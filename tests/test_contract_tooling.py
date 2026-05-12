@@ -264,6 +264,7 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
     )
     assert manifest["generation_policy"]["test_environment"] == "Generated non-Python package tests run in Docker-selected proof lanes."
     maturity = {level["id"]: level for level in manifest["generation_policy"]["generated_package_maturity"]["levels"]}
+    python_completion = manifest["generation_policy"]["python_cli_completion"]
     runtime_binding = manifest["generation_policy"]["non_python_runtime_binding"]
     assert {
         "metadata-proof-fixture",
@@ -282,20 +283,32 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
     assert maturity["weak-agent-safe-adapter"]["weak_agent_routing"] == "allowed-read-only"
     assert "unsupported command errors" in " ".join(maturity["weak-agent-safe-adapter"]["promotion_requires"])
     assert "runtime handoff failures" in " ".join(maturity["weak-agent-safe-adapter"]["promotion_requires"])
+    assert "implementation-independent contracts or IR" in python_completion["finish_line"]
+    assert python_completion["current_state"] == "full-generated-cli-complete"
+    assert python_completion["completion_gate"]["scope"] == "python-only"
+    assert python_completion["completion_gate"]["state"] == "satisfied"
+    completion_evidence = {item["id"] for item in python_completion["completion_gate"]["satisfied_by"]}
+    assert "python-docker-conformance" in completion_evidence
+    assert "runtime-handlers-thin" in completion_evidence
+    assert "runtime primitive implementation" in python_completion["allowed_hand_owned_cli_responsibilities"]
+    assert "command parser shape" in python_completion["must_move_behind_contracts_or_generation"]
+    assert "option and help interface semantics" in python_completion["must_move_behind_contracts_or_generation"]
+    assert any("weak-agent-safe-adapter" in item for item in python_completion["proof_requirements"])
     assert runtime_binding["selected_model"] == "generated parser/help with process handoff to canonical Python CLI"
     assert "operation primitive implementation" in runtime_binding["runtime_owns"]
     assert "argv spelling and help rendering" in runtime_binding["target_projection_owns"]
     assert "adapter failures" in " ".join(runtime_binding["error_mapping"])
     assert "must not own runtime primitive behavior" in manifest["generation_policy"]["shell_adapter_policy"]
     assert "direct cli.py edits" in manifest["generation_policy"]["direct_cli_edit_policy"]
+    assert "instead of package-local executable cli.py files" in manifest["generation_policy"]["direct_cli_edit_policy"]
 
     root_package = packages["root-workspace"]
     targets = {target["kind"]: target for target in root_package["targets"]}
 
     assert root_package["program"] == "agentic-workspace"
     assert targets["python"]["test_environment"] == "python-dev"
-    assert targets["python"]["maturity_level_ref"] == "runtime-backed-read-only-adapter"
-    assert targets["python"]["generation_status"] == "runtime-backed-read-only-adapter"
+    assert targets["python"]["maturity_level_ref"] == "weak-agent-safe-adapter"
+    assert targets["python"]["generation_status"] == "weak-agent-safe-adapter"
     assert targets["typescript"]["test_environment"] == "docker"
     assert targets["typescript"]["maturity_level_ref"] == "weak-agent-safe-adapter"
     assert targets["typescript"]["generation_status"] == "weak-agent-safe-adapter"
@@ -471,30 +484,69 @@ def test_generated_command_package_docker_flags_compose(monkeypatch) -> None:
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 
-    calls: list[tuple[str, str]] = []
+    calls: list[tuple[str, str, str]] = []
 
     def fake_run(command: list[str]) -> int:
         return 0
 
-    def fake_run_docker(tag: str, *, dockerfile: str, require_docker: bool) -> int:
-        calls.append((tag, dockerfile))
+    def fake_run_docker(tag: str, *, dockerfile: str, proof_label: str, require_docker: bool) -> int:
+        calls.append((tag, dockerfile, proof_label))
         assert require_docker is True
         return 0
 
     monkeypatch.setattr(module, "_run", fake_run)
     monkeypatch.setattr(module, "_run_docker", fake_run_docker)
 
-    assert module.main(["--docker", "--docker-conformance", "--require-docker"]) == 0
+    assert module.main(["--python-docker-conformance", "--docker", "--docker-conformance", "--require-docker"]) == 0
     assert calls == [
-        ("agentic-workspace-generated-typescript-cli-test", "generated/typescript/Dockerfile"),
-        ("agentic-workspace-generated-typescript-cli-test-conformance", "generated/typescript/Dockerfile.conformance"),
+        (
+            "agentic-workspace-generated-python-cli-test-conformance",
+            "generated/python/Dockerfile.conformance",
+            "generated Python package Docker conformance proof",
+        ),
+        (
+            "agentic-workspace-generated-typescript-cli-test",
+            "generated/typescript/Dockerfile",
+            "generated TypeScript package Docker proof",
+        ),
+        (
+            "agentic-workspace-generated-typescript-cli-test-conformance",
+            "generated/typescript/Dockerfile.conformance",
+            "generated TypeScript package Docker conformance proof",
+        ),
     ]
 
 
+def test_generated_command_package_docker_skip_message_uses_proof_label(monkeypatch, capsys) -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_generated_command_packages.py"
+    spec = importlib.util.spec_from_file_location("check_generated_command_packages", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    monkeypatch.setattr(module.shutil, "which", lambda _name: None)
+
+    status = module._run_docker(
+        "proof-image",
+        dockerfile="generated/python/Dockerfile.conformance",
+        proof_label="generated Python package Docker conformance proof",
+        require_docker=False,
+    )
+
+    assert status == 0
+    assert "cannot run generated Python package Docker conformance proof" in capsys.readouterr().out
+
+
 def test_generated_command_package_docker_conformance_surface_exists() -> None:
-    dockerfile = Path(__file__).resolve().parents[1] / "generated" / "typescript" / "Dockerfile.conformance"
+    repo_root = Path(__file__).resolve().parents[1]
+    python_dockerfile = repo_root / "generated" / "python" / "Dockerfile.conformance"
+    python_text = python_dockerfile.read_text(encoding="utf-8")
+    dockerfile = repo_root / "generated" / "typescript" / "Dockerfile.conformance"
     text = dockerfile.read_text(encoding="utf-8")
 
+    assert "scripts/check/check_generated_command_packages.py" in python_text
+    assert "--python-conformance" in python_text
+    assert "COPY src ./src" in python_text
+    assert "COPY generated ./generated" in python_text
     assert "scripts/check/check_generated_command_packages.py" in text
     assert "--conformance" in text
     assert "--require-node" in text
@@ -607,7 +659,14 @@ def test_command_generation_readme_defines_lift_out_criteria() -> None:
 
 
 def test_generated_python_command_package_metadata_is_current() -> None:
-    from agentic_workspace.generated_cli_package import GENERATED_COMMAND_PACKAGE, generated_command_names, supports_generated_command
+    from agentic_workspace.generated_cli_package import (
+        GENERATED_COMMAND_PACKAGE,
+        generated_command_names,
+        generated_maturity,
+        generated_operation_ids,
+        generated_weak_agent_routing,
+        supports_generated_command,
+    )
 
     assert GENERATED_COMMAND_PACKAGE["program"] == "agentic-workspace"
     assert {command["adapter_id"] for command in GENERATED_COMMAND_PACKAGE["commands"]} == {
@@ -631,6 +690,14 @@ def test_generated_python_command_package_metadata_is_current() -> None:
     assert {"python", "typescript", "bash", "powershell"} <= target_kinds
     python_target = next(target for target in GENERATED_COMMAND_PACKAGE["targets"] if target["kind"] == "python")
     assert python_target["generated_root"] == "generated/python/workspace-cli"
+    assert python_target["maturity_level_ref"] == "weak-agent-safe-adapter"
+    assert python_target["generation_status"] == "weak-agent-safe-adapter"
+    assert generated_maturity() == {
+        "id": "weak-agent-safe-adapter",
+        "runnable": True,
+        "weak_agent_routing": "allowed-read-only",
+    }
+    assert generated_weak_agent_routing() == "allowed-read-only"
     assert generated_command_names() == (
         "config",
         "defaults",
@@ -647,6 +714,23 @@ def test_generated_python_command_package_metadata_is_current() -> None:
         "start",
         "status",
         "summary",
+    )
+    assert generated_operation_ids() == (
+        "config.report",
+        "defaults.report",
+        "doctor.report",
+        "implement.context",
+        "modules.report",
+        "ownership.report",
+        "preflight.report",
+        "proof.report",
+        "reconcile.report",
+        "report.combined",
+        "setup.guidance",
+        "skills.report",
+        "start.context",
+        "status.report",
+        "summary.report",
     )
     assert supports_generated_command(["defaults", "--format", "json"]) is True
     assert supports_generated_command(["config", "--format", "json"]) is True
@@ -666,7 +750,7 @@ def test_generated_python_command_package_metadata_is_current() -> None:
 
 
 def test_generated_python_command_package_parses_and_dispatches_runtime_operations() -> None:
-    from agentic_workspace.generated_cli_package import run_generated_command
+    from agentic_workspace.generated_cli_package import build_generated_parser, run_generated_command
 
     calls: list[tuple[str, str | None, str, str | None]] = []
 
@@ -674,6 +758,9 @@ def test_generated_python_command_package_parses_and_dispatches_runtime_operatio
         calls.append((operation_id, getattr(args, "target", None), args.format, getattr(args, "section", None)))
         return 0
 
+    help_text = build_generated_parser().format_help()
+    assert "Weak-agent routing: allowed-read-only" in help_text
+    assert "Recovery: use one of the supported generated commands" in help_text
     assert run_generated_command(["defaults", "--section", "startup", "--format", "json"], runtime_handler) == 0
     assert run_generated_command(["config", "--target", ".", "--format", "json"], runtime_handler) == 0
     assert run_generated_command(["modules", "--target", ".", "--format", "json"], runtime_handler) == 0
@@ -728,7 +815,9 @@ def test_generated_python_command_package_parses_doctor_select() -> None:
 
 
 def test_package_generated_python_command_packages_parse_status_runtime_operations() -> None:
+    from repo_memory_bootstrap.generated_cli_package import generated_maturity as memory_generated_maturity
     from repo_memory_bootstrap.generated_cli_package import run_generated_command as run_memory_generated_command
+    from repo_planning_bootstrap.generated_cli_package import generated_maturity as planning_generated_maturity
     from repo_planning_bootstrap.generated_cli_package import run_generated_command as run_planning_generated_command
 
     calls: list[tuple[str, str | None, str]] = []
@@ -745,6 +834,8 @@ def test_package_generated_python_command_packages_parse_status_runtime_operatio
     assert run_memory_generated_command(["status", "--target", ".", "--format", "json"], runtime_handler) == 0
     assert run_memory_generated_command(["doctor", "--target", ".", "--format", "json"], runtime_handler) == 0
     assert run_memory_generated_command(["report", "--target", ".", "--format", "json"], runtime_handler) == 0
+    assert planning_generated_maturity()["weak_agent_routing"] == "allowed-read-only"
+    assert memory_generated_maturity()["weak_agent_routing"] == "allowed-read-only"
     assert calls == [
         ("planning.status.report", ".", "json"),
         ("planning.doctor.report", ".", "json"),
@@ -981,7 +1072,7 @@ def test_generated_adapter_contracts_match_live_cli_surfaces() -> None:
     assert module._validate_generated_adapter_live_cli_parity(contract_tooling.command_adapter_generation_manifest()) == []
 
 
-def test_generated_adapter_live_cli_parity_catches_missing_contract_option(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_generated_adapter_live_cli_parity_defers_generated_command_options_to_package_ir(monkeypatch: pytest.MonkeyPatch) -> None:
     script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
     spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)
     assert spec is not None and spec.loader is not None
@@ -1002,7 +1093,7 @@ def test_generated_adapter_live_cli_parity_catches_missing_contract_option(monke
 
     errors = module._validate_generated_adapter_live_cli_parity({"adapters": [memory_adapter]})
 
-    assert errors == ["generated adapter memory.status.cli live parser has CLI option(s) missing from operation contract: target, verbose"]
+    assert errors == []
 
 
 def test_validated_contract_loader_reports_contract_and_schema(monkeypatch, tmp_path: Path) -> None:

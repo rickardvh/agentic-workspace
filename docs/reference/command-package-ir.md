@@ -26,6 +26,16 @@ Intermediate representation for generating command package metadata and language
 | `generation_policy.generated_package_maturity` | object | yes |  | Generated package maturity details used by this contract. |  |  |
 | `generation_policy.generated_package_maturity.routing_rule` | string | yes |  | Routing rule text value used by this contract. |  |  |
 | `generation_policy.generated_package_maturity.levels` | array of ref `#/$defs/maturity_level` | yes |  | Ordered levels entries used by this contract. |  |  |
+| `generation_policy.python_cli_completion` | object | yes |  | Python generated CLI completion criteria distinct from adapter maturity. |  |  |
+| `generation_policy.python_cli_completion.finish_line` | string | yes |  | Finish line text value used by this contract. |  |  |
+| `generation_policy.python_cli_completion.current_state` | string | yes |  | Current state text value used by this contract. |  |  |
+| `generation_policy.python_cli_completion.allowed_hand_owned_cli_responsibilities` | ref `#/$defs/non_empty_strings` | yes |  | Python CLI responsibilities that may stay hand-owned. |  |  |
+| `generation_policy.python_cli_completion.must_move_behind_contracts_or_generation` | ref `#/$defs/non_empty_strings` | yes |  | Python CLI responsibilities that cannot be treated as complete while hand-owned. |  |  |
+| `generation_policy.python_cli_completion.proof_requirements` | ref `#/$defs/non_empty_strings` | yes |  | Proof requirements before Python generated CLI completion can be claimed. |  |  |
+| `generation_policy.python_cli_completion.completion_gate` | object | yes |  | Schema-backed gate that separates full Python generated CLI completion from generated adapter maturity. |  |  |
+| `generation_policy.python_cli_completion.completion_gate.state` | enum `"pending"`, `"satisfied"` | yes |  | Whether Python generated CLI completion prerequisites are satisfied. |  |  |
+| `generation_policy.python_cli_completion.completion_gate.scope` | const `"python-only"` | yes |  | Completion scope; this gate must not claim TypeScript, Bash, PowerShell, or full codegen epic completion. |  |  |
+| `generation_policy.python_cli_completion.completion_gate.satisfied_by` | array of object | yes |  | Evidence items required before full Python generated CLI completion can be claimed. |  |  |
 | `generation_policy.non_python_runtime_binding` | object | yes |  | Non python runtime binding details used by this contract. |  |  |
 | `generation_policy.non_python_runtime_binding.selected_model` | string | yes |  | Selected model text value used by this contract. |  |  |
 | `generation_policy.non_python_runtime_binding.default_runtime_command` | string | yes |  | Default runtime command text value used by this contract. |  |  |

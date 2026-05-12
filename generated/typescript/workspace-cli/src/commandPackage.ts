@@ -1653,9 +1653,9 @@ export const generatedCommandPackage = {
         "agentic-workspace"
       ],
       "generated_root": "generated/python/workspace-cli",
-      "generation_status": "runtime-backed-read-only-adapter",
+      "generation_status": "weak-agent-safe-adapter",
       "kind": "python",
-      "maturity_level_ref": "runtime-backed-read-only-adapter",
+      "maturity_level_ref": "weak-agent-safe-adapter",
       "package_name": "agentic-workspace",
       "test_environment": "python-dev"
     },

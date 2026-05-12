@@ -11,12 +11,14 @@ from repo_planning_bootstrap.generated_cli_package import (
     build_generated_parser as build_generated_cli_package_parser,
 )
 from repo_planning_bootstrap.generated_cli_package import (
+    generated_command_names as generated_cli_package_command_names,
+)
+from repo_planning_bootstrap.generated_cli_package import (
     run_generated_command as run_generated_cli_package_command,
 )
 from repo_planning_bootstrap.generated_cli_package import (
     supports_generated_command as supports_generated_cli_package_command,
 )
-from repo_planning_bootstrap.generated_command_adapters import GENERATED_COMMAND_ADAPTERS_BY_COMMAND
 from repo_planning_bootstrap.installer import (
     adopt_bootstrap,
     archive_execplan,
@@ -59,6 +61,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     subparsers = parser.add_subparsers(dest="command", required=True)
+    generated_commands = set(generated_cli_package_command_names())
 
     for command in ("install", "init"):
         command_parser = subparsers.add_parser(command, help="Install bootstrap files into a repository.")
@@ -102,6 +105,8 @@ def build_parser() -> argparse.ArgumentParser:
     uninstall_parser.add_argument("--format", choices=("text", "json"), default="text")
 
     for command in ("doctor", "status"):
+        if command in generated_commands:
+            continue
         command_parser = subparsers.add_parser(command)
         command_parser.add_argument("--target")
         command_parser.add_argument(
@@ -111,38 +116,43 @@ def build_parser() -> argparse.ArgumentParser:
         )
         command_parser.add_argument("--format", choices=("text", "json"), default="text")
 
-    summary_parser = subparsers.add_parser("summary", help="Summarise the active planning surfaces in a machine-readable way.")
-    summary_parser.add_argument("--target")
-    summary_parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Emit broad diagnostic planning detail.",
-    )
-    summary_parser.add_argument("--task", help="Optional task text used to return a task-scoped compact summary.")
-    summary_parser.add_argument("--changed", nargs="*", default=[], help="Optional changed paths used to scope compact summary output.")
-    summary_parser.add_argument("--format", choices=("text", "json"), default="text")
+    if "summary" not in generated_commands:
+        summary_parser = subparsers.add_parser("summary", help="Summarise the active planning surfaces in a machine-readable way.")
+        summary_parser.add_argument("--target")
+        summary_parser.add_argument(
+            "--verbose",
+            action="store_true",
+            help="Emit broad diagnostic planning detail.",
+        )
+        summary_parser.add_argument("--task", help="Optional task text used to return a task-scoped compact summary.")
+        summary_parser.add_argument("--changed", nargs="*", default=[], help="Optional changed paths used to scope compact summary output.")
+        summary_parser.add_argument("--format", choices=("text", "json"), default="text")
 
-    report_parser = subparsers.add_parser("report", help="Report compact planning module state without reading raw planning files first.")
-    report_parser.add_argument("--target")
-    report_parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Emit broad diagnostic report detail.",
-    )
-    report_parser.add_argument("--format", choices=("text", "json"), default="text")
+    if "report" not in generated_commands:
+        report_parser = subparsers.add_parser(
+            "report", help="Report compact planning module state without reading raw planning files first."
+        )
+        report_parser.add_argument("--target")
+        report_parser.add_argument(
+            "--verbose",
+            action="store_true",
+            help="Emit broad diagnostic report detail.",
+        )
+        report_parser.add_argument("--format", choices=("text", "json"), default="text")
 
-    reconcile_parser = subparsers.add_parser(
-        "reconcile",
-        help="Report stale planning state against provider-agnostic external work evidence.",
-    )
-    reconcile_parser.add_argument("--target")
-    reconcile_parser.add_argument(
-        "--apply-safe-prune",
-        action="store_true",
-        help="Apply only reconcile cleanup targets that are already marked safe_to_prune.",
-    )
-    reconcile_parser.add_argument("--dry-run", action="store_true", help="Preview --apply-safe-prune without writing files.")
-    reconcile_parser.add_argument("--format", choices=("text", "json"), default="text")
+    if "reconcile" not in generated_commands:
+        reconcile_parser = subparsers.add_parser(
+            "reconcile",
+            help="Report stale planning state against provider-agnostic external work evidence.",
+        )
+        reconcile_parser.add_argument("--target")
+        reconcile_parser.add_argument(
+            "--apply-safe-prune",
+            action="store_true",
+            help="Apply only reconcile cleanup targets that are already marked safe_to_prune.",
+        )
+        reconcile_parser.add_argument("--dry-run", action="store_true", help="Preview --apply-safe-prune without writing files.")
+        reconcile_parser.add_argument("--format", choices=("text", "json"), default="text")
 
     handoff_parser = subparsers.add_parser("handoff", help="Emit the compact delegated-worker handoff derived from active planning state.")
     handoff_parser.add_argument("--target")
@@ -252,10 +262,6 @@ def main(argv: list[str] | None = None) -> int:
 
     parser = build_parser()
     args = parser.parse_args(argv_list)
-
-    generated_adapter = _generated_adapter_for_command(str(args.command))
-    if generated_adapter is not None:
-        return _run_generated_command_adapter(args, adapter=generated_adapter)
 
     if args.command in {"install", "init"}:
         return _emit(
@@ -426,10 +432,6 @@ def main(argv: list[str] | None = None) -> int:
     return 2
 
 
-def _generated_adapter_for_command(command_name: str) -> dict[str, object] | None:
-    return GENERATED_COMMAND_ADAPTERS_BY_COMMAND.get(command_name)
-
-
 def _run_generated_cli_package_if_supported(argv: list[str]) -> int | None:
     if not supports_generated_cli_package_command(argv):
         return None
@@ -517,15 +519,6 @@ _GENERATED_RUNTIME_HANDLERS = {
     "planning.status.report": _run_status_report_adapter,
     "planning.summary.report": _run_summary_report_adapter,
 }
-
-
-def _run_generated_command_adapter(args: argparse.Namespace, *, adapter: dict[str, object]) -> int:
-    operation_id = str(adapter["operation_id"])
-    handler = _GENERATED_RUNTIME_HANDLERS.get(operation_id)
-    if handler is None:
-        parser = build_parser()
-        parser.error(f"Generated adapter for {args.command} references unsupported operation {operation_id}.")
-    return handler(args)
 
 
 def _emit(result, output_format: str) -> int:

@@ -1,0 +1,91 @@
+{
+  "kind": "planning-decomposition/v1",
+  "title": "Python generated CLI completion",
+  "status": "partially-promoted",
+  "larger_intended_outcome": "Complete the Python side of #892 by moving command parser, dispatch, interface behavior, adapter metadata, and conformance expectations behind implementation-independent contracts or IR, leaving cli.py files as thin runtime primitive adapters only.",
+  "non_goals": [
+    "Do not claim weak-agent-safe adapter maturity is full Python generated CLI completion.",
+    "Do not move live workspace inspection, mutation orchestration, or package-specific runtime primitive implementation into generated code.",
+    "Do not advance Bash, PowerShell, or TypeScript in this Python lane except where shared contracts must remain implementation-independent."
+  ],
+  "candidate_lanes": [
+    {
+      "id": "python-runtime-handler-boundary",
+      "title": "Python runtime handler boundary",
+      "readiness": "promoted",
+      "outcome": "Generated Python dispatch can identify supported operation ids from IR while cli.py exposes only thin operation handler adapters for hand-owned runtime primitives.",
+      "owner_surface": "packages/command-generation/src/agentic_command_generation/generator.py and generated/python/*/generated_cli_package/__init__.py",
+      "proof": "Generated package static proof plus Python conformance prove operation dispatch is generated and runtime handlers remain thin package-local adapters.",
+      "depends_on": [],
+      "parallel_with": []
+    },
+    {
+      "id": "python-handwritten-parser-retirement",
+      "title": "Python handwritten parser retirement for generated commands",
+      "readiness": "promoted",
+      "outcome": "Commands covered by command_package_ir no longer require duplicate handwritten argparse definitions in package cli.py files.",
+      "owner_surface": "src/agentic_workspace/cli.py, packages/planning/src/repo_planning_bootstrap/cli.py, packages/memory/src/repo_memory_bootstrap/cli.py, and generated/python/*/generated_cli_package/__init__.py",
+      "proof": "Static proof rejects duplicated handwritten parser ownership for generated command/interface surfaces; Python black-box conformance still passes.",
+      "depends_on": [
+        "python-runtime-handler-boundary"
+      ],
+      "parallel_with": []
+    },
+    {
+      "id": "python-interface-change-gate",
+      "title": "Python command/interface change gate",
+      "readiness": "promoted",
+      "outcome": "Future package command/interface changes are forced through contracts, IR, generators, regenerated outputs, and black-box conformance rather than package-local executable cli.py edits.",
+      "owner_surface": "scripts/check/check_generated_command_packages.py and src/agentic_workspace/contracts/proof_selection_rules.json",
+      "proof": "Proof selection and static generated-package checks fail when command/interface changes bypass contract or generated surfaces.",
+      "depends_on": [
+        "python-handwritten-parser-retirement"
+      ],
+      "parallel_with": []
+    },
+    {
+      "id": "python-generated-cli-completion-promotion",
+      "title": "Python generated CLI completion promotion",
+      "readiness": "promoted",
+      "outcome": "The command-package IR can promote Python from adapter-layer-proven-not-full-generated-cli to full generated CLI completion only after parser, dispatch, interface, proof, and runtime-handler boundaries are all proven.",
+      "owner_surface": "src/agentic_workspace/contracts/command_package_ir.json",
+      "proof": "Generated package static proof, Python Docker conformance, root CLI authority, closeout trust, and package planning summary all agree that original Python generated-CLI intent is satisfied.",
+      "depends_on": [
+        "python-runtime-handler-boundary",
+        "python-handwritten-parser-retirement",
+        "python-interface-change-gate"
+      ],
+      "parallel_with": []
+    }
+  ],
+  "dependency_assumptions": [
+    "Runtime primitive behavior remains hand-owned and can be called from thin operation handlers.",
+    "Generated Python parser and dispatch should consume command_package_ir and conformance contracts as the single source of truth.",
+    "Each lane must keep Python work independent from Bash and PowerShell transport promotion."
+  ],
+  "parallelization_assumptions": [
+    "The first two Python lanes are ordered because parser retirement depends on a clearer runtime-handler boundary.",
+    "Interface-change gating can be explored in parallel only after the parser retirement boundary is explicit."
+  ],
+  "proof_expectations": [
+    "Each promoted Python lane must include Python black-box conformance and Docker-backed Python conformance unless the lane is planning-only.",
+    "Closeout must run or inspect closeout_trust before claiming Python completion.",
+    "The command-package IR python_cli_completion.current_state may be full-generated-cli-complete only with a schema-backed python-only completion gate and static proof for all prerequisite evidence ids."
+  ],
+  "promotion_rule": "Promote only the next ready Python lane with clear generated-output ownership, no Bash/PowerShell scope, and proof that implementation-independent artifacts remain authoritative.",
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#892",
+      "label": "Codegen epic",
+      "role": "original epic intent"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#921",
+      "label": "Python closeout scope correction",
+      "role": "dogfooding signal"
+    }
+  ],
+  "notes": "Created after #921 showed that adapter maturity was incorrectly treated as Python generated-CLI completion. Runtime handler boundary, handwritten parser retirement, interface-change proof gating, and the Python-only completion promotion gate have been promoted and implemented on codex/finish-python-generated-cli. This closes the Python lane only; Bash, PowerShell, TypeScript follow-through, and any future mutation-capable generated adapters remain outside this branch."
+}

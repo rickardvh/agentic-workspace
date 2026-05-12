@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
+import importlib
+import io
 import json
 import os
 import shutil
@@ -14,6 +17,13 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 GENERATOR_SCRIPT_ROOT = REPO_ROOT / "scripts" / "generate"
 if str(GENERATOR_SCRIPT_ROOT) not in sys.path:
     sys.path.insert(0, str(GENERATOR_SCRIPT_ROOT))
+for SOURCE_ROOT in (
+    REPO_ROOT / "src",
+    REPO_ROOT / "packages" / "planning" / "src",
+    REPO_ROOT / "packages" / "memory" / "src",
+):
+    if str(SOURCE_ROOT) not in sys.path:
+        sys.path.insert(0, str(SOURCE_ROOT))
 
 from workspace_command_generation import SCHEMA_PATH, SOURCE_PATH, load_workspace_command_package_ir  # noqa: E402
 
@@ -28,6 +38,8 @@ class AdapterConformanceCase(NamedTuple):
     expected_fields: dict[str, object] | None
     fixture_id: str
     fixture_files: dict[str, str]
+    expected_exit: int
+    allow_stderr: bool
 
 
 class RunnableTypescriptConformanceCase(NamedTuple):
@@ -42,6 +54,25 @@ CONFORMANCE_PLACEHOLDER_BY_PACKAGE = {
     "root-workspace": "agentic_workspace_cli",
     "planning-bootstrap": "agentic_planning_cli",
     "memory-bootstrap": "agentic_memory_cli",
+}
+PYTHON_COMPLETION_STATES = {"adapter-layer-proven-not-full-generated-cli", "full-generated-cli-complete"}
+PYTHON_COMPLETION_REQUIRED_EVIDENCE_IDS = {
+    "parser-shape-generated",
+    "dispatch-selection-generated",
+    "interface-behavior-contract-backed",
+    "future-interface-change-proof-gated",
+    "python-black-box-conformance",
+    "python-docker-conformance",
+    "runtime-handlers-thin",
+}
+PYTHON_COMPLETION_EXPECTED_PROOF_SUBSTRINGS = {
+    "parser-shape-generated": "_validate_generated_python_commands_absent_from_handwritten_parsers",
+    "dispatch-selection-generated": "generated_entrypoints order check",
+    "interface-behavior-contract-backed": "check_generated_command_packages.py",
+    "future-interface-change-proof-gated": "proof_selection_rules.json",
+    "python-black-box-conformance": "--python-conformance",
+    "python-docker-conformance": "--python-docker-conformance --require-docker",
+    "runtime-handlers-thin": "_validate_python_runtime_handler_boundary",
 }
 
 
@@ -79,8 +110,83 @@ def _runtime_module_for_package(package_id: str) -> str:
     return modules[package_id]
 
 
+def _python_command_for_package(package_id: str) -> list[str]:
+    return [_python_executable(), "-m", _runtime_module_for_package(package_id)]
+
+
 def _capture(command: list[str], *, cwd: Path, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(command, cwd=cwd, env=env, text=True, capture_output=True, check=False)
+
+
+def _generated_adapter_proof_surface(*, language: str) -> str:
+    container = os.environ.get("AGENTIC_GENERATED_CONFORMANCE_CONTAINER")
+    if container:
+        return f"generated-{container}-docker-conformance"
+    return f"generated-{language}-adapter-conformance"
+
+
+def _exit_failure_classification(returncode: int) -> tuple[str, str]:
+    if returncode < 0:
+        signal_number = abs(returncode)
+        return (
+            "runtime-crash-or-proof-environment-residue",
+            f"native process terminated by signal {signal_number}",
+        )
+    if returncode > 128:
+        return (
+            "runtime-crash-or-proof-environment-residue",
+            f"process exit may encode signal {returncode - 128}",
+        )
+    return ("adapter-contract-failure", "process exited without the expected contract status")
+
+
+def _is_runtime_crash_exit(returncode: int) -> bool:
+    classification, _detail = _exit_failure_classification(returncode)
+    return classification == "runtime-crash-or-proof-environment-residue"
+
+
+def _format_generated_adapter_exit_failure(
+    *,
+    language: str,
+    package_id: str,
+    case: AdapterConformanceCase,
+    command: list[str],
+    returncode: int,
+    expected_exit: int,
+    stderr: str,
+) -> str:
+    classification, detail = _exit_failure_classification(returncode)
+    command_name = case.success_args[0] if case.success_args else "<entrypoint>"
+    rerun_guidance = (
+        "rerun this package/case or the Docker conformance proof before treating it as deterministic"
+        if classification == "runtime-crash-or-proof-environment-residue"
+        else "compare adapter output with the contract-backed runtime expectation"
+    )
+    return (
+        f"generated {language} adapter failure: classification={classification}; "
+        f"proof_surface={_generated_adapter_proof_surface(language=language)}; package={package_id}; "
+        f"conformance_ref={case.conformance_ref}; command={command_name}; command_args={case.success_args!r}; "
+        f"fixture={case.fixture_id}; adapter_entrypoint={command[0]!r}; exit={returncode}; "
+        f"expected={expected_exit}; detail={detail}; guidance={rerun_guidance}; stderr={stderr!r}"
+    )
+
+
+def _format_generated_adapter_retry_recovery(
+    *,
+    language: str,
+    package_id: str,
+    case: AdapterConformanceCase,
+    command: list[str],
+    first_returncode: int,
+) -> str:
+    _classification, detail = _exit_failure_classification(first_returncode)
+    command_name = case.success_args[0] if case.success_args else "<entrypoint>"
+    return (
+        f"[warn] generated {language} adapter runtime crash recovered after retry: "
+        f"proof_surface={_generated_adapter_proof_surface(language=language)}; package={package_id}; "
+        f"conformance_ref={case.conformance_ref}; command={command_name}; command_args={case.success_args!r}; "
+        f"fixture={case.fixture_id}; adapter_entrypoint={command[0]!r}; first_exit={first_returncode}; detail={detail}"
+    )
 
 
 def _load_json(relative_path: str) -> dict[str, object]:
@@ -145,6 +251,20 @@ def _fixture_from_contract(contract: dict[str, object]) -> tuple[str, dict[str, 
     return fixture_id, {path: str(contents) for path, contents in files.items()}
 
 
+def _expected_exit_from_contract(contract: dict[str, object]) -> int:
+    expectations = contract.get("expectations", {})
+    exit_expectation = expectations.get("exit", {}) if isinstance(expectations, dict) else {}
+    code = exit_expectation.get("code", 0) if isinstance(exit_expectation, dict) else 0
+    return int(code) if isinstance(code, int) else 0
+
+
+def _allow_stderr_from_contract(contract: dict[str, object]) -> bool:
+    expectations = contract.get("expectations", {})
+    stderr = expectations.get("stderr", {}) if isinstance(expectations, dict) else {}
+    allow_non_empty = stderr.get("allow_non_empty", False) if isinstance(stderr, dict) else False
+    return bool(allow_non_empty)
+
+
 def _case_from_conformance_contract(*, contract: dict[str, object], package_id: str) -> AdapterConformanceCase:
     expectations = contract.get("expectations", {})
     stdout = expectations.get("stdout", {}) if isinstance(expectations, dict) else {}
@@ -164,6 +284,8 @@ def _case_from_conformance_contract(*, contract: dict[str, object], package_id: 
         expected_fields=_expected_contract_fields(assertions),
         fixture_id=fixture_id,
         fixture_files=fixture_files,
+        expected_exit=_expected_exit_from_contract(contract),
+        allow_stderr=_allow_stderr_from_contract(contract),
     )
 
 
@@ -207,6 +329,108 @@ def _adapter_conformance_cases_by_package() -> tuple[dict[str, dict[str, Adapter
                     errors.append(str(exc))
         cases_by_package[package_id] = package_cases
     return cases_by_package, errors
+
+
+def _run_python_adapter_conformance() -> list[str]:
+    registries, registry_errors = _adapter_conformance_cases_by_package()
+    if registry_errors:
+        return registry_errors
+    errors: list[str] = []
+    env = _conformance_env()
+    with tempfile.TemporaryDirectory(prefix="agentic-workspace-generated-python-adapter-") as tmp:
+        temp_root = Path(tmp)
+        shims: dict[str, Path] = {}
+
+        def command_for_package(package_id: str) -> list[str]:
+            shim = shims.get(package_id)
+            if shim is None:
+                module = _runtime_module_for_package(package_id)
+                shim = temp_root / f"{package_id.replace('-', '_')}_cli_shim.py"
+                shim.write_text(
+                    "import sys\n"
+                    f"sys.path.insert(0, {str(REPO_ROOT / 'src')!r})\n"
+                    f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'planning' / 'src')!r})\n"
+                    f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'memory' / 'src')!r})\n"
+                    f"from {module} import main\n"
+                    "raise SystemExit(main(sys.argv[1:]))\n",
+                    encoding="utf-8",
+                )
+                shims[package_id] = shim
+            return [_python_executable(), str(shim)]
+
+        for package_id, registry in registries.items():
+            command = command_for_package(package_id)
+            for case in registry.values():
+                fixture_root = temp_root / package_id / case.fixture_id / case.conformance_ref.replace(".", "-")
+                if fixture_root.exists():
+                    shutil.rmtree(fixture_root)
+                for relative_path, contents in case.fixture_files.items():
+                    path = fixture_root / relative_path
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_text(contents, encoding="utf-8")
+                process = _capture([*command, *case.success_args], cwd=fixture_root, env=env)
+                if process.returncode != case.expected_exit:
+                    if _is_runtime_crash_exit(process.returncode):
+                        retry_process = _capture([*command, *case.success_args], cwd=fixture_root, env=env)
+                        if retry_process.returncode == case.expected_exit:
+                            print(
+                                _format_generated_adapter_retry_recovery(
+                                    language="python",
+                                    package_id=package_id,
+                                    case=case,
+                                    command=command,
+                                    first_returncode=process.returncode,
+                                )
+                            )
+                            process = retry_process
+                        else:
+                            errors.append(
+                                _format_generated_adapter_exit_failure(
+                                    language="python",
+                                    package_id=package_id,
+                                    case=case,
+                                    command=command,
+                                    returncode=process.returncode,
+                                    expected_exit=case.expected_exit,
+                                    stderr=process.stderr,
+                                )
+                                + f"; retry_exit={retry_process.returncode}; retry_stderr={retry_process.stderr!r}"
+                            )
+                            continue
+                    if process.returncode != case.expected_exit:
+                        errors.append(
+                            _format_generated_adapter_exit_failure(
+                                language="python",
+                                package_id=package_id,
+                                case=case,
+                                command=command,
+                                returncode=process.returncode,
+                                expected_exit=case.expected_exit,
+                                stderr=process.stderr,
+                            )
+                        )
+                        continue
+                if process.stderr.strip() and not case.allow_stderr:
+                    errors.append(
+                        f"generated Python adapter failure: {package_id} {case.label} emitted unexpected stderr: {process.stderr!r}"
+                    )
+                    continue
+                if case.expected_fields is None:
+                    continue
+                try:
+                    selected = case.selected_fields(process.stdout)
+                except (KeyError, ValueError, json.JSONDecodeError) as exc:
+                    errors.append(
+                        f"generated Python adapter failure: {package_id} {case.label} stdout did not satisfy selected fields: {exc}; "
+                        f"stdout={process.stdout!r}"
+                    )
+                    continue
+                if selected != case.expected_fields:
+                    errors.append(
+                        f"generated Python adapter failure: {package_id} {case.label} output shape drifted; "
+                        f"expected selected fields {case.expected_fields!r}, got {selected!r}"
+                    )
+    return errors
 
 
 def _runnable_typescript_conformance_cases() -> tuple[list[RunnableTypescriptConformanceCase], list[str]]:
@@ -335,6 +559,141 @@ def _validate_generated_command_projection_boundary(*, package_id: str, command:
         for runtime_term in ("live workspace inspection", "payload assembly", "runtime primitive", "output emission"):
             if runtime_term in target_text:
                 errors.append(f"{location} projection_boundary.target_specific contains runtime-owned term {runtime_term!r}")
+    return errors
+
+
+def _validate_python_cli_completion_policy(policy: dict[str, object]) -> list[str]:
+    errors: list[str] = []
+    finish_line = str(policy.get("finish_line", ""))
+    current_state = str(policy.get("current_state", ""))
+    allowed = [str(item) for item in policy.get("allowed_hand_owned_cli_responsibilities", []) if isinstance(item, str)]
+    must_move = [str(item) for item in policy.get("must_move_behind_contracts_or_generation", []) if isinstance(item, str)]
+    proof_requirements = [str(item) for item in policy.get("proof_requirements", []) if isinstance(item, str)]
+    finish_line_lower = finish_line.lower()
+    if "implementation-independent" not in finish_line_lower or "thin runtime primitive adapters" not in finish_line_lower:
+        errors.append("command_package_ir.json Python CLI completion finish_line must require implementation-independent artifacts and thin runtime primitive adapters")
+    if current_state not in PYTHON_COMPLETION_STATES:
+        errors.append(f"command_package_ir.json Python CLI completion current_state is unknown: {current_state!r}")
+    if not any("runtime primitive implementation" in item for item in allowed):
+        errors.append("command_package_ir.json Python CLI completion policy must allow hand-owned runtime primitive implementation")
+    for required in ("command parser shape", "option and help interface semantics", "generated command dispatch selection"):
+        if not any(required in item for item in must_move):
+            errors.append(f"command_package_ir.json Python CLI completion policy must move {required!r} behind contracts or generation")
+    if not any("weak-agent-safe-adapter" in item and "full Python generated CLI completion" in item for item in proof_requirements):
+        errors.append("command_package_ir.json Python CLI completion proof must distinguish adapter maturity from full generated CLI completion")
+    completion_gate = policy.get("completion_gate", {})
+    if current_state == "full-generated-cli-complete":
+        if not isinstance(completion_gate, dict):
+            errors.append("command_package_ir.json full Python CLI completion requires a completion_gate object")
+            return errors
+        if completion_gate.get("state") != "satisfied":
+            errors.append("command_package_ir.json full Python CLI completion requires completion_gate.state='satisfied'")
+        if completion_gate.get("scope") != "python-only":
+            errors.append("command_package_ir.json full Python CLI completion gate must be scoped to python-only")
+        satisfied_by = completion_gate.get("satisfied_by", [])
+        if not isinstance(satisfied_by, list) or not all(isinstance(item, dict) for item in satisfied_by):
+            errors.append("command_package_ir.json full Python CLI completion gate satisfied_by entries are malformed")
+            return errors
+        evidence_ids = {str(item.get("id", "")) for item in satisfied_by}
+        missing_evidence = sorted(PYTHON_COMPLETION_REQUIRED_EVIDENCE_IDS - evidence_ids)
+        if missing_evidence:
+            errors.append(f"command_package_ir.json full Python CLI completion gate is missing evidence ids: {missing_evidence!r}")
+        for item in satisfied_by:
+            evidence_id = str(item.get("id", ""))
+            proof = str(item.get("proof", ""))
+            evidence = str(item.get("evidence", ""))
+            if not evidence.strip() or not proof.strip():
+                errors.append(f"command_package_ir.json Python completion evidence {evidence_id!r} must name evidence and proof")
+            expected_proof = PYTHON_COMPLETION_EXPECTED_PROOF_SUBSTRINGS.get(evidence_id)
+            if expected_proof and expected_proof not in proof:
+                errors.append(
+                    f"command_package_ir.json Python completion evidence {evidence_id!r} must reference "
+                    f"expected proof surface {expected_proof!r}; got {proof!r}"
+                )
+    return errors
+
+
+def _validate_python_runtime_handler_boundary() -> list[str]:
+    errors: list[str] = []
+    package_modules = {
+        "root-workspace": ("agentic_workspace.generated_cli_package", "agentic_workspace.cli"),
+        "planning-bootstrap": ("repo_planning_bootstrap.generated_cli_package", "repo_planning_bootstrap.cli"),
+        "memory-bootstrap": ("repo_memory_bootstrap.generated_cli_package", "repo_memory_bootstrap.cli"),
+    }
+    for package_id, (generated_module_name, runtime_module_name) in package_modules.items():
+        try:
+            generated_module = importlib.import_module(generated_module_name)
+            runtime_module = importlib.import_module(runtime_module_name)
+        except ImportError as exc:
+            errors.append(f"Python runtime handler boundary import failed for {package_id}: {exc}")
+            continue
+        generated_operation_ids = getattr(generated_module, "generated_operation_ids", None)
+        if not callable(generated_operation_ids):
+            errors.append(f"{generated_module_name} must expose generated_operation_ids() from generated command-package IR")
+            continue
+        operation_ids = set(generated_operation_ids())
+        handler_map = getattr(runtime_module, "_GENERATED_RUNTIME_HANDLERS", None)
+        if not isinstance(handler_map, dict):
+            errors.append(f"{runtime_module_name} must expose _GENERATED_RUNTIME_HANDLERS as a runtime adapter binding map")
+            continue
+        handler_ids = {str(operation_id) for operation_id in handler_map}
+        missing = sorted(operation_ids - handler_ids)
+        extra = sorted(handler_ids - operation_ids)
+        if missing:
+            errors.append(f"{runtime_module_name} missing runtime adapter handlers for generated operations: {missing!r}")
+        if extra:
+            errors.append(f"{runtime_module_name} contains runtime adapter handlers outside generated operation ids: {extra!r}")
+        for operation_id, handler in handler_map.items():
+            handler_name = getattr(handler, "__name__", "")
+            if not callable(handler):
+                errors.append(f"{runtime_module_name} handler for {operation_id!r} is not callable")
+                continue
+            if not (handler_name.startswith("_run_") and handler_name.endswith("_adapter")):
+                errors.append(
+                    f"{runtime_module_name} handler for {operation_id!r} must be a thin _run_*_adapter binding; "
+                    f"got {handler_name!r}"
+                )
+    return errors
+
+
+def _validate_no_legacy_generated_adapter_runtime_import(*, relative_path: str, text: str) -> list[str]:
+    legacy_import = "generated_command_adapters import GENERATED_COMMAND_ADAPTERS_BY_COMMAND"
+    if legacy_import in text:
+        return [
+            f"{relative_path} must route generated Python commands through generated_cli_package, "
+            "not legacy generated_command_adapters runtime dispatch"
+        ]
+    return []
+
+
+def _validate_generated_python_commands_absent_from_handwritten_parsers() -> list[str]:
+    errors: list[str] = []
+    package_modules = {
+        "root-workspace": ("agentic_workspace.generated_cli_package", "agentic_workspace.cli"),
+        "planning-bootstrap": ("repo_planning_bootstrap.generated_cli_package", "repo_planning_bootstrap.cli"),
+        "memory-bootstrap": ("repo_memory_bootstrap.generated_cli_package", "repo_memory_bootstrap.cli"),
+    }
+    for package_id, (generated_module_name, runtime_module_name) in package_modules.items():
+        generated_module = importlib.import_module(generated_module_name)
+        runtime_module = importlib.import_module(runtime_module_name)
+        generated_command_names = getattr(generated_module, "generated_command_names", None)
+        build_parser = getattr(runtime_module, "build_parser", None)
+        if not callable(generated_command_names) or not callable(build_parser):
+            errors.append(f"{package_id} cannot prove generated command parser retirement")
+            continue
+        for command_name in generated_command_names():
+            parser = build_parser()
+            with contextlib.redirect_stderr(io.StringIO()):
+                try:
+                    parser.parse_args([str(command_name)])
+                except SystemExit as exc:
+                    if int(exc.code or 0) != 0:
+                        continue
+                else:
+                    errors.append(
+                        f"{runtime_module_name} handwritten parser still accepts generated command {command_name!r}; "
+                        "generated_cli_package must own parser shape"
+                    )
     return errors
 
 
@@ -555,6 +914,11 @@ def _validate_static_surfaces() -> list[str]:
         routing_rule = str(maturity_policy.get("routing_rule", ""))
         if "Weak agents may use only generated targets" not in routing_rule:
             errors.append("command_package_ir.json maturity routing rule does not protect weak-agent routing")
+        python_cli_completion = ir.get("generation_policy", {}).get("python_cli_completion", {})
+        if not isinstance(python_cli_completion, dict):
+            errors.append("command_package_ir.json generation_policy.python_cli_completion is missing or malformed")
+        else:
+            errors.extend(_validate_python_cli_completion_policy(python_cli_completion))
         shell_policy = str(ir.get("generation_policy", {}).get("shell_adapter_policy", ""))
         if "Issue #909 evaluation selects Bash as the first additional generated command transport candidate" not in shell_policy:
             errors.append("command_package_ir.json shell adapter policy does not record the #909 first transport evaluation")
@@ -589,14 +953,14 @@ def _validate_static_surfaces() -> list[str]:
                 errors.append(f"command_package_ir.json package {package_id!r} is missing a Python generated target")
                 continue
             python_target = python_targets[0]
-            if python_target.get("maturity_level_ref") != "runtime-backed-read-only-adapter":
+            if python_target.get("maturity_level_ref") != "weak-agent-safe-adapter":
                 errors.append(
-                    f"command_package_ir.json package {package_id!r} Python target is not runtime-backed; "
+                    f"command_package_ir.json package {package_id!r} Python target is not weak-agent-safe; "
                     f"got {python_target.get('maturity_level_ref')!r}"
                 )
-            if python_target.get("generation_status") != "runtime-backed-read-only-adapter":
+            if python_target.get("generation_status") != "weak-agent-safe-adapter":
                 errors.append(
-                    f"command_package_ir.json package {package_id!r} Python generation_status is not runtime-backed; "
+                    f"command_package_ir.json package {package_id!r} Python generation_status is not weak-agent-safe; "
                     f"got {python_target.get('generation_status')!r}"
                 )
             if package.get("program") != program:
@@ -608,6 +972,14 @@ def _validate_static_surfaces() -> list[str]:
                 )
             if not (REPO_ROOT / generated_root / "generated_cli_package" / "__init__.py").is_file():
                 errors.append(f"{generated_root}/generated_cli_package/__init__.py is missing")
+            else:
+                generated_text = (REPO_ROOT / generated_root / "generated_cli_package" / "__init__.py").read_text(encoding="utf-8")
+                if "def generated_maturity()" not in generated_text:
+                    errors.append(f"{generated_root}/generated_cli_package/__init__.py is missing generated_maturity")
+                if "def generated_weak_agent_routing()" not in generated_text:
+                    errors.append(f"{generated_root}/generated_cli_package/__init__.py is missing generated_weak_agent_routing")
+                if "_GENERATED_WEAK_AGENT_ROUTING = 'allowed-read-only'" not in generated_text:
+                    errors.append(f"{generated_root}/generated_cli_package/__init__.py does not advertise allowed-read-only routing")
         generated_entrypoints = {
             "src/agentic_workspace/cli.py": "agentic_workspace.generated_cli_package",
             "packages/planning/src/repo_planning_bootstrap/cli.py": "repo_planning_bootstrap.generated_cli_package",
@@ -618,10 +990,13 @@ def _validate_static_surfaces() -> list[str]:
             main_index = text.find("def main(")
             generated_index = text.find("_run_generated_cli_package_if_supported", main_index)
             parser_index = text.find("build_parser()", main_index)
+            errors.extend(_validate_no_legacy_generated_adapter_runtime_import(relative_path=relative_path, text=text))
             if import_name not in text:
                 errors.append(f"{relative_path} does not import the generated Python CLI package")
             if main_index == -1 or generated_index == -1 or parser_index == -1 or generated_index > parser_index:
                 errors.append(f"{relative_path} does not route generated Python adapters before the handwritten parser")
+        errors.extend(_validate_python_runtime_handler_boundary())
+        errors.extend(_validate_generated_python_commands_absent_from_handwritten_parsers())
         durable_source_roots = {
             "src/agentic_workspace/generated_cli_package/__init__.py": "generated/python/workspace-cli",
             "packages/planning/src/repo_planning_bootstrap/generated_cli_package/__init__.py": "generated/python/planning-cli",
@@ -640,6 +1015,9 @@ def _validate_static_surfaces() -> list[str]:
     dockerfile = REPO_ROOT / "generated" / "typescript" / "Dockerfile"
     if not dockerfile.is_file():
         errors.append("generated/typescript/Dockerfile is missing")
+    python_conformance_dockerfile = REPO_ROOT / "generated" / "python" / "Dockerfile.conformance"
+    if not python_conformance_dockerfile.is_file():
+        errors.append("generated/python/Dockerfile.conformance is missing")
     conformance_dockerfile = REPO_ROOT / "generated" / "typescript" / "Dockerfile.conformance"
     if not conformance_dockerfile.is_file():
         errors.append("generated/typescript/Dockerfile.conformance is missing")
@@ -676,15 +1054,15 @@ def _validate_static_surfaces() -> list[str]:
     return errors
 
 
-def _run_docker(tag: str, *, dockerfile: str, require_docker: bool) -> int:
+def _run_docker(tag: str, *, dockerfile: str, proof_label: str, require_docker: bool) -> int:
     if shutil.which("docker") is None:
-        print("docker is not available; cannot run generated TypeScript package container proof")
+        print(f"docker is not available; cannot run {proof_label}")
         return 1 if require_docker else 0
     info = subprocess.run(["docker", "info"], cwd=REPO_ROOT, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
     if info.returncode:
         detail = info.stderr.strip().splitlines()
         suffix = f": {detail[0]}" if detail else ""
-        print(f"docker daemon is not available; skipped generated TypeScript package container proof{suffix}")
+        print(f"docker daemon is not available; skipped {proof_label}{suffix}")
         return 1 if require_docker else 0
     build = _run(["docker", "build", "-f", dockerfile, "-t", tag, "."])
     if build:
@@ -710,6 +1088,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Run black-box conformance for runnable generated adapters using local Node and the canonical Python CLI.",
     )
     parser.add_argument(
+        "--python-conformance",
+        action="store_true",
+        help="Run black-box conformance for generated Python adapters using checked-in conformance contracts.",
+    )
+    parser.add_argument(
+        "--python-docker-conformance",
+        action="store_true",
+        help="Run generated Python adapter conformance inside Docker.",
+    )
+    parser.add_argument(
         "--require-node",
         action="store_true",
         help="Fail instead of skipping adapter conformance when Node is unavailable.",
@@ -718,6 +1106,11 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--tag",
         default="agentic-workspace-generated-typescript-cli-test",
         help="Docker image tag used for generated TypeScript package tests.",
+    )
+    parser.add_argument(
+        "--python-tag",
+        default="agentic-workspace-generated-python-cli-test",
+        help="Docker image tag used for generated Python package conformance.",
     )
     parser.add_argument(
         "--require-docker",
@@ -738,6 +1131,13 @@ def main(argv: list[str] | None = None) -> int:
         for error in errors:
             print(error)
         return 1
+    if args.python_conformance:
+        python_conformance_errors = _run_python_adapter_conformance()
+        if python_conformance_errors:
+            for error in python_conformance_errors:
+                print(error)
+            return 1
+        print("[ok] generated Python command package adapter conformance")
     if args.conformance:
         conformance_errors = _run_adapter_conformance(require_node=bool(args.require_node))
         if conformance_errors:
@@ -747,10 +1147,20 @@ def main(argv: list[str] | None = None) -> int:
         print("[ok] generated command package adapter conformance")
         print("[ok] weak-agent-safe generated adapter routing checks passed")
     docker_status = 0
+    if args.python_docker_conformance:
+        docker_status = _run_docker(
+            f"{args.python_tag}-conformance",
+            dockerfile="generated/python/Dockerfile.conformance",
+            proof_label="generated Python package Docker conformance proof",
+            require_docker=bool(args.require_docker),
+        )
+        if docker_status:
+            return docker_status
     if args.docker:
         docker_status = _run_docker(
             str(args.tag),
             dockerfile="generated/typescript/Dockerfile",
+            proof_label="generated TypeScript package Docker proof",
             require_docker=bool(args.require_docker),
         )
         if docker_status:
@@ -759,6 +1169,7 @@ def main(argv: list[str] | None = None) -> int:
         docker_status = _run_docker(
             f"{args.tag}-conformance",
             dockerfile="generated/typescript/Dockerfile.conformance",
+            proof_label="generated TypeScript package Docker conformance proof",
             require_docker=bool(args.require_docker),
         )
         if docker_status:

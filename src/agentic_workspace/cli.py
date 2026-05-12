@@ -113,12 +113,14 @@ from agentic_workspace.generated_cli_package import (
     build_generated_parser as build_generated_cli_package_parser,
 )
 from agentic_workspace.generated_cli_package import (
+    generated_command_names as generated_cli_package_command_names,
+)
+from agentic_workspace.generated_cli_package import (
     run_generated_command as run_generated_cli_package_command,
 )
 from agentic_workspace.generated_cli_package import (
     supports_generated_command as supports_generated_cli_package_command,
 )
-from agentic_workspace.generated_command_adapters import GENERATED_COMMAND_ADAPTERS_BY_COMMAND
 from agentic_workspace.reporting_support import (
     output_contract_payload,
     repo_friction_payload,
@@ -1183,7 +1185,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     subparsers = parser.add_subparsers(dest="command", required=True)
+    generated_commands = set(generated_cli_package_command_names())
     for command_spec in _CLI_COMMANDS_MANIFEST["commands"]:
+        if str(command_spec["name"]) in generated_commands:
+            continue
         _add_manifest_command(subparsers, command_spec)
 
     return parser
@@ -2352,13 +2357,6 @@ def main(argv: list[str] | None = None) -> int:
         else:
             _print_memory_help(payload)
         return 0
-
-    generated_adapter = _generated_adapter_for_command(str(args.command))
-    if generated_adapter is not None:
-        try:
-            return _run_generated_command_adapter(args, adapter=generated_adapter)
-        except WorkspaceUsageError as exc:
-            parser.error(str(exc))
 
     if args.command == "summary":
         try:
@@ -18819,10 +18817,6 @@ def _emit_proof(
             print(f"- {item}")
 
 
-def _generated_adapter_for_command(command_name: str) -> dict[str, Any] | None:
-    return GENERATED_COMMAND_ADAPTERS_BY_COMMAND.get(command_name)
-
-
 def _run_generated_cli_package_if_supported(argv: list[str]) -> int | None:
     if not supports_generated_cli_package_command(argv):
         return None
@@ -19160,14 +19154,6 @@ _GENERATED_RUNTIME_HANDLERS: dict[str, Callable[[argparse.Namespace], int]] = {
     "status.report": _run_lifecycle_report_adapter,
     "summary.report": _run_summary_report_adapter,
 }
-
-
-def _run_generated_command_adapter(args: argparse.Namespace, *, adapter: dict[str, Any]) -> int:
-    operation_id = str(adapter["operation_id"])
-    handler = _GENERATED_RUNTIME_HANDLERS.get(operation_id)
-    if handler is None:
-        raise WorkspaceUsageError(f"Generated adapter for {args.command} references unsupported operation {operation_id}.")
-    return handler(args)
 
 
 def _proof_payload(*, target_root: Path, descriptors: dict[str, ModuleDescriptor]) -> dict[str, Any]:
@@ -20226,6 +20212,20 @@ def _proof_selection_for_changed_paths(
         if lane_id not in selected_ids:
             selected_ids.append(lane_id)
 
+    def generated_command_package_scope() -> str | None:
+        has_python = any(path.startswith("generated/python/") for path in changed_paths)
+        has_typescript = any(path.startswith("generated/typescript/") for path in changed_paths)
+        has_shared_source = any(
+            path in {"src/agentic_workspace/contracts/command_package_ir.json"}
+            or path.startswith("scripts/generate/generate_command_packages.py")
+            for path in changed_paths
+        )
+        if has_python and not has_typescript and not has_shared_source:
+            return "python-only"
+        if has_typescript and not has_python:
+            return "typescript-only"
+        return None
+
     for changed_path in changed_paths:
         matched_rule = False
         for rule in _PROOF_SELECTION_RULES["rules"]:
@@ -20248,10 +20248,27 @@ def _proof_selection_for_changed_paths(
                 break
         if not matched_rule:
             _select(str(_PROOF_SELECTION_RULES["fallback_lane"]))
-        if cli_authority_lane and _cli_authority_classification_for_path(changed_path):
+        cli_authority_classification = _cli_authority_classification_for_path(changed_path)
+        if cli_authority_lane and cli_authority_classification:
             _select(str(cli_authority_lane))
+            if cli_authority_classification.get("id") in {"root-workspace-cli-runtime", "package-cli-runtime"}:
+                _select("generated_command_packages")
 
-    selected_lanes = [_lane(lane_id) for lane_id in selected_ids]
+    selected_lanes = [copy.deepcopy(_lane(lane_id)) for lane_id in selected_ids]
+    generated_scope = generated_command_package_scope()
+    if generated_scope == "python-only":
+        for lane in selected_lanes:
+            if lane["id"] == "generated_command_packages":
+                lane["enough_proof"] = [
+                    "uv run python scripts/check/check_generated_command_packages.py",
+                    "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+                    "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
+                ]
+                lane["ci_relationship"] = (
+                    "CI may repeat generated-package proof; local Python generated-package closeout should run "
+                    "static, local Python conformance, and Python Docker conformance serially."
+                )
+                break
     subsystem_matches = _subsystem_matches_for_changed_paths(target_root=target_root, changed_paths=changed_paths)
     subsystem_lanes: list[dict[str, Any]] = []
     for subsystem in subsystem_matches["matched_subsystems"]:

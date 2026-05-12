@@ -29,8 +29,15 @@ def _is_weak_agent_safe_typescript_target(target: dict[str, Any]) -> bool:
     return target.get("maturity_level_ref") == "weak-agent-safe-adapter"
 
 
+def _is_weak_agent_safe_python_target(target: dict[str, Any]) -> bool:
+    return target.get("kind") == "python" and target.get("maturity_level_ref") == "weak-agent-safe-adapter"
+
+
 def _is_runtime_backed_python_target(target: dict[str, Any]) -> bool:
-    return target.get("kind") == "python" and target.get("maturity_level_ref") == "runtime-backed-read-only-adapter"
+    return target.get("kind") == "python" and target.get("maturity_level_ref") in {
+        "runtime-backed-read-only-adapter",
+        "weak-agent-safe-adapter",
+    }
 
 
 def _runtime_command_for_package(package: dict[str, Any], runtime_binding: dict[str, Any]) -> str:
@@ -62,9 +69,11 @@ def _python_adapter_command_payload(package: dict[str, Any]) -> list[dict[str, A
     return payload
 
 
-def _python_runtime_adapter_module(package: dict[str, Any], *, source_path: str, regenerate_command: str) -> str:
+def _python_runtime_adapter_module(package: dict[str, Any], target: dict[str, Any], *, source_path: str, regenerate_command: str) -> str:
     rendered_package = _json_block(package)
     rendered_commands = _json_block(_python_adapter_command_payload(package))
+    weak_agent_routing = "allowed-read-only" if _is_weak_agent_safe_python_target(target) else "review-required"
+    runnable = str(target.get("maturity_level_ref") in {"runtime-backed-read-only-adapter", "weak-agent-safe-adapter"})
     return (
         '"""Generated runtime-backed Python command adapter.\n\n'
         f"Source: {source_path}\n"
@@ -93,9 +102,22 @@ def _python_runtime_adapter_module(package: dict[str, Any], *, source_path: str,
         "_GENERATED_COMMANDS_BY_NAME: dict[str, dict[str, Any]] = {\n"
         '    str(command["interface"]["name"]): command for command in _GENERATED_ADAPTER_COMMANDS\n'
         "}\n\n"
+        f"_GENERATED_MATURITY_ID = {target['maturity_level_ref']!r}\n"
+        f"_GENERATED_WEAK_AGENT_ROUTING = {weak_agent_routing!r}\n"
+        f"_GENERATED_RUNNABLE = {runnable}\n\n"
         "RuntimeHandler = Callable[[str, argparse.Namespace], int]\n\n\n"
+        "def generated_maturity() -> dict[str, object]:\n"
+        "    return {\n"
+        '        "id": _GENERATED_MATURITY_ID,\n'
+        '        "runnable": _GENERATED_RUNNABLE,\n'
+        '        "weak_agent_routing": _GENERATED_WEAK_AGENT_ROUTING,\n'
+        "    }\n\n\n"
+        "def generated_weak_agent_routing() -> str:\n"
+        "    return _GENERATED_WEAK_AGENT_ROUTING\n\n\n"
         "def generated_command_names() -> tuple[str, ...]:\n"
         "    return tuple(sorted(_GENERATED_COMMANDS_BY_NAME))\n\n\n"
+        "def generated_operation_ids() -> tuple[str, ...]:\n"
+        '    return tuple(sorted(str(command["operation_id"]) for command in _GENERATED_ADAPTER_COMMANDS))\n\n\n'
         "def supports_generated_command(argv: list[str] | tuple[str, ...]) -> bool:\n"
         "    return bool(argv) and str(argv[0]) in _GENERATED_COMMANDS_BY_NAME\n\n\n"
         "def _option_type(option_spec: dict[str, Any]) -> Any:\n"
@@ -123,7 +145,11 @@ def _python_runtime_adapter_module(package: dict[str, Any], *, source_path: str,
         '        kwargs["help"] = help_text\n'
         '    parser.add_argument(*option_spec["flags"], **kwargs)\n\n\n'
         "def build_generated_parser() -> argparse.ArgumentParser:\n"
-        f"    parser = argparse.ArgumentParser(prog={json.dumps(package['program'])}, description={json.dumps(package.get('summary', ''))})\n"
+        "    epilog = (\n"
+        '        f"Weak-agent routing: {_GENERATED_WEAK_AGENT_ROUTING}\\n"\n'
+        '        "Recovery: use one of the supported generated commands or route back to the canonical Python CLI."\n'
+        "    )\n"
+        f"    parser = argparse.ArgumentParser(prog={json.dumps(package['program'])}, description={json.dumps(package.get('summary', ''))}, epilog=epilog, formatter_class=argparse.RawDescriptionHelpFormatter)\n"
         '    subparsers = parser.add_subparsers(dest="command", required=True)\n'
         "    for command in _GENERATED_ADAPTER_COMMANDS:\n"
         '        interface = command["interface"]\n'
@@ -433,7 +459,7 @@ def render_outputs(
                     outputs.append(
                         GeneratedOutput(
                             module_path,
-                            _python_runtime_adapter_module(package, source_path=source_path, regenerate_command=regenerate_command),
+                            _python_runtime_adapter_module(package, target, source_path=source_path, regenerate_command=regenerate_command),
                         )
                     )
                     continue

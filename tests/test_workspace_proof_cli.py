@@ -842,6 +842,38 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
     assert generated["regeneration_path"] == "uv run python scripts/check/check_generated_command_packages.py"
 
 
+def test_proof_changed_selector_routes_python_generated_packages_to_python_docker(capsys) -> None:
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--changed",
+                "generated/python/workspace-cli/generated_cli_package/__init__.py",
+                "scripts/check/check_generated_command_packages.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    answer = payload["answer"]
+    assert [lane["id"] for lane in answer["selected_lanes"]] == ["generated_command_packages", "cli_authority"]
+    assert answer["required_commands"] == [
+        "uv run python scripts/check/check_generated_command_packages.py",
+        "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+        "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
+        "uv run agentic-workspace defaults --section root_cli_authority --format json",
+    ]
+    assert (
+        "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker"
+        not in answer["required_commands"]
+    )
+    assert "Python Docker conformance" in answer["selected_lanes"][0]["ci_relationship"]
+
+
 def test_proof_changed_selector_routes_contract_only_changes_to_focused_lane(capsys) -> None:
     assert (
         cli.main(
@@ -1009,6 +1041,7 @@ def test_proof_changed_selector_flags_direct_cli_edits(capsys) -> None:
     assert [lane["id"] for lane in answer["selected_lanes"]] == [
         "workspace_cli",
         "cli_authority",
+        "generated_command_packages",
         "subsystem:workspace-cli-runtime",
     ]
     authority_review = answer["cli_authority_review"]
@@ -1050,6 +1083,7 @@ def test_proof_changed_selector_broadens_contract_plus_cli_changes(capsys) -> No
         "contract_tooling",
         "workspace_cli",
         "cli_authority",
+        "generated_command_packages",
         "subsystem:workspace-cli-runtime",
     ]
     assert answer["escalate_when"][0] == "changed paths span multiple validation lanes; run all selected commands or split the work"
@@ -1078,6 +1112,7 @@ def test_proof_changed_selector_escalates_for_cross_lane_changes(capsys) -> None
         "planning_package",
         "workspace_cli",
         "cli_authority",
+        "generated_command_packages",
         "subsystem:workspace-cli-runtime",
     ]
     assert answer["escalate_when"][0] == "changed paths span multiple validation lanes; run all selected commands or split the work"

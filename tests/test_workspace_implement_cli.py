@@ -32,6 +32,10 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(capsys)
         "make test-workspace",
         "make lint-workspace",
         "uv run agentic-workspace defaults --section root_cli_authority --format json",
+        "uv run python scripts/check/check_generated_command_packages.py",
+        "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
+        "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
+        "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
         "uv run pytest tests/test_workspace_cli.py -q",
     ]
     assert payload["proof"]["cli_authority_review"]["classifications"][0]["role"] == "hand-owned-executable"
@@ -93,6 +97,7 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(capsys
     assert "make lint-workspace" in payload["next"]["commands"]
     assert payload["scope"]["inspect_files"] == ["src/agentic_workspace/cli.py"]
     assert "make test-workspace" in payload["proof"]["required_commands"]
+    assert "uv run python scripts/check/check_generated_command_packages.py" in payload["proof"]["required_commands"]
     assert payload["proof"]["acceptance_guidance"]["status"] == "present"
     assert payload["routing"]["work_shape"] == "bounded"
     acknowledgement = payload["intent_acknowledgement"]
@@ -114,7 +119,28 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(capsys
     assert "authority_markers" not in payload
     assert "durable_intent" not in payload
     assert "inference_limits" not in payload
-    assert len(encoded) < 5900
+    assert len(encoded) < 7000
+
+
+def test_implement_package_cli_edits_select_generated_command_package_gate(capsys) -> None:
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--changed",
+                "packages/memory/src/repo_memory_bootstrap/cli.py",
+                "--task",
+                "change package cli runtime adapter",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert "make test-memory" in payload["proof"]["required_commands"]
+    assert "uv run python scripts/check/check_generated_command_packages.py" in payload["proof"]["required_commands"]
 
 
 def test_implement_uses_available_target_makefile_targets(tmp_path: Path, capsys) -> None:

@@ -960,11 +960,46 @@ def _executable_command_surfaces(command_specs: list[dict[str, object]]) -> set[
 def _known_command_names_for_program(program: str) -> set[str]:
     if program == cli_commands_manifest()["program"]:
         return {command["name"] for command in cli_commands_manifest()["commands"]}
+    generated_parser = _program_generated_parser(program)
+    generated_subparsers = _subparser_action(generated_parser) if generated_parser is not None else None
+    generated_names = set(generated_subparsers.choices) if generated_subparsers is not None else set()
     parser = _program_parser(program)
     subparsers = _subparser_action(parser) if parser is not None else None
     if subparsers is None:
-        return set()
-    return {str(command_name) for command_name in subparsers.choices}
+        return {str(command_name) for command_name in generated_names}
+    return {str(command_name) for command_name in set(subparsers.choices) | generated_names}
+
+
+def _program_generated_parser(program: str) -> argparse.ArgumentParser | None:
+    if program == "agentic-workspace":
+        from agentic_workspace import generated_cli_package
+
+        return generated_cli_package.build_generated_parser()
+    if program == "agentic-planning":
+        from repo_planning_bootstrap import generated_cli_package
+
+        return generated_cli_package.build_generated_parser()
+    if program == "agentic-memory":
+        from repo_memory_bootstrap import generated_cli_package
+
+        return generated_cli_package.build_generated_parser()
+    return None
+
+
+def _program_generated_command_names(program: str) -> set[str]:
+    if program == "agentic-workspace":
+        from agentic_workspace import generated_cli_package
+
+        return set(generated_cli_package.generated_command_names())
+    if program == "agentic-planning":
+        from repo_planning_bootstrap import generated_cli_package
+
+        return set(generated_cli_package.generated_command_names())
+    if program == "agentic-memory":
+        from repo_memory_bootstrap import generated_cli_package
+
+        return set(generated_cli_package.generated_command_names())
+    return set()
 
 
 def _program_parser(program: str) -> argparse.ArgumentParser | None:
@@ -1028,6 +1063,8 @@ def _validate_generated_adapter_live_cli_parity(payload: dict[str, object]) -> l
         command_name = str(command.get("name", ""))
         subcommand_name = str(command["subcommand"]) if isinstance(command.get("subcommand"), str) else None
         parser = _program_parser(program)
+        if command_name in _program_generated_command_names(program):
+            parser = _program_generated_parser(program)
         if parser is None:
             errors.append(f"generated adapter {adapter_id} references unknown live CLI program {program}")
             continue
@@ -1046,6 +1083,8 @@ def _validate_generated_adapter_live_cli_parity(payload: dict[str, object]) -> l
             operation_surface.get("subcommand") is not None or subcommand_name is not None
         ):
             errors.append(f"generated adapter {adapter_id} subcommand drifted from operation command_surface")
+        if command_name in _program_generated_command_names(program):
+            continue
         expected_cli_inputs = {
             str(input_spec["name"]): bool(input_spec.get("required", False))
             for input_spec in operation.get("inputs", [])
@@ -1593,11 +1632,14 @@ def main(argv: list[str] | None = None) -> int:
         checks.append(("module registry parity", ["live module registry drifted from module_registry.json"]))
     parser_manifest = cli_commands_manifest()
     parser_snapshot = _parser_snapshot(cli.build_parser())
-    expected_parser_snapshot = [_resolved_command_manifest(spec) for spec in parser_manifest["commands"]]
+    generated_root_commands = set(cli.generated_cli_package_command_names())  # type: ignore[attr-defined]
+    expected_parser_snapshot = [
+        _resolved_command_manifest(spec) for spec in parser_manifest["commands"] if str(spec["name"]) not in generated_root_commands
+    ]
     if parser_snapshot != expected_parser_snapshot:
         checks.append(("cli command manifest parity", ["argparse command/options/defaults drifted from cli_commands.json or cli_option_groups.json"]))
-    if [item["name"] for item in parser_manifest["commands"]] != [item["name"] for item in expected_parser_snapshot]:
-        checks.append(("cli command manifest parity", ["resolved command ordering drifted from cli_commands.json"]))
+    if [item["name"] for item in parser_snapshot] != [item["name"] for item in expected_parser_snapshot]:
+        checks.append(("cli command manifest parity", ["resolved handwritten command ordering drifted from cli_commands.json"]))
     if "modules" not in cli._command_suggestions("moduls"):  # type: ignore[attr-defined]
         checks.append(("cli command manifest parity", ["command suggestions no longer derive the expected known commands"]))
     workspace_config_schema = contract_schema("workspace_config.schema.json")

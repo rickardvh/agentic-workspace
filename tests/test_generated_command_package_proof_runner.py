@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import importlib.util
 import sys
 from pathlib import Path
@@ -34,10 +35,12 @@ def test_generated_command_package_proof_defaults_to_docker_steps() -> None:
     steps = runner._proof_steps(runner.parse_args([]))
 
     assert [step.label for step in steps] == [
+        "generated packages python docker conformance",
         "generated packages docker",
         "generated packages docker conformance",
     ]
     assert [step.args for step in steps] == [
+        ["--python-docker-conformance", "--require-docker"],
         ["--docker", "--require-docker"],
         ["--docker-conformance", "--require-docker"],
     ]
@@ -58,11 +61,13 @@ def test_generated_command_package_proof_all_runs_every_step(monkeypatch, capsys
     assert status == 0
     assert calls == [
         ("generated packages static", [], 12.0, 7),
+        ("generated packages python conformance", ["--python-conformance"], 12.0, 7),
+        ("generated packages python docker conformance", ["--python-docker-conformance", "--require-docker"], 12.0, 7),
         ("generated packages conformance", ["--conformance", "--require-node"], 12.0, 7),
         ("generated packages docker", ["--docker", "--require-docker"], 12.0, 7),
         ("generated packages docker conformance", ["--docker-conformance", "--require-docker"], 12.0, 7),
     ]
-    assert "[ok] generated command package proof (4 steps," in capsys.readouterr().out
+    assert "[ok] generated command package proof (6 steps," in capsys.readouterr().out
 
 
 def test_generated_typescript_conformance_cases_come_from_contract_artifacts() -> None:
@@ -86,6 +91,95 @@ def test_generated_typescript_conformance_cases_come_from_contract_artifacts() -
     assert memory_skills.expected_fields == {"mode": "skills"}
 
 
+def test_generated_python_conformance_uses_contract_artifacts() -> None:
+    checker = _load_checker()
+
+    registries, errors = checker._adapter_conformance_cases_by_package()
+
+    assert errors == []
+    assert set(registries) == {"root-workspace", "planning-bootstrap", "memory-bootstrap"}
+    defaults = registries["root-workspace"]["defaults.report.process"]
+    planning_status = registries["planning-bootstrap"]["planning.status.process"]
+    memory_skills = registries["memory-bootstrap"]["memory.list-skills.process"]
+
+    assert checker._python_command_for_package("root-workspace")[-1] == "agentic_workspace.cli"
+    assert checker._python_command_for_package("planning-bootstrap")[-1] == "repo_planning_bootstrap.cli"
+    assert checker._python_command_for_package("memory-bootstrap")[-1] == "repo_memory_bootstrap.cli"
+    assert defaults.success_args == ["defaults", "--section", "startup", "--format", "json"]
+    assert defaults.expected_exit == 0
+    assert defaults.allow_stderr is False
+    assert defaults.expected_fields["answer.default_canonical_agent_instructions_file"] == "AGENTS.md"
+    assert planning_status.expected_fields == {"dry_run": False}
+    assert memory_skills.expected_fields == {"mode": "skills"}
+
+
+def test_generated_python_conformance_classifies_native_crashes(monkeypatch) -> None:
+    checker = _load_checker()
+    registries, errors = checker._adapter_conformance_cases_by_package()
+    assert errors == []
+    monkeypatch.setenv("AGENTIC_GENERATED_CONFORMANCE_CONTAINER", "python")
+
+    message = checker._format_generated_adapter_exit_failure(
+        language="python",
+        package_id="root-workspace",
+        case=registries["root-workspace"]["setup.guidance.process"],
+        command=["python", "shim.py"],
+        returncode=-11,
+        expected_exit=0,
+        stderr="",
+    )
+
+    assert "classification=runtime-crash-or-proof-environment-residue" in message
+    assert "proof_surface=generated-python-docker-conformance" in message
+    assert "package=root-workspace" in message
+    assert "conformance_ref=setup.guidance.process" in message
+    assert "command=setup" in message
+    assert "fixture=minimal-repo" in message
+    assert "exit=-11" in message
+    assert "signal 11" in message
+    assert "rerun this package/case or the Docker conformance proof" in message
+
+
+def test_generated_python_conformance_classifies_contract_failures() -> None:
+    checker = _load_checker()
+    registries, errors = checker._adapter_conformance_cases_by_package()
+    assert errors == []
+
+    message = checker._format_generated_adapter_exit_failure(
+        language="python",
+        package_id="root-workspace",
+        case=registries["root-workspace"]["setup.guidance.process"],
+        command=["python", "shim.py"],
+        returncode=2,
+        expected_exit=0,
+        stderr="bad option",
+    )
+
+    assert "classification=adapter-contract-failure" in message
+    assert "proof_surface=generated-python-adapter-conformance" in message
+    assert "compare adapter output with the contract-backed runtime expectation" in message
+
+
+def test_generated_python_conformance_reports_crash_retry_recovery(monkeypatch) -> None:
+    checker = _load_checker()
+    registries, errors = checker._adapter_conformance_cases_by_package()
+    assert errors == []
+    monkeypatch.setenv("AGENTIC_GENERATED_CONFORMANCE_CONTAINER", "python")
+
+    message = checker._format_generated_adapter_retry_recovery(
+        language="python",
+        package_id="root-workspace",
+        case=registries["root-workspace"]["doctor.report.process"],
+        command=["python", "shim.py"],
+        first_returncode=-11,
+    )
+
+    assert "runtime crash recovered after retry" in message
+    assert "proof_surface=generated-python-docker-conformance" in message
+    assert "conformance_ref=doctor.report.process" in message
+    assert "first_exit=-11" in message
+
+
 def test_static_generated_package_proof_fails_when_conformance_coverage_drifts(monkeypatch) -> None:
     checker = _load_checker()
 
@@ -107,6 +201,86 @@ def test_command_package_ir_records_deferred_shell_transport_evaluation() -> Non
     assert "black-box conformance for runtime handoff" in shell_policy
     assert root_targets["bash"]["maturity_level_ref"] == "deferred"
     assert root_targets["powershell"]["maturity_level_ref"] == "deferred"
+
+
+def test_static_generated_package_proof_requires_python_completion_gate_evidence(monkeypatch) -> None:
+    checker = _load_checker()
+    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+    ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
+    ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"] = [
+        item
+        for item in ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"]
+        if item["id"] != "python-docker-conformance"
+    ]
+    monkeypatch.setattr(checker, "load_workspace_command_package_ir", lambda *, repo_root: ir)
+
+    errors = checker._validate_static_surfaces()
+
+    assert any("python-docker-conformance" in error for error in errors)
+
+
+def test_static_generated_package_proof_rejects_python_completion_proof_surface_drift(monkeypatch) -> None:
+    checker = _load_checker()
+    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+    for item in ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"]:
+        if item["id"] == "python-docker-conformance":
+            item["proof"] = "uv run python scripts/check/check_generated_command_packages.py"
+            break
+    monkeypatch.setattr(checker, "load_workspace_command_package_ir", lambda *, repo_root: ir)
+
+    errors = checker._validate_static_surfaces()
+
+    assert any("--python-docker-conformance --require-docker" in error for error in errors)
+
+
+def test_static_generated_package_proof_accepts_python_completion_gate() -> None:
+    checker = _load_checker()
+
+    errors = checker._validate_static_surfaces()
+
+    assert not [error for error in errors if "Python CLI completion" in error or "Python completion" in error]
+
+
+def test_python_runtime_handler_boundary_rejects_non_adapter_handlers(monkeypatch) -> None:
+    checker = _load_checker()
+    memory_cli = checker.importlib.import_module("repo_memory_bootstrap.cli")
+    drifted_handlers = dict(memory_cli._GENERATED_RUNTIME_HANDLERS)
+    drifted_handlers["memory.status.report"] = memory_cli._handle_status
+    monkeypatch.setattr(memory_cli, "_GENERATED_RUNTIME_HANDLERS", drifted_handlers)
+
+    errors = checker._validate_python_runtime_handler_boundary()
+
+    assert any("memory.status.report" in error and "thin _run_*_adapter binding" in error for error in errors)
+
+
+def test_python_runtime_import_boundary_rejects_legacy_generated_adapter_dispatch() -> None:
+    checker = _load_checker()
+    errors = checker._validate_no_legacy_generated_adapter_runtime_import(
+        relative_path="src/agentic_workspace/cli.py",
+        text="from agentic_workspace.generated_command_adapters import GENERATED_COMMAND_ADAPTERS_BY_COMMAND\n",
+    )
+
+    assert errors == [
+        "src/agentic_workspace/cli.py must route generated Python commands through generated_cli_package, "
+        "not legacy generated_command_adapters runtime dispatch"
+    ]
+
+
+def test_python_parser_retirement_rejects_generated_command_in_handwritten_parser(monkeypatch) -> None:
+    checker = _load_checker()
+    root_cli = checker.importlib.import_module("agentic_workspace.cli")
+
+    def build_drifted_parser() -> argparse.ArgumentParser:
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers(dest="command", required=True)
+        subparsers.add_parser("defaults")
+        return parser
+
+    monkeypatch.setattr(root_cli, "build_parser", build_drifted_parser)
+
+    errors = checker._validate_generated_python_commands_absent_from_handwritten_parsers()
+
+    assert any("handwritten parser still accepts generated command 'defaults'" in error for error in errors)
 
 
 def test_typescript_runtime_handoff_thinness_rejects_runtime_owned_behavior() -> None:
