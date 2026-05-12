@@ -154,7 +154,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["relay"]["rule"] == (
         "Use a strong planner to normalize the vague prompt, then hand compact exploration, implementation, or validation contracts to bounded executors without prescribing the execution method."
     )
-    assert payload["relay"]["handoff_command"] == "agentic-planning handoff --format json"
+    assert payload["relay"]["handoff_command"] == "agentic-workspace planning handoff --format json"
     assert payload["relay"]["execution_methods"][1]["id"] == "external cli or api"
     assert payload["relay"]["planner_role"]["summary"] == (
         "shape confirmed and interpreted intent, choose the proof lane, and freeze the smallest safe contract."
@@ -182,7 +182,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert "the narrow lane cannot prove the change on its own" in workspace_lane["escalate_when"]
     planning_surface_lane = next(lane for lane in payload["validation"]["lanes"] if lane["id"] == "planning_surfaces")
     assert planning_surface_lane["enough_proof"] == [
-        "agentic-planning summary --target ./repo --verbose --format json",
+        "agentic-workspace summary --target ./repo --verbose --format json",
         "agentic-workspace doctor --target ./repo --modules planning --format json",
     ]
     assert payload["validation"]["escalation_rule"] == (

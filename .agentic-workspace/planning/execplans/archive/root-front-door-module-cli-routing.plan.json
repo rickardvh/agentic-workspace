@@ -1,0 +1,324 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Route module CLI operations through the workspace front door",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "User feedback: host-facing agentic-planning and agentic-memory references should route through agentic-workspace; work grew beyond direct fix",
+    "hard_constraints": "Do not expose direct module CLIs in ordinary host-facing guidance; keep package-local CLI identity and operation contracts only where they describe internal/package surfaces.",
+    "agent_may_decide": "Add root workspace wrapper commands, update shipped and installed guidance, add guard tests, and leave deeper generated/package CLI migration to tracked follow-up issues.",
+    "escalate_when": "A fix requires replacing package CLIs entirely, changing generated command package architecture, or rewriting historical archived planning evidence.",
+    "next_action": "Commit and push the validated root front-door module CLI routing work to master.",
+    "proof_expectations": [
+      "make test-workspace",
+      "make lint-workspace",
+      "make test-planning",
+      "make lint-planning",
+      "make test-memory",
+      "make lint-memory"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/cli.py",
+      "src/agentic_workspace/contracts/",
+      "src/agentic_workspace/reporting_support.py",
+      "packages/planning/skills/",
+      "packages/memory/skills/",
+      ".agentic-workspace/WORKFLOW.md",
+      ".agentic-workspace/planning/skills/",
+      ".agentic-workspace/memory/skills/",
+      "tests/"
+    ],
+    "completion_criteria": [
+      "Route module CLI operations through the workspace front door is implemented, validated, and closed out honestly."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "User feedback: host-facing agentic-planning and agentic-memory references should route through agentic-workspace; work grew beyond direct fix"
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "User feedback: host-facing agentic-planning and agentic-memory references should route through agentic-workspace; work grew beyond direct fix",
+      "constraints": "Do not expose direct module CLIs in ordinary host-facing guidance; keep package-local CLI identity and operation contracts only where they describe internal/package surfaces.",
+      "latitude": "Add root workspace wrapper commands, update shipped and installed guidance, add guard tests, and leave deeper generated/package CLI migration to tracked follow-up issues.",
+      "escalation": "Escalate when a fix requires replacing package CLIs entirely, changing generated command package architecture, or rewriting historical archived planning evidence."
+    },
+    "execution": {
+      "milestone": "root-front-door-module-cli-routing",
+      "status": "completed",
+      "next_step": "Commit and push the validated root front-door module CLI routing work to master.",
+      "proof": "make test-workspace; make lint-workspace; make test-planning; make lint-planning; make test-memory; make lint-memory"
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/cli.py",
+        "src/agentic_workspace/contracts/",
+        "src/agentic_workspace/reporting_support.py",
+        "packages/planning/skills/",
+        "packages/memory/skills/",
+        ".agentic-workspace/WORKFLOW.md",
+        ".agentic-workspace/planning/skills/",
+        ".agentic-workspace/memory/skills/",
+        "tests/"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "User feedback: host-facing agentic-planning and agentic-memory references should route through agentic-workspace; work grew beyond direct fix",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Host-facing planning and memory operations can be invoked through agentic-workspace front-door subcommands while package-local CLIs remain internal/debug surfaces.",
+    "intentionally deferred": "Removing package-local CLI entry points entirely; that is a deeper package architecture decision tracked by filed follow-up issues.",
+    "discovered implications": "Current host-facing docs also contained direct module CLI references and needed cleanup, not only skills and startup recommendations.",
+    "proof achieved now": "workspace, planning, and memory test/lint suites passed; contract and inventory guardrails passed; targeted current-doc scan found no direct module CLI guidance.",
+    "validation still needed": "None for this slice. The strict source-payload operational install checker still reports pre-existing planning bootstrap payload drift unrelated to this routing change.",
+    "next likely slice": "Follow issues #926 and #927 if the package architecture should remove or further constrain module CLI entry points."
+  },
+  "intent_interpretation": {
+    "literal request": "Route module CLI operations through the workspace front door",
+    "inferred intended outcome": "User feedback: host-facing agentic-planning and agentic-memory references should route through agentic-workspace; work grew beyond direct fix",
+    "chosen concrete what": "Add workspace front-door planning and memory subcommands, rewrite host-facing guidance to use them, and keep direct module CLI references limited to package/internal identity.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Root workspace CLI/contracts/reporting, planning and memory shipped skills, installed skill mirrors, workflow guidance, tests, and this execplan/state record.",
+    "max changed files": "About 45 files; stop before expanding into generated command packages or historical archives.",
+    "required validation commands": "make test-workspace; make lint-workspace; make test-planning; make lint-planning; make test-memory; make lint-memory",
+    "ask-before-refactor threshold": "Ask before changing package CLI existence, generated CLI package semantics, or historical archive data.",
+    "stop before touching": "Generated Python/TypeScript command packages, package-local parser names, lockfiles, or unrelated docs not needed for host-facing guidance."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue from contract-tooling parity failures after adding root planning/memory subcommands; finish proof and closeout.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "User feedback: host-facing agentic-planning and agentic-memory references should route through agentic-workspace; work grew beyond direct fix",
+    "hard constraints": "Do not expose direct module CLIs in ordinary host-facing guidance; keep package-local CLI identity and operation contracts only where they describe internal/package surfaces.",
+    "agent may decide locally": "Add root workspace wrapper commands, update shipped and installed guidance, add guard tests, and leave deeper generated/package CLI migration to tracked follow-up issues.",
+    "escalate when": "A fix requires replacing package CLIs entirely, changing generated command package architecture, or rewriting historical archived planning evidence."
+  },
+  "post_decomposition_delegation": {
+    "status": "complete",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "User feedback: host-facing agentic-planning and agentic-memory references should route through agentic-workspace; work grew beyond direct fix",
+      "label": "User feedback: host-facing agentic-planning and agentic-memory references should route through agentic-workspace; work grew beyond direct fix",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "root-front-door-module-cli-routing",
+    "status": "completed",
+    "scope": "Route host-facing planning and memory operations through agentic-workspace front-door commands.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Commit and push the validated root front-door module CLI routing work to master."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/cli.py",
+    "src/agentic_workspace/contracts/",
+    "src/agentic_workspace/reporting_support.py",
+    "packages/planning/skills/",
+    "packages/memory/skills/",
+    ".agentic-workspace/WORKFLOW.md",
+    ".agentic-workspace/planning/skills/",
+    ".agentic-workspace/memory/skills/",
+    "tests/"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "make test-workspace",
+    "make lint-workspace",
+    "make test-planning",
+    "make lint-planning",
+    "make test-memory",
+    "make lint-memory",
+    "stale-reference sweep: rg -n \"agentic-(planning|memory)\" .agentic-workspace/docs .agentic-workspace/planning/execplans/README.md .agentic-workspace/planning/execplans/TEMPLATE.plan.json packages/memory/bootstrap/README.md scripts/check/check_source_payload_operational_install.py (expect no matches)"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Route module CLI operations through the workspace front door is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-workspace planning new-plan",
+    "what happened": "Work started as a direct fix, then was promoted after scope expanded; issues #926 and #927 were filed, root planning and memory front-door wrappers were added, host-facing guidance was rewritten, and guard tests/contracts were updated.",
+    "scope touched": "root CLI/contracts/reporting, shipped planning/memory skills, installed skill mirrors, workflow and current docs, package memory bootstrap README, payload sync checker guidance, tests, and planning state.",
+    "changed surfaces": "agentic-workspace now exposes planning and memory front-door subcommands; host-facing current guidance points to agentic-workspace; compact routing output preserves required decomposition and maintainer-mode fields without breaking tiny payload budgets.",
+    "validations run": "make test-workspace; make lint-workspace; make test-planning; make lint-planning; make test-memory; make lint-memory; uv run pytest tests/test_workspace_cli.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py packages/planning/tests/test_install.py; targeted rg current host-facing docs for direct agentic-planning/agentic-memory invocations returned no matches.",
+    "result for continuation": "No continuation required for this slice. Follow issues #926 and #927 for deeper package CLI architecture if desired.",
+    "next step": "Commit and push master."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed for selected proof; one unrelated strict source-payload checker warning remains pre-existing",
+    "intent served": "yes",
+    "config compliance": "late but corrected: active execplan and state entry were added after user called out scope growth",
+    "misinterpretation risk": "low",
+    "follow-on decision": "issues #926 and #927 track deeper planning and memory routing/CLI architecture"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "The remaining work was tightly coupled root CLI, contracts, tests, and docs cleanup.",
+    "expected savings": "low",
+    "actual friction": "Late planning increased coordination cost; compact-output regressions were caught by tests.",
+    "proof result": "passed",
+    "quality concern": "Need to avoid future broad direct fixes without registering plan state early.",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "make test-workspace; make lint-workspace; make test-planning; make lint-planning; make test-memory; make lint-memory; tests/test_workspace_cli.py; contract tooling; structured file inventory; targeted current-doc rg",
+    "proof achieved now": "passed",
+    "evidence for \"proof achieved\" state": "All selected commands passed. `uv run python scripts/check/check_source_payload_operational_install.py --format json --strict` still reports existing planning bootstrap payload drift, so it is recorded as unrelated residual risk rather than acceptance proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "User feedback: host-facing agentic-planning and agentic-memory references should route through agentic-workspace; work grew beyond direct fix",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Root front-door planning and memory subcommands exist; shipped/installed skills and current host-facing docs use agentic-workspace invocations; guard tests reject stale direct module CLI guidance in those surfaces.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Host-facing planning and memory operations route through agentic-workspace front-door commands, with direct module CLI references removed from current guidance surfaces.",
+    "validation confirmed": "make test-workspace; make lint-workspace; make test-planning; make lint-planning; make test-memory; make lint-memory; contract and inventory checks",
+    "follow-on routed to": "#926 and #927",
+    "post-work posterity capture": "execplan closeout fields updated",
+    "knowledge promoted (Memory/Docs/Config)": "current docs and shipped/installed skill guidance now encode root front-door routing",
+    "resume from": "no resume needed"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "This was a bounded code/docs fix; current docs and tests now carry the durable command guidance.",
+    "target scope": "none",
+    "proposed durable intent": "",
+    "confidence": "medium",
+    "needs review": false,
+    "owner surface": "current docs and command contracts"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-workspace planning archive-plan --plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "The requested host-facing routing fix is implemented and validated; broader removal of package-local CLIs is intentionally tracked separately.",
+    "evidence carried forward": "Passed workspace/planning/memory test and lint suites, contract tooling, structured inventory, and no-match scan for current host-facing direct module CLI guidance.",
+    "reopen trigger": "A current host-facing workflow again recommends agentic-planning or agentic-memory directly for ordinary repo work."
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [
+      "Direct module CLI references existed beyond startup/skill surfaces, including current docs and payload-sync operator guidance."
+    ],
+    "signals fixed": [
+      "Current host-facing docs and the payload sync checker now point to agentic-workspace front-door commands."
+    ],
+    "signals routed": [
+      "#926 planning front-door routing follow-up",
+      "#927 memory front-door routing follow-up"
+    ],
+    "signals dismissed": [
+      "Historical archives, package identity metadata, package-local tests, and source labels intentionally retain module package names."
+    ],
+    "next owner": "none for this slice"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        "Historical archived references and package identity strings were left unchanged."
+      ],
+      "continuation": [
+        "Use issues #926 and #927 for deeper package CLI architecture decisions."
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-12: Scaffolded by agentic-workspace planning new-plan after user correctly pointed out the work had grown beyond direct mode.",
+    "2026-05-12: Completed after adding root planning/memory front-door commands, removing current host-facing direct module CLI guidance, and passing selected proof."
+  ]
+}

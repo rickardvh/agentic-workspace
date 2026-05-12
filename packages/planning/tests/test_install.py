@@ -199,7 +199,8 @@ def test_bootstrap_upgrade_skill_uses_root_lifecycle_without_unshipped_helper_sc
         assert "agentic-workspace upgrade --target <repo> --dry-run --format json" in text
         assert "agentic-workspace upgrade --target <repo> --format json" in text
         assert "agentic-workspace doctor --target <repo> --format json" in text
-        assert "agentic-planning upgrade --target <repo>" in text
+        assert "agentic-workspace upgrade --target <repo>" in text
+        assert "agentic-planning upgrade --target <repo>" not in text
         assert "package-local debugging" in text
         assert "scripts/render_agent_docs.py" not in text
         assert "scripts/check/check_maintainer_surfaces.py" not in text

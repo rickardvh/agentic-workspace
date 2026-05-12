@@ -17,6 +17,72 @@
       "migration_status": "draft-contract-only"
     },
     {
+      "id": "planning.new-plan.lifecycle",
+      "path": "operations/planning.new-plan.lifecycle.json",
+      "command": "planning",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "planning.promote-to-plan.lifecycle",
+      "path": "operations/planning.promote-to-plan.lifecycle.json",
+      "command": "planning",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "planning.archive-plan.lifecycle",
+      "path": "operations/planning.archive-plan.lifecycle.json",
+      "command": "planning",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "planning.handoff.report",
+      "path": "operations/planning.handoff.report.json",
+      "command": "planning",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "planning.front-door-report.report",
+      "path": "operations/planning.front-door-report.report.json",
+      "command": "planning",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "memory.route.report",
+      "path": "operations/memory.route.report.json",
+      "command": "memory",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "memory.help",
+      "path": "operations/memory.help.json",
+      "command": "memory",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "memory.sync-memory.report",
+      "path": "operations/memory.sync-memory.report.json",
+      "command": "memory",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "memory.front-door-promotion-report.report",
+      "path": "operations/memory.front-door-promotion-report.report.json",
+      "command": "memory",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "memory.capture-note.report",
+      "path": "operations/memory.capture-note.report.json",
+      "command": "memory",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "memory.front-door-report.report",
+      "path": "operations/memory.front-door-report.report.json",
+      "command": "memory",
+      "migration_status": "draft-contract-only"
+    },
+    {
       "id": "summary.report",
       "path": "operations/summary.report.json",
       "command": "summary",

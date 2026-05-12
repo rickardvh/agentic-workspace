@@ -6,11 +6,10 @@
     "workspace_proof": "agentic-workspace proof --target ./repo --format json",
     "workspace_status": "agentic-workspace status --target ./repo",
     "workspace_doctor": "agentic-workspace doctor --target ./repo",
-    "planning_surfaces": "agentic-planning summary --target ./repo --verbose --format json",
+    "planning_surfaces": "agentic-workspace summary --target ./repo --verbose --format json",
     "maintainer_surfaces": "make maintainer-surfaces",
     "source_payload_install": "uv run pytest tests/test_source_payload_operational_install.py",
     "planning_payload": "uv run agentic-planning upgrade --target .",
-    "memory_payload": "uv run agentic-memory upgrade --target ."
+    "memory_payload": "uv run agentic-workspace upgrade --target . --modules memory"
   }
 }
-

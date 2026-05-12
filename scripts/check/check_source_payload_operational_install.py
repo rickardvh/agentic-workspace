@@ -680,8 +680,8 @@ def gather_sync_proof(*, repo_root: Path = REPO_ROOT) -> dict[str, object]:
         "operator_commands": [
             "uv run python scripts/check/check_source_payload_operational_install.py --format json --strict",
             "make maintainer-surfaces",
-            "uv run agentic-planning upgrade --target .",
-            "uv run agentic-memory upgrade --target .",
+            "uv run agentic-workspace upgrade --target . --modules planning",
+            "uv run agentic-workspace upgrade --target . --modules memory",
         ],
     }
 
@@ -740,4 +740,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -948,6 +948,8 @@ def _executable_command_surfaces(command_specs: list[dict[str, object]]) -> set[
         command_name = str(command_spec["name"])
         subcommands = command_spec.get("subcommands", [])
         if isinstance(subcommands, list) and subcommands:
+            if command_spec.get("subcommands_required") is False:
+                surfaces.add((command_name, None))
             for subcommand_spec in subcommands:
                 surfaces.add((command_name, str(subcommand_spec["name"])))
             continue
@@ -1734,4 +1736,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -23,7 +23,7 @@ The worker may be:
 3. the active execplan
 4. `agentic-workspace config --target . --format json`
 5. `agentic-workspace defaults --section relay --format json`
-6. `agentic-planning handoff --format json`
+6. `agentic-workspace planning handoff --format json`
 
 ## Workflow
 
@@ -31,7 +31,7 @@ The worker may be:
 2. Inspect the effective mixed-agent posture from local config.
 3. After decomposition, classify each slice as `keep-local`, `delegate-exploration`, `delegate-implementation`, `delegate-validation`, `escalate-review`, or `no-safe-route`.
 4. If delegation is not supported or not worthwhile, stay direct and record the skipped reason.
-5. If delegation is worthwhile, derive the worker handoff from `agentic-planning handoff --format json`.
+5. If delegation is worthwhile, derive the worker handoff from `agentic-workspace planning handoff --format json`.
 6. Choose any execution method that preserves that contract:
    - internal delegation when the environment supports it and prefers it
    - read-only exploration when one bounded question can avoid broad rereads

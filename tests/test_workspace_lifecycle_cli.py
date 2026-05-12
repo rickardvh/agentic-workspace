@@ -261,6 +261,28 @@ def test_uninstall_local_only_removes_workspace_tree_local_startup_and_git_exclu
     assert lifecycle_plan["mutation_safety"]["classification"] == "destructive-mutation"
 
 
+def test_upgrade_after_local_only_install_preserves_agents_indirection(tmp_path: Path, capsys) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    _init_git_repo(repo_root)
+    _write(repo_root / "AGENTS.md", "# Host agents\n")
+
+    assert cli.main(["install", "--modules", "planning", "--target", str(repo_root), "--local-only", "--format", "json"]) == 0
+    capsys.readouterr()
+    agents_after_install = (repo_root / "AGENTS.md").read_text(encoding="utf-8")
+
+    assert cli.main(["upgrade", "--modules", "planning", "--target", str(repo_root), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    agents_after_upgrade = (repo_root / "AGENTS.md").read_text(encoding="utf-8")
+    assert agents_after_upgrade == agents_after_install
+    assert "<!-- agentic-workspace:workflow:start -->" not in agents_after_upgrade
+    assert "<!-- agentic-workspace:workflow:start -->" in (repo_root / "AGENTS.local.md").read_text(encoding="utf-8")
+    workspace_report = next(report for report in payload["reports"] if report["module"] == "workspace")
+    assert any(action["path"] == "AGENTS.local.md" for action in workspace_report["actions"])
+    assert payload["lifecycle_plan"]["mutation_safety"]["local_only_preservation"]["status"] == "explicit-local-only-target"
+
+
 def test_init_reports_required_prompt_for_high_ambiguity_repo(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)

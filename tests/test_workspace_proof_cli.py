@@ -25,7 +25,7 @@ def test_proof_command_reports_routes_and_current_health(tmp_path: Path, monkeyp
     payload = json.loads(capsys.readouterr().out)
     assert payload["canonical_doc"] == ".agentic-workspace/docs/proof-surfaces-contract.md"
     assert payload["command"] == "agentic-workspace proof --target ./repo --format json"
-    assert payload["default_routes"]["planning_surfaces"] == "agentic-planning summary --target ./repo --verbose --format json"
+    assert payload["default_routes"]["planning_surfaces"] == "agentic-workspace summary --target ./repo --verbose --format json"
     assert payload["current"]["installed_modules"] == ["planning"]
     assert payload["current"]["status_health"] == "healthy"
     assert payload["current"]["doctor_health"] == "healthy"
@@ -113,16 +113,16 @@ def test_proof_changed_selector_returns_path_based_validation_lane(capsys) -> No
     assert answer["kind"] == "proof-selection/v1"
     assert answer["selected_lanes"][0]["id"] == "planning_surfaces"
     assert answer["required_commands"] == [
-        "uv run agentic-planning summary --target . --verbose --format json",
+        "uv run agentic-workspace summary --target . --verbose --format json",
         "uv run agentic-workspace doctor --target . --modules planning --format json",
     ]
     assert answer["validation_plan"]["kind"] == "validation-plan/v1"
     assert answer["validation_plan"]["status"] == "inspect-before-run"
     first_step = answer["validation_plan"]["required"][0]
     assert first_step["order"] == 1
-    assert first_step["command"] == "uv run agentic-planning summary --target . --verbose --format json"
+    assert first_step["command"] == "uv run agentic-workspace summary --target . --verbose --format json"
     assert first_step["cwd"] == "."
-    assert first_step["run"].endswith("agentic-planning summary --target . --verbose --format json")
+    assert first_step["run"].endswith("agentic-workspace summary --target . --verbose --format json")
     assert first_step["required"] is True
     assert first_step["lane_id"] == "planning_surfaces"
     assert first_step["action"] == "run-validation-command"
@@ -578,8 +578,8 @@ def test_proof_changed_validation_plan_uses_resolved_cli_invoke(tmp_path: Path, 
     payload = json.loads(capsys.readouterr().out)
     step = payload["answer"]["validation_plan"]["required"][0]
     expected_target = tmp_path.as_posix()
-    assert step["command"] == f'uv run agentic-planning summary --target "{expected_target}" --verbose --format json'
-    assert step["run"] == f'uv run agentic-planning summary --target "{expected_target}" --verbose --format json'
+    assert step["command"] == f'uv run agentic-workspace summary --target "{expected_target}" --verbose --format json'
+    assert step["run"] == f'uv run agentic-workspace summary --target "{expected_target}" --verbose --format json'
 
 
 def test_proof_changed_includes_active_assurance_concern_profiles(tmp_path: Path, capsys) -> None:

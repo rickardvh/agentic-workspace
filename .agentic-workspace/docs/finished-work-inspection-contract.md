@@ -16,7 +16,7 @@ Use it when you need to verify whether previously closed planning lanes still lo
 ## Primary Surface
 
 - `finished_work_inspection_contract` in `agentic-workspace summary --format json`
-- `finished_work_inspection` in `agentic-planning report --format json`
+- `finished_work_inspection` in `agentic-workspace planning report --format json`
 
 ## Reopening Evidence
 
@@ -83,4 +83,3 @@ The surface should cheaply answer:
 - which previously closed lanes now have explicit evidence that they were closed too early
 - which unsatisfied intents now require continuation, even without external issue intake
 - what a reviewer or agent should inspect next before treating historical work as settled
-

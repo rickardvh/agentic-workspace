@@ -1426,7 +1426,7 @@ def _durable_understanding_effective_item(*, memory_installed: bool) -> dict[str
         "refs": (
             [
                 ".agentic-workspace/memory/repo/",
-                "agentic-memory report --target ./repo --format json",
+                "agentic-workspace memory report --target ./repo --format json",
             ]
             if memory_installed
             else []

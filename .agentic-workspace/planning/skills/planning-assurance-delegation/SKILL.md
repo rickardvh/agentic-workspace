@@ -13,7 +13,7 @@ Use this skill when task risk or model fit affects whether work should stay dire
 2. Run `agentic-workspace summary --target . --format json`.
 3. Classify risk, proof cost, ambiguity, and capability fit before implementation.
 4. Record the chosen assurance/delegation posture in the active execplan when planned work continues.
-5. Use `agentic-planning handoff --target . --format json` only after the plan is bounded enough for a worker.
+5. Use `agentic-workspace planning handoff --target . --format json` only after the plan is bounded enough for a worker.
 
 ## Outcomes
 
