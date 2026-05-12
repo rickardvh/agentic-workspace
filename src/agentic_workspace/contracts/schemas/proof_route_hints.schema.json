@@ -42,20 +42,25 @@
       ],
       "properties": {
         "kind": {
-          "const": "setup-adopt-proof-route-learning-policy/v1"
+          "const": "setup-adopt-proof-route-learning-policy/v1",
+          "description": "Discriminator identifying the policy that governs setup/adopt-learned proof route hints."
         },
         "persistence": {
-          "const": "advisory-hints"
+          "const": "advisory-hints",
+          "description": "Declares that discovered proof routes are retained only as advisory hints, not authoritative proof policy."
         },
         "authoritative_selection": {
-          "const": "live-target-capabilities"
+          "const": "live-target-capabilities",
+          "description": "Declares that current target capabilities remain authoritative when selecting proof commands."
         },
         "configured_policy_role": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Explains how configured proof policy relates to learned advisory hints."
         },
         "route_map_decision": {
-          "const": "do-not-create-second-route-map-unless-live-discovery-proves-insufficient"
+          "const": "do-not-create-second-route-map-unless-live-discovery-proves-insufficient",
+          "description": "Prevents learned setup/adopt hints from becoming a parallel route map unless live discovery cannot select proof."
         }
       },
       "additionalProperties": false,
