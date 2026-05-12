@@ -506,9 +506,15 @@ def test_start_tiny_profile_returns_first_contact_projection(capsys) -> None:
     assert "authority_markers" not in payload
 
 
-def test_start_default_returns_selector_first_router(capsys) -> None:
+def test_start_default_returns_selector_first_router(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+
     task = "Promote actionable findings to issues"
-    assert cli.main(["start", "--task", task, "--format", "json"]) == 0
+    assert cli.main(["start", "--target", str(target), "--task", task, "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     encoded = json.dumps(payload, sort_keys=True)
@@ -524,7 +530,7 @@ def test_start_default_returns_selector_first_router(capsys) -> None:
     assert payload["active_state_summary"]["todo_active_count"] >= 0
     assert payload["skill_routing"]["preferred_routes"]
     assert payload["task_intent"]["implement_changed_command"] == (
-        f'uv run agentic-workspace implement --changed <paths> --task "{task}" --format json'
+        f'agentic-workspace implement --changed <paths> --task "{task}" --format json'
     )
     assert payload["acceptance"]["items"]
     assert payload["acceptance"]["items"][0]["status"] == "unchecked"
@@ -694,7 +700,13 @@ def test_start_tiny_routes_config_posture_questions_to_tiny_config(capsys) -> No
     assert len(json.dumps(payload, sort_keys=True)) < 8100
 
 
-def test_start_tiny_compacts_long_task_carry_forward_command(capsys) -> None:
+def test_start_tiny_compacts_long_task_carry_forward_command(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+
     task = " ".join(
         [
             "Implement a deliberately long follow-up request that asks the agent to preserve acceptance reconciliation, "
@@ -705,7 +717,7 @@ def test_start_tiny_compacts_long_task_carry_forward_command(capsys) -> None:
         * 5
     )
 
-    assert cli.main(["start", "--task", task, "--format", "json"]) == 0
+    assert cli.main(["start", "--target", str(target), "--task", task, "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     command = payload["task_intent"]["implement_changed_command"]

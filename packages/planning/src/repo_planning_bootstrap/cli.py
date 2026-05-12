@@ -72,7 +72,7 @@ def build_parser() -> argparse.ArgumentParser:
         command_parser.add_argument(
             "--include-optional",
             action="store_true",
-            help="Copy optional planning docs and bundled skills for richer review, intake, recovery, and autopilot workflows.",
+            help="Copy optional planning docs for richer review, intake, and recovery workflows.",
         )
         command_parser.add_argument("--format", choices=("text", "json"), default="text")
 
@@ -82,7 +82,7 @@ def build_parser() -> argparse.ArgumentParser:
     adopt_parser.add_argument(
         "--include-optional",
         action="store_true",
-        help="Copy optional planning docs and bundled skills without overwriting existing repo-owned files.",
+        help="Copy optional planning docs without overwriting existing repo-owned files.",
     )
     adopt_parser.add_argument("--format", choices=("text", "json"), default="text")
 
@@ -95,7 +95,7 @@ def build_parser() -> argparse.ArgumentParser:
     upgrade_parser.add_argument(
         "--include-optional",
         action="store_true",
-        help="Refresh optional planning docs and bundled skills when the repo has enabled richer planning workflows.",
+        help="Refresh optional planning docs when the repo has enabled richer planning workflows.",
     )
     upgrade_parser.add_argument("--format", choices=("text", "json"), default="text")
 
