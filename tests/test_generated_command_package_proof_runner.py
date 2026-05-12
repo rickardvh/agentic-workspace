@@ -112,6 +112,73 @@ def test_generated_python_conformance_uses_contract_artifacts() -> None:
     assert memory_skills.expected_fields == {"mode": "skills"}
 
 
+def test_generated_python_conformance_classifies_native_crashes(monkeypatch) -> None:
+    checker = _load_checker()
+    registries, errors = checker._adapter_conformance_cases_by_package()
+    assert errors == []
+    monkeypatch.setenv("AGENTIC_GENERATED_CONFORMANCE_CONTAINER", "python")
+
+    message = checker._format_generated_adapter_exit_failure(
+        language="python",
+        package_id="root-workspace",
+        case=registries["root-workspace"]["setup.guidance.process"],
+        command=["python", "shim.py"],
+        returncode=-11,
+        expected_exit=0,
+        stderr="",
+    )
+
+    assert "classification=runtime-crash-or-proof-environment-residue" in message
+    assert "proof_surface=generated-python-docker-conformance" in message
+    assert "package=root-workspace" in message
+    assert "conformance_ref=setup.guidance.process" in message
+    assert "command=setup" in message
+    assert "fixture=minimal-repo" in message
+    assert "exit=-11" in message
+    assert "signal 11" in message
+    assert "rerun this package/case or the Docker conformance proof" in message
+
+
+def test_generated_python_conformance_classifies_contract_failures() -> None:
+    checker = _load_checker()
+    registries, errors = checker._adapter_conformance_cases_by_package()
+    assert errors == []
+
+    message = checker._format_generated_adapter_exit_failure(
+        language="python",
+        package_id="root-workspace",
+        case=registries["root-workspace"]["setup.guidance.process"],
+        command=["python", "shim.py"],
+        returncode=2,
+        expected_exit=0,
+        stderr="bad option",
+    )
+
+    assert "classification=adapter-contract-failure" in message
+    assert "proof_surface=generated-python-adapter-conformance" in message
+    assert "compare adapter output with the contract-backed runtime expectation" in message
+
+
+def test_generated_python_conformance_reports_crash_retry_recovery(monkeypatch) -> None:
+    checker = _load_checker()
+    registries, errors = checker._adapter_conformance_cases_by_package()
+    assert errors == []
+    monkeypatch.setenv("AGENTIC_GENERATED_CONFORMANCE_CONTAINER", "python")
+
+    message = checker._format_generated_adapter_retry_recovery(
+        language="python",
+        package_id="root-workspace",
+        case=registries["root-workspace"]["doctor.report.process"],
+        command=["python", "shim.py"],
+        first_returncode=-11,
+    )
+
+    assert "runtime crash recovered after retry" in message
+    assert "proof_surface=generated-python-docker-conformance" in message
+    assert "conformance_ref=doctor.report.process" in message
+    assert "first_exit=-11" in message
+
+
 def test_static_generated_package_proof_fails_when_conformance_coverage_drifts(monkeypatch) -> None:
     checker = _load_checker()
 

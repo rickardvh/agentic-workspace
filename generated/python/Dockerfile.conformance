@@ -10,5 +10,6 @@ COPY packages ./packages
 COPY generated ./generated
 
 ENV PYTHONPATH=/work/src:/work/packages/planning/src:/work/packages/memory/src
+ENV AGENTIC_GENERATED_CONFORMANCE_CONTAINER=python
 
 CMD ["python", "scripts/check/check_generated_command_packages.py", "--python-conformance"]

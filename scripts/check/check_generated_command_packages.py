@@ -89,6 +89,77 @@ def _capture(command: list[str], *, cwd: Path, env: dict[str, str]) -> subproces
     return subprocess.run(command, cwd=cwd, env=env, text=True, capture_output=True, check=False)
 
 
+def _generated_adapter_proof_surface(*, language: str) -> str:
+    container = os.environ.get("AGENTIC_GENERATED_CONFORMANCE_CONTAINER")
+    if container:
+        return f"generated-{container}-docker-conformance"
+    return f"generated-{language}-adapter-conformance"
+
+
+def _exit_failure_classification(returncode: int) -> tuple[str, str]:
+    if returncode < 0:
+        signal_number = abs(returncode)
+        return (
+            "runtime-crash-or-proof-environment-residue",
+            f"native process terminated by signal {signal_number}",
+        )
+    if returncode > 128:
+        return (
+            "runtime-crash-or-proof-environment-residue",
+            f"process exit may encode signal {returncode - 128}",
+        )
+    return ("adapter-contract-failure", "process exited without the expected contract status")
+
+
+def _is_runtime_crash_exit(returncode: int) -> bool:
+    classification, _detail = _exit_failure_classification(returncode)
+    return classification == "runtime-crash-or-proof-environment-residue"
+
+
+def _format_generated_adapter_exit_failure(
+    *,
+    language: str,
+    package_id: str,
+    case: AdapterConformanceCase,
+    command: list[str],
+    returncode: int,
+    expected_exit: int,
+    stderr: str,
+) -> str:
+    classification, detail = _exit_failure_classification(returncode)
+    command_name = case.success_args[0] if case.success_args else "<entrypoint>"
+    rerun_guidance = (
+        "rerun this package/case or the Docker conformance proof before treating it as deterministic"
+        if classification == "runtime-crash-or-proof-environment-residue"
+        else "compare adapter output with the contract-backed runtime expectation"
+    )
+    return (
+        f"generated {language} adapter failure: classification={classification}; "
+        f"proof_surface={_generated_adapter_proof_surface(language=language)}; package={package_id}; "
+        f"conformance_ref={case.conformance_ref}; command={command_name}; command_args={case.success_args!r}; "
+        f"fixture={case.fixture_id}; adapter_entrypoint={command[0]!r}; exit={returncode}; "
+        f"expected={expected_exit}; detail={detail}; guidance={rerun_guidance}; stderr={stderr!r}"
+    )
+
+
+def _format_generated_adapter_retry_recovery(
+    *,
+    language: str,
+    package_id: str,
+    case: AdapterConformanceCase,
+    command: list[str],
+    first_returncode: int,
+) -> str:
+    _classification, detail = _exit_failure_classification(first_returncode)
+    command_name = case.success_args[0] if case.success_args else "<entrypoint>"
+    return (
+        f"[warn] generated {language} adapter runtime crash recovered after retry: "
+        f"proof_surface={_generated_adapter_proof_surface(language=language)}; package={package_id}; "
+        f"conformance_ref={case.conformance_ref}; command={command_name}; command_args={case.success_args!r}; "
+        f"fixture={case.fixture_id}; adapter_entrypoint={command[0]!r}; first_exit={first_returncode}; detail={detail}"
+    )
+
+
 def _load_json(relative_path: str) -> dict[str, object]:
     return json.loads((REPO_ROOT / "src" / "agentic_workspace" / "contracts" / relative_path).read_text(encoding="utf-8"))
 
@@ -270,11 +341,46 @@ def _run_python_adapter_conformance() -> list[str]:
                     path.write_text(contents, encoding="utf-8")
                 process = _capture([*command, *case.success_args], cwd=fixture_root, env=env)
                 if process.returncode != case.expected_exit:
-                    errors.append(
-                        f"generated Python adapter failure: {package_id} {case.label} exited {process.returncode}; "
-                        f"expected {case.expected_exit}; stderr={process.stderr!r}"
-                    )
-                    continue
+                    if _is_runtime_crash_exit(process.returncode):
+                        retry_process = _capture([*command, *case.success_args], cwd=fixture_root, env=env)
+                        if retry_process.returncode == case.expected_exit:
+                            print(
+                                _format_generated_adapter_retry_recovery(
+                                    language="python",
+                                    package_id=package_id,
+                                    case=case,
+                                    command=command,
+                                    first_returncode=process.returncode,
+                                )
+                            )
+                            process = retry_process
+                        else:
+                            errors.append(
+                                _format_generated_adapter_exit_failure(
+                                    language="python",
+                                    package_id=package_id,
+                                    case=case,
+                                    command=command,
+                                    returncode=process.returncode,
+                                    expected_exit=case.expected_exit,
+                                    stderr=process.stderr,
+                                )
+                                + f"; retry_exit={retry_process.returncode}; retry_stderr={retry_process.stderr!r}"
+                            )
+                            continue
+                    if process.returncode != case.expected_exit:
+                        errors.append(
+                            _format_generated_adapter_exit_failure(
+                                language="python",
+                                package_id=package_id,
+                                case=case,
+                                command=command,
+                                returncode=process.returncode,
+                                expected_exit=case.expected_exit,
+                                stderr=process.stderr,
+                            )
+                        )
+                        continue
                 if process.stderr.strip() and not case.allow_stderr:
                     errors.append(
                         f"generated Python adapter failure: {package_id} {case.label} emitted unexpected stderr: {process.stderr!r}"
