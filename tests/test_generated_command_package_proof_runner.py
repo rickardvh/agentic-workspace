@@ -202,6 +202,17 @@ def test_command_package_ir_records_deferred_shell_transport_evaluation() -> Non
     assert root_targets["powershell"]["maturity_level_ref"] == "deferred"
 
 
+def test_static_generated_package_proof_rejects_python_completion_drift(monkeypatch) -> None:
+    checker = _load_checker()
+    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+    ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
+    monkeypatch.setattr(checker, "load_workspace_command_package_ir", lambda *, repo_root: ir)
+
+    errors = checker._validate_static_surfaces()
+
+    assert any("adapter-layer-proven-not-full-generated-cli" in error for error in errors)
+
+
 def test_typescript_runtime_handoff_thinness_rejects_runtime_owned_behavior() -> None:
     checker = _load_checker()
     cli_text = "\n".join(

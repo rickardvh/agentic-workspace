@@ -47,6 +47,7 @@
         "shell_adapter_policy",
         "direct_cli_edit_policy",
         "generated_package_maturity",
+        "python_cli_completion",
         "non_python_runtime_binding"
       ],
       "properties": {
@@ -109,6 +110,42 @@
           },
           "additionalProperties": false,
           "description": "Generated package maturity details used by this contract."
+        },
+        "python_cli_completion": {
+          "type": "object",
+          "required": [
+            "finish_line",
+            "current_state",
+            "allowed_hand_owned_cli_responsibilities",
+            "must_move_behind_contracts_or_generation",
+            "proof_requirements"
+          ],
+          "properties": {
+            "finish_line": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Finish line text value used by this contract."
+            },
+            "current_state": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Current state text value used by this contract."
+            },
+            "allowed_hand_owned_cli_responsibilities": {
+              "$ref": "#/$defs/non_empty_strings",
+              "description": "Python CLI responsibilities that may stay hand-owned."
+            },
+            "must_move_behind_contracts_or_generation": {
+              "$ref": "#/$defs/non_empty_strings",
+              "description": "Python CLI responsibilities that cannot be treated as complete while hand-owned."
+            },
+            "proof_requirements": {
+              "$ref": "#/$defs/non_empty_strings",
+              "description": "Proof requirements before Python generated CLI completion can be claimed."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Python generated CLI completion criteria distinct from adapter maturity."
         },
         "non_python_runtime_binding": {
           "type": "object",

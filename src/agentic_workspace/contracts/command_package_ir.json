@@ -17,7 +17,7 @@
     "test_environment": "Generated non-Python package tests run in Docker-selected proof lanes.",
     "custom_codegen_boundary": "Custom generation code should stay small: validated IR loading, target rendering, freshness checks, and no-direct-edit sentinels.",
     "shell_adapter_policy": "Issue #909 evaluation selects Bash as the first additional generated command transport candidate and keeps it deferred. Promotion may start only with parser/help projection from canonical command artifacts, then black-box conformance for runtime handoff; PowerShell remains deferred until the Bash boundary and proof route are proven. Shell-family targets are downstream projections for thin wrappers, help, argument validation, completion metadata, and runtime handoff only; they must not own runtime primitive behavior.",
-    "direct_cli_edit_policy": "Interface shape, generated package metadata, and adapter wiring should move through contracts, IR, and generators; direct cli.py edits are for runtime primitives, migration exceptions, and uncovered urgent fixes.",
+    "direct_cli_edit_policy": "Interface shape, generated package metadata, and adapter wiring should move through contracts, IR, and generators; direct cli.py edits are for runtime primitives, migration exceptions, and uncovered urgent fixes. Future command/interface package work must change contracts, IR, generators, and regenerated outputs instead of package-local executable cli.py files.",
     "generated_package_maturity": {
       "routing_rule": "Weak agents may use only generated targets whose maturity level explicitly allows weak-agent routing; proof fixtures and parser/help proofs are inspection artifacts, not usable CLI surfaces.",
       "levels": [
@@ -107,6 +107,31 @@
             "ordinary development remains independent of target-specific tooling"
           ]
         }
+      ]
+    },
+    "python_cli_completion": {
+      "finish_line": "Python CLI completion means parser, dispatch, command/interface behavior, adapter metadata, and conformance expectations are generated from implementation-independent contracts or IR, with hand-owned Python code limited to thin runtime primitive adapters.",
+      "current_state": "adapter-layer-proven-not-full-generated-cli",
+      "allowed_hand_owned_cli_responsibilities": [
+        "live workspace inspection",
+        "runtime primitive implementation",
+        "mutation orchestration and safety checks",
+        "output emission mechanics",
+        "thin operation handler adapters that call runtime primitives"
+      ],
+      "must_move_behind_contracts_or_generation": [
+        "command parser shape",
+        "option and help interface semantics",
+        "generated command dispatch selection",
+        "package CLI command/interface additions",
+        "weak-agent routing and maturity claims for generated command surfaces",
+        "black-box conformance fixture selection"
+      ],
+      "proof_requirements": [
+        "generated-package proof distinguishes adapter maturity from full Python generated CLI completion",
+        "static proof rejects treating weak-agent-safe-adapter as full Python generated CLI completion while cli.py owns parser or dispatch behavior",
+        "future package command/interface work changes contracts, IR, generators, and regenerated outputs instead of package-local executable cli.py files",
+        "runtime primitive code remains hand-owned only when it performs live behavior, mutation orchestration, or package-specific runtime logic"
       ]
     },
     "non_python_runtime_binding": {

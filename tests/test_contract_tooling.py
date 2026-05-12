@@ -264,6 +264,7 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
     )
     assert manifest["generation_policy"]["test_environment"] == "Generated non-Python package tests run in Docker-selected proof lanes."
     maturity = {level["id"]: level for level in manifest["generation_policy"]["generated_package_maturity"]["levels"]}
+    python_completion = manifest["generation_policy"]["python_cli_completion"]
     runtime_binding = manifest["generation_policy"]["non_python_runtime_binding"]
     assert {
         "metadata-proof-fixture",
@@ -282,12 +283,19 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
     assert maturity["weak-agent-safe-adapter"]["weak_agent_routing"] == "allowed-read-only"
     assert "unsupported command errors" in " ".join(maturity["weak-agent-safe-adapter"]["promotion_requires"])
     assert "runtime handoff failures" in " ".join(maturity["weak-agent-safe-adapter"]["promotion_requires"])
+    assert "implementation-independent contracts or IR" in python_completion["finish_line"]
+    assert python_completion["current_state"] == "adapter-layer-proven-not-full-generated-cli"
+    assert "runtime primitive implementation" in python_completion["allowed_hand_owned_cli_responsibilities"]
+    assert "command parser shape" in python_completion["must_move_behind_contracts_or_generation"]
+    assert "option and help interface semantics" in python_completion["must_move_behind_contracts_or_generation"]
+    assert any("weak-agent-safe-adapter" in item for item in python_completion["proof_requirements"])
     assert runtime_binding["selected_model"] == "generated parser/help with process handoff to canonical Python CLI"
     assert "operation primitive implementation" in runtime_binding["runtime_owns"]
     assert "argv spelling and help rendering" in runtime_binding["target_projection_owns"]
     assert "adapter failures" in " ".join(runtime_binding["error_mapping"])
     assert "must not own runtime primitive behavior" in manifest["generation_policy"]["shell_adapter_policy"]
     assert "direct cli.py edits" in manifest["generation_policy"]["direct_cli_edit_policy"]
+    assert "instead of package-local executable cli.py files" in manifest["generation_policy"]["direct_cli_edit_policy"]
 
     root_package = packages["root-workspace"]
     targets = {target["kind"]: target for target in root_package["targets"]}

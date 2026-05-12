@@ -533,6 +533,31 @@ def _validate_generated_command_projection_boundary(*, package_id: str, command:
     return errors
 
 
+def _validate_python_cli_completion_policy(policy: dict[str, object]) -> list[str]:
+    errors: list[str] = []
+    finish_line = str(policy.get("finish_line", ""))
+    current_state = str(policy.get("current_state", ""))
+    allowed = [str(item) for item in policy.get("allowed_hand_owned_cli_responsibilities", []) if isinstance(item, str)]
+    must_move = [str(item) for item in policy.get("must_move_behind_contracts_or_generation", []) if isinstance(item, str)]
+    proof_requirements = [str(item) for item in policy.get("proof_requirements", []) if isinstance(item, str)]
+    finish_line_lower = finish_line.lower()
+    if "implementation-independent" not in finish_line_lower or "thin runtime primitive adapters" not in finish_line_lower:
+        errors.append("command_package_ir.json Python CLI completion finish_line must require implementation-independent artifacts and thin runtime primitive adapters")
+    if current_state != "adapter-layer-proven-not-full-generated-cli":
+        errors.append(
+            "command_package_ir.json Python CLI completion current_state must stay adapter-layer-proven-not-full-generated-cli "
+            "until parser/dispatch/interface ownership is generated"
+        )
+    if not any("runtime primitive implementation" in item for item in allowed):
+        errors.append("command_package_ir.json Python CLI completion policy must allow hand-owned runtime primitive implementation")
+    for required in ("command parser shape", "option and help interface semantics", "generated command dispatch selection"):
+        if not any(required in item for item in must_move):
+            errors.append(f"command_package_ir.json Python CLI completion policy must move {required!r} behind contracts or generation")
+    if not any("weak-agent-safe-adapter" in item and "full Python generated CLI completion" in item for item in proof_requirements):
+        errors.append("command_package_ir.json Python CLI completion proof must distinguish adapter maturity from full generated CLI completion")
+    return errors
+
+
 def _run_adapter_conformance(*, require_node: bool) -> list[str]:
     errors: list[str] = []
     node = shutil.which("node")
@@ -750,6 +775,11 @@ def _validate_static_surfaces() -> list[str]:
         routing_rule = str(maturity_policy.get("routing_rule", ""))
         if "Weak agents may use only generated targets" not in routing_rule:
             errors.append("command_package_ir.json maturity routing rule does not protect weak-agent routing")
+        python_cli_completion = ir.get("generation_policy", {}).get("python_cli_completion", {})
+        if not isinstance(python_cli_completion, dict):
+            errors.append("command_package_ir.json generation_policy.python_cli_completion is missing or malformed")
+        else:
+            errors.extend(_validate_python_cli_completion_policy(python_cli_completion))
         shell_policy = str(ir.get("generation_policy", {}).get("shell_adapter_policy", ""))
         if "Issue #909 evaluation selects Bash as the first additional generated command transport candidate" not in shell_policy:
             errors.append("command_package_ir.json shell adapter policy does not record the #909 first transport evaluation")
