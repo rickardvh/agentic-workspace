@@ -55,10 +55,10 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     assert finished_evidence_schema_path.exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
     assert not (tmp_path / ".agentic-workspace" / "planning" / "scripts").exists()
-    assert not skill_readme_path.exists()
-    assert not skill_registry_path.exists()
-    assert not skill_path.exists()
-    assert not intake_skill_path.exists()
+    assert skill_readme_path.exists()
+    assert skill_registry_path.exists()
+    assert skill_path.exists()
+    assert intake_skill_path.exists()
     assert not (tmp_path / "tools").exists()
     assert not (tmp_path / "scripts").exists()
     assert any(action.kind in {"copied", "created", "updated"} for action in result.actions)
@@ -110,7 +110,7 @@ def test_install_bootstrap_state_toml_includes_managed_state_header(tmp_path: Pa
     assert 'kind = "agentic-planning-state"' in state_text
 
 
-def test_install_bootstrap_include_optional_copies_optional_payload_and_skills(tmp_path: Path) -> None:
+def test_install_bootstrap_include_optional_copies_optional_payload(tmp_path: Path) -> None:
     result = install_bootstrap(target=tmp_path, include_optional=True)
 
     assert (tmp_path / ".agentic-workspace" / "docs" / "capability-contract.json").exists()
@@ -140,6 +140,8 @@ def test_install_dry_run_json_includes_compact_lifecycle_plan(tmp_path: Path, ca
     assert plan["summary"]["create_count"] > 0
     assert plan["summary"]["review_required_count"] >= 0
     assert plan["files"]["create"]
+    assert ".agentic-workspace/planning/skills/planning-autopilot/SKILL.md" in plan["files"]["create"]
+    assert ".agentic-workspace/planning/skills/planning-intake-upstream-task/SKILL.md" in plan["files"]["create"]
     assert plan["local_only_state"]["status"] == "not-authoritative"
     assert plan["next_safe_command"].startswith("agentic-planning install --target ")
 
@@ -235,7 +237,7 @@ def test_adopt_bootstrap_docs_heavy_repo_preserves_root_surfaces_and_installs_he
     assert contributor_playbook_path.read_text(encoding="utf-8") == "# Existing contributor playbook\n"
     assert maintainer_commands_path.read_text(encoding="utf-8") == "# Existing commands\n"
     assert (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
-    assert not (tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-autopilot" / "SKILL.md").exists()
+    assert (tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-autopilot" / "SKILL.md").exists()
     assert any(action.kind == "skipped" and action.path == agents_path for action in result.actions)
     assert any(action.kind == "skipped" and action.path == execplan_readme_path for action in result.actions)
     assert any(
@@ -751,13 +753,13 @@ def test_upgrade_bootstrap_overwrites_managed_files_but_preserves_root_surfaces(
 
     assert agents_path.read_text(encoding="utf-8") == "repo-owned agents\n"
     assert "stale checker" not in checker_path.read_text(encoding="utf-8")
-    assert skill_path.read_text(encoding="utf-8") == "stale skill\n"
+    assert "stale skill" not in skill_path.read_text(encoding="utf-8")
     assert any(action.kind == "skipped" and action.path == agents_path for action in result.actions)
     assert any(action.kind == "overwritten" and action.path == checker_path for action in result.actions)
-    assert not any(action.path == skill_path for action in result.actions)
+    assert any(action.kind == "overwritten" and action.path == skill_path for action in result.actions)
 
 
-def test_upgrade_bootstrap_include_optional_refreshes_optional_payload_and_skills(tmp_path: Path) -> None:
+def test_upgrade_bootstrap_include_optional_refreshes_optional_payload_and_keeps_skills_current(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path, include_optional=True)
     review_readme_path = tmp_path / ".agentic-workspace" / "planning" / "reviews" / "README.md"
     skill_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-autopilot" / "SKILL.md"

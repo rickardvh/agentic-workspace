@@ -1298,9 +1298,9 @@ def install_bootstrap(
     result = InstallResult(target_root=target_root, message="Install plan", dry_run=dry_run)
     _add_workspace_orchestrator_notice(result)
     _copy_payload(target_root=target_root, result=result, conservative=False, force=force)
+    _copy_bundled_skills(target_root=target_root, result=result, conservative=False, force=force)
     if include_optional:
         _copy_payload(target_root=target_root, result=result, conservative=False, force=force, files=OPTIONAL_PAYLOAD_FILES)
-        _copy_bundled_skills(target_root=target_root, result=result, conservative=False, force=force)
     _render_generated_agent_files(target_root=target_root, result=result, apply=not dry_run)
     if not dry_run:
         _ensure_state_toml_exists(target_root, overwrite=force)
@@ -1328,9 +1328,9 @@ def adopt_bootstrap(*, target: str | Path | None = None, dry_run: bool = False, 
     result = InstallResult(target_root=target_root, message="Adoption plan for existing repository", dry_run=dry_run)
     _add_workspace_orchestrator_notice(result)
     _copy_payload(target_root=target_root, result=result, conservative=True, force=False)
+    _copy_bundled_skills(target_root=target_root, result=result, conservative=True, force=False)
     if include_optional:
         _copy_payload(target_root=target_root, result=result, conservative=True, force=False, files=OPTIONAL_PAYLOAD_FILES)
-        _copy_bundled_skills(target_root=target_root, result=result, conservative=True, force=False)
     _render_generated_agent_files(target_root=target_root, result=result, apply=not dry_run)
     if not dry_run:
         _ensure_state_toml_exists(target_root)
@@ -1349,10 +1349,11 @@ def upgrade_bootstrap(*, target: str | Path | None = None, dry_run: bool = False
     for relative in PACKAGE_MANAGED_FILES:
         _copy_payload_file(relative=relative, target_root=target_root, result=result, overwrite=True)
 
+    _copy_bundled_skills(target_root=target_root, result=result, conservative=False, force=True)
+
     if include_optional:
         for relative in OPTIONAL_PAYLOAD_FILES:
             _copy_payload_file(relative=relative, target_root=target_root, result=result, overwrite=True)
-        _copy_bundled_skills(target_root=target_root, result=result, conservative=False, force=True)
 
     for relative in ROOT_SURFACE_FILES:
         _copy_payload_file(relative=relative, target_root=target_root, result=result, overwrite=False)

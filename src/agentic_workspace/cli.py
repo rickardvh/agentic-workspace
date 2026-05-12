@@ -23222,22 +23222,25 @@ def _discover_registered_skills(*, target_root: Path) -> tuple[list[RegisteredSk
         skills_root = target_root / source.skills_root
         package_registry_file = _package_skill_registry_file(source)
         source_state = "absent"
+        loaded_from_registry: list[RegisteredSkill] = []
+        warn_for_missing_registry_entries = False
         if registry_file.exists():
             source_state = "registry"
-            for skill in _load_registered_skills(source=source, registry_file=registry_file):
-                key = (skill.skill_id, skill.path.as_posix())
-                if key in seen:
-                    continue
-                seen.add(key)
-                discovered.append(skill)
+            loaded_from_registry = _load_registered_skills(source=source, registry_file=registry_file)
+            warn_for_missing_registry_entries = True
         elif package_registry_file is not None:
             source_state = "package-registry"
-            for skill in _load_registered_skills(source=source, registry_file=package_registry_file):
-                key = (skill.skill_id, skill.path.as_posix())
-                if key in seen:
-                    continue
-                seen.add(key)
-                discovered.append(skill)
+            loaded_from_registry = _load_registered_skills(source=source, registry_file=package_registry_file)
+        for skill in loaded_from_registry:
+            if not (target_root / skill.path).exists():
+                if warn_for_missing_registry_entries:
+                    warnings.append(f"{source.registry_path.as_posix()} points at missing skill file {skill.path.as_posix()}")
+                continue
+            key = (skill.skill_id, skill.path.as_posix())
+            if key in seen:
+                continue
+            seen.add(key)
+            discovered.append(skill)
         scanned_paths = _scan_skill_paths(skills_root)
         registered_paths = {
             (target_root / source.skills_root / skill.path.relative_to(source.skills_root)).resolve()
@@ -23270,16 +23273,6 @@ def _discover_registered_skills(*, target_root: Path) -> tuple[list[RegisteredSk
                     registration="implicit-scan",
                 )
             )
-        if registry_file.exists():
-            missing_files = [
-                skill.path.as_posix()
-                for skill in discovered
-                if skill.registration == "explicit"
-                and skill.path.as_posix().startswith(source.skills_root.as_posix() + "/")
-                and not (target_root / skill.path).exists()
-            ]
-            for missing in missing_files:
-                warnings.append(f"{source.registry_path.as_posix()} points at missing skill file {missing}")
         if registry_file.exists() or scanned_paths or package_registry_file is not None:
             sources.append(
                 {
