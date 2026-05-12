@@ -484,17 +484,25 @@ def test_generated_command_package_docker_flags_compose(monkeypatch) -> None:
     monkeypatch.setattr(module, "_run", fake_run)
     monkeypatch.setattr(module, "_run_docker", fake_run_docker)
 
-    assert module.main(["--docker", "--docker-conformance", "--require-docker"]) == 0
+    assert module.main(["--python-docker-conformance", "--docker", "--docker-conformance", "--require-docker"]) == 0
     assert calls == [
+        ("agentic-workspace-generated-typescript-cli-test-python-conformance", "generated/python/Dockerfile.conformance"),
         ("agentic-workspace-generated-typescript-cli-test", "generated/typescript/Dockerfile"),
         ("agentic-workspace-generated-typescript-cli-test-conformance", "generated/typescript/Dockerfile.conformance"),
     ]
 
 
 def test_generated_command_package_docker_conformance_surface_exists() -> None:
-    dockerfile = Path(__file__).resolve().parents[1] / "generated" / "typescript" / "Dockerfile.conformance"
+    repo_root = Path(__file__).resolve().parents[1]
+    python_dockerfile = repo_root / "generated" / "python" / "Dockerfile.conformance"
+    python_text = python_dockerfile.read_text(encoding="utf-8")
+    dockerfile = repo_root / "generated" / "typescript" / "Dockerfile.conformance"
     text = dockerfile.read_text(encoding="utf-8")
 
+    assert "scripts/check/check_generated_command_packages.py" in python_text
+    assert "--python-conformance" in python_text
+    assert "COPY src ./src" in python_text
+    assert "COPY generated ./generated" in python_text
     assert "scripts/check/check_generated_command_packages.py" in text
     assert "--conformance" in text
     assert "--require-node" in text

@@ -34,10 +34,12 @@ def test_generated_command_package_proof_defaults_to_docker_steps() -> None:
     steps = runner._proof_steps(runner.parse_args([]))
 
     assert [step.label for step in steps] == [
+        "generated packages python docker conformance",
         "generated packages docker",
         "generated packages docker conformance",
     ]
     assert [step.args for step in steps] == [
+        ["--python-docker-conformance", "--require-docker"],
         ["--docker", "--require-docker"],
         ["--docker-conformance", "--require-docker"],
     ]
@@ -58,11 +60,13 @@ def test_generated_command_package_proof_all_runs_every_step(monkeypatch, capsys
     assert status == 0
     assert calls == [
         ("generated packages static", [], 12.0, 7),
+        ("generated packages python conformance", ["--python-conformance"], 12.0, 7),
+        ("generated packages python docker conformance", ["--python-docker-conformance", "--require-docker"], 12.0, 7),
         ("generated packages conformance", ["--conformance", "--require-node"], 12.0, 7),
         ("generated packages docker", ["--docker", "--require-docker"], 12.0, 7),
         ("generated packages docker conformance", ["--docker-conformance", "--require-docker"], 12.0, 7),
     ]
-    assert "[ok] generated command package proof (4 steps," in capsys.readouterr().out
+    assert "[ok] generated command package proof (6 steps," in capsys.readouterr().out
 
 
 def test_generated_typescript_conformance_cases_come_from_contract_artifacts() -> None:
@@ -83,6 +87,28 @@ def test_generated_typescript_conformance_cases_come_from_contract_artifacts() -
     assert planning_status.success_args == ["status", "--format", "json"]
     assert planning_status.expected_fields == {"dry_run": False}
     assert memory_skills.success_args == ["list-skills", "--format", "json"]
+    assert memory_skills.expected_fields == {"mode": "skills"}
+
+
+def test_generated_python_conformance_uses_contract_artifacts() -> None:
+    checker = _load_checker()
+
+    registries, errors = checker._adapter_conformance_cases_by_package()
+
+    assert errors == []
+    assert set(registries) == {"root-workspace", "planning-bootstrap", "memory-bootstrap"}
+    defaults = registries["root-workspace"]["defaults.report.process"]
+    planning_status = registries["planning-bootstrap"]["planning.status.process"]
+    memory_skills = registries["memory-bootstrap"]["memory.list-skills.process"]
+
+    assert checker._python_command_for_package("root-workspace")[-1] == "agentic_workspace.cli"
+    assert checker._python_command_for_package("planning-bootstrap")[-1] == "repo_planning_bootstrap.cli"
+    assert checker._python_command_for_package("memory-bootstrap")[-1] == "repo_memory_bootstrap.cli"
+    assert defaults.success_args == ["defaults", "--section", "startup", "--format", "json"]
+    assert defaults.expected_exit == 0
+    assert defaults.allow_stderr is False
+    assert defaults.expected_fields["answer.default_canonical_agent_instructions_file"] == "AGENTS.md"
+    assert planning_status.expected_fields == {"dry_run": False}
     assert memory_skills.expected_fields == {"mode": "skills"}
 
 

@@ -28,6 +28,8 @@ class AdapterConformanceCase(NamedTuple):
     expected_fields: dict[str, object] | None
     fixture_id: str
     fixture_files: dict[str, str]
+    expected_exit: int
+    allow_stderr: bool
 
 
 class RunnableTypescriptConformanceCase(NamedTuple):
@@ -77,6 +79,10 @@ def _runtime_module_for_package(package_id: str) -> str:
         "memory-bootstrap": "repo_memory_bootstrap.cli",
     }
     return modules[package_id]
+
+
+def _python_command_for_package(package_id: str) -> list[str]:
+    return [_python_executable(), "-m", _runtime_module_for_package(package_id)]
 
 
 def _capture(command: list[str], *, cwd: Path, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
@@ -145,6 +151,20 @@ def _fixture_from_contract(contract: dict[str, object]) -> tuple[str, dict[str, 
     return fixture_id, {path: str(contents) for path, contents in files.items()}
 
 
+def _expected_exit_from_contract(contract: dict[str, object]) -> int:
+    expectations = contract.get("expectations", {})
+    exit_expectation = expectations.get("exit", {}) if isinstance(expectations, dict) else {}
+    code = exit_expectation.get("code", 0) if isinstance(exit_expectation, dict) else 0
+    return int(code) if isinstance(code, int) else 0
+
+
+def _allow_stderr_from_contract(contract: dict[str, object]) -> bool:
+    expectations = contract.get("expectations", {})
+    stderr = expectations.get("stderr", {}) if isinstance(expectations, dict) else {}
+    allow_non_empty = stderr.get("allow_non_empty", False) if isinstance(stderr, dict) else False
+    return bool(allow_non_empty)
+
+
 def _case_from_conformance_contract(*, contract: dict[str, object], package_id: str) -> AdapterConformanceCase:
     expectations = contract.get("expectations", {})
     stdout = expectations.get("stdout", {}) if isinstance(expectations, dict) else {}
@@ -164,6 +184,8 @@ def _case_from_conformance_contract(*, contract: dict[str, object], package_id: 
         expected_fields=_expected_contract_fields(assertions),
         fixture_id=fixture_id,
         fixture_files=fixture_files,
+        expected_exit=_expected_exit_from_contract(contract),
+        allow_stderr=_allow_stderr_from_contract(contract),
     )
 
 
@@ -207,6 +229,73 @@ def _adapter_conformance_cases_by_package() -> tuple[dict[str, dict[str, Adapter
                     errors.append(str(exc))
         cases_by_package[package_id] = package_cases
     return cases_by_package, errors
+
+
+def _run_python_adapter_conformance() -> list[str]:
+    registries, registry_errors = _adapter_conformance_cases_by_package()
+    if registry_errors:
+        return registry_errors
+    errors: list[str] = []
+    env = _conformance_env()
+    with tempfile.TemporaryDirectory(prefix="agentic-workspace-generated-python-adapter-") as tmp:
+        temp_root = Path(tmp)
+        shims: dict[str, Path] = {}
+
+        def command_for_package(package_id: str) -> list[str]:
+            shim = shims.get(package_id)
+            if shim is None:
+                module = _runtime_module_for_package(package_id)
+                shim = temp_root / f"{package_id.replace('-', '_')}_cli_shim.py"
+                shim.write_text(
+                    "import sys\n"
+                    f"sys.path.insert(0, {str(REPO_ROOT / 'src')!r})\n"
+                    f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'planning' / 'src')!r})\n"
+                    f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'memory' / 'src')!r})\n"
+                    f"from {module} import main\n"
+                    "raise SystemExit(main(sys.argv[1:]))\n",
+                    encoding="utf-8",
+                )
+                shims[package_id] = shim
+            return [_python_executable(), str(shim)]
+
+        for package_id, registry in registries.items():
+            command = command_for_package(package_id)
+            for case in registry.values():
+                fixture_root = temp_root / package_id / case.fixture_id / case.conformance_ref.replace(".", "-")
+                if fixture_root.exists():
+                    shutil.rmtree(fixture_root)
+                for relative_path, contents in case.fixture_files.items():
+                    path = fixture_root / relative_path
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_text(contents, encoding="utf-8")
+                process = _capture([*command, *case.success_args], cwd=fixture_root, env=env)
+                if process.returncode != case.expected_exit:
+                    errors.append(
+                        f"generated Python adapter failure: {package_id} {case.label} exited {process.returncode}; "
+                        f"expected {case.expected_exit}; stderr={process.stderr!r}"
+                    )
+                    continue
+                if process.stderr.strip() and not case.allow_stderr:
+                    errors.append(
+                        f"generated Python adapter failure: {package_id} {case.label} emitted unexpected stderr: {process.stderr!r}"
+                    )
+                    continue
+                if case.expected_fields is None:
+                    continue
+                try:
+                    selected = case.selected_fields(process.stdout)
+                except (KeyError, ValueError, json.JSONDecodeError) as exc:
+                    errors.append(
+                        f"generated Python adapter failure: {package_id} {case.label} stdout did not satisfy selected fields: {exc}; "
+                        f"stdout={process.stdout!r}"
+                    )
+                    continue
+                if selected != case.expected_fields:
+                    errors.append(
+                        f"generated Python adapter failure: {package_id} {case.label} output shape drifted; "
+                        f"expected selected fields {case.expected_fields!r}, got {selected!r}"
+                    )
+    return errors
 
 
 def _runnable_typescript_conformance_cases() -> tuple[list[RunnableTypescriptConformanceCase], list[str]]:
@@ -648,6 +737,9 @@ def _validate_static_surfaces() -> list[str]:
     dockerfile = REPO_ROOT / "generated" / "typescript" / "Dockerfile"
     if not dockerfile.is_file():
         errors.append("generated/typescript/Dockerfile is missing")
+    python_conformance_dockerfile = REPO_ROOT / "generated" / "python" / "Dockerfile.conformance"
+    if not python_conformance_dockerfile.is_file():
+        errors.append("generated/python/Dockerfile.conformance is missing")
     conformance_dockerfile = REPO_ROOT / "generated" / "typescript" / "Dockerfile.conformance"
     if not conformance_dockerfile.is_file():
         errors.append("generated/typescript/Dockerfile.conformance is missing")
@@ -718,6 +810,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Run black-box conformance for runnable generated adapters using local Node and the canonical Python CLI.",
     )
     parser.add_argument(
+        "--python-conformance",
+        action="store_true",
+        help="Run black-box conformance for generated Python adapters using checked-in conformance contracts.",
+    )
+    parser.add_argument(
+        "--python-docker-conformance",
+        action="store_true",
+        help="Run generated Python adapter conformance inside Docker.",
+    )
+    parser.add_argument(
         "--require-node",
         action="store_true",
         help="Fail instead of skipping adapter conformance when Node is unavailable.",
@@ -746,6 +848,13 @@ def main(argv: list[str] | None = None) -> int:
         for error in errors:
             print(error)
         return 1
+    if args.python_conformance:
+        python_conformance_errors = _run_python_adapter_conformance()
+        if python_conformance_errors:
+            for error in python_conformance_errors:
+                print(error)
+            return 1
+        print("[ok] generated Python command package adapter conformance")
     if args.conformance:
         conformance_errors = _run_adapter_conformance(require_node=bool(args.require_node))
         if conformance_errors:
@@ -755,6 +864,14 @@ def main(argv: list[str] | None = None) -> int:
         print("[ok] generated command package adapter conformance")
         print("[ok] weak-agent-safe generated adapter routing checks passed")
     docker_status = 0
+    if args.python_docker_conformance:
+        docker_status = _run_docker(
+            f"{args.tag}-python-conformance",
+            dockerfile="generated/python/Dockerfile.conformance",
+            require_docker=bool(args.require_docker),
+        )
+        if docker_status:
+            return docker_status
     if args.docker:
         docker_status = _run_docker(
             str(args.tag),

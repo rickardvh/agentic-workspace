@@ -27,6 +27,8 @@ def _format_duration(duration_seconds: float) -> str:
 def _proof_steps(args: argparse.Namespace) -> list[ProofStep]:
     requested = {
         "static": bool(args.static),
+        "python_conformance": bool(args.python_conformance),
+        "python_docker_conformance": bool(args.python_docker_conformance),
         "conformance": bool(args.conformance),
         "docker": bool(args.docker),
         "docker_conformance": bool(args.docker_conformance),
@@ -34,12 +36,17 @@ def _proof_steps(args: argparse.Namespace) -> list[ProofStep]:
     if args.all:
         requested = dict.fromkeys(requested, True)
     if not any(requested.values()):
+        requested["python_docker_conformance"] = True
         requested["docker"] = True
         requested["docker_conformance"] = True
 
     steps: list[ProofStep] = []
     if requested["static"]:
         steps.append(ProofStep("generated packages static", []))
+    if requested["python_conformance"]:
+        steps.append(ProofStep("generated packages python conformance", ["--python-conformance"]))
+    if requested["python_docker_conformance"]:
+        steps.append(ProofStep("generated packages python docker conformance", ["--python-docker-conformance", "--require-docker"]))
     if requested["conformance"]:
         steps.append(ProofStep("generated packages conformance", ["--conformance", "--require-node"]))
     if requested["docker"]:
@@ -83,10 +90,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         description="Run generated command package proof through compact command wrappers.",
     )
     parser.add_argument("--static", action="store_true", help="Run static generated-package proof.")
+    parser.add_argument("--python-conformance", action="store_true", help="Run generated Python adapter conformance proof.")
+    parser.add_argument("--python-docker-conformance", action="store_true", help="Run generated Python adapter Docker conformance proof.")
     parser.add_argument("--conformance", action="store_true", help="Run local Node adapter conformance proof.")
     parser.add_argument("--docker", action="store_true", help="Run Docker package proof.")
     parser.add_argument("--docker-conformance", action="store_true", help="Run Docker adapter conformance proof.")
-    parser.add_argument("--all", action="store_true", help="Run static, local conformance, Docker, and Docker conformance proof.")
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Run static, Python conformance, Python Docker conformance, local Node conformance, Docker, and Docker conformance proof.",
+    )
     parser.add_argument(
         "--timeout-seconds",
         type=_positive_float,
