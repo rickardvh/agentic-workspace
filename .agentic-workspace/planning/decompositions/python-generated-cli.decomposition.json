@@ -46,7 +46,7 @@
     {
       "id": "python-generated-cli-completion-promotion",
       "title": "Python generated CLI completion promotion",
-      "readiness": "deferred",
+      "readiness": "promoted",
       "outcome": "The command-package IR can promote Python from adapter-layer-proven-not-full-generated-cli to full generated CLI completion only after parser, dispatch, interface, proof, and runtime-handler boundaries are all proven.",
       "owner_surface": "src/agentic_workspace/contracts/command_package_ir.json",
       "proof": "Generated package static proof, Python Docker conformance, root CLI authority, closeout trust, and package planning summary all agree that original Python generated-CLI intent is satisfied.",
@@ -70,7 +70,7 @@
   "proof_expectations": [
     "Each promoted Python lane must include Python black-box conformance and Docker-backed Python conformance unless the lane is planning-only.",
     "Closeout must run or inspect closeout_trust before claiming Python completion.",
-    "The command-package IR python_cli_completion.current_state must stay adapter-layer-proven-not-full-generated-cli until the final promotion lane is proven."
+    "The command-package IR python_cli_completion.current_state may be full-generated-cli-complete only with a schema-backed python-only completion gate and static proof for all prerequisite evidence ids."
   ],
   "promotion_rule": "Promote only the next ready Python lane with clear generated-output ownership, no Bash/PowerShell scope, and proof that implementation-independent artifacts remain authoritative.",
   "references": [
@@ -87,5 +87,5 @@
       "role": "dogfooding signal"
     }
   ],
-  "notes": "Created after #921 showed that adapter maturity was incorrectly treated as Python generated-CLI completion. Runtime handler boundary, handwritten parser retirement, and interface-change proof gating have been promoted and implemented on codex/finish-python-generated-cli; remaining Python work starts at the completion promotion gate."
+  "notes": "Created after #921 showed that adapter maturity was incorrectly treated as Python generated-CLI completion. Runtime handler boundary, handwritten parser retirement, interface-change proof gating, and the Python-only completion promotion gate have been promoted and implemented on codex/finish-python-generated-cli. This closes the Python lane only; Bash, PowerShell, TypeScript follow-through, and any future mutation-capable generated adapters remain outside this branch."
 }

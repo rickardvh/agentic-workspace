@@ -55,6 +55,25 @@ CONFORMANCE_PLACEHOLDER_BY_PACKAGE = {
     "planning-bootstrap": "agentic_planning_cli",
     "memory-bootstrap": "agentic_memory_cli",
 }
+PYTHON_COMPLETION_STATES = {"adapter-layer-proven-not-full-generated-cli", "full-generated-cli-complete"}
+PYTHON_COMPLETION_REQUIRED_EVIDENCE_IDS = {
+    "parser-shape-generated",
+    "dispatch-selection-generated",
+    "interface-behavior-contract-backed",
+    "future-interface-change-proof-gated",
+    "python-black-box-conformance",
+    "python-docker-conformance",
+    "runtime-handlers-thin",
+}
+PYTHON_COMPLETION_EXPECTED_PROOF_SUBSTRINGS = {
+    "parser-shape-generated": "_validate_generated_python_commands_absent_from_handwritten_parsers",
+    "dispatch-selection-generated": "generated_entrypoints order check",
+    "interface-behavior-contract-backed": "check_generated_command_packages.py",
+    "future-interface-change-proof-gated": "proof_selection_rules.json",
+    "python-black-box-conformance": "--python-conformance",
+    "python-docker-conformance": "--python-docker-conformance --require-docker",
+    "runtime-handlers-thin": "_validate_python_runtime_handler_boundary",
+}
 
 
 def _run(command: list[str]) -> int:
@@ -553,11 +572,8 @@ def _validate_python_cli_completion_policy(policy: dict[str, object]) -> list[st
     finish_line_lower = finish_line.lower()
     if "implementation-independent" not in finish_line_lower or "thin runtime primitive adapters" not in finish_line_lower:
         errors.append("command_package_ir.json Python CLI completion finish_line must require implementation-independent artifacts and thin runtime primitive adapters")
-    if current_state != "adapter-layer-proven-not-full-generated-cli":
-        errors.append(
-            "command_package_ir.json Python CLI completion current_state must stay adapter-layer-proven-not-full-generated-cli "
-            "until parser/dispatch/interface ownership is generated"
-        )
+    if current_state not in PYTHON_COMPLETION_STATES:
+        errors.append(f"command_package_ir.json Python CLI completion current_state is unknown: {current_state!r}")
     if not any("runtime primitive implementation" in item for item in allowed):
         errors.append("command_package_ir.json Python CLI completion policy must allow hand-owned runtime primitive implementation")
     for required in ("command parser shape", "option and help interface semantics", "generated command dispatch selection"):
@@ -565,6 +581,35 @@ def _validate_python_cli_completion_policy(policy: dict[str, object]) -> list[st
             errors.append(f"command_package_ir.json Python CLI completion policy must move {required!r} behind contracts or generation")
     if not any("weak-agent-safe-adapter" in item and "full Python generated CLI completion" in item for item in proof_requirements):
         errors.append("command_package_ir.json Python CLI completion proof must distinguish adapter maturity from full generated CLI completion")
+    completion_gate = policy.get("completion_gate", {})
+    if current_state == "full-generated-cli-complete":
+        if not isinstance(completion_gate, dict):
+            errors.append("command_package_ir.json full Python CLI completion requires a completion_gate object")
+            return errors
+        if completion_gate.get("state") != "satisfied":
+            errors.append("command_package_ir.json full Python CLI completion requires completion_gate.state='satisfied'")
+        if completion_gate.get("scope") != "python-only":
+            errors.append("command_package_ir.json full Python CLI completion gate must be scoped to python-only")
+        satisfied_by = completion_gate.get("satisfied_by", [])
+        if not isinstance(satisfied_by, list) or not all(isinstance(item, dict) for item in satisfied_by):
+            errors.append("command_package_ir.json full Python CLI completion gate satisfied_by entries are malformed")
+            return errors
+        evidence_ids = {str(item.get("id", "")) for item in satisfied_by}
+        missing_evidence = sorted(PYTHON_COMPLETION_REQUIRED_EVIDENCE_IDS - evidence_ids)
+        if missing_evidence:
+            errors.append(f"command_package_ir.json full Python CLI completion gate is missing evidence ids: {missing_evidence!r}")
+        for item in satisfied_by:
+            evidence_id = str(item.get("id", ""))
+            proof = str(item.get("proof", ""))
+            evidence = str(item.get("evidence", ""))
+            if not evidence.strip() or not proof.strip():
+                errors.append(f"command_package_ir.json Python completion evidence {evidence_id!r} must name evidence and proof")
+            expected_proof = PYTHON_COMPLETION_EXPECTED_PROOF_SUBSTRINGS.get(evidence_id)
+            if expected_proof and expected_proof not in proof:
+                errors.append(
+                    f"command_package_ir.json Python completion evidence {evidence_id!r} must reference "
+                    f"expected proof surface {expected_proof!r}; got {proof!r}"
+                )
     return errors
 
 

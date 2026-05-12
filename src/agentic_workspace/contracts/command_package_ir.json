@@ -111,7 +111,7 @@
     },
     "python_cli_completion": {
       "finish_line": "Python CLI completion means parser, dispatch, command/interface behavior, adapter metadata, and conformance expectations are generated from implementation-independent contracts or IR, with hand-owned Python code limited to thin runtime primitive adapters.",
-      "current_state": "adapter-layer-proven-not-full-generated-cli",
+      "current_state": "full-generated-cli-complete",
       "allowed_hand_owned_cli_responsibilities": [
         "live workspace inspection",
         "runtime primitive implementation",
@@ -132,7 +132,48 @@
         "static proof rejects treating weak-agent-safe-adapter as full Python generated CLI completion while cli.py owns parser or dispatch behavior",
         "future package command/interface work changes contracts, IR, generators, and regenerated outputs instead of package-local executable cli.py files",
         "runtime primitive code remains hand-owned only when it performs live behavior, mutation orchestration, or package-specific runtime logic"
-      ]
+      ],
+      "completion_gate": {
+        "state": "satisfied",
+        "scope": "python-only",
+        "satisfied_by": [
+          {
+            "id": "parser-shape-generated",
+            "evidence": "Generated Python packages own command parser shape for command_package_ir generated commands.",
+            "proof": "scripts/check/check_generated_command_packages.py::_validate_generated_python_commands_absent_from_handwritten_parsers"
+          },
+          {
+            "id": "dispatch-selection-generated",
+            "evidence": "cli.py routes generated commands through generated_cli_package before handwritten parsers.",
+            "proof": "scripts/check/check_generated_command_packages.py generated_entrypoints order check"
+          },
+          {
+            "id": "interface-behavior-contract-backed",
+            "evidence": "Generated parser options, help, maturity metadata, and weak-agent routing are rendered from command_package_ir.",
+            "proof": "uv run python scripts/check/check_generated_command_packages.py"
+          },
+          {
+            "id": "future-interface-change-proof-gated",
+            "evidence": "Direct Python cli.py edits select generated command package proof.",
+            "proof": "src/agentic_workspace/contracts/proof_selection_rules.json and proof selector tests"
+          },
+          {
+            "id": "python-black-box-conformance",
+            "evidence": "Generated Python adapters are tested through contract-backed black-box process fixtures.",
+            "proof": "uv run python scripts/check/check_generated_command_packages.py --python-conformance"
+          },
+          {
+            "id": "python-docker-conformance",
+            "evidence": "Generated Python adapters run against Docker-selected conformance fixtures.",
+            "proof": "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker"
+          },
+          {
+            "id": "runtime-handlers-thin",
+            "evidence": "Hand-owned cli.py runtime bindings are limited to _run_*_adapter handlers whose operation ids exactly match generated operation ids.",
+            "proof": "scripts/check/check_generated_command_packages.py::_validate_python_runtime_handler_boundary"
+          }
+        ]
+      }
     },
     "non_python_runtime_binding": {
       "selected_model": "generated parser/help with process handoff to canonical Python CLI",

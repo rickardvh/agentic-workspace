@@ -65,26 +65,26 @@
   ],
   "machine_readable_contract": {
     "intent": {
-    "outcome": "Promote the Python side of GitHub #892 only after generated parser, dispatch, interface, adapter metadata, proof routing, Docker conformance, and thin runtime-handler boundaries are all contract-backed and proven.",
-    "constraints": "Keep scope bounded to Python generated CLI completion. Do not expand into TypeScript, Bash, PowerShell, or mutation-capable generated adapters.",
+      "outcome": "Promote the Python side of GitHub #892 only after generated parser, dispatch, interface, adapter metadata, proof routing, Docker conformance, and thin runtime-handler boundaries are all contract-backed and proven.",
+      "constraints": "Keep scope bounded to Python generated CLI completion. Do not expand into TypeScript, Bash, PowerShell, or mutation-capable generated adapters.",
       "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
       "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
     },
     "execution": {
       "milestone": "python-generated-cli-completion-promotion",
       "status": "active",
-    "next_step": "Implement the schema-backed Python completion gate and prove it with generated package static, Python, Docker, planning summary, and closeout-trust checks.",
-    "proof": "Generated package static proof plus Python Docker conformance and planning closeout inspection."
+      "next_step": "Implement the schema-backed Python completion gate and prove it with generated package static, Python, Docker, planning summary, and closeout-trust checks.",
+      "proof": "Generated package static proof plus Python Docker conformance and planning closeout inspection."
     },
     "scope": {
       "touched": [
-      "src/agentic_workspace/contracts/command_package_ir.json",
-      "src/agentic_workspace/contracts/schemas/command_package_ir.schema.json",
-      "packages/command-generation/schemas/command_package_ir.schema.json",
-      "scripts/check/check_generated_command_packages.py",
-      "tests/test_generated_command_package_proof_runner.py",
-      ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
-      ".agentic-workspace/planning/execplans/python-generated-cli-completion-promotion.plan.json"
+        "src/agentic_workspace/contracts/command_package_ir.json",
+        "src/agentic_workspace/contracts/schemas/command_package_ir.schema.json",
+        "packages/command-generation/schemas/command_package_ir.schema.json",
+        "scripts/check/check_generated_command_packages.py",
+        "tests/test_generated_command_package_proof_runner.py",
+        ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+        ".agentic-workspace/planning/execplans/python-generated-cli-completion-promotion.plan.json"
       ],
       "invariants": [
         "Preserve the planning contract and keep the work bounded to this plan."
@@ -174,7 +174,7 @@
   ],
   "active_milestone": {
     "id": "python-generated-cli-completion-promotion",
-    "status": "active",
+    "status": "completed",
     "scope": "Promote Python generated CLI completion only after the completion gate is encoded and proven.",
     "ready": "ready",
     "blocked": "none",
@@ -216,52 +216,52 @@
     "The active execplan and decomposition both record that this is Python-only completion, not full codegen-epic completion."
   ],
   "execution_run": {
-    "run status": "not-run-yet",
-    "executor": "",
+    "run status": "completed",
+    "executor": "Codex primary with Planck validation sidecar",
     "handoff source": "agentic-planning new-plan",
-    "what happened": "plan scaffold created and tightened for the Python completion promotion lane",
-    "scope touched": "planning execplan only so far",
-    "changed surfaces": ".agentic-workspace/planning/execplans/python-generated-cli-completion-promotion.plan.json",
-    "validations run": "pending",
-    "result for continuation": "continue from this scaffolded execplan",
-    "next step": "Implement the command-package IR completion gate and static proof updates."
+    "what happened": "Python generated CLI completion is now a schema-backed command_package_ir state with explicit python-only completion_gate evidence, and static proof rejects incomplete completion claims.",
+    "scope touched": "command package IR/schema, generated package static proof, proof runner tests, Python completion decomposition, and this execplan",
+    "changed surfaces": "src/agentic_workspace/contracts/command_package_ir.json; src/agentic_workspace/contracts/schemas/command_package_ir.schema.json; packages/command-generation/schemas/command_package_ir.schema.json; scripts/check/check_generated_command_packages.py; tests/test_generated_command_package_proof_runner.py; tests/test_contract_tooling.py; .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json; .agentic-workspace/planning/execplans/python-generated-cli-completion-promotion.plan.json",
+    "validations run": "uv run pytest tests/test_generated_command_package_proof_runner.py::test_static_generated_package_proof_requires_python_completion_gate_evidence tests/test_generated_command_package_proof_runner.py::test_static_generated_package_proof_accepts_python_completion_gate tests/test_contract_tooling.py::test_command_package_ir_declares_python_and_typescript_targets -q; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; uv run ruff check scripts/check/check_generated_command_packages.py tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py",
+    "result for continuation": "Python lane complete; broader #892 non-Python lanes remain separate.",
+    "next step": "Run full selected proof and closeout-trust checks before commit."
   },
   "finished_run_review": {
-    "review status": "pending",
-    "scope respected": "pending",
-    "proof status": "pending",
-    "intent served": "pending",
-    "config compliance": "pending",
-    "misinterpretation risk": "pending",
-    "follow-on decision": "pending"
+    "review status": "ready-for-final-proof",
+    "scope respected": "yes; implementation stayed Python-only except shared schema parity and contract-tooling test update",
+    "proof status": "focused proof passed; full selected proof pending",
+    "intent served": "yes for the Python lane only",
+    "config compliance": "used configured uv run agentic-workspace and planning handoff surfaces",
+    "misinterpretation risk": "low after command_package_ir separates Python lane completion from broader codegen epic completion",
+    "follow-on decision": "do not close full #892 epic from this branch"
   },
   "delegation_outcome_feedback": {
     "route chosen": "delegate-validation",
     "route skipped reason": "not skipped",
     "expected savings": "moderate review-context savings by using an already-open worker for prerequisite review",
-    "actual friction": "pending",
-    "proof result": "pending",
-    "quality concern": "pending",
-    "decomposition adjustment": "pending"
+    "actual friction": "ready handoff packet was usable for sidecar validation; local implementation still carried the code changes",
+    "proof result": "focused proof passed; sidecar review result pending",
+    "quality concern": "none from focused local proof",
+    "decomposition adjustment": "python-generated-cli-completion-promotion marked promoted after completion gate implementation"
   },
   "proof_report": {
-    "validation proof": "pending",
-    "proof achieved now": "pending",
-    "evidence for \"proof achieved\" state": ""
+    "validation proof": "focused generated package proof runner tests, static generated package proof, Python conformance, Python Docker conformance, and ruff passed",
+    "proof achieved now": "yes for focused Python completion promotion proof; full selected proof still pending before commit",
+    "evidence for \"proof achieved\" state": "command_package_ir.json now records full-generated-cli-complete only with completion_gate evidence ids; static proof requires parser, dispatch, interface, proof-gate, Python conformance, Python Docker conformance, and thin runtime-handler evidence."
   },
   "intent_satisfaction": {
     "original intent": "GitHub #892; .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json#python-generated-cli-completion-promotion",
-    "was original intent fully satisfied?": "pending",
-    "evidence of intent satisfaction": "",
-    "unsolved intent passed to": "none yet"
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Python-only #892 completion gate is represented in command_package_ir.json as full-generated-cli-complete with schema-backed completion_gate evidence ids; generated package static proof, Python conformance, and Python Docker conformance passed.",
+    "unsolved intent passed to": "none"
   },
   "execution_summary": {
-    "outcome delivered": "not completed yet",
-    "validation confirmed": "pending",
-    "follow-on routed to": "none yet",
-    "post-work posterity capture": "pending",
+    "outcome delivered": "Python generated CLI completion promotion gate implemented.",
+    "validation confirmed": "focused proof passed; full selected proof pending before commit.",
+    "follow-on routed to": "#892 for broader non-Python epic work.",
+    "post-work posterity capture": "completion gate evidence stored in command_package_ir.json and decomposition notes.",
     "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "current milestone"
+    "resume from": "No resume needed for this Python lane after full selected proof passes; continue broader #892 only through non-Python lane plans."
   },
   "durable_residue": {
     "status": "none",
@@ -272,23 +272,22 @@
     "retention after promotion": "retain"
   },
   "task_intent_promotion": {
-    "decision": "pending",
+    "decision": "do-not-promote",
     "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
-    "evidence source": "",
-    "target scope": "",
-    "proposed durable intent": "",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "none",
+    "proposed durable intent": "none yet",
     "confidence": "low",
-    "needs review": true,
-    "owner surface": ""
+    "needs review": "True",
+    "owner surface": "none"
   },
   "closure_check": {
-    "slice status": "pending",
-    "larger-intent status": "pending",
-    "closure decision": "pending",
-    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
-    "why this decision is honest": "",
-    "evidence carried forward": "",
-    "reopen trigger": ""
+    "slice status": "complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The bounded Python lane is complete without claiming TypeScript, Bash, PowerShell, mutation-capable adapters, or full #892 epic closure.",
+    "evidence carried forward": "uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; focused generated package proof runner tests.",
+    "reopen trigger": "Reopen if generated Python commands regain handwritten parser ownership, bypass generated_cli_package dispatch, lose proof selection gating for cli.py edits, or Docker-backed Python conformance fails deterministically."
   },
   "improvement_signal_review": {
     "status": "pending",
@@ -302,15 +301,48 @@
   },
   "closeout_distillation": {
     "buckets": {
-      "discard": [],
-      "continuation": [],
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#892 for broader non-Python epic work.",
+          "owner": "none",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
       "memory": [],
       "config_check": [],
       "docs": [],
-      "issue_follow_up": []
+      "issue_follow_up": [
+        {
+          "summary": "Codegen epic",
+          "owner": "github-issue",
+          "source": "#892"
+        }
+      ]
     }
   },
   "drift_log": [
     "2026-05-12: Scaffolded by agentic-planning new-plan."
-  ]
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: GitHub #892; .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json#python-generated-cli-completion-promotion\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: focused generated package proof runner tests, static generated package proof, Python conformance, Python Docker conformance, and ruff passed\nChanged surfaces: src/agentic_workspace/contracts/command_package_ir.json; src/agentic_workspace/contracts/schemas/command_package_ir.schema.json; packages/command-generation/schemas/command_package_ir.schema.json; scripts/check/check_generated_command_packages.py; tests/test_generated_command_package_proof_runner.py; tests/test_contract_tooling.py; .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json; .agentic-workspace/planning/execplans/python-generated-cli-completion-promotion.plan.json\nDurable residue: none (none)\nMemory learning: none\nFollow-up: #892 for broader non-Python epic work."
+  }
 }

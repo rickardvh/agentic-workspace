@@ -118,7 +118,8 @@
             "current_state",
             "allowed_hand_owned_cli_responsibilities",
             "must_move_behind_contracts_or_generation",
-            "proof_requirements"
+            "proof_requirements",
+            "completion_gate"
           ],
           "properties": {
             "finish_line": {
@@ -142,6 +143,61 @@
             "proof_requirements": {
               "$ref": "#/$defs/non_empty_strings",
               "description": "Proof requirements before Python generated CLI completion can be claimed."
+            },
+            "completion_gate": {
+              "type": "object",
+              "required": [
+                "state",
+                "scope",
+                "satisfied_by"
+              ],
+              "properties": {
+                "state": {
+                  "enum": [
+                    "pending",
+                    "satisfied"
+                  ],
+                  "description": "Whether Python generated CLI completion prerequisites are satisfied."
+                },
+                "scope": {
+                  "const": "python-only",
+                  "description": "Completion scope; this gate must not claim TypeScript, Bash, PowerShell, or full codegen epic completion."
+                },
+                "satisfied_by": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "evidence",
+                      "proof"
+                    ],
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "pattern": "^[a-z0-9][a-z0-9-]*$",
+                        "description": "Stable completion prerequisite id."
+                      },
+                      "evidence": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Evidence showing the prerequisite is satisfied."
+                      },
+                      "proof": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Command, checker, or test surface that proves this prerequisite."
+                      }
+                    },
+                    "additionalProperties": false,
+                    "description": "One satisfied Python completion prerequisite."
+                  },
+                  "description": "Evidence items required before full Python generated CLI completion can be claimed."
+                }
+              },
+              "additionalProperties": false,
+              "description": "Schema-backed gate that separates full Python generated CLI completion from generated adapter maturity."
             }
           },
           "additionalProperties": false,
