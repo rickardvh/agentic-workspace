@@ -882,15 +882,15 @@ def _validate_static_surfaces() -> list[str]:
     return errors
 
 
-def _run_docker(tag: str, *, dockerfile: str, require_docker: bool) -> int:
+def _run_docker(tag: str, *, dockerfile: str, proof_label: str, require_docker: bool) -> int:
     if shutil.which("docker") is None:
-        print("docker is not available; cannot run generated TypeScript package container proof")
+        print(f"docker is not available; cannot run {proof_label}")
         return 1 if require_docker else 0
     info = subprocess.run(["docker", "info"], cwd=REPO_ROOT, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
     if info.returncode:
         detail = info.stderr.strip().splitlines()
         suffix = f": {detail[0]}" if detail else ""
-        print(f"docker daemon is not available; skipped generated TypeScript package container proof{suffix}")
+        print(f"docker daemon is not available; skipped {proof_label}{suffix}")
         return 1 if require_docker else 0
     build = _run(["docker", "build", "-f", dockerfile, "-t", tag, "."])
     if build:
@@ -936,6 +936,11 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Docker image tag used for generated TypeScript package tests.",
     )
     parser.add_argument(
+        "--python-tag",
+        default="agentic-workspace-generated-python-cli-test",
+        help="Docker image tag used for generated Python package conformance.",
+    )
+    parser.add_argument(
         "--require-docker",
         action="store_true",
         help="Fail instead of skipping when Docker is unavailable.",
@@ -972,8 +977,9 @@ def main(argv: list[str] | None = None) -> int:
     docker_status = 0
     if args.python_docker_conformance:
         docker_status = _run_docker(
-            f"{args.tag}-python-conformance",
+            f"{args.python_tag}-conformance",
             dockerfile="generated/python/Dockerfile.conformance",
+            proof_label="generated Python package Docker conformance proof",
             require_docker=bool(args.require_docker),
         )
         if docker_status:
@@ -982,6 +988,7 @@ def main(argv: list[str] | None = None) -> int:
         docker_status = _run_docker(
             str(args.tag),
             dockerfile="generated/typescript/Dockerfile",
+            proof_label="generated TypeScript package Docker proof",
             require_docker=bool(args.require_docker),
         )
         if docker_status:
@@ -990,6 +997,7 @@ def main(argv: list[str] | None = None) -> int:
         docker_status = _run_docker(
             f"{args.tag}-conformance",
             dockerfile="generated/typescript/Dockerfile.conformance",
+            proof_label="generated TypeScript package Docker conformance proof",
             require_docker=bool(args.require_docker),
         )
         if docker_status:

@@ -471,13 +471,13 @@ def test_generated_command_package_docker_flags_compose(monkeypatch) -> None:
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 
-    calls: list[tuple[str, str]] = []
+    calls: list[tuple[str, str, str]] = []
 
     def fake_run(command: list[str]) -> int:
         return 0
 
-    def fake_run_docker(tag: str, *, dockerfile: str, require_docker: bool) -> int:
-        calls.append((tag, dockerfile))
+    def fake_run_docker(tag: str, *, dockerfile: str, proof_label: str, require_docker: bool) -> int:
+        calls.append((tag, dockerfile, proof_label))
         assert require_docker is True
         return 0
 
@@ -486,10 +486,41 @@ def test_generated_command_package_docker_flags_compose(monkeypatch) -> None:
 
     assert module.main(["--python-docker-conformance", "--docker", "--docker-conformance", "--require-docker"]) == 0
     assert calls == [
-        ("agentic-workspace-generated-typescript-cli-test-python-conformance", "generated/python/Dockerfile.conformance"),
-        ("agentic-workspace-generated-typescript-cli-test", "generated/typescript/Dockerfile"),
-        ("agentic-workspace-generated-typescript-cli-test-conformance", "generated/typescript/Dockerfile.conformance"),
+        (
+            "agentic-workspace-generated-python-cli-test-conformance",
+            "generated/python/Dockerfile.conformance",
+            "generated Python package Docker conformance proof",
+        ),
+        (
+            "agentic-workspace-generated-typescript-cli-test",
+            "generated/typescript/Dockerfile",
+            "generated TypeScript package Docker proof",
+        ),
+        (
+            "agentic-workspace-generated-typescript-cli-test-conformance",
+            "generated/typescript/Dockerfile.conformance",
+            "generated TypeScript package Docker conformance proof",
+        ),
     ]
+
+
+def test_generated_command_package_docker_skip_message_uses_proof_label(monkeypatch, capsys) -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_generated_command_packages.py"
+    spec = importlib.util.spec_from_file_location("check_generated_command_packages", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    monkeypatch.setattr(module.shutil, "which", lambda _name: None)
+
+    status = module._run_docker(
+        "proof-image",
+        dockerfile="generated/python/Dockerfile.conformance",
+        proof_label="generated Python package Docker conformance proof",
+        require_docker=False,
+    )
+
+    assert status == 0
+    assert "cannot run generated Python package Docker conformance proof" in capsys.readouterr().out
 
 
 def test_generated_command_package_docker_conformance_surface_exists() -> None:
