@@ -943,14 +943,42 @@ def _handle_generated_doctor(args: argparse.Namespace) -> int | None:
     return _handle_doctor(args)
 
 
+def _run_doctor_report_adapter(args: argparse.Namespace) -> int | None:
+    return _handle_generated_doctor(args)
+
+
+def _run_list_files_report_adapter(args: argparse.Namespace) -> int | None:
+    return _handle_list_files(args)
+
+
+def _run_list_skills_report_adapter(args: argparse.Namespace) -> int | None:
+    return _handle_list_skills(args)
+
+
+def _run_promotion_report_adapter(args: argparse.Namespace) -> int | None:
+    return _handle_promotion_report(args)
+
+
+def _run_report_adapter(args: argparse.Namespace) -> int | None:
+    return _handle_report(args)
+
+
+def _run_route_report_adapter(args: argparse.Namespace) -> int | None:
+    return _handle_route_report(args)
+
+
+def _run_status_report_adapter(args: argparse.Namespace) -> int | None:
+    return _handle_status(args)
+
+
 _GENERATED_RUNTIME_HANDLERS = {
-    "memory.doctor.report": _handle_generated_doctor,
-    "memory.list-files.report": _handle_list_files,
-    "memory.list-skills.report": _handle_list_skills,
-    "memory.promotion-report.report": _handle_promotion_report,
-    "memory.report.report": _handle_report,
-    "memory.route-report.report": _handle_route_report,
-    "memory.status.report": _handle_status,
+    "memory.doctor.report": _run_doctor_report_adapter,
+    "memory.list-files.report": _run_list_files_report_adapter,
+    "memory.list-skills.report": _run_list_skills_report_adapter,
+    "memory.promotion-report.report": _run_promotion_report_adapter,
+    "memory.report.report": _run_report_adapter,
+    "memory.route-report.report": _run_route_report_adapter,
+    "memory.status.report": _run_status_report_adapter,
 }
 
 

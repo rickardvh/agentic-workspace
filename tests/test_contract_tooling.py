@@ -658,6 +658,7 @@ def test_generated_python_command_package_metadata_is_current() -> None:
         GENERATED_COMMAND_PACKAGE,
         generated_command_names,
         generated_maturity,
+        generated_operation_ids,
         generated_weak_agent_routing,
         supports_generated_command,
     )
@@ -708,6 +709,23 @@ def test_generated_python_command_package_metadata_is_current() -> None:
         "start",
         "status",
         "summary",
+    )
+    assert generated_operation_ids() == (
+        "config.report",
+        "defaults.report",
+        "doctor.report",
+        "implement.context",
+        "modules.report",
+        "ownership.report",
+        "preflight.report",
+        "proof.report",
+        "reconcile.report",
+        "report.combined",
+        "setup.guidance",
+        "skills.report",
+        "start.context",
+        "status.report",
+        "summary.report",
     )
     assert supports_generated_command(["defaults", "--format", "json"]) is True
     assert supports_generated_command(["config", "--format", "json"]) is True

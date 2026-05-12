@@ -213,6 +213,18 @@ def test_static_generated_package_proof_rejects_python_completion_drift(monkeypa
     assert any("adapter-layer-proven-not-full-generated-cli" in error for error in errors)
 
 
+def test_python_runtime_handler_boundary_rejects_non_adapter_handlers(monkeypatch) -> None:
+    checker = _load_checker()
+    memory_cli = checker.importlib.import_module("repo_memory_bootstrap.cli")
+    drifted_handlers = dict(memory_cli._GENERATED_RUNTIME_HANDLERS)
+    drifted_handlers["memory.status.report"] = memory_cli._handle_status
+    monkeypatch.setattr(memory_cli, "_GENERATED_RUNTIME_HANDLERS", drifted_handlers)
+
+    errors = checker._validate_python_runtime_handler_boundary()
+
+    assert any("memory.status.report" in error and "thin _run_*_adapter binding" in error for error in errors)
+
+
 def test_typescript_runtime_handoff_thinness_rejects_runtime_owned_behavior() -> None:
     checker = _load_checker()
     cli_text = "\n".join(

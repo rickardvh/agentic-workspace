@@ -926,6 +926,10 @@ def generated_command_names() -> tuple[str, ...]:
     return tuple(sorted(_GENERATED_COMMANDS_BY_NAME))
 
 
+def generated_operation_ids() -> tuple[str, ...]:
+    return tuple(sorted(str(command["operation_id"]) for command in _GENERATED_ADAPTER_COMMANDS))
+
+
 def supports_generated_command(argv: list[str] | tuple[str, ...]) -> bool:
     return bool(argv) and str(argv[0]) in _GENERATED_COMMANDS_BY_NAME
 

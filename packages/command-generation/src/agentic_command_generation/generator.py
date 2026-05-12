@@ -116,6 +116,8 @@ def _python_runtime_adapter_module(package: dict[str, Any], target: dict[str, An
         "    return _GENERATED_WEAK_AGENT_ROUTING\n\n\n"
         "def generated_command_names() -> tuple[str, ...]:\n"
         "    return tuple(sorted(_GENERATED_COMMANDS_BY_NAME))\n\n\n"
+        "def generated_operation_ids() -> tuple[str, ...]:\n"
+        '    return tuple(sorted(str(command["operation_id"]) for command in _GENERATED_ADAPTER_COMMANDS))\n\n\n'
         "def supports_generated_command(argv: list[str] | tuple[str, ...]) -> bool:\n"
         "    return bool(argv) and str(argv[0]) in _GENERATED_COMMANDS_BY_NAME\n\n\n"
         "def _option_type(option_spec: dict[str, Any]) -> Any:\n"

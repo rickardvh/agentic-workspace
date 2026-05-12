@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
 import os
 import shutil
@@ -14,6 +15,13 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 GENERATOR_SCRIPT_ROOT = REPO_ROOT / "scripts" / "generate"
 if str(GENERATOR_SCRIPT_ROOT) not in sys.path:
     sys.path.insert(0, str(GENERATOR_SCRIPT_ROOT))
+for SOURCE_ROOT in (
+    REPO_ROOT / "src",
+    REPO_ROOT / "packages" / "planning" / "src",
+    REPO_ROOT / "packages" / "memory" / "src",
+):
+    if str(SOURCE_ROOT) not in sys.path:
+        sys.path.insert(0, str(SOURCE_ROOT))
 
 from workspace_command_generation import SCHEMA_PATH, SOURCE_PATH, load_workspace_command_package_ir  # noqa: E402
 
@@ -558,6 +566,49 @@ def _validate_python_cli_completion_policy(policy: dict[str, object]) -> list[st
     return errors
 
 
+def _validate_python_runtime_handler_boundary() -> list[str]:
+    errors: list[str] = []
+    package_modules = {
+        "root-workspace": ("agentic_workspace.generated_cli_package", "agentic_workspace.cli"),
+        "planning-bootstrap": ("repo_planning_bootstrap.generated_cli_package", "repo_planning_bootstrap.cli"),
+        "memory-bootstrap": ("repo_memory_bootstrap.generated_cli_package", "repo_memory_bootstrap.cli"),
+    }
+    for package_id, (generated_module_name, runtime_module_name) in package_modules.items():
+        try:
+            generated_module = importlib.import_module(generated_module_name)
+            runtime_module = importlib.import_module(runtime_module_name)
+        except ImportError as exc:
+            errors.append(f"Python runtime handler boundary import failed for {package_id}: {exc}")
+            continue
+        generated_operation_ids = getattr(generated_module, "generated_operation_ids", None)
+        if not callable(generated_operation_ids):
+            errors.append(f"{generated_module_name} must expose generated_operation_ids() from generated command-package IR")
+            continue
+        operation_ids = set(generated_operation_ids())
+        handler_map = getattr(runtime_module, "_GENERATED_RUNTIME_HANDLERS", None)
+        if not isinstance(handler_map, dict):
+            errors.append(f"{runtime_module_name} must expose _GENERATED_RUNTIME_HANDLERS as a runtime adapter binding map")
+            continue
+        handler_ids = {str(operation_id) for operation_id in handler_map}
+        missing = sorted(operation_ids - handler_ids)
+        extra = sorted(handler_ids - operation_ids)
+        if missing:
+            errors.append(f"{runtime_module_name} missing runtime adapter handlers for generated operations: {missing!r}")
+        if extra:
+            errors.append(f"{runtime_module_name} contains runtime adapter handlers outside generated operation ids: {extra!r}")
+        for operation_id, handler in handler_map.items():
+            handler_name = getattr(handler, "__name__", "")
+            if not callable(handler):
+                errors.append(f"{runtime_module_name} handler for {operation_id!r} is not callable")
+                continue
+            if not (handler_name.startswith("_run_") and handler_name.endswith("_adapter")):
+                errors.append(
+                    f"{runtime_module_name} handler for {operation_id!r} must be a thin _run_*_adapter binding; "
+                    f"got {handler_name!r}"
+                )
+    return errors
+
+
 def _run_adapter_conformance(*, require_node: bool) -> list[str]:
     errors: list[str] = []
     node = shutil.which("node")
@@ -855,6 +906,7 @@ def _validate_static_surfaces() -> list[str]:
                 errors.append(f"{relative_path} does not import the generated Python CLI package")
             if main_index == -1 or generated_index == -1 or parser_index == -1 or generated_index > parser_index:
                 errors.append(f"{relative_path} does not route generated Python adapters before the handwritten parser")
+        errors.extend(_validate_python_runtime_handler_boundary())
         durable_source_roots = {
             "src/agentic_workspace/generated_cli_package/__init__.py": "generated/python/workspace-cli",
             "packages/planning/src/repo_planning_bootstrap/generated_cli_package/__init__.py": "generated/python/planning-cli",
