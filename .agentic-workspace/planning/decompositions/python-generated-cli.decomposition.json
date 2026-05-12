@@ -2,21 +2,35 @@
   "kind": "planning-decomposition/v1",
   "title": "Python generated CLI completion",
   "status": "partially-promoted",
-  "larger_intended_outcome": "Complete the Python side of #892 by moving command parser, dispatch, interface behavior, adapter metadata, and conformance expectations behind implementation-independent contracts or IR, leaving cli.py files as thin runtime primitive adapters only.",
+  "larger_intended_outcome": "Complete the Python side of #892 by moving command parser, dispatch, interface behavior, adapter metadata, runtime operation contracts, and conformance expectations behind implementation-independent contracts or IR, so later implementation targets are not forced to depend on Python internals unless that dependency is explicit and temporary.",
   "non_goals": [
     "Do not claim weak-agent-safe adapter maturity is full Python generated CLI completion.",
-    "Do not move live workspace inspection, mutation orchestration, or package-specific runtime primitive implementation into generated code.",
+    "Do not treat a generated non-Python CLI that shells into Python package internals as target completion unless the dependency is explicitly accepted as a transitional runtime bridge.",
+    "Do not move live workspace inspection, mutation orchestration, or package-specific runtime primitive implementation into generated code until the operation contracts make the target-runtime boundary explicit.",
+    "Do not create a broad general-purpose language when a small JSON-Schema-backed operation IR plus thin target executors is sufficient.",
     "Do not advance Bash, PowerShell, or TypeScript in this Python lane except where shared contracts must remain implementation-independent."
   ],
   "candidate_lanes": [
     {
+      "id": "json-schema-operation-ir",
+      "title": "JSON Schema operation IR",
+      "readiness": "promoted",
+      "outcome": "A small JSON-Schema-backed operation IR exists for CLI-visible package behavior over Markdown, TOML, JSON, schemas, templates, managed files, and emitted output.",
+      "owner_surface": "src/agentic_workspace/contracts/ and generated conformance fixtures",
+      "proof": "Schema validation and one representative planning or memory operation prove the IR can describe behavior without relying on package-local CLI code as the source of truth.",
+      "depends_on": [],
+      "parallel_with": []
+    },
+    {
       "id": "python-runtime-handler-boundary",
       "title": "Python runtime handler boundary",
       "readiness": "promoted",
-      "outcome": "Generated Python dispatch can identify supported operation ids from IR while cli.py exposes only thin operation handler adapters for hand-owned runtime primitives.",
+      "outcome": "Generated Python dispatch can identify supported operation ids from IR while runtime operation handlers expose an explicit contract boundary that can be implemented or bridged by future targets without relying on package-local cli.py ownership.",
       "owner_surface": "packages/command-generation/src/agentic_command_generation/generator.py and generated/python/*/generated_cli_package/__init__.py",
-      "proof": "Generated package static proof plus Python conformance prove operation dispatch is generated and runtime handlers remain thin package-local adapters.",
-      "depends_on": [],
+      "proof": "Generated package static proof plus Python conformance prove operation dispatch is generated, runtime handlers are behind an explicit operation contract, and any Python-runtime bridge assumption is visible rather than implicit.",
+      "depends_on": [
+        "json-schema-operation-ir"
+      ],
       "parallel_with": []
     },
     {
@@ -59,16 +73,19 @@
     }
   ],
   "dependency_assumptions": [
-    "Runtime primitive behavior remains hand-owned and can be called from thin operation handlers.",
+    "Runtime primitive behavior remains hand-owned in the Python lane only after it is separated from CLI ownership behind explicit operation contracts.",
+    "Future non-Python targets must either implement the same operation contracts or use an explicitly accepted transitional bridge; an implicit call into Python internals is not completion.",
+    "JSON Schema is sufficient as the contract layer for command packages, operation plans, payloads, and conformance fixtures; execution semantics belong to a small documented primitive set.",
     "Generated Python parser and dispatch should consume command_package_ir and conformance contracts as the single source of truth.",
     "Each lane must keep Python work independent from Bash and PowerShell transport promotion."
   ],
   "parallelization_assumptions": [
-    "The first two Python lanes are ordered because parser retirement depends on a clearer runtime-handler boundary.",
+    "The first two Python lanes are ordered because parser retirement depends on a clearer runtime-operation boundary.",
     "Interface-change gating can be explored in parallel only after the parser retirement boundary is explicit."
   ],
   "proof_expectations": [
     "Each promoted Python lane must include Python black-box conformance and Docker-backed Python conformance unless the lane is planning-only.",
+    "Completion proof must distinguish generated CLI transport, runtime operation contract coverage, and any target bridge dependency instead of treating them as one surface.",
     "Closeout must run or inspect closeout_trust before claiming Python completion.",
     "The command-package IR python_cli_completion.current_state may be full-generated-cli-complete only with a schema-backed python-only completion gate and static proof for all prerequisite evidence ids."
   ],
@@ -85,7 +102,19 @@
       "target": "#921",
       "label": "Python closeout scope correction",
       "role": "dogfooding signal"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#930",
+      "label": "JSON Schema operation IR",
+      "role": "shared operation-contract lane"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#931",
+      "label": "Python operation-contract execution",
+      "role": "Python migration lane"
     }
   ],
-  "notes": "Created after #921 showed that adapter maturity was incorrectly treated as Python generated-CLI completion. Runtime handler boundary, handwritten parser retirement, interface-change proof gating, and the Python-only completion promotion gate have been promoted and implemented on codex/finish-python-generated-cli. This closes the Python lane only; Bash, PowerShell, TypeScript follow-through, and any future mutation-capable generated adapters remain outside this branch."
+  "notes": "Created after #921 showed that adapter maturity was incorrectly treated as Python generated-CLI completion. Updated after user clarification that non-Python generated CLI targets are not meant to depend implicitly on Python internals. Runtime handler boundary, handwritten parser retirement, interface-change proof gating, and the Python-only completion promotion gate were previously promoted and implemented on codex/finish-python-generated-cli, but completion must now also preserve the runtime operation boundary needed by future targets. Bash, PowerShell, TypeScript follow-through, and any future mutation-capable generated adapters remain outside this Python branch unless the shared operation contract must change."
 }
