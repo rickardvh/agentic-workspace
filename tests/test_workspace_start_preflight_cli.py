@@ -365,7 +365,7 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
                 "--target",
                 str(target),
                 "--changed",
-                "src/agentic_workspace/cli.py",
+                "src/agentic_workspace/_runtime_cli.py",
                 "--verbose",
                 "--format",
                 "json",
@@ -445,7 +445,7 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
     assert payload["proof"]["cli_authority_review"]["classifications"][0]["role"] == "hand-owned-executable"
     assert payload["path_boundaries"] == [
         {
-            "path": "src/agentic_workspace/cli.py",
+            "path": "src/agentic_workspace/_runtime_cli.py",
             "authority": "source",
             "warning": None,
             "requires_attention": False,
@@ -1250,7 +1250,7 @@ def test_implement_distinguishes_planning_recovery_from_mixed_wip(tmp_path: Path
                 str(tmp_path),
                 "--changed",
                 ".agentic-workspace/planning/state.toml",
-                "src/agentic_workspace/cli.py",
+                "src/agentic_workspace/_runtime_cli.py",
                 "--task",
                 "Recover planning state while code is dirty",
                 "--format",

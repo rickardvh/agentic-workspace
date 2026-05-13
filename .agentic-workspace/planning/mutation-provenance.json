@@ -56,6 +56,38 @@
       "reason": "archive execplan dogfooding-planning-safety-935-plus",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-13T12:15:23+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
+      "sha256": "e3ea694305480ca8c0a432d0254a7fbad7bc4a2aa891deda1470c9fab15d1cde",
+      "command": "agentic-planning record-recovery",
+      "reason": "narrow active Python codegen execplan from closed #933 next action to root front-door slice before implementation",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T12:19:49+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
+      "sha256": "3fc989d9cb51e41928e3fb5f4c5c1d5e4479a4e13256d740cf1b7bb76c9e0380",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=delegate-exploration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T12:19:49+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "4ed214b46426e6674f77f6694a77d4fc6957d5cd289d3cc68d4ebff83f5d8cee",
+      "command": "agentic-planning record-recovery",
+      "reason": "align active codegen state suggested slice after root front-door execplan narrowing",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T12:31:10+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
+      "sha256": "43cf960865a8d2076dd2184d7e6bf97a69a77f147e2328cfb696f147a3d5fc97",
+      "command": "agentic-planning record-recovery",
+      "reason": "record root front-door slice proof and continuation state",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T12:32:32+00:00"
     }
   ]
 }

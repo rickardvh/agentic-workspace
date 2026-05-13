@@ -1743,7 +1743,7 @@ def _repo_friction_context_strategy(*, relative_path: str, kind: str, surface_ro
                 "retention": "shrink_after_fix",
             },
         }
-    if relative_path == "src/agentic_workspace/cli.py":
+    if relative_path == "src/agentic_workspace/_runtime_cli.py":
         return {
             "classification": "root-cli-runtime-hotspot",
             "suggested_action": "extract-runtime-or-renderer-helper",

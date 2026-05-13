@@ -3762,7 +3762,7 @@ def _write_action_kind(*, dry_run: bool, existing: str | None) -> str:
 def _is_retired_generated_llms_adapter(text: str) -> bool:
     lowered = text.lower()
     return (
-        "canonical_source: `src/agentic_workspace/cli.py:_external_agent_handoff_text`" in lowered
+        "canonical_source: `src/agentic_workspace/_runtime_cli.py:_external_agent_handoff_text`" in lowered
         or "generated compatibility adapter" in lowered
         or "agent entrypoint router" in lowered
     )
@@ -11240,7 +11240,7 @@ def _start_payload(
     )
     if planning_safety_gate["status"] not in {"satisfied", "clear"}:
         payload["planning_safety_gate"] = planning_safety_gate
-    if not planning_safety_gate["workflow_sufficient"]:
+    if not planning_safety_gate["workflow_sufficient"] and not _is_config_posture_task(task_text):
         payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
             surface="start",
             decision=planning_safety_gate["decision"],
@@ -11350,7 +11350,7 @@ def _start_payload(
             "read_first": [command],
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
         }
-    if not planning_safety_gate["workflow_sufficient"]:
+    if not planning_safety_gate["workflow_sufficient"] and not _is_config_posture_task(task_text):
         payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
             surface="start",
             decision=planning_safety_gate["decision"],
@@ -11937,7 +11937,7 @@ def _start_tiny_payload_fast(
             "read_first": [command],
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
         }
-    if not planning_safety_gate["workflow_sufficient"]:
+    if not planning_safety_gate["workflow_sufficient"] and not _is_config_posture_task(task_text):
         payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
             surface="start",
             decision=planning_safety_gate["decision"],
@@ -16050,7 +16050,7 @@ def _prompt_routing_contract_payload() -> dict[str, Any]:
             {
                 "class": "workspace lifecycle change",
                 "proof_lane": "workspace_cli",
-                "owner_surface": "src/agentic_workspace/cli.py",
+                "owner_surface": "src/agentic_workspace/_runtime_cli.py",
             },
             {
                 "class": "planning state or contract change",
@@ -16739,7 +16739,7 @@ def _effective_authority_payload(
                 "concern": "runtime implementation",
                 "authority_class": "procedural-owned",
                 "owner": "workspace",
-                "surface": "src/agentic_workspace/cli.py",
+                "surface": "src/agentic_workspace/_runtime_cli.py",
                 "status": "present",
             },
         ],
@@ -21445,7 +21445,7 @@ def _direct_cli_edit_review_for_changed_paths(changed_paths: list[str]) -> dict[
     cli_paths = [
         path
         for path in changed_paths
-        if path == "src/agentic_workspace/cli.py"
+        if path == "src/agentic_workspace/_runtime_cli.py"
         or path.endswith("/src/repo_planning_bootstrap/cli.py")
         or path.endswith("/src/repo_memory_bootstrap/cli.py")
     ]

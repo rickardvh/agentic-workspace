@@ -2417,7 +2417,7 @@ def test_report_surfaces_combined_execution_shape_for_planning_backed_slice(tmp_
         "## Blockers\n\n"
         "- None.\n\n"
         "## Touched Paths\n\n"
-        "- src/agentic_workspace/cli.py\n\n"
+        "- src/agentic_workspace/_runtime_cli.py\n\n"
         "## Invariants\n\n"
         "- Config remains posture rather than scheduler policy.\n\n"
         "## Validation Commands\n\n"
@@ -2717,7 +2717,7 @@ def test_report_surfaces_promotable_setup_findings_as_repo_friction_evidence(tmp
                         "class": "repo_friction_evidence",
                         "summary": "Validation repeatedly fails after agents hand-author schema shape.",
                         "confidence": 0.9,
-                        "path": "src/agentic_workspace/cli.py",
+                        "path": "src/agentic_workspace/_runtime_cli.py",
                         "observed_during": "uv run pytest tests/test_workspace_cli.py",
                         "signal_kind": "validation_friction",
                         "cost": "Agents spend extra repair loops fixing shape that a writer helper could construct.",
@@ -2752,7 +2752,7 @@ def test_report_surfaces_promotable_setup_findings_as_repo_friction_evidence(tmp
     ]
     setup_findings = next(evidence for evidence in payload["repo_friction"]["external_evidence"] if evidence["kind"] == "setup-findings")
     assert setup_findings["path"] == "tools/setup-findings.json"
-    assert setup_findings["items"][0]["path"] == "src/agentic_workspace/cli.py"
+    assert setup_findings["items"][0]["path"] == "src/agentic_workspace/_runtime_cli.py"
     assert setup_findings["items"][0]["validation_failure_class"] == "interface_design_error"
     assert setup_findings["items"][0]["promotion_reason"] == "grounded friction evidence is worth preserving"
     signal = payload["improvement_intake"]["improvement_signal_candidates"][0]

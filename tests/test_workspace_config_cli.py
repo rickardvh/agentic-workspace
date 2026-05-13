@@ -695,7 +695,7 @@ def test_config_command_layers_shared_local_config_below_repo_local_override(tmp
     shared.write_text(
         "schema_version = 1\n\n"
         "[workspace]\n"
-        'cli_invoke = "python -m agentic_workspace.cli"\n\n'
+        'cli_invoke = "python -m agentic_workspace.generated_cli_entrypoint"\n\n'
         "[runtime]\n"
         "strong_planner_available = true\n"
         "cheap_bounded_executor_available = false\n\n"
@@ -717,7 +717,7 @@ def test_config_command_layers_shared_local_config_below_repo_local_override(tmp
     assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["workspace"]["cli_invoke"] == "python -m agentic_workspace.cli"
+    assert payload["workspace"]["cli_invoke"] == "python -m agentic_workspace.generated_cli_entrypoint"
     assert payload["workspace"]["cli_invoke_source"] == "shared-local-config"
     local_override = payload["mixed_agent"]["local_override"]
     assert local_override["shared_config"] == {
@@ -1438,13 +1438,13 @@ def test_local_config_cli_invoke_overrides_repo_owned_invocation_policy(tmp_path
     )
     _write(
         target / ".agentic-workspace" / "config.local.toml",
-        'schema_version = 1\n\n[workspace]\ncli_invoke = "python -m agentic_workspace.cli"\n',
+        'schema_version = 1\n\n[workspace]\ncli_invoke = "python -m agentic_workspace.generated_cli_entrypoint"\n',
     )
 
     assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["workspace"]["cli_invoke"] == "python -m agentic_workspace.cli"
+    assert payload["workspace"]["cli_invoke"] == "python -m agentic_workspace.generated_cli_entrypoint"
     assert payload["workspace"]["cli_invoke_source"] == "local-override"
     assert payload["warnings"] == []
 

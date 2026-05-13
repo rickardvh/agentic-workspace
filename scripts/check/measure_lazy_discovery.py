@@ -12,7 +12,7 @@ from typing import Any, Callable
 
 from repo_planning_bootstrap import cli as planning_cli
 
-from agentic_workspace import cli as workspace_cli
+from agentic_workspace import _runtime_cli as workspace_cli
 
 JsonRunner = Callable[[list[str]], int]
 

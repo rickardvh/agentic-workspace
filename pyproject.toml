@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [project.scripts]
-agentic-workspace = "agentic_workspace.cli:main"
+agentic-workspace = "agentic_workspace.generated_cli_entrypoint:main"
 
 [dependency-groups]
 dev = [

@@ -184,7 +184,7 @@
         "id": "root-workspace-cli-runtime",
         "role": "hand-owned-executable",
         "exact": [
-          "src/agentic_workspace/cli.py"
+          "src/agentic_workspace/_runtime_cli.py"
         ],
         "direct_edit_allowed": true,
         "source_contract": "src/agentic_workspace/contracts/operation_contracts.json + src/agentic_workspace/contracts/cli_commands.json + src/agentic_workspace/contracts/python_runtime_boundary.json",

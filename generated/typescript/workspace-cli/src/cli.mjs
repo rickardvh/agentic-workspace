@@ -26,7 +26,7 @@ if (!supportedCommands.has(command)) {
   process.exit(2);
 }
 
-const runtimeCommand = process.env.AGENTIC_WORKSPACE_RUNTIME ?? "python -m agentic_workspace.cli";
+const runtimeCommand = process.env.AGENTIC_WORKSPACE_RUNTIME ?? "python -m agentic_workspace.generated_cli_entrypoint";
 
 function splitRuntimeCommand(commandLine) {
   const parts = [];

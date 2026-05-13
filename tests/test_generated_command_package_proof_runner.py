@@ -102,7 +102,7 @@ def test_generated_python_conformance_uses_contract_artifacts() -> None:
     planning_status = registries["planning-bootstrap"]["planning.status.process"]
     memory_skills = registries["memory-bootstrap"]["memory.list-skills.process"]
 
-    assert checker._python_command_for_package("root-workspace")[-1] == "agentic_workspace.cli"
+    assert checker._python_command_for_package("root-workspace")[-1] == "agentic_workspace.generated_cli_entrypoint"
     assert checker._python_command_for_package("planning-bootstrap")[-1] == "repo_planning_bootstrap.cli"
     assert checker._python_command_for_package("memory-bootstrap")[-1] == "repo_memory_bootstrap.cli"
     assert defaults.success_args == ["defaults", "--section", "startup", "--format", "json"]
@@ -311,19 +311,19 @@ def test_python_runtime_handler_boundary_rejects_non_adapter_handlers(monkeypatc
 def test_python_runtime_import_boundary_rejects_legacy_generated_adapter_dispatch() -> None:
     checker = _load_checker()
     errors = checker._validate_no_legacy_generated_adapter_runtime_import(
-        relative_path="src/agentic_workspace/cli.py",
+        relative_path="src/agentic_workspace/_runtime_cli.py",
         text="from agentic_workspace.generated_command_adapters import GENERATED_COMMAND_ADAPTERS_BY_COMMAND\n",
     )
 
     assert errors == [
-        "src/agentic_workspace/cli.py must route generated Python commands through generated_cli_package, "
+        "src/agentic_workspace/_runtime_cli.py must route generated Python commands through generated_cli_package, "
         "not legacy generated_command_adapters runtime dispatch"
     ]
 
 
 def test_python_parser_retirement_rejects_generated_command_in_handwritten_parser(monkeypatch) -> None:
     checker = _load_checker()
-    root_cli = checker.importlib.import_module("agentic_workspace.cli")
+    root_cli = checker.importlib.import_module("agentic_workspace._runtime_cli")
 
     def build_drifted_parser() -> argparse.ArgumentParser:
         parser = argparse.ArgumentParser()

@@ -141,7 +141,7 @@ def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
             [
                 "proof",
                 "--changed",
-                "src/agentic_workspace/cli.py",
+                "src/agentic_workspace/_runtime_cli.py",
                 "--format",
                 "json",
             ]
@@ -152,7 +152,7 @@ def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
     payload = json.loads(capsys.readouterr().out)
     encoded = json.dumps(payload)
     assert payload["kind"] == "proof-next-decision/v1"
-    assert payload["selector"] == {"changed": ["src/agentic_workspace/cli.py"]}
+    assert payload["selector"] == {"changed": ["src/agentic_workspace/_runtime_cli.py"]}
     assert payload["next"]["action"] == "run-validation-command"
     assert payload["next"]["command"] == "make test-workspace"
     assert "make lint-workspace" in payload["required_commands"]
@@ -1124,7 +1124,7 @@ def test_proof_tiny_readme_profile_keeps_docs_only_validation_light(capsys) -> N
 
 
 def test_proof_changed_selector_flags_direct_cli_edits(capsys) -> None:
-    assert cli.main(["proof", "--verbose", "--changed", "src/agentic_workspace/cli.py", "--format", "json"]) == 0
+    assert cli.main(["proof", "--verbose", "--changed", "src/agentic_workspace/_runtime_cli.py", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     answer = payload["answer"]
@@ -1144,7 +1144,7 @@ def test_proof_changed_selector_flags_direct_cli_edits(capsys) -> None:
     assert authority_review["authority_query"] == "agentic-workspace defaults --section root_cli_authority --format json"
     review = payload["answer"]["direct_cli_edit_review"]
     assert review["status"] == "review-needed"
-    assert review["changed_paths"] == ["src/agentic_workspace/cli.py"]
+    assert review["changed_paths"] == ["src/agentic_workspace/_runtime_cli.py"]
     assert "normal interface authoring belongs in command contracts" in review["rule"]
     assert "runtime primitive implementation and live workspace inspection" in review["allowed_direct_cli_work"]
     assert "route interface or generated-surface changes back" in review["recovery_signal"]
@@ -1159,7 +1159,7 @@ def test_proof_changed_selector_broadens_contract_plus_cli_changes(capsys) -> No
                 "--verbose",
                 "--changed",
                 "src/agentic_workspace/contracts/proof_selection_rules.json",
-                "src/agentic_workspace/cli.py",
+                "src/agentic_workspace/_runtime_cli.py",
                 "--format",
                 "json",
             ]
@@ -1188,7 +1188,7 @@ def test_proof_changed_selector_escalates_for_cross_lane_changes(capsys) -> None
                 "--verbose",
                 "--changed",
                 "packages/planning/src/repo_planning_bootstrap/installer.py",
-                "src/agentic_workspace/cli.py",
+                "src/agentic_workspace/_runtime_cli.py",
                 "--format",
                 "json",
             ]
