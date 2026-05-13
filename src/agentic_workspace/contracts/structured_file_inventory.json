@@ -822,6 +822,23 @@
       "routed_to": "#929"
     },
     {
+      "pattern": "generated/python/*/generated_command_adapters.json",
+      "format": "json",
+      "owner": "generated-command-adapters",
+      "status": "generated-derived",
+      "schema_or_validator": "generated command adapter checks",
+      "editable_by_agents": false,
+      "generated": true,
+      "notes": "Generated Python command-adapter metadata JSON files are adapter outputs derived from command_adapter_generation.json.",
+      "storage_class": "generated-required-adapter",
+      "checked_in_justification": "Checked in so conformance and package proof can load generated adapter metadata as data instead of importing generated Python modules from source packages.",
+      "reconstructable_from": [
+        "uv run python scripts/generate/generate_command_adapters.py",
+        "src/agentic_workspace/contracts/command_adapter_generation.json"
+      ],
+      "routed_to": "#950"
+    },
+    {
       "pattern": "generated/python/*/generated_cli_package/operations/*.json",
       "format": "json",
       "owner": "generated-command-adapters",
@@ -978,6 +995,16 @@
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
       "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
       "removal_or_demotion_path": "demote only after generated Python packages no longer need packaged operation artifacts",
+      "max_bytes": 250000
+    },
+    {
+      "pattern": "generated/python/*/generated_command_adapters.json",
+      "source_command": "uv run python scripts/generate/generate_command_adapters.py",
+      "named_consumer": "generated adapter conformance and package proof loaders",
+      "checked_in_justification": "Generated command adapter metadata is kept as JSON so proof can load it as data without package-local generated Python modules.",
+      "freshness_check": "uv run python scripts/generate/generate_command_adapters.py --check",
+      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "removal_or_demotion_path": "demote only after generated adapter proof no longer needs checked-in adapter metadata artifacts",
       "max_bytes": 250000
     },
     {

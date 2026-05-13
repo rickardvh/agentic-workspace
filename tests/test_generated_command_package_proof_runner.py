@@ -36,11 +36,13 @@ def test_generated_command_package_proof_defaults_to_docker_steps() -> None:
 
     assert [step.label for step in steps] == [
         "generated packages python docker conformance",
+        "generated packages primitive docker conformance",
         "generated packages docker",
         "generated packages docker conformance",
     ]
     assert [step.args for step in steps] == [
         ["--python-docker-conformance", "--require-docker"],
+        ["--primitive-docker-conformance", "--require-docker"],
         ["--docker", "--require-docker"],
         ["--docker-conformance", "--require-docker"],
     ]
@@ -63,11 +65,13 @@ def test_generated_command_package_proof_all_runs_every_step(monkeypatch, capsys
         ("generated packages static", [], 12.0, 7),
         ("generated packages python conformance", ["--python-conformance"], 12.0, 7),
         ("generated packages python docker conformance", ["--python-docker-conformance", "--require-docker"], 12.0, 7),
+        ("generated packages primitive conformance", ["--primitive-conformance"], 12.0, 7),
+        ("generated packages primitive docker conformance", ["--primitive-docker-conformance", "--require-docker"], 12.0, 7),
         ("generated packages conformance", ["--conformance", "--require-node"], 12.0, 7),
         ("generated packages docker", ["--docker", "--require-docker"], 12.0, 7),
         ("generated packages docker conformance", ["--docker-conformance", "--require-docker"], 12.0, 7),
     ]
-    assert "[ok] generated command package proof (6 steps," in capsys.readouterr().out
+    assert "[ok] generated command package proof (8 steps," in capsys.readouterr().out
 
 
 def test_generated_typescript_conformance_cases_come_from_contract_artifacts() -> None:
@@ -294,6 +298,15 @@ def test_static_generated_package_proof_accepts_python_completion_gate() -> None
     errors = checker._validate_static_surfaces()
 
     assert not [error for error in errors if "Python CLI completion" in error or "Python completion" in error]
+
+
+def test_static_generated_package_proof_rejects_missing_primitive_conformance_case(monkeypatch) -> None:
+    checker = _load_checker()
+    monkeypatch.setattr(checker, "REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE", {"missing.primitive"})
+
+    errors = checker._validate_static_surfaces()
+
+    assert "primitive conformance is missing required primitive case: missing.primitive" in errors
 
 
 def test_python_runtime_handler_boundary_rejects_non_adapter_handlers(monkeypatch) -> None:

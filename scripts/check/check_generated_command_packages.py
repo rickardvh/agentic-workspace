@@ -79,6 +79,14 @@ PYTHON_COMPLETION_EXPECTED_PROOF_SUBSTRINGS = {
     "operation-execution-inventory-exhaustive": "_validate_python_operation_execution_inventory",
 }
 PYTHON_OPERATION_EXECUTION_FINAL_STATUSES = {"runtime-consumed", "accepted-hand-owned-runtime-primitive"}
+REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE = {
+    "path.target_root.resolve",
+    "filesystem.read",
+    "filesystem.glob",
+    "json.parse",
+    "payload.assemble",
+    "output.emit",
+}
 
 
 def _run(command: list[str]) -> int:
@@ -1197,6 +1205,17 @@ def _validate_static_surfaces() -> list[str]:
     python_conformance_dockerfile = REPO_ROOT / "generated" / "python" / "Dockerfile.conformance"
     if not python_conformance_dockerfile.is_file():
         errors.append("generated/python/Dockerfile.conformance is missing")
+    primitive_conformance_dockerfile = REPO_ROOT / "generated" / "python" / "Dockerfile.primitive-conformance"
+    if not primitive_conformance_dockerfile.is_file():
+        errors.append("generated/python/Dockerfile.primitive-conformance is missing")
+    primitive_conformance_script = REPO_ROOT / "packages" / "command-generation" / "tests" / "primitive_conformance.py"
+    if not primitive_conformance_script.is_file():
+        errors.append("packages/command-generation/tests/primitive_conformance.py is missing")
+    else:
+        primitive_conformance_text = primitive_conformance_script.read_text(encoding="utf-8")
+        for primitive_id in sorted(REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE):
+            if primitive_id not in primitive_conformance_text:
+                errors.append(f"primitive conformance is missing required primitive case: {primitive_id}")
     conformance_dockerfile = REPO_ROOT / "generated" / "typescript" / "Dockerfile.conformance"
     if not conformance_dockerfile.is_file():
         errors.append("generated/typescript/Dockerfile.conformance is missing")
@@ -1249,6 +1268,10 @@ def _run_docker(tag: str, *, dockerfile: str, proof_label: str, require_docker: 
     return _run(["docker", "run", "--rm", tag])
 
 
+def _run_primitive_conformance() -> int:
+    return _run([_python_executable(), "packages/command-generation/tests/primitive_conformance.py"])
+
+
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Check generated command package outputs.")
     parser.add_argument(
@@ -1277,6 +1300,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Run generated Python adapter conformance inside Docker.",
     )
     parser.add_argument(
+        "--primitive-conformance",
+        action="store_true",
+        help="Run command-generation owned primitive executor conformance locally.",
+    )
+    parser.add_argument(
+        "--primitive-docker-conformance",
+        action="store_true",
+        help="Run command-generation owned primitive executor conformance inside Docker.",
+    )
+    parser.add_argument(
         "--require-node",
         action="store_true",
         help="Fail instead of skipping adapter conformance when Node is unavailable.",
@@ -1290,6 +1323,11 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--python-tag",
         default="agentic-workspace-generated-python-cli-test",
         help="Docker image tag used for generated Python package conformance.",
+    )
+    parser.add_argument(
+        "--primitive-tag",
+        default="agentic-workspace-generated-python-primitive-test",
+        help="Docker image tag used for generated primitive executor conformance.",
     )
     parser.add_argument(
         "--require-docker",
@@ -1317,6 +1355,10 @@ def main(argv: list[str] | None = None) -> int:
                 print(error)
             return 1
         print("[ok] generated Python command package adapter conformance")
+    if args.primitive_conformance:
+        primitive_status = _run_primitive_conformance()
+        if primitive_status:
+            return primitive_status
     if args.conformance:
         conformance_errors = _run_adapter_conformance(require_node=bool(args.require_node))
         if conformance_errors:
@@ -1331,6 +1373,15 @@ def main(argv: list[str] | None = None) -> int:
             f"{args.python_tag}-conformance",
             dockerfile="generated/python/Dockerfile.conformance",
             proof_label="generated Python package Docker conformance proof",
+            require_docker=bool(args.require_docker),
+        )
+        if docker_status:
+            return docker_status
+    if args.primitive_docker_conformance:
+        docker_status = _run_docker(
+            f"{args.primitive_tag}-conformance",
+            dockerfile="generated/python/Dockerfile.primitive-conformance",
+            proof_label="generated primitive executor Docker conformance proof",
             require_docker=bool(args.require_docker),
         )
         if docker_status:
@@ -1353,7 +1404,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         if docker_status:
             return docker_status
-    if args.docker or args.docker_conformance:
+    if args.docker or args.docker_conformance or args.primitive_docker_conformance:
         print("[ok] generated command package Docker proof")
         return 0
     print("[ok] generated command package static proof")

@@ -12,9 +12,7 @@ work_items = []
 execplans = []
 
 [todo]
-active_items = [
-  { id = "codegen-generated-under-generated-950", title = "Refine codegen generated ownership boundary", maturity = "active", status = "active", refs = "GitHub #950; PR #949", surface = ".agentic-workspace/planning/execplans/codegen-generated-under-generated-950.plan.json", why_now = "Move generated-owned Python executable wrappers under generated/python while keeping only stable source bridges and hand-owned runtime adapters in package-local source.", owner_role = "implementation", handoff_ready = true },
-]
+active_items = []
 queued_items = []
 
 [roadmap]
