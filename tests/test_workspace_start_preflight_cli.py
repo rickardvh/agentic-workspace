@@ -518,7 +518,7 @@ def test_start_default_returns_selector_first_router(tmp_path: Path, capsys) -> 
 
     payload = json.loads(capsys.readouterr().out)
     encoded = json.dumps(payload, sort_keys=True)
-    assert len(encoded) < 4600
+    assert len(encoded) < 4700
     assert payload["kind"] == "startup-context/v1"
     assert "adaptive_routing" not in payload
     assert "context_router" not in payload
@@ -1144,6 +1144,146 @@ def test_start_decomposition_only_delegation_requires_lane_promotion_before_hand
     assert decision["delegation_next_step"]["command"] is None
     assert decision["delegation_next_step"]["handoff_contract_status"] == "unavailable-without-active-planning"
     assert "Select or promote" in decision["delegation_next_step"]["precondition"]
+
+
+def test_start_blocks_decomposed_epic_without_active_execplan(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "decompositions" / "dogfood.decomposition.json",
+        json.dumps(
+            {
+                "kind": "planning-decomposition/v1",
+                "title": "Dogfood planning safety",
+                "status": "ready-for-lane-promotion",
+                "larger_intended_outcome": "Prevent broad work from bypassing planning.",
+                "non_goals": [],
+                "candidate_lanes": [
+                    {
+                        "id": "safety-slice",
+                        "title": "Safety slice",
+                        "readiness": "ready",
+                        "outcome": "Implement the planning safety gate.",
+                        "owner_surface": ".agentic-workspace/planning/execplans/safety-slice.plan.json",
+                        "proof": "Focused workspace tests pass.",
+                        "depends_on": [],
+                        "parallel_with": [],
+                    }
+                ],
+                "dependency_assumptions": [],
+                "parallelization_assumptions": [],
+                "proof_expectations": ["Focused workspace tests pass."],
+                "promotion_rule": "Promote ready lanes only.",
+                "references": [],
+                "notes": "",
+            },
+            indent=2,
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue the dogfooding epic safety-slice implementation",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    gate = payload["planning_safety_gate"]
+    assert gate["status"] == "blocked"
+    assert gate["delegation_decision_required"] is True
+    assert payload["workflow_sufficiency"]["decision"] == "active-execplan-required"
+    assert payload["immediate_next_allowed_action"]["command"].endswith(
+        "agentic-workspace planning promote-to-plan safety-slice --target . --format json"
+    )
+
+
+def test_implement_flags_scope_growth_without_active_execplan(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "generated/python/memory-cli/generated_cli_package/__init__.py",
+                "src/agentic_workspace/contracts/command_package_ir.json",
+                "packages/memory/src/repo_memory_bootstrap/cli.py",
+                "tests/test_generated_command_package_proof_runner.py",
+                "--task",
+                "Small generated command cleanup",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    gate = payload["planning_safety_gate"]
+    assert gate["status"] == "escalation-required"
+    assert gate["changed_path_classification"]["dirty_shape"] == "implementation-only"
+    assert "generated artifacts changed with source or tests" in gate["changed_path_classification"]["scope_growth_reasons"]
+    assert payload["workflow_sufficiency"]["decision"] == "planning-escalation-required"
+    assert payload["next"]["action"] == "Create or promote an active execplan before continuing implementation."
+
+
+def test_implement_distinguishes_planning_recovery_from_mixed_wip(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                ".agentic-workspace/planning/state.toml",
+                "src/agentic_workspace/cli.py",
+                "--task",
+                "Recover planning state while code is dirty",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    gate = payload["planning_safety_gate"]
+    assert gate["status"] == "violation"
+    assert gate["changed_path_classification"]["dirty_shape"] == "planning-plus-implementation"
+    assert payload["workflow_sufficiency"]["decision"] == "implementation-owner-missing"
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                ".agentic-workspace/planning/state.toml",
+                ".agentic-workspace/planning/execplans/recovery.plan.json",
+                "--task",
+                "Recover planning state",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    planning_only = json.loads(capsys.readouterr().out)["planning_safety_gate"]
+    assert planning_only["status"] == "clear"
+    assert planning_only["changed_path_classification"]["dirty_shape"] == "planning-only"
 
 
 def test_start_task_surfaces_vague_outcome_orientation(tmp_path: Path, capsys) -> None:

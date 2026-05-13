@@ -10,7 +10,7 @@ import tomllib
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any, Iterable, Mapping, cast
 
 from jsonschema import Draft202012Validator
 
@@ -312,6 +312,11 @@ class InstallResult:
 
     def add(self, kind: str, path: Path, detail: str) -> None:
         self.actions.append(Action(kind=kind, path=path, detail=detail))
+
+
+def _add_planning_mutation_proof_actions(result: InstallResult) -> None:
+    result.add("proof", result.target_root, "agentic-planning summary --target . --format json")
+    result.add("proof", result.target_root, "agentic-planning doctor --target . --modules planning --format json")
 
 
 def _add_workspace_orchestrator_notice(result: InstallResult, *, preset: str = "planning") -> None:
@@ -8492,6 +8497,160 @@ def _contract_projection(contract: dict[str, Any], *, view_name: str) -> dict[st
     return projection
 
 
+def _promote_decomposition_lane_to_execplan(
+    item_id: str,
+    *,
+    target_root: Path,
+    plan_slug: str | None,
+    dry_run: bool,
+) -> InstallResult | None:
+    decomposition_root = target_root / ".agentic-workspace" / "planning" / "decompositions"
+    if not decomposition_root.exists():
+        return None
+    matched_path: Path | None = None
+    matched_record: dict[str, Any] | None = None
+    matched_lane: dict[str, Any] | None = None
+    matched_index = -1
+    for path in sorted(decomposition_root.glob("*.decomposition.json")):
+        if path.name == "TEMPLATE.decomposition.json":
+            continue
+        try:
+            record = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(record, dict) or record.get("kind") != "planning-decomposition/v1":
+            continue
+        decomposition_record = cast(dict[str, Any], record)
+        lanes = decomposition_record.get("candidate_lanes", [])
+        if not isinstance(lanes, list):
+            continue
+        for index, lane in enumerate(lanes):
+            if not isinstance(lane, dict):
+                continue
+            lane_record = cast(dict[str, Any], lane)
+            if str(lane_record.get("id", "")).strip() == item_id:
+                matched_path = path
+                matched_record = decomposition_record
+                matched_lane = lane_record
+                matched_index = index
+                break
+        if matched_lane is not None:
+            break
+    if matched_path is None or matched_record is None or matched_lane is None:
+        return None
+
+    result = InstallResult(target_root=target_root, message=f"Promote decomposition lane '{item_id}' to execplan", dry_run=dry_run)
+    state_path = target_root / PLANNING_STATE_PATH
+    state = _read_state_from_toml(target_root) or {
+        "kind": PLANNING_STATE_KIND,
+        "schema_version": PLANNING_STATE_SCHEMA_VERSION,
+        "work_items": [],
+        "active": {"execplans": []},
+        "todo": {"active_items": [], "queued_items": []},
+        "roadmap": {"lanes": [], "candidates": []},
+    }
+    todo = state.get("todo") if isinstance(state.get("todo"), dict) else {}
+    active_items = todo.get("active_items", []) if isinstance(todo, dict) else []
+    if active_items:
+        result.add(
+            "manual review",
+            state_path,
+            "active planning item already exists; archive or switch active work before promoting a decomposition lane",
+        )
+        return result
+
+    slug = _slugify(plan_slug or item_id)
+    if not slug:
+        result.add("manual review", matched_path, "decomposition lane id cannot be converted into an execplan slug")
+        return result
+    record_path = target_root / ".agentic-workspace" / "planning" / "execplans" / f"{slug}.plan.json"
+    record_relative = record_path.relative_to(target_root).as_posix()
+    if record_path.exists():
+        result.add("manual review", record_path, "target canonical execplan record already exists")
+        return result
+
+    title = str(matched_lane.get("title") or _title_from_slug(slug)).strip()
+    outcome = str(matched_lane.get("outcome") or matched_record.get("outcome") or "").strip()
+    proof = str(matched_lane.get("proof") or "").strip()
+    source_relative = matched_path.relative_to(target_root).as_posix()
+    why_now = f"Promoted from {source_relative} lane {item_id}."
+    source_fields = {
+        "id": item_id,
+        "title": title,
+        "outcome": outcome,
+        "proof": proof,
+        "source decomposition": source_relative,
+        "readiness": str(matched_lane.get("readiness", "")).strip(),
+    }
+    plan_record = _build_execplan_record_from_todo_item(
+        title=title,
+        item_id=item_id,
+        status="active",
+        why_now=why_now,
+        next_action=outcome or "Fill in execution bounds, touched paths, and validation before implementation starts.",
+        done_when=proof or outcome or f"{title} is implemented, validated, and closed out honestly.",
+        source_fields=source_fields,
+    )
+    plan_record["references"] = [
+        {
+            "kind": "source",
+            "target": source_relative,
+            "label": f"decomposition lane {item_id}",
+            "role": "intake",
+            "locator": f"candidate_lanes[{matched_index}]",
+        }
+    ]
+    plan_record["execution_run"]["handoff source"] = "agentic-planning promote-to-plan decomposition lane"
+    plan_record["drift_log"] = [
+        f"{date.today().isoformat()}: Scaffolded by agentic-planning promote-to-plan from decomposition lane {item_id}."
+    ]
+
+    updated_state = copy.deepcopy(state)
+    updated_todo = updated_state.get("todo")
+    if not isinstance(updated_todo, dict):
+        updated_todo = {}
+    updated_todo["active_items"] = [
+        {
+            "id": slug,
+            "title": title,
+            "maturity": "active",
+            "status": "active",
+            "surface": record_relative,
+            "why_now": why_now,
+            "owner_role": "implementation",
+            "handoff_ready": True,
+            "refs": [source_relative],
+        }
+    ]
+    updated_todo.setdefault("queued_items", [])
+    updated_state["todo"] = updated_todo
+
+    updated_record = copy.deepcopy(matched_record)
+    updated_lanes = list(updated_record.get("candidate_lanes", []))
+    updated_lane = copy.deepcopy(matched_lane)
+    updated_lane["readiness"] = "promoted"
+    updated_lane["owner_surface"] = record_relative
+    updated_lane["promoted_execplan"] = record_relative
+    updated_lanes[matched_index] = updated_lane
+    updated_record["candidate_lanes"] = updated_lanes
+
+    if dry_run:
+        result.add("would create", record_path, "scaffold canonical execplan record from decomposition lane")
+        result.add("would update", state_path, f"register active planning item '{slug}'")
+        result.add("would update", matched_path, f"mark decomposition lane '{item_id}' as promoted")
+        _add_planning_mutation_proof_actions(result)
+        return result
+
+    _write_execplan_record(record_path=record_path, record=plan_record)
+    _write_state_to_toml(target_root, updated_state)
+    matched_path.write_text(json.dumps(updated_record, indent=2) + "\n", encoding="utf-8")
+    result.add("created", record_path, "scaffolded canonical execplan record from decomposition lane")
+    result.add("updated", state_path, f"registered active planning item '{slug}'")
+    result.add("updated", matched_path, f"marked decomposition lane '{item_id}' as promoted")
+    _add_planning_mutation_proof_actions(result)
+    return result
+
+
 def promote_todo_item_to_execplan(
     item_id: str,
     *,
@@ -8510,7 +8669,15 @@ def promote_todo_item_to_execplan(
         todo_lines, todo_items = _read_todo_items(todo_path)
         item = next((candidate for candidate in todo_items if candidate.item_id == item_id), None)
     if item is None:
-        result.add("manual review", todo_path, f"TODO item '{item_id}' was not found")
+        decomposition_result = _promote_decomposition_lane_to_execplan(
+            item_id,
+            target_root=target_root,
+            plan_slug=plan_slug,
+            dry_run=dry_run,
+        )
+        if decomposition_result is not None:
+            return decomposition_result
+        result.add("manual review", todo_path, f"TODO item or decomposition lane '{item_id}' was not found")
         return result
 
     current_surface = item.fields.get("surface", "")

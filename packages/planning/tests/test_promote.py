@@ -232,6 +232,60 @@ candidates = []
     assert any(action.kind == "created" and action.path == record_path for action in result.actions)
 
 
+def test_promote_to_plan_supports_decomposition_lane(tmp_path: Path) -> None:
+    decomposition_path = tmp_path / ".agentic-workspace" / "planning" / "decompositions" / "dogfood.decomposition.json"
+    decomposition_path.parent.mkdir(parents=True, exist_ok=True)
+    decomposition_path.write_text(
+        json.dumps(
+            {
+                "kind": "planning-decomposition/v1",
+                "title": "Dogfood planning safety",
+                "status": "ready-for-lane-promotion",
+                "larger_intended_outcome": "Prevent broad work from bypassing planning.",
+                "non_goals": [],
+                "candidate_lanes": [
+                    {
+                        "id": "safety-slice",
+                        "title": "Safety slice",
+                        "readiness": "ready",
+                        "outcome": "Implement the planning safety gate.",
+                        "owner_surface": "",
+                        "proof": "Focused workspace tests pass.",
+                        "depends_on": [],
+                        "parallel_with": [],
+                    }
+                ],
+                "dependency_assumptions": [],
+                "parallelization_assumptions": [],
+                "proof_expectations": ["Focused workspace tests pass."],
+                "promotion_rule": "Promote ready lanes only.",
+                "references": [],
+                "notes": "",
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    result = promote_todo_item_to_execplan("safety-slice", target=tmp_path)
+
+    assert [action.kind for action in result.actions] == ["created", "updated", "updated", "proof", "proof"]
+    assert any("summary --target . --format json" in action.detail for action in result.actions if action.kind == "proof")
+    assert any("doctor --target . --modules planning --format json" in action.detail for action in result.actions if action.kind == "proof")
+    state = tomllib.loads((tmp_path / ".agentic-workspace" / "planning" / "state.toml").read_text(encoding="utf-8"))
+    active = state["todo"]["active_items"][0]
+    assert active["id"] == "safety-slice"
+    assert active["surface"] == ".agentic-workspace/planning/execplans/safety-slice.plan.json"
+
+    plan = json.loads((tmp_path / ".agentic-workspace" / "planning" / "execplans" / "safety-slice.plan.json").read_text(encoding="utf-8"))
+    assert "Implement the planning safety gate." in plan["canonical_core"]["next_action"]
+
+    decomposition = json.loads(decomposition_path.read_text(encoding="utf-8"))
+    lane = decomposition["candidate_lanes"][0]
+    assert lane["readiness"] == "promoted"
+    assert lane["owner_surface"] == ".agentic-workspace/planning/execplans/safety-slice.plan.json"
+
+
 def test_planning_summary_validates_planning_state_v1_maturity_contract(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(

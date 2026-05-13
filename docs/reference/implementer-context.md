@@ -148,6 +148,7 @@ Cheap implementer context for a bounded changed-path scope.
 | `durable_intent_promotion.closeout_question` | string | no |  | Question agents should answer before discarding task intent after closeout. |  |  |
 | `delegation_decision` | object | yes |  | Top-level copy of the compact delegation decision for next-action consumers. |  |  |
 | `workflow_sufficiency` | object | no |  | Small decision record that says whether the current implementer packet is enough for the next implementation step or which exact detail field should be requested. |  |  |
+| `planning_safety_gate` | object | no |  | Planning ownership guard for broad, high-assurance, decomposed, or scope-widened implementation work. |  |  |
 | `continuation_state` | object | no |  | Compact continuation-state contract for preserving only unfinished or handoff-relevant work, not historical residue. |  |  |
 | `authority_hierarchy` | object | no |  | Authority and promotion-path guidance for deciding which repo surfaces are current instruction, durable memory, future work, or historical audit. |  |  |
 | `compliance_economics` | object | no |  | Boundary statement for what Agentic Workspace can enforce directly and where it instead makes noncompliance visible or costly. |  |  |
