@@ -304,6 +304,46 @@ def _validate_operation_primitives(payload: dict[str, object]) -> list[str]:
             errors.append("operation_primitives.json ir_model must declare boundary_rules")
         if "general-purpose" not in " ".join(str(rule) for rule in boundary_rules).lower():
             errors.append("operation_primitives.json ir_model must explicitly guard against becoming a general-purpose language")
+    ownership = payload.get("module_ir_ownership")
+    if not isinstance(ownership, dict):
+        errors.append("operation_primitives.json must declare module_ir_ownership")
+        namespace_prefixes: dict[str, str] = {}
+    else:
+        namespaces = ownership.get("namespaces")
+        if not isinstance(namespaces, list) or not namespaces:
+            errors.append("operation_primitives.json module_ir_ownership must declare namespaces")
+            namespace_prefixes = {}
+        else:
+            namespace_prefixes = {}
+            for namespace in namespaces:
+                if not isinstance(namespace, dict):
+                    errors.append("operation_primitives.json module_ir_ownership namespaces must be objects")
+                    continue
+                namespace_id = str(namespace.get("id", ""))
+                prefix = str(namespace.get("operation_id_prefix", ""))
+                owner = str(namespace.get("contract_owner", ""))
+                if not namespace_id or not prefix or not owner:
+                    errors.append("operation_primitives.json module_ir_ownership namespace missing id, operation_id_prefix, or contract_owner")
+                    continue
+                namespace_prefixes[namespace_id] = prefix
+            prefixes = list(namespace_prefixes.values())
+            if len(prefixes) != len(set(prefixes)):
+                errors.append("operation_primitives.json module_ir_ownership contains duplicate operation_id_prefix values")
+            for prefix in prefixes:
+                overlapping = sorted(other for other in prefixes if other != prefix and other.startswith(prefix))
+                if overlapping:
+                    errors.append(
+                        "operation_primitives.json module_ir_ownership contains overlapping prefix "
+                        f"{prefix!r}: "
+                        + ", ".join(overlapping)
+                    )
+    extension_boundary = payload.get("primitive_extension_boundary")
+    if not isinstance(extension_boundary, dict):
+        errors.append("operation_primitives.json must declare primitive_extension_boundary")
+    else:
+        for field in ("portable_support_rule", "module_extension_rule", "target_support_rule"):
+            if not isinstance(extension_boundary.get(field), str) or not str(extension_boundary.get(field)).strip():
+                errors.append(f"operation_primitives.json primitive_extension_boundary missing {field}")
     primitives = payload.get("primitives")
     if not isinstance(primitives, list) or not primitives:
         errors.append("operation_primitives.json must contain at least one primitive")
@@ -344,11 +384,26 @@ def _validate_operation_primitives(payload: dict[str, object]) -> list[str]:
     return errors
 
 
+def _module_ir_namespace_prefixes() -> list[str]:
+    ownership = operation_primitives_manifest().get("module_ir_ownership", {})
+    if not isinstance(ownership, dict):
+        return []
+    namespaces = ownership.get("namespaces", [])
+    if not isinstance(namespaces, list):
+        return []
+    prefixes: list[str] = []
+    for namespace in namespaces:
+        if isinstance(namespace, dict) and isinstance(namespace.get("operation_id_prefix"), str):
+            prefixes.append(str(namespace["operation_id_prefix"]))
+    return prefixes
+
+
 def _validate_operation_ir_plans() -> list[str]:
     errors: list[str] = []
     operation_refs = operation_contracts_manifest()["operations"]
     primitive_map = {primitive["id"]: primitive for primitive in operation_primitives_manifest()["primitives"]}
     primitive_refs = set(primitive_map)
+    module_prefixes = _module_ir_namespace_prefixes()
     conformance_operation_ids = {contract["operation_id"] for contract in conformance_contracts_manifest()["contracts"]}
     representative_ids: set[str] = set()
     for operation_ref in operation_refs:
@@ -363,6 +418,8 @@ def _validate_operation_ir_plans() -> list[str]:
         operation_id = str(operation.get("id", operation_ref.get("id", "")))
         if status in {"representative", "complete"}:
             representative_ids.add(operation_id)
+            if module_prefixes and not any(operation_id.startswith(prefix) for prefix in module_prefixes):
+                errors.append(f"operation {operation_id} has {status} IR without declared module_ir_ownership namespace")
             if operation_id not in conformance_operation_ids:
                 errors.append(f"operation {operation_id} has representative IR without process conformance")
         steps = ir_plan.get("steps")

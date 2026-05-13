@@ -52,6 +52,81 @@
       "additionalProperties": false,
       "description": "Contract-level explanation of the target-executor IR model."
     },
+    "module_ir_ownership": {
+      "type": "object",
+      "required": [
+        "namespaces"
+      ],
+      "properties": {
+        "rule": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Boundary rule for module-owned operation IR namespaces."
+        },
+        "namespaces": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "operation_id_prefix",
+              "contract_owner"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_-]*$"
+              },
+              "operation_id_prefix": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_.-]*$"
+              },
+              "contract_owner": {
+                "type": "string",
+                "minLength": 1
+              },
+              "current_contract_root": {
+                "type": "string",
+                "minLength": 1
+              },
+              "future_contract_root": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "Module namespaces that may own operation IR without making codegen package behavior module-specific."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Ownership boundary for module-owned operation IR namespaces."
+    },
+    "primitive_extension_boundary": {
+      "type": "object",
+      "required": [
+        "portable_support_rule",
+        "module_extension_rule",
+        "target_support_rule"
+      ],
+      "properties": {
+        "portable_support_rule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "module_extension_rule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "target_support_rule": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false,
+      "description": "Rules that separate shared codegen primitives from module-specific primitive extensions."
+    },
     "primitives": {
       "type": "array",
       "minItems": 1,

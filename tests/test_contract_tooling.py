@@ -612,11 +612,14 @@ def test_operation_ir_has_portable_representative_command() -> None:
 
     primitive_errors = module._validate_operation_primitives(module.operation_primitives_manifest())
     ir_errors = module._validate_operation_ir_plans()
+    primitive_registry = module.operation_primitives_manifest()
     operation = contract_tooling.operation_manifest("operations/memory.list-files.report.json")
     used = [step["uses"] for step in operation["ir_plan"]["steps"]]
 
     assert primitive_errors == []
     assert ir_errors == []
+    assert primitive_registry["module_ir_ownership"]["namespaces"]
+    assert primitive_registry["primitive_extension_boundary"]["target_support_rule"]
     assert operation["ir_plan"]["status"] == "representative"
     assert used == [
         "path.target_root.resolve",
@@ -625,6 +628,30 @@ def test_operation_ir_has_portable_representative_command() -> None:
         "output.emit",
     ]
     assert operation["migration_status"] == "runtime-consumed"
+
+
+def test_operation_ir_requires_declared_module_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
+    spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    registry = copy.deepcopy(module.operation_primitives_manifest())
+    registry["module_ir_ownership"]["namespaces"] = [
+        {
+            "id": "planning",
+            "operation_id_prefix": "planning.",
+            "contract_owner": "packages/planning",
+            "current_contract_root": "src/agentic_workspace/contracts/operations",
+            "future_contract_root": "packages/planning/contracts",
+        }
+    ]
+    monkeypatch.setattr(module, "operation_primitives_manifest", lambda: registry)
+
+    errors = module._validate_operation_ir_plans()
+
+    assert any("memory.list-files.report" in error and "module_ir_ownership" in error for error in errors)
 
 
 def test_python_operation_execution_inventory_tracks_representative_runtime_consumption() -> None:

@@ -15,6 +15,37 @@
       "The behavior requires complex conflict resolution or destructive mutation sequencing."
     ]
   },
+  "module_ir_ownership": {
+    "rule": "Module-owned operation IR may remain physically centralized during the Python lane, but each operation id must belong to an explicit module namespace and codegen must consume it as data rather than importing module runtime code.",
+    "namespaces": [
+      {
+        "id": "workspace",
+        "operation_id_prefix": "workspace.",
+        "contract_owner": "src/agentic_workspace/contracts",
+        "current_contract_root": "src/agentic_workspace/contracts/operations",
+        "future_contract_root": "modules/workspace/contracts"
+      },
+      {
+        "id": "planning",
+        "operation_id_prefix": "planning.",
+        "contract_owner": "packages/planning",
+        "current_contract_root": "src/agentic_workspace/contracts/operations",
+        "future_contract_root": "packages/planning/contracts"
+      },
+      {
+        "id": "memory",
+        "operation_id_prefix": "memory.",
+        "contract_owner": "packages/memory",
+        "current_contract_root": "src/agentic_workspace/contracts/operations",
+        "future_contract_root": "packages/memory/contracts"
+      }
+    ]
+  },
+  "primitive_extension_boundary": {
+    "portable_support_rule": "Target-executor primitives are shared codegen primitives and must declare semantics plus input/output schemas before they count as portable executor coverage.",
+    "module_extension_rule": "Module-specific primitives are domain-runtime extensions owned by the module namespace; they must remain explicit primitive ids and must not be counted as shared codegen primitive completion.",
+    "target_support_rule": "Each target executor must either implement every shared target-executor primitive used by its generated operations or visibly report unsupported module/domain-runtime primitive extensions in conformance."
+  },
   "primitives": [
     {
       "id": "path.target_root.resolve",

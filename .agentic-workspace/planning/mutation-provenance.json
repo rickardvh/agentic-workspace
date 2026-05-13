@@ -280,6 +280,30 @@
       "reason": "record delegation decision route=delegate-exploration",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-13T19:48:10+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/codegen-ir-extension-boundary-951.plan.json",
+      "sha256": "5b2dc9cfe41a3eaca04623f9715b0fbdae643d25f7bdefefaf09048d55369399",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold codegen-ir-extension-boundary-951",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:02:15+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "3593576143e13a08de2f38142ab06980157d5da6f3f6985c1e391ad23f3db8c5",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold codegen-ir-extension-boundary-951",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:02:15+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/codegen-ir-extension-boundary-951.plan.json",
+      "sha256": "4d75a22df06991cba41ea2a31949adbd4926bdf213297cfed1d827cd3dd1bf17",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=delegate-exploration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:02:20+00:00"
     }
   ]
 }
