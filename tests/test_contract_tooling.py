@@ -988,14 +988,15 @@ def test_generated_typescript_package_adapters_are_runnable() -> None:
         assert "generated runnable adapter preserves spaced argv values during runtime handoff" in test_text
 
 
-def test_generated_command_adapter_module_routes_direct_edits_to_authoritative_sources() -> None:
-    generated_path = Path(__file__).resolve().parents[1] / "src" / "agentic_workspace" / "generated_command_adapters.py"
+def test_generated_command_adapter_metadata_routes_direct_edits_to_authoritative_sources() -> None:
+    generated_path = Path(__file__).resolve().parents[1] / "generated" / "python" / "workspace-cli" / "generated_command_adapters.json"
     generated_text = generated_path.read_text(encoding="utf-8")
+    generated_payload = json.loads(generated_text)
 
-    assert "DO NOT EDIT DIRECTLY." in generated_text
-    assert "src/agentic_workspace/contracts/command_adapter_generation.json" in generated_text
-    assert "hand-written operation/primitive implementation code" in generated_text
-    assert "uv run python scripts/generate/generate_command_adapters.py" in generated_text
+    assert generated_payload["source"] == "src/agentic_workspace/contracts/command_adapter_generation.json"
+    assert generated_payload["program"] == "agentic-workspace"
+    assert generated_payload["regenerate_with"] == "uv run python scripts/generate/generate_command_adapters.py"
+    assert "adapters_by_command" in generated_payload
 
 
 def test_python_runtime_boundary_declares_root_cli_authority_audit() -> None:

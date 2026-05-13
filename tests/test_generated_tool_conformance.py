@@ -1,20 +1,14 @@
 from __future__ import annotations
 
 import copy
+import json
 import sys
 from pathlib import Path
 
 import pytest
-from repo_memory_bootstrap.generated_command_adapters import (
-    GENERATED_COMMAND_ADAPTERS_BY_COMMAND as GENERATED_MEMORY_COMMAND_ADAPTERS_BY_COMMAND,
-)
-from repo_planning_bootstrap.generated_command_adapters import (
-    GENERATED_COMMAND_ADAPTERS_BY_COMMAND as GENERATED_PLANNING_COMMAND_ADAPTERS_BY_COMMAND,
-)
 
 from agentic_workspace.conformance import materialize_fixture, run_process_conformance
 from agentic_workspace.contract_tooling import conformance_contract_manifest, conformance_contracts_manifest
-from agentic_workspace.generated_command_adapters import GENERATED_COMMAND_ADAPTERS_BY_COMMAND
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CLI_SHIM = (
@@ -35,6 +29,11 @@ MEMORY_CLI_SHIM = (
     "from repo_memory_bootstrap.generated_cli_package import main; "
     "raise SystemExit(main(sys.argv[1:]))"
 )
+
+
+def _generated_adapters_by_command(path: str) -> dict[str, dict[str, object]]:
+    payload = json.loads((REPO_ROOT / path).read_text(encoding="utf-8"))
+    return dict(payload["adapters_by_command"])
 
 
 def _contract_refs() -> list[dict[str, str]]:
@@ -138,9 +137,9 @@ def test_generated_adapters_are_backed_by_black_box_conformance_contracts() -> N
     contracts_by_id = {contract["id"]: contract for contract in registry["contracts"]}
 
     generated_adapters_by_command = {
-        **GENERATED_COMMAND_ADAPTERS_BY_COMMAND,
-        **GENERATED_PLANNING_COMMAND_ADAPTERS_BY_COMMAND,
-        **GENERATED_MEMORY_COMMAND_ADAPTERS_BY_COMMAND,
+        **_generated_adapters_by_command("generated/python/workspace-cli/generated_command_adapters.json"),
+        **_generated_adapters_by_command("generated/python/planning-cli/generated_command_adapters.json"),
+        **_generated_adapters_by_command("generated/python/memory-cli/generated_command_adapters.json"),
     }
     for command_name, adapter in generated_adapters_by_command.items():
         for conformance_ref in adapter["conformance_refs"]:

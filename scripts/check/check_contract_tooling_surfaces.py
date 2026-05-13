@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import ast
 import importlib.util
+import json
 import tempfile
 from pathlib import Path
 
@@ -42,8 +43,6 @@ from agentic_workspace.contract_tooling import (
     workflow_definition_format_manifest,
     workspace_surfaces_manifest,
 )
-from agentic_workspace.generated_command_adapters import GENERATED_COMMAND_ADAPTERS_BY_COMMAND
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -659,7 +658,7 @@ def _generated_command_adapter_statuses() -> tuple[list[dict[str, object]], list
         output_adapters = [
             adapter for adapter in manifest["adapters"] if adapter.get("command", {}).get("program") == program
         ]
-        expected = module._render_generated_module(manifest, program=program)
+        expected = module._render_generated_json(manifest, program=program)
         current = generated_path.read_text(encoding="utf-8") if generated_path.exists() else ""
         is_current = current == expected
         statuses.append(
@@ -685,29 +684,42 @@ def _generated_command_adapter_statuses() -> tuple[list[dict[str, object]], list
                 "run uv run python scripts/generate/generate_command_adapters.py"
             )
 
-    expected_by_command = {
-        str(adapter["command"]["name"]): {
-            "id": adapter["id"],
-            "status": adapter["status"],
-            "operation_id": adapter["operation_ref"]["id"],
-            "runtime_binding": adapter["runtime_binding"],
-            "effect_hints": adapter["effect_hints"],
-            "schemas": adapter["schemas"],
-            "conformance_refs": adapter["conformance_refs"],
+        expected_by_command = {
+            str(adapter["command"]["name"]): {
+                "id": adapter["id"],
+                "status": adapter["status"],
+                "command": adapter["command"],
+                "operation_id": adapter["operation_ref"]["id"],
+                "runtime_binding": adapter["runtime_binding"],
+                "effect_hints": adapter["effect_hints"],
+                "schemas": adapter["schemas"],
+                "conformance_refs": adapter["conformance_refs"],
+            }
+            for adapter in manifest["adapters"]
+            if adapter["command"]["program"] == program
         }
-        for adapter in command_adapter_generation_manifest()["adapters"]
-        if adapter["command"]["program"] == "agentic-workspace"
-    }
-    for command_name, expected_adapter in expected_by_command.items():
-        actual_adapter = GENERATED_COMMAND_ADAPTERS_BY_COMMAND.get(command_name)
-        if actual_adapter is None:
-            errors.append(f"generated adapter layer: missing generated adapter for command {command_name}")
+        try:
+            payload = json.loads(current) if current else {}
+        except json.JSONDecodeError as exc:
+            errors.append(f"generated adapter layer: {generated_path.relative_to(repo_root).as_posix()} is not valid JSON: {exc}")
             continue
-        for key, expected_value in expected_adapter.items():
-            if actual_adapter.get(key) != expected_value:
-                errors.append(f"generated adapter layer: {command_name} {key} drifted from command_adapter_generation.json")
-    for command_name in set(GENERATED_COMMAND_ADAPTERS_BY_COMMAND) - set(expected_by_command):
-        errors.append(f"generated adapter layer: unexpected generated adapter for command {command_name}")
+        actual_by_command = payload.get("adapters_by_command", {}) if isinstance(payload, dict) else {}
+        if not isinstance(actual_by_command, dict):
+            errors.append(f"generated adapter layer: {generated_path.relative_to(repo_root).as_posix()} missing adapters_by_command object")
+            continue
+        for command_name, expected_adapter in expected_by_command.items():
+            actual_adapter = actual_by_command.get(command_name)
+            if actual_adapter is None:
+                errors.append(f"generated adapter layer: missing generated adapter for {program} command {command_name}")
+                continue
+            if not isinstance(actual_adapter, dict):
+                errors.append(f"generated adapter layer: {program} command {command_name} adapter is not an object")
+                continue
+            for key, expected_value in expected_adapter.items():
+                if actual_adapter.get(key) != expected_value:
+                    errors.append(f"generated adapter layer: {program} command {command_name} {key} drifted from command_adapter_generation.json")
+        for command_name in set(actual_by_command) - set(expected_by_command):
+            errors.append(f"generated adapter layer: unexpected generated adapter for {program} command {command_name}")
     return statuses, errors
 
 

@@ -232,7 +232,7 @@
         "id": "parser-and-dispatch",
         "responsibility_class": "generated-dispatch-bridges",
         "status": "guarded-interface-authority",
-        "evidence": "cli_commands.json, cli_option_groups.json, command_adapter_generation.json, generated_command_adapters.py, and command package checks cover selected command shapes.",
+        "evidence": "cli_commands.json, cli_option_groups.json, command_adapter_generation.json, generated/python/*/generated_command_adapters.json, and command package checks cover selected command shapes.",
         "next_review": "Direct parser changes must prove they are runtime glue or update the command contracts and generated adapters."
       },
       {

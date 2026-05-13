@@ -53,6 +53,9 @@ packages = ["src/agentic_workspace"]
 [tool.hatch.build.targets.sdist]
 include = [
   "/README.md",
+  "/generated/python/memory-cli/generated_command_adapters.json",
+  "/generated/python/planning-cli/generated_command_adapters.json",
+  "/generated/python/workspace-cli/generated_command_adapters.json",
   "/generated/python/workspace-cli/generated_cli_package/__init__.py",
   "/generated/python/workspace-cli/generated_cli_package/command_package.json",
   "/generated/python/workspace-cli/generated_cli_package/adapter_commands.json",
@@ -79,4 +82,3 @@ source = ["agentic_workspace"]
 [tool.coverage.report]
 show_missing = true
 skip_covered = true
-

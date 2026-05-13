@@ -248,6 +248,14 @@
       "reason": "Record proven #950 generated executable wrapper boundary slice and #951 follow-up.",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-13T13:46:09+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/codegen-generated-under-generated-950.plan.json",
+      "sha256": "115d7d8474b14bc653827279fcd753e7837a806017a4f8b9ef4dc16fda7dc018",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=delegate-exploration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T13:55:36+00:00"
     }
   ]
 }

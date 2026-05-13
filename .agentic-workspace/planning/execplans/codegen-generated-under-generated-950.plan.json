@@ -30,7 +30,7 @@
     "hard_constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
     "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
     "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
-    "next_action": "Move Python generated CLI entrypoint behavior into generated/python/*/generated_cli_package, delete package-local generated_cli_entrypoint.py modules, and update scripts/tests/proof metadata.",
+    "next_action": "Move generated command adapter metadata into generated/python/*/generated_command_adapters.json, delete package-local generated_command_adapters.py modules, and update contract/proof/packaging surfaces.",
     "proof_expectations": [
       "uv run python scripts/generate/generate_command_packages.py --check",
       "uv run python scripts/check/check_generated_command_packages.py",
@@ -55,7 +55,8 @@
       "No package-local generated_cli_entrypoint.py modules remain.",
       "Generated Python command packages expose the executable main wrapper from generated/python.",
       "Console script metadata points at package-local generated_cli_package bridge modules, not package-local generated entrypoint modules.",
-      "Static proof rejects generated-owned executable entrypoint modules outside generated/python except stable bridge shims."
+      "Static proof rejects generated-owned executable entrypoint modules outside generated/python except stable bridge shims.",
+      "Generated command adapter metadata is emitted as JSON under generated/python and loaded as data by checks/conformance, not imported as package-local Python modules."
     ],
     "continuation_owner": "#951 for broader module IR and primitive-extension extraction",
     "closeout_decision": "pending"
@@ -149,10 +150,10 @@
     "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
     "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
     "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
-    "route chosen": "keep-local",
-    "route skipped reason": "The first #950 slice is tightly coupled across generator, package metadata, generated Python/TypeScript outputs, import bridges, and proof tests; no safe disjoint implementation write set is available yet.",
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "",
     "decision command": "agentic-planning delegation-decision",
-    "recorded at": "2026-05-13T13:39:35+00:00"
+    "recorded at": "2026-05-13T13:55:36+00:00"
   },
   "system_intent_alignment": {
     "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
@@ -195,11 +196,11 @@
     "executor": "Codex",
     "handoff source": "agentic-planning new-plan",
     "what happened": "Generated Python packages now expose main() from generated/python generated_cli_package modules. Console scripts target generated_cli_package:main bridge modules. Package-local generated_cli_entrypoint.py files were deleted. TypeScript runtime handoff now invokes generated_cli_package main through python -c.",
-    "scope touched": "command generator, command_package_ir runtime command, generated Python and TypeScript outputs, package script metadata, stable generated_cli_package bridges, proof tests, and planning records",
-    "changed surfaces": "packages/command-generation; generated/python; generated/typescript; pyproject.toml files; generated_cli_package bridge modules; scripts/check/check_generated_command_packages.py; focused tests; this execplan and state.toml",
-    "validations run": "uv run python scripts/check/check_generated_command_packages.py; --python-conformance; --docker --require-docker; --docker-conformance --require-docker; focused pytest; make test-workspace; make test-memory; make test-planning; make lint-workspace; make lint-memory; make lint-planning; contract tooling; structured inventory; command smokes; rg generated_cli_entrypoint.py inventory",
-    "result for continuation": "This slice satisfies the generated executable wrapper location boundary for #950; broader module IR and primitive-extension architecture is filed as #951.",
-    "next step": "Commit and push this slice to PR #949."
+    "scope touched": "command adapter generator, command_adapter_generation contract and schema, generated Python JSON adapter metadata, package script metadata, proof tests, packaging tests, docs, and planning records",
+    "changed surfaces": "scripts/generate/generate_command_adapters.py; generated/python/*/generated_command_adapters.json; src/agentic_workspace/contracts; package-local generated_command_adapters.py deletions; packaging/report/conformance tests; docs; this execplan and mutation provenance",
+    "validations run": "uv run python scripts/generate/generate_command_adapters.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; focused pytest for conformance/report/packaging; make test-workspace; make lint-workspace; make test-memory; make lint-memory; make test-planning; make lint-planning; uv run python scripts/check/check_generated_command_packages.py --docker --require-docker; uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
+    "result for continuation": "This slice satisfies the generated executable wrapper location boundary for #950. Continuation moved generated command adapter metadata out of package-local Python modules and into generated/python JSON artifacts. Broader module IR and primitive-extension architecture is filed as #951.",
+    "next step": "Commit and push the generated command adapter metadata JSON slice to PR #949."
   },
   "finished_run_review": {
     "review status": "completed-for-slice",
@@ -211,17 +212,17 @@
     "follow-on decision": "keep plan active until PR #949 review confirms #950 is satisfied"
   },
   "delegation_outcome_feedback": {
-    "route chosen": "keep-local",
-    "route skipped reason": "The first #950 slice is tightly coupled across generator, package metadata, generated Python/TypeScript outputs, import bridges, and proof tests; no safe disjoint implementation write set is available yet.",
-    "expected savings": "Low for this slice; validation can be delegated later after static proof is stable.",
-    "actual friction": "Delegation would risk conflicting edits across generated outputs and proof expectations.",
-    "proof result": "green for first #950 slice",
-    "quality concern": "Generated/source ownership boundary must remain coherent across editable install, wheel install, and Docker conformance.",
-    "decomposition adjustment": "First slice moves executable wrapper behavior into generated/python generated_cli_package main(); broader codegen extraction remains follow-up."
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "not skipped",
+    "expected savings": "Reused the open worker for a read-only consumer inventory while local implementation continued.",
+    "actual friction": "Low; report matched local search and added docs/packaging surfaces.",
+    "proof result": "Sidecar report incorporated before focused proof.",
+    "quality concern": "Implementation stayed local because edits crossed generator, contracts, packaging tests, and generated artifacts.",
+    "decomposition adjustment": "Use sidecar exploration for generated-ownership leaks; keep coupled writes local unless a disjoint write set exists."
   },
   "proof_report": {
-    "validation proof": "complete for generated executable wrapper boundary slice",
-    "proof achieved now": "Generated package static proof, Python conformance, Docker proof, workspace tests, memory/planning tests, package lints, contract tooling, structured inventory, command smokes, and no generated_cli_entrypoint.py inventory passed.",
+    "validation proof": "complete for generated command adapter metadata JSON slice",
+    "proof achieved now": "Generated adapter freshness, generated package static proof, Python conformance, Docker proof, workspace tests/lint, memory/planning tests/lint, contract tooling, focused conformance/report/packaging tests, and no generated_command_adapters.py inventory passed.",
     "evidence for \"proof achieved\" state": "See execution_run.validations run."
   },
   "intent_satisfaction": {
@@ -287,6 +288,7 @@
   },
   "drift_log": [
     "2026-05-13: Scaffolded by agentic-planning new-plan.",
-    "2026-05-13: Recorded delegation decision route=keep-local."
+    "2026-05-13: Recorded delegation decision route=keep-local.",
+    "2026-05-13: Recorded delegation decision route=delegate-exploration."
   ]
 }

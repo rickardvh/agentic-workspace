@@ -36,28 +36,16 @@ def _adapters_for_program(manifest: dict[str, Any], *, program: str) -> dict[str
     return adapters_by_command
 
 
-def _render_generated_module(manifest: dict[str, Any], *, program: str = DEFAULT_PROGRAM) -> str:
+def _render_generated_json(manifest: dict[str, Any], *, program: str = DEFAULT_PROGRAM) -> str:
     adapters_by_command = _adapters_for_program(manifest, program=program)
-    rendered = json.dumps(adapters_by_command, indent=2, sort_keys=True)
-    return (
-        '"""Generated command adapter metadata.\n\n'
-        "Source: src/agentic_workspace/contracts/command_adapter_generation.json\n"
-        f"Program: {program}\n"
-        "Regenerate with: uv run python scripts/generate/generate_command_adapters.py\n"
-        '"""\n\n'
-        "from __future__ import annotations\n\n"
-        "import json\n"
-        "from typing import Any\n\n"
-        "# DO NOT EDIT DIRECTLY.\n"
-        "# Command/interface changes belong in src/agentic_workspace/contracts/command_adapter_generation.json.\n"
-        "# Runtime behavior changes belong in hand-written operation/primitive implementation code.\n"
-        "# Regenerate with: uv run python scripts/generate/generate_command_adapters.py\n"
-        "GENERATED_COMMAND_ADAPTERS_BY_COMMAND: dict[str, dict[str, Any]] = json.loads(\n"
-        "    r\"\"\"\n"
-        f"{rendered}\n"
-        "\"\"\"\n"
-        ")\n"
-    )
+    payload = {
+        "schema_version": "agentic-workspace/generated-command-adapters/v1",
+        "source": "src/agentic_workspace/contracts/command_adapter_generation.json",
+        "program": program,
+        "regenerate_with": "uv run python scripts/generate/generate_command_adapters.py",
+        "adapters_by_command": adapters_by_command,
+    }
+    return json.dumps(payload, indent=2, sort_keys=True) + "\n"
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -82,7 +70,7 @@ def main(argv: list[str] | None = None) -> int:
     for output_spec in output_specs:
         program = str(output_spec["program"])
         output_path = (REPO_ROOT / str(output_spec["path"])).resolve()
-        rendered = _render_generated_module(manifest, program=program)
+        rendered = _render_generated_json(manifest, program=program)
         rendered_outputs.append((output_path, rendered))
         if args.check:
             current = output_path.read_text(encoding="utf-8") if output_path.exists() else ""

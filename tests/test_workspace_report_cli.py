@@ -891,7 +891,7 @@ def test_operational_compression_classifies_generated_output_footprint(tmp_path:
             "generated_outputs": [
                 {
                     "program": "agentic-workspace",
-                    "path": "src/agentic_workspace/generated_command_adapters.py",
+                    "path": "generated/python/workspace-cli/generated_command_adapters.json",
                 }
             ]
         },
@@ -903,7 +903,7 @@ def test_operational_compression_classifies_generated_output_footprint(tmp_path:
         target / "src" / "agentic_workspace" / "generated_cli_package" / "__pycache__" / "__init__.cpython-313.pyc",
         "cache\n",
     )
-    _write(target / "src" / "agentic_workspace" / "generated_command_adapters.py", "# generated\n")
+    _write(target / "generated" / "python" / "workspace-cli" / "generated_command_adapters.json", "{}\n")
     _write(target / "generated" / "typescript" / "workspace-cli" / "package.json", "{}\n")
     _write(target / "generated" / "typescript" / "workspace-cli" / "src" / "cli.mjs", "export {};\n")
     _write(target / "generated" / "typescript" / "Dockerfile", "FROM node:22\n")

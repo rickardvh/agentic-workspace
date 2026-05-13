@@ -149,7 +149,7 @@ def test_memory_wheel_ships_generated_cli_package_import_dependency() -> None:
         wheel_path = _build_artifact("wheel", Path(tmpdir))
         inventory = _raw_artifact_inventory(wheel_path)
 
-    assert "repo_memory_bootstrap/generated_command_adapters.py" in inventory
+    assert "repo_memory_bootstrap/generated_command_adapters.py" not in inventory
     assert "repo_memory_bootstrap/generated_cli_package/__init__.py" in inventory
     assert "repo_memory_bootstrap/_generated_cli_package_impl/__init__.py" in inventory
     assert "repo_memory_bootstrap/_generated_cli_package_impl/command_package.json" in inventory
@@ -161,7 +161,7 @@ def test_memory_sdist_ships_generated_cli_package_import_dependency() -> None:
         sdist_path = _build_artifact("sdist", Path(tmpdir))
         inventory = _raw_artifact_inventory(sdist_path)
 
-    assert "src/repo_memory_bootstrap/generated_command_adapters.py" in inventory
+    assert "src/repo_memory_bootstrap/generated_command_adapters.py" not in inventory
     assert "src/repo_memory_bootstrap/generated_cli_package/__init__.py" in inventory
     assert "src/repo_memory_bootstrap/_generated_cli_package_impl/__init__.py" in inventory
     assert "src/repo_memory_bootstrap/_generated_cli_package_impl/command_package.json" in inventory
