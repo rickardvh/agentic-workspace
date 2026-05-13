@@ -360,6 +360,54 @@
       "reason": "archive execplan .agentic-workspace/planning/execplans/codegen-runtime-binding-data-951.plan.json",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-13T20:20:16+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/primitive-extension-target-support-951.plan.json",
+      "sha256": "c0eedfd1243179538d1849c17901f28b85c485cd6b09bb516086b798f67c3651",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold primitive-extension-target-support-951",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:20:56+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "dcafc464e48bd59cf1c6fe6f34db929373fd02cac994ede17b161a4d355c6e3b",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold primitive-extension-target-support-951",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:20:56+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/primitive-extension-target-support-951.plan.json",
+      "sha256": "39628cd95178c7ddfb25715f0a4f9d07658c6badb0840b13f5159cd110864109",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:21:00+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/primitive-extension-target-support-951.plan.json",
+      "sha256": "53480d04ac90c59798b8cc7d2d9f8b00b5f69481ea33e15ee62cc49472245401",
+      "command": "agentic-planning record-recovery",
+      "reason": "Intentional plan closeout update after implementing the bounded #951 target support matrix slice.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T20:23:58+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/primitive-extension-target-support-951.plan.json",
+      "sha256": "039ac32f41bb455004cc8cde02301a41122b7c7c5e7eb14ff7d5eb6d9fa43792",
+      "command": "agentic-planning record-recovery",
+      "reason": "Intentional final proof and closure status update after broad validation passed.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T20:25:43+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan .agentic-workspace/planning/execplans/primitive-extension-target-support-951.plan.json",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:25:51+00:00"
     }
   ]
 }

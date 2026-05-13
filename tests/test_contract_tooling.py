@@ -615,11 +615,16 @@ def test_operation_ir_has_portable_representative_command() -> None:
     primitive_registry = module.operation_primitives_manifest()
     operation = contract_tooling.operation_manifest("operations/memory.list-files.report.json")
     used = [step["uses"] for step in operation["ir_plan"]["steps"]]
+    support_matrix = {entry["target"]: entry for entry in primitive_registry["primitive_extension_boundary"]["target_support_matrix"]}
 
     assert primitive_errors == []
     assert ir_errors == []
     assert primitive_registry["module_ir_ownership"]["namespaces"]
     assert primitive_registry["primitive_extension_boundary"]["target_support_rule"]
+    assert support_matrix["python"]["status"] == "implemented"
+    assert "path.target_root.resolve" in support_matrix["python"]["implemented_shared_primitives"]
+    assert support_matrix["typescript"]["status"] == "unsupported-reported"
+    assert "runtime handoff" in support_matrix["typescript"]["unsupported_behavior"]
     assert operation["ir_plan"]["status"] == "representative"
     assert used == [
         "path.target_root.resolve",
@@ -652,6 +657,31 @@ def test_operation_ir_requires_declared_module_namespace(monkeypatch: pytest.Mon
     errors = module._validate_operation_ir_plans()
 
     assert any("memory.list-files.report" in error and "module_ir_ownership" in error for error in errors)
+
+
+def test_operation_primitives_require_target_support_matrix(monkeypatch: pytest.MonkeyPatch) -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
+    spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    registry = copy.deepcopy(module.operation_primitives_manifest())
+    registry["primitive_extension_boundary"]["target_support_matrix"] = [
+        {
+            "target": "typescript",
+            "status": "unsupported-reported",
+            "implemented_shared_primitives": [],
+            "domain_runtime_extension_behavior": "reported through runtime handoff",
+            "conformance_ref": "scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
+            "unsupported_behavior": "primitive execution is not implemented",
+        }
+    ]
+
+    errors = module._validate_operation_primitives(registry)
+
+    assert any("missing target python" in error for error in errors)
+    assert any("schema-backed primitives missing implemented target support" in error for error in errors)
 
 
 def test_python_operation_execution_inventory_tracks_representative_runtime_consumption() -> None:

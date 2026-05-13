@@ -345,6 +345,31 @@ def _validate_operation_primitives(payload: dict[str, object]) -> list[str]:
         for field in ("portable_support_rule", "module_extension_rule", "target_support_rule"):
             if not isinstance(extension_boundary.get(field), str) or not str(extension_boundary.get(field)).strip():
                 errors.append(f"operation_primitives.json primitive_extension_boundary missing {field}")
+        support_matrix = extension_boundary.get("target_support_matrix")
+        if not isinstance(support_matrix, list) or not support_matrix:
+            errors.append("operation_primitives.json primitive_extension_boundary must declare target_support_matrix")
+        else:
+            support_targets: dict[str, dict[str, object]] = {}
+            for entry in support_matrix:
+                if not isinstance(entry, dict):
+                    errors.append("operation_primitives.json target_support_matrix entries must be objects")
+                    continue
+                target = str(entry.get("target", ""))
+                status = str(entry.get("status", ""))
+                conformance_ref = str(entry.get("conformance_ref", ""))
+                unsupported_behavior = str(entry.get("unsupported_behavior", ""))
+                if not target or not status or not conformance_ref or not unsupported_behavior:
+                    errors.append("operation_primitives.json target_support_matrix entries need target, status, conformance_ref, and unsupported_behavior")
+                    continue
+                support_targets[target] = entry
+                implemented = entry.get("implemented_shared_primitives", [])
+                if status == "implemented" and (not isinstance(implemented, list) or not implemented):
+                    errors.append(f"operation_primitives.json target {target} must list implemented_shared_primitives")
+                if status in {"unsupported-reported", "deferred"} and not unsupported_behavior:
+                    errors.append(f"operation_primitives.json target {target} must describe unsupported_behavior")
+            for required_target in ("python", "typescript", "bash", "powershell"):
+                if required_target not in support_targets:
+                    errors.append(f"operation_primitives.json target_support_matrix missing target {required_target}")
     primitives = payload.get("primitives")
     if not isinstance(primitives, list) or not primitives:
         errors.append("operation_primitives.json must contain at least one primitive")
@@ -382,6 +407,27 @@ def _validate_operation_primitives(payload: dict[str, object]) -> list[str]:
     missing_kinds = sorted(required_target_executor_kinds - target_executor_kinds)
     if missing_kinds:
         errors.append("operation_primitives.json target-executor coverage missing kind(s): " + ", ".join(missing_kinds))
+    if isinstance(extension_boundary, dict):
+        support_matrix = extension_boundary.get("target_support_matrix")
+        if isinstance(support_matrix, list):
+            implemented_target_primitives = {
+                str(primitive_id)
+                for entry in support_matrix
+                if isinstance(entry, dict) and entry.get("status") == "implemented"
+                for primitive_id in entry.get("implemented_shared_primitives", [])
+                if isinstance(primitive_id, str)
+            }
+            schema_backed_primitives = {
+                str(primitive["id"])
+                for primitive in primitives
+                if isinstance(primitive, dict)
+                and primitive.get("portability") == "target-executor"
+                and isinstance(primitive.get("input_schema_ref"), str)
+                and isinstance(primitive.get("output_schema_ref"), str)
+            }
+            missing_support = sorted(schema_backed_primitives - implemented_target_primitives)
+            if missing_support:
+                errors.append("operation_primitives.json schema-backed primitives missing implemented target support: " + ", ".join(missing_support))
     return errors
 
 
