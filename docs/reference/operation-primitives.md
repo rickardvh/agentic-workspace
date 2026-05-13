@@ -17,4 +17,12 @@ Registry of implementation primitives referenced by operation contracts.
 | `ir_model.purpose` | string | yes |  | Why this primitive registry exists as an operation IR boundary. |  |  |
 | `ir_model.boundary_rules` | array of string | yes |  | Rules that keep the primitive set from becoming an ad hoc programming language. |  |  |
 | `ir_model.defer_when` | array of string | no |  | Signals that behavior should remain a named runtime primitive instead of being decomposed further. |  |  |
+| `module_ir_ownership` | object | no |  | Ownership boundary for module-owned operation IR namespaces. |  |  |
+| `module_ir_ownership.rule` | string | no |  | Boundary rule for module-owned operation IR namespaces. |  |  |
+| `module_ir_ownership.namespaces` | array of object | yes |  | Module namespaces that may own operation IR without making codegen package behavior module-specific. |  |  |
+| `primitive_extension_boundary` | object | no |  | Rules that separate shared codegen primitives from module-specific primitive extensions. |  |  |
+| `primitive_extension_boundary.portable_support_rule` | string | yes |  | Rule for when target-executor primitives count as portable shared primitive coverage. |  |  |
+| `primitive_extension_boundary.module_extension_rule` | string | yes |  | Rule for keeping module-specific primitives explicit as domain-runtime extensions. |  |  |
+| `primitive_extension_boundary.target_support_rule` | string | yes |  | Rule requiring each generated target to implement shared primitives or visibly report unsupported/deferred behavior. |  |  |
+| `primitive_extension_boundary.target_support_matrix` | array of object | yes |  | Target support or explicit unsupported reporting for shared primitives and module/domain-runtime extensions. |  |  |
 | `primitives` | array of object | yes |  | Ordered primitives entries used by this contract. |  |  |

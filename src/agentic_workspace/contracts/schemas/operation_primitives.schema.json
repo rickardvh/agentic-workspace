@@ -114,15 +114,18 @@
       "properties": {
         "portable_support_rule": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Rule for when target-executor primitives count as portable shared primitive coverage."
         },
         "module_extension_rule": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Rule for keeping module-specific primitives explicit as domain-runtime extensions."
         },
         "target_support_rule": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Rule requiring each generated target to implement shared primitives or visibly report unsupported/deferred behavior."
         },
         "target_support_matrix": {
           "type": "array",
