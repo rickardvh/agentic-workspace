@@ -1175,18 +1175,21 @@ def _validate_static_surfaces() -> list[str]:
         errors.extend(_validate_python_runtime_handler_boundary())
         errors.extend(_validate_generated_python_commands_absent_from_handwritten_parsers())
         durable_source_roots = {
-            "src/agentic_workspace/generated_cli_package/__init__.py": "generated/python/workspace-cli",
-            "packages/planning/src/repo_planning_bootstrap/generated_cli_package/__init__.py": "generated/python/planning-cli",
-            "packages/memory/src/repo_memory_bootstrap/generated_cli_package/__init__.py": "generated/python/memory-cli",
+            "src/agentic_workspace/generated_cli_package.py": "generated/python/workspace-cli",
+            "packages/planning/src/repo_planning_bootstrap/generated_cli_package.py": "generated/python/planning-cli",
+            "packages/memory/src/repo_memory_bootstrap/generated_cli_package.py": "generated/python/memory-cli",
         }
         forbidden_generated_entrypoints = [
             "src/agentic_workspace/generated_cli_entrypoint.py",
+            "src/agentic_workspace/generated_cli_package/__init__.py",
             "packages/planning/src/repo_planning_bootstrap/generated_cli_entrypoint.py",
+            "packages/planning/src/repo_planning_bootstrap/generated_cli_package/__init__.py",
             "packages/memory/src/repo_memory_bootstrap/generated_cli_entrypoint.py",
+            "packages/memory/src/repo_memory_bootstrap/generated_cli_package/__init__.py",
         ]
         for relative_path in forbidden_generated_entrypoints:
             if (REPO_ROOT / relative_path).exists():
-                errors.append(f"{relative_path} is generated-owned executable wrapper code outside generated/python")
+                errors.append(f"{relative_path} is obsolete generated-owned source layout outside generated/python")
         for relative_path, generated_root in durable_source_roots.items():
             text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
             if "Generated runtime-backed Python command adapter" in text or "DO NOT EDIT DIRECTLY." in text:

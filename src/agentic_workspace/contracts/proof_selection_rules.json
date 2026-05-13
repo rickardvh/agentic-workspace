@@ -45,9 +45,9 @@
         "generated/typescript/",
         "scripts/generate/generate_command_packages.py",
         "scripts/check/check_generated_command_packages.py",
-        "src/agentic_workspace/generated_cli_package/",
-        "packages/planning/src/repo_planning_bootstrap/generated_cli_package/",
-        "packages/memory/src/repo_memory_bootstrap/generated_cli_package/"
+        "src/agentic_workspace/generated_cli_package.py",
+        "packages/planning/src/repo_planning_bootstrap/generated_cli_package.py",
+        "packages/memory/src/repo_memory_bootstrap/generated_cli_package.py"
       ]
     },
     {
@@ -170,9 +170,9 @@
         "id": "python-generated-package-bridge",
         "role": "hand-owned-executable",
         "exact": [
-          "src/agentic_workspace/generated_cli_package/__init__.py",
-          "packages/planning/src/repo_planning_bootstrap/generated_cli_package/__init__.py",
-          "packages/memory/src/repo_memory_bootstrap/generated_cli_package/__init__.py"
+          "src/agentic_workspace/generated_cli_package.py",
+          "packages/planning/src/repo_planning_bootstrap/generated_cli_package.py",
+          "packages/memory/src/repo_memory_bootstrap/generated_cli_package.py"
         ],
         "direct_edit_allowed": true,
         "source_contract": "src/agentic_workspace/contracts/command_package_ir.json",

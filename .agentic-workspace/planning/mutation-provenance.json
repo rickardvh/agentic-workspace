@@ -408,6 +408,54 @@
       "reason": "archive execplan .agentic-workspace/planning/execplans/primitive-extension-target-support-951.plan.json",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-13T20:25:51+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/generated-cli-package-source-folder-cleanup.plan.json",
+      "sha256": "eb953c9a06dff7ce9c218a6ef8b72a2b0bde368ff3d211c38f55cee94cfe8594",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold generated-cli-package-source-folder-cleanup",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:40:06+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "4cdb9c8364680baf39d16a95283e6ddca6cc9b3ba4564691a9d8ae7e412cc434",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold generated-cli-package-source-folder-cleanup",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:40:06+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/generated-cli-package-source-folder-cleanup.plan.json",
+      "sha256": "634942f2e52433fa383c3806cd9d88354790fa3a1bcb30194d8186d45277e67a",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:40:11+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/generated-cli-package-source-folder-cleanup.plan.json",
+      "sha256": "c10b2a7251a872f1b81bcffef93abae74d9fc5be0c183dbc0f7763e1e99d3671",
+      "command": "agentic-planning record-recovery",
+      "reason": "Intentional closeout field update after validating generated CLI package source folder cleanup.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T20:44:15+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/generated-cli-package-source-folder-cleanup.plan.json",
+      "sha256": "a04946349d628d0277cc35f2f13f044cb1c3df721bca6610a5ec6ead98e6af1e",
+      "command": "agentic-planning record-recovery",
+      "reason": "Intentional final follow-on routing closeout update after archive validation requested it.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T20:44:35+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan .agentic-workspace/planning/execplans/generated-cli-package-source-folder-cleanup.plan.json",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:44:42+00:00"
     }
   ]
 }

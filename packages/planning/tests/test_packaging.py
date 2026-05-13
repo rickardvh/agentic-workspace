@@ -204,7 +204,8 @@ def test_planning_artifacts_ship_generated_cli_package_import_dependency(kind: s
         entries = _raw_artifact_entries(artifact)
 
     assert not any(entry.endswith("repo_planning_bootstrap/generated_command_adapters.py") for entry in entries)
-    assert any(entry.endswith("repo_planning_bootstrap/generated_cli_package/__init__.py") for entry in entries)
+    assert any(entry.endswith("repo_planning_bootstrap/generated_cli_package.py") for entry in entries)
+    assert not any(entry.endswith("repo_planning_bootstrap/generated_cli_package/__init__.py") for entry in entries)
     if kind == "wheel":
         assert any(entry.endswith("repo_planning_bootstrap/_generated_cli_package_impl/__init__.py") for entry in entries)
         assert any(entry.endswith("repo_planning_bootstrap/_generated_cli_package_impl/command_package.json") for entry in entries)
