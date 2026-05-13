@@ -48,25 +48,17 @@ def _runtime_command_for_package(package: dict[str, Any], runtime_binding: dict[
 
 
 def _generated_package_module_for_package(package: dict[str, Any]) -> str:
-    package_role = package.get("package_role")
-    if package_role == "root-workspace-cli":
-        return ("agentic" + "_workspace") + ".generated_cli_package"
-    if package_role == "planning-module-cli":
-        return "repo_planning_bootstrap.generated_cli_package"
-    if package_role == "memory-module-cli":
-        return "repo_memory_bootstrap.generated_cli_package"
-    return ""
+    binding = package.get("python_runtime_binding", {})
+    if not isinstance(binding, dict):
+        return ""
+    return str(binding.get("generated_package_module") or "")
 
 
 def _runtime_module_for_package(package: dict[str, Any]) -> str:
-    package_role = package.get("package_role")
-    if package_role == "root-workspace-cli":
-        return ("agentic" + "_workspace") + "._runtime_cli"
-    if package_role == "planning-module-cli":
-        return "repo_planning_bootstrap._runtime_cli"
-    if package_role == "memory-module-cli":
-        return "repo_memory_bootstrap._runtime_cli"
-    return ""
+    binding = package.get("python_runtime_binding", {})
+    if not isinstance(binding, dict):
+        return ""
+    return str(binding.get("runtime_module") or "")
 
 
 def _python_adapter_commands(package: dict[str, Any]) -> list[dict[str, Any]]:

@@ -1647,6 +1647,10 @@ export const generatedCommandPackage = {
   "id": "root-workspace",
   "package_role": "root-workspace-cli",
   "program": "agentic-workspace",
+  "python_runtime_binding": {
+    "generated_package_module": "agentic_workspace.generated_cli_package",
+    "runtime_module": "agentic_workspace._runtime_cli"
+  },
   "targets": [
     {
       "entrypoints": [

@@ -294,6 +294,27 @@
           ],
           "description": "Allowed package role value for routing or validation."
         },
+        "python_runtime_binding": {
+          "type": "object",
+          "required": [
+            "generated_package_module",
+            "runtime_module"
+          ],
+          "properties": {
+            "generated_package_module": {
+              "type": "string",
+              "pattern": "^[A-Za-z_][A-Za-z0-9_.]*$",
+              "description": "Python module imported by generated process handoff for this package."
+            },
+            "runtime_module": {
+              "type": "string",
+              "pattern": "^[A-Za-z_][A-Za-z0-9_.]*$",
+              "description": "Hand-owned Python runtime module imported by generated Python package bridge code."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Python-specific runtime binding data supplied by IR rather than hard-coded in the generator."
+        },
         "targets": {
           "type": "array",
           "minItems": 1,

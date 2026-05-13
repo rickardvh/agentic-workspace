@@ -59,3 +59,12 @@ def test_canonical_command_artifacts_exclude_target_specific_package_fields() ->
     assert "spawnSync" not in rendered
     assert "argparse" not in rendered
     assert "Dockerfile" not in rendered
+
+
+def test_command_generation_package_does_not_hardcode_host_runtime_modules() -> None:
+    package_root = Path(__file__).resolve().parents[1] / "packages" / "command-generation"
+    text = "\n".join(path.read_text(encoding="utf-8") for path in (package_root / "src").rglob("*.py"))
+
+    assert "agentic_workspace" not in text
+    assert "repo_planning_bootstrap" not in text
+    assert "repo_memory_bootstrap" not in text

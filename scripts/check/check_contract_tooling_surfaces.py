@@ -43,6 +43,7 @@ from agentic_workspace.contract_tooling import (
     workflow_definition_format_manifest,
     workspace_surfaces_manifest,
 )
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 

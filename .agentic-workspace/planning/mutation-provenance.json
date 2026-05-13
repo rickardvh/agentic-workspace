@@ -304,6 +304,62 @@
       "reason": "record delegation decision route=delegate-exploration",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-13T20:02:20+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/codegen-runtime-binding-data-951.plan.json",
+      "sha256": "a6722638ad742aa762c302864649a5a9038769ef86a41029fc7eba4b3c1150b6",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold codegen-runtime-binding-data-951",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:08:11+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "d900211120e85c20f6b79b938297224009c6fe0f85c0a8da26333340c41a763e",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold codegen-runtime-binding-data-951",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:08:11+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/codegen-runtime-binding-data-951.plan.json",
+      "sha256": "3583a40ae1b5ed1860069fc3a0401aa1a73c815fa9b8f3ea88b2606876a5193f",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:08:17+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/codegen-runtime-binding-data-951.plan.json",
+      "sha256": "4171bf1f1bb84ff5294b29f4e05a1bdc9fd9db8e5eb836ab90a7a8e2bf6b2278",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold codegen-runtime-binding-data-951",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:14:45+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "4c312eac98ea71f7f5e52014c8c0084b3d7ca989ee9e94e4bc19e46c005ee054",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold codegen-runtime-binding-data-951",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:14:45+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/codegen-runtime-binding-data-951.plan.json",
+      "sha256": "e4e746007b07e9c30fda11ad26f6e6bb5cab5c3df2c1e20ff41914208d8487ca",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:16:36+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan .agentic-workspace/planning/execplans/codegen-runtime-binding-data-951.plan.json",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:20:16+00:00"
     }
   ]
 }
