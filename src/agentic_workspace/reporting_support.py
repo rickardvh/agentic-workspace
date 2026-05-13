@@ -246,9 +246,19 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
             reason = str(value.get("reason", ""))
             if status == "unavailable" and "no active planning record" in reason:
                 return {"status": "not-applicable", "reason": "no active planning record"}
-            return {
+            compact = {
                 key: value.get(key) for key in ("status", "trust", "required_for_broad_work", "recommended_next_action") if key in value
             }
+            if "continuation_surface" in value:
+                compact["continuation_surface"] = value.get("continuation_surface")
+            package_continuation = value.get("package_owned_continuation", {})
+            if isinstance(package_continuation, dict):
+                compact["package_owned_continuation"] = {
+                    key: package_continuation.get(key)
+                    for key in ("status", "surface_count", "owner_surfaces", "rule")
+                    if key in package_continuation
+                }
+            return compact
 
         historical_reviews = answer.get("historical_review_artifacts", {})
         historical_reviews = historical_reviews if isinstance(historical_reviews, dict) else {}

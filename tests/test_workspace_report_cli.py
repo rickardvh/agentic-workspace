@@ -1455,6 +1455,10 @@ candidates = [
     assert answer["lower_trust_closeout_count"] == 1
     assert answer["checks"]["intent_satisfaction"]["status"] == "present"
     assert answer["checks"]["intent_satisfaction"]["trust"] == "follow-up-required"
+    assert answer["checks"]["intent_satisfaction"]["continuation_surface"] == ".agentic-workspace/planning/state.toml"
+    compact_continuation = answer["checks"]["intent_satisfaction"]["package_owned_continuation"]
+    assert compact_continuation["status"] == "present"
+    assert ".agentic-workspace/planning/state.toml" in compact_continuation["owner_surfaces"]
 
 
 def test_report_closeout_trust_lowers_trust_when_active_plan_has_no_package_evidence(tmp_path: Path, capsys) -> None:
