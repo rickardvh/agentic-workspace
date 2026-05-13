@@ -2594,7 +2594,7 @@ def test_report_routes_root_cli_hotspot_with_owner_decision(tmp_path: Path, caps
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    cli_path = target / "src" / "agentic_workspace" / "cli.py"
+    cli_path = target / "src" / "agentic_workspace" / "_runtime_cli.py"
     cli_path.parent.mkdir(parents=True, exist_ok=True)
     cli_path.write_text("\n".join(f"line_{index}" for index in range(450)) + "\n", encoding="utf-8")
 

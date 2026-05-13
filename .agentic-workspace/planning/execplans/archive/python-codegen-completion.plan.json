@@ -36,6 +36,8 @@
     "proof_expectations": [
       "uv run python scripts/check/check_generated_command_packages.py",
       "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+      "rg --files | rg '(^|[\\\\/])cli\\\\.py$' (expected no output)",
+      "uv run python -c \"import subprocess, sys; files=subprocess.check_output(['git','ls-files'], text=True).splitlines(); stale=[p for p in files if p == 'cli.py' or p.endswith('/cli.py')]; print('\\n'.join(stale)); sys.exit(bool(stale))\"",
       "uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_workspace_start_preflight_cli.py tests/test_workspace_config_cli.py -q",
       "uv run ruff check src/agentic_workspace scripts/check tests"
     ],
@@ -53,7 +55,7 @@
       "Complete the Python lane so executable CLI front doors and runtime operation boundaries are generated or represented by implementation-independent artifacts, with no hand-owned cli.py outside generated/python and no implicit Python-internal dependency for future targets."
     ],
     "continuation_owner": "none",
-    "closeout_decision": "pending"
+    "closeout_decision": "archive-and-close"
   },
   "goal": [
     "The previous completion claim only proved generated adapter coverage; the user clarified that Python is not complete while hand-owned cli.py entrypoints remain and future targets must not silently rely on Python internals."
@@ -70,8 +72,8 @@
     },
     "execution": {
       "milestone": "github-892-python-codegen-completion",
-      "status": "in-progress",
-      "next_step": "Run the Python completion reconciliation gate after the memory front-door migration.",
+      "status": "completed",
+      "next_step": "Archive this completed Python lane after closeout proof.",
       "proof": "Generated package static proof, Python generated conformance, memory package tests, ruff, generator freshness, contract tooling, generated entrypoint smoke, and a no-hand-owned-cli.py inventory check."
     },
     "scope": {
@@ -88,21 +90,21 @@
   },
   "intent_continuity": {
     "larger intended outcome": "The previous completion claim only proved generated adapter coverage; the user clarified that Python is not complete while hand-owned cli.py entrypoints remain and future targets must not silently rely on Python internals.",
-    "this slice completes the larger intended outcome": "no",
-    "continuation surface": "this execplan, then Python completion reconciliation"
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "TypeScript/Bash/PowerShell transport follow-through remains outside this Python-only lane."
   },
   "required_continuation": {
-    "required follow-on for the larger intended outcome": "yes",
-    "owner surface": "this execplan",
-    "activation trigger": "After the memory front-door slice is committed and pushed, reconcile the Python completion gate against the #892 acceptance criteria."
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none for the Python-only lane",
+    "activation trigger": "Reopen only if a hand-owned cli.py executable front door reappears outside generated Python surfaces or Python command/interface behavior changes without contract/generated proof."
   },
   "iterative_follow_through": {
     "what this slice enabled": "none yet",
     "intentionally deferred": "none",
     "discovered implications": "none yet",
-    "proof achieved now": "pending",
-    "validation still needed": "current milestone validation remains pending",
-    "next likely slice": "continue the current milestone until the completion criteria are met"
+    "proof achieved now": "complete for the Python-only lane",
+    "validation still needed": "none for the Python-only lane",
+    "next likely slice": "none; close this Python-only lane"
   },
   "intent_interpretation": {
     "literal request": "Python Codegen Completion",
@@ -158,14 +160,14 @@
   "references": [],
   "active_milestone": {
     "id": "github-892-python-codegen-completion",
-    "status": "in-progress",
+    "status": "completed",
     "scope": "Python completion reconciliation after root, planning, and memory front-door migrations.",
-    "ready": "ready after delegation decision is recorded",
+    "ready": "completed",
     "blocked": "none",
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Commit and push the proven memory front-door slice, then run the Python completion reconciliation gate."
+    "Archive this completed Python-only lane."
   ],
   "blockers": [
     "None."
@@ -186,6 +188,8 @@
   "validation_commands": [
     "uv run python scripts/check/check_generated_command_packages.py",
     "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+    "rg --files | rg '(^|[\\\\/])cli\\\\.py$' (expected no output)",
+    "uv run python -c \"import subprocess, sys; files=subprocess.check_output(['git','ls-files'], text=True).splitlines(); stale=[p for p in files if p == 'cli.py' or p.endswith('/cli.py')]; print('\\n'.join(stale)); sys.exit(bool(stale))\"",
     "uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_workspace_start_preflight_cli.py tests/test_workspace_config_cli.py -q",
     "uv run ruff check src/agentic_workspace scripts/check tests"
   ],
@@ -196,24 +200,24 @@
     "Complete the Python lane so executable CLI front doors and runtime operation boundaries are generated or represented by implementation-independent artifacts, with no hand-owned cli.py outside generated/python and no implicit Python-internal dependency for future targets."
   ],
   "execution_run": {
-    "run status": "root-planning-memory-front-door-slices-proven",
+    "run status": "python-lane-complete",
     "executor": "Codex",
     "handoff source": "agentic-planning promote-to-plan",
     "what happened": "Root and planning front-door slices were committed/pushed, then agentic-memory was migrated to `repo_memory_bootstrap.generated_cli_entrypoint` with hand-owned runtime primitives moved from `packages/memory/src/repo_memory_bootstrap/cli.py` to `_runtime_cli.py`.",
     "scope touched": "root, planning, and memory Python front-door/runtime ownership metadata; generated runtime command metadata; generated-command proof checks; focused tests; this execplan and state.toml",
     "changed surfaces": "packages/memory/pyproject.toml; packages/memory/src/repo_memory_bootstrap/generated_cli_entrypoint.py; packages/memory/src/repo_memory_bootstrap/_runtime_cli.py; root memory delegation imports; generated TypeScript memory runtime metadata; generator runtime command metadata; focused proof/tests; this execplan and state.toml",
     "validations run": "uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_generated_tool_conformance.py packages/memory/tests -q; uv run ruff check packages/memory/src packages/memory/tests src/agentic_workspace/_runtime_cli.py scripts/check tests/test_generated_command_package_proof_runner.py tests/test_generated_tool_conformance.py packages/command-generation/src tests/test_workspace_start_preflight_cli.py tests/test_workspace_implement_cli.py; uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python -m repo_memory_bootstrap.generated_cli_entrypoint list-skills --format json",
-    "result for continuation": "root, planning, and memory front-door slices are proven; run the final Python completion reconciliation before claiming #892 Python lane completion",
-    "next step": "Commit and push the memory front-door slice, then run the Python completion reconciliation gate."
+    "result for continuation": "Python-only #892 lane completion criteria are satisfied; TypeScript, Bash, and PowerShell follow-through are explicitly deferred to separate issues.",
+    "next step": "Archive this execplan and keep non-Python transport follow-through outside this Python-only lane."
   },
   "finished_run_review": {
     "review status": "completed-for-memory-slice",
     "scope respected": "yes; the slice stayed on the memory front door and required metadata/proof fallout",
     "proof status": "green for focused memory front-door proof",
-    "intent served": "partial pending final reconciliation; root, planning, and memory cli.py front doors are retired",
+    "intent served": "yes for the Python-only lane; root, planning, and memory cli.py front doors are retired and final reconciliation proof passed",
     "config compliance": "used configured uv run agentic-workspace front door and recorded planning recovery/delegation",
     "misinterpretation risk": "medium if this root slice is mistaken for full Python completion",
-    "follow-on decision": "keep lane open until completion reconciliation is proven"
+    "follow-on decision": "archive-and-close"
   },
   "delegation_outcome_feedback": {
     "route chosen": "delegate-exploration",
@@ -231,17 +235,17 @@
   },
   "intent_satisfaction": {
     "original intent": "The previous completion claim only proved generated adapter coverage; the user clarified that Python is not complete while hand-owned cli.py entrypoints remain and future targets must not silently rely on Python internals.",
-    "was original intent fully satisfied?": "pending final reconciliation",
-    "evidence of intent satisfaction": "The root, planning, and memory package-specific executable cli.py front doors were retired in favor of generated_cli_entrypoint plus `_runtime_cli.py` runtime primitives.",
-    "unsolved intent passed to": "this execplan remains open for the Python completion reconciliation gate"
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Root, planning, and memory executable CLI front doors now route through generated_cli_entrypoint modules; repository inventory has no tracked cli.py files; generated static, Python conformance, Docker, workspace, memory, contract, and structured-inventory proof passed.",
+    "unsolved intent passed to": "none"
   },
   "execution_summary": {
     "outcome delivered": "root agentic-workspace, agentic-planning, and agentic-memory Python front doors moved off package-local cli.py",
     "validation confirmed": "focused proof passed",
-    "follow-on routed to": "this execplan; next slice is final Python completion reconciliation",
+    "follow-on routed to": "separate non-Python transport issues, not this Python-only lane",
     "post-work posterity capture": "updated state.toml and execplan",
     "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "Python completion reconciliation gate"
+    "resume from": "no Python-lane continuation"
   },
   "durable_residue": {
     "status": "none",
@@ -252,23 +256,22 @@
     "retention after promotion": "retain"
   },
   "task_intent_promotion": {
-    "decision": "pending",
+    "decision": "do-not-promote",
     "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
-    "evidence source": "",
-    "target scope": "",
-    "proposed durable intent": "",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "none",
+    "proposed durable intent": "none yet",
     "confidence": "low",
-    "needs review": true,
-    "owner surface": ""
+    "needs review": "True",
+    "owner surface": "none"
   },
   "closure_check": {
-    "slice status": "pending",
-    "larger-intent status": "pending",
-    "closure decision": "pending",
-    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
-    "why this decision is honest": "",
-    "evidence carried forward": "",
-    "reopen trigger": ""
+    "slice status": "complete",
+    "larger-intent status": "complete",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The Python-only #892 lane completion criteria are satisfied; TypeScript, Bash, and PowerShell follow-through are explicitly deferred to separate issues.",
+    "evidence carried forward": "uv run python scripts/check/check_generated_command_packages.py; --python-conformance; --docker --require-docker; --docker-conformance --require-docker; make test-workspace; make lint-workspace; make test-memory; make lint-memory; contract tooling; structured inventory; tracked cli.py stale-reference sweep.",
+    "reopen trigger": "Reopen if a hand-owned cli.py executable front door reappears outside generated Python surfaces or Python command/interface behavior changes without contract/generated proof."
   },
   "improvement_signal_review": {
     "status": "active",
@@ -279,38 +282,34 @@
       "start planning-safety override replaced config-posture read-only routing"
     ],
     "signals fixed": [
-      "start config-posture read-only routing now keeps inspect-effective-config"
+      "start config-posture read-only routing now keeps inspect-effective-config",
+      "start/implement/preflight active-state fast path now recognizes [active].execplans"
     ],
     "signals routed": [
       "#946",
       "#947"
     ],
     "signals dismissed": [],
-    "next owner": "#946 and this branch for #947"
+    "next owner": "none for #946/#947 after this branch; non-Python transport follow-through remains outside this Python-only lane"
   },
   "closeout_distillation": {
     "buckets": {
-      "discard": [],
-      "continuation": [
+      "discard": [
         {
-          "summary": "Final Python completion reconciliation remains before Python lane completion can be claimed.",
-          "owner": "this execplan",
-          "source": "intent_satisfaction.unsolved intent passed to"
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
         }
       ],
+      "continuation": [],
       "memory": [],
       "config_check": [],
       "docs": [],
       "issue_follow_up": [
         {
-          "summary": "implement --changed active execplan detection mismatch",
-          "owner": "github-issue",
-          "source": "#946"
-        },
-        {
-          "summary": "start planning gate overrides config-posture routing",
-          "owner": "github-issue",
-          "source": "#947"
+          "summary": "TypeScript/Bash/PowerShell transport completion remains outside this Python-only lane.",
+          "owner": "separate transport issues",
+          "source": "closure_check.closure decision"
         }
       ]
     }
@@ -318,5 +317,20 @@
   "drift_log": [
     "2026-05-13: Promoted from TODO direct-task shape into an execplan.",
     "2026-05-13: Recorded delegation decision route=delegate-exploration."
-  ]
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: The previous completion claim only proved generated adapter coverage; the user clarified that Python is not complete while hand-owned cli.py entrypoints remain and future targets must not silently rely on Python internals.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: complete for root, planning, and memory front-door slices\nChanged surfaces: packages/memory/pyproject.toml; packages/memory/src/repo_memory_bootstrap/generated_cli_entrypoint.py; packages/memory/src/repo_memory_bootstrap/_runtime_cli.py; root memory delegation imports; generated TypeScript memory runtime metadata; generator runtime command metadata; focused proof/tests; this execplan and state.toml\nDurable residue: none (none)\nMemory learning: none\nFollow-up: separate non-Python transport issues, not this Python-only lane"
+  }
 }

@@ -11991,13 +11991,19 @@ def _fast_planning_active_summary(*, target_root: Path) -> dict[str, Any]:
     todo = data.get("todo", {}) if isinstance(data, dict) else {}
     active_items = todo.get("active_items", []) if isinstance(todo, dict) else []
     active_items = active_items if isinstance(active_items, list) else []
+    active = data.get("active", {}) if isinstance(data, dict) else {}
+    active_execplans = active.get("execplans", []) if isinstance(active, dict) else []
+    active_execplans = active_execplans if isinstance(active_execplans, list) else []
     active_execplan = None
     if active_items and isinstance(active_items[0], dict):
         active_execplan = active_items[0].get("surface")
+    if active_execplan is None and active_execplans and isinstance(active_execplans[0], dict):
+        active_execplan = active_execplans[0].get("path")
     return {
         "todo_active_count": len(active_items),
+        "active_execplan_count": len(active_execplans),
         "active_execplan": active_execplan,
-        "planning_status": "present" if active_items else "unavailable",
+        "planning_status": "present" if active_items or active_execplans else "unavailable",
     }
 
 
@@ -12099,7 +12105,10 @@ def _active_decomposition_delegation_payload(*, target_root: Path) -> dict[str, 
 
 
 def _planning_state_has_active_items(*, target_root: Path) -> bool:
-    return bool(_fast_planning_active_summary(target_root=target_root)["todo_active_count"])
+    active_summary = _fast_planning_active_summary(target_root=target_root)
+    return bool(
+        active_summary.get("todo_active_count") or active_summary.get("active_execplan_count") or active_summary.get("active_execplan")
+    )
 
 
 def _tiny_memory_consult_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
@@ -12936,7 +12945,6 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "kind": "implementer-context-tiny/v1",
         "target": payload.get("target"),
         "workflow_sufficiency": payload.get("workflow_sufficiency"),
-        "planning_safety_gate": planning_safety_gate,
         "adaptive_routing": _tiny_adaptive_routing_payload(
             surface="implement",
             current_need="changed-path-next-action" if payload.get("changed_paths") else "unknown-scope-routing",
@@ -12999,6 +13007,20 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "detail_command": detail_commands["full_context"],
         "detail_commands": detail_commands,
     }
+    if isinstance(planning_safety_gate, dict):
+        projected["planning_safety_gate"] = (
+            planning_safety_gate
+            if planning_safety_gate.get("workflow_sufficient") is False
+            else {
+                "kind": planning_safety_gate.get("kind"),
+                "status": planning_safety_gate.get("status"),
+                "decision": planning_safety_gate.get("decision"),
+                "workflow_sufficient": planning_safety_gate.get("workflow_sufficient"),
+                "required_next_action": planning_safety_gate.get("required_next_action"),
+                "active_planning_present": planning_safety_gate.get("active_planning_present"),
+                "changed_path_classification": planning_safety_gate.get("changed_path_classification", {}),
+            }
+        )
     if isinstance(intent_acknowledgement, dict) and intent_acknowledgement.get("decision") == "proceed-with-stated-assumption":
         projected["intent_acknowledgement"] = {
             "decision": intent_acknowledgement.get("decision"),
@@ -13274,9 +13296,10 @@ def _planning_safety_gate_payload(
     issue_refs = sorted(set(re.findall(r"#\d+", task_text or "")))
     normalized_task = " ".join((task_text or "").lower().split())
     completion_status_question = _is_completion_status_task(task_text) and not changed_paths
+    high_assurance_requires_plan = proof_burden == "high" and work_shape not in {"bounded", "narrow"}
     broad_or_high_assurance = not completion_status_question and (
         work_shape in {"lane", "epic"}
-        or proof_burden == "high"
+        or high_assurance_requires_plan
         or len(issue_refs) > 1
         or any(term in normalized_task for term in ("epic", "high-assurance", "dogfooding issues"))
     )
@@ -13318,6 +13341,12 @@ def _planning_safety_gate_payload(
         reason = "Changed paths have outgrown direct/no-plan assumptions across implementation boundaries."
         required_next_action = "create-or-promote-active-execplan"
         workflow_sufficient = False
+    elif path_classification["dirty_shape"] == "planning-plus-implementation":
+        status = "violation"
+        decision = "implementation-owner-missing"
+        reason = "Implementation paths are mixed with planning recovery paths without active planning ownership."
+        required_next_action = "checkpoint-planning-before-implementation"
+        workflow_sufficient = False
     elif path_classification["implementation_paths"] and broad_or_high_assurance:
         status = "violation"
         decision = "implementation-owner-missing"
@@ -13330,12 +13359,6 @@ def _planning_safety_gate_payload(
         reason = "Broad, high-assurance, multi-issue, or decomposed work needs an active execplan before implementation."
         required_next_action = "promote-or-create-active-execplan"
         workflow_sufficient = False
-    elif path_classification["dirty_shape"] == "planning-plus-implementation":
-        status = "attention"
-        decision = "mixed-planning-and-implementation-wip"
-        reason = "Planning and implementation changes are mixed; checkpoint planning before continuing if scope is not narrow."
-        required_next_action = "review-mixed-wip"
-        workflow_sufficient = True
     else:
         status = "clear"
         decision = "direct-work-allowed"
