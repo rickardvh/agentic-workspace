@@ -12,7 +12,9 @@ work_items = []
 execplans = []
 
 [todo]
-active_items = []
+active_items = [
+  { id = "dogfooding-planning-safety-935-plus", title = "Dogfooding Planning Safety 935 Plus", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/dogfooding-planning-safety-935-plus.plan.json", why_now = "GitHub #935 #936 #937 #938 #939 #940", owner_role = "implementation", handoff_ready = true, refs = ["GitHub #935 #936 #937 #938 #939 #940"] },
+]
 queued_items = []
 
 [roadmap]

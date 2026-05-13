@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import importlib.util
 import json
 import re
@@ -8,9 +9,9 @@ import shutil
 import subprocess
 import tomllib
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any, Iterable, Mapping, cast
 
 from jsonschema import Draft202012Validator
 
@@ -31,6 +32,7 @@ PLANNING_STATE_PATH = PLANNING_MANAGED_ROOT / "state.toml"
 PLANNING_EXTERNAL_INTENT_EVIDENCE_PATH = PLANNING_MANAGED_ROOT / "external-intent-evidence.json"
 PLANNING_EXTERNAL_INTENT_CACHE_PATH = Path(".agentic-workspace") / "local" / "cache" / "external-intent-evidence.json"
 PLANNING_FINISHED_WORK_EVIDENCE_PATH = PLANNING_MANAGED_ROOT / "finished-work-evidence.json"
+PLANNING_MUTATION_PROVENANCE_PATH = PLANNING_MANAGED_ROOT / "mutation-provenance.json"
 PLANNING_SCHEMA_ROOT = PLANNING_MANAGED_ROOT / "schemas"
 EXECPLAN_RECORD_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-execplan.schema.json"
 DECOMPOSITION_RECORD_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-decomposition.schema.json"
@@ -312,6 +314,101 @@ class InstallResult:
 
     def add(self, kind: str, path: Path, detail: str) -> None:
         self.actions.append(Action(kind=kind, path=path, detail=detail))
+
+
+def _planning_surface_sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _planning_surface_relative(target_root: Path, path: Path) -> str:
+    try:
+        return path.relative_to(target_root).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def _load_mutation_provenance(target_root: Path) -> dict[str, Any]:
+    path = target_root / PLANNING_MUTATION_PROVENANCE_PATH
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        payload = {}
+    if not isinstance(payload, dict) or payload.get("kind") != "planning-mutation-provenance/v1":
+        return {"kind": "planning-mutation-provenance/v1", "entries": []}
+    entries = payload.get("entries", [])
+    if not isinstance(entries, list):
+        payload["entries"] = []
+    return payload
+
+
+def _record_planning_mutation_provenance(
+    *,
+    target_root: Path,
+    paths: Iterable[Path],
+    command: str,
+    reason: str,
+    mode: str = "cli-mutation",
+) -> Path:
+    existing = _load_mutation_provenance(target_root)
+    entries = [entry for entry in existing.get("entries", []) if isinstance(entry, dict)]
+    now = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    for path in paths:
+        if not path.exists() or not path.is_file():
+            continue
+        relative = _planning_surface_relative(target_root, path)
+        entries.append(
+            {
+                "path": relative,
+                "sha256": _planning_surface_sha256(path),
+                "command": command,
+                "reason": reason,
+                "mode": mode,
+                "recorded_at": now,
+            }
+        )
+    payload = {"kind": "planning-mutation-provenance/v1", "entries": entries[-200:]}
+    provenance_path = target_root / PLANNING_MUTATION_PROVENANCE_PATH
+    provenance_path.parent.mkdir(parents=True, exist_ok=True)
+    provenance_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    return provenance_path
+
+
+def _stamp_result_planning_mutations(
+    result: InstallResult,
+    *,
+    paths: Iterable[Path],
+    command: str,
+    reason: str,
+    mode: str = "cli-mutation",
+) -> None:
+    provenance_path = _record_planning_mutation_provenance(
+        target_root=result.target_root,
+        paths=paths,
+        command=command,
+        reason=reason,
+        mode=mode,
+    )
+    result.add("updated", provenance_path, "recorded planning mutation provenance")
+
+
+def _stamp_result_action_mutations(result: InstallResult, *, command: str, reason: str) -> None:
+    mutation_kinds = {
+        "created",
+        "updated",
+        "closed",
+        "archived",
+        "overwritten",
+        "recovery recorded",
+        "closeout distillation",
+    }
+    paths = [action.path for action in result.actions if action.kind in mutation_kinds and action.path.exists() and action.path.is_file()]
+    if paths:
+        _stamp_result_planning_mutations(result, paths=paths, command=command, reason=reason)
+
+
+def _add_planning_mutation_proof_actions(result: InstallResult) -> None:
+    result.add("proof", result.target_root, "agentic-planning summary --target . --format json")
+    result.add("proof", result.target_root, "agentic-planning doctor --target . --modules planning --format json")
 
 
 def _add_workspace_orchestrator_notice(result: InstallResult, *, preset: str = "planning") -> None:
@@ -923,8 +1020,17 @@ def create_review_record(
 
     _write_review_record(record_path=record_path, record=record, render_markdown=render_markdown)
     result.add("created", record_path, "valid planning-review/v1 record")
+    provenance_paths = [record_path]
     if render_markdown:
-        result.add("created", _derived_review_markdown_path(record_path), "derived review markdown")
+        markdown_path = _derived_review_markdown_path(record_path)
+        result.add("created", markdown_path, "derived review markdown")
+        provenance_paths.append(markdown_path)
+    _stamp_result_planning_mutations(
+        result,
+        paths=provenance_paths,
+        command="agentic-planning create-review",
+        reason=f"create review record {review_name}",
+    )
     return result
 
 
@@ -8492,6 +8598,166 @@ def _contract_projection(contract: dict[str, Any], *, view_name: str) -> dict[st
     return projection
 
 
+def _promote_decomposition_lane_to_execplan(
+    item_id: str,
+    *,
+    target_root: Path,
+    plan_slug: str | None,
+    dry_run: bool,
+) -> InstallResult | None:
+    decomposition_root = target_root / ".agentic-workspace" / "planning" / "decompositions"
+    if not decomposition_root.exists():
+        return None
+    matched_path: Path | None = None
+    matched_record: dict[str, Any] | None = None
+    matched_lane: dict[str, Any] | None = None
+    matched_index = -1
+    for path in sorted(decomposition_root.glob("*.decomposition.json")):
+        if path.name == "TEMPLATE.decomposition.json":
+            continue
+        try:
+            record = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(record, dict) or record.get("kind") != "planning-decomposition/v1":
+            continue
+        decomposition_record = cast(dict[str, Any], record)
+        lanes = decomposition_record.get("candidate_lanes", [])
+        if not isinstance(lanes, list):
+            continue
+        for index, lane in enumerate(lanes):
+            if not isinstance(lane, dict):
+                continue
+            lane_record = cast(dict[str, Any], lane)
+            if str(lane_record.get("id", "")).strip() == item_id:
+                matched_path = path
+                matched_record = decomposition_record
+                matched_lane = lane_record
+                matched_index = index
+                break
+        if matched_lane is not None:
+            break
+    if matched_path is None or matched_record is None or matched_lane is None:
+        return None
+
+    result = InstallResult(target_root=target_root, message=f"Promote decomposition lane '{item_id}' to execplan", dry_run=dry_run)
+    state_path = target_root / PLANNING_STATE_PATH
+    state = _read_state_from_toml(target_root) or {
+        "kind": PLANNING_STATE_KIND,
+        "schema_version": PLANNING_STATE_SCHEMA_VERSION,
+        "work_items": [],
+        "active": {"execplans": []},
+        "todo": {"active_items": [], "queued_items": []},
+        "roadmap": {"lanes": [], "candidates": []},
+    }
+    todo = state.get("todo") if isinstance(state.get("todo"), dict) else {}
+    active_items = todo.get("active_items", []) if isinstance(todo, dict) else []
+    if active_items:
+        result.add(
+            "manual review",
+            state_path,
+            "active planning item already exists; archive or switch active work before promoting a decomposition lane",
+        )
+        return result
+
+    slug = _slugify(plan_slug or item_id)
+    if not slug:
+        result.add("manual review", matched_path, "decomposition lane id cannot be converted into an execplan slug")
+        return result
+    record_path = target_root / ".agentic-workspace" / "planning" / "execplans" / f"{slug}.plan.json"
+    record_relative = record_path.relative_to(target_root).as_posix()
+    if record_path.exists():
+        result.add("manual review", record_path, "target canonical execplan record already exists")
+        return result
+
+    title = str(matched_lane.get("title") or _title_from_slug(slug)).strip()
+    outcome = str(matched_lane.get("outcome") or matched_record.get("outcome") or "").strip()
+    proof = str(matched_lane.get("proof") or "").strip()
+    source_relative = matched_path.relative_to(target_root).as_posix()
+    why_now = f"Promoted from {source_relative} lane {item_id}."
+    source_fields = {
+        "id": item_id,
+        "title": title,
+        "outcome": outcome,
+        "proof": proof,
+        "source decomposition": source_relative,
+        "readiness": str(matched_lane.get("readiness", "")).strip(),
+    }
+    plan_record = _build_execplan_record_from_todo_item(
+        title=title,
+        item_id=item_id,
+        status="active",
+        why_now=why_now,
+        next_action=outcome or "Fill in execution bounds, touched paths, and validation before implementation starts.",
+        done_when=proof or outcome or f"{title} is implemented, validated, and closed out honestly.",
+        source_fields=source_fields,
+    )
+    plan_record["references"] = [
+        {
+            "kind": "source",
+            "target": source_relative,
+            "label": f"decomposition lane {item_id}",
+            "role": "intake",
+            "locator": f"candidate_lanes[{matched_index}]",
+        }
+    ]
+    plan_record["execution_run"]["handoff source"] = "agentic-planning promote-to-plan decomposition lane"
+    plan_record["drift_log"] = [
+        f"{date.today().isoformat()}: Scaffolded by agentic-planning promote-to-plan from decomposition lane {item_id}."
+    ]
+
+    updated_state = copy.deepcopy(state)
+    updated_todo = updated_state.get("todo")
+    if not isinstance(updated_todo, dict):
+        updated_todo = {}
+    updated_todo["active_items"] = [
+        {
+            "id": slug,
+            "title": title,
+            "maturity": "active",
+            "status": "active",
+            "surface": record_relative,
+            "why_now": why_now,
+            "owner_role": "implementation",
+            "handoff_ready": True,
+            "refs": [source_relative],
+        }
+    ]
+    updated_todo.setdefault("queued_items", [])
+    updated_state["todo"] = updated_todo
+
+    updated_record = copy.deepcopy(matched_record)
+    updated_lanes = list(updated_record.get("candidate_lanes", []))
+    updated_lane = copy.deepcopy(matched_lane)
+    updated_lane["readiness"] = "promoted"
+    updated_lane["owner_surface"] = record_relative
+    updated_lane["promoted_execplan"] = record_relative
+    updated_lanes[matched_index] = updated_lane
+    updated_record["candidate_lanes"] = updated_lanes
+
+    if dry_run:
+        result.add("would create", record_path, "scaffold canonical execplan record from decomposition lane")
+        result.add("would update", state_path, f"register active planning item '{slug}'")
+        result.add("would update", matched_path, f"mark decomposition lane '{item_id}' as promoted")
+        _add_planning_mutation_proof_actions(result)
+        return result
+
+    _write_execplan_record(record_path=record_path, record=plan_record)
+    _write_state_to_toml(target_root, updated_state)
+    matched_path.write_text(json.dumps(updated_record, indent=2) + "\n", encoding="utf-8")
+    result.add("created", record_path, "scaffolded canonical execplan record from decomposition lane")
+    result.add("updated", state_path, f"registered active planning item '{slug}'")
+    result.add("updated", matched_path, f"marked decomposition lane '{item_id}' as promoted")
+    _stamp_result_planning_mutations(
+        result,
+        paths=[record_path, state_path, matched_path],
+        command="agentic-planning promote-to-plan",
+        reason=f"promote decomposition lane {item_id}",
+    )
+    _add_planning_mutation_proof_actions(result)
+    return result
+
+
 def promote_todo_item_to_execplan(
     item_id: str,
     *,
@@ -8510,7 +8776,15 @@ def promote_todo_item_to_execplan(
         todo_lines, todo_items = _read_todo_items(todo_path)
         item = next((candidate for candidate in todo_items if candidate.item_id == item_id), None)
     if item is None:
-        result.add("manual review", todo_path, f"TODO item '{item_id}' was not found")
+        decomposition_result = _promote_decomposition_lane_to_execplan(
+            item_id,
+            target_root=target_root,
+            plan_slug=plan_slug,
+            dry_run=dry_run,
+        )
+        if decomposition_result is not None:
+            return decomposition_result
+        result.add("manual review", todo_path, f"TODO item or decomposition lane '{item_id}' was not found")
         return result
 
     current_surface = item.fields.get("surface", "")
@@ -8564,6 +8838,12 @@ def promote_todo_item_to_execplan(
             todo_path.write_text("\n".join(new_todo_lines).rstrip() + "\n", encoding="utf-8")
         result.add("created", existing_execplan_record_path, "scaffolded missing canonical execplan record from TODO path")
         result.add("updated", todo_path, f"confirmed '{item_id}' points at {surface_relative.as_posix()}")
+        _stamp_result_planning_mutations(
+            result,
+            paths=[existing_execplan_record_path, todo_path],
+            command="agentic-planning promote-to-plan",
+            reason=f"promote planning item {item_id}",
+        )
         return result
 
     slug = _slugify(plan_slug or item_id)
@@ -8623,6 +8903,12 @@ def promote_todo_item_to_execplan(
         todo_path.write_text("\n".join(new_todo_lines).rstrip() + "\n", encoding="utf-8")
     result.add("created", execplan_record_path, "scaffolded canonical execplan record from TODO item")
     result.add("updated", todo_path, f"pointed '{item_id}' at {surface_relative.as_posix()} and removed direct-task fields")
+    _stamp_result_planning_mutations(
+        result,
+        paths=[execplan_record_path, todo_path],
+        command="agentic-planning promote-to-plan",
+        reason=f"promote planning item {item_id}",
+    )
     return result
 
 
@@ -8765,9 +9051,17 @@ def create_execplan_scaffold(
     _write_execplan_record(record_path=record_path, record=plan_record)
     detail = "schema-valid prep-only execplan scaffold" if prep_only else "schema-valid execplan scaffold"
     result.add("created" if not overwrite else "updated", record_path, detail)
+    provenance_paths = [record_path]
     if activate or queue:
         _write_state_to_toml(target_root, updated_state)
         result.add("updated", state_path, f"registered '{slug}' in todo.{'active_items' if activate else 'queued_items'}")
+        provenance_paths.append(state_path)
+    _stamp_result_planning_mutations(
+        result,
+        paths=provenance_paths,
+        command="agentic-planning new-plan",
+        reason=f"create execplan scaffold {slug}",
+    )
     result.add("next", state_path, "run `agentic-workspace summary --target . --verbose --format json`")
     result.add("next", record_path, _new_plan_tightening_checklist(prep_only=prep_only))
     if prep_only:
@@ -8789,6 +9083,156 @@ def _new_plan_tightening_checklist(*, prep_only: bool) -> str:
         "before implementation, tighten scaffold fields: goal, non_goals, intent_continuity, execution_bounds, "
         "touched_paths, validation_commands, completion_criteria, and adaptive_assurance when risk or scope requires it"
     )
+
+
+def _active_execplan_record_path_from_state(target_root: Path) -> Path | None:
+    state = _read_state_from_toml(target_root)
+    todo = state.get("todo") if isinstance(state, dict) else None
+    active_items = todo.get("active_items", []) if isinstance(todo, dict) else []
+    if isinstance(active_items, list) and active_items:
+        first = active_items[0]
+        if isinstance(first, dict):
+            surface = _active_execplan_reference(first)
+            if surface:
+                return _resolve_execplan_path(target_root, surface)
+    execplan_dir = target_root / ".agentic-workspace" / "planning" / "execplans"
+    active_plans = [path for path in _live_execplan_paths(execplan_dir) if _execplan_status(path) not in {"completed", "done", "closed"}]
+    if len(active_plans) == 1:
+        return active_plans[0]
+    return None
+
+
+def record_delegation_decision(
+    *,
+    target: str | Path | None = None,
+    plan: str | None = None,
+    route: str,
+    skipped_reason: str = "",
+    expected_savings: str = "",
+    actual_friction: str = "",
+    proof_result: str = "",
+    quality_concern: str = "",
+    decomposition_adjustment: str = "",
+    dry_run: bool = False,
+) -> InstallResult:
+    target_root = resolve_target_root(target)
+    result = InstallResult(target_root=target_root, message="Record planning delegation decision", dry_run=dry_run)
+    plan_path = _resolve_execplan_path(target_root, plan) if plan else _active_execplan_record_path_from_state(target_root)
+    if plan_path is None or not plan_path.exists():
+        result.add("manual review", target_root / PLANNING_STATE_PATH, "no active execplan resolved; pass --plan explicitly")
+        return result
+    record = _load_execplan_record(plan_path)
+    if record is None:
+        result.add("manual review", plan_path, "delegation decisions require a canonical .plan.json execplan")
+        return result
+    route_value = route.strip()
+    if not route_value:
+        result.add("manual review", plan_path, "--route is required")
+        return result
+    if route_value == "keep-local" and not skipped_reason.strip():
+        result.add("manual review", plan_path, "--skipped-reason is required when --route keep-local")
+        return result
+
+    updated = copy.deepcopy(record)
+    existing_post = updated.get("post_decomposition_delegation")
+    if not isinstance(existing_post, dict):
+        existing_post = {}
+    existing_post.update(
+        {
+            "status": "recorded",
+            "route chosen": route_value,
+            "route skipped reason": skipped_reason.strip(),
+            "decision command": "agentic-planning delegation-decision",
+            "recorded at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        }
+    )
+    updated["post_decomposition_delegation"] = existing_post
+    feedback = updated.get("delegation_outcome_feedback")
+    if not isinstance(feedback, dict):
+        feedback = {}
+    feedback.update(
+        {
+            "route chosen": route_value,
+            "route skipped reason": skipped_reason.strip() or "not skipped",
+            "expected savings": expected_savings.strip() or "unknown",
+            "actual friction": actual_friction.strip() or "pending",
+            "proof result": proof_result.strip() or "pending",
+            "quality concern": quality_concern.strip() or "none recorded",
+            "decomposition adjustment": decomposition_adjustment.strip() or "none",
+        }
+    )
+    updated["delegation_outcome_feedback"] = feedback
+    drift_log = updated.get("drift_log")
+    if not isinstance(drift_log, list):
+        drift_log = []
+    drift_log.append(f"{date.today().isoformat()}: Recorded delegation decision route={route_value}.")
+    updated["drift_log"] = drift_log
+
+    if dry_run:
+        result.add("would update", plan_path, f"record delegation decision route={route_value}")
+        return result
+
+    _write_execplan_record(record_path=plan_path, record=updated)
+    result.add("updated", plan_path, f"recorded delegation decision route={route_value}")
+    _stamp_result_planning_mutations(
+        result,
+        paths=[plan_path],
+        command="agentic-planning delegation-decision",
+        reason=f"record delegation decision route={route_value}",
+    )
+    return result
+
+
+def record_planning_recovery(
+    *,
+    target: str | Path | None = None,
+    paths: list[str] | None = None,
+    reason: str,
+    dry_run: bool = False,
+) -> InstallResult:
+    target_root = resolve_target_root(target)
+    result = InstallResult(target_root=target_root, message="Record explicit planning recovery", dry_run=dry_run)
+    reason_text = reason.strip()
+    if not reason_text:
+        result.add("manual review", target_root / PLANNING_MUTATION_PROVENANCE_PATH, "--reason is required")
+        return result
+    raw_paths = paths or [PLANNING_STATE_PATH.as_posix()]
+    selected: list[Path] = []
+    for raw_path in raw_paths:
+        candidate = Path(raw_path)
+        full_path = candidate if candidate.is_absolute() else target_root / candidate
+        try:
+            relative = full_path.resolve().relative_to(target_root.resolve())
+        except ValueError:
+            result.add("manual review", full_path, "recovery path must stay inside the target repository")
+            continue
+        if not relative.as_posix().startswith(".agentic-workspace/planning/"):
+            result.add("manual review", full_path, "recovery provenance is scoped to managed planning surfaces")
+            continue
+        if relative.as_posix() == PLANNING_MUTATION_PROVENANCE_PATH.as_posix():
+            result.add("manual review", full_path, "recovery provenance cannot bless the provenance ledger itself")
+            continue
+        if not full_path.exists() or not full_path.is_file():
+            result.add("manual review", full_path, "recovery path does not exist")
+            continue
+        selected.append(full_path)
+    if any(action.kind == "manual review" for action in result.actions):
+        return result
+    if dry_run:
+        for path in selected:
+            result.add("would update", path, "record emergency recovery provenance")
+        return result
+    provenance_path = _record_planning_mutation_provenance(
+        target_root=target_root,
+        paths=selected,
+        command="agentic-planning record-recovery",
+        reason=reason_text,
+        mode="manual-recovery",
+    )
+    for path in selected:
+        result.add("recovery recorded", path, reason_text)
+    result.add("updated", provenance_path, "recorded emergency recovery provenance")
+    return result
 
 
 def _apply_prep_only_execplan_defaults(plan_record: dict[str, Any]) -> None:
@@ -9738,6 +10182,11 @@ def archive_parent_lane_closeout(
     _write_state_to_toml(target_root, _closed_parent_lane_state(state, parent_id, item))
     result.add("created", record_path, "schema-valid parent lane closeout record")
     result.add("updated", state_path, f"removed closed parent lane '{parent_id}' from first-line planning state")
+    _stamp_result_action_mutations(
+        result,
+        command="agentic-planning archive-plan --parent-lane-closeout",
+        reason=f"close parent lane {parent_id}",
+    )
     return result
 
 
@@ -10360,6 +10809,7 @@ def archive_execplan(
         result.add("archived", destination_record, f"canonical record for {plan_path.relative_to(target_root).as_posix()}")
     else:
         result.add("closed", plan_path, "completed execplan removed from Planning after closeout distillation")
+    _stamp_result_action_mutations(result, command="agentic-planning archive-plan", reason=f"archive execplan {plan}")
     return result
 
 

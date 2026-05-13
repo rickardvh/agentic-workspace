@@ -370,6 +370,215 @@
           "classification_note": "Planning closeout front door"
         },
         {
+          "name": "create-review",
+          "help": "Create a schema-valid planning review record skeleton.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "slug",
+              "flags": [
+                "--slug"
+              ],
+              "required": true,
+              "help": "Stable review record slug."
+            },
+            {
+              "name": "title",
+              "flags": [
+                "--title"
+              ],
+              "required": true,
+              "help": "Human-readable review title."
+            },
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path."
+            },
+            {
+              "name": "scope",
+              "flags": [
+                "--scope"
+              ],
+              "help": "Review scope summary."
+            },
+            {
+              "name": "classification",
+              "flags": [
+                "--classification"
+              ],
+              "default": "review",
+              "help": "Review classification."
+            },
+            {
+              "name": "render_markdown",
+              "flags": [
+                "--render-markdown"
+              ],
+              "action": "store_true",
+              "help": "Also render the derived markdown companion."
+            },
+            {
+              "name": "dry_run",
+              "flags": [
+                "--dry-run"
+              ],
+              "action": "store_true",
+              "help": "Show planned changes without mutating files."
+            }
+          ],
+          "role": "core_context_router",
+          "audience": "ordinary_host_repo",
+          "classification_note": "Planning review mutation front door"
+        },
+        {
+          "name": "delegation-decision",
+          "help": "Record the delegation route chosen for the active execplan before mechanical lane work proceeds.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path."
+            },
+            {
+              "name": "plan",
+              "flags": [
+                "--plan"
+              ],
+              "help": "Plan path, slug, or id; defaults to the active execplan."
+            },
+            {
+              "name": "route",
+              "flags": [
+                "--route"
+              ],
+              "required": true,
+              "choices": [
+                "keep-local",
+                "delegate-exploration",
+                "delegate-implementation",
+                "delegate-validation",
+                "escalate-review",
+                "no-safe-route"
+              ],
+              "help": "Delegation route chosen for this slice."
+            },
+            {
+              "name": "skipped_reason",
+              "flags": [
+                "--skipped-reason"
+              ],
+              "default": "",
+              "help": "Required explanation when route is keep-local."
+            },
+            {
+              "name": "expected_savings",
+              "flags": [
+                "--expected-savings"
+              ],
+              "default": "",
+              "help": "Expected time or token savings."
+            },
+            {
+              "name": "actual_friction",
+              "flags": [
+                "--actual-friction"
+              ],
+              "default": "",
+              "help": "Observed delegation friction."
+            },
+            {
+              "name": "proof_result",
+              "flags": [
+                "--proof-result"
+              ],
+              "default": "",
+              "help": "Proof or validation result for the delegation decision."
+            },
+            {
+              "name": "quality_concern",
+              "flags": [
+                "--quality-concern"
+              ],
+              "default": "",
+              "help": "Any quality concern from delegation or skipping it."
+            },
+            {
+              "name": "decomposition_adjustment",
+              "flags": [
+                "--decomposition-adjustment"
+              ],
+              "default": "",
+              "help": "Any follow-up adjustment needed in the decomposition."
+            },
+            {
+              "name": "dry_run",
+              "flags": [
+                "--dry-run"
+              ],
+              "action": "store_true",
+              "help": "Show planned changes without mutating files."
+            }
+          ],
+          "role": "core_context_router",
+          "audience": "ordinary_host_repo",
+          "classification_note": "Planning delegation decision front door"
+        },
+        {
+          "name": "record-recovery",
+          "help": "Bless an emergency manual repair to managed planning surfaces with explicit provenance.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "paths",
+              "flags": [
+                "--path"
+              ],
+              "nargs": "*",
+              "default": [],
+              "required": true,
+              "help": "Managed planning file path to stamp; repeat or pass multiple values."
+            },
+            {
+              "name": "reason",
+              "flags": [
+                "--reason"
+              ],
+              "required": true,
+              "help": "Emergency repair reason."
+            },
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path."
+            },
+            {
+              "name": "dry_run",
+              "flags": [
+                "--dry-run"
+              ],
+              "action": "store_true",
+              "help": "Show planned changes without mutating files."
+            }
+          ],
+          "role": "core_context_router",
+          "audience": "ordinary_host_repo",
+          "classification_note": "Planning recovery provenance front door"
+        },
+        {
           "name": "handoff",
           "help": "Emit the compact delegated-worker handoff derived from active planning state.",
           "uses_option_groups": [

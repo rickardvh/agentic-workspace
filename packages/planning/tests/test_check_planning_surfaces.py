@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
 from pathlib import Path
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
@@ -33,6 +34,17 @@ def _write(path: Path, text: str) -> None:
     path.write_text(text.strip() + "\n", encoding="utf-8")
 
 
+def _init_git_repo(path: Path) -> None:
+    subprocess.run(["git", "init"], cwd=path, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "tests@example.invalid"], cwd=path, check=True)
+    subprocess.run(["git", "config", "user.name", "Planning Tests"], cwd=path, check=True)
+
+
+def _commit_all(path: Path, message: str) -> None:
+    subprocess.run(["git", "add", "."], cwd=path, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", message], cwd=path, check=True, capture_output=True)
+
+
 def _install_planning_record_schemas(target: Path) -> None:
     schema_root = WORKSPACE_ROOT / ".agentic-workspace" / "planning" / "schemas"
     for name in ("planning-execplan.schema.json", "planning-review.schema.json", "planning-decomposition.schema.json"):
@@ -47,6 +59,26 @@ def _install_planning_evidence_schemas(target: Path) -> None:
         destination = target / ".agentic-workspace" / "planning" / "schemas" / name
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_text((schema_root / name).read_text(encoding="utf-8"), encoding="utf-8")
+
+
+def _write_mutation_provenance_fixture_surfaces(target: Path) -> tuple[Path, Path, Path]:
+    state_path = target / ".agentic-workspace" / "planning" / "state.toml"
+    plan_path = target / ".agentic-workspace" / "planning" / "execplans" / "active.plan.json"
+    decomposition_path = target / ".agentic-workspace" / "planning" / "decompositions" / "epic.decomposition.json"
+    _write(
+        state_path,
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = []
+queued_items = []
+""",
+    )
+    _write(plan_path, '{"kind": "planning-execplan/v1", "id": "active", "status": "in-progress"}')
+    _write(decomposition_path, '{"kind": "planning-decomposition/v1", "id": "epic", "status": "ready"}')
+    return state_path, plan_path, decomposition_path
 
 
 def _minimal_execplan(*, status: str = "in-progress") -> str:
@@ -1234,6 +1266,40 @@ def test_main_json_format_outputs_payload(tmp_path: Path, capsys) -> None:
     assert payload["execplans"]["active_count"] == 1
 
 
+def test_checker_summary_counts_active_json_execplans_from_planning_state(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_json_execplan_summary")
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "plan-alpha", status = "active", surface = ".agentic-workspace/planning/execplans/plan-alpha.plan.json", why_now = "prove checker summary parity." },
+]
+queued_items = []
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace/planning/execplans/plan-alpha.plan.json",
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "id": "plan-alpha",
+                "active_milestone": {"id": "plan-alpha", "status": "active"},
+            },
+            indent=2,
+        ),
+    )
+
+    payload = mod.gather_planning_summary(repo_root=tmp_path)
+
+    assert payload["todo"]["active_count"] == 1
+    assert payload["execplans"]["active_count"] == 1
+    assert payload["execplans"]["active_execplans"][0]["path"].endswith("plan-alpha.plan.json")
+
+
 def test_startup_policy_ignores_generic_readme_but_warns_for_contributor_drift(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "planning_startup_policy")
     _write_startup_surfaces(
@@ -1486,3 +1552,51 @@ def test_checker_warns_for_noncanonical_planning_records_directory(tmp_path: Pat
     freehand = [warning for warning in warnings if warning.warning_class == "planning_artifact_freehand"]
     assert len(freehand) == 1
     assert ".agentic-workspace/planning/decompositions" in freehand[0].message
+
+
+def test_check_planning_surfaces_warns_for_unstamped_dirty_managed_mutations(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_surface_check_mutation_provenance")
+    _init_git_repo(tmp_path)
+    state_path, plan_path, decomposition_path = _write_mutation_provenance_fixture_surfaces(tmp_path)
+    _commit_all(tmp_path, "initial planning surfaces")
+
+    state_path.write_text(state_path.read_text(encoding="utf-8") + "# repaired manually\n", encoding="utf-8")
+    plan_path.write_text('{"kind": "planning-execplan/v1", "id": "active", "status": "blocked"}\n', encoding="utf-8")
+    decomposition_path.write_text('{"kind": "planning-decomposition/v1", "id": "epic", "status": "updated"}\n', encoding="utf-8")
+
+    warnings = mod.gather_planning_warnings(repo_root=tmp_path)
+    mutation_warnings = [warning for warning in warnings if warning.warning_class == "planning_manual_mutation_unstamped"]
+
+    assert {warning.path for warning in mutation_warnings} == {
+        state_path.as_posix(),
+        plan_path.as_posix(),
+        decomposition_path.as_posix(),
+    }
+    assert all("record-recovery" in warning.message for warning in mutation_warnings)
+
+
+def test_record_recovery_suppresses_managed_mutation_warning(tmp_path: Path) -> None:
+    from repo_planning_bootstrap.installer import record_planning_recovery
+
+    mod = _load_module(_checker_script_path(), "planning_surface_check_mutation_recovery")
+    _init_git_repo(tmp_path)
+    state_path, plan_path, decomposition_path = _write_mutation_provenance_fixture_surfaces(tmp_path)
+    _commit_all(tmp_path, "initial planning surfaces")
+
+    state_path.write_text(state_path.read_text(encoding="utf-8") + "# repaired manually\n", encoding="utf-8")
+    plan_path.write_text('{"kind": "planning-execplan/v1", "id": "active", "status": "blocked"}\n', encoding="utf-8")
+    decomposition_path.write_text('{"kind": "planning-decomposition/v1", "id": "epic", "status": "updated"}\n', encoding="utf-8")
+
+    result = record_planning_recovery(
+        target=tmp_path,
+        paths=[
+            ".agentic-workspace/planning/state.toml",
+            ".agentic-workspace/planning/execplans/active.plan.json",
+            ".agentic-workspace/planning/decompositions/epic.decomposition.json",
+        ],
+        reason="emergency manual repair during takeover",
+    )
+
+    assert any(action.kind == "updated" and action.path.name == "mutation-provenance.json" for action in result.actions)
+    warnings = mod.gather_planning_warnings(repo_root=tmp_path)
+    assert "planning_manual_mutation_unstamped" not in {warning.warning_class for warning in warnings}

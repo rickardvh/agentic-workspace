@@ -1330,6 +1330,9 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
         f"agentic-workspace planning new-plan --id <id> --title <title>{target_arg} --activate --prep-only --format json"
     )
     promote_command = f"agentic-workspace planning promote-to-plan --item-id <item-id>{target_arg} --format json"
+    delegation_command = (
+        f"agentic-workspace planning delegation-decision --route keep-local --skipped-reason <reason>{target_arg} --format json"
+    )
     summary_command = f"agentic-workspace summary{target_arg} --verbose --format json"
     return {
         "kind": "agentic-workspace/planning-help/v1",
@@ -1342,6 +1345,9 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
         "lifecycle_commands": [
             new_plan_command,
             promote_command,
+            delegation_command,
+            f"agentic-workspace planning record-recovery --path <managed-planning-file> --reason <reason>{target_arg} --format json",
+            f"agentic-workspace planning create-review --slug <slug> --title <title>{target_arg} --format json",
             f"agentic-workspace planning archive-plan --plan <plan>{target_arg} --format json",
         ],
         "post_new_plan_tightening": {
@@ -1454,6 +1460,8 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
             "Edit intent, scope, proof, and closeout content inside schema-backed checked-in records.",
             "Copy TEMPLATE.* files to new task-specific filenames; never move, rename, delete, or repurpose templates as live planning records.",
             "After any planning mutation, run agentic-workspace summary --format json or the planning surface checker.",
+            "If emergency manual repair is unavoidable, stamp the repaired managed planning files with planning record-recovery and a reason.",
+            "For decomposed or mechanical lanes, record the delegation route or keep-local reason before implementation proceeds.",
         ],
         "runtime_native_bridge": {
             "status": "allowed-as-local-aid",
@@ -1469,9 +1477,10 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
             "inspect": f"agentic-workspace summary{target_arg} --format json",
             "doctor": f"agentic-workspace doctor{target_arg} --format json",
             "preferred": f"agentic-workspace planning archive-plan --plan <plan>{target_arg} --format json",
+            "record_emergency_repair": f"agentic-workspace planning record-recovery --path <managed-planning-file> --reason <reason>{target_arg} --format json",
             "manual_fallback": (
                 "Make the smallest schema-preserving edit to .agentic-workspace/planning/state.toml or the active "
-                "plan, then rerun summary; do not invent reset flags."
+                "plan only when no CLI mutation exists, then stamp the repair and rerun summary; do not invent reset flags."
             ),
         },
         "fallback": (
@@ -1535,12 +1544,25 @@ def _planning_module_argv(args: argparse.Namespace) -> list[str]:
         argv.append(str(args.item_id))
     elif command == "archive-plan" and getattr(args, "plan", None):
         argv.append(str(args.plan))
+    elif command == "create-review" and getattr(args, "slug", None):
+        argv.append(str(args.slug))
     for option, attr in (
         ("--id", "id"),
         ("--title", "title"),
         ("--source", "source"),
         ("--target", "target"),
         ("--plan-slug", "plan_slug"),
+        ("--scope", "scope"),
+        ("--classification", "classification"),
+        ("--plan", "plan"),
+        ("--route", "route"),
+        ("--skipped-reason", "skipped_reason"),
+        ("--expected-savings", "expected_savings"),
+        ("--actual-friction", "actual_friction"),
+        ("--proof-result", "proof_result"),
+        ("--quality-concern", "quality_concern"),
+        ("--decomposition-adjustment", "decomposition_adjustment"),
+        ("--reason", "reason"),
         ("--parent-lane-closeout", "parent_lane_closeout"),
         ("--closure-decision", "closure_decision"),
         ("--intent-satisfied", "intent_satisfied"),
@@ -1560,12 +1582,18 @@ def _planning_module_argv(args: argparse.Namespace) -> list[str]:
         ("--prep-only", "prep_only"),
         ("--overwrite", "overwrite"),
         ("--dry-run", "dry_run"),
+        ("--render-markdown", "render_markdown"),
         ("--apply-cleanup", "apply_cleanup"),
         ("--prepare-closeout", "prepare_closeout"),
         ("--retain-archive", "retain_archive"),
         ("--verbose", "verbose"),
     ):
         _append_flag(argv, option, bool(getattr(args, attr, False)))
+    path_values = getattr(args, "paths", None) or getattr(args, "path", None) or []
+    if isinstance(path_values, str):
+        path_values = [path_values]
+    for path in path_values:
+        _append_option(argv, "--path", path)
     _append_option(argv, "--format", getattr(args, "format", None))
     return argv
 
@@ -10381,6 +10409,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         },
         "active_state_summary": payload["active_state_summary"],
         "workflow_sufficiency": payload.get("workflow_sufficiency"),
+        **({"planning_safety_gate": payload["planning_safety_gate"]} if "planning_safety_gate" in payload else {}),
         "package_boundary": payload["package_boundary"],
         "authority_markers": payload["authority_markers"][:1],
         "immediate_next_allowed_action": immediate,
@@ -10996,6 +11025,7 @@ _START_TINY_ONLY_SELECTORS = {
     "delegation_decision",
     "durable_intent",
     "immediate_next_allowed_action",
+    "planning_safety_gate",
     "skill_routing",
     "task_intent",
     "workflow_sufficiency",
@@ -11200,6 +11230,34 @@ def _start_payload(
         target_root=target_root,
     )
     payload["delegation_decision"] = execution_posture["delegation_decision"]
+    planning_safety_gate = _planning_safety_gate_payload(
+        target_root=target_root,
+        config=config,
+        changed_paths=_normalize_changed_paths(changed_paths),
+        task_text=task_text,
+        execution_posture=execution_posture,
+    )
+    if planning_safety_gate["status"] not in {"satisfied", "clear"}:
+        payload["planning_safety_gate"] = planning_safety_gate
+    if not planning_safety_gate["workflow_sufficient"]:
+        payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
+            surface="start",
+            decision=planning_safety_gate["decision"],
+            reason=planning_safety_gate["reason"],
+            required_next_action=planning_safety_gate["required_next_action"],
+            evidence_required=["active planning ownership evidence"],
+        )
+        payload["immediate_next_allowed_action"] = {
+            "action": planning_safety_gate["required_next_action"],
+            "summary": planning_safety_gate["reason"],
+            "command": planning_safety_gate["promotion_command"],
+            "run": planning_safety_gate["promotion_command"],
+            "risk": "planning-required-before-implementation",
+            "required_inputs": ["target repo", "current task"],
+            "next_proof": "run summary after creating or promoting the active execplan",
+            "read_first": [planning_safety_gate["promotion_command"]],
+            "open_execplan_only_when": startup_template["open_execplan_only_when"],
+        }
     intent_acknowledgement = _intent_acknowledgement_payload(
         task_text=task_text,
         execution_posture=execution_posture,
@@ -11289,6 +11347,25 @@ def _start_payload(
             "required_inputs": ["target repo", "completion/status question"],
             "next_proof": "answer completion only after closeout_trust and intent satisfaction are reconciled",
             "read_first": [command],
+            "open_execplan_only_when": startup_template["open_execplan_only_when"],
+        }
+    if not planning_safety_gate["workflow_sufficient"]:
+        payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
+            surface="start",
+            decision=planning_safety_gate["decision"],
+            reason=planning_safety_gate["reason"],
+            required_next_action=planning_safety_gate["required_next_action"],
+            evidence_required=["active planning ownership evidence"],
+        )
+        payload["immediate_next_allowed_action"] = {
+            "action": planning_safety_gate["required_next_action"],
+            "summary": planning_safety_gate["reason"],
+            "command": planning_safety_gate["promotion_command"],
+            "run": planning_safety_gate["promotion_command"],
+            "risk": "planning-required-before-implementation",
+            "required_inputs": ["target repo", "current task"],
+            "next_proof": "run summary after creating or promoting the active execplan",
+            "read_first": [planning_safety_gate["promotion_command"]],
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
         }
     cli_compatibility = _cli_compatibility_payload(config=config, compact=True)
@@ -11498,6 +11575,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str) -
                 reason="Use the next action and selectors; no raw workspace files are needed yet.",
             ),
         ),
+        **({"planning_safety_gate": payload["planning_safety_gate"]} if "planning_safety_gate" in payload else {}),
         "skill_routing": {
             "status": skill_routing.get("status", "unknown") if isinstance(skill_routing, dict) else "unknown",
             "rule": skill_routing.get("rule", "Use listed skills only when directly relevant; otherwise proceed from the next action.")
@@ -11763,6 +11841,15 @@ def _start_tiny_payload_fast(
         target_root=target_root,
     )
     payload["delegation_decision"] = execution_posture["delegation_decision"]
+    planning_safety_gate = _planning_safety_gate_payload(
+        target_root=target_root,
+        config=config,
+        changed_paths=_normalize_changed_paths(changed_paths),
+        task_text=task_text,
+        execution_posture=execution_posture,
+    )
+    if planning_safety_gate["status"] not in {"satisfied", "clear"}:
+        payload["planning_safety_gate"] = planning_safety_gate
     intent_acknowledgement = _intent_acknowledgement_payload(
         task_text=task_text,
         execution_posture=execution_posture,
@@ -11847,6 +11934,25 @@ def _start_tiny_payload_fast(
             "required_inputs": ["target repo", "completion/status question"],
             "next_proof": "answer completion only after closeout_trust and intent satisfaction are reconciled",
             "read_first": [command],
+            "open_execplan_only_when": startup_template["open_execplan_only_when"],
+        }
+    if not planning_safety_gate["workflow_sufficient"]:
+        payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
+            surface="start",
+            decision=planning_safety_gate["decision"],
+            reason=planning_safety_gate["reason"],
+            required_next_action=planning_safety_gate["required_next_action"],
+            evidence_required=["active planning ownership evidence"],
+        )
+        payload["immediate_next_allowed_action"] = {
+            "action": planning_safety_gate["required_next_action"],
+            "summary": planning_safety_gate["reason"],
+            "command": planning_safety_gate["promotion_command"],
+            "run": planning_safety_gate["promotion_command"],
+            "risk": "planning-required-before-implementation",
+            "required_inputs": ["target repo", "current task"],
+            "next_proof": "run summary after creating or promoting the active execplan",
+            "read_first": [planning_safety_gate["promotion_command"]],
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
         }
     normalized_paths = _normalize_changed_paths(changed_paths)
@@ -12604,6 +12710,13 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
         task_text=task_text,
         target_root=target_root,
     )
+    planning_safety_gate = _planning_safety_gate_payload(
+        target_root=target_root,
+        config=config,
+        changed_paths=normalized_paths,
+        task_text=task_text,
+        execution_posture=execution_posture,
+    )
     task_intent = _task_intent_carry_forward_payload(task_text=task_text, cli_invoke=config.cli_invoke)
     acceptance = task_intent["acceptance"]
     promotion_guidance = task_intent["promotion_guidance"]
@@ -12621,16 +12734,30 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
         "target": target_root.as_posix(),
         "workflow_sufficiency": _workflow_sufficiency_payload(
             surface="implement",
-            decision=("enough-for-bounded-implementation" if normalized_paths else "insufficient-without-changed-paths"),
+            decision=(
+                planning_safety_gate["decision"]
+                if not planning_safety_gate["workflow_sufficient"]
+                else ("enough-for-bounded-implementation" if normalized_paths else "insufficient-without-changed-paths")
+            ),
             reason=(
-                "Changed paths are known; inspect only the named scope, reconcile acceptance, and run selected proof."
-                if normalized_paths
-                else "Changed paths are missing, so the package cannot select bounded inspect or proof scope."
+                planning_safety_gate["reason"]
+                if not planning_safety_gate["workflow_sufficient"]
+                else (
+                    "Changed paths are known; inspect only the named scope, reconcile acceptance, and run selected proof."
+                    if normalized_paths
+                    else "Changed paths are missing, so the package cannot select bounded inspect or proof scope."
+                )
             ),
             required_next_action=(
-                "inspect changed paths and selected proof" if normalized_paths else "provide --changed paths or run start/preflight"
+                planning_safety_gate["required_next_action"]
+                if not planning_safety_gate["workflow_sufficient"]
+                else ("inspect changed paths and selected proof" if normalized_paths else "provide --changed paths or run start/preflight")
             ),
-            evidence_required=(["proof execution evidence before closeout"] if normalized_paths else ["changed paths"]),
+            evidence_required=(
+                ["active planning ownership evidence", "proof execution evidence before closeout"]
+                if not planning_safety_gate["workflow_sufficient"]
+                else (["proof execution evidence before closeout"] if normalized_paths else ["changed paths"])
+            ),
         ),
         "adaptive_routing": _adaptive_routing_payload(
             surface="implement",
@@ -12735,6 +12862,7 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
             ),
         },
         "execution_posture": execution_posture,
+        "planning_safety_gate": planning_safety_gate,
         "delegation_decision": execution_posture["delegation_decision"],
         "durable_intent": _intent_decision_projection(
             target_root=target_root,
@@ -12760,6 +12888,12 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
                 "task routing status is needs-planning for broad external-work ingestion",
                 *payload["handoff_requirements"]["stop_when"],
             ]
+    if not planning_safety_gate["workflow_sufficient"]:
+        payload["next_allowed_action"] = "Create or promote an active execplan before continuing implementation."
+        payload["handoff_requirements"]["stop_when"] = [
+            "planning safety gate requires active planning ownership",
+            *payload["handoff_requirements"]["stop_when"],
+        ]
     return payload
 
 
@@ -12775,7 +12909,10 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     ]
     task_routing = payload.get("task_routing")
     next_action = payload.get("next_allowed_action", "")
-    if isinstance(task_routing, dict) and task_routing.get("status") == "needs-planning":
+    planning_safety_gate = payload.get("planning_safety_gate", {})
+    if isinstance(planning_safety_gate, dict) and planning_safety_gate.get("workflow_sufficient") is False:
+        next_action = "Create or promote an active execplan before continuing implementation."
+    elif isinstance(task_routing, dict) and task_routing.get("status") == "needs-planning":
         next_action = "Plan or narrow before implementation."
     elif path_warnings:
         next_action = "Resolve path authority warnings before editing."
@@ -12798,6 +12935,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "kind": "implementer-context-tiny/v1",
         "target": payload.get("target"),
         "workflow_sufficiency": payload.get("workflow_sufficiency"),
+        "planning_safety_gate": planning_safety_gate,
         "adaptive_routing": _tiny_adaptive_routing_payload(
             surface="implement",
             current_need="changed-path-next-action" if payload.get("changed_paths") else "unknown-scope-routing",
@@ -12854,6 +12992,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "work_shape": capability.get("work_shape"),
             "proof_burden": capability.get("proof_burden"),
             "delegation_recommendation": runtime_resolution.get("recommendation"),
+            "planning_safety": planning_safety_gate.get("status") if isinstance(planning_safety_gate, dict) else None,
         },
         "delegation_decision": _compact_start_delegation_decision(execution_posture.get("delegation_decision", {})),
         "detail_command": detail_commands["full_context"],
@@ -12973,6 +13112,281 @@ def _acceptance_reconciliation_prompt_payload(*, task_text: str | None, acceptan
         "task_text_available": has_task,
         "task_carry_forward_hint": (
             "Pass --task from start into implement --changed when possible so this checklist can name concrete outcomes."
+        ),
+    }
+
+
+def _planning_safety_path_classification(changed_paths: list[str]) -> dict[str, Any]:
+    planning_paths = [
+        path for path in changed_paths if path == ".agentic-workspace/planning" or path.startswith(".agentic-workspace/planning/")
+    ]
+    implementation_paths = [path for path in changed_paths if path not in planning_paths]
+    surface_roots = sorted({path.split("/", 1)[0] for path in implementation_paths if path})
+    generated_and_source = any(path.startswith("generated/") for path in implementation_paths) and any(
+        path.startswith(prefix) for path in implementation_paths for prefix in ("src/", "packages/", "tests/")
+    )
+    scope_growth_reasons = [
+        reason
+        for reason, applies in [
+            ("many implementation paths", len(implementation_paths) >= 6),
+            ("multiple top-level implementation surfaces", len(surface_roots) >= 3),
+            ("generated artifacts changed with source or tests", generated_and_source),
+        ]
+        if applies
+    ]
+    if not changed_paths:
+        dirty_shape = "none"
+    elif planning_paths and implementation_paths:
+        dirty_shape = "planning-plus-implementation"
+    elif planning_paths:
+        dirty_shape = "planning-only"
+    else:
+        dirty_shape = "implementation-only"
+    return {
+        "dirty_shape": dirty_shape,
+        "planning_paths": planning_paths,
+        "implementation_paths": implementation_paths,
+        "surface_roots": surface_roots,
+        "surface_root_count": len(surface_roots),
+        "scope_growth_detected": bool(implementation_paths and scope_growth_reasons),
+        "scope_growth_reasons": scope_growth_reasons,
+    }
+
+
+def _planning_safety_promotion_command(
+    *,
+    config: WorkspaceConfig,
+    decomposition_delegation: dict[str, Any],
+    task_text: str | None,
+) -> str:
+    candidates = decomposition_delegation.get("candidates", []) if isinstance(decomposition_delegation, dict) else []
+    if isinstance(candidates, list) and candidates:
+        normalized_task = " ".join((task_text or "").lower().split())
+        selected = None
+        for candidate in candidates:
+            if not isinstance(candidate, dict):
+                continue
+            lane_id = str(candidate.get("lane_id", "")).strip()
+            title = str(candidate.get("title", "")).strip()
+            if lane_id and (lane_id.lower() in normalized_task or title.lower() in normalized_task):
+                selected = candidate
+                break
+        if selected is None:
+            selected = next((candidate for candidate in candidates if isinstance(candidate, dict)), None)
+        if isinstance(selected, dict):
+            lane_id = str(selected.get("lane_id", "")).strip()
+            if lane_id:
+                return str(
+                    _command_with_cli_invoke(
+                        command=f"agentic-workspace planning promote-to-plan {lane_id} --target . --format json",
+                        cli_invoke=config.cli_invoke,
+                    )
+                )
+    return str(
+        _command_with_cli_invoke(
+            command="agentic-workspace planning new-plan --id <id> --title <title> --target . --activate --format json",
+            cli_invoke=config.cli_invoke,
+        )
+    )
+
+
+def _active_plan_delegation_requirement(
+    *,
+    target_root: Path,
+    active_summary: dict[str, Any],
+    config: WorkspaceConfig,
+    task_text: str | None,
+    execution_posture: dict[str, Any],
+) -> dict[str, Any]:
+    active_surface = active_summary.get("active_execplan")
+    if not isinstance(active_surface, str) or not active_surface.strip():
+        return {"required": False, "status": "no-active-execplan"}
+    plan_path = target_root / active_surface
+    if not plan_path.exists() or plan_path.suffix != ".json":
+        return {"required": False, "status": "active-plan-not-json", "path": active_surface}
+    try:
+        record = json.loads(plan_path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return {"required": False, "status": "active-plan-unreadable", "path": active_surface}
+    if not isinstance(record, dict):
+        return {"required": False, "status": "active-plan-unreadable", "path": active_surface}
+    delegation = record.get("post_decomposition_delegation")
+    delegation = delegation if isinstance(delegation, dict) else {}
+    status = str(delegation.get("status", "")).strip().lower()
+    recorded_statuses = {"recorded", "evaluated", "completed", "not-needed", "keep-local", "delegated"}
+    if status in recorded_statuses or delegation.get("route chosen"):
+        return {"required": False, "status": "delegation-decision-recorded", "path": active_surface}
+
+    normalized_task = " ".join((task_text or "").lower().split())
+    capability = execution_posture.get("capability_posture", {}) if isinstance(execution_posture, dict) else {}
+    posture = capability.get("posture", {}) if isinstance(capability.get("posture"), dict) else {}
+    work_shape = str(capability.get("work_shape") or posture.get("work shape") or "")
+    proof_burden = str(capability.get("proof_burden") or posture.get("proof burden") or "")
+    trigger_terms = (
+        "decomposed",
+        "decomposition",
+        "delegate",
+        "delegation",
+        "mechanical",
+        "lane",
+        "epic",
+        "high-assurance",
+    )
+    required = (
+        status in {"pending", "required", "available", "suitable"}
+        or work_shape in {"lane", "epic"}
+        or proof_burden == "high"
+        or any(term in normalized_task for term in trigger_terms)
+    )
+    if not required:
+        return {"required": False, "status": "delegation-decision-not-needed", "path": active_surface}
+    return {
+        "required": True,
+        "status": "delegation-decision-required",
+        "path": active_surface,
+        "current_status": status or "missing",
+        "command": _command_with_cli_invoke(
+            command="agentic-workspace planning delegation-decision --route keep-local --skipped-reason <reason> --target . --format json",
+            cli_invoke=config.cli_invoke,
+        ),
+        "rule": "Decomposed, mechanical, lane, epic, or high-assurance active work must record a delegation route or keep-local reason before implementation proceeds.",
+    }
+
+
+def _planning_safety_gate_payload(
+    *,
+    target_root: Path,
+    config: WorkspaceConfig,
+    changed_paths: list[str],
+    task_text: str | None,
+    execution_posture: dict[str, Any],
+) -> dict[str, Any]:
+    active_summary = _fast_planning_active_summary(target_root=target_root)
+    active_planning_present = bool(active_summary.get("todo_active_count") or active_summary.get("active_execplan"))
+    capability = execution_posture.get("capability_posture", {}) if isinstance(execution_posture, dict) else {}
+    posture = capability.get("posture", {}) if isinstance(capability.get("posture"), dict) else {}
+    work_shape = str(capability.get("work_shape") or posture.get("work shape") or "")
+    proof_burden = str(capability.get("proof_burden") or posture.get("proof burden") or "")
+    decomposition_delegation = execution_posture.get("decomposition_delegation", {}) if isinstance(execution_posture, dict) else {}
+    decomposition_status = str(decomposition_delegation.get("status", "")) if isinstance(decomposition_delegation, dict) else ""
+    path_classification = _planning_safety_path_classification(changed_paths)
+    issue_refs = sorted(set(re.findall(r"#\d+", task_text or "")))
+    normalized_task = " ".join((task_text or "").lower().split())
+    completion_status_question = _is_completion_status_task(task_text) and not changed_paths
+    broad_or_high_assurance = not completion_status_question and (
+        work_shape in {"lane", "epic"}
+        or proof_burden == "high"
+        or len(issue_refs) > 1
+        or any(term in normalized_task for term in ("epic", "high-assurance", "dogfooding issues"))
+    )
+    decomposition_pressure = decomposition_status in {"present", "available-without-active-planning"}
+    promotion_command = _planning_safety_promotion_command(
+        config=config,
+        decomposition_delegation=decomposition_delegation if isinstance(decomposition_delegation, dict) else {},
+        task_text=task_text,
+    )
+    active_delegation_requirement = _active_plan_delegation_requirement(
+        target_root=target_root,
+        active_summary=active_summary,
+        config=config,
+        task_text=task_text,
+        execution_posture=execution_posture,
+    )
+
+    if active_planning_present and active_delegation_requirement.get("required"):
+        status = "blocked"
+        decision = "delegation-decision-required"
+        reason = "Active decomposed or high-assurance planning exists, but no delegation decision is recorded."
+        required_next_action = "record-delegation-decision"
+        workflow_sufficient = False
+    elif active_planning_present:
+        status = "satisfied"
+        decision = "planning-backed"
+        reason = "Active planning owns broad or high-assurance implementation."
+        required_next_action = "continue-from-active-plan"
+        workflow_sufficient = True
+    elif path_classification["dirty_shape"] == "planning-only":
+        status = "clear"
+        decision = "planning-recovery-or-prep"
+        reason = "Only planning surfaces are named; validate planning state before implementation."
+        required_next_action = "validate-planning-state"
+        workflow_sufficient = True
+    elif path_classification["implementation_paths"] and path_classification["scope_growth_detected"]:
+        status = "escalation-required"
+        decision = "planning-escalation-required"
+        reason = "Changed paths have outgrown direct/no-plan assumptions across implementation boundaries."
+        required_next_action = "create-or-promote-active-execplan"
+        workflow_sufficient = False
+    elif path_classification["implementation_paths"] and broad_or_high_assurance:
+        status = "violation"
+        decision = "implementation-owner-missing"
+        reason = "Implementation paths are present for broad or high-assurance work without an active execplan."
+        required_next_action = "checkpoint-planning-before-implementation"
+        workflow_sufficient = False
+    elif broad_or_high_assurance or decomposition_pressure:
+        status = "blocked"
+        decision = "active-execplan-required"
+        reason = "Broad, high-assurance, multi-issue, or decomposed work needs an active execplan before implementation."
+        required_next_action = "promote-or-create-active-execplan"
+        workflow_sufficient = False
+    elif path_classification["dirty_shape"] == "planning-plus-implementation":
+        status = "attention"
+        decision = "mixed-planning-and-implementation-wip"
+        reason = "Planning and implementation changes are mixed; checkpoint planning before continuing if scope is not narrow."
+        required_next_action = "review-mixed-wip"
+        workflow_sufficient = True
+    else:
+        status = "clear"
+        decision = "direct-work-allowed"
+        reason = "No broad or high-assurance planning ownership pressure was detected."
+        required_next_action = "continue-direct"
+        workflow_sufficient = True
+
+    candidates = (
+        decomposition_delegation.get("candidates", [])
+        if isinstance(decomposition_delegation, dict) and isinstance(decomposition_delegation.get("candidates"), list)
+        else []
+    )
+    return {
+        "kind": "agentic-workspace/planning-safety-gate/v1",
+        "status": status,
+        "decision": decision,
+        "workflow_sufficient": workflow_sufficient,
+        "reason": reason,
+        "required_next_action": required_next_action,
+        "active_planning_present": active_planning_present,
+        "active_state_summary": active_summary,
+        "work_shape": work_shape or "unknown",
+        "proof_burden": proof_burden or "unknown",
+        "issue_refs": issue_refs,
+        "decomposition": {
+            "status": decomposition_status or "unknown",
+            "candidate_count": len(candidates),
+            "candidates": candidates,
+        },
+        "changed_path_classification": path_classification,
+        "promotion_command": promotion_command,
+        "delegation_decision_command": active_delegation_requirement.get("command"),
+        "active_delegation_requirement": active_delegation_requirement,
+        "new_plan_command": _command_with_cli_invoke(
+            command="agentic-workspace planning new-plan --id <id> --title <title> --target . --activate --format json",
+            cli_invoke=config.cli_invoke,
+        ),
+        "recovery_guidance": [
+            "If implementation WIP exists without active planning ownership, stop and checkpoint planning before continuing.",
+            "If a decomposition lane already exists, promote that lane instead of reconstructing the slice by hand.",
+            "If direct work has grown across boundaries, create or promote an execplan from the discovered scope before further edits.",
+        ],
+        "delegation_decision_required": bool(
+            decomposition_pressure
+            and any(
+                isinstance(candidate, dict) and candidate.get("route_candidate") in {"delegate-implementation", "delegate-exploration"}
+                for candidate in candidates
+            )
+        ),
+        "rule": (
+            "Direct/no-plan mode is provisional; broad, high-assurance, decomposed, or widened implementation needs "
+            "active planning ownership."
         ),
     }
 

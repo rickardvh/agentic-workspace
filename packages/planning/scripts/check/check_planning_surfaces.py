@@ -9,9 +9,11 @@ advisory and exits with 0.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import json
 import re
+import subprocess
 import tomllib
 from pathlib import Path
 from typing import NamedTuple
@@ -94,6 +96,15 @@ WARNING_DOCS_SURFACE_ROLE_DRIFT = "docs_surface_role_drift"
 WARNING_GENERATED_DOCS_DRIFT = "generated_docs_drift"
 WARNING_ARCHIVE_ACCUMULATION_DRIFT = "archive_accumulation_drift"
 WARNING_PLANNING_MEMORY_BOUNDARY_BLUR = "planning_memory_boundary_blur"
+WARNING_PLANNING_MANUAL_MUTATION_UNSTAMPED = "planning_manual_mutation_unstamped"
+
+MUTATION_PROVENANCE_PATH = Path(".agentic-workspace") / "planning" / "mutation-provenance.json"
+MUTATION_PROVENANCE_SURFACES = (
+    Path(".agentic-workspace") / "planning" / "state.toml",
+    Path(".agentic-workspace") / "planning" / "execplans",
+    Path(".agentic-workspace") / "planning" / "decompositions",
+    Path(".agentic-workspace") / "planning" / "reviews",
+)
 
 GENERIC_PM_EXECPLAN_FIELDS = {
     "tasks",
@@ -268,6 +279,96 @@ def _load_json(path: Path) -> object | None:
         return json.loads(path.read_text(encoding="utf-8-sig"))
     except (OSError, json.JSONDecodeError):
         return None
+
+
+def _sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _is_mutation_provenance_surface(relative_path: str) -> bool:
+    path = Path(relative_path)
+    if path == MUTATION_PROVENANCE_PATH:
+        return False
+    return any(path == surface or surface in path.parents for surface in MUTATION_PROVENANCE_SURFACES)
+
+
+def _git_dirty_planning_surfaces(repo_root: Path) -> list[str]:
+    if not (repo_root / ".git").exists():
+        return []
+    args = [
+        "git",
+        "-C",
+        str(repo_root),
+        "status",
+        "--porcelain",
+        "--",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans",
+        ".agentic-workspace/planning/decompositions",
+        ".agentic-workspace/planning/reviews",
+    ]
+    try:
+        proc = subprocess.run(args, check=False, capture_output=True, text=True, timeout=5)
+    except (OSError, subprocess.SubprocessError):
+        return []
+    if proc.returncode != 0:
+        return []
+    paths: list[str] = []
+    for line in proc.stdout.splitlines():
+        if len(line) < 4:
+            continue
+        raw_path = line[3:].strip()
+        if " -> " in raw_path:
+            raw_path = raw_path.rsplit(" -> ", 1)[-1].strip()
+        raw_path = raw_path.replace("\\", "/")
+        if _is_mutation_provenance_surface(raw_path):
+            paths.append(raw_path)
+    return sorted(set(paths))
+
+
+def _mutation_provenance_hashes(repo_root: Path) -> dict[str, str]:
+    payload = _load_json(repo_root / MUTATION_PROVENANCE_PATH)
+    if not isinstance(payload, dict) or payload.get("kind") != "planning-mutation-provenance/v1":
+        return {}
+    hashes: dict[str, str] = {}
+    entries = payload.get("entries", [])
+    if not isinstance(entries, list):
+        return hashes
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        path = str(entry.get("path", "")).replace("\\", "/")
+        digest = str(entry.get("sha256", ""))
+        if path and digest:
+            hashes[path] = digest
+    return hashes
+
+
+def _check_mutation_provenance(repo_root: Path) -> list[PlanningWarning]:
+    warnings: list[PlanningWarning] = []
+    provenance = _mutation_provenance_hashes(repo_root)
+    for relative_path in _git_dirty_planning_surfaces(repo_root):
+        path = repo_root / relative_path
+        if not path.exists() or not path.is_file():
+            continue
+        try:
+            current_hash = _sha256_file(path)
+        except OSError:
+            continue
+        if provenance.get(relative_path) == current_hash:
+            continue
+        warnings.append(
+            PlanningWarning(
+                WARNING_PLANNING_MANUAL_MUTATION_UNSTAMPED,
+                _render_path(path),
+                (
+                    "Managed planning surface changed without matching CLI mutation provenance; "
+                    f"run agentic-planning record-recovery --path {relative_path} --reason <reason> --format json "
+                    "if this was an intentional emergency repair."
+                ),
+            )
+        )
+    return warnings
 
 
 def _schema_record_warnings(
@@ -1537,10 +1638,26 @@ def _active_execplans(execplan_dir: Path) -> list[Path]:
         if path.name in {"README.md", "TEMPLATE.md"}:
             continue
         plans.append(path)
+    for path in sorted(execplan_dir.glob("*.plan.json")):
+        if path.name == "TEMPLATE.plan.json":
+            continue
+        plans.append(path)
     return plans
 
 
 def _execplan_status(path: Path) -> str:
+    if path.suffix == ".json":
+        payload = _load_json(path)
+        if isinstance(payload, dict):
+            milestone = payload.get("active_milestone")
+            if isinstance(milestone, dict):
+                status = milestone.get("status")
+                if isinstance(status, str):
+                    return status.strip().lower()
+            status = payload.get("status")
+            if isinstance(status, str):
+                return status.strip().lower()
+        return ""
     for line in _section_content(_read_lines(path), "Active Milestone"):
         match = re.match(r"^\s*-\s*status\s*:\s*(.*)\s*$", line, re.IGNORECASE)
         if match:
@@ -2508,6 +2625,7 @@ def gather_planning_warnings(*, repo_root: Path = REPO_ROOT) -> list[PlanningWar
     warnings.extend(_unsupported_epic_artifact_warnings(repo_root=repo_root))
     warnings.extend(_misplaced_decomposition_artifact_warnings(repo_root=repo_root))
     warnings.extend(_freehand_planning_artifact_warnings(repo_root=repo_root))
+    warnings.extend(_check_mutation_provenance(repo_root))
 
     if config_path.exists():
         config_text = "\n".join(_read_lines(config_path)).lower()
@@ -2548,6 +2666,13 @@ def gather_planning_warnings(*, repo_root: Path = REPO_ROOT) -> list[PlanningWar
 
     execplan_active_ids: set[str] = set()
     for plan_path in _active_execplans(execplan_dir):
+        if plan_path.suffix == ".json":
+            payload = _load_json(plan_path)
+            if isinstance(payload, dict):
+                plan_id = payload.get("id")
+                if isinstance(plan_id, str) and plan_id:
+                    execplan_active_ids.add(plan_id)
+            continue
         plan_warnings, plan_active_ids = _check_execplan(plan_path)
         warnings.extend(plan_warnings)
         execplan_active_ids.update(plan_active_ids)

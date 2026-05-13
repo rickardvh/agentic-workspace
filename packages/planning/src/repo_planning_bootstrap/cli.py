@@ -41,6 +41,8 @@ from repo_planning_bootstrap.installer import (
     planning_report_tiny,
     planning_summary,
     promote_todo_item_to_execplan,
+    record_delegation_decision,
+    record_planning_recovery,
     uninstall_bootstrap,
     upgrade_bootstrap,
     verify_payload,
@@ -242,6 +244,43 @@ def build_parser() -> argparse.ArgumentParser:
     review_parser.add_argument("--dry-run", action="store_true")
     review_parser.add_argument("--format", choices=("text", "json"), default="text")
 
+    delegation_parser = subparsers.add_parser(
+        "delegation-decision",
+        help="Record the delegation route chosen for the active execplan before mechanical lane work proceeds.",
+    )
+    delegation_parser.add_argument("--target")
+    delegation_parser.add_argument("--plan", help="Plan path, slug, or id; defaults to the active execplan.")
+    delegation_parser.add_argument(
+        "--route",
+        required=True,
+        choices=(
+            "keep-local",
+            "delegate-exploration",
+            "delegate-implementation",
+            "delegate-validation",
+            "escalate-review",
+            "no-safe-route",
+        ),
+    )
+    delegation_parser.add_argument("--skipped-reason", default="")
+    delegation_parser.add_argument("--expected-savings", default="")
+    delegation_parser.add_argument("--actual-friction", default="")
+    delegation_parser.add_argument("--proof-result", default="")
+    delegation_parser.add_argument("--quality-concern", default="")
+    delegation_parser.add_argument("--decomposition-adjustment", default="")
+    delegation_parser.add_argument("--dry-run", action="store_true")
+    delegation_parser.add_argument("--format", choices=("text", "json"), default="text")
+
+    recovery_parser = subparsers.add_parser(
+        "record-recovery",
+        help="Bless an emergency manual repair to managed planning surfaces with explicit provenance.",
+    )
+    recovery_parser.add_argument("--target")
+    recovery_parser.add_argument("--path", action="append", dest="paths", required=True)
+    recovery_parser.add_argument("--reason", required=True)
+    recovery_parser.add_argument("--dry-run", action="store_true")
+    recovery_parser.add_argument("--format", choices=("text", "json"), default="text")
+
     list_files_parser = subparsers.add_parser("list-files")
     list_files_parser.add_argument("--format", choices=("text", "json"), default="text")
 
@@ -397,6 +436,32 @@ def main(argv: list[str] | None = None) -> int:
                 classification=args.classification,
                 dry_run=args.dry_run,
                 render_markdown=args.render_markdown,
+            ),
+            args.format,
+        )
+    if args.command == "delegation-decision":
+        return _emit(
+            record_delegation_decision(
+                target=args.target,
+                plan=args.plan,
+                route=args.route,
+                skipped_reason=args.skipped_reason,
+                expected_savings=args.expected_savings,
+                actual_friction=args.actual_friction,
+                proof_result=args.proof_result,
+                quality_concern=args.quality_concern,
+                decomposition_adjustment=args.decomposition_adjustment,
+                dry_run=args.dry_run,
+            ),
+            args.format,
+        )
+    if args.command == "record-recovery":
+        return _emit(
+            record_planning_recovery(
+                target=args.target,
+                paths=list(args.paths or []),
+                reason=args.reason,
+                dry_run=args.dry_run,
             ),
             args.format,
         )

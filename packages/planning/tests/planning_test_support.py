@@ -28,6 +28,7 @@ from repo_planning_bootstrap.installer import (
     planning_report,
     planning_summary,
     promote_todo_item_to_execplan,
+    record_delegation_decision,
     uninstall_bootstrap,
     upgrade_bootstrap,
     verify_payload,
