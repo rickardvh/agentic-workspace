@@ -1094,7 +1094,7 @@ def _program_parser(program: str) -> argparse.ArgumentParser | None:
 
         return planning_cli.build_parser()
     if program == "agentic-memory":
-        from repo_memory_bootstrap import cli as memory_cli
+        from repo_memory_bootstrap import _runtime_cli as memory_cli
 
         return memory_cli.build_parser()
     return None

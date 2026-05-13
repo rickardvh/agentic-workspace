@@ -958,7 +958,7 @@ def test_generated_typescript_package_adapters_are_runnable() -> None:
         "memory-cli": (
             "@agentic-workspace/memory-cli",
             "agentic-memory",
-            "python -m repo_memory_bootstrap.cli",
+            "python -m repo_memory_bootstrap.generated_cli_entrypoint",
             "weak-agent-safe-adapter",
             "allowed-read-only",
         ),

@@ -1631,7 +1631,7 @@ def _run_planning_front_door(args: argparse.Namespace) -> int:
 
 
 def _run_memory_front_door(args: argparse.Namespace) -> int:
-    from repo_memory_bootstrap.cli import main as memory_main
+    from repo_memory_bootstrap.generated_cli_entrypoint import main as memory_main
 
     buffer = io.StringIO()
     with contextlib.redirect_stdout(buffer):

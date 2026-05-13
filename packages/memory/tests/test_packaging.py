@@ -185,7 +185,7 @@ def test_installed_memory_wheel_imports_cli_module() -> None:
             [
                 sys.executable,
                 "-c",
-                "import repo_memory_bootstrap.cli; from repo_memory_bootstrap.generated_cli_package import build_generated_parser",
+                "import repo_memory_bootstrap._runtime_cli; from repo_memory_bootstrap.generated_cli_package import build_generated_parser",
             ],
             cwd=tmpdir_path,
             env={**os.environ, "PYTHONPATH": str(install_root)},

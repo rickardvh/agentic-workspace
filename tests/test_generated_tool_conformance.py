@@ -32,7 +32,7 @@ PLANNING_CLI_SHIM = (
 MEMORY_CLI_SHIM = (
     "import sys; "
     f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'memory' / 'src')!r}); "
-    "from repo_memory_bootstrap.cli import main; "
+    "from repo_memory_bootstrap.generated_cli_entrypoint import main; "
     "raise SystemExit(main(sys.argv[1:]))"
 )
 

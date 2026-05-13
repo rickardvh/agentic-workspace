@@ -1219,7 +1219,7 @@ def test_implement_flags_scope_growth_without_active_execplan(tmp_path: Path, ca
                 "--changed",
                 "generated/python/memory-cli/generated_cli_package/__init__.py",
                 "src/agentic_workspace/contracts/command_package_ir.json",
-                "packages/memory/src/repo_memory_bootstrap/cli.py",
+                "packages/memory/src/repo_memory_bootstrap/_runtime_cli.py",
                 "tests/test_generated_command_package_proof_runner.py",
                 "--task",
                 "Small generated command cleanup",

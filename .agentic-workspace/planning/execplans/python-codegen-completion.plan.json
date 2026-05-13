@@ -32,7 +32,7 @@
     "hard_constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
     "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
     "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
-    "next_action": "Migrate the agentic-memory Python console front door away from package-local cli.py while keeping hand-owned runtime primitives in a non-CLI module and preserving generated dispatch proof.",
+    "next_action": "Reconcile the Python completion gate against #892: prove no hand-owned cli.py front doors remain outside generated Python surfaces, then either close this lane or record the exact remaining Python-only gap.",
     "proof_expectations": [
       "uv run python scripts/check/check_generated_command_packages.py",
       "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
@@ -41,7 +41,6 @@
     ],
     "touched_scope": [
       "packages/memory/pyproject.toml",
-      "packages/memory/src/repo_memory_bootstrap/cli.py",
       "packages/memory/src/repo_memory_bootstrap/_runtime_cli.py",
       "packages/memory/src/repo_memory_bootstrap/generated_cli_entrypoint.py",
       "src/agentic_workspace/_runtime_cli.py",
@@ -72,13 +71,12 @@
     "execution": {
       "milestone": "github-892-python-codegen-completion",
       "status": "in-progress",
-      "next_step": "Migrate the agentic-memory Python console front door away from package-local cli.py while preserving generated dispatch proof.",
-      "proof": "Generated package static proof, Python generated conformance, memory package tests, and ruff."
+      "next_step": "Run the Python completion reconciliation gate after the memory front-door migration.",
+      "proof": "Generated package static proof, Python generated conformance, memory package tests, ruff, generator freshness, contract tooling, generated entrypoint smoke, and a no-hand-owned-cli.py inventory check."
     },
     "scope": {
       "touched": [
         "packages/memory/pyproject.toml",
-        "packages/memory/src/repo_memory_bootstrap/cli.py",
         "packages/memory/src/repo_memory_bootstrap/_runtime_cli.py",
         "packages/memory/src/repo_memory_bootstrap/generated_cli_entrypoint.py",
         "src/agentic_workspace/_runtime_cli.py"
@@ -91,12 +89,12 @@
   "intent_continuity": {
     "larger intended outcome": "The previous completion claim only proved generated adapter coverage; the user clarified that Python is not complete while hand-owned cli.py entrypoints remain and future targets must not silently rely on Python internals.",
     "this slice completes the larger intended outcome": "no",
-    "continuation surface": "this execplan, then memory front-door slice and completion reconciliation"
+    "continuation surface": "this execplan, then Python completion reconciliation"
   },
   "required_continuation": {
     "required follow-on for the larger intended outcome": "yes",
     "owner surface": "this execplan",
-    "activation trigger": "After the memory front-door slice is proven and committed, reconcile the Python completion gate against the #892 acceptance criteria."
+    "activation trigger": "After the memory front-door slice is committed and pushed, reconcile the Python completion gate against the #892 acceptance criteria."
   },
   "iterative_follow_through": {
     "what this slice enabled": "none yet",
@@ -132,7 +130,7 @@
     "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
     "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
     "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
-    "tiny resumability note": "Memory front-door slice: move memory CLI runtime to a non-cli module, route console/module/proof through generated-owned entrypoint, then reconcile Python completion.",
+    "tiny resumability note": "Memory front-door slice is proven; commit/push it, then reconcile Python completion with inventory and acceptance proof.",
     "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
   },
   "delegated_judgment": {
@@ -161,20 +159,19 @@
   "active_milestone": {
     "id": "github-892-python-codegen-completion",
     "status": "in-progress",
-    "scope": "Memory package Python front-door migration only.",
+    "scope": "Python completion reconciliation after root, planning, and memory front-door migrations.",
     "ready": "ready after delegation decision is recorded",
     "blocked": "none",
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Migrate the agentic-memory Python console front door away from package-local cli.py while preserving generated dispatch proof."
+    "Commit and push the proven memory front-door slice, then run the Python completion reconciliation gate."
   ],
   "blockers": [
     "None."
   ],
   "touched_paths": [
     "packages/memory/pyproject.toml",
-    "packages/memory/src/repo_memory_bootstrap/cli.py",
     "packages/memory/src/repo_memory_bootstrap/_runtime_cli.py",
     "packages/memory/src/repo_memory_bootstrap/generated_cli_entrypoint.py",
     "src/agentic_workspace/_runtime_cli.py",
@@ -199,52 +196,52 @@
     "Complete the Python lane so executable CLI front doors and runtime operation boundaries are generated or represented by implementation-independent artifacts, with no hand-owned cli.py outside generated/python and no implicit Python-internal dependency for future targets."
   ],
   "execution_run": {
-    "run status": "root-front-door-slice-proven",
+    "run status": "root-planning-memory-front-door-slices-proven",
     "executor": "Codex",
     "handoff source": "agentic-planning promote-to-plan",
-    "what happened": "Root front-door slice was committed/pushed, then agentic-planning was migrated to `repo_planning_bootstrap.generated_cli_entrypoint` with hand-owned runtime primitives moved from `packages/planning/src/repo_planning_bootstrap/cli.py` to `_runtime_cli.py`.",
-    "scope touched": "root and planning Python front-door/runtime ownership metadata; memory package front door remains for the next slice",
-    "changed surfaces": "packages/planning/pyproject.toml; packages/planning/src/repo_planning_bootstrap/generated_cli_entrypoint.py; packages/planning/src/repo_planning_bootstrap/_runtime_cli.py; root planning delegation imports; generated TypeScript planning runtime metadata; focused proof/tests; this execplan and state.toml",
-    "validations run": "uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_generated_tool_conformance.py packages/planning/tests -q; uv run ruff check packages/planning/src packages/planning/tests src/agentic_workspace/_runtime_cli.py scripts/check tests/test_generated_command_package_proof_runner.py tests/test_generated_tool_conformance.py packages/command-generation/src; uv run python scripts/generate/generate_command_packages.py --check; uv run python -m repo_planning_bootstrap.generated_cli_entrypoint status --format json",
-    "result for continuation": "root and planning front-door slices are proven; continue with memory package front-door migration",
-    "next step": "Commit and push the planning front-door slice, then implement and prove the memory package front-door migration slice."
+    "what happened": "Root and planning front-door slices were committed/pushed, then agentic-memory was migrated to `repo_memory_bootstrap.generated_cli_entrypoint` with hand-owned runtime primitives moved from `packages/memory/src/repo_memory_bootstrap/cli.py` to `_runtime_cli.py`.",
+    "scope touched": "root, planning, and memory Python front-door/runtime ownership metadata; generated runtime command metadata; generated-command proof checks; focused tests; this execplan and state.toml",
+    "changed surfaces": "packages/memory/pyproject.toml; packages/memory/src/repo_memory_bootstrap/generated_cli_entrypoint.py; packages/memory/src/repo_memory_bootstrap/_runtime_cli.py; root memory delegation imports; generated TypeScript memory runtime metadata; generator runtime command metadata; focused proof/tests; this execplan and state.toml",
+    "validations run": "uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_generated_tool_conformance.py packages/memory/tests -q; uv run ruff check packages/memory/src packages/memory/tests src/agentic_workspace/_runtime_cli.py scripts/check tests/test_generated_command_package_proof_runner.py tests/test_generated_tool_conformance.py packages/command-generation/src tests/test_workspace_start_preflight_cli.py tests/test_workspace_implement_cli.py; uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python -m repo_memory_bootstrap.generated_cli_entrypoint list-skills --format json",
+    "result for continuation": "root, planning, and memory front-door slices are proven; run the final Python completion reconciliation before claiming #892 Python lane completion",
+    "next step": "Commit and push the memory front-door slice, then run the Python completion reconciliation gate."
   },
   "finished_run_review": {
-    "review status": "completed-for-planning-slice",
-    "scope respected": "yes; memory front door was not migrated in this commit",
-    "proof status": "green for focused planning front-door proof",
-    "intent served": "partial; root and planning cli.py front doors are retired, memory cli.py remains",
+    "review status": "completed-for-memory-slice",
+    "scope respected": "yes; the slice stayed on the memory front door and required metadata/proof fallout",
+    "proof status": "green for focused memory front-door proof",
+    "intent served": "partial pending final reconciliation; root, planning, and memory cli.py front doors are retired",
     "config compliance": "used configured uv run agentic-workspace front door and recorded planning recovery/delegation",
     "misinterpretation risk": "medium if this root slice is mistaken for full Python completion",
-    "follow-on decision": "keep lane open"
+    "follow-on decision": "keep lane open until completion reconciliation is proven"
   },
   "delegation_outcome_feedback": {
     "route chosen": "delegate-exploration",
     "route skipped reason": "not skipped",
     "expected savings": "Sidecar import/proof fallout scan can run while local implementation planning continues.",
     "actual friction": "useful; read-only scan identified high-risk imports and confirmed the need to split package front doors into separate slices",
-    "proof result": "green for root and planning front-door slices",
+    "proof result": "green for root, planning, and memory front-door slices",
     "quality concern": "Implementation write set remains local for the root front-door slice; delegate is read-only.",
-    "decomposition adjustment": "Root, planning, and memory front-door migrations must be separate slices."
+    "decomposition adjustment": "Root, planning, and memory front-door migrations were completed as separate slices; final reconciliation is its own closeout step."
   },
   "proof_report": {
-    "validation proof": "complete for root and planning front-door slices",
-    "proof achieved now": "Generated package static proof, Python generated conformance, planning package tests, ruff, generator freshness, and direct planning generated entrypoint smoke test passed.",
+    "validation proof": "complete for root, planning, and memory front-door slices",
+    "proof achieved now": "Generated package static proof, Python generated conformance, memory package tests, ruff, generator freshness, contract tooling, and direct memory generated entrypoint smoke test passed.",
     "evidence for \"proof achieved\" state": "See execution_run.validations run."
   },
   "intent_satisfaction": {
     "original intent": "The previous completion claim only proved generated adapter coverage; the user clarified that Python is not complete while hand-owned cli.py entrypoints remain and future targets must not silently rely on Python internals.",
-    "was original intent fully satisfied?": "no",
-    "evidence of intent satisfaction": "The root and planning package-specific executable cli.py front doors were retired in favor of generated_cli_entrypoint plus `_runtime_cli.py` runtime primitives.",
-    "unsolved intent passed to": "this execplan remains open for the memory front-door slice"
+    "was original intent fully satisfied?": "pending final reconciliation",
+    "evidence of intent satisfaction": "The root, planning, and memory package-specific executable cli.py front doors were retired in favor of generated_cli_entrypoint plus `_runtime_cli.py` runtime primitives.",
+    "unsolved intent passed to": "this execplan remains open for the Python completion reconciliation gate"
   },
   "execution_summary": {
-    "outcome delivered": "root agentic-workspace and agentic-planning Python front doors moved off package-local cli.py",
+    "outcome delivered": "root agentic-workspace, agentic-planning, and agentic-memory Python front doors moved off package-local cli.py",
     "validation confirmed": "focused proof passed",
-    "follow-on routed to": "this execplan; next slice is memory package front door",
+    "follow-on routed to": "this execplan; next slice is final Python completion reconciliation",
     "post-work posterity capture": "updated state.toml and execplan",
     "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "memory package front-door migration slice"
+    "resume from": "Python completion reconciliation gate"
   },
   "durable_residue": {
     "status": "none",
@@ -296,7 +293,7 @@
       "discard": [],
       "continuation": [
         {
-          "summary": "Planning and memory package front-door migrations remain before Python lane completion.",
+          "summary": "Final Python completion reconciliation remains before Python lane completion can be claimed.",
           "owner": "this execplan",
           "source": "intent_satisfaction.unsolved intent passed to"
         }

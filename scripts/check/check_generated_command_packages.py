@@ -110,7 +110,7 @@ def _runtime_module_for_package(package_id: str) -> str:
     modules = {
         "root-workspace": "agentic_workspace.generated_cli_entrypoint",
         "planning-bootstrap": "repo_planning_bootstrap.generated_cli_entrypoint",
-        "memory-bootstrap": "repo_memory_bootstrap.cli",
+        "memory-bootstrap": "repo_memory_bootstrap.generated_cli_entrypoint",
     }
     return modules[package_id]
 
@@ -715,7 +715,9 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
     except (ImportError, KeyError, FileNotFoundError, json.JSONDecodeError) as exc:
         errors.append(f"generated memory operation contract could not be loaded: {exc}")
 
-    memory_cli_text = (REPO_ROOT / "packages" / "memory" / "src" / "repo_memory_bootstrap" / "cli.py").read_text(encoding="utf-8")
+    memory_cli_text = (
+        REPO_ROOT / "packages" / "memory" / "src" / "repo_memory_bootstrap" / "_runtime_cli.py"
+    ).read_text(encoding="utf-8")
     for function_name in ("_run_list_files_report_adapter", "_run_list_skills_report_adapter"):
         function_index = memory_cli_text.find(f"def {function_name}")
         next_function_index = memory_cli_text.find("\ndef ", function_index + 1)
@@ -748,7 +750,7 @@ def _validate_python_runtime_handler_boundary() -> list[str]:
     package_modules = {
         "root-workspace": ("agentic_workspace.generated_cli_package", "agentic_workspace._runtime_cli"),
         "planning-bootstrap": ("repo_planning_bootstrap.generated_cli_package", "repo_planning_bootstrap._runtime_cli"),
-        "memory-bootstrap": ("repo_memory_bootstrap.generated_cli_package", "repo_memory_bootstrap.cli"),
+        "memory-bootstrap": ("repo_memory_bootstrap.generated_cli_package", "repo_memory_bootstrap._runtime_cli"),
     }
     for package_id, (generated_module_name, runtime_module_name) in package_modules.items():
         try:
@@ -801,7 +803,7 @@ def _validate_generated_python_commands_absent_from_handwritten_parsers() -> lis
     package_modules = {
         "root-workspace": ("agentic_workspace.generated_cli_package", "agentic_workspace._runtime_cli"),
         "planning-bootstrap": ("repo_planning_bootstrap.generated_cli_package", "repo_planning_bootstrap._runtime_cli"),
-        "memory-bootstrap": ("repo_memory_bootstrap.generated_cli_package", "repo_memory_bootstrap.cli"),
+        "memory-bootstrap": ("repo_memory_bootstrap.generated_cli_package", "repo_memory_bootstrap._runtime_cli"),
     }
     for package_id, (generated_module_name, runtime_module_name) in package_modules.items():
         generated_module = importlib.import_module(generated_module_name)
@@ -1145,7 +1147,7 @@ def _validate_static_surfaces() -> list[str]:
         generated_entrypoints = {
             "src/agentic_workspace/_runtime_cli.py": "agentic_workspace.generated_cli_package",
             "packages/planning/src/repo_planning_bootstrap/_runtime_cli.py": "repo_planning_bootstrap.generated_cli_package",
-            "packages/memory/src/repo_memory_bootstrap/cli.py": "repo_memory_bootstrap.generated_cli_package",
+            "packages/memory/src/repo_memory_bootstrap/_runtime_cli.py": "repo_memory_bootstrap.generated_cli_package",
         }
         for relative_path, import_name in generated_entrypoints.items():
             text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")

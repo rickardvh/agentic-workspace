@@ -128,7 +128,7 @@ def test_implement_package_cli_edits_select_generated_command_package_gate(capsy
             [
                 "implement",
                 "--changed",
-                "packages/memory/src/repo_memory_bootstrap/cli.py",
+                "packages/memory/src/repo_memory_bootstrap/_runtime_cli.py",
                 "--task",
                 "change package cli runtime adapter",
                 "--format",

@@ -27,7 +27,7 @@
       "readiness": "promoted",
       "outcome": "Generated Python dispatch can identify supported operation ids from IR while runtime operation handlers expose an explicit contract boundary that can be implemented or bridged by future targets without relying on package-local cli.py ownership.",
       "owner_surface": "packages/command-generation/src/agentic_command_generation/generator.py and generated/python/*/generated_cli_package/__init__.py",
-      "proof": "Generated package static proof plus Python conformance prove operation dispatch is generated, runtime handlers are behind an explicit operation contract, and any Python-runtime bridge assumption is visible rather than implicit.",
+      "proof": "Generated package static proof plus Python conformance prove operation dispatch is generated, runtime handlers are behind an explicit operation contract, and any Python-runtime bridge assumption is visible rather than implicit. Root, planning, and memory executable front doors now route through generated_cli_entrypoint modules.",
       "depends_on": [
         "json-schema-operation-ir"
       ],
@@ -50,9 +50,9 @@
       "id": "python-handwritten-parser-retirement",
       "title": "Python handwritten parser retirement for generated commands",
       "readiness": "promoted",
-      "outcome": "Commands covered by command_package_ir no longer require duplicate handwritten argparse definitions in package cli.py files.",
-      "owner_surface": "src/agentic_workspace/cli.py, packages/planning/src/repo_planning_bootstrap/cli.py, packages/memory/src/repo_memory_bootstrap/cli.py, and generated/python/*/generated_cli_package/__init__.py",
-      "proof": "Static proof rejects duplicated handwritten parser ownership for generated command/interface surfaces; Python black-box conformance still passes.",
+      "outcome": "Commands covered by command_package_ir no longer require duplicate handwritten argparse definitions in package-local cli.py files; hand-owned runtime helpers live in _runtime_cli.py modules while executable front doors route through generated_cli_entrypoint.",
+      "owner_surface": "src/agentic_workspace/generated_cli_entrypoint.py, src/agentic_workspace/_runtime_cli.py, packages/planning/src/repo_planning_bootstrap/generated_cli_entrypoint.py, packages/planning/src/repo_planning_bootstrap/_runtime_cli.py, packages/memory/src/repo_memory_bootstrap/generated_cli_entrypoint.py, packages/memory/src/repo_memory_bootstrap/_runtime_cli.py, and generated/python/*/generated_cli_package/__init__.py",
+      "proof": "Static proof rejects duplicated handwritten parser ownership for generated command/interface surfaces; Python black-box conformance still passes; repository inventory has no cli.py files outside generated Python surfaces.",
       "depends_on": [
         "python-runtime-handler-boundary",
         "python-package-resource-operation-ir"
@@ -136,5 +136,5 @@
       "role": "active package-resource operation IR slice"
     }
   ],
-  "notes": "Created after #921 showed that adapter maturity was incorrectly treated as Python generated-CLI completion. Updated after user clarification that non-Python generated CLI targets are not meant to depend implicitly on Python internals. #930 established the small JSON-Schema-backed operation IR boundary with memory.list-files.report as the representative portable command. #931 promoted memory.list-files to runtime-consumed operation IR and opened #933 for remaining command groups. #933 is now active through .agentic-workspace/planning/execplans/python-operation-ir-package-resource-commands.plan.json, which records the interrupted memory list-skills package-resource slice and must be resolved before broader report-command migration. Runtime handler boundary, handwritten parser retirement, interface-change proof gating, and the Python-only completion promotion gate were previously promoted and implemented on codex/finish-python-generated-cli, but completion must now also preserve the runtime operation boundary needed by future targets. Bash, PowerShell, TypeScript follow-through, and any future mutation-capable generated adapters remain outside this Python branch unless the shared operation contract must change."
+  "notes": "Created after #921 showed that adapter maturity was incorrectly treated as Python generated-CLI completion. Updated after user clarification that non-Python generated CLI targets are not meant to depend implicitly on Python internals. #930 established the small JSON-Schema-backed operation IR boundary with memory.list-files.report as the representative portable command. #931 promoted memory.list-files to runtime-consumed operation IR and opened #933 for remaining command groups. Root, planning, and memory executable front doors have now been moved off package-local cli.py files and through generated_cli_entrypoint modules while runtime helpers remain in _runtime_cli.py. The active execplan .agentic-workspace/planning/execplans/python-codegen-completion.plan.json now owns final Python completion reconciliation before #892 Python-lane completion is claimed. Bash, PowerShell, TypeScript follow-through, and any future mutation-capable generated adapters remain outside this Python branch unless the shared operation contract must change."
 }

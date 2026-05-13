@@ -104,7 +104,7 @@ def test_generated_python_conformance_uses_contract_artifacts() -> None:
 
     assert checker._python_command_for_package("root-workspace")[-1] == "agentic_workspace.generated_cli_entrypoint"
     assert checker._python_command_for_package("planning-bootstrap")[-1] == "repo_planning_bootstrap.generated_cli_entrypoint"
-    assert checker._python_command_for_package("memory-bootstrap")[-1] == "repo_memory_bootstrap.cli"
+    assert checker._python_command_for_package("memory-bootstrap")[-1] == "repo_memory_bootstrap.generated_cli_entrypoint"
     assert defaults.success_args == ["defaults", "--section", "startup", "--format", "json"]
     assert defaults.expected_exit == 0
     assert defaults.allow_stderr is False
@@ -298,7 +298,7 @@ def test_static_generated_package_proof_accepts_python_completion_gate() -> None
 
 def test_python_runtime_handler_boundary_rejects_non_adapter_handlers(monkeypatch) -> None:
     checker = _load_checker()
-    memory_cli = checker.importlib.import_module("repo_memory_bootstrap.cli")
+    memory_cli = checker.importlib.import_module("repo_memory_bootstrap._runtime_cli")
     drifted_handlers = dict(memory_cli._GENERATED_RUNTIME_HANDLERS)
     drifted_handlers["memory.status.report"] = memory_cli._handle_status
     monkeypatch.setattr(memory_cli, "_GENERATED_RUNTIME_HANDLERS", drifted_handlers)

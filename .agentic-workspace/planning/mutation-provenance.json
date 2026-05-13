@@ -120,6 +120,38 @@
       "reason": "advance active codegen state to memory front-door slice",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-13T12:38:03+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "2233245699747827143c56ddfb321d4a3668f790255476e67313705b18d59366",
+      "command": "agentic-planning record-recovery",
+      "reason": "Update active Python codegen lane next slice after memory front-door proof.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T12:44:38+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
+      "sha256": "c7745dc81bb13f9d63a8b49752b46d4f188dc74ac19357cafacc77de658413a4",
+      "command": "agentic-planning record-recovery",
+      "reason": "Record proven memory front-door slice and next Python completion reconciliation gate.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T12:44:38+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "7ebe6639ded0b79c9f6a75c9f6abb685a13bf61d14be05d13b0442cee4d73add",
+      "command": "agentic-planning record-recovery",
+      "reason": "Update Python codegen decomposition after root/planning/memory front-door slices.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T12:45:53+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "91394db4100a4a057957bc3ea9f96959007fbeebd6315217385de8162da3c9fe",
+      "command": "agentic-planning record-recovery",
+      "reason": "Keep decomposition readiness values within schema after status prose update.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T12:46:19+00:00"
     }
   ]
 }
