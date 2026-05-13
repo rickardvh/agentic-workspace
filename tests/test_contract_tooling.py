@@ -284,13 +284,14 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
     assert "unsupported command errors" in " ".join(maturity["weak-agent-safe-adapter"]["promotion_requires"])
     assert "runtime handoff failures" in " ".join(maturity["weak-agent-safe-adapter"]["promotion_requires"])
     assert "implementation-independent contracts or IR" in python_completion["finish_line"]
-    assert python_completion["current_state"] == "adapter-layer-proven-not-full-generated-cli"
+    assert python_completion["current_state"] == "full-generated-cli-complete"
     assert python_completion["completion_gate"]["scope"] == "python-only"
-    assert python_completion["completion_gate"]["state"] == "pending"
+    assert python_completion["completion_gate"]["state"] == "satisfied"
     completion_evidence = {item["id"] for item in python_completion["completion_gate"]["satisfied_by"]}
     assert "python-docker-conformance" in completion_evidence
     assert "runtime-handlers-thin" in completion_evidence
     assert "representative-operation-ir-runtime-consumed" in completion_evidence
+    assert "operation-execution-inventory-exhaustive" in completion_evidence
     assert "runtime primitive implementation" in python_completion["allowed_hand_owned_cli_responsibilities"]
     assert "command parser shape" in python_completion["must_move_behind_contracts_or_generation"]
     assert "option and help interface semantics" in python_completion["must_move_behind_contracts_or_generation"]
@@ -634,7 +635,15 @@ def test_python_operation_execution_inventory_tracks_representative_runtime_cons
 
     assert representative["status"] == "runtime-consumed"
     assert representative["primitive_executor"] == "packages/memory/src/repo_memory_bootstrap/operation_ir_executor.py"
-    assert "compatibility-runtime-handler" in {entry["status"] for entry in entries.values()}
+    assert entries["memory.list-skills.report"]["status"] == "runtime-consumed"
+    assert "compatibility-runtime-handler" not in {entry["status"] for entry in entries.values()}
+    assert "accepted-hand-owned-runtime-primitive" in {entry["status"] for entry in entries.values()}
+    generated_operations = {
+        command["operation_ref"]["id"]
+        for package in contract_tooling.command_package_ir_manifest()["packages"]
+        for command in package["commands"]
+    }
+    assert set(entries) == generated_operations
 
 
 def test_workspace_command_generation_integration_owns_repo_paths() -> None:

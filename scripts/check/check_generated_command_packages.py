@@ -65,6 +65,7 @@ PYTHON_COMPLETION_REQUIRED_EVIDENCE_IDS = {
     "python-docker-conformance",
     "runtime-handlers-thin",
     "representative-operation-ir-runtime-consumed",
+    "operation-execution-inventory-exhaustive",
 }
 PYTHON_COMPLETION_EXPECTED_PROOF_SUBSTRINGS = {
     "parser-shape-generated": "_validate_generated_python_commands_absent_from_handwritten_parsers",
@@ -75,7 +76,9 @@ PYTHON_COMPLETION_EXPECTED_PROOF_SUBSTRINGS = {
     "python-docker-conformance": "--python-docker-conformance --require-docker",
     "runtime-handlers-thin": "_validate_python_runtime_handler_boundary",
     "representative-operation-ir-runtime-consumed": "_validate_python_operation_execution_inventory",
+    "operation-execution-inventory-exhaustive": "_validate_python_operation_execution_inventory",
 }
+PYTHON_OPERATION_EXECUTION_FINAL_STATUSES = {"runtime-consumed", "accepted-hand-owned-runtime-primitive"}
 
 
 def _run(command: list[str]) -> int:
@@ -628,6 +631,52 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
     if not isinstance(entries, list):
         return errors + ["python_operation_execution_inventory.json entries must be a list"]
     by_operation = {str(entry.get("operation_id")): entry for entry in entries if isinstance(entry, dict)}
+    generated_operations: dict[str, dict[str, object]] = {}
+    for package in ir.get("packages", []):
+        if not isinstance(package, dict):
+            continue
+        package_id = str(package.get("id", ""))
+        generated_transport = {
+            "root-workspace": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+            "planning-bootstrap": "generated/python/planning-cli/generated_cli_package/__init__.py",
+            "memory-bootstrap": "generated/python/memory-cli/generated_cli_package/__init__.py",
+        }.get(package_id)
+        for command in package.get("commands", []):
+            if not isinstance(command, dict):
+                continue
+            operation_ref = command.get("operation_ref", {})
+            interface = command.get("interface", {})
+            if not isinstance(operation_ref, dict) or not isinstance(interface, dict):
+                continue
+            operation_id = str(operation_ref.get("id", ""))
+            if not operation_id:
+                continue
+            generated_operations[operation_id] = {
+                "program": package.get("program"),
+                "command": interface.get("name"),
+                "operation_contract": operation_ref.get("path"),
+                "generated_transport": generated_transport,
+                "conformance_ref": (command.get("conformance_refs") or [None])[0],
+            }
+    missing_inventory = sorted(set(generated_operations) - set(by_operation))
+    extra_inventory = sorted(set(by_operation) - set(generated_operations))
+    if missing_inventory:
+        errors.append(f"python_operation_execution_inventory.json missing generated operation ids: {missing_inventory!r}")
+    if extra_inventory:
+        errors.append(f"python_operation_execution_inventory.json contains entries outside generated operation ids: {extra_inventory!r}")
+    for operation_id, expected in sorted(generated_operations.items()):
+        entry = by_operation.get(operation_id)
+        if not isinstance(entry, dict):
+            continue
+        for field in ("program", "command", "generated_transport", "operation_contract", "conformance_ref"):
+            if entry.get(field) != expected.get(field):
+                errors.append(f"python_operation_execution_inventory.json {operation_id} has wrong {field}: {entry.get(field)!r}")
+        status = str(entry.get("status", ""))
+        if status not in PYTHON_OPERATION_EXECUTION_FINAL_STATUSES and status != "compatibility-runtime-handler":
+            errors.append(f"python_operation_execution_inventory.json {operation_id} has unknown status: {status!r}")
+        hand_owned = entry.get("hand_owned_runtime_code")
+        if not isinstance(hand_owned, list) or not all(isinstance(item, str) and item.strip() for item in hand_owned):
+            errors.append(f"python_operation_execution_inventory.json {operation_id} must name hand_owned_runtime_code entries")
 
     runtime_consumed_memory_operations = {
         "memory.list-files.report",
@@ -679,7 +728,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         incomplete = sorted(
             operation_id
             for operation_id, entry in by_operation.items()
-            if isinstance(entry, dict) and entry.get("status") != "runtime-consumed"
+            if isinstance(entry, dict) and entry.get("status") not in PYTHON_OPERATION_EXECUTION_FINAL_STATUSES
         )
         if incomplete:
             incomplete_statuses = sorted(
@@ -689,7 +738,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
             )
             errors.append(
                 "command_package_ir.json cannot claim full Python generated CLI completion while "
-                f"inventory entries remain outside operation-IR runtime consumption: {incomplete_statuses!r}"
+                f"inventory entries remain outside accepted operation execution statuses: {incomplete_statuses!r}"
             )
     return errors
 

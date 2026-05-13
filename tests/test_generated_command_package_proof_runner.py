@@ -235,6 +235,22 @@ def test_static_generated_package_proof_requires_operation_ir_runtime_consumptio
     assert any("representative-operation-ir-runtime-consumed" in error for error in errors)
 
 
+def test_static_generated_package_proof_requires_exhaustive_operation_inventory_evidence(monkeypatch) -> None:
+    checker = _load_checker()
+    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+    ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
+    ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"] = [
+        item
+        for item in ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"]
+        if item["id"] != "operation-execution-inventory-exhaustive"
+    ]
+    monkeypatch.setattr(checker, "load_workspace_command_package_ir", lambda *, repo_root: ir)
+
+    errors = checker._validate_static_surfaces()
+
+    assert any("operation-execution-inventory-exhaustive" in error for error in errors)
+
+
 def test_static_generated_package_proof_rejects_python_completion_proof_surface_drift(monkeypatch) -> None:
     checker = _load_checker()
     ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
@@ -253,8 +269,19 @@ def test_static_generated_package_proof_rejects_python_completion_proof_surface_
 def test_static_generated_package_proof_rejects_full_completion_with_compatibility_handlers(monkeypatch) -> None:
     checker = _load_checker()
     ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
-    ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
+    original_load_json = checker._load_json
+
+    def fake_load_json(path: str) -> dict[str, object]:
+        payload = original_load_json(path)
+        if path == "python_operation_execution_inventory.json":
+            payload = dict(payload)
+            entries = [dict(entry) for entry in payload["entries"]]
+            entries[0]["status"] = "compatibility-runtime-handler"
+            payload["entries"] = entries
+        return payload
+
     monkeypatch.setattr(checker, "load_workspace_command_package_ir", lambda *, repo_root: ir)
+    monkeypatch.setattr(checker, "_load_json", fake_load_json)
 
     errors = checker._validate_static_surfaces()
 

@@ -12,8 +12,7 @@ work_items = []
 execplans = []
 
 [todo]
-active_items = [
-]
+active_items = []
 queued_items = []
 
 [roadmap]
