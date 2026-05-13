@@ -58,6 +58,54 @@ candidates = []
     assert handoff["handoff_contract"]["role_metadata"] == expected_role_metadata
 
 
+def test_delegation_decision_records_route_and_provenance_on_active_plan(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/active-plan.plan.json"
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "active-plan", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/active-plan.plan.json", why_now = "prove delegation decision recording." },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write_execplan_record(plan_path, item_id="active-plan", status="in-progress")
+
+    result = record_delegation_decision(
+        target=tmp_path,
+        route="keep-local",
+        skipped_reason="tightly coupled root routing and package checker change",
+        expected_savings="low",
+        actual_friction="none",
+    )
+
+    assert any(action.kind == "updated" and action.path == plan_path for action in result.actions)
+    assert any(action.kind == "updated" and action.path.name == "mutation-provenance.json" for action in result.actions)
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    assert record["post_decomposition_delegation"]["status"] == "recorded"
+    assert record["post_decomposition_delegation"]["route chosen"] == "keep-local"
+    assert record["delegation_outcome_feedback"]["route skipped reason"] == "tightly coupled root routing and package checker change"
+
+
+def test_delegation_decision_requires_skip_reason_for_keep_local(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/active-plan.plan.json"
+    _write_execplan_record(plan_path, item_id="active-plan", status="in-progress")
+
+    result = record_delegation_decision(target=tmp_path, plan="active-plan", route="keep-local")
+
+    assert any(action.kind == "manual review" and "--skipped-reason" in action.detail for action in result.actions)
+
+
 def test_planning_summary_and_handoff_expose_structured_execplan_references(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(

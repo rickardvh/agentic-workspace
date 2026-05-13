@@ -35,6 +35,24 @@
       "migration_status": "draft-contract-only"
     },
     {
+      "id": "planning.create-review.lifecycle",
+      "path": "operations/planning.create-review.lifecycle.json",
+      "command": "planning",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "planning.delegation-decision.lifecycle",
+      "path": "operations/planning.delegation-decision.lifecycle.json",
+      "command": "planning",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "planning.record-recovery.lifecycle",
+      "path": "operations/planning.record-recovery.lifecycle.json",
+      "command": "planning",
+      "migration_status": "draft-contract-only"
+    },
+    {
       "id": "planning.handoff.report",
       "path": "operations/planning.handoff.report.json",
       "command": "planning",

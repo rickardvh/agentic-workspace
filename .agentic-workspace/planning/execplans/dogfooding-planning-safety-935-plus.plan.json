@@ -26,11 +26,11 @@
     "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
   },
   "canonical_core": {
-    "requested_outcome": "Fix the actionable dogfooding issues #935 and above by making broad/high-assurance planning-safety failures visible before implementation proceeds.",
-    "hard_constraints": "Do not widen into a full planning provenance system unless it is necessary for this safety gate. Preserve direct narrow-work fast paths. Use the workspace front-door CLI in user-facing commands.",
-    "agent_may_decide": "Implement one shared start/implement planning-safety gate, add concrete promotion/escalation guidance, and route any remaining manual-provenance work honestly.",
-    "escalate_when": "A fix requires durable mutation provenance, a new planning state schema, or broad rewrite of planning installer surfaces.",
-      "next_action": "Add a root workspace planning-safety gate that blocks or flags broad, high-assurance, or decomposed implementation without active execplan ownership and detects changed-path scope growth.",
+    "requested_outcome": "Finish the actionable dogfooding issues #935 and above, including durable managed-planning mutation provenance for #937 and command-backed delegation decision recording for #938.",
+    "hard_constraints": "Keep the provenance and delegation work package-owned, tracker-agnostic, and bounded. Preserve direct narrow-work fast paths. Use the workspace front-door CLI in user-facing commands.",
+    "agent_may_decide": "Implement a minimal mutation provenance ledger, a recovery stamping command, a delegation-decision recording command, root front-door wrappers, and focused tests; update PR and issue state honestly.",
+    "escalate_when": "A fix requires a broad planning state schema migration, external tracker coupling, or a new hidden durable state store outside package-managed planning surfaces.",
+    "next_action": "Implement #937 and #938 with package-owned provenance and delegation-decision commands, then reconcile issues and PR scope.",
     "proof_expectations": [
       "uv run pytest tests/test_workspace_start_preflight_cli.py tests/test_workspace_summary_cli.py packages/planning/tests/test_promote.py -q",
       "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
@@ -42,6 +42,8 @@
       "tests/test_workspace_start_preflight_cli.py",
       "tests/test_workspace_summary_cli.py",
       "packages/planning/tests/test_promote.py",
+      "packages/planning/tests/test_handoff.py",
+      "packages/planning/tests/test_check_planning_surfaces.py",
       ".agentic-workspace/planning/execplans/dogfooding-planning-safety-935-plus.plan.json",
       ".agentic-workspace/planning/state.toml"
     ],
@@ -50,11 +52,13 @@
       "implement --changed flags implementation paths that lack active planning ownership and distinguishes planning-only from planning-plus-implementation changes.",
       "Changed-path scope growth across multiple boundaries returns a planning escalation state with a concrete new-plan command.",
       "Decomposition-backed work without active planning points to a concrete planning command before implementation.",
-      "Delegation suitability from decompositions remains visible as a required recorded decision when present.",
-        "Remaining provenance/stamping scope is routed to #937 if not complete."
+      "Planning CLI mutations stamp managed-surface provenance and a recovery command can explicitly bless emergency manual repairs with a reason.",
+      "Planning surface checks warn for dirty managed planning surfaces that do not match CLI provenance, scoped to planning-owned files only.",
+      "A command-backed delegation decision updates the active execplan/run record and start/implement can require that decision before high-assurance decomposed implementation proceeds.",
+      "GitHub #937 and #938 are closed only if their acceptance criteria are satisfied by proof."
     ],
     "continuation_owner": "none",
-    "closeout_decision": "pending"
+    "closeout_decision": "archive-and-close after issue and PR reconciliation"
   },
   "goal": [
     "Make the #933 dogfooding failure mode harder to repeat: broad/high-assurance or decomposed implementation should require active planning ownership or return a clear violation/escalation route.",
@@ -67,24 +71,28 @@
   ],
   "machine_readable_contract": {
     "intent": {
-      "outcome": "Planning safety gate for GitHub #935 #936 #938 #939 #940 with honest routing for #937.",
-      "constraints": "Stay within root workspace routing and focused tests unless provenance support becomes unavoidable.",
-      "latitude": "Add derived guard payloads, warnings, next actions, and tests that enforce planning escalation before broad implementation.",
-      "escalation": "Escalate if durable provenance stamping or schema migration is required."
+      "outcome": "Planning safety gate plus provenance and delegation decision completion for GitHub #935 #936 #937 #938 #939 #940.",
+      "constraints": "Stay within root workspace routing, planning installer/checker, CLI front door, and focused tests unless a broader schema migration becomes unavoidable.",
+      "latitude": "Add ledger fields, warnings, commands, next actions, and tests that make the safe path cheaper than manual edits or chat-only delegation decisions.",
+      "escalation": "Escalate if this requires a broad planning state schema migration or a hidden durable state store."
     },
     "execution": {
       "milestone": "dogfooding-planning-safety-935-plus",
       "status": "active",
-        "next_step": "Add a root workspace planning-safety gate that blocks or flags broad, high-assurance, or decomposed implementation without active execplan ownership and detects changed-path scope growth.",
-      "proof": "Focused workspace CLI tests, contract tooling check, ruff, and planning checks."
+      "next_step": "Implement #937 and #938 with package-owned provenance and delegation-decision commands, then reconcile issues and PR scope.",
+      "proof": "Focused workspace CLI/planning tests, contract tooling check, selected ruff, planning checks, summary, and planning doctor."
     },
     "scope": {
       "touched": [
         "src/agentic_workspace/cli.py",
         "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/src/repo_planning_bootstrap/cli.py",
+        "packages/planning/scripts/check/check_planning_surfaces.py",
         "tests/test_workspace_start_preflight_cli.py",
         "tests/test_workspace_summary_cli.py",
-        "packages/planning/tests/test_promote.py"
+        "packages/planning/tests/test_promote.py",
+        "packages/planning/tests/test_handoff.py",
+        "packages/planning/tests/test_check_planning_surfaces.py"
       ],
       "invariants": [
         "Preserve the planning contract and keep the work bounded to this plan."
@@ -93,34 +101,34 @@
   },
   "intent_continuity": {
     "larger intended outcome": "Fix dogfooding planning-safety findings #935 and above.",
-    "this slice completes the larger intended outcome": "partial until proof and issue reconciliation confirm which issues close.",
-    "continuation surface": "GitHub #937 if durable managed-surface provenance remains outside this slice."
+    "this slice completes the larger intended outcome": "pending until #937/#938 proof and issue reconciliation complete.",
+    "continuation surface": "GitHub #942/#943 for planning skill and root review wrapper findings; #937/#938 should close only after implementation proof."
   },
   "required_continuation": {
     "required follow-on for the larger intended outcome": "possibly",
-    "owner surface": "GitHub #937",
-    "activation trigger": "If the root planning-safety gate does not implement durable mutation provenance or emergency recovery stamping."
+    "owner surface": "GitHub #942 and GitHub #943",
+    "activation trigger": "After #937/#938 close, continue only if the planning skill lifecycle or root create-review wrapper issues are selected."
   },
   "iterative_follow_through": {
-    "what this slice enabled": "The workspace front door now blocks or flags high-risk planning-bypass shapes before implementation proceeds.",
-    "intentionally deferred": "Durable manual edit provenance/stamping remains with GitHub #937 unless a later slice promotes it.",
-    "discovered implications": "The compact selector projection must omit absent optional gates rather than emit null values, because schema validation treats null as a real incompatible value.",
-    "proof achieved now": "Focused CLI tests, contract tooling, ruff, planning checks, summary, and planning doctor passed.",
-    "validation still needed": "GitHub issue reconciliation and PR CI after push.",
-    "next likely slice": "Return to the active Python codegen lane after issue reconciliation."
+    "what this slice enabled": "The workspace front door blocks or flags high-risk planning-bypass shapes before implementation proceeds.",
+    "intentionally deferred": "Planning skill lifecycle work is promoted to #942 and root create-review wrapper work is promoted to #943 unless pulled into this PR later.",
+    "discovered implications": "The remaining #937/#938 work is command-affordance work, not just advisory text.",
+    "proof achieved now": "Focused provenance/delegation tests, planning checks, contract tooling, selected ruff, summary, and doctor passed for #937/#938.",
+    "validation still needed": "Issue reconciliation, PR update, commit, push, and PR CI.",
+    "next likely slice": "Return to the active Python codegen lane after #937/#938 issue reconciliation."
   },
   "intent_interpretation": {
     "literal request": "Fix the dogfooding findings #935 and above.",
     "inferred intended outcome": "Prevent planning-bypass and boundary-growth failures observed during #933.",
-    "chosen concrete what": "Root start/implement planning-safety gate plus tests for no-active-plan, decomposition, delegation-decision, dirty implementation WIP, and scope growth.",
+    "chosen concrete what": "Complete the root planning-safety gate with durable mutation provenance and command-backed delegation-decision recording.",
     "interpretation distance": "medium",
     "review guidance": "Check issue closure one by one; do not close #937 unless provenance/recovery-mode acceptance is actually implemented."
   },
   "execution_bounds": {
-    "allowed paths": "src/agentic_workspace/cli.py; packages/planning/src/repo_planning_bootstrap/installer.py; tests/test_workspace_start_preflight_cli.py; tests/test_workspace_summary_cli.py; packages/planning/tests/test_promote.py; this execplan; planning state.",
-    "max changed files": "7 implementation/test/planning files before closeout artifacts.",
-    "required validation commands": "Focused workspace CLI pytest, contract tooling check, ruff.",
-    "ask-before-refactor threshold": "Stop before adding a new provenance storage format or broad planning installer rewrite.",
+    "allowed paths": "src/agentic_workspace/cli.py; src/agentic_workspace/contracts/cli_commands.json; packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/src/repo_planning_bootstrap/cli.py; packages/planning/scripts/check/check_planning_surfaces.py; focused workspace/planning tests; this execplan; review/PR metadata.",
+    "max changed files": "12 implementation/test/planning files before generated docs or closeout artifacts.",
+    "required validation commands": "Focused workspace/planning pytest, contract tooling check, selected ruff, make check-planning, summary, doctor.",
+    "ask-before-refactor threshold": "Stop before adding a broad planning state schema migration or external-tracker-specific provenance model.",
     "stop before touching": "Generated CLI packages, operation IR contracts, unrelated planning installer mutation internals, or codegen runtime surfaces."
   },
   "stop_conditions": {
@@ -135,20 +143,24 @@
     "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
     "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
     "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
-    "tiny resumability note": "Implement and test a root workspace planning-safety gate for #935/#936/#938/#939/#940; route #937 if provenance remains.",
+    "tiny resumability note": "Implement and test #937 managed-planning mutation provenance plus #938 command-backed delegation-decision recording.",
     "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
   },
   "delegated_judgment": {
     "requested outcome": "Fix dogfooding planning-safety findings #935 and above.",
-    "hard constraints": "Keep durable provenance out of scope unless needed; keep narrow direct work cheap.",
-    "agent may decide locally": "Exact payload shape, warning names, tests, and issue reconciliation.",
-    "escalate when": "Durable mutation provenance or broad planning command refactor is required."
+    "hard constraints": "Keep provenance and delegation recording bounded to package-owned planning surfaces; keep narrow direct work cheap.",
+    "agent may decide locally": "Exact ledger shape, warning names, command names, tests, and issue/PR reconciliation.",
+    "escalate when": "A broad planning state schema migration, hidden state store, or tracker-specific coupling is required."
   },
   "post_decomposition_delegation": {
-    "status": "keep-local",
-    "decision rule": "This is a tightly coupled root routing/test change; reassess delegation only if a separable planning-provenance follow-up is promoted.",
+    "status": "recorded",
+    "decision rule": "Keep implementation local because this change spans tightly coupled package CLI/checker/root-routing code; record this explicitly because #938 is about making skipped delegation recoverable.",
     "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
-    "required evidence": "keep-local because the changed surface is one routing function family plus tests and needs immediate integration proof"
+    "required evidence": "Skipped manual ChatGPT relay because the user supplied the concrete target issues and acceptance criteria; local execution is cheaper without reducing proof.",
+    "route chosen": "keep-local",
+    "route skipped reason": "The #937/#938 slice spans tightly coupled planning installer, checker, root routing, and contract manifests; local integration proof is cheaper than delegating a same-model worker for this pass.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-13T11:54:16+00:00"
   },
   "system_intent_alignment": {
     "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
@@ -168,13 +180,13 @@
   "active_milestone": {
     "id": "dogfooding-planning-safety-935-plus",
     "status": "active",
-    "scope": "Implement root planning-safety gate and focused tests for dogfooding issues #935/#936/#938/#939/#940; route #937 honestly if not complete.",
+    "scope": "Finish dogfooding issues #937 and #938 with provenance/delegation commands, update PR issue scope, and keep #942/#943 as promoted follow-ups unless selected.",
     "ready": "ready",
     "blocked": "none",
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Add a root workspace planning-safety gate that blocks or flags broad, high-assurance, or decomposed implementation without active execplan ownership and detects changed-path scope growth."
+    "Implement #937 and #938 with package-owned provenance and delegation-decision commands, then reconcile issues and PR scope."
   ],
   "blockers": [
     "None."
@@ -182,9 +194,13 @@
   "touched_paths": [
     "src/agentic_workspace/cli.py",
     "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/src/repo_planning_bootstrap/cli.py",
+    "packages/planning/scripts/check/check_planning_surfaces.py",
     "tests/test_workspace_start_preflight_cli.py",
     "tests/test_workspace_summary_cli.py",
     "packages/planning/tests/test_promote.py",
+    "packages/planning/tests/test_handoff.py",
+    "packages/planning/tests/test_check_planning_surfaces.py",
     ".agentic-workspace/planning/execplans/dogfooding-planning-safety-935-plus.plan.json",
     ".agentic-workspace/planning/state.toml"
   ],
@@ -193,6 +209,7 @@
   ],
   "validation_commands": [
     "uv run pytest tests/test_workspace_start_preflight_cli.py tests/test_workspace_summary_cli.py packages/planning/tests/test_promote.py -q",
+    "uv run pytest packages/planning/tests/test_check_planning_surfaces.py packages/planning/tests/test_handoff.py -q",
     "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
     "uv run ruff check src/agentic_workspace/cli.py packages/planning/src/repo_planning_bootstrap/installer.py tests/test_workspace_start_preflight_cli.py tests/test_workspace_summary_cli.py packages/planning/tests/test_promote.py"
   ],
@@ -204,56 +221,58 @@
     "implement --changed flags implementation paths that lack active planning ownership and distinguishes planning-only from planning-plus-implementation changes.",
     "Changed-path scope growth across multiple boundaries returns a planning escalation state with a concrete new-plan command.",
     "Decomposition-backed work without active planning points to a concrete planning command before implementation.",
-    "Delegation suitability from decompositions remains visible as a required recorded decision when present.",
-    "Remaining provenance/stamping scope is routed to #937 if not complete."
+    "Planning CLI mutations stamp managed-surface provenance and a recovery command can explicitly bless emergency manual repairs with a reason.",
+    "Planning surface checks warn for dirty managed planning surfaces that do not match CLI provenance, scoped to planning-owned files only.",
+    "A command-backed delegation decision updates the active execplan/run record and start/implement can require that decision before high-assurance decomposed implementation proceeds.",
+    "GitHub #937 and #938 are closed only if their acceptance criteria are satisfied by proof."
   ],
   "execution_run": {
     "run status": "completed",
     "executor": "Codex",
     "handoff source": "agentic-planning new-plan",
-    "what happened": "Added planning-safety gate payloads to start and implement paths, added decomposition-lane promotion support, schema support, focused tests, and schema reference updates.",
-    "scope touched": "workspace CLI routing, planning installer promotion, tests, context schemas, schema reference docs, and active planning state.",
-    "changed surfaces": "src/agentic_workspace/cli.py; packages/planning/src/repo_planning_bootstrap/installer.py; tests/test_workspace_start_preflight_cli.py; packages/planning/tests/test_promote.py; context schemas and generated reference docs; active execplan/state.",
-    "validations run": "uv run pytest tests/test_workspace_start_preflight_cli.py tests/test_workspace_summary_cli.py packages/planning/tests/test_promote.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run ruff check selected files; make check-planning; git diff --check; summary and planning doctor.",
-    "result for continuation": "Issue reconciliation remains; #937 should stay open unless durable mutation provenance is later implemented.",
+    "what happened": "Added package-owned mutation provenance, record-recovery, delegation-decision recording, root front-door wrappers, operation contracts, planning checker warnings, and focused tests.",
+    "scope touched": "workspace CLI routing, planning installer/CLI/checker, operation contracts, focused planning/workspace tests, and active planning state.",
+    "changed surfaces": "src/agentic_workspace/cli.py; src/agentic_workspace/contracts; packages/planning/src/repo_planning_bootstrap; packages/planning/scripts/check/check_planning_surfaces.py; focused tests; active execplan/provenance.",
+    "validations run": "uv run pytest tests/test_workspace_start_preflight_cli.py tests/test_workspace_summary_cli.py packages/planning/tests/test_promote.py packages/planning/tests/test_check_planning_surfaces.py packages/planning/tests/test_handoff.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run ruff check selected files; uv run python packages/planning/scripts/check/check_planning_surfaces.py --format json; summary and planning doctor.",
+    "result for continuation": "Issue reconciliation and PR update remain; #942 remains open for planning skill lifecycle follow-up.",
     "next step": "Reconcile GitHub #935 through #940 honestly, then commit and push this slice."
   },
   "finished_run_review": {
     "review status": "completed",
     "scope respected": "yes",
     "proof status": "passed",
-    "intent served": "partial: planning bypass and growth are guarded; durable manual edit provenance remains routed to #937",
+    "intent served": "yes for #937/#938: managed planning mutation provenance and delegation decision recording are now package-owned surfaces with tests",
     "config compliance": "used uv run agentic-workspace as the effective workspace CLI",
-    "misinterpretation risk": "low for the bounded safety-gate slice; high if this is mistaken for full provenance/stamping completion",
-    "follow-on decision": "keep #937 open or update it as the durable provenance continuation"
+    "misinterpretation risk": "medium: provenance covers package-managed planning surfaces, not arbitrary repo files or external issue lifecycle",
+    "follow-on decision": "close #937/#938 after issue and PR reconciliation if acceptance remains satisfied"
   },
   "delegation_outcome_feedback": {
-    "route chosen": "pending",
-    "route skipped reason": "pending",
-    "expected savings": "pending",
-    "actual friction": "pending",
-    "proof result": "pending",
-    "quality concern": "pending",
-    "decomposition adjustment": "pending"
+    "route chosen": "keep-local",
+    "route skipped reason": "The #937/#938 slice spans tightly coupled planning installer, checker, root routing, and contract manifests; local integration proof is cheaper than delegating a same-model worker for this pass.",
+    "expected savings": "low",
+    "actual friction": "none",
+    "proof result": "focused provenance and delegation tests plus contract tooling and ruff passed",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
   },
   "proof_report": {
     "validation proof": "passed",
-    "proof achieved now": "The focused CLI tests, contract tooling, selected ruff check, make check-planning, git diff --check, summary, and planning doctor all passed after implementation.",
-    "evidence for \"proof achieved\" state": "83 focused tests passed; contract tooling reported [ok]; selected ruff reported all checks passed; make check-planning reported all subchecks ok; planning doctor health was healthy."
+    "proof achieved now": "Focused CLI/planning tests, contract tooling, selected ruff, planning surface check, summary, and planning doctor passed after #937/#938 implementation.",
+    "evidence for \"proof achieved\" state": "136 focused tests passed; contract tooling reported [ok]; selected ruff reported all checks passed; planning checker reported warning_count 0; planning summary reported warning_count 0; planning doctor health was healthy."
   },
   "intent_satisfaction": {
     "original intent": "GitHub #935 #936 #937 #938 #939 #940",
-    "was original intent fully satisfied?": "partial",
-    "evidence of intent satisfaction": "The implemented gate covers active execplan enforcement, scope growth escalation, decomposition-lane promotion guidance, and dirty implementation WIP detection. It does not implement durable manual edit provenance/stamping.",
-    "unsolved intent passed to": "GitHub #937"
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The branch now covers active execplan enforcement, scope growth escalation, decomposition-lane promotion guidance, dirty implementation WIP detection, managed planning mutation provenance, emergency recovery stamping, and delegation-decision recording.",
+    "unsolved intent passed to": "GitHub #942 for skill lifecycle guidance; no remaining #937/#938 acceptance item known"
   },
   "execution_summary": {
-    "outcome delivered": "planning-safety gate and decomposition-lane promotion support for the actionable #935/#936/#938/#939/#940 failure modes",
+    "outcome delivered": "planning-safety gate, managed planning mutation provenance, emergency recovery stamping, and delegation-decision recording for the actionable #935 through #940 failure modes",
     "validation confirmed": "passed",
-    "follow-on routed to": "GitHub #937 for durable manual edit provenance/stamping",
+    "follow-on routed to": "GitHub #942 for planning skill lifecycle guidance; #943 is implemented by the root create-review wrapper in this branch",
     "post-work posterity capture": "this execplan and GitHub issue reconciliation",
     "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "GitHub #937 if provenance is promoted, otherwise return to the Python codegen lane"
+    "resume from": "issue/PR reconciliation, then return to the Python codegen lane"
   },
   "durable_residue": {
     "status": "none",
@@ -275,12 +294,12 @@
   },
   "closure_check": {
     "slice status": "bounded slice complete",
-    "larger-intent status": "open",
-    "closure decision": "archive-but-keep-lane-open",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
     "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
-    "why this decision is honest": "The implemented gate prevents the observed no-plan and scope-growth failures, but durable managed-surface mutation provenance is explicitly outside this slice.",
-    "evidence carried forward": "GitHub #937 remains the continuation owner for manual edit provenance/stamping.",
-    "reopen trigger": "A future broad planning mutation can still be performed manually without durable provenance evidence."
+    "why this decision is honest": "The branch implements the remaining #937/#938 package-owned safeguards and keeps the newly promoted planning-skill lifecycle follow-up in #942.",
+    "evidence carried forward": "Focused tests, contract tooling, ruff, planning checker, summary, and doctor passed after implementation.",
+    "reopen trigger": "PR CI fails or issue reconciliation identifies an unsatisfied #937/#938 acceptance criterion."
   },
   "improvement_signal_review": {
     "status": "pending",
@@ -303,6 +322,7 @@
     }
   },
   "drift_log": [
-    "2026-05-13: Scaffolded by agentic-planning new-plan."
+    "2026-05-13: Scaffolded by agentic-planning new-plan.",
+    "2026-05-13: Recorded delegation decision route=keep-local."
   ]
 }

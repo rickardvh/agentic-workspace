@@ -1286,6 +1286,87 @@ def test_implement_distinguishes_planning_recovery_from_mixed_wip(tmp_path: Path
     assert planning_only["changed_path_classification"]["dirty_shape"] == "planning-only"
 
 
+def test_implement_requires_delegation_decision_for_active_decomposed_lane(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "mechanical-lane", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/mechanical-lane.plan.json", why_now = "prove delegation gate." },
+]
+queued_items = []
+""",
+    )
+    plan_path = target / ".agentic-workspace/planning/execplans/mechanical-lane.plan.json"
+    _write(
+        plan_path,
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "id": "mechanical-lane",
+                "status": "in-progress",
+                "post_decomposition_delegation": {"status": "pending"},
+            }
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(target),
+                "--task",
+                "Continue the decomposed mechanical lane implementation",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    gate = payload["planning_safety_gate"]
+    assert gate["status"] == "blocked"
+    assert gate["decision"] == "delegation-decision-required"
+    assert "planning delegation-decision" in gate["delegation_decision_command"]
+    assert payload["workflow_sufficiency"]["decision"] == "delegation-decision-required"
+
+    _write(
+        plan_path,
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "id": "mechanical-lane",
+                "status": "in-progress",
+                "post_decomposition_delegation": {"status": "recorded", "route chosen": "keep-local"},
+            }
+        ),
+    )
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(target),
+                "--task",
+                "Continue the decomposed mechanical lane implementation",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    recorded = json.loads(capsys.readouterr().out)["planning_safety_gate"]
+    assert recorded["status"] == "satisfied"
+
+
 def test_start_task_surfaces_vague_outcome_orientation(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

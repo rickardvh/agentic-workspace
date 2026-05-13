@@ -269,7 +269,7 @@ def test_promote_to_plan_supports_decomposition_lane(tmp_path: Path) -> None:
 
     result = promote_todo_item_to_execplan("safety-slice", target=tmp_path)
 
-    assert [action.kind for action in result.actions] == ["created", "updated", "updated", "proof", "proof"]
+    assert [action.kind for action in result.actions] == ["created", "updated", "updated", "updated", "proof", "proof"]
     assert any("summary --target . --format json" in action.detail for action in result.actions if action.kind == "proof")
     assert any("doctor --target . --modules planning --format json" in action.detail for action in result.actions if action.kind == "proof")
     state = tomllib.loads((tmp_path / ".agentic-workspace" / "planning" / "state.toml").read_text(encoding="utf-8"))

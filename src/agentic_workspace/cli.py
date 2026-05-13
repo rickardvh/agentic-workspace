@@ -1330,6 +1330,9 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
         f"agentic-workspace planning new-plan --id <id> --title <title>{target_arg} --activate --prep-only --format json"
     )
     promote_command = f"agentic-workspace planning promote-to-plan --item-id <item-id>{target_arg} --format json"
+    delegation_command = (
+        f"agentic-workspace planning delegation-decision --route keep-local --skipped-reason <reason>{target_arg} --format json"
+    )
     summary_command = f"agentic-workspace summary{target_arg} --verbose --format json"
     return {
         "kind": "agentic-workspace/planning-help/v1",
@@ -1342,6 +1345,9 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
         "lifecycle_commands": [
             new_plan_command,
             promote_command,
+            delegation_command,
+            f"agentic-workspace planning record-recovery --path <managed-planning-file> --reason <reason>{target_arg} --format json",
+            f"agentic-workspace planning create-review --slug <slug> --title <title>{target_arg} --format json",
             f"agentic-workspace planning archive-plan --plan <plan>{target_arg} --format json",
         ],
         "post_new_plan_tightening": {
@@ -1454,6 +1460,8 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
             "Edit intent, scope, proof, and closeout content inside schema-backed checked-in records.",
             "Copy TEMPLATE.* files to new task-specific filenames; never move, rename, delete, or repurpose templates as live planning records.",
             "After any planning mutation, run agentic-workspace summary --format json or the planning surface checker.",
+            "If emergency manual repair is unavoidable, stamp the repaired managed planning files with planning record-recovery and a reason.",
+            "For decomposed or mechanical lanes, record the delegation route or keep-local reason before implementation proceeds.",
         ],
         "runtime_native_bridge": {
             "status": "allowed-as-local-aid",
@@ -1469,9 +1477,10 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
             "inspect": f"agentic-workspace summary{target_arg} --format json",
             "doctor": f"agentic-workspace doctor{target_arg} --format json",
             "preferred": f"agentic-workspace planning archive-plan --plan <plan>{target_arg} --format json",
+            "record_emergency_repair": f"agentic-workspace planning record-recovery --path <managed-planning-file> --reason <reason>{target_arg} --format json",
             "manual_fallback": (
                 "Make the smallest schema-preserving edit to .agentic-workspace/planning/state.toml or the active "
-                "plan, then rerun summary; do not invent reset flags."
+                "plan only when no CLI mutation exists, then stamp the repair and rerun summary; do not invent reset flags."
             ),
         },
         "fallback": (
@@ -1535,12 +1544,25 @@ def _planning_module_argv(args: argparse.Namespace) -> list[str]:
         argv.append(str(args.item_id))
     elif command == "archive-plan" and getattr(args, "plan", None):
         argv.append(str(args.plan))
+    elif command == "create-review" and getattr(args, "slug", None):
+        argv.append(str(args.slug))
     for option, attr in (
         ("--id", "id"),
         ("--title", "title"),
         ("--source", "source"),
         ("--target", "target"),
         ("--plan-slug", "plan_slug"),
+        ("--scope", "scope"),
+        ("--classification", "classification"),
+        ("--plan", "plan"),
+        ("--route", "route"),
+        ("--skipped-reason", "skipped_reason"),
+        ("--expected-savings", "expected_savings"),
+        ("--actual-friction", "actual_friction"),
+        ("--proof-result", "proof_result"),
+        ("--quality-concern", "quality_concern"),
+        ("--decomposition-adjustment", "decomposition_adjustment"),
+        ("--reason", "reason"),
         ("--parent-lane-closeout", "parent_lane_closeout"),
         ("--closure-decision", "closure_decision"),
         ("--intent-satisfied", "intent_satisfied"),
@@ -1560,12 +1582,18 @@ def _planning_module_argv(args: argparse.Namespace) -> list[str]:
         ("--prep-only", "prep_only"),
         ("--overwrite", "overwrite"),
         ("--dry-run", "dry_run"),
+        ("--render-markdown", "render_markdown"),
         ("--apply-cleanup", "apply_cleanup"),
         ("--prepare-closeout", "prepare_closeout"),
         ("--retain-archive", "retain_archive"),
         ("--verbose", "verbose"),
     ):
         _append_flag(argv, option, bool(getattr(args, attr, False)))
+    path_values = getattr(args, "paths", None) or getattr(args, "path", None) or []
+    if isinstance(path_values, str):
+        path_values = [path_values]
+    for path in path_values:
+        _append_option(argv, "--path", path)
     _append_option(argv, "--format", getattr(args, "format", None))
     return argv
 
@@ -13162,6 +13190,69 @@ def _planning_safety_promotion_command(
     )
 
 
+def _active_plan_delegation_requirement(
+    *,
+    target_root: Path,
+    active_summary: dict[str, Any],
+    config: WorkspaceConfig,
+    task_text: str | None,
+    execution_posture: dict[str, Any],
+) -> dict[str, Any]:
+    active_surface = active_summary.get("active_execplan")
+    if not isinstance(active_surface, str) or not active_surface.strip():
+        return {"required": False, "status": "no-active-execplan"}
+    plan_path = target_root / active_surface
+    if not plan_path.exists() or plan_path.suffix != ".json":
+        return {"required": False, "status": "active-plan-not-json", "path": active_surface}
+    try:
+        record = json.loads(plan_path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return {"required": False, "status": "active-plan-unreadable", "path": active_surface}
+    if not isinstance(record, dict):
+        return {"required": False, "status": "active-plan-unreadable", "path": active_surface}
+    delegation = record.get("post_decomposition_delegation")
+    delegation = delegation if isinstance(delegation, dict) else {}
+    status = str(delegation.get("status", "")).strip().lower()
+    recorded_statuses = {"recorded", "evaluated", "completed", "not-needed", "keep-local", "delegated"}
+    if status in recorded_statuses or delegation.get("route chosen"):
+        return {"required": False, "status": "delegation-decision-recorded", "path": active_surface}
+
+    normalized_task = " ".join((task_text or "").lower().split())
+    capability = execution_posture.get("capability_posture", {}) if isinstance(execution_posture, dict) else {}
+    posture = capability.get("posture", {}) if isinstance(capability.get("posture"), dict) else {}
+    work_shape = str(capability.get("work_shape") or posture.get("work shape") or "")
+    proof_burden = str(capability.get("proof_burden") or posture.get("proof burden") or "")
+    trigger_terms = (
+        "decomposed",
+        "decomposition",
+        "delegate",
+        "delegation",
+        "mechanical",
+        "lane",
+        "epic",
+        "high-assurance",
+    )
+    required = (
+        status in {"pending", "required", "available", "suitable"}
+        or work_shape in {"lane", "epic"}
+        or proof_burden == "high"
+        or any(term in normalized_task for term in trigger_terms)
+    )
+    if not required:
+        return {"required": False, "status": "delegation-decision-not-needed", "path": active_surface}
+    return {
+        "required": True,
+        "status": "delegation-decision-required",
+        "path": active_surface,
+        "current_status": status or "missing",
+        "command": _command_with_cli_invoke(
+            command="agentic-workspace planning delegation-decision --route keep-local --skipped-reason <reason> --target . --format json",
+            cli_invoke=config.cli_invoke,
+        ),
+        "rule": "Decomposed, mechanical, lane, epic, or high-assurance active work must record a delegation route or keep-local reason before implementation proceeds.",
+    }
+
+
 def _planning_safety_gate_payload(
     *,
     target_root: Path,
@@ -13194,8 +13285,21 @@ def _planning_safety_gate_payload(
         decomposition_delegation=decomposition_delegation if isinstance(decomposition_delegation, dict) else {},
         task_text=task_text,
     )
+    active_delegation_requirement = _active_plan_delegation_requirement(
+        target_root=target_root,
+        active_summary=active_summary,
+        config=config,
+        task_text=task_text,
+        execution_posture=execution_posture,
+    )
 
-    if active_planning_present:
+    if active_planning_present and active_delegation_requirement.get("required"):
+        status = "blocked"
+        decision = "delegation-decision-required"
+        reason = "Active decomposed or high-assurance planning exists, but no delegation decision is recorded."
+        required_next_action = "record-delegation-decision"
+        workflow_sufficient = False
+    elif active_planning_present:
         status = "satisfied"
         decision = "planning-backed"
         reason = "Active planning owns broad or high-assurance implementation."
@@ -13262,6 +13366,8 @@ def _planning_safety_gate_payload(
         },
         "changed_path_classification": path_classification,
         "promotion_command": promotion_command,
+        "delegation_decision_command": active_delegation_requirement.get("command"),
+        "active_delegation_requirement": active_delegation_requirement,
         "new_plan_command": _command_with_cli_invoke(
             command="agentic-workspace planning new-plan --id <id> --title <title> --target . --activate --format json",
             cli_invoke=config.cli_invoke,

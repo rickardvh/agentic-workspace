@@ -1,0 +1,21 @@
+{
+  "kind": "planning-mutation-provenance/v1",
+  "entries": [
+    {
+      "path": ".agentic-workspace/planning/execplans/dogfooding-planning-safety-935-plus.plan.json",
+      "sha256": "daa2797b9b7a9b490c81fd62007d87efc69c17dce2678b6077d5649e3be22363",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T11:54:16+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/dogfooding-planning-safety-935-plus.plan.json",
+      "sha256": "c682469ad9b70f329be274ee9c9e085ec7ae39479ab652a13077b3a4e89ac87e",
+      "command": "agentic-planning record-recovery",
+      "reason": "record proof and closeout after package-owned #937/#938 implementation",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T11:57:03+00:00"
+    }
+  ]
+}
