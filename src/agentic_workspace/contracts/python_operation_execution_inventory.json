@@ -1,0 +1,48 @@
+{
+  "schema_version": "agentic-workspace/python-operation-execution-inventory/v1",
+  "purpose": "Track which generated Python commands execute implementation-independent operation IR rather than only handwritten CLI/runtime behavior.",
+  "entries": [
+    {
+      "operation_id": "memory.list-files.report",
+      "program": "agentic-memory",
+      "command": "list-files",
+      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/memory.list-files.report.json",
+      "primitive_executor": "packages/memory/src/repo_memory_bootstrap/operation_ir_executor.py",
+      "hand_owned_runtime_code": [
+        "memory package payload enumeration",
+        "target-root resolution",
+        "module-result emission mechanics"
+      ],
+      "status": "runtime-consumed",
+      "conformance_ref": "memory.list-files.process"
+    },
+    {
+      "operation_id": "memory.doctor.report",
+      "program": "agentic-memory",
+      "command": "doctor",
+      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/memory.doctor.report.json",
+      "primitive_executor": null,
+      "hand_owned_runtime_code": [
+        "doctor bootstrap inspection"
+      ],
+      "status": "compatibility-runtime-handler",
+      "conformance_ref": "memory.doctor.process"
+    },
+    {
+      "operation_id": "planning.summary.report",
+      "program": "agentic-planning",
+      "command": "summary",
+      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/planning.summary.report.json",
+      "primitive_executor": null,
+      "hand_owned_runtime_code": [
+        "planning summary assembly"
+      ],
+      "status": "compatibility-runtime-handler",
+      "conformance_ref": "planning.summary.process"
+    }
+  ],
+  "completion_rule": "Python completion cannot be claimed while generated Python commands remain at compatibility-runtime-handler unless the remaining behavior is explicitly accepted as hand-owned runtime primitive implementation."
+}

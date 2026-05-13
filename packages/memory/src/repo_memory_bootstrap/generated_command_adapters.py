@@ -71,7 +71,9 @@ GENERATED_COMMAND_ADAPTERS_BY_COMMAND: dict[str, dict[str, Any]] = json.loads(
     "runtime_binding": {
       "kind": "operation-primitive-sequence",
       "primitive_refs": [
-        "memory.bootstrap.files.list",
+        "path.target_root.resolve",
+        "filesystem.glob",
+        "payload.assemble",
         "output.emit"
       ]
     },

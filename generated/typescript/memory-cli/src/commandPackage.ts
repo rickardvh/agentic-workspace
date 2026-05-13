@@ -517,7 +517,9 @@ export const generatedCommandPackage = {
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "memory.bootstrap.files.list",
+          "path.target_root.resolve",
+          "filesystem.glob",
+          "payload.assemble",
           "output.emit"
         ]
       },

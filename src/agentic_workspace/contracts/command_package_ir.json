@@ -111,7 +111,7 @@
     },
     "python_cli_completion": {
       "finish_line": "Python CLI completion means parser, dispatch, command/interface behavior, adapter metadata, and conformance expectations are generated from implementation-independent contracts or IR, with hand-owned Python code limited to thin runtime primitive adapters.",
-      "current_state": "full-generated-cli-complete",
+      "current_state": "adapter-layer-proven-not-full-generated-cli",
       "allowed_hand_owned_cli_responsibilities": [
         "live workspace inspection",
         "runtime primitive implementation",
@@ -134,7 +134,7 @@
         "runtime primitive code remains hand-owned only when it performs live behavior, mutation orchestration, or package-specific runtime logic"
       ],
       "completion_gate": {
-        "state": "satisfied",
+        "state": "pending",
         "scope": "python-only",
         "satisfied_by": [
           {
@@ -171,6 +171,11 @@
             "id": "runtime-handlers-thin",
             "evidence": "Hand-owned cli.py runtime bindings are limited to _run_*_adapter handlers whose operation ids exactly match generated operation ids.",
             "proof": "scripts/check/check_generated_command_packages.py::_validate_python_runtime_handler_boundary"
+          },
+          {
+            "id": "representative-operation-ir-runtime-consumed",
+            "evidence": "agentic-memory list-files is generated from command metadata and executes memory.list-files.report through a Python operation IR executor.",
+            "proof": "scripts/check/check_generated_command_packages.py::_validate_python_operation_execution_inventory"
           }
         ]
       }
@@ -2895,7 +2900,9 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "memory.bootstrap.files.list",
+              "path.target_root.resolve",
+              "filesystem.glob",
+              "payload.assemble",
               "output.emit"
             ]
           },

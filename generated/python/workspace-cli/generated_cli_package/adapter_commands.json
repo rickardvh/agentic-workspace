@@ -41,7 +41,8 @@
         }
       ]
     },
-    "operation_id": "defaults.report"
+    "operation_id": "defaults.report",
+    "operation_path": "operations/defaults.report.json"
   },
   {
     "adapter_id": "config.report.cli",
@@ -85,7 +86,8 @@
         }
       ]
     },
-    "operation_id": "config.report"
+    "operation_id": "config.report",
+    "operation_path": "operations/config.report.json"
   },
   {
     "adapter_id": "modules.report.cli",
@@ -122,7 +124,8 @@
         }
       ]
     },
-    "operation_id": "modules.report"
+    "operation_id": "modules.report",
+    "operation_path": "operations/modules.report.json"
   },
   {
     "adapter_id": "start.context.cli",
@@ -182,7 +185,8 @@
         }
       ]
     },
-    "operation_id": "start.context"
+    "operation_id": "start.context",
+    "operation_path": "operations/start.context.json"
   },
   {
     "adapter_id": "summary.report.cli",
@@ -242,7 +246,8 @@
         }
       ]
     },
-    "operation_id": "summary.report"
+    "operation_id": "summary.report",
+    "operation_path": "operations/summary.report.json"
   },
   {
     "adapter_id": "implement.context.cli",
@@ -309,7 +314,8 @@
         }
       ]
     },
-    "operation_id": "implement.context"
+    "operation_id": "implement.context",
+    "operation_path": "operations/implement.context.json"
   },
   {
     "adapter_id": "preflight.report.cli",
@@ -361,7 +367,8 @@
         }
       ]
     },
-    "operation_id": "preflight.report"
+    "operation_id": "preflight.report",
+    "operation_path": "operations/preflight.report.json"
   },
   {
     "adapter_id": "proof.report.cli",
@@ -429,7 +436,8 @@
         }
       ]
     },
-    "operation_id": "proof.report"
+    "operation_id": "proof.report",
+    "operation_path": "operations/proof.report.json"
   },
   {
     "adapter_id": "ownership.report.cli",
@@ -472,7 +480,8 @@
         }
       ]
     },
-    "operation_id": "ownership.report"
+    "operation_id": "ownership.report",
+    "operation_path": "operations/ownership.report.json"
   },
   {
     "adapter_id": "skills.report.cli",
@@ -515,7 +524,8 @@
         }
       ]
     },
-    "operation_id": "skills.report"
+    "operation_id": "skills.report",
+    "operation_path": "operations/skills.report.json"
   },
   {
     "adapter_id": "report.combined.cli",
@@ -589,7 +599,8 @@
         }
       ]
     },
-    "operation_id": "report.combined"
+    "operation_id": "report.combined",
+    "operation_path": "operations/report.combined.json"
   },
   {
     "adapter_id": "reconcile.report.cli",
@@ -634,7 +645,8 @@
         }
       ]
     },
-    "operation_id": "reconcile.report"
+    "operation_id": "reconcile.report",
+    "operation_path": "operations/reconcile.report.json"
   },
   {
     "adapter_id": "setup.guidance.cli",
@@ -685,7 +697,8 @@
         }
       ]
     },
-    "operation_id": "setup.guidance"
+    "operation_id": "setup.guidance",
+    "operation_path": "operations/setup.guidance.json"
   },
   {
     "adapter_id": "status.report.cli",
@@ -744,7 +757,8 @@
         }
       ]
     },
-    "operation_id": "status.report"
+    "operation_id": "status.report",
+    "operation_path": "operations/status.report.json"
   },
   {
     "adapter_id": "doctor.report.cli",
@@ -810,6 +824,7 @@
         }
       ]
     },
-    "operation_id": "doctor.report"
+    "operation_id": "doctor.report",
+    "operation_path": "operations/doctor.report.json"
   }
 ]

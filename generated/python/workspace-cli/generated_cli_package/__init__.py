@@ -21,10 +21,11 @@ from typing import Any
 
 
 def _load_generated_json(name: str) -> Any:
+    parts = tuple(part for part in name.replace('\\', '/').split('/') if part)
     try:
-        return json.loads(files(__package__).joinpath(name).read_text(encoding="utf-8"))
+        return json.loads(files(__package__).joinpath(*parts).read_text(encoding="utf-8"))
     except (AttributeError, FileNotFoundError, ModuleNotFoundError, TypeError):
-        return json.loads(Path(__file__).with_name(name).read_text(encoding="utf-8"))
+        return json.loads(Path(__file__).parent.joinpath(*parts).read_text(encoding="utf-8"))
 
 
 GENERATED_COMMAND_PACKAGE: dict[str, Any] = _load_generated_json("command_package.json")
@@ -32,6 +33,12 @@ GENERATED_COMMAND_PACKAGE: dict[str, Any] = _load_generated_json("command_packag
 _GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = _load_generated_json("adapter_commands.json")
 _GENERATED_COMMANDS_BY_NAME: dict[str, dict[str, Any]] = {
     str(command["interface"]["name"]): command for command in _GENERATED_ADAPTER_COMMANDS
+}
+
+_GENERATED_OPERATION_PATHS_BY_ID: dict[str, str] = {
+    str(command["operation_id"]): str(command["operation_path"])
+    for command in _GENERATED_ADAPTER_COMMANDS
+    if "operation_path" in command
 }
 
 _GENERATED_MATURITY_ID = 'weak-agent-safe-adapter'
@@ -59,6 +66,11 @@ def generated_command_names() -> tuple[str, ...]:
 
 def generated_operation_ids() -> tuple[str, ...]:
     return tuple(sorted(str(command["operation_id"]) for command in _GENERATED_ADAPTER_COMMANDS))
+
+
+def generated_operation_contract(operation_id: str) -> dict[str, Any]:
+    operation_path = _GENERATED_OPERATION_PATHS_BY_ID[str(operation_id)]
+    return _load_generated_json(operation_path)
 
 
 def supports_generated_command(argv: list[str] | tuple[str, ...]) -> bool:

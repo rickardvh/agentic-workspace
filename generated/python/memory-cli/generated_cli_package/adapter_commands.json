@@ -34,7 +34,8 @@
         }
       ]
     },
-    "operation_id": "memory.status.report"
+    "operation_id": "memory.status.report",
+    "operation_path": "operations/memory.status.report.json"
   },
   {
     "adapter_id": "memory.doctor.cli",
@@ -79,7 +80,8 @@
         }
       ]
     },
-    "operation_id": "memory.doctor.report"
+    "operation_id": "memory.doctor.report",
+    "operation_path": "operations/memory.doctor.report.json"
   },
   {
     "adapter_id": "memory.report.cli",
@@ -116,7 +118,8 @@
         }
       ]
     },
-    "operation_id": "memory.report.report"
+    "operation_id": "memory.report.report",
+    "operation_path": "operations/memory.report.report.json"
   },
   {
     "adapter_id": "memory.route-report.cli",
@@ -145,7 +148,8 @@
         }
       ]
     },
-    "operation_id": "memory.route-report.report"
+    "operation_id": "memory.route-report.report",
+    "operation_path": "operations/memory.route-report.report.json"
   },
   {
     "adapter_id": "memory.promotion-report.cli",
@@ -195,7 +199,8 @@
         }
       ]
     },
-    "operation_id": "memory.promotion-report.report"
+    "operation_id": "memory.promotion-report.report",
+    "operation_path": "operations/memory.promotion-report.report.json"
   },
   {
     "adapter_id": "memory.list-files.cli",
@@ -224,7 +229,8 @@
         }
       ]
     },
-    "operation_id": "memory.list-files.report"
+    "operation_id": "memory.list-files.report",
+    "operation_path": "operations/memory.list-files.report.json"
   },
   {
     "adapter_id": "memory.list-skills.cli",
@@ -246,6 +252,7 @@
         }
       ]
     },
-    "operation_id": "memory.list-skills.report"
+    "operation_id": "memory.list-skills.report",
+    "operation_path": "operations/memory.list-skills.report.json"
   }
 ]

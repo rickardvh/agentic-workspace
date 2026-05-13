@@ -59,14 +59,41 @@ def _python_adapter_command_payload(package: dict[str, Any]) -> list[dict[str, A
     payload: list[dict[str, Any]] = []
     for command in _python_adapter_commands(package):
         interface = dict(command["interface"])
+        operation_ref = dict(command["operation_ref"])
         payload.append(
             {
                 "adapter_id": command["adapter_id"],
-                "operation_id": command["operation_ref"]["id"],
+                "operation_id": operation_ref["id"],
+                "operation_path": operation_ref["path"],
                 "interface": interface,
             }
         )
     return payload
+
+
+def _runtime_consumed_operation_outputs(
+    package: dict[str, Any],
+    *,
+    repo_root: Path,
+    root: Path,
+) -> list[GeneratedOutput]:
+    outputs: list[GeneratedOutput] = []
+    emitted: set[str] = set()
+    for command in _python_adapter_commands(package):
+        operation_ref = command["operation_ref"]
+        operation_path = str(operation_ref["path"])
+        if operation_path in emitted:
+            continue
+        source = repo_root / "src" / ("agentic_workspace") / "contracts" / operation_path
+        if not source.is_file():
+            continue
+        operation = json.loads(source.read_text(encoding="utf-8"))
+        ir_plan = operation.get("ir_plan", {})
+        if not isinstance(ir_plan, dict) or ir_plan.get("status") not in {"representative", "complete"}:
+            continue
+        emitted.add(operation_path)
+        outputs.append(GeneratedOutput(root / "generated_cli_package" / operation_path, _json_block(operation) + "\n"))
+    return outputs
 
 
 def _python_runtime_adapter_module(package: dict[str, Any], target: dict[str, Any], *, source_path: str, regenerate_command: str) -> str:
@@ -91,14 +118,20 @@ def _python_runtime_adapter_module(package: dict[str, Any], target: dict[str, An
         f"# Regenerate with: {regenerate_command}\n"
         "\n\n"
         "def _load_generated_json(name: str) -> Any:\n"
+        "    parts = tuple(part for part in name.replace('\\\\', '/').split('/') if part)\n"
         "    try:\n"
-        '        return json.loads(files(__package__).joinpath(name).read_text(encoding="utf-8"))\n'
+        '        return json.loads(files(__package__).joinpath(*parts).read_text(encoding="utf-8"))\n'
         "    except (AttributeError, FileNotFoundError, ModuleNotFoundError, TypeError):\n"
-        '        return json.loads(Path(__file__).with_name(name).read_text(encoding="utf-8"))\n\n\n'
+        '        return json.loads(Path(__file__).parent.joinpath(*parts).read_text(encoding="utf-8"))\n\n\n'
         'GENERATED_COMMAND_PACKAGE: dict[str, Any] = _load_generated_json("command_package.json")\n\n'
         '_GENERATED_ADAPTER_COMMANDS: list[dict[str, Any]] = _load_generated_json("adapter_commands.json")\n'
         "_GENERATED_COMMANDS_BY_NAME: dict[str, dict[str, Any]] = {\n"
         '    str(command["interface"]["name"]): command for command in _GENERATED_ADAPTER_COMMANDS\n'
+        "}\n\n"
+        "_GENERATED_OPERATION_PATHS_BY_ID: dict[str, str] = {\n"
+        '    str(command["operation_id"]): str(command["operation_path"])\n'
+        "    for command in _GENERATED_ADAPTER_COMMANDS\n"
+        '    if "operation_path" in command\n'
         "}\n\n"
         f"_GENERATED_MATURITY_ID = {target['maturity_level_ref']!r}\n"
         f"_GENERATED_WEAK_AGENT_ROUTING = {weak_agent_routing!r}\n"
@@ -116,6 +149,9 @@ def _python_runtime_adapter_module(package: dict[str, Any], target: dict[str, An
         "    return tuple(sorted(_GENERATED_COMMANDS_BY_NAME))\n\n\n"
         "def generated_operation_ids() -> tuple[str, ...]:\n"
         '    return tuple(sorted(str(command["operation_id"]) for command in _GENERATED_ADAPTER_COMMANDS))\n\n\n'
+        "def generated_operation_contract(operation_id: str) -> dict[str, Any]:\n"
+        "    operation_path = _GENERATED_OPERATION_PATHS_BY_ID[str(operation_id)]\n"
+        "    return _load_generated_json(operation_path)\n\n\n"
         "def supports_generated_command(argv: list[str] | tuple[str, ...]) -> bool:\n"
         "    return bool(argv) and str(argv[0]) in _GENERATED_COMMANDS_BY_NAME\n\n\n"
         "def _option_type(option_spec: dict[str, Any]) -> Any:\n"
@@ -458,6 +494,7 @@ def render_outputs(
                 module_path = root / "generated_cli_package" / "__init__.py"
                 outputs.append(GeneratedOutput(root / "generated_cli_package" / "command_package.json", _json_block(package) + "\n"))
                 if _is_runtime_backed_python_target(target):
+                    outputs.extend(_runtime_consumed_operation_outputs(package, repo_root=repo_root, root=root))
                     outputs.append(
                         GeneratedOutput(
                             root / "generated_cli_package" / "adapter_commands.json",

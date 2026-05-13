@@ -219,9 +219,26 @@ def test_static_generated_package_proof_requires_python_completion_gate_evidence
     assert any("python-docker-conformance" in error for error in errors)
 
 
+def test_static_generated_package_proof_requires_operation_ir_runtime_consumption_evidence(monkeypatch) -> None:
+    checker = _load_checker()
+    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+    ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
+    ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"] = [
+        item
+        for item in ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"]
+        if item["id"] != "representative-operation-ir-runtime-consumed"
+    ]
+    monkeypatch.setattr(checker, "load_workspace_command_package_ir", lambda *, repo_root: ir)
+
+    errors = checker._validate_static_surfaces()
+
+    assert any("representative-operation-ir-runtime-consumed" in error for error in errors)
+
+
 def test_static_generated_package_proof_rejects_python_completion_proof_surface_drift(monkeypatch) -> None:
     checker = _load_checker()
     ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+    ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
     for item in ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"]:
         if item["id"] == "python-docker-conformance":
             item["proof"] = "uv run python scripts/check/check_generated_command_packages.py"
@@ -231,6 +248,17 @@ def test_static_generated_package_proof_rejects_python_completion_proof_surface_
     errors = checker._validate_static_surfaces()
 
     assert any("--python-docker-conformance --require-docker" in error for error in errors)
+
+
+def test_static_generated_package_proof_rejects_full_completion_with_compatibility_handlers(monkeypatch) -> None:
+    checker = _load_checker()
+    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+    ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
+    monkeypatch.setattr(checker, "load_workspace_command_package_ir", lambda *, repo_root: ir)
+
+    errors = checker._validate_static_surfaces()
+
+    assert any("compatibility-runtime-handler" in error for error in errors)
 
 
 def test_static_generated_package_proof_accepts_python_completion_gate() -> None:

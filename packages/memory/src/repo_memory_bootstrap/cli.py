@@ -16,6 +16,9 @@ from repo_memory_bootstrap.generated_cli_package import (
     generated_command_names as generated_cli_package_command_names,
 )
 from repo_memory_bootstrap.generated_cli_package import (
+    generated_operation_contract as generated_cli_package_operation_contract,
+)
+from repo_memory_bootstrap.generated_cli_package import (
     run_generated_command as run_generated_cli_package_command,
 )
 from repo_memory_bootstrap.generated_cli_package import (
@@ -53,6 +56,7 @@ from repo_memory_bootstrap.installer import (
     upgrade_bootstrap,
     verify_payload,
 )
+from repo_memory_bootstrap.operation_ir_executor import run_operation_ir
 
 
 def _program_name() -> str:
@@ -941,7 +945,7 @@ def _run_doctor_report_adapter(args: argparse.Namespace) -> int | None:
 
 
 def _run_list_files_report_adapter(args: argparse.Namespace) -> int | None:
-    return _handle_list_files(args)
+    return run_operation_ir(generated_cli_package_operation_contract("memory.list-files.report"), args)
 
 
 def _run_list_skills_report_adapter(args: argparse.Namespace) -> int | None:

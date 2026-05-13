@@ -810,6 +810,23 @@
       "routed_to": "#929"
     },
     {
+      "pattern": "generated/python/*/generated_cli_package/operations/*.json",
+      "format": "json",
+      "owner": "generated-command-adapters",
+      "status": "generated-derived",
+      "schema_or_validator": "generated command package checks",
+      "editable_by_agents": false,
+      "generated": true,
+      "notes": "Generated Python operation-contract resources are adapter outputs derived from operation contracts consumed by generated CLI packages.",
+      "storage_class": "generated-required-adapter",
+      "checked_in_justification": "Checked in so generated Python packages can load operation contracts at runtime without depending on source-tree contract paths.",
+      "reconstructable_from": [
+        "uv run python scripts/generate/generate_command_packages.py",
+        "src/agentic_workspace/contracts/operations/*.json"
+      ],
+      "routed_to": "#931"
+    },
+    {
       "pattern": "tests/fixtures/**/*.json",
       "format": "json",
       "owner": "workspace-tests",
@@ -939,6 +956,16 @@
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
       "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
       "removal_or_demotion_path": "demote to generated-on-demand only after packaging no longer needs checked-in generated Python resource files",
+      "max_bytes": 250000
+    },
+    {
+      "pattern": "generated/python/*/generated_cli_package/operations/*.json",
+      "source_command": "uv run python scripts/generate/generate_command_packages.py",
+      "named_consumer": "generated Python operation-contract resource loaders",
+      "checked_in_justification": "Generated Python operation-contract resources are kept as files so runtime-consumed operations load from the generated package.",
+      "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
+      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "removal_or_demotion_path": "demote only after generated Python packages no longer need packaged operation artifacts",
       "max_bytes": 250000
     },
     {

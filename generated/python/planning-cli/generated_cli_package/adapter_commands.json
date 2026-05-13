@@ -50,7 +50,8 @@
         }
       ]
     },
-    "operation_id": "planning.status.report"
+    "operation_id": "planning.status.report",
+    "operation_path": "operations/planning.status.report.json"
   },
   {
     "adapter_id": "planning.doctor.cli",
@@ -87,7 +88,8 @@
         }
       ]
     },
-    "operation_id": "planning.doctor.report"
+    "operation_id": "planning.doctor.report",
+    "operation_path": "operations/planning.doctor.report.json"
   },
   {
     "adapter_id": "planning.summary.cli",
@@ -140,7 +142,8 @@
         }
       ]
     },
-    "operation_id": "planning.summary.report"
+    "operation_id": "planning.summary.report",
+    "operation_path": "operations/planning.summary.report.json"
   },
   {
     "adapter_id": "planning.report.cli",
@@ -177,7 +180,8 @@
         }
       ]
     },
-    "operation_id": "planning.report.report"
+    "operation_id": "planning.report.report",
+    "operation_path": "operations/planning.report.report.json"
   },
   {
     "adapter_id": "planning.reconcile.cli",
@@ -206,6 +210,7 @@
         }
       ]
     },
-    "operation_id": "planning.reconcile.report"
+    "operation_id": "planning.reconcile.report",
+    "operation_path": "operations/planning.reconcile.report.json"
   }
 ]
