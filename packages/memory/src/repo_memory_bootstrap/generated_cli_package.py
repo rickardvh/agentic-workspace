@@ -1,6 +1,6 @@
 """Package-local bridge to the generated Python CLI projection.
 
-The durable generated source lives under generated/python/planning-cli.
+The durable generated source lives under generated/python/memory-cli.
 Installed wheels may bundle that projection under a private package-local
 implementation module so runtime imports do not depend on repository layout.
 """
@@ -16,19 +16,19 @@ from typing import Any
 
 def _load_generated_source() -> ModuleType:
     for parent in Path(__file__).resolve().parents:
-        candidate = parent / "generated" / "python" / "planning-cli" / "generated_cli_package" / "__init__.py"
+        candidate = parent / "generated" / "python" / "memory-cli" / "generated_cli_package" / "__init__.py"
         if candidate.is_file():
-            spec = importlib.util.spec_from_file_location("_repo_planning_bootstrap_generated_cli_package", candidate)
+            spec = importlib.util.spec_from_file_location("_repo_memory_bootstrap_generated_cli_package", candidate)
             if spec is None or spec.loader is None:
                 break
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
             return module
-    raise ModuleNotFoundError("generated/python/planning-cli/generated_cli_package is unavailable")
+    raise ModuleNotFoundError("generated/python/memory-cli/generated_cli_package is unavailable")
 
 
 try:
-    _generated = import_module("repo_planning_bootstrap._generated_cli_package_impl")
+    _generated = import_module("repo_memory_bootstrap._generated_cli_package_impl")
 except (ImportError, ModuleNotFoundError):
     _generated = _load_generated_source()
 
@@ -42,6 +42,7 @@ generated_maturity = _generated.generated_maturity
 generated_weak_agent_routing = _generated.generated_weak_agent_routing
 run_generated_command = _generated.run_generated_command
 supports_generated_command = _generated.supports_generated_command
+main = _generated.main
 
 __all__ = [
     "GENERATED_COMMAND_PACKAGE",
@@ -51,6 +52,7 @@ __all__ = [
     "generated_operation_ids",
     "generated_maturity",
     "generated_weak_agent_routing",
+    "main",
     "run_generated_command",
     "supports_generated_command",
 ]

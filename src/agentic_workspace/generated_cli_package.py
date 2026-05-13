@@ -42,6 +42,7 @@ generated_maturity = _generated.generated_maturity
 generated_weak_agent_routing = _generated.generated_weak_agent_routing
 run_generated_command = _generated.run_generated_command
 supports_generated_command = _generated.supports_generated_command
+main = _generated.main
 
 __all__ = [
     "GENERATED_COMMAND_PACKAGE",
@@ -51,6 +52,7 @@ __all__ = [
     "generated_operation_ids",
     "generated_maturity",
     "generated_weak_agent_routing",
+    "main",
     "run_generated_command",
     "supports_generated_command",
 ]

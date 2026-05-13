@@ -1554,7 +1554,6 @@ def _planning_module_argv(args: argparse.Namespace) -> list[str]:
         ("--plan-slug", "plan_slug"),
         ("--scope", "scope"),
         ("--classification", "classification"),
-        ("--plan", "plan"),
         ("--route", "route"),
         ("--skipped-reason", "skipped_reason"),
         ("--expected-savings", "expected_savings"),
@@ -1575,6 +1574,8 @@ def _planning_module_argv(args: argparse.Namespace) -> list[str]:
         ("--continuation-summary", "continuation_summary"),
     ):
         _append_option(argv, option, getattr(args, attr, None))
+    if command == "delegation-decision":
+        _append_option(argv, "--plan", getattr(args, "plan", None))
     for option, attr in (
         ("--activate", "activate"),
         ("--queue", "queue"),
@@ -1620,7 +1621,7 @@ def _memory_module_argv(args: argparse.Namespace) -> list[str]:
 
 
 def _run_planning_front_door(args: argparse.Namespace) -> int:
-    from repo_planning_bootstrap.cli import main as planning_main
+    from repo_planning_bootstrap.generated_cli_package import main as planning_main
 
     buffer = io.StringIO()
     with contextlib.redirect_stdout(buffer):
@@ -1630,7 +1631,7 @@ def _run_planning_front_door(args: argparse.Namespace) -> int:
 
 
 def _run_memory_front_door(args: argparse.Namespace) -> int:
-    from repo_memory_bootstrap.cli import main as memory_main
+    from repo_memory_bootstrap.generated_cli_package import main as memory_main
 
     buffer = io.StringIO()
     with contextlib.redirect_stdout(buffer):
@@ -2390,7 +2391,7 @@ def main(argv: list[str] | None = None) -> int:
         try:
             target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
             _validate_target_root(command_name="summary", target_root=target_root)
-            from repo_planning_bootstrap.cli import _print_summary
+            from repo_planning_bootstrap._runtime_cli import _print_summary
             from repo_planning_bootstrap.installer import format_summary_json, planning_summary
 
             config = _load_workspace_config(target_root=target_root)
@@ -2675,7 +2676,7 @@ def main(argv: list[str] | None = None) -> int:
         try:
             target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
             _validate_target_root(command_name="reconcile", target_root=target_root)
-            from repo_planning_bootstrap.cli import _print_reconcile
+            from repo_planning_bootstrap._runtime_cli import _print_reconcile
             from repo_planning_bootstrap.installer import planning_reconcile
         except ImportError:
             parser.error("The planning module must be installed to use the reconcile command.")
@@ -3761,7 +3762,7 @@ def _write_action_kind(*, dry_run: bool, existing: str | None) -> str:
 def _is_retired_generated_llms_adapter(text: str) -> bool:
     lowered = text.lower()
     return (
-        "canonical_source: `src/agentic_workspace/cli.py:_external_agent_handoff_text`" in lowered
+        "canonical_source: `src/agentic_workspace/_runtime_cli.py:_external_agent_handoff_text`" in lowered
         or "generated compatibility adapter" in lowered
         or "agent entrypoint router" in lowered
     )
@@ -7867,11 +7868,7 @@ def _artifact_class(
 
 def _generated_output_files(*, target_root: Path) -> list[Path]:
     candidates: list[Path] = []
-    for pattern in (
-        "generated/**/*",
-        "src/**/generated_command_adapters.py",
-        "packages/**/generated_command_adapters.py",
-    ):
+    for pattern in ("generated/**/*",):
         candidates.extend(path for path in target_root.glob(pattern) if path.is_file() and not _is_runtime_cache_file(path))
     return sorted({path.resolve(): path for path in candidates}.values(), key=lambda path: path.as_posix())
 
@@ -11239,7 +11236,7 @@ def _start_payload(
     )
     if planning_safety_gate["status"] not in {"satisfied", "clear"}:
         payload["planning_safety_gate"] = planning_safety_gate
-    if not planning_safety_gate["workflow_sufficient"]:
+    if not planning_safety_gate["workflow_sufficient"] and not _is_config_posture_task(task_text):
         payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
             surface="start",
             decision=planning_safety_gate["decision"],
@@ -11349,7 +11346,7 @@ def _start_payload(
             "read_first": [command],
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
         }
-    if not planning_safety_gate["workflow_sufficient"]:
+    if not planning_safety_gate["workflow_sufficient"] and not _is_config_posture_task(task_text):
         payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
             surface="start",
             decision=planning_safety_gate["decision"],
@@ -11936,7 +11933,7 @@ def _start_tiny_payload_fast(
             "read_first": [command],
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
         }
-    if not planning_safety_gate["workflow_sufficient"]:
+    if not planning_safety_gate["workflow_sufficient"] and not _is_config_posture_task(task_text):
         payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
             surface="start",
             decision=planning_safety_gate["decision"],
@@ -11990,13 +11987,19 @@ def _fast_planning_active_summary(*, target_root: Path) -> dict[str, Any]:
     todo = data.get("todo", {}) if isinstance(data, dict) else {}
     active_items = todo.get("active_items", []) if isinstance(todo, dict) else []
     active_items = active_items if isinstance(active_items, list) else []
+    active = data.get("active", {}) if isinstance(data, dict) else {}
+    active_execplans = active.get("execplans", []) if isinstance(active, dict) else []
+    active_execplans = active_execplans if isinstance(active_execplans, list) else []
     active_execplan = None
     if active_items and isinstance(active_items[0], dict):
         active_execplan = active_items[0].get("surface")
+    if active_execplan is None and active_execplans and isinstance(active_execplans[0], dict):
+        active_execplan = active_execplans[0].get("path")
     return {
         "todo_active_count": len(active_items),
+        "active_execplan_count": len(active_execplans),
         "active_execplan": active_execplan,
-        "planning_status": "present" if active_items else "unavailable",
+        "planning_status": "present" if active_items or active_execplans else "unavailable",
     }
 
 
@@ -12098,7 +12101,10 @@ def _active_decomposition_delegation_payload(*, target_root: Path) -> dict[str, 
 
 
 def _planning_state_has_active_items(*, target_root: Path) -> bool:
-    return bool(_fast_planning_active_summary(target_root=target_root)["todo_active_count"])
+    active_summary = _fast_planning_active_summary(target_root=target_root)
+    return bool(
+        active_summary.get("todo_active_count") or active_summary.get("active_execplan_count") or active_summary.get("active_execplan")
+    )
 
 
 def _tiny_memory_consult_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
@@ -12935,7 +12941,6 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "kind": "implementer-context-tiny/v1",
         "target": payload.get("target"),
         "workflow_sufficiency": payload.get("workflow_sufficiency"),
-        "planning_safety_gate": planning_safety_gate,
         "adaptive_routing": _tiny_adaptive_routing_payload(
             surface="implement",
             current_need="changed-path-next-action" if payload.get("changed_paths") else "unknown-scope-routing",
@@ -12998,6 +13003,20 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "detail_command": detail_commands["full_context"],
         "detail_commands": detail_commands,
     }
+    if isinstance(planning_safety_gate, dict):
+        projected["planning_safety_gate"] = (
+            planning_safety_gate
+            if planning_safety_gate.get("workflow_sufficient") is False
+            else {
+                "kind": planning_safety_gate.get("kind"),
+                "status": planning_safety_gate.get("status"),
+                "decision": planning_safety_gate.get("decision"),
+                "workflow_sufficient": planning_safety_gate.get("workflow_sufficient"),
+                "required_next_action": planning_safety_gate.get("required_next_action"),
+                "active_planning_present": planning_safety_gate.get("active_planning_present"),
+                "changed_path_classification": planning_safety_gate.get("changed_path_classification", {}),
+            }
+        )
     if isinstance(intent_acknowledgement, dict) and intent_acknowledgement.get("decision") == "proceed-with-stated-assumption":
         projected["intent_acknowledgement"] = {
             "decision": intent_acknowledgement.get("decision"),
@@ -13273,9 +13292,10 @@ def _planning_safety_gate_payload(
     issue_refs = sorted(set(re.findall(r"#\d+", task_text or "")))
     normalized_task = " ".join((task_text or "").lower().split())
     completion_status_question = _is_completion_status_task(task_text) and not changed_paths
+    high_assurance_requires_plan = proof_burden == "high" and work_shape not in {"bounded", "narrow"}
     broad_or_high_assurance = not completion_status_question and (
         work_shape in {"lane", "epic"}
-        or proof_burden == "high"
+        or high_assurance_requires_plan
         or len(issue_refs) > 1
         or any(term in normalized_task for term in ("epic", "high-assurance", "dogfooding issues"))
     )
@@ -13317,6 +13337,12 @@ def _planning_safety_gate_payload(
         reason = "Changed paths have outgrown direct/no-plan assumptions across implementation boundaries."
         required_next_action = "create-or-promote-active-execplan"
         workflow_sufficient = False
+    elif path_classification["dirty_shape"] == "planning-plus-implementation":
+        status = "violation"
+        decision = "implementation-owner-missing"
+        reason = "Implementation paths are mixed with planning recovery paths without active planning ownership."
+        required_next_action = "checkpoint-planning-before-implementation"
+        workflow_sufficient = False
     elif path_classification["implementation_paths"] and broad_or_high_assurance:
         status = "violation"
         decision = "implementation-owner-missing"
@@ -13329,12 +13355,6 @@ def _planning_safety_gate_payload(
         reason = "Broad, high-assurance, multi-issue, or decomposed work needs an active execplan before implementation."
         required_next_action = "promote-or-create-active-execplan"
         workflow_sufficient = False
-    elif path_classification["dirty_shape"] == "planning-plus-implementation":
-        status = "attention"
-        decision = "mixed-planning-and-implementation-wip"
-        reason = "Planning and implementation changes are mixed; checkpoint planning before continuing if scope is not narrow."
-        required_next_action = "review-mixed-wip"
-        workflow_sufficient = True
     else:
         status = "clear"
         decision = "direct-work-allowed"
@@ -16049,7 +16069,7 @@ def _prompt_routing_contract_payload() -> dict[str, Any]:
             {
                 "class": "workspace lifecycle change",
                 "proof_lane": "workspace_cli",
-                "owner_surface": "src/agentic_workspace/cli.py",
+                "owner_surface": "src/agentic_workspace/_runtime_cli.py",
             },
             {
                 "class": "planning state or contract change",
@@ -16738,7 +16758,7 @@ def _effective_authority_payload(
                 "concern": "runtime implementation",
                 "authority_class": "procedural-owned",
                 "owner": "workspace",
-                "surface": "src/agentic_workspace/cli.py",
+                "surface": "src/agentic_workspace/_runtime_cli.py",
                 "status": "present",
             },
         ],
@@ -19298,7 +19318,7 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
 def _run_summary_report_adapter(args: argparse.Namespace) -> int:
     target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
     _validate_target_root(command_name="summary", target_root=target_root)
-    from repo_planning_bootstrap.cli import _print_summary
+    from repo_planning_bootstrap._runtime_cli import _print_summary
     from repo_planning_bootstrap.installer import format_summary_json, planning_summary
 
     config = _load_workspace_config(target_root=target_root)
@@ -19500,7 +19520,7 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
 def _run_reconcile_report_adapter(args: argparse.Namespace) -> int:
     target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
     _validate_target_root(command_name="reconcile", target_root=target_root)
-    from repo_planning_bootstrap.cli import _print_reconcile
+    from repo_planning_bootstrap._runtime_cli import _print_reconcile
     from repo_planning_bootstrap.installer import planning_reconcile
 
     _ensure_external_intent_cache_if_available(target_root=target_root)
@@ -21444,7 +21464,7 @@ def _direct_cli_edit_review_for_changed_paths(changed_paths: list[str]) -> dict[
     cli_paths = [
         path
         for path in changed_paths
-        if path == "src/agentic_workspace/cli.py"
+        if path == "src/agentic_workspace/_runtime_cli.py"
         or path.endswith("/src/repo_planning_bootstrap/cli.py")
         or path.endswith("/src/repo_memory_bootstrap/cli.py")
     ]

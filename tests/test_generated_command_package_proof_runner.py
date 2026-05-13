@@ -36,11 +36,13 @@ def test_generated_command_package_proof_defaults_to_docker_steps() -> None:
 
     assert [step.label for step in steps] == [
         "generated packages python docker conformance",
+        "generated packages primitive docker conformance",
         "generated packages docker",
         "generated packages docker conformance",
     ]
     assert [step.args for step in steps] == [
         ["--python-docker-conformance", "--require-docker"],
+        ["--primitive-docker-conformance", "--require-docker"],
         ["--docker", "--require-docker"],
         ["--docker-conformance", "--require-docker"],
     ]
@@ -63,11 +65,13 @@ def test_generated_command_package_proof_all_runs_every_step(monkeypatch, capsys
         ("generated packages static", [], 12.0, 7),
         ("generated packages python conformance", ["--python-conformance"], 12.0, 7),
         ("generated packages python docker conformance", ["--python-docker-conformance", "--require-docker"], 12.0, 7),
+        ("generated packages primitive conformance", ["--primitive-conformance"], 12.0, 7),
+        ("generated packages primitive docker conformance", ["--primitive-docker-conformance", "--require-docker"], 12.0, 7),
         ("generated packages conformance", ["--conformance", "--require-node"], 12.0, 7),
         ("generated packages docker", ["--docker", "--require-docker"], 12.0, 7),
         ("generated packages docker conformance", ["--docker-conformance", "--require-docker"], 12.0, 7),
     ]
-    assert "[ok] generated command package proof (6 steps," in capsys.readouterr().out
+    assert "[ok] generated command package proof (8 steps," in capsys.readouterr().out
 
 
 def test_generated_typescript_conformance_cases_come_from_contract_artifacts() -> None:
@@ -102,9 +106,9 @@ def test_generated_python_conformance_uses_contract_artifacts() -> None:
     planning_status = registries["planning-bootstrap"]["planning.status.process"]
     memory_skills = registries["memory-bootstrap"]["memory.list-skills.process"]
 
-    assert checker._python_command_for_package("root-workspace")[-1] == "agentic_workspace.cli"
-    assert checker._python_command_for_package("planning-bootstrap")[-1] == "repo_planning_bootstrap.cli"
-    assert checker._python_command_for_package("memory-bootstrap")[-1] == "repo_memory_bootstrap.cli"
+    assert "agentic_workspace.generated_cli_package" in checker._python_command_for_package("root-workspace")[-1]
+    assert "repo_planning_bootstrap.generated_cli_package" in checker._python_command_for_package("planning-bootstrap")[-1]
+    assert "repo_memory_bootstrap.generated_cli_package" in checker._python_command_for_package("memory-bootstrap")[-1]
     assert defaults.success_args == ["defaults", "--section", "startup", "--format", "json"]
     assert defaults.expected_exit == 0
     assert defaults.allow_stderr is False
@@ -296,9 +300,18 @@ def test_static_generated_package_proof_accepts_python_completion_gate() -> None
     assert not [error for error in errors if "Python CLI completion" in error or "Python completion" in error]
 
 
+def test_static_generated_package_proof_rejects_missing_primitive_conformance_case(monkeypatch) -> None:
+    checker = _load_checker()
+    monkeypatch.setattr(checker, "REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE", {"missing.primitive"})
+
+    errors = checker._validate_static_surfaces()
+
+    assert "primitive conformance is missing required primitive case: missing.primitive" in errors
+
+
 def test_python_runtime_handler_boundary_rejects_non_adapter_handlers(monkeypatch) -> None:
     checker = _load_checker()
-    memory_cli = checker.importlib.import_module("repo_memory_bootstrap.cli")
+    memory_cli = checker.importlib.import_module("repo_memory_bootstrap._runtime_cli")
     drifted_handlers = dict(memory_cli._GENERATED_RUNTIME_HANDLERS)
     drifted_handlers["memory.status.report"] = memory_cli._handle_status
     monkeypatch.setattr(memory_cli, "_GENERATED_RUNTIME_HANDLERS", drifted_handlers)
@@ -311,19 +324,19 @@ def test_python_runtime_handler_boundary_rejects_non_adapter_handlers(monkeypatc
 def test_python_runtime_import_boundary_rejects_legacy_generated_adapter_dispatch() -> None:
     checker = _load_checker()
     errors = checker._validate_no_legacy_generated_adapter_runtime_import(
-        relative_path="src/agentic_workspace/cli.py",
+        relative_path="src/agentic_workspace/_runtime_cli.py",
         text="from agentic_workspace.generated_command_adapters import GENERATED_COMMAND_ADAPTERS_BY_COMMAND\n",
     )
 
     assert errors == [
-        "src/agentic_workspace/cli.py must route generated Python commands through generated_cli_package, "
+        "src/agentic_workspace/_runtime_cli.py must route generated Python commands through generated_cli_package, "
         "not legacy generated_command_adapters runtime dispatch"
     ]
 
 
 def test_python_parser_retirement_rejects_generated_command_in_handwritten_parser(monkeypatch) -> None:
     checker = _load_checker()
-    root_cli = checker.importlib.import_module("agentic_workspace.cli")
+    root_cli = checker.importlib.import_module("agentic_workspace._runtime_cli")
 
     def build_drifted_parser() -> argparse.ArgumentParser:
         parser = argparse.ArgumentParser()

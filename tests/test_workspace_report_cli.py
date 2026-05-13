@@ -891,7 +891,7 @@ def test_operational_compression_classifies_generated_output_footprint(tmp_path:
             "generated_outputs": [
                 {
                     "program": "agentic-workspace",
-                    "path": "src/agentic_workspace/generated_command_adapters.py",
+                    "path": "generated/python/workspace-cli/generated_command_adapters.json",
                 }
             ]
         },
@@ -903,7 +903,7 @@ def test_operational_compression_classifies_generated_output_footprint(tmp_path:
         target / "src" / "agentic_workspace" / "generated_cli_package" / "__pycache__" / "__init__.cpython-313.pyc",
         "cache\n",
     )
-    _write(target / "src" / "agentic_workspace" / "generated_command_adapters.py", "# generated\n")
+    _write(target / "generated" / "python" / "workspace-cli" / "generated_command_adapters.json", "{}\n")
     _write(target / "generated" / "typescript" / "workspace-cli" / "package.json", "{}\n")
     _write(target / "generated" / "typescript" / "workspace-cli" / "src" / "cli.mjs", "export {};\n")
     _write(target / "generated" / "typescript" / "Dockerfile", "FROM node:22\n")
@@ -1455,6 +1455,10 @@ candidates = [
     assert answer["lower_trust_closeout_count"] == 1
     assert answer["checks"]["intent_satisfaction"]["status"] == "present"
     assert answer["checks"]["intent_satisfaction"]["trust"] == "follow-up-required"
+    assert answer["checks"]["intent_satisfaction"]["continuation_surface"] == ".agentic-workspace/planning/state.toml"
+    compact_continuation = answer["checks"]["intent_satisfaction"]["package_owned_continuation"]
+    assert compact_continuation["status"] == "present"
+    assert ".agentic-workspace/planning/state.toml" in compact_continuation["owner_surfaces"]
 
 
 def test_report_closeout_trust_lowers_trust_when_active_plan_has_no_package_evidence(tmp_path: Path, capsys) -> None:
@@ -2417,7 +2421,7 @@ def test_report_surfaces_combined_execution_shape_for_planning_backed_slice(tmp_
         "## Blockers\n\n"
         "- None.\n\n"
         "## Touched Paths\n\n"
-        "- src/agentic_workspace/cli.py\n\n"
+        "- src/agentic_workspace/_runtime_cli.py\n\n"
         "## Invariants\n\n"
         "- Config remains posture rather than scheduler policy.\n\n"
         "## Validation Commands\n\n"
@@ -2594,7 +2598,7 @@ def test_report_routes_root_cli_hotspot_with_owner_decision(tmp_path: Path, caps
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    cli_path = target / "src" / "agentic_workspace" / "cli.py"
+    cli_path = target / "src" / "agentic_workspace" / "_runtime_cli.py"
     cli_path.parent.mkdir(parents=True, exist_ok=True)
     cli_path.write_text("\n".join(f"line_{index}" for index in range(450)) + "\n", encoding="utf-8")
 
@@ -2717,7 +2721,7 @@ def test_report_surfaces_promotable_setup_findings_as_repo_friction_evidence(tmp
                         "class": "repo_friction_evidence",
                         "summary": "Validation repeatedly fails after agents hand-author schema shape.",
                         "confidence": 0.9,
-                        "path": "src/agentic_workspace/cli.py",
+                        "path": "src/agentic_workspace/_runtime_cli.py",
                         "observed_during": "uv run pytest tests/test_workspace_cli.py",
                         "signal_kind": "validation_friction",
                         "cost": "Agents spend extra repair loops fixing shape that a writer helper could construct.",
@@ -2752,7 +2756,7 @@ def test_report_surfaces_promotable_setup_findings_as_repo_friction_evidence(tmp
     ]
     setup_findings = next(evidence for evidence in payload["repo_friction"]["external_evidence"] if evidence["kind"] == "setup-findings")
     assert setup_findings["path"] == "tools/setup-findings.json"
-    assert setup_findings["items"][0]["path"] == "src/agentic_workspace/cli.py"
+    assert setup_findings["items"][0]["path"] == "src/agentic_workspace/_runtime_cli.py"
     assert setup_findings["items"][0]["validation_failure_class"] == "interface_design_error"
     assert setup_findings["items"][0]["promotion_reason"] == "grounded friction evidence is worth preserving"
     signal = payload["improvement_intake"]["improvement_signal_candidates"][0]

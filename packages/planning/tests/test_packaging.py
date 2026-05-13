@@ -203,8 +203,9 @@ def test_planning_artifacts_ship_generated_cli_package_import_dependency(kind: s
         artifact = _build_artifact(kind, Path(tmpdir))
         entries = _raw_artifact_entries(artifact)
 
-    assert any(entry.endswith("repo_planning_bootstrap/generated_command_adapters.py") for entry in entries)
-    assert any(entry.endswith("repo_planning_bootstrap/generated_cli_package/__init__.py") for entry in entries)
+    assert not any(entry.endswith("repo_planning_bootstrap/generated_command_adapters.py") for entry in entries)
+    assert any(entry.endswith("repo_planning_bootstrap/generated_cli_package.py") for entry in entries)
+    assert not any(entry.endswith("repo_planning_bootstrap/generated_cli_package/__init__.py") for entry in entries)
     if kind == "wheel":
         assert any(entry.endswith("repo_planning_bootstrap/_generated_cli_package_impl/__init__.py") for entry in entries)
         assert any(entry.endswith("repo_planning_bootstrap/_generated_cli_package_impl/command_package.json") for entry in entries)
@@ -232,7 +233,7 @@ def test_installed_planning_wheel_imports_cli_module() -> None:
             [
                 sys.executable,
                 "-c",
-                "import repo_planning_bootstrap.cli; from repo_planning_bootstrap.generated_cli_package import build_generated_parser",
+                "import repo_planning_bootstrap._runtime_cli; from repo_planning_bootstrap.generated_cli_package import build_generated_parser",
             ],
             cwd=tmpdir_path,
             env={**os.environ, "PYTHONPATH": str(install_root)},

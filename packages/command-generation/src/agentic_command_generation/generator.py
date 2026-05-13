@@ -41,12 +41,24 @@ def _is_runtime_backed_python_target(target: dict[str, Any]) -> bool:
 
 
 def _runtime_command_for_package(package: dict[str, Any], runtime_binding: dict[str, Any]) -> str:
-    package_role = package.get("package_role")
-    if package_role == "planning-module-cli":
-        return "python -m repo_planning_bootstrap.cli"
-    if package_role == "memory-module-cli":
-        return "python -m repo_memory_bootstrap.cli"
+    generated_package = _generated_package_module_for_package(package)
+    if generated_package:
+        return "python -c " + json.dumps(f"import sys; from {generated_package} import main; raise SystemExit(main(sys.argv[1:]))")
     return str(runtime_binding["default_runtime_command"])
+
+
+def _generated_package_module_for_package(package: dict[str, Any]) -> str:
+    binding = package.get("python_runtime_binding", {})
+    if not isinstance(binding, dict):
+        return ""
+    return str(binding.get("generated_package_module") or "")
+
+
+def _runtime_module_for_package(package: dict[str, Any]) -> str:
+    binding = package.get("python_runtime_binding", {})
+    if not isinstance(binding, dict):
+        return ""
+    return str(binding.get("runtime_module") or "")
 
 
 def _python_adapter_commands(package: dict[str, Any]) -> list[dict[str, Any]]:
@@ -100,6 +112,15 @@ def _runtime_consumed_operation_outputs(
 def _python_runtime_adapter_module(package: dict[str, Any], target: dict[str, Any], *, source_path: str, regenerate_command: str) -> str:
     weak_agent_routing = "allowed-read-only" if _is_weak_agent_safe_python_target(target) else "review-required"
     runnable = str(target.get("maturity_level_ref") in {"runtime-backed-read-only-adapter", "weak-agent-safe-adapter"})
+    runtime_module = _runtime_module_for_package(package)
+    main_function = ""
+    if runtime_module:
+        main_function = (
+            "\n\n"
+            "def main(argv: list[str] | None = None) -> int:\n"
+            f"    from {runtime_module} import main as runtime_main\n\n"
+            "    return runtime_main(argv)\n"
+        )
     return (
         '"""Generated runtime-backed Python command adapter.\n\n'
         f"Source: {source_path}\n"
@@ -202,6 +223,7 @@ def _python_runtime_adapter_module(package: dict[str, Any], target: dict[str, An
         "    args = parser.parse_args(list(argv))\n"
         '    operation_id = str(getattr(args, "_generated_operation_id"))\n'
         "    return runtime_handler(operation_id, args)\n"
+        f"{main_function}"
     )
 
 

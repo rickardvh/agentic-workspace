@@ -1,0 +1,11 @@
+FROM python:3.13-slim
+
+WORKDIR /work
+
+COPY packages/command-generation ./packages/command-generation
+
+RUN python -m pip install --no-cache-dir ./packages/command-generation
+
+ENV PYTHONPATH=/work/packages/command-generation/src
+
+CMD ["python", "packages/command-generation/tests/primitive_conformance.py"]

@@ -45,9 +45,9 @@
         "generated/typescript/",
         "scripts/generate/generate_command_packages.py",
         "scripts/check/check_generated_command_packages.py",
-        "src/agentic_workspace/generated_cli_package/",
-        "packages/planning/src/repo_planning_bootstrap/generated_cli_package/",
-        "packages/memory/src/repo_memory_bootstrap/generated_cli_package/"
+        "src/agentic_workspace/generated_cli_package.py",
+        "packages/planning/src/repo_planning_bootstrap/generated_cli_package.py",
+        "packages/memory/src/repo_memory_bootstrap/generated_cli_package.py"
       ]
     },
     {
@@ -170,9 +170,9 @@
         "id": "python-generated-package-bridge",
         "role": "hand-owned-executable",
         "exact": [
-          "src/agentic_workspace/generated_cli_package/__init__.py",
-          "packages/planning/src/repo_planning_bootstrap/generated_cli_package/__init__.py",
-          "packages/memory/src/repo_memory_bootstrap/generated_cli_package/__init__.py"
+          "src/agentic_workspace/generated_cli_package.py",
+          "packages/planning/src/repo_planning_bootstrap/generated_cli_package.py",
+          "packages/memory/src/repo_memory_bootstrap/generated_cli_package.py"
         ],
         "direct_edit_allowed": true,
         "source_contract": "src/agentic_workspace/contracts/command_package_ir.json",
@@ -184,7 +184,7 @@
         "id": "root-workspace-cli-runtime",
         "role": "hand-owned-executable",
         "exact": [
-          "src/agentic_workspace/cli.py"
+          "src/agentic_workspace/_runtime_cli.py"
         ],
         "direct_edit_allowed": true,
         "source_contract": "src/agentic_workspace/contracts/operation_contracts.json + src/agentic_workspace/contracts/cli_commands.json + src/agentic_workspace/contracts/python_runtime_boundary.json",
@@ -196,8 +196,8 @@
         "id": "package-cli-runtime",
         "role": "hand-owned-executable",
         "exact": [
-          "packages/planning/src/repo_planning_bootstrap/cli.py",
-          "packages/memory/src/repo_memory_bootstrap/cli.py"
+          "packages/planning/src/repo_planning_bootstrap/_runtime_cli.py",
+          "packages/memory/src/repo_memory_bootstrap/_runtime_cli.py"
         ],
         "direct_edit_allowed": true,
         "source_contract": "package-local CLI source plus package bootstrap payload checks",

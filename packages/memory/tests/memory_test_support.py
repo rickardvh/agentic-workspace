@@ -8,7 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from repo_memory_bootstrap import cli, installer
+from repo_memory_bootstrap import _runtime_cli as cli
+from repo_memory_bootstrap import installer
 from repo_memory_bootstrap._installer_output import _infer_action_category
 from repo_memory_bootstrap._installer_shared import (
     MEMORY_COMPATIBILITY_CONTRACT_FILES,

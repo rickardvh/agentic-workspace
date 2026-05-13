@@ -42,8 +42,8 @@
           },
           "path": {
             "type": "string",
-            "pattern": "^[A-Za-z0-9_./-]+\\.py$",
-            "description": "Path segments or repository path used by this contract."
+            "pattern": "^generated/[A-Za-z0-9_./-]+\\.json$",
+            "description": "Repository path for generated adapter metadata JSON."
           }
         },
         "additionalProperties": false,

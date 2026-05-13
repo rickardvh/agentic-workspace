@@ -16,6 +16,446 @@
       "reason": "record proof and closeout after package-owned #937/#938 implementation",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-13T11:57:03+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
+      "sha256": "c09dd3d343ae812e4e14f4b75688dd03e4545260697afc46a3fcf24a1ce710ba",
+      "command": "agentic-planning promote-to-plan",
+      "reason": "promote planning item github-892-python-codegen-completion",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T12:13:33+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "624367b95cb293da3a4a2af48d6b69251a5a86fa2f41222c3fc660be776a8439",
+      "command": "agentic-planning promote-to-plan",
+      "reason": "promote planning item github-892-python-codegen-completion",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T12:13:33+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/dogfooding-planning-safety-935-plus.plan.json",
+      "sha256": "21b00a697e8284cdc05f8a97af23cd67796a5ce10d79cbb0716f5bdee044862b",
+      "command": "agentic-planning record-recovery",
+      "reason": "mark merged dogfooding plan complete before archive cleanup",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T12:15:06+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/dogfooding-planning-safety-935-plus.plan.json",
+      "sha256": "c3cf6df1c28d17eab1cd7ee6443d89426e5bcbc4beba3dbbbc139e7cb88aafe2",
+      "command": "agentic-planning record-recovery",
+      "reason": "align merged plan intent closeout for archive-and-close",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T12:15:19+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "81b4926d5e327923747a0e4120aa100fb42944c5ed0fc98de06081b6e536e4ea",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan dogfooding-planning-safety-935-plus",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T12:15:23+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
+      "sha256": "e3ea694305480ca8c0a432d0254a7fbad7bc4a2aa891deda1470c9fab15d1cde",
+      "command": "agentic-planning record-recovery",
+      "reason": "narrow active Python codegen execplan from closed #933 next action to root front-door slice before implementation",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T12:19:49+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
+      "sha256": "3fc989d9cb51e41928e3fb5f4c5c1d5e4479a4e13256d740cf1b7bb76c9e0380",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=delegate-exploration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T12:19:49+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "4ed214b46426e6674f77f6694a77d4fc6957d5cd289d3cc68d4ebff83f5d8cee",
+      "command": "agentic-planning record-recovery",
+      "reason": "align active codegen state suggested slice after root front-door execplan narrowing",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T12:31:10+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
+      "sha256": "43cf960865a8d2076dd2184d7e6bf97a69a77f147e2328cfb696f147a3d5fc97",
+      "command": "agentic-planning record-recovery",
+      "reason": "record root front-door slice proof and continuation state",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T12:32:32+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
+      "sha256": "fab8960b3d051c5cb1e08104a11be3f8695338f1cf4946ee0e23c147ec9d0fac",
+      "command": "agentic-planning record-recovery",
+      "reason": "advance active codegen execplan to planning front-door slice",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T12:34:36+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "46ff15b03f6eadc16391d78522705b10d7122ced5cc46fcb13f4ff983821a52c",
+      "command": "agentic-planning record-recovery",
+      "reason": "advance active codegen state to planning front-door slice",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T12:34:36+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
+      "sha256": "7c1877388ba4520bb25f23134b731a67fbae04cb7e63a9e9f8e60014001312de",
+      "command": "agentic-planning record-recovery",
+      "reason": "record planning front-door slice proof and advance to memory front-door slice",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T12:38:03+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8c451d9d2396d190b4a2bf9a31edc61822375caf0cafd08e606133abd34936fe",
+      "command": "agentic-planning record-recovery",
+      "reason": "advance active codegen state to memory front-door slice",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T12:38:03+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "2233245699747827143c56ddfb321d4a3668f790255476e67313705b18d59366",
+      "command": "agentic-planning record-recovery",
+      "reason": "Update active Python codegen lane next slice after memory front-door proof.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T12:44:38+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
+      "sha256": "c7745dc81bb13f9d63a8b49752b46d4f188dc74ac19357cafacc77de658413a4",
+      "command": "agentic-planning record-recovery",
+      "reason": "Record proven memory front-door slice and next Python completion reconciliation gate.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T12:44:38+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "7ebe6639ded0b79c9f6a75c9f6abb685a13bf61d14be05d13b0442cee4d73add",
+      "command": "agentic-planning record-recovery",
+      "reason": "Update Python codegen decomposition after root/planning/memory front-door slices.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T12:45:53+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "91394db4100a4a057957bc3ea9f96959007fbeebd6315217385de8162da3c9fe",
+      "command": "agentic-planning record-recovery",
+      "reason": "Keep decomposition readiness values within schema after status prose update.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T12:46:19+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
+      "sha256": "724e2837097901f522930880b74b1a2c811c4ed682edc4fdde092b2994f405b8",
+      "command": "agentic-planning record-recovery",
+      "reason": "Mark Python codegen completion execplan ready for CLI archive after reconciliation proof.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T13:01:37+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
+      "sha256": "cfd4ef9ee858a30c44d8facf6438110eac07a0ba2aa78815eabcdfad3f763f80",
+      "command": "agentic-planning record-recovery",
+      "reason": "Add explicit tracked cli.py stale-reference sweep required by archive gate.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T13:02:09+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
+      "sha256": "aac187e8a09de9c4ee2c5d1e7e7f3f52bca002f2f17ab00eca45fb952875c940",
+      "command": "agentic-planning record-recovery",
+      "reason": "Add rg stale-reference sweep marker required by archive gate.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T13:02:55+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan .agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T13:03:14+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/python-codegen-completion.plan.json",
+      "sha256": "a04e721ee8d387c5d22b8a22e69baf865ae36cdce86bfc845046605d1f6ce03c",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan .agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T13:03:14+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/python-codegen-completion.plan.json",
+      "sha256": "50733d9c801fba980c4719c92c46d5a49f00e36ca44af46d7eecfd76848ae021",
+      "command": "agentic-planning record-recovery",
+      "reason": "Correct archived Python lane distillation after final reconciliation and active-state fix.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T13:03:46+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/codegen-generated-under-generated-950.plan.json",
+      "sha256": "1f682d4fee512748625e452a25a0550e807b4d1b918c0b787bacfbfdf4f52392",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold codegen-generated-under-generated-950",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T13:33:13+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "952cfe238489caf6673cef51c2b95635c2f52970b75e7e1ce1762b79d0b0e409",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold codegen-generated-under-generated-950",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T13:33:13+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/codegen-generated-under-generated-950.plan.json",
+      "sha256": "5a29d1cbe4adfe7eb891e59dd8fe9a7e1280648e898e669a5ef9b2a4001dd14c",
+      "command": "agentic-planning record-recovery",
+      "reason": "Tighten #950 generated ownership boundary execplan before implementation.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T13:34:35+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "98f541b8b7d9f3067471ca56d4076c356f81b131c639d45ce026862dc393c59f",
+      "command": "agentic-planning record-recovery",
+      "reason": "Update active #950 planning item with concrete generated ownership slice.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T13:34:35+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/codegen-generated-under-generated-950.plan.json",
+      "sha256": "98f5311e53bc7a5188c5d57fc36effe5eff4ea3cd8d2a5914fd306da2fe93765",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T13:39:35+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/codegen-generated-under-generated-950.plan.json",
+      "sha256": "f049f7730a42fffea93b79c85fd93d250d28335a6a5445ce3ba837bfe84c57a8",
+      "command": "agentic-planning record-recovery",
+      "reason": "Record proven #950 generated executable wrapper boundary slice and #951 follow-up.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T13:46:09+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/codegen-generated-under-generated-950.plan.json",
+      "sha256": "115d7d8474b14bc653827279fcd753e7837a806017a4f8b9ef4dc16fda7dc018",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=delegate-exploration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T13:55:36+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/codegen-primitive-docker-proof-952.plan.json",
+      "sha256": "45d6ff6ea4f83ec27793b3a47ba5a8431e6cd5f7e641c1d576668eb496ff851d",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold codegen-primitive-docker-proof-952",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T19:46:10+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "29e50302f89eea470043057b8dacbdc0fbfefd3c74f5dd694927804858135543",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold codegen-primitive-docker-proof-952",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T19:46:10+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/codegen-primitive-docker-proof-952.plan.json",
+      "sha256": "b9881753ef111964dd0ed33f0ff8bd48e6d88896ab43a6802c821dec65ccf4a9",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=delegate-exploration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T19:48:10+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/codegen-ir-extension-boundary-951.plan.json",
+      "sha256": "5b2dc9cfe41a3eaca04623f9715b0fbdae643d25f7bdefefaf09048d55369399",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold codegen-ir-extension-boundary-951",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:02:15+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "3593576143e13a08de2f38142ab06980157d5da6f3f6985c1e391ad23f3db8c5",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold codegen-ir-extension-boundary-951",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:02:15+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/codegen-ir-extension-boundary-951.plan.json",
+      "sha256": "4d75a22df06991cba41ea2a31949adbd4926bdf213297cfed1d827cd3dd1bf17",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=delegate-exploration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:02:20+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/codegen-runtime-binding-data-951.plan.json",
+      "sha256": "a6722638ad742aa762c302864649a5a9038769ef86a41029fc7eba4b3c1150b6",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold codegen-runtime-binding-data-951",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:08:11+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "d900211120e85c20f6b79b938297224009c6fe0f85c0a8da26333340c41a763e",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold codegen-runtime-binding-data-951",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:08:11+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/codegen-runtime-binding-data-951.plan.json",
+      "sha256": "3583a40ae1b5ed1860069fc3a0401aa1a73c815fa9b8f3ea88b2606876a5193f",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:08:17+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/codegen-runtime-binding-data-951.plan.json",
+      "sha256": "4171bf1f1bb84ff5294b29f4e05a1bdc9fd9db8e5eb836ab90a7a8e2bf6b2278",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold codegen-runtime-binding-data-951",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:14:45+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "4c312eac98ea71f7f5e52014c8c0084b3d7ca989ee9e94e4bc19e46c005ee054",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold codegen-runtime-binding-data-951",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:14:45+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/codegen-runtime-binding-data-951.plan.json",
+      "sha256": "e4e746007b07e9c30fda11ad26f6e6bb5cab5c3df2c1e20ff41914208d8487ca",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:16:36+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan .agentic-workspace/planning/execplans/codegen-runtime-binding-data-951.plan.json",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:20:16+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/primitive-extension-target-support-951.plan.json",
+      "sha256": "c0eedfd1243179538d1849c17901f28b85c485cd6b09bb516086b798f67c3651",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold primitive-extension-target-support-951",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:20:56+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "dcafc464e48bd59cf1c6fe6f34db929373fd02cac994ede17b161a4d355c6e3b",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold primitive-extension-target-support-951",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:20:56+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/primitive-extension-target-support-951.plan.json",
+      "sha256": "39628cd95178c7ddfb25715f0a4f9d07658c6badb0840b13f5159cd110864109",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:21:00+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/primitive-extension-target-support-951.plan.json",
+      "sha256": "53480d04ac90c59798b8cc7d2d9f8b00b5f69481ea33e15ee62cc49472245401",
+      "command": "agentic-planning record-recovery",
+      "reason": "Intentional plan closeout update after implementing the bounded #951 target support matrix slice.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T20:23:58+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/primitive-extension-target-support-951.plan.json",
+      "sha256": "039ac32f41bb455004cc8cde02301a41122b7c7c5e7eb14ff7d5eb6d9fa43792",
+      "command": "agentic-planning record-recovery",
+      "reason": "Intentional final proof and closure status update after broad validation passed.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T20:25:43+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan .agentic-workspace/planning/execplans/primitive-extension-target-support-951.plan.json",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:25:51+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/generated-cli-package-source-folder-cleanup.plan.json",
+      "sha256": "eb953c9a06dff7ce9c218a6ef8b72a2b0bde368ff3d211c38f55cee94cfe8594",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold generated-cli-package-source-folder-cleanup",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:40:06+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "4cdb9c8364680baf39d16a95283e6ddca6cc9b3ba4564691a9d8ae7e412cc434",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold generated-cli-package-source-folder-cleanup",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:40:06+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/generated-cli-package-source-folder-cleanup.plan.json",
+      "sha256": "634942f2e52433fa383c3806cd9d88354790fa3a1bcb30194d8186d45277e67a",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:40:11+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/generated-cli-package-source-folder-cleanup.plan.json",
+      "sha256": "c10b2a7251a872f1b81bcffef93abae74d9fc5be0c183dbc0f7763e1e99d3671",
+      "command": "agentic-planning record-recovery",
+      "reason": "Intentional closeout field update after validating generated CLI package source folder cleanup.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T20:44:15+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/generated-cli-package-source-folder-cleanup.plan.json",
+      "sha256": "a04946349d628d0277cc35f2f13f044cb1c3df721bca6610a5ec6ead98e6af1e",
+      "command": "agentic-planning record-recovery",
+      "reason": "Intentional final follow-on routing closeout update after archive validation requested it.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T20:44:35+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan .agentic-workspace/planning/execplans/generated-cli-package-source-folder-cleanup.plan.json",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T20:44:42+00:00"
     }
   ]
 }

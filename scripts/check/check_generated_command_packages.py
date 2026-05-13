@@ -79,6 +79,14 @@ PYTHON_COMPLETION_EXPECTED_PROOF_SUBSTRINGS = {
     "operation-execution-inventory-exhaustive": "_validate_python_operation_execution_inventory",
 }
 PYTHON_OPERATION_EXECUTION_FINAL_STATUSES = {"runtime-consumed", "accepted-hand-owned-runtime-primitive"}
+REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE = {
+    "path.target_root.resolve",
+    "filesystem.read",
+    "filesystem.glob",
+    "json.parse",
+    "payload.assemble",
+    "output.emit",
+}
 
 
 def _run(command: list[str]) -> int:
@@ -108,15 +116,20 @@ def _conformance_env(*, runtime: str | None = None) -> dict[str, str]:
 
 def _runtime_module_for_package(package_id: str) -> str:
     modules = {
-        "root-workspace": "agentic_workspace.cli",
-        "planning-bootstrap": "repo_planning_bootstrap.cli",
-        "memory-bootstrap": "repo_memory_bootstrap.cli",
+        "root-workspace": "agentic_workspace.generated_cli_package",
+        "planning-bootstrap": "repo_planning_bootstrap.generated_cli_package",
+        "memory-bootstrap": "repo_memory_bootstrap.generated_cli_package",
     }
     return modules[package_id]
 
 
 def _python_command_for_package(package_id: str) -> list[str]:
-    return [_python_executable(), "-m", _runtime_module_for_package(package_id)]
+    module = _runtime_module_for_package(package_id)
+    return [
+        _python_executable(),
+        "-c",
+        f"import sys; from {module} import main; raise SystemExit(main(sys.argv[1:]))",
+    ]
 
 
 def _capture(command: list[str], *, cwd: Path, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
@@ -715,7 +728,9 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
     except (ImportError, KeyError, FileNotFoundError, json.JSONDecodeError) as exc:
         errors.append(f"generated memory operation contract could not be loaded: {exc}")
 
-    memory_cli_text = (REPO_ROOT / "packages" / "memory" / "src" / "repo_memory_bootstrap" / "cli.py").read_text(encoding="utf-8")
+    memory_cli_text = (
+        REPO_ROOT / "packages" / "memory" / "src" / "repo_memory_bootstrap" / "_runtime_cli.py"
+    ).read_text(encoding="utf-8")
     for function_name in ("_run_list_files_report_adapter", "_run_list_skills_report_adapter"):
         function_index = memory_cli_text.find(f"def {function_name}")
         next_function_index = memory_cli_text.find("\ndef ", function_index + 1)
@@ -746,9 +761,9 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
 def _validate_python_runtime_handler_boundary() -> list[str]:
     errors: list[str] = []
     package_modules = {
-        "root-workspace": ("agentic_workspace.generated_cli_package", "agentic_workspace.cli"),
-        "planning-bootstrap": ("repo_planning_bootstrap.generated_cli_package", "repo_planning_bootstrap.cli"),
-        "memory-bootstrap": ("repo_memory_bootstrap.generated_cli_package", "repo_memory_bootstrap.cli"),
+        "root-workspace": ("agentic_workspace.generated_cli_package", "agentic_workspace._runtime_cli"),
+        "planning-bootstrap": ("repo_planning_bootstrap.generated_cli_package", "repo_planning_bootstrap._runtime_cli"),
+        "memory-bootstrap": ("repo_memory_bootstrap.generated_cli_package", "repo_memory_bootstrap._runtime_cli"),
     }
     for package_id, (generated_module_name, runtime_module_name) in package_modules.items():
         try:
@@ -799,9 +814,9 @@ def _validate_no_legacy_generated_adapter_runtime_import(*, relative_path: str, 
 def _validate_generated_python_commands_absent_from_handwritten_parsers() -> list[str]:
     errors: list[str] = []
     package_modules = {
-        "root-workspace": ("agentic_workspace.generated_cli_package", "agentic_workspace.cli"),
-        "planning-bootstrap": ("repo_planning_bootstrap.generated_cli_package", "repo_planning_bootstrap.cli"),
-        "memory-bootstrap": ("repo_memory_bootstrap.generated_cli_package", "repo_memory_bootstrap.cli"),
+        "root-workspace": ("agentic_workspace.generated_cli_package", "agentic_workspace._runtime_cli"),
+        "planning-bootstrap": ("repo_planning_bootstrap.generated_cli_package", "repo_planning_bootstrap._runtime_cli"),
+        "memory-bootstrap": ("repo_memory_bootstrap.generated_cli_package", "repo_memory_bootstrap._runtime_cli"),
     }
     for package_id, (generated_module_name, runtime_module_name) in package_modules.items():
         generated_module = importlib.import_module(generated_module_name)
@@ -1143,9 +1158,9 @@ def _validate_static_surfaces() -> list[str]:
                             f"{generated_root}/generated_cli_package/adapter_commands.json drifted from generated adapter projection"
                         )
         generated_entrypoints = {
-            "src/agentic_workspace/cli.py": "agentic_workspace.generated_cli_package",
-            "packages/planning/src/repo_planning_bootstrap/cli.py": "repo_planning_bootstrap.generated_cli_package",
-            "packages/memory/src/repo_memory_bootstrap/cli.py": "repo_memory_bootstrap.generated_cli_package",
+            "src/agentic_workspace/_runtime_cli.py": "agentic_workspace.generated_cli_package",
+            "packages/planning/src/repo_planning_bootstrap/_runtime_cli.py": "repo_planning_bootstrap.generated_cli_package",
+            "packages/memory/src/repo_memory_bootstrap/_runtime_cli.py": "repo_memory_bootstrap.generated_cli_package",
         }
         for relative_path, import_name in generated_entrypoints.items():
             text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
@@ -1160,16 +1175,29 @@ def _validate_static_surfaces() -> list[str]:
         errors.extend(_validate_python_runtime_handler_boundary())
         errors.extend(_validate_generated_python_commands_absent_from_handwritten_parsers())
         durable_source_roots = {
-            "src/agentic_workspace/generated_cli_package/__init__.py": "generated/python/workspace-cli",
-            "packages/planning/src/repo_planning_bootstrap/generated_cli_package/__init__.py": "generated/python/planning-cli",
-            "packages/memory/src/repo_memory_bootstrap/generated_cli_package/__init__.py": "generated/python/memory-cli",
+            "src/agentic_workspace/generated_cli_package.py": "generated/python/workspace-cli",
+            "packages/planning/src/repo_planning_bootstrap/generated_cli_package.py": "generated/python/planning-cli",
+            "packages/memory/src/repo_memory_bootstrap/generated_cli_package.py": "generated/python/memory-cli",
         }
+        forbidden_generated_entrypoints = [
+            "src/agentic_workspace/generated_cli_entrypoint.py",
+            "src/agentic_workspace/generated_cli_package/__init__.py",
+            "packages/planning/src/repo_planning_bootstrap/generated_cli_entrypoint.py",
+            "packages/planning/src/repo_planning_bootstrap/generated_cli_package/__init__.py",
+            "packages/memory/src/repo_memory_bootstrap/generated_cli_entrypoint.py",
+            "packages/memory/src/repo_memory_bootstrap/generated_cli_package/__init__.py",
+        ]
+        for relative_path in forbidden_generated_entrypoints:
+            if (REPO_ROOT / relative_path).exists():
+                errors.append(f"{relative_path} is obsolete generated-owned source layout outside generated/python")
         for relative_path, generated_root in durable_source_roots.items():
             text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
             if "Generated runtime-backed Python command adapter" in text or "DO NOT EDIT DIRECTLY." in text:
                 errors.append(f"{relative_path} still contains durable generated Python output instead of package-local glue")
             if generated_root not in text:
                 errors.append(f"{relative_path} does not bridge to {generated_root}")
+            if "main = _generated.main" not in text:
+                errors.append(f"{relative_path} does not expose generated package main() from generated/python")
         conformance_cases, conformance_errors = _runnable_typescript_conformance_cases()
         errors.extend(f"static conformance coverage drift: {error}" for error in conformance_errors)
         if not conformance_errors and not conformance_cases:
@@ -1180,6 +1208,17 @@ def _validate_static_surfaces() -> list[str]:
     python_conformance_dockerfile = REPO_ROOT / "generated" / "python" / "Dockerfile.conformance"
     if not python_conformance_dockerfile.is_file():
         errors.append("generated/python/Dockerfile.conformance is missing")
+    primitive_conformance_dockerfile = REPO_ROOT / "generated" / "python" / "Dockerfile.primitive-conformance"
+    if not primitive_conformance_dockerfile.is_file():
+        errors.append("generated/python/Dockerfile.primitive-conformance is missing")
+    primitive_conformance_script = REPO_ROOT / "packages" / "command-generation" / "tests" / "primitive_conformance.py"
+    if not primitive_conformance_script.is_file():
+        errors.append("packages/command-generation/tests/primitive_conformance.py is missing")
+    else:
+        primitive_conformance_text = primitive_conformance_script.read_text(encoding="utf-8")
+        for primitive_id in sorted(REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE):
+            if primitive_id not in primitive_conformance_text:
+                errors.append(f"primitive conformance is missing required primitive case: {primitive_id}")
     conformance_dockerfile = REPO_ROOT / "generated" / "typescript" / "Dockerfile.conformance"
     if not conformance_dockerfile.is_file():
         errors.append("generated/typescript/Dockerfile.conformance is missing")
@@ -1232,6 +1271,10 @@ def _run_docker(tag: str, *, dockerfile: str, proof_label: str, require_docker: 
     return _run(["docker", "run", "--rm", tag])
 
 
+def _run_primitive_conformance() -> int:
+    return _run([_python_executable(), "packages/command-generation/tests/primitive_conformance.py"])
+
+
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Check generated command package outputs.")
     parser.add_argument(
@@ -1260,6 +1303,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Run generated Python adapter conformance inside Docker.",
     )
     parser.add_argument(
+        "--primitive-conformance",
+        action="store_true",
+        help="Run command-generation owned primitive executor conformance locally.",
+    )
+    parser.add_argument(
+        "--primitive-docker-conformance",
+        action="store_true",
+        help="Run command-generation owned primitive executor conformance inside Docker.",
+    )
+    parser.add_argument(
         "--require-node",
         action="store_true",
         help="Fail instead of skipping adapter conformance when Node is unavailable.",
@@ -1273,6 +1326,11 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--python-tag",
         default="agentic-workspace-generated-python-cli-test",
         help="Docker image tag used for generated Python package conformance.",
+    )
+    parser.add_argument(
+        "--primitive-tag",
+        default="agentic-workspace-generated-python-primitive-test",
+        help="Docker image tag used for generated primitive executor conformance.",
     )
     parser.add_argument(
         "--require-docker",
@@ -1300,6 +1358,10 @@ def main(argv: list[str] | None = None) -> int:
                 print(error)
             return 1
         print("[ok] generated Python command package adapter conformance")
+    if args.primitive_conformance:
+        primitive_status = _run_primitive_conformance()
+        if primitive_status:
+            return primitive_status
     if args.conformance:
         conformance_errors = _run_adapter_conformance(require_node=bool(args.require_node))
         if conformance_errors:
@@ -1314,6 +1376,15 @@ def main(argv: list[str] | None = None) -> int:
             f"{args.python_tag}-conformance",
             dockerfile="generated/python/Dockerfile.conformance",
             proof_label="generated Python package Docker conformance proof",
+            require_docker=bool(args.require_docker),
+        )
+        if docker_status:
+            return docker_status
+    if args.primitive_docker_conformance:
+        docker_status = _run_docker(
+            f"{args.primitive_tag}-conformance",
+            dockerfile="generated/python/Dockerfile.primitive-conformance",
+            proof_label="generated primitive executor Docker conformance proof",
             require_docker=bool(args.require_docker),
         )
         if docker_status:
@@ -1336,7 +1407,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         if docker_status:
             return docker_status
-    if args.docker or args.docker_conformance:
+    if args.docker or args.docker_conformance or args.primitive_docker_conformance:
         print("[ok] generated command package Docker proof")
         return 0
     print("[ok] generated command package static proof")

@@ -3,12 +3,13 @@ from __future__ import annotations
 import argparse
 import ast
 import importlib.util
+import json
 import tempfile
 from pathlib import Path
 
 from jsonschema import Draft202012Validator
 
-from agentic_workspace import cli
+from agentic_workspace import _runtime_cli as cli
 from agentic_workspace.contract_tooling import (
     authority_markers_manifest,
     cli_commands_manifest,
@@ -42,7 +43,6 @@ from agentic_workspace.contract_tooling import (
     workflow_definition_format_manifest,
     workspace_surfaces_manifest,
 )
-from agentic_workspace.generated_command_adapters import GENERATED_COMMAND_ADAPTERS_BY_COMMAND
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -204,7 +204,7 @@ def _sample_setup_findings_payload() -> dict[str, object]:
                 "class": "repo_friction_evidence",
                 "summary": "Large shared workspace CLI surface is still a hotspot.",
                 "confidence": 0.91,
-                "path": "src/agentic_workspace/cli.py",
+                "path": "src/agentic_workspace/_runtime_cli.py",
                 "refs": [".agentic-workspace/docs/reporting-contract.md"],
                 "why": "Would reduce rediscovery during later repo work.",
             },
@@ -251,7 +251,7 @@ def _sample_startup_context_payload() -> dict[str, object]:
         (target / ".git").mkdir(exist_ok=True)
         return cli._start_payload(  # type: ignore[attr-defined]
             target_root=target,
-            changed_paths=["src/agentic_workspace/cli.py"],
+            changed_paths=["src/agentic_workspace/_runtime_cli.py"],
         )
 
 
@@ -264,7 +264,7 @@ def _sample_implementer_context_payload() -> dict[str, object]:
             target_root=target,
             changed_paths=[
                 "packages/planning/bootstrap/repo_planning_bootstrap/installer.py",
-                "src/agentic_workspace/cli.py",
+                "src/agentic_workspace/_runtime_cli.py",
             ],
         )
 
@@ -305,6 +305,71 @@ def _validate_operation_primitives(payload: dict[str, object]) -> list[str]:
             errors.append("operation_primitives.json ir_model must declare boundary_rules")
         if "general-purpose" not in " ".join(str(rule) for rule in boundary_rules).lower():
             errors.append("operation_primitives.json ir_model must explicitly guard against becoming a general-purpose language")
+    ownership = payload.get("module_ir_ownership")
+    if not isinstance(ownership, dict):
+        errors.append("operation_primitives.json must declare module_ir_ownership")
+        namespace_prefixes: dict[str, str] = {}
+    else:
+        namespaces = ownership.get("namespaces")
+        if not isinstance(namespaces, list) or not namespaces:
+            errors.append("operation_primitives.json module_ir_ownership must declare namespaces")
+            namespace_prefixes = {}
+        else:
+            namespace_prefixes = {}
+            for namespace in namespaces:
+                if not isinstance(namespace, dict):
+                    errors.append("operation_primitives.json module_ir_ownership namespaces must be objects")
+                    continue
+                namespace_id = str(namespace.get("id", ""))
+                prefix = str(namespace.get("operation_id_prefix", ""))
+                owner = str(namespace.get("contract_owner", ""))
+                if not namespace_id or not prefix or not owner:
+                    errors.append("operation_primitives.json module_ir_ownership namespace missing id, operation_id_prefix, or contract_owner")
+                    continue
+                namespace_prefixes[namespace_id] = prefix
+            prefixes = list(namespace_prefixes.values())
+            if len(prefixes) != len(set(prefixes)):
+                errors.append("operation_primitives.json module_ir_ownership contains duplicate operation_id_prefix values")
+            for prefix in prefixes:
+                overlapping = sorted(other for other in prefixes if other != prefix and other.startswith(prefix))
+                if overlapping:
+                    errors.append(
+                        "operation_primitives.json module_ir_ownership contains overlapping prefix "
+                        f"{prefix!r}: "
+                        + ", ".join(overlapping)
+                    )
+    extension_boundary = payload.get("primitive_extension_boundary")
+    if not isinstance(extension_boundary, dict):
+        errors.append("operation_primitives.json must declare primitive_extension_boundary")
+    else:
+        for field in ("portable_support_rule", "module_extension_rule", "target_support_rule"):
+            if not isinstance(extension_boundary.get(field), str) or not str(extension_boundary.get(field)).strip():
+                errors.append(f"operation_primitives.json primitive_extension_boundary missing {field}")
+        support_matrix = extension_boundary.get("target_support_matrix")
+        if not isinstance(support_matrix, list) or not support_matrix:
+            errors.append("operation_primitives.json primitive_extension_boundary must declare target_support_matrix")
+        else:
+            support_targets: dict[str, dict[str, object]] = {}
+            for entry in support_matrix:
+                if not isinstance(entry, dict):
+                    errors.append("operation_primitives.json target_support_matrix entries must be objects")
+                    continue
+                target = str(entry.get("target", ""))
+                status = str(entry.get("status", ""))
+                conformance_ref = str(entry.get("conformance_ref", ""))
+                unsupported_behavior = str(entry.get("unsupported_behavior", ""))
+                if not target or not status or not conformance_ref or not unsupported_behavior:
+                    errors.append("operation_primitives.json target_support_matrix entries need target, status, conformance_ref, and unsupported_behavior")
+                    continue
+                support_targets[target] = entry
+                implemented = entry.get("implemented_shared_primitives", [])
+                if status == "implemented" and (not isinstance(implemented, list) or not implemented):
+                    errors.append(f"operation_primitives.json target {target} must list implemented_shared_primitives")
+                if status in {"unsupported-reported", "deferred"} and not unsupported_behavior:
+                    errors.append(f"operation_primitives.json target {target} must describe unsupported_behavior")
+            for required_target in ("python", "typescript", "bash", "powershell"):
+                if required_target not in support_targets:
+                    errors.append(f"operation_primitives.json target_support_matrix missing target {required_target}")
     primitives = payload.get("primitives")
     if not isinstance(primitives, list) or not primitives:
         errors.append("operation_primitives.json must contain at least one primitive")
@@ -342,7 +407,42 @@ def _validate_operation_primitives(payload: dict[str, object]) -> list[str]:
     missing_kinds = sorted(required_target_executor_kinds - target_executor_kinds)
     if missing_kinds:
         errors.append("operation_primitives.json target-executor coverage missing kind(s): " + ", ".join(missing_kinds))
+    if isinstance(extension_boundary, dict):
+        support_matrix = extension_boundary.get("target_support_matrix")
+        if isinstance(support_matrix, list):
+            implemented_target_primitives = {
+                str(primitive_id)
+                for entry in support_matrix
+                if isinstance(entry, dict) and entry.get("status") == "implemented"
+                for primitive_id in entry.get("implemented_shared_primitives", [])
+                if isinstance(primitive_id, str)
+            }
+            schema_backed_primitives = {
+                str(primitive["id"])
+                for primitive in primitives
+                if isinstance(primitive, dict)
+                and primitive.get("portability") == "target-executor"
+                and isinstance(primitive.get("input_schema_ref"), str)
+                and isinstance(primitive.get("output_schema_ref"), str)
+            }
+            missing_support = sorted(schema_backed_primitives - implemented_target_primitives)
+            if missing_support:
+                errors.append("operation_primitives.json schema-backed primitives missing implemented target support: " + ", ".join(missing_support))
     return errors
+
+
+def _module_ir_namespace_prefixes() -> list[str]:
+    ownership = operation_primitives_manifest().get("module_ir_ownership", {})
+    if not isinstance(ownership, dict):
+        return []
+    namespaces = ownership.get("namespaces", [])
+    if not isinstance(namespaces, list):
+        return []
+    prefixes: list[str] = []
+    for namespace in namespaces:
+        if isinstance(namespace, dict) and isinstance(namespace.get("operation_id_prefix"), str):
+            prefixes.append(str(namespace["operation_id_prefix"]))
+    return prefixes
 
 
 def _validate_operation_ir_plans() -> list[str]:
@@ -350,6 +450,7 @@ def _validate_operation_ir_plans() -> list[str]:
     operation_refs = operation_contracts_manifest()["operations"]
     primitive_map = {primitive["id"]: primitive for primitive in operation_primitives_manifest()["primitives"]}
     primitive_refs = set(primitive_map)
+    module_prefixes = _module_ir_namespace_prefixes()
     conformance_operation_ids = {contract["operation_id"] for contract in conformance_contracts_manifest()["contracts"]}
     representative_ids: set[str] = set()
     for operation_ref in operation_refs:
@@ -364,6 +465,8 @@ def _validate_operation_ir_plans() -> list[str]:
         operation_id = str(operation.get("id", operation_ref.get("id", "")))
         if status in {"representative", "complete"}:
             representative_ids.add(operation_id)
+            if module_prefixes and not any(operation_id.startswith(prefix) for prefix in module_prefixes):
+                errors.append(f"operation {operation_id} has {status} IR without declared module_ir_ownership namespace")
             if operation_id not in conformance_operation_ids:
                 errors.append(f"operation {operation_id} has representative IR without process conformance")
         steps = ir_plan.get("steps")
@@ -659,7 +762,7 @@ def _generated_command_adapter_statuses() -> tuple[list[dict[str, object]], list
         output_adapters = [
             adapter for adapter in manifest["adapters"] if adapter.get("command", {}).get("program") == program
         ]
-        expected = module._render_generated_module(manifest, program=program)
+        expected = module._render_generated_json(manifest, program=program)
         current = generated_path.read_text(encoding="utf-8") if generated_path.exists() else ""
         is_current = current == expected
         statuses.append(
@@ -685,29 +788,42 @@ def _generated_command_adapter_statuses() -> tuple[list[dict[str, object]], list
                 "run uv run python scripts/generate/generate_command_adapters.py"
             )
 
-    expected_by_command = {
-        str(adapter["command"]["name"]): {
-            "id": adapter["id"],
-            "status": adapter["status"],
-            "operation_id": adapter["operation_ref"]["id"],
-            "runtime_binding": adapter["runtime_binding"],
-            "effect_hints": adapter["effect_hints"],
-            "schemas": adapter["schemas"],
-            "conformance_refs": adapter["conformance_refs"],
+        expected_by_command = {
+            str(adapter["command"]["name"]): {
+                "id": adapter["id"],
+                "status": adapter["status"],
+                "command": adapter["command"],
+                "operation_id": adapter["operation_ref"]["id"],
+                "runtime_binding": adapter["runtime_binding"],
+                "effect_hints": adapter["effect_hints"],
+                "schemas": adapter["schemas"],
+                "conformance_refs": adapter["conformance_refs"],
+            }
+            for adapter in manifest["adapters"]
+            if adapter["command"]["program"] == program
         }
-        for adapter in command_adapter_generation_manifest()["adapters"]
-        if adapter["command"]["program"] == "agentic-workspace"
-    }
-    for command_name, expected_adapter in expected_by_command.items():
-        actual_adapter = GENERATED_COMMAND_ADAPTERS_BY_COMMAND.get(command_name)
-        if actual_adapter is None:
-            errors.append(f"generated adapter layer: missing generated adapter for command {command_name}")
+        try:
+            payload = json.loads(current) if current else {}
+        except json.JSONDecodeError as exc:
+            errors.append(f"generated adapter layer: {generated_path.relative_to(repo_root).as_posix()} is not valid JSON: {exc}")
             continue
-        for key, expected_value in expected_adapter.items():
-            if actual_adapter.get(key) != expected_value:
-                errors.append(f"generated adapter layer: {command_name} {key} drifted from command_adapter_generation.json")
-    for command_name in set(GENERATED_COMMAND_ADAPTERS_BY_COMMAND) - set(expected_by_command):
-        errors.append(f"generated adapter layer: unexpected generated adapter for command {command_name}")
+        actual_by_command = payload.get("adapters_by_command", {}) if isinstance(payload, dict) else {}
+        if not isinstance(actual_by_command, dict):
+            errors.append(f"generated adapter layer: {generated_path.relative_to(repo_root).as_posix()} missing adapters_by_command object")
+            continue
+        for command_name, expected_adapter in expected_by_command.items():
+            actual_adapter = actual_by_command.get(command_name)
+            if actual_adapter is None:
+                errors.append(f"generated adapter layer: missing generated adapter for {program} command {command_name}")
+                continue
+            if not isinstance(actual_adapter, dict):
+                errors.append(f"generated adapter layer: {program} command {command_name} adapter is not an object")
+                continue
+            for key, expected_value in expected_adapter.items():
+                if actual_adapter.get(key) != expected_value:
+                    errors.append(f"generated adapter layer: {program} command {command_name} {key} drifted from command_adapter_generation.json")
+        for command_name in set(actual_by_command) - set(expected_by_command):
+            errors.append(f"generated adapter layer: unexpected generated adapter for {program} command {command_name}")
     return statuses, errors
 
 
@@ -1090,11 +1206,11 @@ def _program_parser(program: str) -> argparse.ArgumentParser | None:
     if program == "agentic-workspace":
         return cli.build_parser()
     if program == "agentic-planning":
-        from repo_planning_bootstrap import cli as planning_cli
+        from repo_planning_bootstrap import _runtime_cli as planning_cli
 
         return planning_cli.build_parser()
     if program == "agentic-memory":
-        from repo_memory_bootstrap import cli as memory_cli
+        from repo_memory_bootstrap import _runtime_cli as memory_cli
 
         return memory_cli.build_parser()
     return None

@@ -15,6 +15,78 @@
       "The behavior requires complex conflict resolution or destructive mutation sequencing."
     ]
   },
+  "module_ir_ownership": {
+    "rule": "Module-owned operation IR may remain physically centralized during the Python lane, but each operation id must belong to an explicit module namespace and codegen must consume it as data rather than importing module runtime code.",
+    "namespaces": [
+      {
+        "id": "workspace",
+        "operation_id_prefix": "workspace.",
+        "contract_owner": "src/agentic_workspace/contracts",
+        "current_contract_root": "src/agentic_workspace/contracts/operations",
+        "future_contract_root": "modules/workspace/contracts"
+      },
+      {
+        "id": "planning",
+        "operation_id_prefix": "planning.",
+        "contract_owner": "packages/planning",
+        "current_contract_root": "src/agentic_workspace/contracts/operations",
+        "future_contract_root": "packages/planning/contracts"
+      },
+      {
+        "id": "memory",
+        "operation_id_prefix": "memory.",
+        "contract_owner": "packages/memory",
+        "current_contract_root": "src/agentic_workspace/contracts/operations",
+        "future_contract_root": "packages/memory/contracts"
+      }
+    ]
+  },
+  "primitive_extension_boundary": {
+    "portable_support_rule": "Target-executor primitives are shared codegen primitives and must declare semantics plus input/output schemas before they count as portable executor coverage.",
+    "module_extension_rule": "Module-specific primitives are domain-runtime extensions owned by the module namespace; they must remain explicit primitive ids and must not be counted as shared codegen primitive completion.",
+    "target_support_rule": "Each target executor must either implement every shared target-executor primitive used by its generated operations or visibly report unsupported module/domain-runtime primitive extensions in conformance.",
+    "target_support_matrix": [
+      {
+        "target": "python",
+        "status": "implemented",
+        "implemented_shared_primitives": [
+          "path.target_root.resolve",
+          "filesystem.read",
+          "filesystem.glob",
+          "json.parse",
+          "payload.assemble",
+          "output.emit"
+        ],
+        "domain_runtime_extension_behavior": "Python generated packages may bridge explicit domain-runtime primitives through the declared runtime module binding; that bridge is not counted as shared primitive executor coverage.",
+        "conformance_ref": "packages/command-generation/tests/primitive_conformance.py and scripts/check/check_generated_command_packages.py --primitive-docker-conformance --require-docker",
+        "unsupported_behavior": "Unsupported primitive ids must fail as executor errors rather than silently falling back to package internals."
+      },
+      {
+        "target": "typescript",
+        "status": "unsupported-reported",
+        "implemented_shared_primitives": [],
+        "domain_runtime_extension_behavior": "TypeScript generated packages currently expose weak-agent-safe process adapters and must report runtime handoff or unsupported routing instead of claiming independent primitive execution.",
+        "conformance_ref": "scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
+        "unsupported_behavior": "Primitive IR execution is not implemented for TypeScript; conformance proves generated adapters surface runtime handoff and unsupported-command recovery guidance."
+      },
+      {
+        "target": "bash",
+        "status": "deferred",
+        "implemented_shared_primitives": [],
+        "domain_runtime_extension_behavior": "Bash generation is deferred and must not be counted as primitive executor support.",
+        "conformance_ref": "src/agentic_workspace/contracts/command_package_ir.json target maturity declarations",
+        "unsupported_behavior": "Deferred target status is declared in command_package_ir instead of emitting executable primitive support."
+      },
+      {
+        "target": "powershell",
+        "status": "deferred",
+        "implemented_shared_primitives": [],
+        "domain_runtime_extension_behavior": "PowerShell generation is deferred and must not be counted as primitive executor support.",
+        "conformance_ref": "src/agentic_workspace/contracts/command_package_ir.json target maturity declarations",
+        "unsupported_behavior": "Deferred target status is declared in command_package_ir instead of emitting executable primitive support."
+      }
+    ]
+  },
   "primitives": [
     {
       "id": "path.target_root.resolve",

@@ -612,11 +612,19 @@ def test_operation_ir_has_portable_representative_command() -> None:
 
     primitive_errors = module._validate_operation_primitives(module.operation_primitives_manifest())
     ir_errors = module._validate_operation_ir_plans()
+    primitive_registry = module.operation_primitives_manifest()
     operation = contract_tooling.operation_manifest("operations/memory.list-files.report.json")
     used = [step["uses"] for step in operation["ir_plan"]["steps"]]
+    support_matrix = {entry["target"]: entry for entry in primitive_registry["primitive_extension_boundary"]["target_support_matrix"]}
 
     assert primitive_errors == []
     assert ir_errors == []
+    assert primitive_registry["module_ir_ownership"]["namespaces"]
+    assert primitive_registry["primitive_extension_boundary"]["target_support_rule"]
+    assert support_matrix["python"]["status"] == "implemented"
+    assert "path.target_root.resolve" in support_matrix["python"]["implemented_shared_primitives"]
+    assert support_matrix["typescript"]["status"] == "unsupported-reported"
+    assert "runtime handoff" in support_matrix["typescript"]["unsupported_behavior"]
     assert operation["ir_plan"]["status"] == "representative"
     assert used == [
         "path.target_root.resolve",
@@ -625,6 +633,55 @@ def test_operation_ir_has_portable_representative_command() -> None:
         "output.emit",
     ]
     assert operation["migration_status"] == "runtime-consumed"
+
+
+def test_operation_ir_requires_declared_module_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
+    spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    registry = copy.deepcopy(module.operation_primitives_manifest())
+    registry["module_ir_ownership"]["namespaces"] = [
+        {
+            "id": "planning",
+            "operation_id_prefix": "planning.",
+            "contract_owner": "packages/planning",
+            "current_contract_root": "src/agentic_workspace/contracts/operations",
+            "future_contract_root": "packages/planning/contracts",
+        }
+    ]
+    monkeypatch.setattr(module, "operation_primitives_manifest", lambda: registry)
+
+    errors = module._validate_operation_ir_plans()
+
+    assert any("memory.list-files.report" in error and "module_ir_ownership" in error for error in errors)
+
+
+def test_operation_primitives_require_target_support_matrix(monkeypatch: pytest.MonkeyPatch) -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
+    spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    registry = copy.deepcopy(module.operation_primitives_manifest())
+    registry["primitive_extension_boundary"]["target_support_matrix"] = [
+        {
+            "target": "typescript",
+            "status": "unsupported-reported",
+            "implemented_shared_primitives": [],
+            "domain_runtime_extension_behavior": "reported through runtime handoff",
+            "conformance_ref": "scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
+            "unsupported_behavior": "primitive execution is not implemented",
+        }
+    ]
+
+    errors = module._validate_operation_primitives(registry)
+
+    assert any("missing target python" in error for error in errors)
+    assert any("schema-backed primitives missing implemented target support" in error for error in errors)
 
 
 def test_python_operation_execution_inventory_tracks_representative_runtime_consumption() -> None:
@@ -951,14 +1008,14 @@ def test_generated_typescript_package_adapters_are_runnable() -> None:
         "planning-cli": (
             "@agentic-workspace/planning-cli",
             "agentic-planning",
-            "python -m repo_planning_bootstrap.cli",
+            "repo_planning_bootstrap.generated_cli_package",
             "weak-agent-safe-adapter",
             "allowed-read-only",
         ),
         "memory-cli": (
             "@agentic-workspace/memory-cli",
             "agentic-memory",
-            "python -m repo_memory_bootstrap.cli",
+            "repo_memory_bootstrap.generated_cli_package",
             "weak-agent-safe-adapter",
             "allowed-read-only",
         ),
@@ -974,7 +1031,7 @@ def test_generated_typescript_package_adapters_are_runnable() -> None:
         metadata = package_json["agenticWorkspace"]
         assert metadata["fixtureOnly"] is False
         assert metadata["generationStatus"] == maturity
-        assert metadata["effectiveRuntimeCommand"] == runtime_command
+        assert runtime_command in metadata["effectiveRuntimeCommand"]
         assert metadata["maturity"]["id"] == maturity
         assert metadata["maturity"]["runnable"] is True
         assert metadata["maturity"]["weak_agent_routing"] == weak_agent_routing
@@ -988,14 +1045,15 @@ def test_generated_typescript_package_adapters_are_runnable() -> None:
         assert "generated runnable adapter preserves spaced argv values during runtime handoff" in test_text
 
 
-def test_generated_command_adapter_module_routes_direct_edits_to_authoritative_sources() -> None:
-    generated_path = Path(__file__).resolve().parents[1] / "src" / "agentic_workspace" / "generated_command_adapters.py"
+def test_generated_command_adapter_metadata_routes_direct_edits_to_authoritative_sources() -> None:
+    generated_path = Path(__file__).resolve().parents[1] / "generated" / "python" / "workspace-cli" / "generated_command_adapters.json"
     generated_text = generated_path.read_text(encoding="utf-8")
+    generated_payload = json.loads(generated_text)
 
-    assert "DO NOT EDIT DIRECTLY." in generated_text
-    assert "src/agentic_workspace/contracts/command_adapter_generation.json" in generated_text
-    assert "hand-written operation/primitive implementation code" in generated_text
-    assert "uv run python scripts/generate/generate_command_adapters.py" in generated_text
+    assert generated_payload["source"] == "src/agentic_workspace/contracts/command_adapter_generation.json"
+    assert generated_payload["program"] == "agentic-workspace"
+    assert generated_payload["regenerate_with"] == "uv run python scripts/generate/generate_command_adapters.py"
+    assert "adapters_by_command" in generated_payload
 
 
 def test_python_runtime_boundary_declares_root_cli_authority_audit() -> None:
@@ -1009,7 +1067,7 @@ def test_python_runtime_boundary_declares_root_cli_authority_audit() -> None:
     boundaries = {item["id"]: item for item in manifest["boundaries"]}
     assert boundaries["report-router-rendering"]["owner_modules"] == [
         "agentic_workspace.reporting_support",
-        "agentic_workspace.cli",
+        "agentic_workspace._runtime_cli",
     ]
     assert boundaries["report-router-rendering"]["classification"] == "operation-contract-covered"
     statuses = {item["status"] for item in audit["current_audit"]}

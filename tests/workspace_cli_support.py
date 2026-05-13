@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 from jsonschema import Draft202012Validator
 
-from agentic_workspace import cli
+from agentic_workspace import _runtime_cli as cli
 from agentic_workspace.contract_tooling import authority_markers_manifest, cli_commands_manifest
 from agentic_workspace.result_adapter import adapt_action, adapt_module_result
 
@@ -69,7 +69,7 @@ def _assert_invoked_cli_identity(payload: dict[str, object], *, target_relation:
     assert identity["source_class"] in {"source-checkout", "installed-package", "unknown"}
     if "confidence" in identity:
         assert identity["confidence"] in {"high", "medium", "low"}
-    assert str(identity["module_path"]).endswith("src/agentic_workspace/cli.py")
+    assert str(identity["module_path"]).endswith("src/agentic_workspace/_runtime_cli.py")
     if "python_executable" in identity:
         assert identity["python_executable"]
     assert identity["target_relation"] == target_relation
