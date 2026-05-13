@@ -30,7 +30,7 @@
     "hard_constraints": "Do not widen into a full planning provenance system unless it is necessary for this safety gate. Preserve direct narrow-work fast paths. Use the workspace front-door CLI in user-facing commands.",
     "agent_may_decide": "Implement one shared start/implement planning-safety gate, add concrete promotion/escalation guidance, and route any remaining manual-provenance work honestly.",
     "escalate_when": "A fix requires durable mutation provenance, a new planning state schema, or broad rewrite of planning installer surfaces.",
-    "next_action": "Add a root workspace planning-safety gate that blocks or flags broad/high-assurance/decomposed implementation without active execplan ownership and detects changed-path scope growth.",
+      "next_action": "Add a root workspace planning-safety gate that blocks or flags broad, high-assurance, or decomposed implementation without active execplan ownership and detects changed-path scope growth.",
     "proof_expectations": [
       "uv run pytest tests/test_workspace_start_preflight_cli.py tests/test_workspace_summary_cli.py packages/planning/tests/test_promote.py -q",
       "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
@@ -51,7 +51,7 @@
       "Changed-path scope growth across multiple boundaries returns a planning escalation state with a concrete new-plan command.",
       "Decomposition-backed work without active planning points to a concrete planning command before implementation.",
       "Delegation suitability from decompositions remains visible as a required recorded decision when present.",
-      "Any remaining issue scope, especially durable manual-provenance stamping, is routed explicitly rather than claimed as complete."
+        "Remaining provenance/stamping scope is routed to #937 if not complete."
     ],
     "continuation_owner": "none",
     "closeout_decision": "pending"
@@ -75,7 +75,7 @@
     "execution": {
       "milestone": "dogfooding-planning-safety-935-plus",
       "status": "active",
-      "next_step": "Add a root workspace planning-safety gate that blocks or flags broad/high-assurance/decomposed implementation without active execplan ownership and detects changed-path scope growth.",
+        "next_step": "Add a root workspace planning-safety gate that blocks or flags broad, high-assurance, or decomposed implementation without active execplan ownership and detects changed-path scope growth.",
       "proof": "Focused workspace CLI tests, contract tooling check, ruff, and planning checks."
     },
     "scope": {
@@ -174,7 +174,7 @@
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Add a root workspace planning-safety gate that blocks or flags broad/high-assurance/decomposed implementation without active execplan ownership and detects changed-path scope growth."
+    "Add a root workspace planning-safety gate that blocks or flags broad, high-assurance, or decomposed implementation without active execplan ownership and detects changed-path scope growth."
   ],
   "blockers": [
     "None."

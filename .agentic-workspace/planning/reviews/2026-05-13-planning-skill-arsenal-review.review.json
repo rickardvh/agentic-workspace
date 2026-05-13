@@ -1,0 +1,213 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Planning Skill Arsenal Review",
+  "date": "2026-05-13",
+  "scope": [
+    "Planning bundled skills, skill routing, and dogfooding behavior around missed planning/delegation/closeout steps"
+  ],
+  "classification": "skill-system",
+  "goal": [
+    "Review whether the current planning skill arsenal is shaped strongly enough to prevent the recent mistaken behavior around missing plans, skipped delegation, and premature closeout.",
+    "Identify skill gaps, merge candidates, and update targets without turning the review itself into implementation."
+  ],
+  "non_goals": [
+    "Do not implement skill changes in this review pass.",
+    "Do not audit every historical review artifact or every non-planning skill.",
+    "Do not promote findings automatically into active work unless the maintainer explicitly asks for implementation."
+  ],
+  "review_mode": {
+    "mode": "skill-system",
+    "review question": "Do the bundled planning skills and their routing boundaries make the correct plan/decompose/delegate/execute/closeout sequence hard to skip?",
+    "default finding cap": "3 findings",
+    "inputs inspected first": "agentic-workspace start and summary outputs, planning skill registry, all bundled planning SKILL.md files, existing skill-system/delegation reviews, and root/package planning command availability"
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace start --task \"Review the current planning skill arsenal for gaps, merges, and updates that could explain mistaken behaviour\" --format json; uv run agentic-workspace summary --format json; uv run agentic-workspace skills --target . --task \"Review planning skills for gaps merges updates mistaken behaviour\" --format json; uv run agentic-workspace planning create-review --help; uv run agentic-planning create-review planning-skill-arsenal-review --title \"Planning Skill Arsenal Review\" --scope \"Planning bundled skills, skill routing, and dogfooding behavior around missed planning/delegation/closeout steps\" --classification skill-system --target . --format json; rg over planning skill and review surfaces",
+    "evidence sources": "Static inspection of package-managed planning skill bodies and registry metadata, live skill recommendation output, existing dogfooding review records, and direct command availability checks."
+  },
+  "references": [
+    {
+      "kind": "skill",
+      "target": ".agentic-workspace/planning/skills/planning-autopilot/SKILL.md",
+      "label": "Bounded execution skill",
+      "role": "evidence",
+      "locator": "Operating Rules and Suitability Check"
+    },
+    {
+      "kind": "skill",
+      "target": ".agentic-workspace/planning/skills/planning-decompose/SKILL.md",
+      "label": "Decomposition skill",
+      "role": "evidence",
+      "locator": "Route and Guardrails"
+    },
+    {
+      "kind": "skill",
+      "target": ".agentic-workspace/planning/skills/planning-new-plan-tighten/SKILL.md",
+      "label": "Plan creation/tightening skill",
+      "role": "evidence",
+      "locator": "Route and Guardrails"
+    },
+    {
+      "kind": "skill",
+      "target": ".agentic-workspace/planning/skills/planning-orchestrator-workflow/SKILL.md",
+      "label": "Delegated execution skill",
+      "role": "evidence",
+      "locator": "Workflow and Output"
+    },
+    {
+      "kind": "skill",
+      "target": ".agentic-workspace/planning/skills/planning-closeout-trust/SKILL.md",
+      "label": "Closeout skill",
+      "role": "evidence",
+      "locator": "Route and Guardrails"
+    },
+    {
+      "kind": "registry",
+      "target": ".agentic-workspace/planning/skills/REGISTRY.json",
+      "label": "Planning skill registry",
+      "role": "evidence",
+      "locator": "activation_hints"
+    },
+    {
+      "kind": "review",
+      "target": ".agentic-workspace/planning/reviews/skill-inventory-steering-review-2026-05-05.review.json",
+      "label": "Earlier skill inventory review",
+      "role": "prior-art",
+      "locator": "finding: The skill arsenal does not yet cover the highest-risk workflow decisions"
+    },
+    {
+      "kind": "review",
+      "target": ".agentic-workspace/planning/reviews/2026-05-08-delegation-decomposition-token-optimization.review.json",
+      "label": "Earlier delegation/decomposition review",
+      "role": "prior-art",
+      "locator": "findings"
+    },
+    {
+      "kind": "command",
+      "target": "uv run agentic-workspace planning create-review --help",
+      "label": "Root planning command availability",
+      "role": "evidence",
+      "locator": "invalid choice: create-review"
+    },
+    {
+      "kind": "issue",
+      "target": "GitHub #942",
+      "label": "Add high-assurance planning lifecycle skill",
+      "role": "promotion",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "GitHub #943",
+      "label": "Expose review creation through root planning CLI",
+      "role": "promotion",
+      "locator": ""
+    },
+    {
+      "kind": "issue",
+      "target": "GitHub #938",
+      "label": "Record delegation packet decisions for decomposed mechanical lanes",
+      "role": "promotion",
+      "locator": "enriched with delegation skill finding"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Planning skills exist as fragments but no single skill owns the high-risk sequence",
+      "summary": "The arsenal now has separate skills for decomposition, plan tightening, assurance/delegation, orchestrator workflow, autopilot, and closeout, but no umbrella skill makes the required sequence explicit when work is broad or starts to widen. That leaves the agent to compose the workflow from generic reasoning exactly where recent mistakes occurred.",
+      "evidence": "`planning-autopilot` says it only applies when active work is clearly bounded and validation is obvious. `planning-decompose`, `planning-new-plan-tighten`, `planning-assurance-delegation`, `planning-orchestrator-workflow`, and `planning-closeout-trust` each own one stage, but none declares an ordered high-assurance lifecycle such as classify -> decompose -> promote/tighten -> record assurance/delegation -> execute -> close out intent. The live skill recommendation for this review selected `planning-review-pass`, with no lifecycle/checklist skill surfaced for the mistaken behavior itself.",
+      "risk if unchanged": "Agents can use one correct skill locally while still skipping the next required stage, such as planning before code, delegation after decomposition, or intent satisfaction before issue closure. The package keeps relying on the model to infer cross-skill choreography.",
+      "suggested action": "Add or merge into a `planning-high-assurance-lifecycle` skill that is a short ordered router over the existing stage skills. It should name the sequence, stop conditions, and the exact compact commands to run at each transition, while keeping stage detail in the existing skills.",
+      "confidence": "high",
+      "source": "friction-confirmed",
+      "promotion target": "GitHub #942",
+      "promotion trigger": "Promote before the next long codegen/delegation epic slice or any model-evaluation run that measures planning-module reliability.",
+      "post-remediation note shape": "shrink"
+    },
+    {
+      "title": "Delegation skills still describe recording, but do not force or verify a durable decision",
+      "summary": "The delegation and orchestrator skills tell agents to record delegation posture and skipped reasons, but they do not point to a single command or required field that can be mechanically checked before implementation proceeds.",
+      "evidence": "`planning-assurance-delegation` says to record the chosen posture in the active execplan. `planning-orchestrator-workflow` says to record whether work stayed direct, internal, or external, plus skipped reasons and expected token savings. The recent #938 reconciliation had to remain open because the implemented safety gate only surfaces `delegation_decision_required`; it does not enforce durable packet/report-template usage in the execplan or run record.",
+      "risk if unchanged": "Agents can acknowledge delegation as a concept and still keep work local without recoverable evidence. That matches the observed behavior where delegation opportunities existed but were not captured through the package's ready packet/report workflow.",
+      "suggested action": "Update or merge `planning-assurance-delegation` and `planning-orchestrator-workflow` around one command-backed decision surface, for example a `planning delegation-decision` or `planning handoff --record-skip` flow. The skill should say implementation may proceed only after the decision is present in checked-in planning.",
+      "confidence": "high",
+      "source": "friction-confirmed",
+      "promotion target": "GitHub #938",
+      "promotion trigger": "Promote with the next #938 implementation slice or before claiming delegation dogfooding is evaluable.",
+      "post-remediation note shape": "shrink"
+    },
+    {
+      "title": "Review artifact workflow is package-valid but not exposed through the root planning command",
+      "summary": "The review skill and README steer agents toward checked-in review artifacts, and the package CLI can create them valid-by-construction, but `agentic-workspace planning` does not expose `create-review`. In this review pass, the documented root command failed and the package-local command had to be used.",
+      "evidence": "`.agentic-workspace/planning/reviews/README.md` says new review records are created by `agentic-planning create-review`. The package CLI exposes `create-review`, but `uv run agentic-workspace planning create-review --help` returned an invalid choice error; available root subcommands were `new-plan`, `promote-to-plan`, `archive-plan`, `handoff`, and `report`.",
+      "risk if unchanged": "Agents following the root-workspace authority rule hit a missing affordance exactly when trying to avoid hand-authored JSON. Weaker agents may either hand-edit managed review artifacts or abandon review capture.",
+      "suggested action": "Expose review creation through `agentic-workspace planning create-review` or update the review skill/README to explicitly authorize the package-local fallback when the root wrapper is absent. Prefer the root wrapper so AGENTS.md and skill guidance stay aligned.",
+      "confidence": "high",
+      "source": "friction-confirmed",
+      "promotion target": "GitHub #943",
+      "promotion trigger": "Promote immediately because this review pass reproduced the gap.",
+      "post-remediation note shape": "delete"
+    }
+  ],
+  "recommendation": {
+    "promote": "Promoted all three findings: #942 for the missing high-assurance lifecycle skill, #938 for command-backed delegation decision recording, and #943 for the root create-review wrapper gap.",
+    "defer": "Defer copyediting or broad skill merge work until the lifecycle and delegation decision surfaces are agreed; a full merge may be worse than a short orchestrating skill over existing focused skills.",
+    "dismiss": "Do not dismiss the separate stage skills as redundant. They are useful as implementation details; the gap is missing orchestration and command-backed enforcement."
+  },
+  "retention": {
+    "closeout shape": "shrink",
+    "trigger": "findings promoted, dismissed, or superseded",
+    "proof surface": "GitHub #942, GitHub #938, GitHub #943, future skill updates, root command wrapper tests, and this compact retained review stub"
+  },
+  "prose_templates": {
+    "review_finding": {
+      "sections": [
+        "Finding",
+        "Evidence",
+        "Impact",
+        "Recommendation",
+        "Owner",
+        "Status"
+      ],
+      "field_map": {
+        "Finding": "findings[].title + findings[].summary",
+        "Evidence": "findings[].evidence + findings[].source",
+        "Impact": "findings[].risk if unchanged",
+        "Recommendation": "findings[].suggested action + findings[].promotion target",
+        "Owner": "findings[].promotion target",
+        "Status": "recommendation/promote|defer|dismiss"
+      },
+      "rule": "Use only these headings when a prose finding is needed; keep the canonical fields structured."
+    },
+    "handoff_or_closeout": {
+      "sections": [
+        "Intent",
+        "What changed",
+        "Proof",
+        "Remaining risk",
+        "Durable residue",
+        "Next owner"
+      ],
+      "field_map": {
+        "Intent": "intent/outcome or requested_outcome",
+        "What changed": "execution_summary/outcome delivered",
+        "Proof": "proof_report/validation proof",
+        "Remaining risk": "finished_run_review/misinterpretation risk or follow-on decision",
+        "Durable residue": "durable_residue + closeout_distillation",
+        "Next owner": "execution_summary/follow-on routed to or required_continuation/owner surface"
+      },
+      "rule": "Prefer structured fields; use this shape only for short human-readable summaries."
+    }
+  },
+  "validation_commands": [
+    "uv run agentic-workspace implement --changed .agentic-workspace/planning/reviews/2026-05-13-planning-skill-arsenal-review.review.json --task \"Review the current planning skill arsenal for gaps, merges, and updates that could explain mistaken behaviour\" --format json",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run agentic-workspace summary --target . --verbose --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "drift_log": [
+    "2026-05-13: Review record created by create-review.",
+    "2026-05-13: Filled after reviewing installed/package planning skills, registry routing, prior skill-system/delegation reviews, and root/package review command availability.",
+    "2026-05-13: Promoted finding 1 to GitHub #942, finding 2 into existing GitHub #938, and finding 3 to GitHub #943."
+  ]
+}
