@@ -3,7 +3,7 @@
     "declaredEntrypoints": [
       "agentic-memory"
     ],
-    "effectiveRuntimeCommand": "python -m repo_memory_bootstrap.generated_cli_entrypoint",
+    "effectiveRuntimeCommand": "python -c \"import sys; from repo_memory_bootstrap.generated_cli_package import main; raise SystemExit(main(sys.argv[1:]))\"",
     "fixtureOnly": false,
     "generated": true,
     "generationStatus": "weak-agent-safe-adapter",
@@ -23,7 +23,7 @@
     },
     "program": "agentic-memory",
     "runtimeBinding": {
-      "default_runtime_command": "python -m agentic_workspace.generated_cli_entrypoint",
+      "default_runtime_command": "python -c \"import sys; from agentic_workspace.generated_cli_package import main; raise SystemExit(main(sys.argv[1:]))\"",
       "error_mapping": [
         "Generated adapter failures before process handoff are adapter failures.",
         "Non-zero exits returned by the delegated canonical process are runtime failures unless the conformance case expects the error.",

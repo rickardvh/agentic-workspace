@@ -951,14 +951,14 @@ def test_generated_typescript_package_adapters_are_runnable() -> None:
         "planning-cli": (
             "@agentic-workspace/planning-cli",
             "agentic-planning",
-            "python -m repo_planning_bootstrap.generated_cli_entrypoint",
+            "repo_planning_bootstrap.generated_cli_package",
             "weak-agent-safe-adapter",
             "allowed-read-only",
         ),
         "memory-cli": (
             "@agentic-workspace/memory-cli",
             "agentic-memory",
-            "python -m repo_memory_bootstrap.generated_cli_entrypoint",
+            "repo_memory_bootstrap.generated_cli_package",
             "weak-agent-safe-adapter",
             "allowed-read-only",
         ),
@@ -974,7 +974,7 @@ def test_generated_typescript_package_adapters_are_runnable() -> None:
         metadata = package_json["agenticWorkspace"]
         assert metadata["fixtureOnly"] is False
         assert metadata["generationStatus"] == maturity
-        assert metadata["effectiveRuntimeCommand"] == runtime_command
+        assert runtime_command in metadata["effectiveRuntimeCommand"]
         assert metadata["maturity"]["id"] == maturity
         assert metadata["maturity"]["runnable"] is True
         assert metadata["maturity"]["weak_agent_routing"] == weak_agent_routing

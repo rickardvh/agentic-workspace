@@ -108,15 +108,20 @@ def _conformance_env(*, runtime: str | None = None) -> dict[str, str]:
 
 def _runtime_module_for_package(package_id: str) -> str:
     modules = {
-        "root-workspace": "agentic_workspace.generated_cli_entrypoint",
-        "planning-bootstrap": "repo_planning_bootstrap.generated_cli_entrypoint",
-        "memory-bootstrap": "repo_memory_bootstrap.generated_cli_entrypoint",
+        "root-workspace": "agentic_workspace.generated_cli_package",
+        "planning-bootstrap": "repo_planning_bootstrap.generated_cli_package",
+        "memory-bootstrap": "repo_memory_bootstrap.generated_cli_package",
     }
     return modules[package_id]
 
 
 def _python_command_for_package(package_id: str) -> list[str]:
-    return [_python_executable(), "-m", _runtime_module_for_package(package_id)]
+    module = _runtime_module_for_package(package_id)
+    return [
+        _python_executable(),
+        "-c",
+        f"import sys; from {module} import main; raise SystemExit(main(sys.argv[1:]))",
+    ]
 
 
 def _capture(command: list[str], *, cwd: Path, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
@@ -1166,12 +1171,22 @@ def _validate_static_surfaces() -> list[str]:
             "packages/planning/src/repo_planning_bootstrap/generated_cli_package/__init__.py": "generated/python/planning-cli",
             "packages/memory/src/repo_memory_bootstrap/generated_cli_package/__init__.py": "generated/python/memory-cli",
         }
+        forbidden_generated_entrypoints = [
+            "src/agentic_workspace/generated_cli_entrypoint.py",
+            "packages/planning/src/repo_planning_bootstrap/generated_cli_entrypoint.py",
+            "packages/memory/src/repo_memory_bootstrap/generated_cli_entrypoint.py",
+        ]
+        for relative_path in forbidden_generated_entrypoints:
+            if (REPO_ROOT / relative_path).exists():
+                errors.append(f"{relative_path} is generated-owned executable wrapper code outside generated/python")
         for relative_path, generated_root in durable_source_roots.items():
             text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
             if "Generated runtime-backed Python command adapter" in text or "DO NOT EDIT DIRECTLY." in text:
                 errors.append(f"{relative_path} still contains durable generated Python output instead of package-local glue")
             if generated_root not in text:
                 errors.append(f"{relative_path} does not bridge to {generated_root}")
+            if "main = _generated.main" not in text:
+                errors.append(f"{relative_path} does not expose generated package main() from generated/python")
         conformance_cases, conformance_errors = _runnable_typescript_conformance_cases()
         errors.extend(f"static conformance coverage drift: {error}" for error in conformance_errors)
         if not conformance_errors and not conformance_cases:

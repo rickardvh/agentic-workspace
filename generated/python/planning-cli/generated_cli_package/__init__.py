@@ -130,3 +130,9 @@ def run_generated_command(argv: list[str] | tuple[str, ...], runtime_handler: Ru
     args = parser.parse_args(list(argv))
     operation_id = str(getattr(args, "_generated_operation_id"))
     return runtime_handler(operation_id, args)
+
+
+def main(argv: list[str] | None = None) -> int:
+    from repo_planning_bootstrap._runtime_cli import main as runtime_main
+
+    return runtime_main(argv)

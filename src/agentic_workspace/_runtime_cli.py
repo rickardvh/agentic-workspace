@@ -1621,7 +1621,7 @@ def _memory_module_argv(args: argparse.Namespace) -> list[str]:
 
 
 def _run_planning_front_door(args: argparse.Namespace) -> int:
-    from repo_planning_bootstrap.generated_cli_entrypoint import main as planning_main
+    from repo_planning_bootstrap.generated_cli_package import main as planning_main
 
     buffer = io.StringIO()
     with contextlib.redirect_stdout(buffer):
@@ -1631,7 +1631,7 @@ def _run_planning_front_door(args: argparse.Namespace) -> int:
 
 
 def _run_memory_front_door(args: argparse.Namespace) -> int:
-    from repo_memory_bootstrap.generated_cli_entrypoint import main as memory_main
+    from repo_memory_bootstrap.generated_cli_package import main as memory_main
 
     buffer = io.StringIO()
     with contextlib.redirect_stdout(buffer):
