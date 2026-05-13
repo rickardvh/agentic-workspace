@@ -30,8 +30,8 @@
   ],
   "ir_plan": {
     "portability_notes": [
-      "A TypeScript executor can implement this representative plan with filesystem globbing and payload assembly; it does not require importing Python internals.",
-      "The generated Python memory CLI consumes this operation contract directly for list-files; other generated commands remain on compatibility runtime handlers until promoted."
+      "Target executors can implement this representative plan with filesystem globbing and payload assembly; it does not require importing package internals.",
+      "Generated command adapters consume this operation contract directly for list-files; other generated commands remain on compatibility runtime handlers until promoted."
     ],
     "status": "representative",
     "steps": [
