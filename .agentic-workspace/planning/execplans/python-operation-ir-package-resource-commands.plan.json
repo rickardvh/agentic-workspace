@@ -1,0 +1,461 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Python Operation IR Package Resource Commands",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout."
+  },
+  "canonical_core": {
+    "requested_outcome": "Continue #933 by migrating the next small group of generated Python package-resource commands from compatibility runtime handlers to operation-contract execution.",
+    "hard_constraints": "Stay on the Python lane and this branch. Do not broaden into planning/workspace report commands or non-Python target completion. Do not claim full Python generated CLI completion while compatibility handlers remain.",
+    "agent_may_decide": "Finish or adjust the already-started memory list-skills slice if it remains the smallest valid continuation; otherwise stop and rescope before touching more runtime behavior.",
+    "escalate_when": "Escalate if the package-resource executor starts needing semantic report policy, generalized control flow, or a broader DSL.",
+    "next_action": "Reconcile the in-progress list-skills IR work with primitive schemas and generator hygiene, then rerun focused proof before any further command migration.",
+    "proof_expectations": [
+      "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+      "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+      "uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q",
+      "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+      "uv run python scripts/generate/generate_command_packages.py --check"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/contracts/operations/memory.list-skills.report.json",
+      "src/agentic_workspace/contracts/operation_primitives.json",
+      "src/agentic_workspace/contracts/schemas/primitives/",
+      "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+      "packages/memory/src/repo_memory_bootstrap/operation_ir_executor.py",
+      "packages/memory/src/repo_memory_bootstrap/cli.py",
+      "packages/command-generation/src/agentic_command_generation/generator.py",
+      "generated/python/memory-cli/generated_cli_package/"
+    ],
+    "completion_criteria": [
+      "memory.list-skills.report is either runtime-consumed with schema-backed primitive steps and generated package artifact proof, or the slice is explicitly rolled back/rescoped.",
+      "Python operation execution inventory distinguishes list-files, list-skills, and remaining compatibility handler cases.",
+      "Static proof still prevents full Python completion claims while compatibility handlers remain.",
+      "Black-box Python generated command conformance remains green."
+    ],
+    "continuation_owner": ".agentic-workspace/planning/execplans/python-operation-ir-package-resource-commands.plan.json",
+    "closeout_decision": "archive-but-keep-lane-open unless #933 is fully exhausted, which this slice is not expected to do."
+  },
+  "goal": [
+    "Promote one additional simple package-resource generated Python command, memory list-skills, from compatibility runtime handler to operation IR execution.",
+    "Keep #933 decomposed into command groups so each group has clear operation contracts, generated artifacts, inventory status, and conformance proof."
+  ],
+  "non_goals": [
+    "Do not migrate memory status, doctor, report, route-report, or promotion-report in this slice.",
+    "Do not migrate planning or workspace commands in this slice.",
+    "Do not introduce loops, expressions, or broad DSL semantics.",
+    "Do not claim the Python lane or #892 epic is complete."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Package-resource generated Python commands consume operation IR directly where practical.",
+      "constraints": "Python-only; implementation-independent operation artifacts remain authoritative.",
+      "latitude": "Implementation may use hand-owned primitive executor code for package resource reads, JSON parsing, payload assembly, and output emission.",
+      "escalation": "Escalate before moving semantic report commands into the same executor."
+    },
+    "execution": {
+      "milestone": "memory-list-skills-runtime-consumed",
+      "status": "in-progress",
+      "next_step": "Reconcile the in-progress list-skills IR work with primitive schemas and generator hygiene, then rerun focused proof before any further command migration.",
+      "proof": "Generated package static proof plus Python conformance and contract tooling."
+    },
+    "scope": {
+      "touched": [
+        "memory list-skills operation contract",
+        "operation primitive schemas",
+        "memory operation IR executor",
+        "generated Python memory package resources"
+      ],
+      "invariants": [
+        "generated artifacts are derived from source contracts",
+        "compatibility handler residue remains explicit in python_operation_execution_inventory.json"
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Complete the Python side of #892 by moving CLI-visible behavior behind implementation-independent artifacts and thin runtime primitive executors.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "#933 and python-generated-cli.decomposition.json",
+    "parent lane": "python-generated-cli-completion"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "Remaining memory, planning, and workspace read-only report commands still need classification and either operation IR promotion or explicit compatibility-handler acceptance.",
+    "owner surface": "GitHub #933",
+    "activation trigger": "After memory list-skills slice is proven or consciously abandoned."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "A second package-resource command can prove filesystem.read and json.parse primitive schemas.",
+    "intentionally deferred": "Semantic report commands and all non-Python target completion.",
+    "discovered implications": "Primitive schema coverage must expand before representative IR can use new target-executor primitives.",
+    "proof achieved now": "Not yet; implementation is interrupted mid-slice.",
+    "validation still needed": "Contract tooling currently failed until filesystem.read/json.parse schemas and generic generator hygiene are completed.",
+    "next likely slice": "Memory read-only report command classification after package-resource commands are complete."
+  },
+  "intent_interpretation": {
+    "literal request": "Continue with #933 on this same branch.",
+    "inferred intended outcome": "Use #933 to keep migrating generated Python commands from compatibility handlers to operation IR in bounded command groups.",
+    "chosen concrete what": "Memory package-resource commands, starting with list-skills after list-files.",
+    "interpretation distance": "low",
+    "review guidance": "Verify the slice did not silently broaden into full Python completion."
+  },
+  "execution_bounds": {
+    "allowed paths": "memory list-skills operation/contract/generator/executor/generated package surfaces and planning artifacts",
+    "max changed files": "moderate because generated outputs and primitive schemas are expected",
+    "required validation commands": "contract tooling, generated package proof, Python conformance, structured inventory, generator freshness",
+    "ask-before-refactor threshold": "before generalizing into a cross-package executor framework",
+    "stop before touching": "planning/workspace semantic report implementations or non-Python runtime behavior"
+  },
+  "stop_conditions": {
+    "stop when": "Proof is green for list-skills or the slice is rolled back/rescoped.",
+    "escalate when boundary reached": "If list-skills requires more than package resource read + JSON parse + payload assembly.",
+    "escalate on scope drift": "If additional command groups become necessary to make tests pass.",
+    "escalate on proof failure": "If Docker/Python conformance fails for reasons outside list-skills."
+  },
+  "context_budget": {
+    "live working set": "#933, this execplan, python decomposition, operation primitives, memory list-skills/list-files contracts, memory operation executor, generated command package checker.",
+    "recoverable later": "Archived #931 proof and PR #934 comments.",
+    "externalize before shift": "Update this execplan execution_run and proof_report before context switch.",
+    "pre-work config pull": "uv run agentic-workspace start --task \"Continue #933 memory package-resource operation IR slice\" --format json",
+    "pre-work memory pull": "Only route memory if implementation touches memory package behavior beyond package-resource listing.",
+    "tiny resumability note": "Resume by fixing primitive schema coverage and generic generator string hygiene, then rerun focused proof.",
+    "context-shift triggers": "Before adding another command group or changing compatibility completion state."
+  },
+  "delegated_judgment": {
+    "requested outcome": "A bounded #933 slice with clear proof and no completion overclaim.",
+    "hard constraints": "Python-only, operation artifact authority, no hidden compatibility handler completion claim.",
+    "agent may decide locally": "Whether list-skills remains viable or should be rolled back.",
+    "escalate when": "If semantic command behavior must be represented before package-resource commands are complete."
+  },
+  "post_decomposition_delegation": {
+    "status": "available-after-plan",
+    "decision rule": "Use an existing worker only for read-only review or focused validation; implementation write scope should remain local unless split cleanly.",
+    "route candidates": "delegate-validation|delegate-exploration|keep-local",
+    "required evidence": "Worker must report exact proof/check gaps and avoid editing code unless assigned a disjoint schema/check scope."
+  },
+  "adaptive_assurance": {
+    "level": "medium",
+    "reason": "This is a correctness/intent-preservation lane after previous overclaiming of Python completion.",
+    "agent_may_escalate": true,
+    "agent_may_deescalate": false,
+    "strict_closeout": true,
+    "required_refs": [
+      "#892",
+      "#931",
+      "#933"
+    ],
+    "proof_profiles": [
+      "generated-command-packages",
+      "contract-tooling",
+      "python-conformance"
+    ],
+    "required_gates": [
+      "no full Python completion claim while compatibility handlers remain"
+    ]
+  },
+  "traceability_refs": {
+    "requirement_refs": [
+      "#892",
+      "#933"
+    ],
+    "regulation_refs": [],
+    "compliance_refs": [],
+    "domain_model_refs": [
+      ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+    ],
+    "risk_refs": [
+      "#915"
+    ],
+    "security_refs": [],
+    "audit_refs": [],
+    "acceptance_refs": [
+      "#933 acceptance criteria"
+    ],
+    "decision_refs": [
+      "#930 operation IR boundary"
+    ]
+  },
+  "control_gates": [],
+  "implementation_blockers": [
+    {
+      "id": "primitive-schema-coverage",
+      "status": "active"
+    },
+    {
+      "id": "generic-generator-hygiene",
+      "status": "active"
+    }
+  ],
+  "risk_registry_refs": [
+    "python completion overclaim",
+    "semantic primitive creep",
+    "generated artifact/source contract drift"
+  ],
+  "invariant_refs": [
+    "operation IR remains package-operation primitives, not a general-purpose DSL",
+    "generated Python package resources are derived from source contracts"
+  ],
+  "test_data_policy": {
+    "classification": "repo fixtures and package payload metadata only",
+    "forbidden": [
+      "network fixtures",
+      "host-specific absolute paths"
+    ],
+    "fixture_owner": "src/agentic_workspace/contracts/conformance",
+    "proof_required": [
+      "black-box Python generated command conformance"
+    ],
+    "refs": [
+      "memory.list-skills.process"
+    ]
+  },
+  "layer_scaffold": {
+    "type": "operation-ir-runtime-consumption",
+    "required_refs": [
+      "operation contract",
+      "primitive schema refs",
+      "generated package operation artifact",
+      "python operation execution inventory",
+      "process conformance fixture"
+    ],
+    "common_risks": [
+      "runtime code becomes semantic package logic",
+      "generated artifacts drift from source contracts",
+      "completion state overclaims remaining compatibility handlers"
+    ],
+    "suggested_proof_profiles": [
+      "contract-tooling",
+      "generated-command-packages",
+      "python-conformance"
+    ],
+    "suggested_gates": [
+      "completion gate remains pending"
+    ],
+    "non_goals": [
+      "semantic report migration",
+      "non-Python target completion"
+    ],
+    "durable_residue_prompts": [
+      "If package-resource command migration repeats, consider a generated executor table or schema-backed helper to reduce manual executor code."
+    ]
+  },
+  "architecture_decision_promotion": {
+    "status": "candidate",
+    "target": "operation primitive schema coverage for package resources",
+    "decision_refs": [
+      "#933"
+    ],
+    "promotion_needed": false,
+    "notes": "May become needed if a third package-resource command follows the same executor pattern."
+  },
+  "threat_failure_aids": [],
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#892",
+      "label": "Codegen epic",
+      "role": "parent intent",
+      "locator": "GitHub"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#931",
+      "label": "First Python operation execution slice",
+      "role": "predecessor",
+      "locator": "GitHub"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#933",
+      "label": "Remaining Python generated command migration",
+      "role": "source issue",
+      "locator": "GitHub"
+    },
+    {
+      "kind": "planning-decomposition",
+      "target": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "label": "Python generated CLI decomposition",
+      "role": "parent lane",
+      "locator": "repo"
+    }
+  ],
+  "active_milestone": {
+    "id": "memory-list-skills-runtime-consumed",
+    "status": "in-progress",
+    "scope": "Promote memory.list-skills.report to runtime-consumed operation IR if focused proof can be made green.",
+    "ready": "Source and generated surfaces are partially changed in the working tree.",
+    "blocked": "Contract tooling failure needs primitive schema refs and generator hygiene fix.",
+    "optional_deps": "Existing #931 list-files implementation."
+  },
+  "immediate_next_action": [
+    "Reconcile the in-progress list-skills IR work with primitive schemas and generator hygiene, then rerun focused proof before any further command migration."
+  ],
+  "blockers": [
+    "Planning state was not updated before implementation started; this execplan records the recovery point.",
+    "Current working tree contains uncommitted #933 implementation changes."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/operations/memory.list-skills.report.json",
+    "src/agentic_workspace/contracts/operation_primitives.json",
+    "src/agentic_workspace/contracts/schemas/primitives/",
+    "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+    "packages/memory/src/repo_memory_bootstrap/operation_ir_executor.py",
+    "packages/memory/src/repo_memory_bootstrap/cli.py",
+    "packages/command-generation/src/agentic_command_generation/generator.py",
+    "generated/python/memory-cli/generated_cli_package/"
+  ],
+  "invariants": [
+    "Generated resources remain derived outputs.",
+    "Operation IR target-executor primitives need schema refs before representative use.",
+    "Python completion state remains adapter-layer-proven-not-full-generated-cli until all compatibility residue is addressed."
+  ],
+  "contract_decisions_to_freeze": [
+    "memory list-skills is a package-resource operation, not a semantic report operation.",
+    "filesystem.read and json.parse are target-executor primitives requiring schemas."
+  ],
+  "open_questions_to_close": [
+    "Should the list-skills text output remain byte-for-byte equivalent to the old _emit_result path?",
+    "Should remaining memory report commands be classified as semantic runtime primitives rather than operation IR candidates?"
+  ],
+  "validation_commands": [
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+    "uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run python scripts/generate/generate_command_packages.py --check"
+  ],
+  "required_tools": [
+    "uv",
+    "pytest",
+    "Docker for final generated Python conformance"
+  ],
+  "completion_criteria": [
+    "memory.list-skills.report is either runtime-consumed with schema-backed primitive steps and generated package artifact proof, or the slice is explicitly rolled back/rescoped.",
+    "Python operation execution inventory distinguishes list-files, list-skills, and remaining compatibility handler cases.",
+    "Static proof still prevents full Python completion claims while compatibility handlers remain.",
+    "Black-box Python generated command conformance remains green."
+  ],
+  "execution_run": {
+    "run status": "interrupted-mid-implementation",
+    "executor": "Codex",
+    "handoff source": "User requested #933 continuation on #931 branch, then stopped work and flagged missing planning artifacts.",
+    "what happened": "Started list-skills operation IR migration and discovered primitive schema/generator hygiene gaps before planning state was updated.",
+    "scope touched": "memory list-skills package-resource command and supporting primitive/generator/check surfaces",
+    "changed surfaces": "See touched_paths; implementation changes are currently uncommitted.",
+    "validations run": "Focused proof partially run; generated Python conformance passed, contract tooling failed on missing filesystem.read/json.parse primitive schema refs and generator hygiene.",
+    "result for continuation": "Recover by committing planning surfaces first or explicitly deciding how to handle the uncommitted implementation WIP.",
+    "next step": "Finish planning recovery; then resume or roll back implementation by explicit decision."
+  },
+  "finished_run_review": {
+    "review status": "not-finished",
+    "scope respected": "partially; implementation stayed within memory package-resource command but planning was missing",
+    "proof status": "failing before interruption",
+    "intent served": "partial",
+    "config compliance": "violated planning-followthrough expectation; this file is the recovery artifact",
+    "misinterpretation risk": "medium if WIP is mistaken for completed #933",
+    "follow-on decision": "keep lane open"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "local implementation",
+    "route skipped reason": "small initial command-group migration; planning omission was the actual failure",
+    "expected savings": "none",
+    "actual friction": "missing execplan/state made the active slice hard to recover",
+    "proof result": "not complete",
+    "quality concern": "planning system did not prevent implementation before execplan promotion",
+    "decomposition adjustment": "Add explicit package-resource command lane under Python decomposition."
+  },
+  "proof_report": {
+    "validation proof": "not complete",
+    "proof achieved now": "none for final closeout; partial generated Python conformance passed before interruption",
+    "evidence for \"proof achieved\" state": "Contract tooling failure remains active."
+  },
+  "intent_satisfaction": {
+    "original intent": "Use #933 to continue migrating remaining Python generated commands from compatibility handlers to operation IR.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "WIP only; no closeout claim",
+    "unsolved intent passed to": "this execplan and #933"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve larger intent and avoid treating bounded slices as epic completion.",
+    "slice shaping bias": "Make active work recoverable and proof-backed before continuing.",
+    "broader-lane validation question": "Does each promoted command reduce hidden Python CLI authority without creating semantic primitive creep?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "closure_check": {
+    "slice status": "incomplete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "accepted values": "Do not archive until proof is green or slice is explicitly abandoned.",
+    "why this decision is honest": "The work is mid-implementation and #933 remains broad.",
+    "evidence carried forward": "Working tree WIP and failed proof details are recorded.",
+    "reopen trigger": "Any claim that Python generated CLI completion is full while compatibility handlers remain."
+  },
+  "generated_closeout": {
+    "status": "not-generated",
+    "source": "none",
+    "authority": "structured execplan fields remain authoritative",
+    "text": ""
+  },
+  "memory_learning_capture": {
+    "status": "pending",
+    "memory consult recommended?": "pending",
+    "memory notes read": "",
+    "future agents should not rediscover": "Planning state must be updated before starting major decomposed epic slices.",
+    "decision": "route_to_planning",
+    "target": ".agentic-workspace/planning/state.toml and this execplan",
+    "reason": "Current issue is planning recovery, not durable package behavior."
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "When continuing a decomposed epic, promote the concrete slice into state.toml and an execplan before implementation.",
+    "motivation worth preserving": "The active WIP otherwise becomes invisible to the package's own intent-preservation surfaces.",
+    "canonical owner now": ".agentic-workspace/planning/execplans/python-operation-ir-package-resource-commands.plan.json",
+    "promotion trigger": "If repeated, add a checker that flags #issue implementation WIP without active planning state.",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "evidence source": "existing #892/#933 issue and decomposition already own the intent",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "medium",
+    "needs review": false,
+    "owner surface": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+  },
+  "execution_summary": {
+    "outcome delivered": "Planning recovery artifact for active #933 WIP.",
+    "validation confirmed": "pending",
+    "follow-on routed to": "#933",
+    "post-work posterity capture": "this execplan",
+    "knowledge promoted (Memory/Docs/Config)": "planning",
+    "resume from": "active_milestone.next_step"
+  },
+  "improvement_signal_review": {
+    "status": "active",
+    "signals found": [
+      "Major decomposed epic work started without active execplan/state update."
+    ],
+    "signals fixed": [
+      "Active execplan added."
+    ],
+    "signals routed": [
+      "Potential future checker for implementation WIP without active planning state."
+    ],
+    "signals dismissed": [],
+    "next owner": "planning"
+  },
+  "drift_log": [
+    "2026-05-13: Execplan created after implementation had already begun; records WIP and proof failure so the active slice is recoverable."
+  ]
+}
