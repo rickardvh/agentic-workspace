@@ -103,7 +103,7 @@ def test_generated_python_conformance_uses_contract_artifacts() -> None:
     memory_skills = registries["memory-bootstrap"]["memory.list-skills.process"]
 
     assert checker._python_command_for_package("root-workspace")[-1] == "agentic_workspace.generated_cli_entrypoint"
-    assert checker._python_command_for_package("planning-bootstrap")[-1] == "repo_planning_bootstrap.cli"
+    assert checker._python_command_for_package("planning-bootstrap")[-1] == "repo_planning_bootstrap.generated_cli_entrypoint"
     assert checker._python_command_for_package("memory-bootstrap")[-1] == "repo_memory_bootstrap.cli"
     assert defaults.success_args == ["defaults", "--section", "startup", "--format", "json"]
     assert defaults.expected_exit == 0

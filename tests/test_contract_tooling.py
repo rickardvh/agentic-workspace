@@ -951,7 +951,7 @@ def test_generated_typescript_package_adapters_are_runnable() -> None:
         "planning-cli": (
             "@agentic-workspace/planning-cli",
             "agentic-planning",
-            "python -m repo_planning_bootstrap.cli",
+            "python -m repo_planning_bootstrap.generated_cli_entrypoint",
             "weak-agent-safe-adapter",
             "allowed-read-only",
         ),

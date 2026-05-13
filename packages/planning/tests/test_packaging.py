@@ -232,7 +232,7 @@ def test_installed_planning_wheel_imports_cli_module() -> None:
             [
                 sys.executable,
                 "-c",
-                "import repo_planning_bootstrap.cli; from repo_planning_bootstrap.generated_cli_package import build_generated_parser",
+                "import repo_planning_bootstrap._runtime_cli; from repo_planning_bootstrap.generated_cli_package import build_generated_parser",
             ],
             cwd=tmpdir_path,
             env={**os.environ, "PYTHONPATH": str(install_root)},

@@ -3,7 +3,7 @@
     "declaredEntrypoints": [
       "agentic-planning"
     ],
-    "effectiveRuntimeCommand": "python -m repo_planning_bootstrap.cli",
+    "effectiveRuntimeCommand": "python -m repo_planning_bootstrap.generated_cli_entrypoint",
     "fixtureOnly": false,
     "generated": true,
     "generationStatus": "weak-agent-safe-adapter",

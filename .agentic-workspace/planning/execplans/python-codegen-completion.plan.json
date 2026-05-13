@@ -32,7 +32,7 @@
     "hard_constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
     "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
     "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
-    "next_action": "Migrate the root agentic-workspace Python console front door away from package-local cli.py while keeping hand-owned runtime primitives in a non-CLI module and preserving generated parser/dispatch proof.",
+    "next_action": "Migrate the agentic-memory Python console front door away from package-local cli.py while keeping hand-owned runtime primitives in a non-CLI module and preserving generated dispatch proof.",
     "proof_expectations": [
       "uv run python scripts/check/check_generated_command_packages.py",
       "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
@@ -40,14 +40,15 @@
       "uv run ruff check src/agentic_workspace scripts/check tests"
     ],
     "touched_scope": [
-      "pyproject.toml",
+      "packages/memory/pyproject.toml",
+      "packages/memory/src/repo_memory_bootstrap/cli.py",
+      "packages/memory/src/repo_memory_bootstrap/_runtime_cli.py",
+      "packages/memory/src/repo_memory_bootstrap/generated_cli_entrypoint.py",
       "src/agentic_workspace/_runtime_cli.py",
-      "src/agentic_workspace/_runtime_cli.py",
-      "src/agentic_workspace/generated_cli_entrypoint.py",
       "scripts/check/check_generated_command_packages.py",
       "tests/test_generated_command_package_proof_runner.py",
       "tests/test_generated_tool_conformance.py",
-      "tests/test_workspace_packaging.py"
+      "packages/memory/tests/"
     ],
     "completion_criteria": [
       "Complete the Python lane so executable CLI front doors and runtime operation boundaries are generated or represented by implementation-independent artifacts, with no hand-owned cli.py outside generated/python and no implicit Python-internal dependency for future targets."
@@ -71,12 +72,16 @@
     "execution": {
       "milestone": "github-892-python-codegen-completion",
       "status": "in-progress",
-      "next_step": "Promote a new bounded execplan for the next #933 memory read-only report classification/migration slice, using the archived package-resource list-skills slice as proof precedent.",
-      "proof": "Fill in the narrowest command that proves the promoted work."
+      "next_step": "Migrate the agentic-memory Python console front door away from package-local cli.py while preserving generated dispatch proof.",
+      "proof": "Generated package static proof, Python generated conformance, memory package tests, and ruff."
     },
     "scope": {
       "touched": [
-        "Fill in the concrete files before implementation starts."
+        "packages/memory/pyproject.toml",
+        "packages/memory/src/repo_memory_bootstrap/cli.py",
+        "packages/memory/src/repo_memory_bootstrap/_runtime_cli.py",
+        "packages/memory/src/repo_memory_bootstrap/generated_cli_entrypoint.py",
+        "src/agentic_workspace/_runtime_cli.py"
       ],
       "invariants": [
         "Preserve the planning contract and keep the work bounded to this plan."
@@ -86,12 +91,12 @@
   "intent_continuity": {
     "larger intended outcome": "The previous completion claim only proved generated adapter coverage; the user clarified that Python is not complete while hand-owned cli.py entrypoints remain and future targets must not silently rely on Python internals.",
     "this slice completes the larger intended outcome": "no",
-    "continuation surface": "this execplan, then planning and memory front-door slices"
+    "continuation surface": "this execplan, then memory front-door slice and completion reconciliation"
   },
   "required_continuation": {
     "required follow-on for the larger intended outcome": "yes",
     "owner surface": "this execplan",
-    "activation trigger": "After the root front-door slice is proven and committed, continue with planning and memory package front-door migration."
+    "activation trigger": "After the memory front-door slice is proven and committed, reconcile the Python completion gate against the #892 acceptance criteria."
   },
   "iterative_follow_through": {
     "what this slice enabled": "none yet",
@@ -127,7 +132,7 @@
     "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
     "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
     "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
-    "tiny resumability note": "Root front-door slice: move root CLI runtime to a non-cli module, route console/module/proof through generated-owned entrypoint, and keep planning/memory front doors for later slices.",
+    "tiny resumability note": "Memory front-door slice: move memory CLI runtime to a non-cli module, route console/module/proof through generated-owned entrypoint, then reconcile Python completion.",
     "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
   },
   "delegated_judgment": {
@@ -156,26 +161,27 @@
   "active_milestone": {
     "id": "github-892-python-codegen-completion",
     "status": "in-progress",
-    "scope": "Root agentic-workspace Python front-door migration only.",
+    "scope": "Memory package Python front-door migration only.",
     "ready": "ready after delegation decision is recorded",
     "blocked": "none",
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Migrate the root agentic-workspace Python console front door away from package-local cli.py while preserving generated dispatch proof."
+    "Migrate the agentic-memory Python console front door away from package-local cli.py while preserving generated dispatch proof."
   ],
   "blockers": [
     "None."
   ],
   "touched_paths": [
-    "pyproject.toml",
+    "packages/memory/pyproject.toml",
+    "packages/memory/src/repo_memory_bootstrap/cli.py",
+    "packages/memory/src/repo_memory_bootstrap/_runtime_cli.py",
+    "packages/memory/src/repo_memory_bootstrap/generated_cli_entrypoint.py",
     "src/agentic_workspace/_runtime_cli.py",
-    "src/agentic_workspace/_runtime_cli.py",
-    "src/agentic_workspace/generated_cli_entrypoint.py",
     "scripts/check/check_generated_command_packages.py",
     "tests/test_generated_command_package_proof_runner.py",
     "tests/test_generated_tool_conformance.py",
-    "tests/test_workspace_packaging.py"
+    "packages/memory/tests/"
   ],
   "invariants": [
     "Preserve the planning contract and keep the work bounded to this plan."
@@ -196,18 +202,18 @@
     "run status": "root-front-door-slice-proven",
     "executor": "Codex",
     "handoff source": "agentic-planning promote-to-plan",
-    "what happened": "Recovered the active #892 plan from an obsolete #933 next action, migrated the root `agentic-workspace` Python console entrypoint to `agentic_workspace.generated_cli_entrypoint`, and moved hand-owned root runtime primitives from `src/agentic_workspace/cli.py` to `src/agentic_workspace/_runtime_cli.py`.",
-    "scope touched": "root workspace Python front-door and runtime ownership metadata; planning and memory package front doors remain for later slices",
-    "changed surfaces": "pyproject.toml; src/agentic_workspace/generated_cli_entrypoint.py; src/agentic_workspace/_runtime_cli.py; root runtime ownership contracts; generated TypeScript runtime metadata derived from command_package_ir; focused proof/tests; this execplan and state.toml",
-    "validations run": "uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_generated_tool_conformance.py tests/test_workspace_packaging.py -q; uv run pytest tests/test_workspace_start_preflight_cli.py tests/test_workspace_config_cli.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run ruff check src/agentic_workspace scripts/check tests/test_generated_command_package_proof_runner.py tests/test_generated_tool_conformance.py tests/test_workspace_packaging.py tests/test_workspace_start_preflight_cli.py tests/test_workspace_config_cli.py; uv run python scripts/generate/generate_command_packages.py --check; uv run python -m agentic_workspace.generated_cli_entrypoint defaults --section startup --format json; uv run python -m agentic_workspace.generated_cli_entrypoint start --task \"front door smoke\" --select kind --format json",
-    "result for continuation": "root front-door slice is ready to commit; continue with planning then memory package front-door migrations as separate slices",
-    "next step": "Commit and push the root front-door slice, then continue with the next package front-door migration slice."
+    "what happened": "Root front-door slice was committed/pushed, then agentic-planning was migrated to `repo_planning_bootstrap.generated_cli_entrypoint` with hand-owned runtime primitives moved from `packages/planning/src/repo_planning_bootstrap/cli.py` to `_runtime_cli.py`.",
+    "scope touched": "root and planning Python front-door/runtime ownership metadata; memory package front door remains for the next slice",
+    "changed surfaces": "packages/planning/pyproject.toml; packages/planning/src/repo_planning_bootstrap/generated_cli_entrypoint.py; packages/planning/src/repo_planning_bootstrap/_runtime_cli.py; root planning delegation imports; generated TypeScript planning runtime metadata; focused proof/tests; this execplan and state.toml",
+    "validations run": "uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_generated_tool_conformance.py packages/planning/tests -q; uv run ruff check packages/planning/src packages/planning/tests src/agentic_workspace/_runtime_cli.py scripts/check tests/test_generated_command_package_proof_runner.py tests/test_generated_tool_conformance.py packages/command-generation/src; uv run python scripts/generate/generate_command_packages.py --check; uv run python -m repo_planning_bootstrap.generated_cli_entrypoint status --format json",
+    "result for continuation": "root and planning front-door slices are proven; continue with memory package front-door migration",
+    "next step": "Commit and push the planning front-door slice, then implement and prove the memory package front-door migration slice."
   },
   "finished_run_review": {
-    "review status": "completed-for-root-slice",
-    "scope respected": "yes; package front doors were not migrated in this commit",
-    "proof status": "green for focused root front-door proof",
-    "intent served": "partial; root cli.py is retired, planning and memory cli.py remain",
+    "review status": "completed-for-planning-slice",
+    "scope respected": "yes; memory front door was not migrated in this commit",
+    "proof status": "green for focused planning front-door proof",
+    "intent served": "partial; root and planning cli.py front doors are retired, memory cli.py remains",
     "config compliance": "used configured uv run agentic-workspace front door and recorded planning recovery/delegation",
     "misinterpretation risk": "medium if this root slice is mistaken for full Python completion",
     "follow-on decision": "keep lane open"
@@ -217,28 +223,28 @@
     "route skipped reason": "not skipped",
     "expected savings": "Sidecar import/proof fallout scan can run while local implementation planning continues.",
     "actual friction": "useful; read-only scan identified high-risk imports and confirmed the need to split package front doors into separate slices",
-    "proof result": "green for root front-door slice",
+    "proof result": "green for root and planning front-door slices",
     "quality concern": "Implementation write set remains local for the root front-door slice; delegate is read-only.",
     "decomposition adjustment": "Root, planning, and memory front-door migrations must be separate slices."
   },
   "proof_report": {
-    "validation proof": "complete for root front-door slice",
-    "proof achieved now": "Generated package static proof, Python generated conformance, focused packaging/conformance tests, start/config tests, contract tooling, ruff, generator freshness, and direct generated entrypoint smoke tests passed.",
+    "validation proof": "complete for root and planning front-door slices",
+    "proof achieved now": "Generated package static proof, Python generated conformance, planning package tests, ruff, generator freshness, and direct planning generated entrypoint smoke test passed.",
     "evidence for \"proof achieved\" state": "See execution_run.validations run."
   },
   "intent_satisfaction": {
     "original intent": "The previous completion claim only proved generated adapter coverage; the user clarified that Python is not complete while hand-owned cli.py entrypoints remain and future targets must not silently rely on Python internals.",
     "was original intent fully satisfied?": "no",
-    "evidence of intent satisfaction": "The root package-specific `src/agentic_workspace/cli.py` executable front door was retired in favor of generated_cli_entrypoint plus `_runtime_cli.py` runtime primitives.",
-    "unsolved intent passed to": "this execplan remains open for planning and memory front-door slices"
+    "evidence of intent satisfaction": "The root and planning package-specific executable cli.py front doors were retired in favor of generated_cli_entrypoint plus `_runtime_cli.py` runtime primitives.",
+    "unsolved intent passed to": "this execplan remains open for the memory front-door slice"
   },
   "execution_summary": {
-    "outcome delivered": "root agentic-workspace Python front door moved off package-local cli.py",
+    "outcome delivered": "root agentic-workspace and agentic-planning Python front doors moved off package-local cli.py",
     "validation confirmed": "focused proof passed",
-    "follow-on routed to": "this execplan; next slices are planning and memory package front doors",
+    "follow-on routed to": "this execplan; next slice is memory package front door",
     "post-work posterity capture": "updated state.toml and execplan",
     "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "next package front-door migration slice"
+    "resume from": "memory package front-door migration slice"
   },
   "durable_residue": {
     "status": "none",

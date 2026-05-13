@@ -26,7 +26,7 @@ if (!supportedCommands.has(command)) {
   process.exit(2);
 }
 
-const runtimeCommand = process.env.AGENTIC_WORKSPACE_RUNTIME ?? "python -m repo_planning_bootstrap.cli";
+const runtimeCommand = process.env.AGENTIC_WORKSPACE_RUNTIME ?? "python -m repo_planning_bootstrap.generated_cli_entrypoint";
 
 function splitRuntimeCommand(commandLine) {
   const parts = [];

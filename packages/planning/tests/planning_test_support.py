@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 import repo_planning_bootstrap._render as render_module
-import repo_planning_bootstrap.cli as planning_cli
+import repo_planning_bootstrap._runtime_cli as planning_cli
 import repo_planning_bootstrap.installer as installer_mod
 from repo_planning_bootstrap._ownership import module_root as planning_module_root
 from repo_planning_bootstrap.installer import (

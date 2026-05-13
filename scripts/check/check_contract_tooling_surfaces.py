@@ -1090,7 +1090,7 @@ def _program_parser(program: str) -> argparse.ArgumentParser | None:
     if program == "agentic-workspace":
         return cli.build_parser()
     if program == "agentic-planning":
-        from repo_planning_bootstrap import cli as planning_cli
+        from repo_planning_bootstrap import _runtime_cli as planning_cli
 
         return planning_cli.build_parser()
     if program == "agentic-memory":

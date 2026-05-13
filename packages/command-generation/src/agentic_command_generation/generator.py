@@ -43,7 +43,7 @@ def _is_runtime_backed_python_target(target: dict[str, Any]) -> bool:
 def _runtime_command_for_package(package: dict[str, Any], runtime_binding: dict[str, Any]) -> str:
     package_role = package.get("package_role")
     if package_role == "planning-module-cli":
-        return "python -m repo_planning_bootstrap.cli"
+        return "python -m repo_planning_bootstrap.generated_cli_entrypoint"
     if package_role == "memory-module-cli":
         return "python -m repo_memory_bootstrap.cli"
     return str(runtime_binding["default_runtime_command"])

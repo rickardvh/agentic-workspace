@@ -88,6 +88,38 @@
       "reason": "record root front-door slice proof and continuation state",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-13T12:32:32+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
+      "sha256": "fab8960b3d051c5cb1e08104a11be3f8695338f1cf4946ee0e23c147ec9d0fac",
+      "command": "agentic-planning record-recovery",
+      "reason": "advance active codegen execplan to planning front-door slice",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T12:34:36+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "46ff15b03f6eadc16391d78522705b10d7122ced5cc46fcb13f4ff983821a52c",
+      "command": "agentic-planning record-recovery",
+      "reason": "advance active codegen state to planning front-door slice",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T12:34:36+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
+      "sha256": "7c1877388ba4520bb25f23134b731a67fbae04cb7e63a9e9f8e60014001312de",
+      "command": "agentic-planning record-recovery",
+      "reason": "record planning front-door slice proof and advance to memory front-door slice",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T12:38:03+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8c451d9d2396d190b4a2bf9a31edc61822375caf0cafd08e606133abd34936fe",
+      "command": "agentic-planning record-recovery",
+      "reason": "advance active codegen state to memory front-door slice",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T12:38:03+00:00"
     }
   ]
 }

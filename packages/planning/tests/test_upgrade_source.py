@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from repo_planning_bootstrap import cli
+from repo_planning_bootstrap import _runtime_cli as cli
 from repo_planning_bootstrap._source import UPGRADE_SOURCE_PATH, default_upgrade_source, resolve_upgrade_source
 from repo_planning_bootstrap.installer import doctor_bootstrap
 
