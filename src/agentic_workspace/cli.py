@@ -1554,7 +1554,6 @@ def _planning_module_argv(args: argparse.Namespace) -> list[str]:
         ("--plan-slug", "plan_slug"),
         ("--scope", "scope"),
         ("--classification", "classification"),
-        ("--plan", "plan"),
         ("--route", "route"),
         ("--skipped-reason", "skipped_reason"),
         ("--expected-savings", "expected_savings"),
@@ -1575,6 +1574,8 @@ def _planning_module_argv(args: argparse.Namespace) -> list[str]:
         ("--continuation-summary", "continuation_summary"),
     ):
         _append_option(argv, option, getattr(args, attr, None))
+    if command == "delegation-decision":
+        _append_option(argv, "--plan", getattr(args, "plan", None))
     for option, attr in (
         ("--activate", "activate"),
         ("--queue", "queue"),

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import argparse
+
 # ruff: noqa: F403,F405
 from tests.workspace_cli_support import *
 
@@ -1365,6 +1367,40 @@ queued_items = []
     )
     recorded = json.loads(capsys.readouterr().out)["planning_safety_gate"]
     assert recorded["status"] == "satisfied"
+
+
+def test_planning_archive_plan_front_door_forwards_plan_positionally() -> None:
+    args = argparse.Namespace(
+        planning_command="archive-plan",
+        plan="plan-alpha",
+        target=".",
+        apply_cleanup=True,
+        dry_run=True,
+        format="json",
+    )
+
+    argv = cli._planning_module_argv(args)
+
+    assert argv[:2] == ["archive-plan", "plan-alpha"]
+    assert "--plan" not in argv
+    assert "--apply-cleanup" in argv
+
+
+def test_planning_delegation_decision_front_door_keeps_plan_option() -> None:
+    args = argparse.Namespace(
+        planning_command="delegation-decision",
+        plan="plan-alpha",
+        route="keep-local",
+        skipped_reason="small coupled slice",
+        target=".",
+        dry_run=False,
+        format="json",
+    )
+
+    argv = cli._planning_module_argv(args)
+
+    assert argv[0] == "delegation-decision"
+    assert argv[argv.index("--plan") + 1] == "plan-alpha"
 
 
 def test_start_task_surfaces_vague_outcome_orientation(tmp_path: Path, capsys) -> None:

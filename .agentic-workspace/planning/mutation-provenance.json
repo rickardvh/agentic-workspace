@@ -16,6 +16,46 @@
       "reason": "record proof and closeout after package-owned #937/#938 implementation",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-13T11:57:03+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
+      "sha256": "c09dd3d343ae812e4e14f4b75688dd03e4545260697afc46a3fcf24a1ce710ba",
+      "command": "agentic-planning promote-to-plan",
+      "reason": "promote planning item github-892-python-codegen-completion",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T12:13:33+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "624367b95cb293da3a4a2af48d6b69251a5a86fa2f41222c3fc660be776a8439",
+      "command": "agentic-planning promote-to-plan",
+      "reason": "promote planning item github-892-python-codegen-completion",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T12:13:33+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/dogfooding-planning-safety-935-plus.plan.json",
+      "sha256": "21b00a697e8284cdc05f8a97af23cd67796a5ce10d79cbb0716f5bdee044862b",
+      "command": "agentic-planning record-recovery",
+      "reason": "mark merged dogfooding plan complete before archive cleanup",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T12:15:06+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/dogfooding-planning-safety-935-plus.plan.json",
+      "sha256": "c3cf6df1c28d17eab1cd7ee6443d89426e5bcbc4beba3dbbbc139e7cb88aafe2",
+      "command": "agentic-planning record-recovery",
+      "reason": "align merged plan intent closeout for archive-and-close",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-13T12:15:19+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "81b4926d5e327923747a0e4120aa100fb42944c5ed0fc98de06081b6e536e4ea",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan dogfooding-planning-safety-935-plus",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-13T12:15:23+00:00"
     }
   ]
 }
