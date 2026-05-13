@@ -37,7 +37,9 @@
       "summary": "Read a UTF-8 text file from within the operation root or package resource root.",
       "kind": "filesystem",
       "portability": "target-executor",
-      "semantics": "Read text from a normalized path after root containment checks."
+      "semantics": "Read text from a normalized path after root containment checks.",
+      "input_schema_ref": "schemas/primitives/filesystem_read.input.schema.json",
+      "output_schema_ref": "schemas/primitives/filesystem_read.output.schema.json"
     },
     {
       "id": "filesystem.write",
@@ -74,7 +76,9 @@
       "summary": "Parse JSON text into a structured value.",
       "kind": "structured-data",
       "portability": "target-executor",
-      "semantics": "Parse JSON using the target runtime's standard parser and fail the operation on invalid JSON."
+      "semantics": "Parse JSON using the target runtime's standard parser and fail the operation on invalid JSON.",
+      "input_schema_ref": "schemas/primitives/json_parse.input.schema.json",
+      "output_schema_ref": "schemas/primitives/json_parse.output.schema.json"
     },
     {
       "id": "json.write",

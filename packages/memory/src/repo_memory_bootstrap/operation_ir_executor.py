@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 from typing import Any
 
 from repo_memory_bootstrap._installer_output import _new_result, format_actions, format_result_json
-from repo_memory_bootstrap._installer_paths import _record_repo_context_warnings, payload_root, resolve_target_root
+from repo_memory_bootstrap._installer_paths import _record_repo_context_warnings, payload_root, resolve_target_root, skills_root
 from repo_memory_bootstrap._installer_payload import _payload_entries
-from repo_memory_bootstrap._installer_shared import OPTIONAL_APPEND_TARGETS
+from repo_memory_bootstrap._installer_shared import OPTIONAL_APPEND_TARGETS, InstallResult
 
 
 class OperationIrExecutionError(RuntimeError):
@@ -15,7 +16,7 @@ class OperationIrExecutionError(RuntimeError):
 
 
 def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int:
-    if operation.get("id") != "memory.list-files.report":
+    if operation.get("id") not in {"memory.list-files.report", "memory.list-skills.report"}:
         raise OperationIrExecutionError(f"unsupported operation IR contract: {operation.get('id')!r}")
     if operation.get("migration_status") != "runtime-consumed":
         raise OperationIrExecutionError(f"operation is not marked runtime-consumed: {operation.get('id')!r}")
@@ -25,19 +26,28 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
         primitive = step.get("uses")
         if primitive == "path.target_root.resolve":
             values["target_root"] = resolve_target_root(values["target"])
+        elif primitive == "filesystem.read":
+            values["registry_text"] = _read_memory_package_file(step.get("arguments", {}))
+        elif primitive == "json.parse":
+            values["registry"] = json.loads(str(values["registry_text"]))
         elif primitive == "filesystem.glob":
             values["files"] = _list_memory_payload_entries(step.get("arguments", {}))
         elif primitive == "payload.assemble":
-            values["result"] = _assemble_memory_list_files_payload(
-                target_root=values["target_root"],
-                files=values["files"],
-                arguments=step.get("arguments", {}),
-            )
+            values["result"] = _assemble_payload(operation_id=str(operation["id"]), values=values, arguments=step.get("arguments", {}))
         elif primitive == "output.emit":
             _emit_operation_output(values["result"], output_format=str(values["format"]))
         else:
             raise OperationIrExecutionError(f"unsupported primitive in operation IR: {primitive!r}")
     return 0
+
+
+def _read_memory_package_file(arguments: dict[str, Any]) -> str:
+    if arguments.get("root") != "memory.package-skills":
+        raise OperationIrExecutionError(f"unsupported filesystem.read root: {arguments.get('root')!r}")
+    relative_path = Path(str(arguments.get("path", "")))
+    if relative_path.as_posix() != "REGISTRY.json":
+        raise OperationIrExecutionError(f"unsupported filesystem.read path: {relative_path.as_posix()!r}")
+    return (skills_root() / relative_path).read_text(encoding="utf-8")
 
 
 def _list_memory_payload_entries(arguments: dict[str, Any]) -> list[dict[str, str]]:
@@ -69,6 +79,18 @@ def _list_memory_payload_entries(arguments: dict[str, Any]) -> list[dict[str, st
     return sorted(entries, key=lambda item: (item["kind"], item["relative_path"], item["source"]))
 
 
+def _assemble_payload(*, operation_id: str, values: dict[str, Any], arguments: dict[str, Any]):
+    if operation_id == "memory.list-files.report":
+        return _assemble_memory_list_files_payload(
+            target_root=values["target_root"],
+            files=values["files"],
+            arguments=arguments,
+        )
+    if operation_id == "memory.list-skills.report":
+        return _assemble_memory_list_skills_payload(registry=values["registry"], arguments=arguments)
+    raise OperationIrExecutionError(f"unsupported payload assembly operation: {operation_id!r}")
+
+
 def _assemble_memory_list_files_payload(*, target_root: Path, files: list[dict[str, str]], arguments: dict[str, Any]):
     fields = arguments.get("fields", {})
     if not isinstance(fields, dict) or fields.get("actions_from") != "files":
@@ -88,6 +110,35 @@ def _assemble_memory_list_files_payload(*, target_root: Path, files: list[dict[s
             role=file_entry["role"],
             safety="safe",
             source=file_entry["source"],
+        )
+    return result
+
+
+def _assemble_memory_list_skills_payload(*, registry: Any, arguments: dict[str, Any]) -> InstallResult:
+    fields = arguments.get("fields", {})
+    if not isinstance(fields, dict) or fields.get("actions_from") != "registry.skills":
+        raise OperationIrExecutionError("payload.assemble must declare actions_from='registry.skills'")
+    if not isinstance(registry, dict):
+        raise OperationIrExecutionError("memory skill registry must parse to an object")
+
+    skills_dir = skills_root()
+    result = InstallResult(target_root=skills_dir, dry_run=bool(fields.get("dry_run", True)), message=str(fields["message"]))
+    result.mode = str(fields.get("mode", "skills"))
+    result.detected_version = None
+    for skill in registry.get("skills", []):
+        if not isinstance(skill, dict):
+            continue
+        skill_id = str(skill.get("id", "")).strip()
+        relative = Path(str(skill.get("path", "")).strip())
+        if not skill_id or not relative.as_posix():
+            continue
+        result.add(
+            "bundled skill",
+            skills_dir / relative.parent,
+            "registered packaged product skill",
+            role="skill",
+            safety="safe",
+            source=skill_id,
         )
     return result
 

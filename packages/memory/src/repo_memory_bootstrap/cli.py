@@ -949,7 +949,7 @@ def _run_list_files_report_adapter(args: argparse.Namespace) -> int | None:
 
 
 def _run_list_skills_report_adapter(args: argparse.Namespace) -> int | None:
-    return _handle_list_skills(args)
+    return run_operation_ir(generated_cli_package_operation_contract("memory.list-skills.report"), args)
 
 
 def _run_promotion_report_adapter(args: argparse.Namespace) -> int | None:

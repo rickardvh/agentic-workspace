@@ -629,37 +629,50 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         return errors + ["python_operation_execution_inventory.json entries must be a list"]
     by_operation = {str(entry.get("operation_id")): entry for entry in entries if isinstance(entry, dict)}
 
-    representative = by_operation.get("memory.list-files.report")
-    if not isinstance(representative, dict):
-        errors.append("python_operation_execution_inventory.json must track memory.list-files.report as the #931 representative")
-    else:
-        if representative.get("status") != "runtime-consumed":
-            errors.append("memory.list-files.report must be marked runtime-consumed in python_operation_execution_inventory.json")
-        if representative.get("primitive_executor") != "packages/memory/src/repo_memory_bootstrap/operation_ir_executor.py":
-            errors.append("memory.list-files.report must point at the Python operation IR executor")
-        if representative.get("operation_contract") != "operations/memory.list-files.report.json":
-            errors.append("memory.list-files.report must point at its operation contract")
+    runtime_consumed_memory_operations = {
+        "memory.list-files.report",
+        "memory.list-skills.report",
+    }
+    for operation_id in sorted(runtime_consumed_memory_operations):
+        entry = by_operation.get(operation_id)
+        if not isinstance(entry, dict):
+            errors.append(f"python_operation_execution_inventory.json must track {operation_id} as runtime-consumed")
+            continue
+        operation_contract = f"operations/{operation_id}.json"
+        if entry.get("status") != "runtime-consumed":
+            errors.append(f"{operation_id} must be marked runtime-consumed in python_operation_execution_inventory.json")
+        if entry.get("primitive_executor") != "packages/memory/src/repo_memory_bootstrap/operation_ir_executor.py":
+            errors.append(f"{operation_id} must point at the Python operation IR executor")
+        if entry.get("operation_contract") != operation_contract:
+            errors.append(f"{operation_id} must point at {operation_contract}")
 
-    operation = _load_json("operations/memory.list-files.report.json")
-    if operation.get("migration_status") != "runtime-consumed":
-        errors.append("operations/memory.list-files.report.json must be marked runtime-consumed")
-    ir_plan = operation.get("ir_plan", {})
-    if not isinstance(ir_plan, dict) or ir_plan.get("status") not in {"representative", "complete"}:
-        errors.append("memory.list-files.report must keep a representative or complete ir_plan")
+    operations_by_id = {operation_id: _load_json(f"operations/{operation_id}.json") for operation_id in runtime_consumed_memory_operations}
+    for operation_id, operation in operations_by_id.items():
+        if operation.get("migration_status") != "runtime-consumed":
+            errors.append(f"operations/{operation_id}.json must be marked runtime-consumed")
+        ir_plan = operation.get("ir_plan", {})
+        if not isinstance(ir_plan, dict) or ir_plan.get("status") not in {"representative", "complete"}:
+            errors.append(f"{operation_id} must keep a representative or complete ir_plan")
 
     try:
         generated_memory = importlib.import_module("repo_memory_bootstrap.generated_cli_package")
         generated_operation_contract = getattr(generated_memory, "generated_operation_contract", None)
         if not callable(generated_operation_contract):
             errors.append("repo_memory_bootstrap.generated_cli_package must expose generated_operation_contract()")
-        elif generated_operation_contract("memory.list-files.report") != operation:
-            errors.append("generated memory list-files operation contract drifted from source operation contract")
+        else:
+            for operation_id, operation in operations_by_id.items():
+                if generated_operation_contract(operation_id) != operation:
+                    errors.append(f"generated memory operation contract drifted from source operation contract: {operation_id}")
     except (ImportError, KeyError, FileNotFoundError, json.JSONDecodeError) as exc:
-        errors.append(f"generated memory list-files operation contract could not be loaded: {exc}")
+        errors.append(f"generated memory operation contract could not be loaded: {exc}")
 
     memory_cli_text = (REPO_ROOT / "packages" / "memory" / "src" / "repo_memory_bootstrap" / "cli.py").read_text(encoding="utf-8")
-    if "def _run_list_files_report_adapter" not in memory_cli_text or "run_operation_ir(" not in memory_cli_text:
-        errors.append("memory.list-files.report runtime adapter must execute generated operation IR through run_operation_ir")
+    for function_name in ("_run_list_files_report_adapter", "_run_list_skills_report_adapter"):
+        function_index = memory_cli_text.find(f"def {function_name}")
+        next_function_index = memory_cli_text.find("\ndef ", function_index + 1)
+        function_text = memory_cli_text[function_index:next_function_index] if function_index != -1 else ""
+        if "run_operation_ir(" not in function_text:
+            errors.append(f"{function_name} must execute generated operation IR through run_operation_ir")
 
     python_completion = ir.get("generation_policy", {}).get("python_cli_completion", {})
     if isinstance(python_completion, dict) and python_completion.get("current_state") == "full-generated-cli-complete":

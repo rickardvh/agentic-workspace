@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/primitives/filesystem_read.output.schema.json",
+  "title": "filesystem.read output",
+  "type": "object",
+  "properties": {
+    "text": {
+      "type": "string",
+      "description": "UTF-8 text read from the declared path."
+    }
+  },
+  "required": [
+    "text"
+  ],
+  "additionalProperties": false
+}

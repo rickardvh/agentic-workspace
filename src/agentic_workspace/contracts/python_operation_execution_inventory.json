@@ -18,6 +18,20 @@
       "conformance_ref": "memory.list-files.process"
     },
     {
+      "operation_id": "memory.list-skills.report",
+      "program": "agentic-memory",
+      "command": "list-skills",
+      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/memory.list-skills.report.json",
+      "primitive_executor": "packages/memory/src/repo_memory_bootstrap/operation_ir_executor.py",
+      "hand_owned_runtime_code": [
+        "memory package skill registry loading",
+        "module-result emission mechanics"
+      ],
+      "status": "runtime-consumed",
+      "conformance_ref": "memory.list-skills.process"
+    },
+    {
       "operation_id": "memory.doctor.report",
       "program": "agentic-memory",
       "command": "doctor",

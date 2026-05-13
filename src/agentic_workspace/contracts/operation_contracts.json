@@ -296,7 +296,7 @@
       "id": "memory.list-skills.report",
       "path": "operations/memory.list-skills.report.json",
       "command": "list-skills",
-      "migration_status": "validated-contract"
+      "migration_status": "runtime-consumed"
     }
   ]
 }
