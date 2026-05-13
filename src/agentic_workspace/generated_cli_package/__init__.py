@@ -36,6 +36,7 @@ except (ImportError, ModuleNotFoundError):
 GENERATED_COMMAND_PACKAGE: dict[str, Any] = _generated.GENERATED_COMMAND_PACKAGE
 build_generated_parser = _generated.build_generated_parser
 generated_command_names = _generated.generated_command_names
+generated_operation_contract = _generated.generated_operation_contract
 generated_operation_ids = _generated.generated_operation_ids
 generated_maturity = _generated.generated_maturity
 generated_weak_agent_routing = _generated.generated_weak_agent_routing
@@ -46,6 +47,7 @@ __all__ = [
     "GENERATED_COMMAND_PACKAGE",
     "build_generated_parser",
     "generated_command_names",
+    "generated_operation_contract",
     "generated_operation_ids",
     "generated_maturity",
     "generated_weak_agent_routing",

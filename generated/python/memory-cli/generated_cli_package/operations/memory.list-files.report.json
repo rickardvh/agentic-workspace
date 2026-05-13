@@ -1,0 +1,144 @@
+{
+  "classification": "read-only-report",
+  "command_surface": {
+    "command": "list-files",
+    "format_option": "format",
+    "program": "agentic-memory"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": true,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
+  },
+  "guards": [
+    "List-files must remain read-only."
+  ],
+  "id": "memory.list-files.report",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "portability_notes": [
+      "Target executors can implement this representative plan with filesystem globbing and payload assembly; it does not require importing package internals.",
+      "Generated command adapters consume this operation contract directly for list-files; other generated commands remain on compatibility runtime handlers until promoted."
+    ],
+    "status": "representative",
+    "steps": [
+      {
+        "description": "Resolve the optional target root without requiring an installed workspace.",
+        "id": "resolve_target",
+        "inputs": [
+          "target"
+        ],
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "target_root"
+        ],
+        "uses": "path.target_root.resolve"
+      },
+      {
+        "arguments": {
+          "pattern": "**/*",
+          "root": "memory.package-payload",
+          "sort": "lexicographic"
+        },
+        "description": "List packaged memory bootstrap payload files as stable relative paths.",
+        "id": "list_packaged_payload",
+        "on_error": "fail",
+        "outputs": [
+          "files"
+        ],
+        "reads": [
+          "packaged memory bootstrap payload"
+        ],
+        "uses": "filesystem.glob"
+      },
+      {
+        "arguments": {
+          "fields": {
+            "actions_from": "files",
+            "dry_run": true,
+            "message": "Packaged bootstrap file preview"
+          }
+        },
+        "description": "Build the module-result payload containing dry-run status and discovered file paths.",
+        "id": "assemble_payload",
+        "inputs": [
+          "target_root",
+          "files"
+        ],
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "payload.assemble"
+      },
+      {
+        "description": "Emit the result as JSON or text according to the format option.",
+        "id": "emit_output",
+        "inputs": [
+          "result",
+          "format"
+        ],
+        "on_error": "emit_usage_error",
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Representative target-executor IR for a read-only package-resource command from CLI input through emitted JSON/text output."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "text-or-json"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "operation command parity checks agentic-memory live parser"
+  ],
+  "reads": [
+    {
+      "required": true,
+      "surface": "packaged memory bootstrap payload"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the optional target root without requiring an installed workspace.",
+      "id": "resolve_target",
+      "uses": "path.target_root.resolve"
+    },
+    {
+      "description": "List packaged memory bootstrap payload files as stable relative paths.",
+      "id": "list_packaged_payload",
+      "uses": "filesystem.glob"
+    },
+    {
+      "description": "Build the module-result payload containing dry-run status and discovered file paths.",
+      "id": "assemble_payload",
+      "uses": "payload.assemble"
+    },
+    {
+      "description": "Emit file list in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Preview packaged memory bootstrap files without applying them to a target repository.",
+  "writes": []
+}

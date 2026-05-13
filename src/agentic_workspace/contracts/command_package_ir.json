@@ -171,6 +171,16 @@
             "id": "runtime-handlers-thin",
             "evidence": "Hand-owned cli.py runtime bindings are limited to _run_*_adapter handlers whose operation ids exactly match generated operation ids.",
             "proof": "scripts/check/check_generated_command_packages.py::_validate_python_runtime_handler_boundary"
+          },
+          {
+            "id": "representative-operation-ir-runtime-consumed",
+            "evidence": "agentic-memory list-files and list-skills execute generated operation artifacts through the Python operation IR executor.",
+            "proof": "scripts/check/check_generated_command_packages.py::_validate_python_operation_execution_inventory"
+          },
+          {
+            "id": "operation-execution-inventory-exhaustive",
+            "evidence": "python_operation_execution_inventory.json covers every generated Python operation id and rejects unaccepted compatibility handlers.",
+            "proof": "scripts/check/check_generated_command_packages.py::_validate_python_operation_execution_inventory"
           }
         ]
       }
@@ -2895,7 +2905,9 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "memory.bootstrap.files.list",
+              "path.target_root.resolve",
+              "filesystem.glob",
+              "payload.assemble",
               "output.emit"
             ]
           },
@@ -2966,7 +2978,9 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "memory.bootstrap.skills.list",
+              "filesystem.read",
+              "json.parse",
+              "payload.assemble",
               "output.emit"
             ]
           },

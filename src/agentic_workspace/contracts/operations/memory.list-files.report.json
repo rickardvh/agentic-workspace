@@ -44,9 +44,19 @@
   "writes": [],
   "steps": [
     {
-      "id": "list_files",
-      "uses": "memory.bootstrap.files.list",
-      "description": "List packaged memory bootstrap files."
+      "id": "resolve_target",
+      "uses": "path.target_root.resolve",
+      "description": "Resolve the optional target root without requiring an installed workspace."
+    },
+    {
+      "id": "list_packaged_payload",
+      "uses": "filesystem.glob",
+      "description": "List packaged memory bootstrap payload files as stable relative paths."
+    },
+    {
+      "id": "assemble_payload",
+      "uses": "payload.assemble",
+      "description": "Build the module-result payload containing dry-run status and discovered file paths."
     },
     {
       "id": "emit_output",
@@ -74,6 +84,11 @@
         "id": "list_packaged_payload",
         "uses": "filesystem.glob",
         "description": "List packaged memory bootstrap payload files as stable relative paths.",
+        "arguments": {
+          "root": "memory.package-payload",
+          "pattern": "**/*",
+          "sort": "lexicographic"
+        },
         "reads": [
           "packaged memory bootstrap payload"
         ],
@@ -86,6 +101,13 @@
         "id": "assemble_payload",
         "uses": "payload.assemble",
         "description": "Build the module-result payload containing dry-run status and discovered file paths.",
+        "arguments": {
+          "fields": {
+            "dry_run": true,
+            "message": "Packaged bootstrap file preview",
+            "actions_from": "files"
+          }
+        },
         "inputs": [
           "target_root",
           "files"
@@ -107,8 +129,8 @@
       }
     ],
     "portability_notes": [
-      "A TypeScript executor can implement this representative plan with filesystem globbing and payload assembly; it does not require importing Python internals.",
-      "The existing runtime primitive sequence remains the compatibility layer until generated targets consume ir_plan directly."
+      "Target executors can implement this representative plan with filesystem globbing and payload assembly; it does not require importing package internals.",
+      "Generated command adapters consume this operation contract directly for list-files; other generated commands remain on compatibility runtime handlers until promoted."
     ]
   },
   "guards": [
@@ -118,5 +140,5 @@
     "operation contract validates against operation.schema.json",
     "operation command parity checks agentic-memory live parser"
   ],
-  "migration_status": "validated-contract"
+  "migration_status": "runtime-consumed"
 }

@@ -347,6 +347,10 @@
                 },
                 "description": "Named inputs consumed by this step."
               },
+              "arguments": {
+                "type": "object",
+                "description": "Primitive-specific JSON arguments validated by the primitive input schema."
+              },
               "outputs": {
                 "type": "array",
                 "items": {

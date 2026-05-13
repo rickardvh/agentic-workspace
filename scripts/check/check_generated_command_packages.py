@@ -64,6 +64,8 @@ PYTHON_COMPLETION_REQUIRED_EVIDENCE_IDS = {
     "python-black-box-conformance",
     "python-docker-conformance",
     "runtime-handlers-thin",
+    "representative-operation-ir-runtime-consumed",
+    "operation-execution-inventory-exhaustive",
 }
 PYTHON_COMPLETION_EXPECTED_PROOF_SUBSTRINGS = {
     "parser-shape-generated": "_validate_generated_python_commands_absent_from_handwritten_parsers",
@@ -73,7 +75,10 @@ PYTHON_COMPLETION_EXPECTED_PROOF_SUBSTRINGS = {
     "python-black-box-conformance": "--python-conformance",
     "python-docker-conformance": "--python-docker-conformance --require-docker",
     "runtime-handlers-thin": "_validate_python_runtime_handler_boundary",
+    "representative-operation-ir-runtime-consumed": "_validate_python_operation_execution_inventory",
+    "operation-execution-inventory-exhaustive": "_validate_python_operation_execution_inventory",
 }
+PYTHON_OPERATION_EXECUTION_FINAL_STATUSES = {"runtime-consumed", "accepted-hand-owned-runtime-primitive"}
 
 
 def _run(command: list[str]) -> int:
@@ -613,6 +618,131 @@ def _validate_python_cli_completion_policy(policy: dict[str, object]) -> list[st
     return errors
 
 
+def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> list[str]:
+    errors: list[str] = []
+    try:
+        inventory = _load_json("python_operation_execution_inventory.json")
+    except (OSError, json.JSONDecodeError) as exc:
+        return [f"python_operation_execution_inventory.json is missing or invalid: {exc}"]
+
+    if inventory.get("schema_version") != "agentic-workspace/python-operation-execution-inventory/v1":
+        errors.append("python_operation_execution_inventory.json has an unknown schema_version")
+    entries = inventory.get("entries", [])
+    if not isinstance(entries, list):
+        return errors + ["python_operation_execution_inventory.json entries must be a list"]
+    by_operation = {str(entry.get("operation_id")): entry for entry in entries if isinstance(entry, dict)}
+    generated_operations: dict[str, dict[str, object]] = {}
+    for package in ir.get("packages", []):
+        if not isinstance(package, dict):
+            continue
+        package_id = str(package.get("id", ""))
+        generated_transport = {
+            "root-workspace": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+            "planning-bootstrap": "generated/python/planning-cli/generated_cli_package/__init__.py",
+            "memory-bootstrap": "generated/python/memory-cli/generated_cli_package/__init__.py",
+        }.get(package_id)
+        for command in package.get("commands", []):
+            if not isinstance(command, dict):
+                continue
+            operation_ref = command.get("operation_ref", {})
+            interface = command.get("interface", {})
+            if not isinstance(operation_ref, dict) or not isinstance(interface, dict):
+                continue
+            operation_id = str(operation_ref.get("id", ""))
+            if not operation_id:
+                continue
+            generated_operations[operation_id] = {
+                "program": package.get("program"),
+                "command": interface.get("name"),
+                "operation_contract": operation_ref.get("path"),
+                "generated_transport": generated_transport,
+                "conformance_ref": (command.get("conformance_refs") or [None])[0],
+            }
+    missing_inventory = sorted(set(generated_operations) - set(by_operation))
+    extra_inventory = sorted(set(by_operation) - set(generated_operations))
+    if missing_inventory:
+        errors.append(f"python_operation_execution_inventory.json missing generated operation ids: {missing_inventory!r}")
+    if extra_inventory:
+        errors.append(f"python_operation_execution_inventory.json contains entries outside generated operation ids: {extra_inventory!r}")
+    for operation_id, expected in sorted(generated_operations.items()):
+        entry = by_operation.get(operation_id)
+        if not isinstance(entry, dict):
+            continue
+        for field in ("program", "command", "generated_transport", "operation_contract", "conformance_ref"):
+            if entry.get(field) != expected.get(field):
+                errors.append(f"python_operation_execution_inventory.json {operation_id} has wrong {field}: {entry.get(field)!r}")
+        status = str(entry.get("status", ""))
+        if status not in PYTHON_OPERATION_EXECUTION_FINAL_STATUSES and status != "compatibility-runtime-handler":
+            errors.append(f"python_operation_execution_inventory.json {operation_id} has unknown status: {status!r}")
+        hand_owned = entry.get("hand_owned_runtime_code")
+        if not isinstance(hand_owned, list) or not all(isinstance(item, str) and item.strip() for item in hand_owned):
+            errors.append(f"python_operation_execution_inventory.json {operation_id} must name hand_owned_runtime_code entries")
+
+    runtime_consumed_memory_operations = {
+        "memory.list-files.report",
+        "memory.list-skills.report",
+    }
+    for operation_id in sorted(runtime_consumed_memory_operations):
+        entry = by_operation.get(operation_id)
+        if not isinstance(entry, dict):
+            errors.append(f"python_operation_execution_inventory.json must track {operation_id} as runtime-consumed")
+            continue
+        operation_contract = f"operations/{operation_id}.json"
+        if entry.get("status") != "runtime-consumed":
+            errors.append(f"{operation_id} must be marked runtime-consumed in python_operation_execution_inventory.json")
+        if entry.get("primitive_executor") != "packages/memory/src/repo_memory_bootstrap/operation_ir_executor.py":
+            errors.append(f"{operation_id} must point at the Python operation IR executor")
+        if entry.get("operation_contract") != operation_contract:
+            errors.append(f"{operation_id} must point at {operation_contract}")
+
+    operations_by_id = {operation_id: _load_json(f"operations/{operation_id}.json") for operation_id in runtime_consumed_memory_operations}
+    for operation_id, operation in operations_by_id.items():
+        if operation.get("migration_status") != "runtime-consumed":
+            errors.append(f"operations/{operation_id}.json must be marked runtime-consumed")
+        ir_plan = operation.get("ir_plan", {})
+        if not isinstance(ir_plan, dict) or ir_plan.get("status") not in {"representative", "complete"}:
+            errors.append(f"{operation_id} must keep a representative or complete ir_plan")
+
+    try:
+        generated_memory = importlib.import_module("repo_memory_bootstrap.generated_cli_package")
+        generated_operation_contract = getattr(generated_memory, "generated_operation_contract", None)
+        if not callable(generated_operation_contract):
+            errors.append("repo_memory_bootstrap.generated_cli_package must expose generated_operation_contract()")
+        else:
+            for operation_id, operation in operations_by_id.items():
+                if generated_operation_contract(operation_id) != operation:
+                    errors.append(f"generated memory operation contract drifted from source operation contract: {operation_id}")
+    except (ImportError, KeyError, FileNotFoundError, json.JSONDecodeError) as exc:
+        errors.append(f"generated memory operation contract could not be loaded: {exc}")
+
+    memory_cli_text = (REPO_ROOT / "packages" / "memory" / "src" / "repo_memory_bootstrap" / "cli.py").read_text(encoding="utf-8")
+    for function_name in ("_run_list_files_report_adapter", "_run_list_skills_report_adapter"):
+        function_index = memory_cli_text.find(f"def {function_name}")
+        next_function_index = memory_cli_text.find("\ndef ", function_index + 1)
+        function_text = memory_cli_text[function_index:next_function_index] if function_index != -1 else ""
+        if "run_operation_ir(" not in function_text:
+            errors.append(f"{function_name} must execute generated operation IR through run_operation_ir")
+
+    python_completion = ir.get("generation_policy", {}).get("python_cli_completion", {})
+    if isinstance(python_completion, dict) and python_completion.get("current_state") == "full-generated-cli-complete":
+        incomplete = sorted(
+            operation_id
+            for operation_id, entry in by_operation.items()
+            if isinstance(entry, dict) and entry.get("status") not in PYTHON_OPERATION_EXECUTION_FINAL_STATUSES
+        )
+        if incomplete:
+            incomplete_statuses = sorted(
+                f"{operation_id}:{by_operation[operation_id].get('status')}"
+                for operation_id in incomplete
+                if isinstance(by_operation.get(operation_id), dict)
+            )
+            errors.append(
+                "command_package_ir.json cannot claim full Python generated CLI completion while "
+                f"inventory entries remain outside accepted operation execution statuses: {incomplete_statuses!r}"
+            )
+    return errors
+
+
 def _validate_python_runtime_handler_boundary() -> list[str]:
     errors: list[str] = []
     package_modules = {
@@ -919,6 +1049,7 @@ def _validate_static_surfaces() -> list[str]:
             errors.append("command_package_ir.json generation_policy.python_cli_completion is missing or malformed")
         else:
             errors.extend(_validate_python_cli_completion_policy(python_cli_completion))
+        errors.extend(_validate_python_operation_execution_inventory(ir))
         shell_policy = str(ir.get("generation_policy", {}).get("shell_adapter_policy", ""))
         if "Issue #909 evaluation selects Bash as the first additional generated command transport candidate" not in shell_policy:
             errors.append("command_package_ir.json shell adapter policy does not record the #909 first transport evaluation")
@@ -980,6 +1111,8 @@ def _validate_static_surfaces() -> list[str]:
                     errors.append(f"{generated_root}/generated_cli_package/__init__.py is missing generated_maturity")
                 if "def generated_weak_agent_routing()" not in generated_text:
                     errors.append(f"{generated_root}/generated_cli_package/__init__.py is missing generated_weak_agent_routing")
+                if "def generated_operation_contract(" not in generated_text:
+                    errors.append(f"{generated_root}/generated_cli_package/__init__.py is missing generated_operation_contract")
                 if "_GENERATED_WEAK_AGENT_ROUTING = 'allowed-read-only'" not in generated_text:
                     errors.append(f"{generated_root}/generated_cli_package/__init__.py does not advertise allowed-read-only routing")
             for resource_name in ("command_package.json", "adapter_commands.json"):
@@ -999,6 +1132,7 @@ def _validate_static_surfaces() -> list[str]:
                         {
                             "adapter_id": command["adapter_id"],
                             "operation_id": command["operation_ref"]["id"],
+                            "operation_path": command["operation_ref"]["path"],
                             "interface": dict(command["interface"]),
                         }
                         for command in package.get("commands", [])

@@ -39,6 +39,11 @@ Contract for one Agentic Workspace operation, including command shape, effects, 
 | `reads` | array of ref `#/$defs/surface_access` | no |  | Surfaces or state the operation reads. |  |  |
 | `writes` | array of  | no |  | Surfaces or state the operation writes. |  |  |
 | `steps` | array of object | yes |  | Primitive implementation steps that define operation behavior. |  |  |
+| `ir_plan` | object | no |  | Optional lower-level operation IR plan suitable for thin target executors. |  |  |
+| `ir_plan.status` | enum `"not-modeled"`, `"partial"`, `"representative"`, `"complete"` | yes |  | How much of the operation behavior is expressed as target-executor IR. |  |  |
+| `ir_plan.summary` | string | no |  | Short explanation of what this IR plan proves. |  |  |
+| `ir_plan.steps` | array of object | yes |  | Target-executor primitive plan. |  |  |
+| `ir_plan.portability_notes` | array of string | no |  | Target portability constraints and bridge assumptions. |  |  |
 | `guards` | array of string | yes |  | Safety or escalation guards for using the operation. |  |  |
 | `proof` | array of string | yes |  | Validation expectations for the operation contract. |  |  |
 | `projections` | object | no |  | Adapter projections such as CLI, MCP, or skill bindings. |  |  |

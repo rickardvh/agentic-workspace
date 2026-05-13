@@ -286,17 +286,17 @@
       "command": "promotion-report",
       "migration_status": "validated-contract"
     },
-    {
-      "id": "memory.list-files.report",
-      "path": "operations/memory.list-files.report.json",
-      "command": "list-files",
-      "migration_status": "validated-contract"
-    },
+      {
+        "id": "memory.list-files.report",
+        "path": "operations/memory.list-files.report.json",
+        "command": "list-files",
+        "migration_status": "runtime-consumed"
+      },
     {
       "id": "memory.list-skills.report",
       "path": "operations/memory.list-skills.report.json",
       "command": "list-skills",
-      "migration_status": "validated-contract"
+      "migration_status": "runtime-consumed"
     }
   ]
 }

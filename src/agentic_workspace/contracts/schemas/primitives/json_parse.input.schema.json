@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/primitives/json_parse.input.schema.json",
+  "title": "json.parse input",
+  "type": "object",
+  "properties": {
+    "text": {
+      "type": "string",
+      "description": "JSON text to parse."
+    }
+  },
+  "required": [
+    "text"
+  ],
+  "additionalProperties": false
+}

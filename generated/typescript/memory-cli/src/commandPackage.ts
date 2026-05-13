@@ -517,7 +517,9 @@ export const generatedCommandPackage = {
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "memory.bootstrap.files.list",
+          "path.target_root.resolve",
+          "filesystem.glob",
+          "payload.assemble",
           "output.emit"
         ]
       },
@@ -588,7 +590,9 @@ export const generatedCommandPackage = {
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "memory.bootstrap.skills.list",
+          "filesystem.read",
+          "json.parse",
+          "payload.assemble",
           "output.emit"
         ]
       },

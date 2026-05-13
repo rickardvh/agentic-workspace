@@ -34,6 +34,19 @@
       "parallel_with": []
     },
     {
+      "id": "python-package-resource-operation-ir",
+      "title": "Python package-resource operation IR migration",
+      "readiness": "promoted",
+      "outcome": "Simple package-resource generated Python commands consume checked-in operation contracts and target-executor primitives instead of compatibility runtime handlers.",
+      "owner_surface": "src/agentic_workspace/contracts/operations/memory.list-*.report.json, src/agentic_workspace/contracts/python_operation_execution_inventory.json, packages/memory/src/repo_memory_bootstrap/operation_ir_executor.py, and generated/python/memory-cli/generated_cli_package/operations/",
+      "proof": "Active execplan .agentic-workspace/planning/execplans/python-operation-ir-package-resource-commands.plan.json must prove contract tooling, generated Python conformance, generated package freshness, and structured inventory before this lane is complete.",
+      "depends_on": [
+        "json-schema-operation-ir",
+        "python-runtime-handler-boundary"
+      ],
+      "parallel_with": []
+    },
+    {
       "id": "python-handwritten-parser-retirement",
       "title": "Python handwritten parser retirement for generated commands",
       "readiness": "promoted",
@@ -41,7 +54,8 @@
       "owner_surface": "src/agentic_workspace/cli.py, packages/planning/src/repo_planning_bootstrap/cli.py, packages/memory/src/repo_memory_bootstrap/cli.py, and generated/python/*/generated_cli_package/__init__.py",
       "proof": "Static proof rejects duplicated handwritten parser ownership for generated command/interface surfaces; Python black-box conformance still passes.",
       "depends_on": [
-        "python-runtime-handler-boundary"
+        "python-runtime-handler-boundary",
+        "python-package-resource-operation-ir"
       ],
       "parallel_with": []
     },
@@ -114,7 +128,13 @@
       "target": "#931",
       "label": "Python operation-contract execution",
       "role": "Python migration lane"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#933",
+      "label": "Remaining Python generated command migration",
+      "role": "active package-resource operation IR slice"
     }
   ],
-  "notes": "Created after #921 showed that adapter maturity was incorrectly treated as Python generated-CLI completion. Updated after user clarification that non-Python generated CLI targets are not meant to depend implicitly on Python internals. #930 established the small JSON-Schema-backed operation IR boundary with memory.list-files.report as the representative portable command. Runtime handler boundary, handwritten parser retirement, interface-change proof gating, and the Python-only completion promotion gate were previously promoted and implemented on codex/finish-python-generated-cli, but completion must now also preserve the runtime operation boundary needed by future targets. Bash, PowerShell, TypeScript follow-through, and any future mutation-capable generated adapters remain outside this Python branch unless the shared operation contract must change."
+  "notes": "Created after #921 showed that adapter maturity was incorrectly treated as Python generated-CLI completion. Updated after user clarification that non-Python generated CLI targets are not meant to depend implicitly on Python internals. #930 established the small JSON-Schema-backed operation IR boundary with memory.list-files.report as the representative portable command. #931 promoted memory.list-files to runtime-consumed operation IR and opened #933 for remaining command groups. #933 is now active through .agentic-workspace/planning/execplans/python-operation-ir-package-resource-commands.plan.json, which records the interrupted memory list-skills package-resource slice and must be resolved before broader report-command migration. Runtime handler boundary, handwritten parser retirement, interface-change proof gating, and the Python-only completion promotion gate were previously promoted and implemented on codex/finish-python-generated-cli, but completion must now also preserve the runtime operation boundary needed by future targets. Bash, PowerShell, TypeScript follow-through, and any future mutation-capable generated adapters remain outside this Python branch unless the shared operation contract must change."
 }

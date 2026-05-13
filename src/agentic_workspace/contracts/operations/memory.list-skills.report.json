@@ -39,9 +39,19 @@
   "writes": [],
   "steps": [
     {
-      "id": "list_skills",
-      "uses": "memory.bootstrap.skills.list",
-      "description": "List packaged memory bootstrap lifecycle skills."
+      "id": "load_skill_registry",
+      "uses": "filesystem.read",
+      "description": "Read the packaged memory skill registry."
+    },
+    {
+      "id": "parse_skill_registry",
+      "uses": "json.parse",
+      "description": "Parse the packaged memory skill registry."
+    },
+    {
+      "id": "assemble_payload",
+      "uses": "payload.assemble",
+      "description": "Build the module-result payload containing bundled skill actions."
     },
     {
       "id": "emit_output",
@@ -49,6 +59,74 @@
       "description": "Emit skill list in the requested format."
     }
   ],
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Representative target-executor IR for a read-only package-resource command that loads a JSON registry and emits module-result output.",
+    "steps": [
+      {
+        "id": "load_skill_registry",
+        "uses": "filesystem.read",
+        "description": "Read the packaged memory skill registry.",
+        "arguments": {
+          "root": "memory.package-skills",
+          "path": "REGISTRY.json"
+        },
+        "reads": [
+          "packaged memory bootstrap skill registry"
+        ],
+        "outputs": [
+          "registry_text"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "parse_skill_registry",
+        "uses": "json.parse",
+        "description": "Parse the packaged memory skill registry.",
+        "inputs": [
+          "registry_text"
+        ],
+        "outputs": [
+          "registry"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "assemble_payload",
+        "uses": "payload.assemble",
+        "description": "Build the module-result payload containing bundled skill actions.",
+        "arguments": {
+          "fields": {
+            "dry_run": true,
+            "message": "Bundled skills",
+            "actions_from": "registry.skills",
+            "mode": "skills"
+          }
+        },
+        "inputs": [
+          "registry"
+        ],
+        "outputs": [
+          "result"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit",
+        "description": "Emit the result as JSON or text according to the format option.",
+        "inputs": [
+          "result",
+          "format"
+        ],
+        "on_error": "emit_usage_error"
+      }
+    ],
+    "portability_notes": [
+      "Target executors can implement this representative plan with package-resource file reads, JSON parsing, and payload assembly.",
+      "Generated command adapters consume this operation contract directly for list-skills; remaining report commands stay on compatibility runtime handlers until promoted."
+    ]
+  },
   "guards": [
     "List-skills must remain read-only."
   ],
@@ -56,6 +134,5 @@
     "operation contract validates against operation.schema.json",
     "operation command parity checks agentic-memory live parser"
   ],
-  "migration_status": "validated-contract"
+  "migration_status": "runtime-consumed"
 }
-

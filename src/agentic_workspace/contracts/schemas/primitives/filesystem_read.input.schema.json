@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/primitives/filesystem_read.input.schema.json",
+  "title": "filesystem.read input",
+  "type": "object",
+  "properties": {
+    "root": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Root directory or package resource namespace to read from."
+    },
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Non-escaping relative path to read."
+    },
+    "encoding": {
+      "type": "string",
+      "enum": [
+        "utf-8"
+      ],
+      "default": "utf-8"
+    }
+  },
+  "required": [
+    "root",
+    "path"
+  ],
+  "additionalProperties": false
+}

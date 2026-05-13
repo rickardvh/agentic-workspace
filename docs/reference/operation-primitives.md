@@ -13,4 +13,8 @@ Registry of implementation primitives referenced by operation contracts.
 | (root) | object | yes |  | Registry of implementation primitives referenced by operation contracts. |  | x-agentic-workspace-doc-role: "contract-reference" |
 | `schema_version` | const `"agentic-workspace/operation-primitives/v1"` | yes |  | Contract version for this document. |  |  |
 | `summary` | string | yes |  | Short human-readable summary for this entry. |  |  |
+| `ir_model` | object | no |  | Contract-level explanation of the target-executor IR model. |  |  |
+| `ir_model.purpose` | string | yes |  | Why this primitive registry exists as an operation IR boundary. |  |  |
+| `ir_model.boundary_rules` | array of string | yes |  | Rules that keep the primitive set from becoming an ad hoc programming language. |  |  |
+| `ir_model.defer_when` | array of string | no |  | Signals that behavior should remain a named runtime primitive instead of being decomposed further. |  |  |
 | `primitives` | array of object | yes |  | Ordered primitives entries used by this contract. |  |  |

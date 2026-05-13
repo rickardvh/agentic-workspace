@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/primitives/json_parse.output.schema.json",
+  "title": "json.parse output",
+  "type": "object",
+  "properties": {
+    "value": {
+      "description": "Structured JSON value produced by parsing the input text."
+    }
+  },
+  "required": [
+    "value"
+  ],
+  "additionalProperties": false
+}

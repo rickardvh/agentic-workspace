@@ -1,0 +1,326 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Python Remaining Operation IR Classification",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Finish GitHub #933 by making Python operation execution inventory exhaustive across generated commands, accepting true runtime primitives explicitly, and satisfying the Python completion gate without claiming non-Python completion.",
+    "hard_constraints": "Stay Python-only. Do not migrate TypeScript, Bash, or PowerShell. Do not implement semantic report behavior as portable primitive IR if it depends on live package judgment. Do not leave compatibility-runtime-handler residue unclassified.",
+    "agent_may_decide": "Classify generated Python operations as portable runtime-consumed IR or accepted hand-owned runtime primitive adapters when the operation contract already owns command shape and the runtime handler is a thin _run_*_adapter.",
+    "escalate_when": "Escalate if a command needs new behavior beyond inventory/proof classification, if runtime handlers are not thin, or if a non-Python target must change.",
+    "next_action": "Make python_operation_execution_inventory exhaustive and update generated package proof so full Python generated CLI completion requires either runtime-consumed IR or accepted hand-owned runtime primitive classification.",
+    "proof_expectations": [
+      "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+      "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
+      "uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q",
+      "uv run python scripts/generate/generate_command_packages.py --check"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+      "src/agentic_workspace/contracts/command_package_ir.json",
+      "scripts/check/check_generated_command_packages.py",
+      "tests/test_generated_command_package_proof_runner.py",
+      "tests/test_contract_tooling.py",
+      ".agentic-workspace/planning/execplans/python-remaining-operation-ir-classification.plan.json"
+    ],
+    "completion_criteria": [
+      "Every generated Python command operation id is represented in python_operation_execution_inventory.json.",
+      "Inventory statuses distinguish portable runtime-consumed IR from accepted hand-owned runtime primitive adapters.",
+      "Full Python generated CLI completion gate is satisfied only when no compatibility-runtime-handler residue remains.",
+      "Issue #933 is updated or closed with evidence that remaining behavior is explicitly classified.",
+      "Black-box Python and Docker conformance remain green."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "Finish #933 by making operation execution status explicit for all generated Python commands.",
+    "Promote the Python completion state only if the inventory/proof gate shows no unaccepted compatibility handler residue."
+  ],
+  "non_goals": [
+    "Do not move non-Python target conformance or runtime behavior.",
+    "Do not invent portable IR for semantic report commands that still require live package judgment.",
+    "Do not change visible command behavior except generated proof/inventory reporting."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "GitHub #933",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "python-remaining-operation-ir-classification",
+      "status": "active",
+      "next_step": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+      "proof": "Fill in the narrowest command that proves the promoted work."
+    },
+    "scope": {
+      "touched": [
+        "Fill in the concrete files before implementation starts."
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "GitHub #933",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Python Remaining Operation IR Classification",
+    "inferred intended outcome": "GitHub #933",
+    "chosen concrete what": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Fill in the concrete write scope before implementation starts.",
+    "max changed files": "Fill in an expected upper bound before implementation starts.",
+    "required validation commands": "Fill in the narrowest command that proves the promoted work.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "GitHub #933",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "pending",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "GitHub #933",
+      "label": "GitHub #933",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "python-remaining-operation-ir-classification",
+    "status": "completed",
+    "scope": "Make Python operation execution inventory exhaustive and satisfy #933's completion gate.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Fill in execution bounds, touched paths, and validation before implementation starts."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    "scripts/check/check_generated_command_packages.py",
+    "tests/test_generated_command_package_proof_runner.py",
+    "tests/test_contract_tooling.py",
+    ".agentic-workspace/planning/execplans/python-remaining-operation-ir-classification.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+    "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
+    "uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q",
+    "uv run python scripts/generate/generate_command_packages.py --check"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Every generated Python command operation id is represented in python_operation_execution_inventory.json.",
+    "Inventory statuses distinguish portable runtime-consumed IR from accepted hand-owned runtime primitive adapters.",
+    "Full Python generated CLI completion gate is satisfied only when no compatibility-runtime-handler residue remains.",
+    "Issue #933 is updated or closed with evidence that remaining behavior is explicitly classified.",
+    "Black-box Python and Docker conformance remain green."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Made the Python operation execution inventory exhaustive, promoted the Python completion gate, and tightened generated package proof so compatibility-runtime-handler residue blocks completion.",
+    "scope touched": "python_operation_execution_inventory.json, command_package_ir.json, generated package checks, focused contract/proof tests, and this execplan.",
+    "changed surfaces": "src/agentic_workspace/contracts/python_operation_execution_inventory.json; src/agentic_workspace/contracts/command_package_ir.json; scripts/check/check_generated_command_packages.py; tests/test_generated_command_package_proof_runner.py; tests/test_contract_tooling.py; .agentic-workspace/planning/execplans/python-remaining-operation-ir-classification.plan.json",
+    "validations run": "check_contract_tooling_surfaces, check_structured_file_inventory, check_generated_command_packages, generated command package conformance, Docker proof, focused pytest, make test-workspace, make lint-workspace, generate_command_packages --check, and git diff --check.",
+    "result for continuation": "No continuation remains for #933 after issue closeout; future work resumes from the broader codegen epic only through a newly promoted plan.",
+    "next step": "Close #933 with proof, archive this plan, commit, and push."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used configured uv run agentic-workspace entrypoint and maintained the active execplan",
+    "misinterpretation risk": "low; scope is limited to Python #933 and does not claim non-Python epic completion",
+    "follow-on decision": "none for #933"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "The implementation was a narrow, already-decomposed inventory/proof update with high closeout coupling and no safe disjoint write scope left after resumption.",
+    "expected savings": "low",
+    "actual friction": "archive closeout required additional explicit posterity and resume fields",
+    "proof result": "passed",
+    "quality concern": "none outstanding for #933",
+    "decomposition adjustment": "future similar lanes should keep inventory/proof classification as the delegated unit before implementation starts"
+  },
+  "proof_report": {
+    "validation proof": "complete",
+    "proof achieved now": "Exhaustive Python operation execution inventory, full Python completion gate, generated package proof, Python/TypeScript generated conformance, Docker proof, workspace tests, and lint are green.",
+    "evidence for \"proof achieved\" state": "Ran check_contract_tooling_surfaces, check_structured_file_inventory, check_generated_command_packages, --python-conformance, --conformance --require-node, --docker --require-docker, --docker-conformance --require-docker, --python-docker-conformance --require-docker, pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q, make test-workspace, and make lint-workspace."
+  },
+  "intent_satisfaction": {
+    "original intent": "GitHub #933",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Every generated Python command operation id is inventoried; entries are either runtime-consumed or accepted-hand-owned-runtime-primitive; command_package_ir marks Python completion gate satisfied; generated package, conformance, Docker, workspace test, and lint proof passed.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "All generated Python operations are represented in python_operation_execution_inventory.json and the Python completion gate is satisfied.",
+    "validation confirmed": "complete",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "python_operation_execution_inventory.json and command_package_ir.json now own the durable completion evidence.",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "No further action in this #933 plan after archive; resume broader codegen work only from a fresh summary and newly promoted plan."
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "none",
+    "proposed durable intent": "none yet",
+    "confidence": "low",
+    "needs review": "True",
+    "owner surface": "none"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "complete",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "#933 asked to migrate remaining Python generated commands from compatibility handlers to operation IR or explicit runtime status; no compatibility-runtime-handler residue remains.",
+    "evidence carried forward": "python_operation_execution_inventory.json is exhaustive, static proof rejects missing or compatibility entries, and Python/TypeScript generated conformance plus Docker proof passed.",
+    "reopen trigger": "Reopen if a generated Python operation is added without inventory classification or if compatibility-runtime-handler status reappears."
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-13: Scaffolded by agentic-planning new-plan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: GitHub #933\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: complete\nChanged surfaces: src/agentic_workspace/contracts/python_operation_execution_inventory.json; src/agentic_workspace/contracts/command_package_ir.json; scripts/check/check_generated_command_packages.py; tests/test_generated_command_package_proof_runner.py; tests/test_contract_tooling.py; .agentic-workspace/planning/execplans/python-remaining-operation-ir-classification.plan.json\nDurable residue: none (none)\nMemory learning: none\nFollow-up: none"
+  }
+}
