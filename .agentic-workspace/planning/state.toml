@@ -12,9 +12,7 @@ work_items = []
 execplans = []
 
 [todo]
-active_items = [
-  { id = "planning-skill-and-close-item-942-953", title = "Implement planning lifecycle skill and close-item command", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/planning-skill-and-close-item-942-953.plan.json", why_now = "Created by new-plan scaffold.", owner_role = "implementation", handoff_ready = true },
-]
+active_items = []
 queued_items = []
 
 [roadmap]
