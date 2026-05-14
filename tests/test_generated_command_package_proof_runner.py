@@ -357,17 +357,12 @@ def test_static_generated_package_proof_rejects_full_completion_when_generated_m
     assert any("missing generated-main boundary fragment" in error for error in errors)
 
 
-def test_static_generated_package_proof_rejects_full_completion_with_configured_executable_source(monkeypatch) -> None:
+def test_static_generated_package_proof_rejects_full_completion_with_product_runtime_source(monkeypatch) -> None:
     checker = _load_checker()
     ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
     ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
     ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
     monkeypatch.setattr(checker, "load_workspace_command_package_ir", lambda *, repo_root: ir)
-    monkeypatch.setattr(
-        checker,
-        "PYTHON_MODULE_SOURCE_EXECUTABLE_PATHS",
-        ("packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py",),
-    )
 
     errors = checker._validate_static_surfaces()
 

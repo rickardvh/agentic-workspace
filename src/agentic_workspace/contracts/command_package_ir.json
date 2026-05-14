@@ -110,8 +110,8 @@
       ]
     },
     "python_cli_completion": {
-      "finish_line": "Python CLI completion means parser, dispatch, command/interface behavior, adapter metadata, conformance expectations, and generic deterministic file/data behavior are generated from implementation-independent contracts or IR and executed by codegen-owned primitive executors, with module-local Python limited to package-specific judgment that cannot yet be represented portably.",
-      "current_state": "full-generated-cli-complete",
+      "finish_line": "Python CLI completion means parser, dispatch, command/interface behavior, adapter metadata, conformance expectations, product-specific runtime binding, and generic deterministic file/data behavior are generated from implementation-independent contracts or IR into generated/python outputs and executed by codegen-owned primitive executors; packages/command-generation/src owns only generic generation, rendering, primitive execution, schema, freshness, and conformance machinery.",
+      "current_state": "adapter-layer-proven-not-full-generated-cli",
       "allowed_hand_owned_cli_responsibilities": [
         "live workspace inspection",
         "package-specific runtime primitive implementation that cannot yet be represented by codegen-owned primitives",
@@ -124,6 +124,7 @@
         "option and help interface semantics",
         "generated command dispatch selection",
         "generic file, JSON, TOML, Markdown, schema, template, managed payload, and JSON/text emission behavior",
+        "product-specific executable runtime modules currently living in command-generation source",
         "package CLI command/interface additions",
         "weak-agent routing and maturity claims for generated command surfaces",
         "black-box conformance fixture selection"
@@ -134,10 +135,11 @@
         "future package command/interface work changes contracts, IR, generators, and regenerated outputs instead of package-local executable cli.py files",
         "runtime primitive code remains module-owned only when it performs live behavior, mutation orchestration, or package-specific judgment that is explicitly inventoried as not yet portable",
         "generic deterministic operations over files, JSON, TOML, Markdown, schemas, templates, managed payloads, and emitted JSON/text are codegen-owned primitive executor behavior before full completion is claimed",
+        "product-specific executable runtime behavior lives under generated/python target output before full completion is claimed; moving it from modules into command-generation source is not sufficient",
         "root console smoke proof executes at least one generated root command through the installed console path, not only through generated parser/help imports"
       ],
       "completion_gate": {
-        "state": "satisfied",
+        "state": "pending",
         "scope": "python-only",
         "satisfied_by": [
           {
@@ -189,6 +191,11 @@
             "id": "root-console-generated-command-smoke",
             "evidence": "The root console script executes at least one generated root command through generated dispatch and the runtime handler map.",
             "proof": "tests/test_workspace_cli_blackbox.py::test_blackbox_root_generated_command_executes_through_console_script"
+          },
+          {
+            "id": "product-specific-runtime-generated-output-owned",
+            "evidence": "Workspace, planning, and memory product-specific executable runtime behavior is generated target output under generated/python, not hand-owned source under package modules or command-generation.",
+            "proof": "scripts/check/check_generated_command_packages.py::_validate_full_python_completion_executable_ownership"
           }
         ]
       }

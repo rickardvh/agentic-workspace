@@ -1272,6 +1272,70 @@
       "reason": "archive execplan python-cli-src-executable-cleanup",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-14T20:03:30+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-intent-correction.plan.json",
+      "sha256": "ce3726db961c22b2c6ab512f421f6b161086fe3b06021fb87282e4020a43b8c9",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-codegen-intent-correction",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T20:21:17+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "753b50da2a4c31c51a23afeefb4f8f2a60f68a0652e2cb52eba3248bb450340f",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-codegen-intent-correction",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T20:21:17+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-intent-correction.plan.json",
+      "sha256": "b19fd4b2f2d7f318098b6c5ecaaf499bb876bc021383a768490fa1155f9874c2",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T20:22:55+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-intent-correction.plan.json",
+      "sha256": "136f82cf83c949ff3f41faf0652e06fed606da3a855a0ae0087ac56e1fed0584",
+      "command": "agentic-planning record-recovery",
+      "reason": "Intent correction execplan filled after scaffold; manual edit kept to encode exact scope and proof before closeout.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T20:26:37+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "f8756c5e03d2f836fbf1bb7013349ef275e9ad7345a129ea6d439da999fcb93a",
+      "command": "agentic-planning record-recovery",
+      "reason": "Intent correction: demote false Python generated CLI completion and encode generated/python ownership invariant.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T20:26:37+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-intent-correction.plan.json",
+      "sha256": "019e1f5007b4a517f259dae3ba5b315491c28de1ece7f518608749f88f3f1abb",
+      "command": "agentic-planning record-recovery",
+      "reason": "Closeout fields updated for completed corrective intent slice before archiving.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T20:27:35+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-intent-correction.plan.json",
+      "sha256": "8f223bc4655cc379055ed4fc19ce7dec5e9963d648cf897b919964cd7fde4308",
+      "command": "agentic-planning record-recovery",
+      "reason": "Add explicit resume cue required for archiving corrective intent slice.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T20:27:57+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-codegen-intent-correction",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T20:28:07+00:00"
     }
   ]
 }

@@ -67,6 +67,7 @@ PYTHON_COMPLETION_REQUIRED_EVIDENCE_IDS = {
     "representative-operation-ir-runtime-consumed",
     "operation-execution-inventory-exhaustive",
     "root-console-generated-command-smoke",
+    "product-specific-runtime-generated-output-owned",
 }
 PYTHON_COMPLETION_EXPECTED_PROOF_SUBSTRINGS = {
     "parser-shape-generated": "_validate_generated_python_commands_absent_from_handwritten_parsers",
@@ -79,6 +80,7 @@ PYTHON_COMPLETION_EXPECTED_PROOF_SUBSTRINGS = {
     "representative-operation-ir-runtime-consumed": "_validate_python_operation_execution_inventory",
     "operation-execution-inventory-exhaustive": "_validate_python_operation_execution_inventory",
     "root-console-generated-command-smoke": "test_workspace_cli_blackbox.py::test_blackbox_root_generated_command_executes_through_console_script",
+    "product-specific-runtime-generated-output-owned": "_validate_full_python_completion_executable_ownership",
 }
 PYTHON_OPERATION_EXECUTION_FINAL_STATUSES = {"runtime-consumed", "accepted-hand-owned-runtime-primitive"}
 PYTHON_OPERATION_ACCEPTED_BOUNDARY_CLASSES = {
@@ -106,7 +108,7 @@ PYTHON_MODULE_SOURCE_EXECUTABLE_MARKERS = {
     "runtime fallback dispatch": ("runtime_main", "_run_generated_cli_package_if_supported"),
     "generic operation executor": ("def run_operation_ir(", "run_operation_steps("),
 }
-PYTHON_MODULE_SOURCE_EXECUTABLE_PATHS = (
+PYTHON_FULL_COMPLETION_BLOCKING_EXECUTABLE_PATHS = (
     "src/agentic_workspace/_runtime_cli.py",
     "packages/planning/src/repo_planning_bootstrap/_runtime_cli.py",
     "packages/memory/src/repo_memory_bootstrap/_runtime_cli.py",
@@ -116,6 +118,9 @@ PYTHON_MODULE_SOURCE_EXECUTABLE_PATHS = (
     "src/agentic_workspace/operation_ir_executor.py",
     "packages/planning/src/repo_planning_bootstrap/operation_ir_executor.py",
     "packages/memory/src/repo_memory_bootstrap/operation_ir_executor.py",
+    "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py",
+    "packages/command-generation/src/agentic_command_generation/planning_runtime_cli.py",
+    "packages/command-generation/src/agentic_command_generation/memory_runtime_cli.py",
 )
 
 
@@ -747,13 +752,13 @@ def _validate_full_python_completion_runtime_ownership(ir: dict[str, object]) ->
     return errors
 
 
-def _validate_full_python_completion_module_source_executable_ownership(ir: dict[str, object]) -> list[str]:
+def _validate_full_python_completion_executable_ownership(ir: dict[str, object]) -> list[str]:
     python_completion = ir.get("generation_policy", {}).get("python_cli_completion", {})
     if not isinstance(python_completion, dict) or python_completion.get("current_state") != "full-generated-cli-complete":
         return []
 
     errors: list[str] = []
-    for relative_path in PYTHON_MODULE_SOURCE_EXECUTABLE_PATHS:
+    for relative_path in PYTHON_FULL_COMPLETION_BLOCKING_EXECUTABLE_PATHS:
         path = REPO_ROOT / relative_path
         if not path.is_file():
             continue
@@ -766,7 +771,7 @@ def _validate_full_python_completion_module_source_executable_ownership(ir: dict
         if matched_categories:
             errors.append(
                 "command_package_ir.json cannot claim full Python generated CLI completion while shipped module "
-                f"source {relative_path} owns executable behavior markers: {matched_categories!r}"
+                f"or product-specific command-generation source {relative_path} owns executable behavior markers: {matched_categories!r}"
             )
     return errors
 
@@ -1325,7 +1330,7 @@ def _validate_static_surfaces() -> list[str]:
         else:
             errors.extend(_validate_python_cli_completion_policy(python_cli_completion))
             errors.extend(_validate_full_python_completion_runtime_ownership(ir))
-            errors.extend(_validate_full_python_completion_module_source_executable_ownership(ir))
+            errors.extend(_validate_full_python_completion_executable_ownership(ir))
         errors.extend(_validate_python_operation_execution_inventory(ir))
         shell_policy = str(ir.get("generation_policy", {}).get("shell_adapter_policy", ""))
         if "Issue #909 evaluation selects Bash as the first additional generated command transport candidate" not in shell_policy:
