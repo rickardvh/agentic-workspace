@@ -14,7 +14,7 @@
       "command": "doctor",
       "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
       "operation_contract": "operations/memory.doctor.report.json",
-      "primitive_executor": "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "memory.bootstrap.doctor.load",
         "module-result text/json compatibility formatting"
@@ -28,7 +28,7 @@
       "command": "list-files",
       "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
       "operation_contract": "operations/memory.list-files.report.json",
-      "primitive_executor": "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "codegen-owned filesystem glob primitive",
         "memory package payload metadata enrichment",
@@ -44,7 +44,7 @@
       "command": "list-skills",
       "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
       "operation_contract": "operations/memory.list-skills.report.json",
-      "primitive_executor": "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "codegen-owned filesystem read and JSON parse primitives",
         "module-result emission mechanics"
@@ -58,7 +58,7 @@
       "command": "promotion-report",
       "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
       "operation_contract": "operations/memory.promotion-report.report.json",
-      "primitive_executor": "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "memory.promotion_report.load",
         "module-result text/json compatibility formatting"
@@ -72,7 +72,7 @@
       "command": "report",
       "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
       "operation_contract": "operations/memory.report.report.json",
-      "primitive_executor": "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "memory.report.load",
         "module-result text/json compatibility formatting"
@@ -86,7 +86,7 @@
       "command": "route-report",
       "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
       "operation_contract": "operations/memory.route-report.report.json",
-      "primitive_executor": "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "memory.route_report.load",
         "module-result text/json compatibility formatting"
@@ -100,7 +100,7 @@
       "command": "status",
       "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
       "operation_contract": "operations/memory.status.report.json",
-      "primitive_executor": "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "memory.bootstrap.status.load",
         "module-result text/json compatibility formatting"
@@ -114,7 +114,7 @@
       "command": "doctor",
       "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
       "operation_contract": "operations/planning.doctor.report.json",
-      "primitive_executor": "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "planning.bootstrap.doctor.load",
         "module-result text/json compatibility formatting"
@@ -145,7 +145,7 @@
       "command": "report",
       "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
       "operation_contract": "operations/planning.report.report.json",
-      "primitive_executor": "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "planning.report.load",
         "module-result text/json compatibility formatting"
@@ -159,7 +159,7 @@
       "command": "status",
       "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
       "operation_contract": "operations/planning.status.report.json",
-      "primitive_executor": "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "planning.bootstrap.status.load",
         "module-result text/json compatibility formatting"
@@ -189,7 +189,7 @@
       "command": "config",
       "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
       "operation_contract": "operations/config.report.json",
-      "primitive_executor": "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "workspace config loading",
         "workspace config text compatibility formatting"
@@ -203,7 +203,7 @@
       "command": "defaults",
       "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
       "operation_contract": "operations/defaults.report.json",
-      "primitive_executor": "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "workspace defaults payload source",
         "workspace defaults text compatibility formatting"
@@ -217,7 +217,7 @@
       "command": "note-delegation-outcome",
       "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
       "operation_contract": "operations/delegation-outcome.append.json",
-      "primitive_executor": "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "workspace.root.resolve",
         "workspace operation compatibility formatting"
@@ -418,7 +418,7 @@
       "command": "prompt",
       "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
       "operation_contract": "operations/prompt.init.json",
-      "primitive_executor": "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "workspace.selection.resolve",
         "prompt.render compatibility payload",
@@ -433,7 +433,7 @@
       "command": "prompt",
       "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
       "operation_contract": "operations/prompt.uninstall.json",
-      "primitive_executor": "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "workspace.selection.resolve",
         "prompt.render compatibility payload",
@@ -448,7 +448,7 @@
       "command": "prompt",
       "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
       "operation_contract": "operations/prompt.upgrade.json",
-      "primitive_executor": "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "workspace.selection.resolve",
         "prompt.render compatibility payload",
@@ -611,7 +611,7 @@
       "command": "system-intent",
       "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
       "operation_contract": "operations/system-intent.sync.json",
-      "primitive_executor": "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "workspace.root.resolve",
         "workspace operation compatibility formatting"

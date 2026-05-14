@@ -14,20 +14,23 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 CLI_SHIM = (
     "import sys; "
     f"sys.path.insert(0, {str(REPO_ROOT / 'src')!r}); "
-    "from agentic_command_generation.workspace_runtime_cli import main; "
-    "raise SystemExit(main(sys.argv[1:]))"
+    f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'command-generation' / 'src')!r}); "
+    "from command_generation.console import main_for_entrypoint; "
+    "raise SystemExit(main_for_entrypoint('agentic-workspace', sys.argv[1:]))"
 )
 PLANNING_CLI_SHIM = (
     "import sys; "
+    f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'command-generation' / 'src')!r}); "
     f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'planning' / 'src')!r}); "
-    "from agentic_command_generation.planning_generated_cli_package import main; "
-    "raise SystemExit(main(sys.argv[1:]))"
+    "from command_generation.console import main_for_entrypoint; "
+    "raise SystemExit(main_for_entrypoint('agentic-planning', sys.argv[1:]))"
 )
 MEMORY_CLI_SHIM = (
     "import sys; "
+    f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'command-generation' / 'src')!r}); "
     f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'memory' / 'src')!r}); "
-    "from agentic_command_generation.memory_generated_cli_package import main; "
-    "raise SystemExit(main(sys.argv[1:]))"
+    "from command_generation.console import main_for_entrypoint; "
+    "raise SystemExit(main_for_entrypoint('agentic-memory', sys.argv[1:]))"
 )
 
 

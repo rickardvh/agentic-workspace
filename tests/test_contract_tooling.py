@@ -11,6 +11,7 @@ import pytest
 from jsonschema import Draft202012Validator
 
 from agentic_workspace import contract_tooling
+from command_generation.generated_package_loader import load_generated_cli_package_for_entrypoint
 
 
 def _command_operation_ids(command: dict[str, object]) -> set[str]:
@@ -613,7 +614,7 @@ def test_command_generation_schema_boundary_is_checked() -> None:
 
 
 def test_command_generation_loader_uses_explicit_ir_and_schema_paths() -> None:
-    from agentic_command_generation import load_command_package_ir
+    from command_generation import load_command_package_ir
 
     repo_root = Path(__file__).resolve().parents[1]
     ir_path = repo_root / "src" / "agentic_workspace" / "contracts" / "command_package_ir.json"
@@ -732,7 +733,7 @@ def test_python_operation_execution_inventory_tracks_representative_runtime_cons
     representative = entries["memory.list-files.report"]
 
     assert representative["status"] == "runtime-consumed"
-    assert representative["primitive_executor"] == "packages/command-generation/src/agentic_command_generation/primitive_executor.py"
+    assert representative["primitive_executor"] == "packages/command-generation/src/command_generation/primitive_executor.py"
     assert entries["memory.list-skills.report"]["status"] == "runtime-consumed"
     assert "compatibility-runtime-handler" not in {entry["status"] for entry in entries.values()}
     assert "accepted-hand-owned-runtime-primitive" in {entry["status"] for entry in entries.values()}
@@ -772,9 +773,7 @@ def test_generate_command_packages_wrapper_uses_workspace_consumer_integration()
 
 
 def test_command_package_generator_normalizes_line_endings() -> None:
-    generator = (
-        Path(__file__).resolve().parents[1] / "packages" / "command-generation" / "src" / "agentic_command_generation" / "generator.py"
-    )
+    generator = Path(__file__).resolve().parents[1] / "packages" / "command-generation" / "src" / "command_generation" / "generator.py"
     wrapper = Path(__file__).resolve().parents[1] / "scripts" / "generate" / "generate_command_packages.py"
 
     assert 'newline="\\n"' in generator.read_text(encoding="utf-8")
@@ -782,10 +781,8 @@ def test_command_package_generator_normalizes_line_endings() -> None:
 
 
 def test_generated_python_module_collects_nested_operation_refs(tmp_path: Path) -> None:
-    generator_path = (
-        Path(__file__).resolve().parents[1] / "packages" / "command-generation" / "src" / "agentic_command_generation" / "generator.py"
-    )
-    spec = importlib.util.spec_from_file_location("agentic_command_generation_generator", generator_path)
+    generator_path = Path(__file__).resolve().parents[1] / "packages" / "command-generation" / "src" / "command_generation" / "generator.py"
+    spec = importlib.util.spec_from_file_location("command_generation_generator", generator_path)
     assert spec is not None and spec.loader is not None
     generator = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = generator
@@ -855,7 +852,7 @@ def test_generated_python_module_collects_nested_operation_refs(tmp_path: Path) 
 
 
 def test_generic_command_generation_package_has_no_workspace_imports() -> None:
-    package_root = Path(__file__).resolve().parents[1] / "packages" / "command-generation" / "src" / "agentic_command_generation"
+    package_root = Path(__file__).resolve().parents[1] / "packages" / "command-generation" / "src" / "command_generation"
     for path in package_root.rglob("*.py"):
         if path.name.endswith(("_generated_cli_package.py", "_operation_ir_executor.py", "_runtime_cli.py")):
             continue
@@ -884,14 +881,13 @@ def test_command_generation_readme_defines_lift_out_criteria() -> None:
 
 
 def test_generated_python_command_package_metadata_is_current() -> None:
-    from agentic_command_generation.workspace_generated_cli_package import (
-        GENERATED_COMMAND_PACKAGE,
-        generated_command_names,
-        generated_maturity,
-        generated_operation_ids,
-        generated_weak_agent_routing,
-        supports_generated_command,
-    )
+    generated = load_generated_cli_package_for_entrypoint("agentic-workspace")
+    GENERATED_COMMAND_PACKAGE = generated.GENERATED_COMMAND_PACKAGE
+    generated_command_names = generated.generated_command_names
+    generated_maturity = generated.generated_maturity
+    generated_operation_ids = generated.generated_operation_ids
+    generated_weak_agent_routing = generated.generated_weak_agent_routing
+    supports_generated_command = generated.supports_generated_command
 
     assert GENERATED_COMMAND_PACKAGE["program"] == "agentic-workspace"
     assert {command["adapter_id"] for command in GENERATED_COMMAND_PACKAGE["commands"]} == {
@@ -1017,7 +1013,9 @@ def test_generated_python_command_package_metadata_is_current() -> None:
 
 
 def test_generated_python_command_package_parses_and_dispatches_runtime_operations() -> None:
-    from agentic_command_generation.workspace_generated_cli_package import build_generated_parser, run_generated_command
+    generated = load_generated_cli_package_for_entrypoint("agentic-workspace")
+    build_generated_parser = generated.build_generated_parser
+    run_generated_command = generated.run_generated_command
 
     calls: list[tuple[str, str | None, str, str | None]] = []
 
@@ -1092,7 +1090,7 @@ def test_generated_python_command_package_parses_and_dispatches_runtime_operatio
 
 
 def test_generated_python_command_package_parses_doctor_select() -> None:
-    from agentic_command_generation.workspace_generated_cli_package import run_generated_command
+    run_generated_command = load_generated_cli_package_for_entrypoint("agentic-workspace").run_generated_command
 
     calls: list[tuple[str, str | None]] = []
 
@@ -1105,10 +1103,12 @@ def test_generated_python_command_package_parses_doctor_select() -> None:
 
 
 def test_package_generated_python_command_packages_parse_status_runtime_operations() -> None:
-    from agentic_command_generation.memory_generated_cli_package import generated_maturity as memory_generated_maturity
-    from agentic_command_generation.memory_generated_cli_package import run_generated_command as run_memory_generated_command
-    from agentic_command_generation.planning_generated_cli_package import generated_maturity as planning_generated_maturity
-    from agentic_command_generation.planning_generated_cli_package import run_generated_command as run_planning_generated_command
+    memory_generated = load_generated_cli_package_for_entrypoint("agentic-memory")
+    planning_generated = load_generated_cli_package_for_entrypoint("agentic-planning")
+    memory_generated_maturity = memory_generated.generated_maturity
+    run_memory_generated_command = memory_generated.run_generated_command
+    planning_generated_maturity = planning_generated.generated_maturity
+    run_planning_generated_command = planning_generated.run_generated_command
 
     calls: list[tuple[str, str | None, str]] = []
 
@@ -1196,14 +1196,14 @@ def test_generated_typescript_package_adapters_are_runnable() -> None:
         "planning-cli": (
             "@agentic-workspace/planning-cli",
             "agentic-planning",
-            "agentic_command_generation.planning_generated_cli_package",
+            "agentic-planning",
             "weak-agent-safe-adapter",
             "allowed-read-only",
         ),
         "memory-cli": (
             "@agentic-workspace/memory-cli",
             "agentic-memory",
-            "agentic_command_generation.memory_generated_cli_package",
+            "agentic-memory",
             "weak-agent-safe-adapter",
             "allowed-read-only",
         ),
@@ -1255,7 +1255,7 @@ def test_python_runtime_boundary_declares_root_cli_authority_audit() -> None:
     boundaries = {item["id"]: item for item in manifest["boundaries"]}
     assert boundaries["report-router-rendering"]["owner_modules"] == [
         "agentic_workspace.reporting_support",
-        "agentic_command_generation.workspace_runtime_cli",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
     ]
     assert boundaries["report-router-rendering"]["classification"] == "operation-contract-covered"
     statuses = {item["status"] for item in audit["current_audit"]}

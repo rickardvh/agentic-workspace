@@ -6,7 +6,9 @@ from pathlib import Path
 
 from repo_planning_bootstrap.installer import install_bootstrap
 
-from agentic_command_generation import workspace_runtime_cli as cli
+from command_generation.generated_package_loader import load_generated_cli_module_for_entrypoint
+
+cli = load_generated_cli_module_for_entrypoint("agentic-workspace", "workspace_runtime_cli")
 
 
 def _write(path: Path, content: str) -> None:

@@ -202,7 +202,7 @@
     },
     "non_python_runtime_binding": {
       "selected_model": "generated parser/help with process handoff to canonical Python CLI",
-      "default_runtime_command": "python -c \"import sys; from agentic_command_generation.workspace_generated_cli_package import main; raise SystemExit(main(sys.argv[1:]))\"",
+      "default_runtime_command": "python -c \"import sys; from command_generation.console import main_for_entrypoint; raise SystemExit(main_for_entrypoint('agentic-workspace', sys.argv[1:]))\"",
       "scope": "Read-only generated non-Python adapters may invoke the existing Python command surface as the runtime boundary; mutation-capable commands remain deferred until lifecycle dry-run, preflight, and refusal conformance are explicit.",
       "universal_contract_owns": [
         "command identity",
@@ -238,8 +238,8 @@
       "program": "agentic-workspace",
       "package_role": "root-workspace-cli",
       "python_runtime_binding": {
-        "generated_package_module": "agentic_command_generation.workspace_generated_cli_package",
-        "runtime_module": "agentic_command_generation.workspace_runtime_cli"
+        "entrypoint": "agentic-workspace",
+        "runtime_module_file": "workspace_runtime_cli"
       },
       "targets": [
         {
@@ -4234,8 +4234,8 @@
       "program": "agentic-planning",
       "package_role": "planning-module-cli",
       "python_runtime_binding": {
-        "generated_package_module": "agentic_command_generation.planning_generated_cli_package",
-        "runtime_module": "agentic_command_generation.planning_runtime_cli"
+        "entrypoint": "agentic-planning",
+        "runtime_module_file": "planning_runtime_cli"
       },
       "targets": [
         {
@@ -4724,8 +4724,8 @@
       "program": "agentic-memory",
       "package_role": "memory-module-cli",
       "python_runtime_binding": {
-        "generated_package_module": "agentic_command_generation.memory_generated_cli_package",
-        "runtime_module": "agentic_command_generation.memory_runtime_cli"
+        "entrypoint": "agentic-memory",
+        "runtime_module_file": "memory_runtime_cli"
       },
       "targets": [
         {

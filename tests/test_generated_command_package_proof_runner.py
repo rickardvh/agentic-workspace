@@ -106,9 +106,9 @@ def test_generated_python_conformance_uses_contract_artifacts() -> None:
     planning_status = registries["planning-bootstrap"]["planning.status.process"]
     memory_skills = registries["memory-bootstrap"]["memory.list-skills.process"]
 
-    assert "agentic_command_generation.workspace_generated_cli_package" in checker._python_command_for_package("root-workspace")[-1]
-    assert "agentic_command_generation.planning_generated_cli_package" in checker._python_command_for_package("planning-bootstrap")[-1]
-    assert "agentic_command_generation.memory_generated_cli_package" in checker._python_command_for_package("memory-bootstrap")[-1]
+    assert "main_for_entrypoint('agentic-workspace'" in checker._python_command_for_package("root-workspace")[-1]
+    assert "main_for_entrypoint('agentic-planning'" in checker._python_command_for_package("planning-bootstrap")[-1]
+    assert "main_for_entrypoint('agentic-memory'" in checker._python_command_for_package("memory-bootstrap")[-1]
     assert defaults.success_args == ["defaults", "--section", "startup", "--format", "json"]
     assert defaults.expected_exit == 0
     assert defaults.allow_stderr is False
@@ -363,21 +363,28 @@ def test_static_generated_package_proof_rejects_full_completion_with_product_run
     ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
     ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
     original_read_text = checker.Path.read_text
+    original_is_file = checker.Path.is_file
+    product_runtime_source = "scratch/product_runtime.py"
 
     def fake_read_text(self, *args, **kwargs):
-        if self.as_posix().endswith("packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py"):
+        if self.as_posix().endswith(product_runtime_source):
             return "import argparse\n\ndef main(argv=None):\n    parser = argparse.ArgumentParser()\n    parser.add_subparsers()\n"
         return original_read_text(self, *args, **kwargs)
 
+    def fake_is_file(self):
+        if self.as_posix().endswith(product_runtime_source):
+            return True
+        return original_is_file(self)
+
     monkeypatch.setattr(checker, "load_workspace_command_package_ir", lambda *, repo_root: ir)
+    monkeypatch.setattr(checker, "PYTHON_FULL_COMPLETION_BLOCKING_EXECUTABLE_PATHS", (product_runtime_source,))
     monkeypatch.setattr(checker.Path, "read_text", fake_read_text)
+    monkeypatch.setattr(checker.Path, "is_file", fake_is_file)
 
     errors = checker._validate_static_surfaces()
 
     assert any(
-        "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py owns executable behavior markers" in error
-        and "parser construction" in error
-        for error in errors
+        "scratch/product_runtime.py owns executable behavior markers" in error and "parser construction" in error for error in errors
     )
 
 
@@ -412,7 +419,7 @@ def test_static_generated_package_proof_rejects_missing_primitive_conformance_ca
 
 def test_python_runtime_handler_boundary_rejects_non_adapter_handlers(monkeypatch) -> None:
     checker = _load_checker()
-    memory_cli = checker.importlib.import_module("agentic_command_generation.memory_runtime_cli")
+    memory_cli = checker._generated_runtime_module_for_package("memory-bootstrap")
     drifted_handlers = dict(memory_cli._GENERATED_RUNTIME_HANDLERS)
     drifted_handlers["memory.status.report"] = memory_cli._handle_status
     monkeypatch.setattr(memory_cli, "_GENERATED_RUNTIME_HANDLERS", drifted_handlers)
@@ -425,19 +432,19 @@ def test_python_runtime_handler_boundary_rejects_non_adapter_handlers(monkeypatc
 def test_python_runtime_import_boundary_rejects_legacy_generated_adapter_dispatch() -> None:
     checker = _load_checker()
     errors = checker._validate_no_legacy_generated_adapter_runtime_import(
-        relative_path="packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py",
+        relative_path="generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
         text="from agentic_workspace.generated_command_adapters import GENERATED_COMMAND_ADAPTERS_BY_COMMAND\n",
     )
 
     assert errors == [
-        "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py must route generated Python commands through generated_cli_package, "
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py must route generated Python commands through generated_cli_package, "
         "not legacy generated_command_adapters runtime dispatch"
     ]
 
 
 def test_python_parser_retirement_rejects_generated_command_in_handwritten_parser(monkeypatch) -> None:
     checker = _load_checker()
-    root_cli = checker.importlib.import_module("agentic_command_generation.workspace_runtime_cli")
+    root_cli = checker._generated_runtime_module_for_package("root-workspace")
 
     def build_drifted_parser() -> argparse.ArgumentParser:
         parser = argparse.ArgumentParser()

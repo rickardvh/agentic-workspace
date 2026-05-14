@@ -10,9 +10,11 @@ from pathlib import Path
 import pytest
 from jsonschema import Draft202012Validator
 
-from agentic_command_generation import workspace_runtime_cli as cli
 from agentic_workspace.contract_tooling import authority_markers_manifest, cli_commands_manifest
 from agentic_workspace.result_adapter import adapt_action, adapt_module_result
+from command_generation.generated_package_loader import load_generated_cli_module_for_entrypoint
+
+cli = load_generated_cli_module_for_entrypoint("agentic-workspace", "workspace_runtime_cli")
 
 _ORIGINAL_PATH_WRITE_TEXT = Path.write_text
 

@@ -1630,7 +1630,9 @@ def _memory_module_argv(args: argparse.Namespace) -> list[str]:
 
 
 def _run_planning_front_door(args: argparse.Namespace) -> int:
-    from agentic_command_generation.planning_generated_cli_package import main as planning_main
+    from command_generation.generated_package_loader import load_generated_cli_package_for_entrypoint
+
+    planning_main = load_generated_cli_package_for_entrypoint("agentic-planning").main
 
     buffer = io.StringIO()
     with contextlib.redirect_stdout(buffer):
@@ -1640,7 +1642,9 @@ def _run_planning_front_door(args: argparse.Namespace) -> int:
 
 
 def _run_memory_front_door(args: argparse.Namespace) -> int:
-    from agentic_command_generation.memory_generated_cli_package import main as memory_main
+    from command_generation.generated_package_loader import load_generated_cli_package_for_entrypoint
+
+    memory_main = load_generated_cli_package_for_entrypoint("agentic-memory").main
 
     buffer = io.StringIO()
     with contextlib.redirect_stdout(buffer):
@@ -2430,7 +2434,9 @@ def main(argv: list[str] | None = None) -> int:
             _validate_target_root(command_name="summary", target_root=target_root)
             from repo_planning_bootstrap.installer import format_summary_json, planning_summary
 
-            from agentic_command_generation.planning_runtime_cli import _print_summary
+            from command_generation.generated_package_loader import load_generated_cli_module_for_entrypoint
+
+            _print_summary = load_generated_cli_module_for_entrypoint("agentic-planning", "planning_runtime_cli")._print_summary
 
             config = _load_workspace_config(target_root=target_root)
             changed_paths = list(getattr(args, "changed", []) or [])
@@ -2716,7 +2722,9 @@ def main(argv: list[str] | None = None) -> int:
             _validate_target_root(command_name="reconcile", target_root=target_root)
             from repo_planning_bootstrap.installer import planning_reconcile
 
-            from agentic_command_generation.planning_runtime_cli import _print_reconcile
+            from command_generation.generated_package_loader import load_generated_cli_module_for_entrypoint
+
+            _print_reconcile = load_generated_cli_module_for_entrypoint("agentic-planning", "planning_runtime_cli")._print_reconcile
         except ImportError:
             parser.error("The planning module must be installed to use the reconcile command.")
         except WorkspaceUsageError as exc:
@@ -3806,7 +3814,7 @@ def _write_action_kind(*, dry_run: bool, existing: str | None) -> str:
 def _is_retired_generated_llms_adapter(text: str) -> bool:
     lowered = text.lower()
     return (
-        "canonical_source: `packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py:_external_agent_handoff_text`"
+        "canonical_source: `generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_external_agent_handoff_text`"
         in lowered
         or "generated compatibility adapter" in lowered
         or "agent entrypoint router" in lowered
@@ -16114,7 +16122,7 @@ def _prompt_routing_contract_payload() -> dict[str, Any]:
             {
                 "class": "workspace lifecycle change",
                 "proof_lane": "workspace_cli",
-                "owner_surface": "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py",
+                "owner_surface": "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
             },
             {
                 "class": "planning state or contract change",
@@ -16803,7 +16811,7 @@ def _effective_authority_payload(
                 "concern": "runtime implementation",
                 "authority_class": "procedural-owned",
                 "owner": "workspace",
-                "surface": "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py",
+                "surface": "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
                 "status": "present",
             },
         ],
@@ -19353,7 +19361,9 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
     _validate_target_root(command_name="summary", target_root=target_root)
     from repo_planning_bootstrap.installer import format_summary_json, planning_summary
 
-    from agentic_command_generation.planning_runtime_cli import _print_summary
+    from command_generation.generated_package_loader import load_generated_cli_module_for_entrypoint
+
+    _print_summary = load_generated_cli_module_for_entrypoint("agentic-planning", "planning_runtime_cli")._print_summary
 
     config = _load_workspace_config(target_root=target_root)
     changed_paths = list(getattr(args, "changed", []) or [])
@@ -19598,7 +19608,9 @@ def _run_reconcile_report_adapter(args: argparse.Namespace) -> int:
     _validate_target_root(command_name="reconcile", target_root=target_root)
     from repo_planning_bootstrap.installer import planning_reconcile
 
-    from agentic_command_generation.planning_runtime_cli import _print_reconcile
+    from command_generation.generated_package_loader import load_generated_cli_module_for_entrypoint
+
+    _print_reconcile = load_generated_cli_module_for_entrypoint("agentic-planning", "planning_runtime_cli")._print_reconcile
 
     _ensure_external_intent_cache_if_available(target_root=target_root)
     payload = planning_reconcile(
@@ -21654,7 +21666,7 @@ def _direct_cli_edit_review_for_changed_paths(changed_paths: list[str]) -> dict[
     cli_paths = [
         path
         for path in changed_paths
-        if path == "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py"
+        if path == "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py"
         or path.endswith("/src/repo_planning_bootstrap/cli.py")
         or path.endswith("/src/repo_memory_bootstrap/cli.py")
     ]

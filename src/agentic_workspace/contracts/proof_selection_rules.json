@@ -38,21 +38,21 @@
       "id": "workspace-codegen-runtime",
       "lane": "workspace_cli",
       "exact": [
-        "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py"
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py"
       ]
     },
     {
       "id": "planning-codegen-runtime",
       "lane": "planning_package",
       "exact": [
-        "packages/command-generation/src/agentic_command_generation/planning_runtime_cli.py"
+        "generated/python/planning-cli/generated_cli_package/planning_runtime_cli.py"
       ]
     },
     {
       "id": "memory-codegen-runtime",
       "lane": "memory_package",
       "exact": [
-        "packages/command-generation/src/agentic_command_generation/memory_runtime_cli.py"
+        "generated/python/memory-cli/generated_cli_package/memory_runtime_cli.py"
       ]
     },
     {
@@ -66,7 +66,7 @@
         "generated/typescript/",
         "scripts/generate/generate_command_packages.py",
         "scripts/check/check_generated_command_packages.py",
-        "packages/command-generation/src/agentic_command_generation/"
+        "packages/command-generation/src/command_generation/"
       ]
     },
     {
@@ -176,7 +176,7 @@
         "id": "root-workspace-cli-runtime",
         "role": "hand-owned-executable",
         "exact": [
-          "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py"
+          "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py"
         ],
         "direct_edit_allowed": true,
         "source_contract": "src/agentic_workspace/contracts/operation_contracts.json + src/agentic_workspace/contracts/cli_commands.json + src/agentic_workspace/contracts/python_runtime_boundary.json",
@@ -188,8 +188,8 @@
         "id": "package-cli-runtime",
         "role": "hand-owned-executable",
         "exact": [
-          "packages/command-generation/src/agentic_command_generation/planning_runtime_cli.py",
-          "packages/command-generation/src/agentic_command_generation/memory_runtime_cli.py"
+          "generated/python/planning-cli/generated_cli_package/planning_runtime_cli.py",
+          "generated/python/memory-cli/generated_cli_package/memory_runtime_cli.py"
         ],
         "direct_edit_allowed": true,
         "source_contract": "package-local CLI source plus package bootstrap payload checks",
@@ -214,11 +214,11 @@
         "id": "python-generated-package-loader",
         "role": "generator",
         "prefixes": [
-          "packages/command-generation/src/agentic_command_generation/"
+          "packages/command-generation/src/command_generation/"
         ],
         "direct_edit_allowed": true,
         "source_contract": "src/agentic_workspace/contracts/command_package_ir.json",
-        "generator_contract": "packages/command-generation/src/agentic_command_generation/",
+        "generator_contract": "packages/command-generation/src/command_generation/",
         "regeneration_path": "uv run python scripts/generate/generate_command_packages.py",
         "edit_policy": "Package-local source must not own generated CLI bridges. Codegen-owned loader changes must prove generated package import behavior, generated output freshness, and packaging entry points."
       }

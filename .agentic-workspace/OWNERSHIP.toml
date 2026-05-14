@@ -180,7 +180,7 @@ escalate_when = ["change widens what memory may store", "promotion policy change
 
 [[subsystems]]
 id = "workspace-cli-runtime"
-paths = ["packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py", "src/agentic_workspace/generated_cli_package/**"]
+paths = ["generated/python/workspace-cli/generated_cli_package/**", "src/agentic_workspace/generated_cli_package/**"]
 owns = ["workspace command routing", "compact report assembly", "runtime adapter dispatch"]
 does_not_own = ["planning package state semantics", "memory note policy", "generated command package source contracts"]
 proof = ["uv run pytest tests/test_workspace_cli.py -q"]

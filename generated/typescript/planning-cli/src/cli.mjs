@@ -26,7 +26,7 @@ if (!supportedCommands.has(command)) {
   process.exit(2);
 }
 
-const runtimeCommand = process.env.AGENTIC_WORKSPACE_RUNTIME ?? "python -c \"import sys; from agentic_command_generation.planning_generated_cli_package import main; raise SystemExit(main(sys.argv[1:]))\"";
+const runtimeCommand = process.env.AGENTIC_WORKSPACE_RUNTIME ?? "python -c \"import sys; from command_generation.console import main_for_entrypoint; raise SystemExit(main_for_entrypoint('agentic-planning', sys.argv[1:]))\"";
 
 function splitRuntimeCommand(commandLine) {
   const parts = [];

@@ -24,25 +24,25 @@
       "contract": "proof_selection_rules.json",
       "schema": "proof_selection_rules.schema.json",
       "loader": "proof_selection_rules_manifest",
-      "consumer": "agentic_command_generation.workspace_runtime_cli:_proof_selection_for_changed_paths"
+      "consumer": "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_proof_selection_for_changed_paths"
     },
     {
       "contract": "authority_markers.json",
       "schema": "authority_markers.schema.json",
       "loader": "authority_markers_manifest",
-      "consumer": "agentic_command_generation.workspace_runtime_cli:_authority_marker_for_path"
+      "consumer": "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_authority_marker_for_path"
     },
     {
       "contract": "report_contract.json",
       "schema": "report_contract_manifest.schema.json",
       "loader": "report_contract_manifest",
-      "consumer": "agentic_command_generation.workspace_runtime_cli:_report_payload"
+      "consumer": "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_report_payload"
     },
     {
       "contract": "contract_inventory.json",
       "schema": "contract_inventory.schema.json",
       "loader": "contract_inventory_manifest",
-      "consumer": "agentic_command_generation.workspace_runtime_cli:_ownership_payload"
+      "consumer": "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_ownership_payload"
     },
     {
       "contract": "workspace_surfaces.json",
@@ -54,73 +54,73 @@
       "contract": "setup_findings_policy.json",
       "schema": "setup_findings_policy.schema.json",
       "loader": "setup_findings_policy_manifest",
-      "consumer": "agentic_command_generation.workspace_runtime_cli:_setup_payload"
+      "consumer": "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_setup_payload"
     },
     {
       "contract": "workflow_artifact_profiles.json",
       "schema": "workflow_artifact_profiles.schema.json",
       "loader": "workflow_artifact_profiles_manifest",
-      "consumer": "agentic_command_generation.workspace_runtime_cli:_workspace_config_payload"
+      "consumer": "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_workspace_config_payload"
     },
     {
       "contract": "context_templates.json",
       "schema": "context_templates.schema.json",
       "loader": "context_templates_manifest",
-      "consumer": "agentic_command_generation.workspace_runtime_cli:_start_payload"
+      "consumer": "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_start_payload"
     },
     {
       "contract": "context_templates.json",
       "schema": "context_templates.schema.json",
       "loader": "context_templates_manifest",
-      "consumer": "agentic_command_generation.workspace_runtime_cli:_implement_payload"
+      "consumer": "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_implement_payload"
     },
     {
       "contract": "improvement_latitude_policy.json",
       "schema": "improvement_latitude_policy.schema.json",
       "loader": "improvement_latitude_policy_manifest",
-      "consumer": "agentic_command_generation.workspace_runtime_cli:_workspace_config_payload"
+      "consumer": "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_workspace_config_payload"
     },
     {
       "contract": "improvement_signal_contract.json",
       "schema": "improvement_signal_contract.schema.json",
       "loader": "improvement_signal_contract_manifest",
-      "consumer": "agentic_command_generation.workspace_runtime_cli:_improvement_intake_payload"
+      "consumer": "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_improvement_intake_payload"
     },
     {
       "contract": "optimization_bias_policy.json",
       "schema": "optimization_bias_policy.schema.json",
       "loader": "optimization_bias_policy_manifest",
-      "consumer": "agentic_command_generation.workspace_runtime_cli:_workspace_config_payload"
+      "consumer": "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_workspace_config_payload"
     },
     {
       "contract": "repo_friction_policy.json",
       "schema": "repo_friction_policy.schema.json",
       "loader": "repo_friction_policy_manifest",
-      "consumer": "agentic_command_generation.workspace_runtime_cli:_repo_friction_payload"
+      "consumer": "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_repo_friction_payload"
     },
     {
       "contract": "preflight_policy.json",
       "schema": "preflight_policy.schema.json",
       "loader": "preflight_policy_manifest",
-      "consumer": "agentic_command_generation.workspace_runtime_cli:_preflight_payload"
+      "consumer": "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_preflight_payload"
     },
     {
       "contract": "module_registry.json",
       "schema": "module_registry.schema.json",
       "loader": "module_registry_manifest",
-      "consumer": "agentic_command_generation.workspace_runtime_cli:_module_descriptors"
+      "consumer": "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_module_descriptors"
     },
     {
       "contract": "cli_commands.json",
       "schema": "cli_commands.schema.json",
       "loader": "cli_commands_manifest",
-      "consumer": "agentic_command_generation.workspace_runtime_cli:_build_parser"
+      "consumer": "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_build_parser"
     },
     {
       "contract": "cli_option_groups.json",
       "schema": "cli_option_groups.schema.json",
       "loader": "cli_option_groups_manifest",
-      "consumer": "agentic_command_generation.workspace_runtime_cli:_build_parser"
+      "consumer": "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_build_parser"
     },
     {
       "contract": "operation_contracts.json",

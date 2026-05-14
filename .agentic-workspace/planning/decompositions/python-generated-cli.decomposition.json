@@ -27,7 +27,7 @@
       "title": "Python runtime handler boundary",
       "readiness": "promoted",
       "outcome": "Generated Python dispatch can identify supported operation ids from IR while runtime operation handlers expose an explicit contract boundary that can be implemented or bridged by future targets without relying on package-local cli.py ownership.",
-      "owner_surface": "packages/command-generation/src/agentic_command_generation/generator.py and generated/python/*/generated_cli_package/__init__.py",
+      "owner_surface": "packages/command-generation/src/command_generation/generator.py and generated/python/*/generated_cli_package/__init__.py",
       "proof": "Generated package static proof plus Python conformance prove operation dispatch is generated, runtime handlers are behind an explicit operation contract, and any Python-runtime bridge assumption is visible rather than implicit. Root, planning, and memory executable front doors now route through generated_cli_entrypoint modules.",
       "depends_on": [
         "json-schema-operation-ir"
@@ -39,7 +39,7 @@
       "title": "Python package-resource operation IR migration",
       "readiness": "promoted",
       "outcome": "Simple package-resource generated Python commands consume checked-in operation contracts and target-executor primitives instead of compatibility runtime handlers.",
-      "owner_surface": "src/agentic_workspace/contracts/operations/memory.list-*.report.json, src/agentic_workspace/contracts/python_operation_execution_inventory.json, packages/command-generation/src/agentic_command_generation/memory_operation_ir_executor.py, and generated/python/memory-cli/generated_cli_package/operations/",
+      "owner_surface": "src/agentic_workspace/contracts/operations/memory.list-*.report.json, src/agentic_workspace/contracts/python_operation_execution_inventory.json, packages/command-generation/src/command_generation/primitive_executor.py, and generated/python/memory-cli/generated_cli_package/operations/",
       "proof": "Contract tooling, generated Python conformance, generated package freshness, and structured operation inventory passed before Python completion promotion.",
       "depends_on": [
         "json-schema-operation-ir",
@@ -51,8 +51,8 @@
       "id": "python-handwritten-parser-retirement",
       "title": "Python handwritten parser retirement for generated commands",
       "readiness": "promoted",
-      "outcome": "Commands covered by command_package_ir no longer require duplicate handwritten argparse definitions in package-local cli.py files; runtime helpers now live under command-generation ownership while executable projections route through generated packages.",
-      "owner_surface": "packages/command-generation/src/agentic_command_generation/*_runtime_cli.py and generated/python/*/generated_cli_package/__init__.py",
+      "outcome": "Commands covered by command_package_ir no longer require duplicate handwritten argparse definitions or product-specific runtime shims in package-local or command-generation source; executable projections route through generated Python packages plus generic command_generation machinery.",
+      "owner_surface": "generated/python/*/generated_cli_package/*_runtime_cli.py, generated/python/*/generated_cli_package/__init__.py, and generic packages/command-generation/src/command_generation machinery",
       "proof": "Static proof rejects duplicated handwritten parser ownership for generated command/interface surfaces; Python black-box conformance still passes; repository inventory has no cli.py files outside generated Python surfaces.",
       "depends_on": [
         "python-runtime-handler-boundary",

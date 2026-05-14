@@ -9,13 +9,13 @@ description = "Repo-native continuity and execution layer for agents, combining 
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-  "agentic-command-generation",
+  "command-generation",
   "agentic-memory",
   "agentic-planning",
 ]
 
 [project.scripts]
-agentic-workspace = "agentic_command_generation.workspace_generated_cli_package:main"
+agentic-workspace = "command_generation.console:main"
 
 [dependency-groups]
 dev = [
@@ -33,7 +33,7 @@ dev = [
 package = true
 
 [tool.uv.sources]
-agentic-command-generation = { workspace = true }
+command-generation = { workspace = true }
 agentic-memory = { workspace = true }
 agentic-planning = { workspace = true }
 

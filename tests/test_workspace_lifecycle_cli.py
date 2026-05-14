@@ -51,7 +51,7 @@ def test_setup_command_loads_promotable_findings_artifact(tmp_path: Path, capsys
                         "class": "repo_friction_evidence",
                         "summary": "Workspace CLI remains a large shared hotspot.",
                         "confidence": 0.91,
-                        "path": "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py",
+                        "path": "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
                         "refs": [".agentic-workspace/docs/reporting-contract.md"],
                     },
                     {
@@ -79,7 +79,7 @@ def test_setup_command_loads_promotable_findings_artifact(tmp_path: Path, capsys
     assert payload["analysis_input"]["loaded_count"] == 3
     assert (
         payload["analysis_input"]["promotable"]["repo_friction_evidence"][0]["path"]
-        == "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py"
+        == "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py"
     )
     assert payload["analysis_input"]["promotable"]["planning_candidate"][0]["next_action"].startswith("Promote the next")
     assert payload["analysis_input"]["transient"][0]["promotion_reason"] == "planning candidate needs a bounded next_action"
@@ -806,7 +806,7 @@ def test_upgrade_removes_retired_generated_llms_adapter(tmp_path: Path) -> None:
 
 Authority marker:
 
-- canonical_source: `packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py:_external_agent_handoff_text`
+- canonical_source: `generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_external_agent_handoff_text`
 
 Generated compatibility adapter.
 """,

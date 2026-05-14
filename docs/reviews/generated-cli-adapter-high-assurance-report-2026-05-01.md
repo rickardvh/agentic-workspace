@@ -35,7 +35,7 @@
 | Surface | Owner | Why it changed | Host-private? |
 | --- | --- | --- | --- |
 | `src/agentic_workspace/contracts/command_package_ir.json` | workspace | Declare Python runtime-backed maturity and generated parser interface | no |
-| `packages/command-generation/src/agentic_command_generation/generator.py` | workspace | Generate runtime-backed Python adapter packages | no |
+| `packages/command-generation/src/command_generation/generator.py` | workspace | Generate runtime-backed Python adapter packages | no |
 | `src/agentic_workspace/cli.py` | workspace | Route generated parser/dispatch before handwritten parser for promoted commands and bind root read-only commands to hand-owned primitives | no |
 | `packages/planning/src/repo_planning_bootstrap/cli.py` | planning | Route generated parser/dispatch for promoted package status command | no |
 | `packages/memory/src/repo_memory_bootstrap/cli.py` | memory | Route generated parser/dispatch for promoted package status command | no |

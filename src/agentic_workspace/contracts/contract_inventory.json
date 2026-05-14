@@ -60,7 +60,7 @@
       },
       {
         "id": "runtime_primitive_implementation",
-        "owner_surface": "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py",
+        "owner_surface": "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
         "authority_class": "procedural-owned",
         "route_when": "The concern needs imperative behavior, live repo inspection, subprocess execution, or mutation sequencing.",
         "avoid_when": "The concern can be expressed as a declarative contract, schema, or package payload."
@@ -73,8 +73,8 @@
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/compact_contract_profile.json",
       "consumers": [
-        "agentic_command_generation.workspace_runtime_cli:_defaults_payload",
-        "agentic_command_generation.workspace_runtime_cli:_compact_contract_answer"
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_defaults_payload",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_compact_contract_answer"
       ],
       "notes": "Stable compact answer envelope shape and selector metadata are manifest-backed."
     },
@@ -83,8 +83,8 @@
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/proof_routes.json",
       "consumers": [
-        "agentic_command_generation.workspace_runtime_cli:_defaults_payload",
-        "agentic_command_generation.workspace_runtime_cli:_proof_payload"
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_defaults_payload",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_proof_payload"
       ],
       "notes": "Stable proof route ids and commands are manifest-backed."
     },
@@ -93,8 +93,8 @@
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/proof_selection_rules.json",
       "consumers": [
-        "agentic_command_generation.workspace_runtime_cli:_proof_selection_for_changed_paths",
-        "agentic_command_generation.workspace_runtime_cli:_implement_payload",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_proof_selection_for_changed_paths",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_implement_payload",
         "scripts/check/check_contract_tooling_surfaces.py"
       ],
       "notes": "Changed-path proof classification rules are manifest-backed so bounded implementer proof selection does not depend on inline Python path tables."
@@ -104,7 +104,7 @@
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/authority_markers.json",
       "consumers": [
-        "agentic_command_generation.workspace_runtime_cli:_authority_marker_for_path",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_authority_marker_for_path",
         "scripts/check/check_contract_tooling_surfaces.py"
       ],
       "notes": "Authority marker labels, canonical source policy, safe-to-edit defaults, refresh commands, and representative parity paths are manifest-backed while runtime path normalization and matching stay Python-owned."
@@ -114,7 +114,7 @@
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/report_contract.json",
       "consumers": [
-        "agentic_command_generation.workspace_runtime_cli:_reporting_schema_payload"
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_reporting_schema_payload"
       ],
       "notes": "Stable report schema metadata is manifest-backed."
     },
@@ -145,7 +145,7 @@
       "consumers": [
         "docs/setup-findings-contract.md",
         "scripts/check/check_contract_tooling_surfaces.py",
-        "agentic_command_generation.workspace_runtime_cli:_setup_findings_input_payload"
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_setup_findings_input_payload"
       ],
       "notes": "The optional setup/jumpstart findings artifact shape is formalized separately so the workspace can standardize promotion without owning the analysis method."
     },
@@ -165,7 +165,7 @@
       "owner_surface": "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
       "consumers": [
         "agentic-workspace start --task \"<task>\" --format json",
-        "agentic_command_generation.workspace_runtime_cli:_start_payload",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_start_payload",
         "scripts/check/check_contract_tooling_surfaces.py"
       ],
       "notes": "The bounded startup context payload emitted by the CLI is schema-backed so adapter consumers can validate the shape without treating cli.py as the sole contract."
@@ -176,7 +176,7 @@
       "owner_surface": "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
       "consumers": [
         "agentic-workspace implement --format json",
-        "agentic_command_generation.workspace_runtime_cli:_implement_payload",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_implement_payload",
         "scripts/check/check_contract_tooling_surfaces.py"
       ],
       "notes": "The bounded implementer context payload emitted by the CLI is schema-backed so changed-path handoffs and proof requirements can be validated by non-Python adapters."
@@ -186,8 +186,8 @@
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/context_templates.json",
       "consumers": [
-        "agentic_command_generation.workspace_runtime_cli:_start_payload",
-        "agentic_command_generation.workspace_runtime_cli:_implement_payload",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_start_payload",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_implement_payload",
         "scripts/check/check_contract_tooling_surfaces.py"
       ],
       "notes": "Stable startup and implementer context text fragments are contract-backed so cli.py remains the renderer instead of the wording authority."
@@ -195,7 +195,7 @@
     {
       "area": "report_payload_derivation",
       "classification": "derived",
-      "owner_surface": "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py",
+      "owner_surface": "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
       "consumers": [
         "agentic-workspace report --target ./repo --format json"
       ],
@@ -204,7 +204,7 @@
     {
       "area": "defaults_contract_assembly",
       "classification": "procedural",
-      "owner_surface": "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py",
+      "owner_surface": "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
       "consumers": [
         "agentic-workspace defaults --format json"
       ],
@@ -213,7 +213,7 @@
     {
       "area": "lifecycle_execution",
       "classification": "procedural",
-      "owner_surface": "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py",
+      "owner_surface": "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
       "consumers": [
         "agentic-workspace init/adopt/upgrade/uninstall/status/doctor"
       ],
@@ -222,7 +222,7 @@
     {
       "area": "reconciliation_and_drift_handling",
       "classification": "procedural",
-      "owner_surface": "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py",
+      "owner_surface": "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
       "consumers": [
         "status/doctor/install reconciliation",
         "setup/report live state"
@@ -244,7 +244,7 @@
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/module_registry.json",
       "consumers": [
-        "agentic_command_generation.workspace_runtime_cli:modules",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:modules",
         "src/agentic_workspace/contracts/schemas/module_registry.schema.json",
         "scripts/check/check_contract_tooling_surfaces.py"
       ],
@@ -255,7 +255,7 @@
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/workspace_surfaces.json",
       "consumers": [
-        "agentic_command_generation.workspace_runtime_cli",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
         "scripts/check/check_contract_tooling_surfaces.py"
       ],
       "notes": "Stable workspace-owned path tables and setup artifact locations are manifest-backed instead of duplicated in cli.py."
@@ -265,8 +265,8 @@
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/setup_findings_policy.json",
       "consumers": [
-        "agentic_command_generation.workspace_runtime_cli:_setup_findings_input_payload",
-        "agentic_command_generation.workspace_runtime_cli:_setup_finding_class_payload",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_setup_findings_input_payload",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_setup_finding_class_payload",
         "scripts/check/check_contract_tooling_surfaces.py"
       ],
       "notes": "Setup findings promotion thresholds and accepted class policy are manifest-backed instead of duplicated in cli.py."
@@ -276,8 +276,8 @@
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/workflow_artifact_profiles.json",
       "consumers": [
-        "agentic_command_generation.workspace_runtime_cli:_workflow_artifact_profile_payload",
-        "agentic_command_generation.workspace_runtime_cli:_defaults_payload",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_workflow_artifact_profile_payload",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_defaults_payload",
         "scripts/check/check_contract_tooling_surfaces.py"
       ],
       "notes": "Workflow artifact adapter profiles now come from checked-in contract JSON instead of inline Python tables."
@@ -287,7 +287,7 @@
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/workflow_definition_format.json",
       "consumers": [
-        "agentic_command_generation.workspace_runtime_cli:_agent_configuration_workflow_extensions_payload",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_agent_configuration_workflow_extensions_payload",
         "scripts/check/check_contract_tooling_surfaces.py"
       ],
       "notes": "Workflow component structure, composition, attachment, and migration posture are schema-backed so workflow docs can stay adapters over a machine-usable format."
@@ -297,8 +297,8 @@
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/improvement_latitude_policy.json",
       "consumers": [
-        "agentic_command_generation.workspace_runtime_cli:_improvement_latitude_payload",
-        "agentic_command_generation.workspace_runtime_cli:_defaults_payload",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_improvement_latitude_payload",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_defaults_payload",
         "scripts/check/check_contract_tooling_surfaces.py"
       ],
       "notes": "Improvement latitude mode policy text and evidence metadata are manifest-backed instead of inline Python tables."
@@ -308,8 +308,8 @@
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/optimization_bias_policy.json",
       "consumers": [
-        "agentic_command_generation.workspace_runtime_cli:_optimization_bias_payload",
-        "agentic_command_generation.workspace_runtime_cli:_defaults_payload",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_optimization_bias_payload",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_defaults_payload",
         "scripts/check/check_contract_tooling_surfaces.py"
       ],
       "notes": "Optimization bias mode policy text and surface-boundary metadata are manifest-backed instead of inline Python tables."
@@ -319,12 +319,12 @@
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/repo_friction_policy.json",
       "consumers": [
-        "agentic_command_generation.workspace_runtime_cli:_workspace_self_adaptation_payload",
-        "agentic_command_generation.workspace_runtime_cli:_friction_response_order_payload",
-        "agentic_command_generation.workspace_runtime_cli:_workspace_self_adaptation_guardrail_payload",
-        "agentic_command_generation.workspace_runtime_cli:_repo_directed_improvement_evidence_threshold_payload",
-        "agentic_command_generation.workspace_runtime_cli:_validation_friction_payload",
-        "agentic_command_generation.workspace_runtime_cli:_improvement_boundary_test_payload",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_workspace_self_adaptation_payload",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_friction_response_order_payload",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_workspace_self_adaptation_guardrail_payload",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_repo_directed_improvement_evidence_threshold_payload",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_validation_friction_payload",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_improvement_boundary_test_payload",
         "scripts/check/check_contract_tooling_surfaces.py"
       ],
       "notes": "Repo-friction policy payloads and boundary tests are manifest-backed instead of inline Python tables."
@@ -334,8 +334,8 @@
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/preflight_policy.json",
       "consumers": [
-        "agentic_command_generation.workspace_runtime_cli:_enforce_preflight_gate",
-        "agentic_command_generation.workspace_runtime_cli:build_parser",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_enforce_preflight_gate",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:build_parser",
         "scripts/check/check_contract_tooling_surfaces.py"
       ],
       "notes": "High-risk command gating, preflight token format, token freshness defaults, and strict-gate messages are manifest-backed instead of inline Python constants."
@@ -426,8 +426,8 @@
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/module_registry.json",
       "consumers": [
-        "agentic_command_generation.workspace_runtime_cli:_module_operations",
-        "agentic_command_generation.workspace_runtime_cli:_module_registry",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_module_operations",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_module_registry",
         "scripts/check/check_contract_tooling_surfaces.py"
       ],
       "notes": "Module metadata, command args, and result-contract fields are manifest-backed while lifecycle handlers and detectors remain procedural."
@@ -437,8 +437,8 @@
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/cli_commands.json",
       "consumers": [
-        "agentic_command_generation.workspace_runtime_cli:build_parser",
-        "agentic_command_generation.workspace_runtime_cli:_command_suggestions",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:build_parser",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_command_suggestions",
         "scripts/check/check_contract_tooling_surfaces.py"
       ],
       "notes": "Command names, parser help text, and command-local options are manifest-backed instead of duplicated in argparse construction."
@@ -448,7 +448,7 @@
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/cli_option_groups.json",
       "consumers": [
-        "agentic_command_generation.workspace_runtime_cli:build_parser",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:build_parser",
         "scripts/check/check_contract_tooling_surfaces.py"
       ],
       "notes": "Shared parser option groups are manifest-backed instead of duplicated in helper functions."

@@ -12,7 +12,7 @@ from repo_memory_bootstrap._installer_payload import _payload_entries
 from repo_memory_bootstrap._installer_shared import OPTIONAL_APPEND_TARGETS, InstallResult
 from repo_memory_bootstrap.installer import MANIFEST_PATH, collect_status, doctor_bootstrap, memory_report, promotion_report, report_routes
 
-from agentic_command_generation.primitive_executor import PrimitiveContext, PrimitiveExecutionError, run_operation_steps
+from command_generation.primitive_executor import PrimitiveContext, PrimitiveExecutionError, run_operation_steps
 
 
 class OperationIrExecutionError(RuntimeError):

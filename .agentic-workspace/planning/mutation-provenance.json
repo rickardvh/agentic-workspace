@@ -1408,6 +1408,38 @@
       "reason": "archive execplan python-product-runtime-source-generation",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-14T21:02:04+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/command-generation-rename-and-shim-removal.plan.json",
+      "sha256": "1096d296e30f343052a0ef111ec62932daa133e20e723de4927b056d55c7813a",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold command-generation-rename-and-shim-removal",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T21:27:40+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "e244c0ad75b54d23a0b725d25e98baa3dd30e478904159f432767fbfd2bcd1cf",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold command-generation-rename-and-shim-removal",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T21:27:40+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/command-generation-rename-and-shim-removal.plan.json",
+      "sha256": "e93c5d97e1bdc02a9c7fadef81af798dbd83ce48ec75446b4b72acd95a60c926",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=delegate-exploration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T21:27:43+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan command-generation-rename-and-shim-removal",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T21:50:09+00:00"
     }
   ]
 }

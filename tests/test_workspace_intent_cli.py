@@ -217,7 +217,7 @@ def test_proof_changed_paths_include_subsystem_proof_hints(tmp_path: Path, monke
         'summary = "startup"\n\n'
         "[[subsystems]]\n"
         'id = "workspace-cli"\n'
-        'paths = ["packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py"]\n'
+        'paths = ["generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py"]\n'
         'owns = ["workspace command routing"]\n'
         'does_not_own = ["planning state semantics"]\n'
         'proof = ["uv run pytest tests/test_workspace_cli.py -q"]\n'
@@ -234,7 +234,7 @@ def test_proof_changed_paths_include_subsystem_proof_hints(tmp_path: Path, monke
                 "--target",
                 str(tmp_path),
                 "--changed",
-                "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py",
+                "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
                 "--format",
                 "json",
             ]
@@ -243,12 +243,12 @@ def test_proof_changed_paths_include_subsystem_proof_hints(tmp_path: Path, monke
     )
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["selector"] == {"changed": ["packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py"]}
+    assert payload["selector"] == {"changed": ["generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py"]}
     answer = payload["answer"]
     assert "uv run pytest tests/test_workspace_cli.py -q" in answer["required_commands"]
     subsystem_lanes = [lane for lane in answer["selected_lanes"] if lane["id"] == "subsystem:workspace-cli"]
     assert subsystem_lanes
     assert subsystem_lanes[0]["subsystem"]["does_not_own"] == ["planning state semantics"]
     assert answer["subsystem_ownership"]["matched_subsystems"][0]["matched_paths"] == [
-        "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py"
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py"
     ]

@@ -187,7 +187,7 @@ def test_installed_memory_wheel_imports_cli_module() -> None:
             [
                 sys.executable,
                 "-c",
-                "import agentic_command_generation.memory_runtime_cli; from agentic_command_generation.memory_generated_cli_package import build_generated_parser",
+                "from repo_memory_bootstrap._generated_cli_package_impl import build_generated_parser",
             ],
             cwd=tmpdir_path,
             env={**os.environ, "PYTHONPATH": str(install_root)},

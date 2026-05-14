@@ -15,7 +15,7 @@ from repo_planning_bootstrap.installer import (
     planning_report_tiny,
 )
 
-from agentic_command_generation.primitive_executor import PrimitiveContext, PrimitiveExecutionError, run_operation_steps
+from command_generation.primitive_executor import PrimitiveContext, PrimitiveExecutionError, run_operation_steps
 
 
 class OperationIrExecutionError(RuntimeError):

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import contextlib
-import importlib
 import io
 import json
 import os
@@ -19,6 +18,7 @@ if str(GENERATOR_SCRIPT_ROOT) not in sys.path:
     sys.path.insert(0, str(GENERATOR_SCRIPT_ROOT))
 for SOURCE_ROOT in (
     REPO_ROOT / "src",
+    REPO_ROOT / "packages" / "command-generation" / "src",
     REPO_ROOT / "packages" / "planning" / "src",
     REPO_ROOT / "packages" / "memory" / "src",
 ):
@@ -26,6 +26,11 @@ for SOURCE_ROOT in (
         sys.path.insert(0, str(SOURCE_ROOT))
 
 from workspace_command_generation import SCHEMA_PATH, SOURCE_PATH, load_workspace_command_package_ir  # noqa: E402
+
+from command_generation.generated_package_loader import (  # noqa: E402
+    load_generated_cli_module_for_entrypoint,
+    load_generated_cli_package_for_entrypoint,
+)
 
 SelectedFields = Callable[[str], dict[str, object]]
 
@@ -118,12 +123,6 @@ PYTHON_FULL_COMPLETION_BLOCKING_EXECUTABLE_PATHS = (
     "src/agentic_workspace/operation_ir_executor.py",
     "packages/planning/src/repo_planning_bootstrap/operation_ir_executor.py",
     "packages/memory/src/repo_memory_bootstrap/operation_ir_executor.py",
-    "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py",
-    "packages/command-generation/src/agentic_command_generation/planning_runtime_cli.py",
-    "packages/command-generation/src/agentic_command_generation/memory_runtime_cli.py",
-    "packages/command-generation/src/agentic_command_generation/workspace_operation_ir_executor.py",
-    "packages/command-generation/src/agentic_command_generation/planning_operation_ir_executor.py",
-    "packages/command-generation/src/agentic_command_generation/memory_operation_ir_executor.py",
 )
 
 
@@ -153,21 +152,41 @@ def _conformance_env(*, runtime: str | None = None) -> dict[str, str]:
     return env
 
 
-def _runtime_module_for_package(package_id: str) -> str:
-    modules = {
-        "root-workspace": "agentic_command_generation.workspace_generated_cli_package",
-        "planning-bootstrap": "agentic_command_generation.planning_generated_cli_package",
-        "memory-bootstrap": "agentic_command_generation.memory_generated_cli_package",
+def _entrypoint_for_package(package_id: str) -> str:
+    entrypoints = {
+        "root-workspace": "agentic-workspace",
+        "planning-bootstrap": "agentic-planning",
+        "memory-bootstrap": "agentic-memory",
     }
-    return modules[package_id]
+    return entrypoints[package_id]
+
+
+def _runtime_module_file_for_package(package_id: str) -> str:
+    runtime_modules = {
+        "root-workspace": "workspace_runtime_cli",
+        "planning-bootstrap": "planning_runtime_cli",
+        "memory-bootstrap": "memory_runtime_cli",
+    }
+    return runtime_modules[package_id]
+
+
+def _generated_package_for_package(package_id: str):
+    return load_generated_cli_package_for_entrypoint(_entrypoint_for_package(package_id))
+
+
+def _generated_runtime_module_for_package(package_id: str):
+    return load_generated_cli_module_for_entrypoint(_entrypoint_for_package(package_id), _runtime_module_file_for_package(package_id))
 
 
 def _python_command_for_package(package_id: str) -> list[str]:
-    module = _runtime_module_for_package(package_id)
+    entrypoint = _entrypoint_for_package(package_id)
     return [
         _python_executable(),
         "-c",
-        f"import sys; from {module} import main; raise SystemExit(main(sys.argv[1:]))",
+        (
+            "import sys; from command_generation.console import main_for_entrypoint; "
+            f"raise SystemExit(main_for_entrypoint({entrypoint!r}, sys.argv[1:]))"
+        ),
     ]
 
 
@@ -439,15 +458,16 @@ def _run_python_adapter_conformance() -> list[str]:
         def command_for_package(package_id: str) -> list[str]:
             shim = shims.get(package_id)
             if shim is None:
-                module = _runtime_module_for_package(package_id)
+                entrypoint = _entrypoint_for_package(package_id)
                 shim = temp_root / f"{package_id.replace('-', '_')}_cli_shim.py"
                 shim.write_text(
                     "import sys\n"
                     f"sys.path.insert(0, {str(REPO_ROOT / 'src')!r})\n"
+                    f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'command-generation' / 'src')!r})\n"
                     f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'planning' / 'src')!r})\n"
                     f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'memory' / 'src')!r})\n"
-                    f"from {module} import main\n"
-                    "raise SystemExit(main(sys.argv[1:]))\n",
+                    "from command_generation.console import main_for_entrypoint\n"
+                    f"raise SystemExit(main_for_entrypoint({entrypoint!r}, sys.argv[1:]))\n",
                     encoding="utf-8",
                 )
                 shims[package_id] = shim
@@ -879,7 +899,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         operation_contract = f"operations/{operation_id}.json"
         if entry.get("status") != "runtime-consumed":
             errors.append(f"{operation_id} must be marked runtime-consumed in python_operation_execution_inventory.json")
-        if entry.get("primitive_executor") != "packages/command-generation/src/agentic_command_generation/primitive_executor.py":
+        if entry.get("primitive_executor") != "packages/command-generation/src/command_generation/primitive_executor.py":
             errors.append(f"{operation_id} must point at the codegen-owned Python primitive executor")
         if entry.get("operation_contract") != operation_contract:
             errors.append(f"{operation_id} must point at {operation_contract}")
@@ -892,31 +912,31 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         if not isinstance(ir_plan, dict) or ir_plan.get("status") not in {"representative", "complete"}:
             errors.append(f"{operation_id} must keep a representative or complete ir_plan")
 
-    generated_operation_modules = {
-        "config.report": "agentic_command_generation.workspace_generated_cli_package",
-        "delegation-outcome.append": "agentic_command_generation.workspace_generated_cli_package",
-        "defaults.report": "agentic_command_generation.workspace_generated_cli_package",
-        "memory.doctor.report": "agentic_command_generation.memory_generated_cli_package",
-        "memory.list-files.report": "agentic_command_generation.memory_generated_cli_package",
-        "memory.list-skills.report": "agentic_command_generation.memory_generated_cli_package",
-        "memory.promotion-report.report": "agentic_command_generation.memory_generated_cli_package",
-        "memory.report.report": "agentic_command_generation.memory_generated_cli_package",
-        "memory.route-report.report": "agentic_command_generation.memory_generated_cli_package",
-        "memory.status.report": "agentic_command_generation.memory_generated_cli_package",
-        "planning.doctor.report": "agentic_command_generation.planning_generated_cli_package",
-        "planning.report.report": "agentic_command_generation.planning_generated_cli_package",
-        "planning.status.report": "agentic_command_generation.planning_generated_cli_package",
-        "prompt.init": "agentic_command_generation.workspace_generated_cli_package",
-        "prompt.uninstall": "agentic_command_generation.workspace_generated_cli_package",
-        "prompt.upgrade": "agentic_command_generation.workspace_generated_cli_package",
-        "system-intent.sync": "agentic_command_generation.workspace_generated_cli_package",
+    generated_operation_packages = {
+        "config.report": "root-workspace",
+        "delegation-outcome.append": "root-workspace",
+        "defaults.report": "root-workspace",
+        "memory.doctor.report": "memory-bootstrap",
+        "memory.list-files.report": "memory-bootstrap",
+        "memory.list-skills.report": "memory-bootstrap",
+        "memory.promotion-report.report": "memory-bootstrap",
+        "memory.report.report": "memory-bootstrap",
+        "memory.route-report.report": "memory-bootstrap",
+        "memory.status.report": "memory-bootstrap",
+        "planning.doctor.report": "planning-bootstrap",
+        "planning.report.report": "planning-bootstrap",
+        "planning.status.report": "planning-bootstrap",
+        "prompt.init": "root-workspace",
+        "prompt.uninstall": "root-workspace",
+        "prompt.upgrade": "root-workspace",
+        "system-intent.sync": "root-workspace",
     }
-    for operation_id, module_name in sorted(generated_operation_modules.items()):
+    for operation_id, package_id in sorted(generated_operation_packages.items()):
         try:
-            generated_module = importlib.import_module(module_name)
+            generated_module = _generated_package_for_package(package_id)
             generated_operation_contract = getattr(generated_module, "generated_operation_contract", None)
             if not callable(generated_operation_contract):
-                errors.append(f"{module_name} must expose generated_operation_contract()")
+                errors.append(f"{package_id} generated package must expose generated_operation_contract()")
                 continue
             if generated_operation_contract(operation_id) != operations_by_id[operation_id]:
                 errors.append(f"generated operation contract drifted from source operation contract: {operation_id}")
@@ -926,7 +946,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
     memory_operation_executor_text = (
         REPO_ROOT / "generated" / "python" / "memory-cli" / "generated_cli_package" / "memory_operation_ir_executor.py"
     ).read_text(encoding="utf-8")
-    if "from agentic_command_generation.primitive_executor import" not in memory_operation_executor_text:
+    if "from command_generation.primitive_executor import" not in memory_operation_executor_text:
         errors.append("memory operation IR executor must import the codegen-owned primitive executor")
     if "run_operation_steps(" not in memory_operation_executor_text:
         errors.append("memory operation IR executor must execute operation plans through codegen-owned run_operation_steps")
@@ -951,7 +971,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
     planning_operation_executor_text = (
         REPO_ROOT / "generated" / "python" / "planning-cli" / "generated_cli_package" / "planning_operation_ir_executor.py"
     ).read_text(encoding="utf-8")
-    if "from agentic_command_generation.primitive_executor import" not in planning_operation_executor_text:
+    if "from command_generation.primitive_executor import" not in planning_operation_executor_text:
         errors.append("planning operation IR executor must import the codegen-owned primitive executor")
     if "run_operation_steps(" not in planning_operation_executor_text:
         errors.append("planning operation IR executor must execute operation plans through codegen-owned run_operation_steps")
@@ -968,7 +988,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
     workspace_operation_executor_text = (
         REPO_ROOT / "generated" / "python" / "workspace-cli" / "generated_cli_package" / "workspace_operation_ir_executor.py"
     ).read_text(encoding="utf-8")
-    if "from agentic_command_generation.primitive_executor import" not in workspace_operation_executor_text:
+    if "from command_generation.primitive_executor import" not in workspace_operation_executor_text:
         errors.append("workspace operation IR executor must import the codegen-owned primitive executor")
     if "run_operation_steps(" not in workspace_operation_executor_text:
         errors.append("workspace operation IR executor must execute operation plans through codegen-owned run_operation_steps")
@@ -1022,21 +1042,17 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
 
 def _validate_python_runtime_handler_boundary() -> list[str]:
     errors: list[str] = []
-    package_modules = {
-        "root-workspace": ("agentic_command_generation.workspace_generated_cli_package", "agentic_command_generation.workspace_runtime_cli"),
-        "planning-bootstrap": ("agentic_command_generation.planning_generated_cli_package", "agentic_command_generation.planning_runtime_cli"),
-        "memory-bootstrap": ("agentic_command_generation.memory_generated_cli_package", "agentic_command_generation.memory_runtime_cli"),
-    }
-    for package_id, (generated_module_name, runtime_module_name) in package_modules.items():
+    for package_id in ("root-workspace", "planning-bootstrap", "memory-bootstrap"):
+        runtime_module_name = f"{_entrypoint_for_package(package_id)}:{_runtime_module_file_for_package(package_id)}"
         try:
-            generated_module = importlib.import_module(generated_module_name)
-            runtime_module = importlib.import_module(runtime_module_name)
+            generated_module = _generated_package_for_package(package_id)
+            runtime_module = _generated_runtime_module_for_package(package_id)
         except ImportError as exc:
             errors.append(f"Python runtime handler boundary import failed for {package_id}: {exc}")
             continue
         generated_operation_ids = getattr(generated_module, "generated_operation_ids", None)
         if not callable(generated_operation_ids):
-            errors.append(f"{generated_module_name} must expose generated_operation_ids() from generated command-package IR")
+            errors.append(f"{package_id} generated package must expose generated_operation_ids() from generated command-package IR")
             continue
         operation_ids = set(generated_operation_ids())
         handler_map = getattr(runtime_module, "_GENERATED_RUNTIME_HANDLERS", None)
@@ -1075,14 +1091,10 @@ def _validate_no_legacy_generated_adapter_runtime_import(*, relative_path: str, 
 
 def _validate_generated_python_commands_absent_from_handwritten_parsers() -> list[str]:
     errors: list[str] = []
-    package_modules = {
-        "root-workspace": ("agentic_command_generation.workspace_generated_cli_package", "agentic_command_generation.workspace_runtime_cli"),
-        "planning-bootstrap": ("agentic_command_generation.planning_generated_cli_package", "agentic_command_generation.planning_runtime_cli"),
-        "memory-bootstrap": ("agentic_command_generation.memory_generated_cli_package", "agentic_command_generation.memory_runtime_cli"),
-    }
-    for package_id, (generated_module_name, runtime_module_name) in package_modules.items():
-        generated_module = importlib.import_module(generated_module_name)
-        runtime_module = importlib.import_module(runtime_module_name)
+    for package_id in ("root-workspace", "planning-bootstrap", "memory-bootstrap"):
+        runtime_module_name = f"{_entrypoint_for_package(package_id)}:{_runtime_module_file_for_package(package_id)}"
+        generated_module = _generated_package_for_package(package_id)
+        runtime_module = _generated_runtime_module_for_package(package_id)
         generated_command_names = getattr(generated_module, "generated_command_names", None)
         build_parser = getattr(runtime_module, "build_parser", None)
         if not callable(generated_command_names) or not callable(build_parser):
@@ -1127,15 +1139,16 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
         def runtime_for_package(package_id: str) -> str:
             shim = shims.get(package_id)
             if shim is None:
-                module = _runtime_module_for_package(package_id)
+                entrypoint = _entrypoint_for_package(package_id)
                 shim = temp_root / f"{package_id.replace('-', '_')}_cli_shim.py"
                 shim.write_text(
                     "import sys\n"
                     f"sys.path.insert(0, {str(REPO_ROOT / 'src')!r})\n"
+                    f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'command-generation' / 'src')!r})\n"
                     f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'planning' / 'src')!r})\n"
                     f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'memory' / 'src')!r})\n"
-                    f"from {module} import main\n"
-                    "raise SystemExit(main(sys.argv[1:]))\n",
+                    "from command_generation.console import main_for_entrypoint\n"
+                    f"raise SystemExit(main_for_entrypoint({entrypoint!r}, sys.argv[1:]))\n",
                     encoding="utf-8",
                 )
                 shims[package_id] = shim

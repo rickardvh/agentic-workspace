@@ -41,24 +41,15 @@ def _is_runtime_backed_python_target(target: dict[str, Any]) -> bool:
 
 
 def _runtime_command_for_package(package: dict[str, Any], runtime_binding: dict[str, Any]) -> str:
-    generated_package = _generated_package_module_for_package(package)
-    if generated_package:
-        return "python -c " + json.dumps(f"import sys; from {generated_package} import main; raise SystemExit(main(sys.argv[1:]))")
+    entrypoint = str(package.get("python_runtime_binding", {}).get("entrypoint") or package.get("program") or "")
+    if entrypoint:
+        snippet = (
+            "import sys; "
+            "from command_generation.console import main_for_entrypoint; "
+            f"raise SystemExit(main_for_entrypoint({entrypoint!r}, sys.argv[1:]))"
+        )
+        return "python -c " + json.dumps(snippet)
     return str(runtime_binding["default_runtime_command"])
-
-
-def _generated_package_module_for_package(package: dict[str, Any]) -> str:
-    binding = package.get("python_runtime_binding", {})
-    if not isinstance(binding, dict):
-        return ""
-    return str(binding.get("generated_package_module") or "")
-
-
-def _runtime_module_for_package(package: dict[str, Any]) -> str:
-    binding = package.get("python_runtime_binding", {})
-    if not isinstance(binding, dict):
-        return ""
-    return str(binding.get("runtime_module") or "")
 
 
 def _runtime_module_file_for_package(package: dict[str, Any]) -> str:
@@ -66,10 +57,7 @@ def _runtime_module_file_for_package(package: dict[str, Any]) -> str:
     if not isinstance(binding, dict):
         return ""
     configured = str(binding.get("runtime_module_file") or "")
-    if configured:
-        return configured
-    runtime_module = str(binding.get("runtime_module") or "")
-    return runtime_module.rsplit(".", 1)[-1] if runtime_module else ""
+    return configured.removesuffix(".py")
 
 
 def _python_adapter_commands(package: dict[str, Any]) -> list[dict[str, Any]]:

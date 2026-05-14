@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from agentic_command_generation.primitive_executor import PrimitiveContext, PrimitiveExecutionError, run_operation_steps
+from command_generation.primitive_executor import PrimitiveContext, PrimitiveExecutionError, run_operation_steps
 
 
 class OperationIrExecutionError(RuntimeError):

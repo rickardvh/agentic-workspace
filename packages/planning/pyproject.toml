@@ -21,10 +21,10 @@ classifiers = [
 authors = [
   { name = "Rickard von Haugwitz" },
 ]
-dependencies = ["agentic-command-generation", "jsonschema>=4.0"]
+dependencies = ["command-generation", "jsonschema>=4.0"]
 
 [tool.uv.sources]
-agentic-command-generation = { workspace = true }
+command-generation = { workspace = true }
 
 [project.urls]
 Homepage = "https://github.com/rickardvh/agentic-workspace/tree/master/packages/planning"
@@ -32,7 +32,7 @@ Repository = "https://github.com/rickardvh/agentic-workspace"
 Issues = "https://github.com/rickardvh/agentic-workspace/issues"
 
 [project.scripts]
-agentic-planning = "agentic_command_generation.planning_generated_cli_package:main"
+agentic-planning = "command_generation.console:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/repo_planning_bootstrap"]

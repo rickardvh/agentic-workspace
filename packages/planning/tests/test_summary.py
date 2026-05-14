@@ -3377,7 +3377,7 @@ candidates = [
             "--task",
             "Improve adaptive read budget routing",
             "--changed",
-            "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py",
+            "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
         ]
     )
     payload = json.loads(capsys.readouterr().out)
@@ -3386,7 +3386,7 @@ candidates = [
     assert payload["profile"] == "compact-task"
     assert payload["schema"]["schema_version"] == "planning-summary-compact-task-schema/v1"
     assert payload["task_scope"]["task_text_available"] is True
-    assert payload["task_scope"]["changed_paths"] == ["packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py"]
+    assert payload["task_scope"]["changed_paths"] == ["generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py"]
     assert "adaptive" in payload["task_scope"]["match_tokens"]
     assert "historical_audit_pressure" not in payload
     assert payload["detail_commands"]["broad_compact"] == "agentic-workspace summary --verbose --format json"

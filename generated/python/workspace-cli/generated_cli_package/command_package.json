@@ -3944,8 +3944,8 @@
   "package_role": "root-workspace-cli",
   "program": "agentic-workspace",
   "python_runtime_binding": {
-    "generated_package_module": "agentic_command_generation.workspace_generated_cli_package",
-    "runtime_module": "agentic_command_generation.workspace_runtime_cli"
+    "entrypoint": "agentic-workspace",
+    "runtime_module_file": "workspace_runtime_cli"
   },
   "targets": [
     {

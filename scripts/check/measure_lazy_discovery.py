@@ -10,8 +10,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
-from agentic_command_generation import planning_runtime_cli as planning_cli
-from agentic_command_generation import workspace_runtime_cli as workspace_cli
+from command_generation.generated_package_loader import load_generated_cli_module_for_entrypoint
+
+planning_cli = load_generated_cli_module_for_entrypoint("agentic-planning", "planning_runtime_cli")
+workspace_cli = load_generated_cli_module_for_entrypoint("agentic-workspace", "workspace_runtime_cli")
 
 JsonRunner = Callable[[list[str]], int]
 

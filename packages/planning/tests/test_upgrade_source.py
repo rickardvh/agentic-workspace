@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from agentic_command_generation import planning_runtime_cli as cli
+from command_generation.generated_package_loader import load_generated_cli_module_for_entrypoint
 
 from repo_planning_bootstrap._source import UPGRADE_SOURCE_PATH, default_upgrade_source, resolve_upgrade_source
 from repo_planning_bootstrap.installer import doctor_bootstrap
+
+cli = load_generated_cli_module_for_entrypoint("agentic-planning", "planning_runtime_cli")
 
 
 def _write(path: Path, text: str) -> None:

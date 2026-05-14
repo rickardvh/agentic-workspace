@@ -11,7 +11,7 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(capsys)
                 "implement",
                 "--changed",
                 "packages/planning/bootstrap/repo_planning_bootstrap/installer.py",
-                "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py",
+                "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
                 "--verbose",
                 "--format",
                 "json",
@@ -24,7 +24,7 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(capsys)
     assert payload["kind"] == "implementer-context/v1"
     assert payload["inspect_files"] == [
         "packages/planning/bootstrap/repo_planning_bootstrap/installer.py",
-        "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py",
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
     ]
     assert payload["required_validation_commands"] == [
         "make test-planning",
@@ -33,9 +33,8 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(capsys)
         "make lint-workspace",
         "uv run agentic-workspace defaults --section root_cli_authority --format json",
         "uv run python scripts/check/check_generated_command_packages.py",
-        "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
-        "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
-        "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
+        "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+        "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
         "uv run pytest tests/test_workspace_cli.py -q",
     ]
     assert payload["proof"]["cli_authority_review"]["classifications"][0]["role"] == "hand-owned-executable"
@@ -73,7 +72,7 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(capsys
             [
                 "implement",
                 "--changed",
-                "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py",
+                "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
                 "--task",
                 "implement output profile policy",
                 "--format",
@@ -91,11 +90,11 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(capsys
     assert adaptive["read_budget"]["profile"] == "tiny"
     assert adaptive["detail_commands"]["task_scoped_state"].startswith("agentic-workspace summary --changed")
     assert "raw workspace files" in adaptive["not_needed_now"]
-    assert payload["next"]["action"] == "Resolve path authority warnings before editing."
+    assert payload["next"]["action"] == "Inspect only the listed files and run the required validation commands."
     assert payload["next"]["command"] == "make test-workspace"
     assert payload["next"]["run"] == payload["next"]["command"]
     assert "make lint-workspace" in payload["next"]["commands"]
-    assert payload["scope"]["inspect_files"] == ["packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py"]
+    assert payload["scope"]["inspect_files"] == ["generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py"]
     assert "make test-workspace" in payload["proof"]["required_commands"]
     assert "uv run python scripts/check/check_generated_command_packages.py" in payload["proof"]["required_commands"]
     assert payload["proof"]["acceptance_guidance"]["status"] == "present"
@@ -128,7 +127,7 @@ def test_implement_package_cli_edits_select_generated_command_package_gate(capsy
             [
                 "implement",
                 "--changed",
-                "packages/command-generation/src/agentic_command_generation/memory_runtime_cli.py",
+                "generated/python/memory-cli/generated_cli_package/memory_runtime_cli.py",
                 "--task",
                 "change package cli runtime adapter",
                 "--format",
@@ -548,7 +547,7 @@ def test_implement_epic_decomposition_prefers_reusable_worker_over_manual_relay(
                 "--target",
                 str(tmp_path),
                 "--changed",
-                "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py",
+                "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
                 "--task",
                 "Continue the codegen epic and evaluate reusable-worker delegation",
                 "--format",

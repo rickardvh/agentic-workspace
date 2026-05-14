@@ -297,23 +297,23 @@
         "python_runtime_binding": {
           "type": "object",
           "required": [
-            "generated_package_module",
-            "runtime_module"
+            "entrypoint",
+            "runtime_module_file"
           ],
           "properties": {
-            "generated_package_module": {
+            "entrypoint": {
               "type": "string",
-              "pattern": "^[A-Za-z_][A-Za-z0-9_.]*$",
-              "description": "Python module imported by generated process handoff for this package."
+              "minLength": 1,
+              "description": "Generated CLI entrypoint used by generic command_generation console handoff."
             },
-            "runtime_module": {
+            "runtime_module_file": {
               "type": "string",
-              "pattern": "^[A-Za-z_][A-Za-z0-9_.]*$",
-              "description": "Hand-owned Python runtime module imported by generated Python package bridge code."
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+              "description": "Generated sibling runtime module file imported by generated Python package bridge code."
             }
           },
           "additionalProperties": false,
-          "description": "Python-specific runtime binding data supplied by IR rather than hard-coded in the generator."
+          "description": "Python-specific generated runtime binding data supplied by IR rather than hard-coded in the generator."
         },
         "targets": {
           "type": "array",

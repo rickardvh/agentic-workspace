@@ -607,8 +607,8 @@ export const generatedCommandPackage = {
   "package_role": "memory-module-cli",
   "program": "agentic-memory",
   "python_runtime_binding": {
-    "generated_package_module": "agentic_command_generation.memory_generated_cli_package",
-    "runtime_module": "agentic_command_generation.memory_runtime_cli"
+    "entrypoint": "agentic-memory",
+    "runtime_module_file": "memory_runtime_cli"
   },
   "targets": [
     {

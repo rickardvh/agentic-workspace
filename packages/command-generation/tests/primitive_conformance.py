@@ -4,7 +4,7 @@ import json
 import tempfile
 from pathlib import Path
 
-from agentic_command_generation.primitive_executor import PrimitiveContext, PrimitiveExecutionError, execute_primitive, run_operation_steps
+from command_generation.primitive_executor import PrimitiveContext, PrimitiveExecutionError, execute_primitive, run_operation_steps
 
 
 def main() -> int:

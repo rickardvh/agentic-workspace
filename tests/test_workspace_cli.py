@@ -129,7 +129,7 @@ def test_proof_supports_exact_field_selectors_for_sufficiency(tmp_path: Path, ca
                 "--target",
                 str(tmp_path),
                 "--changed",
-                "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py",
+                "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
                 "--select",
                 "sufficiency,next",
                 "--format",
@@ -193,7 +193,7 @@ def test_summary_task_scoped_profile_omits_historical_audit_detail(tmp_path: Pat
                 "--task",
                 "Implement adaptive read action routing",
                 "--changed",
-                "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py",
+                "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
                 "--format",
                 "json",
             ]
@@ -204,7 +204,7 @@ def test_summary_task_scoped_profile_omits_historical_audit_detail(tmp_path: Pat
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "compact-task"
     assert payload["task_scope"]["task_text_available"] is True
-    assert payload["task_scope"]["changed_paths"] == ["packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py"]
+    assert payload["task_scope"]["changed_paths"] == ["generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py"]
     assert "detail_commands" in payload
     assert "historical_audit_pressure" not in payload
     assert payload["omitted_context"]["historical_audit_pressure"].startswith("not relevant")
