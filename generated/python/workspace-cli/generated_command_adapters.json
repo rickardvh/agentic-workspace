@@ -106,6 +106,43 @@
       },
       "status": "generated"
     },
+    "external-intent": {
+      "command": {
+        "command_manifest": "cli_commands.json",
+        "name": "external-intent",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-workspace",
+        "subcommand": "refresh-github"
+      },
+      "conformance_refs": [
+        "external-intent.refresh-github.help.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "id": "external-intent.refresh-github.cli",
+      "operation_id": "external-intent.refresh-github",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "external_intent.github.repo.resolve",
+          "external_intent.github.issues.list",
+          "external_intent.evidence.normalize",
+          "external_intent.evidence.write",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
     "implement": {
       "command": {
         "command_manifest": "cli_commands.json",
@@ -141,6 +178,112 @@
       },
       "status": "generated"
     },
+    "init": {
+      "command": {
+        "command_manifest": "cli_commands.json",
+        "name": "init",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-workspace"
+      },
+      "conformance_refs": [
+        "init.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "init.lifecycle.cli",
+      "operation_id": "init.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "workspace.config.load",
+          "workspace.selection.resolve",
+          "workspace.lifecycle.plan",
+          "workspace.lifecycle.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    "install": {
+      "command": {
+        "command_manifest": "cli_commands.json",
+        "name": "install",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-workspace"
+      },
+      "conformance_refs": [
+        "install.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "install.lifecycle.cli",
+      "operation_id": "install.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "workspace.config.load",
+          "workspace.selection.resolve",
+          "workspace.lifecycle.plan",
+          "workspace.lifecycle.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    "memory": {
+      "command": {
+        "command_manifest": "cli_commands.json",
+        "name": "memory",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-workspace"
+      },
+      "conformance_refs": [
+        "memory.front-door.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "memory.front-door.cli",
+      "operation_id": "memory.front-door",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.front_door.dispatch",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "status": "generated"
+    },
     "modules": {
       "command": {
         "command_manifest": "cli_commands.json",
@@ -165,6 +308,39 @@
         "primitive_refs": [
           "workspace.root.resolve",
           "workspace.modules.inspect",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    "note-delegation-outcome": {
+      "command": {
+        "command_manifest": "cli_commands.json",
+        "name": "note-delegation-outcome",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-workspace"
+      },
+      "conformance_refs": [
+        "delegation-outcome.append.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "id": "delegation-outcome.append.cli",
+      "operation_id": "delegation-outcome.append",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "delegation.outcome.append",
           "output.emit"
         ]
       },
@@ -207,6 +383,40 @@
       },
       "status": "generated"
     },
+    "planning": {
+      "command": {
+        "command_manifest": "cli_commands.json",
+        "name": "planning",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-workspace"
+      },
+      "conformance_refs": [
+        "planning.front-door.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "planning.front-door.cli",
+      "operation_id": "planning.front-door",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.front_door.dispatch",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "status": "generated"
+    },
     "preflight": {
       "command": {
         "command_manifest": "cli_commands.json",
@@ -235,6 +445,46 @@
           "planning.summary.load",
           "preflight.token.create",
           "preflight.context.assemble",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    "prompt": {
+      "command": {
+        "command_manifest": "cli_commands.json",
+        "name": "prompt",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-workspace",
+        "subcommands": [
+          "init",
+          "upgrade",
+          "uninstall"
+        ]
+      },
+      "conformance_refs": [
+        "prompt.init.process",
+        "prompt.upgrade.process",
+        "prompt.uninstall.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "id": "prompt.lifecycle.cli",
+      "operation_id": "prompt.init",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.selection.resolve",
+          "prompt.render",
           "output.emit"
         ]
       },
@@ -513,6 +763,115 @@
           "workspace.root.resolve",
           "planning.summary.load",
           "output.fields.select",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    "system-intent": {
+      "command": {
+        "command_manifest": "cli_commands.json",
+        "name": "system-intent",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-workspace"
+      },
+      "conformance_refs": [
+        "system-intent.sync.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "system-intent.sync.cli",
+      "operation_id": "system-intent.sync",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "system_intent.config.resolve",
+          "system_intent.source_metadata.refresh",
+          "system_intent.mirror.read_or_create",
+          "system_intent.result.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    "uninstall": {
+      "command": {
+        "command_manifest": "cli_commands.json",
+        "name": "uninstall",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-workspace"
+      },
+      "conformance_refs": [
+        "uninstall.lifecycle.destructive-refusal.process",
+        "uninstall.lifecycle.strict-preflight-refusal.process"
+      ],
+      "effect_hints": {
+        "destructive": true,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": true,
+        "writes_repo_state": true
+      },
+      "id": "uninstall.lifecycle.cli",
+      "operation_id": "uninstall.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "workspace.config.load",
+          "workspace.selection.resolve",
+          "workspace.lifecycle.plan",
+          "workspace.lifecycle.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    "upgrade": {
+      "command": {
+        "command_manifest": "cli_commands.json",
+        "name": "upgrade",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-workspace"
+      },
+      "conformance_refs": [
+        "upgrade.lifecycle.dry-run.process",
+        "upgrade.lifecycle.strict-preflight-refusal.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": true,
+        "writes_repo_state": true
+      },
+      "id": "upgrade.lifecycle.cli",
+      "operation_id": "upgrade.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "workspace.config.load",
+          "workspace.selection.resolve",
+          "workspace.lifecycle.plan",
+          "workspace.lifecycle.apply",
           "output.emit"
         ]
       },

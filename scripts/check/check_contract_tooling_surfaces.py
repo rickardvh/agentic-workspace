@@ -445,6 +445,27 @@ def _module_ir_namespace_prefixes() -> list[str]:
     return prefixes
 
 
+def _interface_operation_refs(interface: dict[str, object], inherited_operation_ref: dict[str, object]) -> list[dict[str, object]]:
+    operation_ref = interface.get("operation_ref", inherited_operation_ref)
+    refs = [operation_ref] if isinstance(operation_ref, dict) else [inherited_operation_ref]
+    subcommands = interface.get("subcommands", [])
+    if isinstance(subcommands, list):
+        for subcommand in subcommands:
+            if isinstance(subcommand, dict):
+                refs.extend(_interface_operation_refs(subcommand, refs[-1]))
+    return refs
+
+
+def _command_operation_refs(command: dict[str, object]) -> list[dict[str, object]]:
+    operation_ref = command.get("operation_ref", {})
+    interface = command.get("interface", {})
+    if not isinstance(operation_ref, dict):
+        return []
+    if not isinstance(interface, dict):
+        return [operation_ref]
+    return _interface_operation_refs(interface, operation_ref)
+
+
 def _validate_operation_ir_plans() -> list[str]:
     errors: list[str] = []
     operation_refs = operation_contracts_manifest()["operations"]
@@ -637,8 +658,8 @@ def _validate_command_adapter_generation(payload: dict[str, object]) -> list[str
         if operation_ref.get("path") != operation_registry_ref.get("path"):
             errors.append(f"command adapter {adapter_id} operation path drifted from operation registry")
         operation = operation_manifest(str(operation_ref.get("path", "")))
-        operation_command = operation.get("command_surface", {}).get("command")
-        if operation_command != command_name:
+        operation_surface = operation.get("command_surface", {})
+        if not isinstance(operation_surface, dict) or not (_adapter_command_surfaces(command) & _operation_command_surfaces(operation_surface)):
             errors.append(f"command adapter {adapter_id} command does not match operation command_surface")
         if raw_adapter.get("effect_hints") != operation.get("effects"):
             errors.append(f"command adapter {adapter_id} effect_hints drifted from operation effects")
@@ -660,6 +681,13 @@ def _validate_command_adapter_generation(payload: dict[str, object]) -> list[str
                 errors.append(f"command adapter {adapter_id} references unknown conformance contract {conformance_ref}")
                 continue
             if conformance.get("operation_id") != operation_id:
+                conformance_operation_ref = operation_refs.get(str(conformance.get("operation_id", "")))
+                conformance_operation = (
+                    operation_manifest(str(conformance_operation_ref.get("path", ""))) if isinstance(conformance_operation_ref, dict) else {}
+                )
+                conformance_surface = conformance_operation.get("command_surface", {}) if isinstance(conformance_operation, dict) else {}
+                if isinstance(conformance_surface, dict) and _adapter_command_surfaces(command) & _operation_command_surfaces(conformance_surface):
+                    continue
                 errors.append(f"command adapter {adapter_id} conformance ref {conformance_ref} targets a different operation")
     return errors
 
@@ -703,19 +731,20 @@ def _validate_command_package_ir(payload: dict[str, object]) -> list[str]:
                 continue
             if adapter["command"]["program"] != program:
                 errors.append(f"command_package_ir command {adapter_id} program drifted from command_adapter_generation.json")
-            operation_ref = command.get("operation_ref", {})
             runtime_binding = command.get("runtime_binding", {})
-            if not isinstance(operation_ref, dict) or not isinstance(runtime_binding, dict):
+            if not isinstance(runtime_binding, dict):
                 errors.append(f"command_package_ir command {adapter_id} has malformed operation or runtime binding")
                 continue
-            operation_id = str(operation_ref.get("id", ""))
-            operation = operations.get(operation_id)
-            if operation is None:
-                errors.append(f"command_package_ir command {adapter_id} references unknown operation {operation_id}")
-            elif operation.get("path") != operation_ref.get("path"):
-                errors.append(f"command_package_ir command {adapter_id} operation path drifted from registry")
+            for operation_ref in _command_operation_refs(command):
+                operation_id = str(operation_ref.get("id", ""))
+                operation = operations.get(operation_id)
+                if operation is None:
+                    errors.append(f"command_package_ir command {adapter_id} references unknown operation {operation_id}")
+                elif operation.get("path") != operation_ref.get("path"):
+                    errors.append(f"command_package_ir command {adapter_id} operation path drifted from registry")
             expected_operation_ref = {"id": adapter["operation_ref"]["id"], "path": adapter["operation_ref"]["path"]}
-            if operation_ref != expected_operation_ref:
+            top_level_operation_ref = command.get("operation_ref", {})
+            if top_level_operation_ref != expected_operation_ref:
                 errors.append(f"command_package_ir command {adapter_id} operation ref drifted from command_adapter_generation.json")
             if runtime_binding != adapter["runtime_binding"]:
                 errors.append(f"command_package_ir command {adapter_id} runtime binding drifted from command_adapter_generation.json")
@@ -1157,6 +1186,28 @@ def _executable_command_surfaces(command_specs: list[dict[str, object]]) -> set[
     return surfaces
 
 
+def _operation_command_surfaces(command_surface: dict[str, object]) -> set[tuple[str, str | None]]:
+    command_name = str(command_surface["command"])
+    surfaces = {(command_name, command_surface.get("subcommand") if isinstance(command_surface.get("subcommand"), str) else None)}
+    subcommands = command_surface.get("subcommands", [])
+    if isinstance(subcommands, list):
+        for subcommand in subcommands:
+            if isinstance(subcommand, str):
+                surfaces.add((command_name, subcommand))
+            elif isinstance(subcommand, dict) and isinstance(subcommand.get("name"), str):
+                surfaces.add((command_name, str(subcommand["name"])))
+    return surfaces
+
+
+def _adapter_command_surfaces(command: dict[str, object]) -> set[tuple[str, str | None]]:
+    command_name = str(command["name"])
+    subcommands = command.get("subcommands", [])
+    if isinstance(subcommands, list) and subcommands:
+        return {(command_name, str(subcommand)) for subcommand in subcommands}
+    subcommand = command.get("subcommand")
+    return {(command_name, str(subcommand) if isinstance(subcommand, str) else None)}
+
+
 def _known_command_names_for_program(program: str) -> set[str]:
     if program == cli_commands_manifest()["program"]:
         return {command["name"] for command in cli_commands_manifest()["commands"]}
@@ -1261,28 +1312,37 @@ def _validate_generated_adapter_live_cli_parity(payload: dict[str, object]) -> l
             continue
         program = str(command.get("program", ""))
         command_name = str(command.get("name", ""))
-        subcommand_name = str(command["subcommand"]) if isinstance(command.get("subcommand"), str) else None
+        if isinstance(command.get("subcommands"), list):
+            subcommand_names: list[str | None] = [
+                str(subcommand) for subcommand in command["subcommands"] if isinstance(subcommand, str)
+            ]
+        else:
+            subcommand_names = [str(command["subcommand"]) if isinstance(command.get("subcommand"), str) else None]
         parser = _program_parser(program)
         if command_name in _program_generated_command_names(program):
             parser = _program_generated_parser(program)
         if parser is None:
             errors.append(f"generated adapter {adapter_id} references unknown live CLI program {program}")
             continue
-        live_command_parser = _command_parser(parser, command_name=command_name, subcommand_name=subcommand_name)
-        if live_command_parser is None:
-            surface = f"{command_name} {subcommand_name}" if subcommand_name else command_name
-            errors.append(f"generated adapter {adapter_id} command surface {program} {surface} is missing from the live CLI")
-            continue
+        live_command_parser = None
+        for subcommand_name in subcommand_names:
+            live_command_parser = _command_parser(parser, command_name=command_name, subcommand_name=subcommand_name)
+            if live_command_parser is None:
+                surface = f"{command_name} {subcommand_name}" if subcommand_name else command_name
+                errors.append(f"generated adapter {adapter_id} command surface {program} {surface} is missing from the live CLI")
+                continue
         operation = operation_manifest(str(operation_ref.get("path", "")))
         operation_surface = operation.get("command_surface", {})
+        if not isinstance(operation_surface, dict):
+            errors.append(f"generated adapter {adapter_id} operation command_surface is malformed")
+            continue
         if operation_surface.get("program", "agentic-workspace") != program:
             errors.append(f"generated adapter {adapter_id} program drifted from operation command_surface")
-        if operation_surface.get("command") != command_name:
+        operation_surfaces = _operation_command_surfaces(operation_surface)
+        if len(subcommand_names) == 1 and (command_name, subcommand_names[0]) not in operation_surfaces:
             errors.append(f"generated adapter {adapter_id} command drifted from operation command_surface")
-        if operation_surface.get("subcommand") != subcommand_name and (
-            operation_surface.get("subcommand") is not None or subcommand_name is not None
-        ):
-            errors.append(f"generated adapter {adapter_id} subcommand drifted from operation command_surface")
+        if len(subcommand_names) > 1 and command_name != operation_surface.get("command"):
+            errors.append(f"generated adapter {adapter_id} command drifted from operation command_surface")
         if command_name in _program_generated_command_names(program):
             continue
         expected_cli_inputs = {
@@ -1623,7 +1683,7 @@ def main(argv: list[str] | None = None) -> int:
         operation = operation_manifest(operation_ref["path"])
         command_surface = operation["command_surface"]
         if command_surface.get("program", "agentic-workspace") == cli_commands_manifest()["program"]:
-            operation_surfaces.append((str(command_surface["command"]), command_surface.get("subcommand")))
+            operation_surfaces.extend(_operation_command_surfaces(command_surface))
         checks.append(
             (
                 f"operation contract {operation_ref['id']}",

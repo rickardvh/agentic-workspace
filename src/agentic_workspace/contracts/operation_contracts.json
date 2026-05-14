@@ -5,27 +5,141 @@
   "schema": "schemas/operation.schema.json",
   "operations": [
     {
+      "id": "config.report",
+      "path": "operations/config.report.json",
+      "command": "config",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "defaults.report",
+      "path": "operations/defaults.report.json",
+      "command": "defaults",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "delegation-outcome.append",
+      "path": "operations/delegation-outcome.append.json",
+      "command": "note-delegation-outcome",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "doctor.report",
+      "path": "operations/doctor.report.json",
+      "command": "doctor",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "external-intent.refresh-github",
+      "path": "operations/external-intent.refresh-github.json",
+      "command": "external-intent",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "implement.context",
+      "path": "operations/implement.context.json",
+      "command": "implement",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "init.lifecycle",
+      "path": "operations/init.lifecycle.json",
+      "command": "init",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "install.lifecycle",
+      "path": "operations/install.lifecycle.json",
+      "command": "install",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "memory.capture-note.report",
+      "path": "operations/memory.capture-note.report.json",
+      "command": "memory",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "memory.doctor.report",
+      "path": "operations/memory.doctor.report.json",
+      "command": "doctor",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "memory.front-door",
+      "path": "operations/memory.front-door.json",
+      "command": "memory",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "memory.front-door-promotion-report.report",
+      "path": "operations/memory.front-door-promotion-report.report.json",
+      "command": "memory",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "memory.front-door-report.report",
+      "path": "operations/memory.front-door-report.report.json",
+      "command": "memory",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "memory.list-files.report",
+      "path": "operations/memory.list-files.report.json",
+      "command": "list-files",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "memory.list-skills.report",
+      "path": "operations/memory.list-skills.report.json",
+      "command": "list-skills",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "memory.promotion-report.report",
+      "path": "operations/memory.promotion-report.report.json",
+      "command": "promotion-report",
+      "migration_status": "validated-contract"
+    },
+    {
+      "id": "memory.report.report",
+      "path": "operations/memory.report.report.json",
+      "command": "report",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "memory.route-report.report",
+      "path": "operations/memory.route-report.report.json",
+      "command": "route-report",
+      "migration_status": "validated-contract"
+    },
+    {
+      "id": "memory.route.report",
+      "path": "operations/memory.route.report.json",
+      "command": "memory",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "memory.status.report",
+      "path": "operations/memory.status.report.json",
+      "command": "status",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "memory.sync-memory.report",
+      "path": "operations/memory.sync-memory.report.json",
+      "command": "memory",
+      "migration_status": "draft-contract-only"
+    },
+    {
       "id": "modules.report",
       "path": "operations/modules.report.json",
       "command": "modules",
       "migration_status": "draft-contract-only"
     },
     {
-      "id": "planning.help",
-      "path": "operations/planning.help.json",
-      "command": "planning",
-      "migration_status": "draft-contract-only"
-    },
-    {
-      "id": "planning.new-plan.lifecycle",
-      "path": "operations/planning.new-plan.lifecycle.json",
-      "command": "planning",
-      "migration_status": "draft-contract-only"
-    },
-    {
-      "id": "planning.promote-to-plan.lifecycle",
-      "path": "operations/planning.promote-to-plan.lifecycle.json",
-      "command": "planning",
+      "id": "ownership.report",
+      "path": "operations/ownership.report.json",
+      "command": "ownership",
       "migration_status": "draft-contract-only"
     },
     {
@@ -53,14 +167,14 @@
       "migration_status": "draft-contract-only"
     },
     {
-      "id": "planning.record-recovery.lifecycle",
-      "path": "operations/planning.record-recovery.lifecycle.json",
-      "command": "planning",
-      "migration_status": "draft-contract-only"
+      "id": "planning.doctor.report",
+      "path": "operations/planning.doctor.report.json",
+      "command": "doctor",
+      "migration_status": "runtime-consumed"
     },
     {
-      "id": "planning.handoff.report",
-      "path": "operations/planning.handoff.report.json",
+      "id": "planning.front-door",
+      "path": "operations/planning.front-door.json",
       "command": "planning",
       "migration_status": "draft-contract-only"
     },
@@ -71,88 +185,52 @@
       "migration_status": "draft-contract-only"
     },
     {
-      "id": "memory.route.report",
-      "path": "operations/memory.route.report.json",
-      "command": "memory",
+      "id": "planning.handoff.report",
+      "path": "operations/planning.handoff.report.json",
+      "command": "planning",
       "migration_status": "draft-contract-only"
     },
     {
-      "id": "memory.help",
-      "path": "operations/memory.help.json",
-      "command": "memory",
+      "id": "planning.new-plan.lifecycle",
+      "path": "operations/planning.new-plan.lifecycle.json",
+      "command": "planning",
       "migration_status": "draft-contract-only"
     },
     {
-      "id": "memory.sync-memory.report",
-      "path": "operations/memory.sync-memory.report.json",
-      "command": "memory",
+      "id": "planning.promote-to-plan.lifecycle",
+      "path": "operations/planning.promote-to-plan.lifecycle.json",
+      "command": "planning",
       "migration_status": "draft-contract-only"
     },
     {
-      "id": "memory.front-door-promotion-report.report",
-      "path": "operations/memory.front-door-promotion-report.report.json",
-      "command": "memory",
+      "id": "planning.reconcile.report",
+      "path": "operations/planning.reconcile.report.json",
+      "command": "reconcile",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "planning.record-recovery.lifecycle",
+      "path": "operations/planning.record-recovery.lifecycle.json",
+      "command": "planning",
       "migration_status": "draft-contract-only"
     },
     {
-      "id": "memory.capture-note.report",
-      "path": "operations/memory.capture-note.report.json",
-      "command": "memory",
+      "id": "planning.report.report",
+      "path": "operations/planning.report.report.json",
+      "command": "report",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "planning.status.report",
+      "path": "operations/planning.status.report.json",
+      "command": "status",
       "migration_status": "draft-contract-only"
     },
     {
-      "id": "memory.front-door-report.report",
-      "path": "operations/memory.front-door-report.report.json",
-      "command": "memory",
-      "migration_status": "draft-contract-only"
-    },
-    {
-      "id": "summary.report",
-      "path": "operations/summary.report.json",
+      "id": "planning.summary.report",
+      "path": "operations/planning.summary.report.json",
       "command": "summary",
-      "migration_status": "draft-contract-only"
-    },
-    {
-      "id": "start.context",
-      "path": "operations/start.context.json",
-      "command": "start",
-      "migration_status": "draft-contract-only"
-    },
-    {
-      "id": "implement.context",
-      "path": "operations/implement.context.json",
-      "command": "implement",
-      "migration_status": "draft-contract-only"
-    },
-    {
-      "id": "defaults.report",
-      "path": "operations/defaults.report.json",
-      "command": "defaults",
-      "migration_status": "draft-contract-only"
-    },
-    {
-      "id": "proof.report",
-      "path": "operations/proof.report.json",
-      "command": "proof",
-      "migration_status": "draft-contract-only"
-    },
-    {
-      "id": "setup.guidance",
-      "path": "operations/setup.guidance.json",
-      "command": "setup",
-      "migration_status": "draft-contract-only"
-    },
-    {
-      "id": "ownership.report",
-      "path": "operations/ownership.report.json",
-      "command": "ownership",
-      "migration_status": "draft-contract-only"
-    },
-    {
-      "id": "config.report",
-      "path": "operations/config.report.json",
-      "command": "config",
-      "migration_status": "draft-contract-only"
+      "migration_status": "runtime-consumed"
     },
     {
       "id": "preflight.report",
@@ -161,62 +239,8 @@
       "migration_status": "draft-contract-only"
     },
     {
-      "id": "system-intent.sync",
-      "path": "operations/system-intent.sync.json",
-      "command": "system-intent",
-      "migration_status": "draft-contract-only"
-    },
-    {
-      "id": "delegation-outcome.append",
-      "path": "operations/delegation-outcome.append.json",
-      "command": "note-delegation-outcome",
-      "migration_status": "draft-contract-only"
-    },
-    {
-      "id": "skills.report",
-      "path": "operations/skills.report.json",
-      "command": "skills",
-      "migration_status": "draft-contract-only"
-    },
-    {
-      "id": "report.combined",
-      "path": "operations/report.combined.json",
-      "command": "report",
-      "migration_status": "draft-contract-only"
-    },
-    {
-      "id": "reconcile.report",
-      "path": "operations/reconcile.report.json",
-      "command": "reconcile",
-      "migration_status": "draft-contract-only"
-    },
-    {
-      "id": "external-intent.refresh-github",
-      "path": "operations/external-intent.refresh-github.json",
-      "command": "external-intent",
-      "migration_status": "draft-contract-only"
-    },
-    {
-      "id": "install.lifecycle",
-      "path": "operations/install.lifecycle.json",
-      "command": "install",
-      "migration_status": "draft-contract-only"
-    },
-    {
-      "id": "init.lifecycle",
-      "path": "operations/init.lifecycle.json",
-      "command": "init",
-      "migration_status": "draft-contract-only"
-    },
-    {
       "id": "prompt.init",
       "path": "operations/prompt.init.json",
-      "command": "prompt",
-      "migration_status": "draft-contract-only"
-    },
-    {
-      "id": "prompt.upgrade",
-      "path": "operations/prompt.upgrade.json",
       "command": "prompt",
       "migration_status": "draft-contract-only"
     },
@@ -227,33 +251,63 @@
       "migration_status": "draft-contract-only"
     },
     {
+      "id": "prompt.upgrade",
+      "path": "operations/prompt.upgrade.json",
+      "command": "prompt",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "proof.report",
+      "path": "operations/proof.report.json",
+      "command": "proof",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "reconcile.report",
+      "path": "operations/reconcile.report.json",
+      "command": "reconcile",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "report.combined",
+      "path": "operations/report.combined.json",
+      "command": "report",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "setup.guidance",
+      "path": "operations/setup.guidance.json",
+      "command": "setup",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "skills.report",
+      "path": "operations/skills.report.json",
+      "command": "skills",
+      "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "start.context",
+      "path": "operations/start.context.json",
+      "command": "start",
+      "migration_status": "draft-contract-only"
+    },
+    {
       "id": "status.report",
       "path": "operations/status.report.json",
       "command": "status",
       "migration_status": "draft-contract-only"
     },
     {
-      "id": "planning.status.report",
-      "path": "operations/planning.status.report.json",
-      "command": "status",
+      "id": "summary.report",
+      "path": "operations/summary.report.json",
+      "command": "summary",
       "migration_status": "draft-contract-only"
     },
     {
-      "id": "memory.status.report",
-      "path": "operations/memory.status.report.json",
-      "command": "status",
-      "migration_status": "draft-contract-only"
-    },
-    {
-      "id": "doctor.report",
-      "path": "operations/doctor.report.json",
-      "command": "doctor",
-      "migration_status": "draft-contract-only"
-    },
-    {
-      "id": "upgrade.lifecycle",
-      "path": "operations/upgrade.lifecycle.json",
-      "command": "upgrade",
+      "id": "system-intent.sync",
+      "path": "operations/system-intent.sync.json",
+      "command": "system-intent",
       "migration_status": "draft-contract-only"
     },
     {
@@ -263,64 +317,10 @@
       "migration_status": "draft-contract-only"
     },
     {
-      "id": "planning.doctor.report",
-      "path": "operations/planning.doctor.report.json",
-      "command": "doctor",
-      "migration_status": "runtime-consumed"
-    },
-    {
-      "id": "planning.summary.report",
-      "path": "operations/planning.summary.report.json",
-      "command": "summary",
-      "migration_status": "runtime-consumed"
-    },
-    {
-      "id": "planning.report.report",
-      "path": "operations/planning.report.report.json",
-      "command": "report",
-      "migration_status": "runtime-consumed"
-    },
-    {
-      "id": "planning.reconcile.report",
-      "path": "operations/planning.reconcile.report.json",
-      "command": "reconcile",
-      "migration_status": "runtime-consumed"
-    },
-    {
-      "id": "memory.doctor.report",
-      "path": "operations/memory.doctor.report.json",
-      "command": "doctor",
-      "migration_status": "runtime-consumed"
-    },
-    {
-      "id": "memory.report.report",
-      "path": "operations/memory.report.report.json",
-      "command": "report",
-      "migration_status": "runtime-consumed"
-    },
-    {
-      "id": "memory.route-report.report",
-      "path": "operations/memory.route-report.report.json",
-      "command": "route-report",
-      "migration_status": "validated-contract"
-    },
-    {
-      "id": "memory.promotion-report.report",
-      "path": "operations/memory.promotion-report.report.json",
-      "command": "promotion-report",
-      "migration_status": "validated-contract"
-    },
-      {
-        "id": "memory.list-files.report",
-        "path": "operations/memory.list-files.report.json",
-        "command": "list-files",
-        "migration_status": "runtime-consumed"
-      },
-    {
-      "id": "memory.list-skills.report",
-      "path": "operations/memory.list-skills.report.json",
-      "command": "list-skills",
-      "migration_status": "runtime-consumed"
+      "id": "upgrade.lifecycle",
+      "path": "operations/upgrade.lifecycle.json",
+      "command": "upgrade",
+      "migration_status": "draft-contract-only"
     }
   ]
 }

@@ -4,12 +4,32 @@ import argparse
 import copy
 import importlib.util
 import json
+import sys
 from pathlib import Path
 
 import pytest
 from jsonschema import Draft202012Validator
 
 from agentic_workspace import contract_tooling
+
+
+def _command_operation_ids(command: dict[str, object]) -> set[str]:
+    operation_ref = command.get("operation_ref", {})
+    operation_ids = {str(operation_ref["id"])} if isinstance(operation_ref, dict) and "id" in operation_ref else set()
+
+    def collect_interface(interface: object) -> None:
+        if not isinstance(interface, dict):
+            return
+        nested_operation_ref = interface.get("operation_ref", {})
+        if isinstance(nested_operation_ref, dict) and "id" in nested_operation_ref:
+            operation_ids.add(str(nested_operation_ref["id"]))
+        subcommands = interface.get("subcommands", [])
+        if isinstance(subcommands, list):
+            for subcommand in subcommands:
+                collect_interface(subcommand)
+
+    collect_interface(command.get("interface"))
+    return operation_ids
 
 
 def test_contract_tooling_check_passes() -> None:
@@ -292,6 +312,7 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
     assert "runtime-handlers-thin" in completion_evidence
     assert "representative-operation-ir-runtime-consumed" in completion_evidence
     assert "operation-execution-inventory-exhaustive" in completion_evidence
+    assert "root-console-generated-command-smoke" in completion_evidence
     assert "runtime primitive implementation" in python_completion["allowed_hand_owned_cli_responsibilities"]
     assert "command parser shape" in python_completion["must_move_behind_contracts_or_generation"]
     assert "option and help interface semantics" in python_completion["must_move_behind_contracts_or_generation"]
@@ -345,7 +366,17 @@ def test_command_package_ir_reuses_generated_adapter_truth() -> None:
         "preflight.report.cli",
         "proof.report.cli",
         "ownership.report.cli",
+        "system-intent.sync.cli",
+        "delegation-outcome.append.cli",
         "skills.report.cli",
+        "planning.front-door.cli",
+        "memory.front-door.cli",
+        "external-intent.refresh-github.cli",
+        "install.lifecycle.cli",
+        "init.lifecycle.cli",
+        "prompt.lifecycle.cli",
+        "upgrade.lifecycle.cli",
+        "uninstall.lifecycle.cli",
         "report.combined.cli",
         "reconcile.report.cli",
         "setup.guidance.cli",
@@ -696,9 +727,10 @@ def test_python_operation_execution_inventory_tracks_representative_runtime_cons
     assert "compatibility-runtime-handler" not in {entry["status"] for entry in entries.values()}
     assert "accepted-hand-owned-runtime-primitive" in {entry["status"] for entry in entries.values()}
     generated_operations = {
-        command["operation_ref"]["id"]
+        operation_id
         for package in contract_tooling.command_package_ir_manifest()["packages"]
         for command in package["commands"]
+        for operation_id in _command_operation_ids(command)
     }
     assert set(entries) == generated_operations
 
@@ -733,6 +765,79 @@ def test_command_package_generator_normalizes_line_endings() -> None:
 
     assert 'newline="\\n"' in generator.read_text(encoding="utf-8")
     assert "line-ending drift" in wrapper.read_text(encoding="utf-8")
+
+
+def test_generated_python_module_collects_nested_operation_refs(tmp_path: Path) -> None:
+    generator_path = (
+        Path(__file__).resolve().parents[1] / "packages" / "command-generation" / "src" / "agentic_command_generation" / "generator.py"
+    )
+    spec = importlib.util.spec_from_file_location("agentic_command_generation_generator", generator_path)
+    assert spec is not None and spec.loader is not None
+    generator = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = generator
+    spec.loader.exec_module(generator)
+    package = {
+        "program": "example",
+        "summary": "Example generated package",
+        "commands": [
+            {
+                "adapter_id": "prompt.lifecycle.cli",
+                "operation_ref": {"id": "prompt.init", "path": "operations/prompt.init.json"},
+                "status": "generated",
+                "interface": {
+                    "name": "prompt",
+                    "help": "Prompt lifecycle",
+                    "subcommand_dest": "prompt_command",
+                    "subcommands": [
+                        {
+                            "name": "upgrade",
+                            "help": "Upgrade prompt",
+                            "operation_ref": {"id": "prompt.upgrade", "path": "operations/prompt.upgrade.json"},
+                        },
+                        {
+                            "name": "uninstall",
+                            "help": "Uninstall prompt",
+                            "operation_ref": {"id": "prompt.uninstall", "path": "operations/prompt.uninstall.json"},
+                        },
+                    ],
+                },
+            },
+        ],
+    }
+    target = {"maturity_level_ref": "weak-agent-safe-adapter", "kind": "python"}
+    package_dir = tmp_path / "nested_generated_cli_package"
+    package_dir.mkdir()
+    (package_dir / "command_package.json").write_text(json.dumps(package), encoding="utf-8")
+    (package_dir / "adapter_commands.json").write_text(
+        json.dumps(
+            [
+                {
+                    "adapter_id": "prompt.lifecycle.cli",
+                    "operation_id": "prompt.init",
+                    "operation_path": "operations/prompt.init.json",
+                    "interface": package["commands"][0]["interface"],
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    module_text = generator._python_runtime_adapter_module(
+        package,
+        target,
+        source_path="src/agentic_workspace/contracts/command_package_ir.json",
+        regenerate_command="uv run python scripts/generate/generate_command_packages.py",
+    )
+    (package_dir / "__init__.py").write_text(module_text, encoding="utf-8")
+    sys.path.insert(0, str(tmp_path))
+    try:
+        generated = __import__("nested_generated_cli_package")
+    finally:
+        sys.path.remove(str(tmp_path))
+
+    assert generated.generated_operation_ids() == ("prompt.init", "prompt.uninstall", "prompt.upgrade")
+    parser = generated.build_generated_parser()
+    assert parser.parse_args(["prompt", "upgrade"])._generated_operation_id == "prompt.upgrade"
+    assert parser.parse_args(["prompt", "uninstall"])._generated_operation_id == "prompt.uninstall"
 
 
 def test_generic_command_generation_package_has_no_workspace_imports() -> None:
@@ -781,7 +886,17 @@ def test_generated_python_command_package_metadata_is_current() -> None:
         "preflight.report.cli",
         "proof.report.cli",
         "ownership.report.cli",
+        "system-intent.sync.cli",
+        "delegation-outcome.append.cli",
         "skills.report.cli",
+        "planning.front-door.cli",
+        "memory.front-door.cli",
+        "external-intent.refresh-github.cli",
+        "install.lifecycle.cli",
+        "init.lifecycle.cli",
+        "prompt.lifecycle.cli",
+        "upgrade.lifecycle.cli",
+        "uninstall.lifecycle.cli",
         "report.combined.cli",
         "reconcile.report.cli",
         "setup.guidance.cli",
@@ -804,10 +919,17 @@ def test_generated_python_command_package_metadata_is_current() -> None:
         "config",
         "defaults",
         "doctor",
+        "external-intent",
         "implement",
+        "init",
+        "install",
+        "memory",
         "modules",
+        "note-delegation-outcome",
         "ownership",
+        "planning",
         "preflight",
+        "prompt",
         "proof",
         "reconcile",
         "report",
@@ -816,15 +938,27 @@ def test_generated_python_command_package_metadata_is_current() -> None:
         "start",
         "status",
         "summary",
+        "system-intent",
+        "uninstall",
+        "upgrade",
     )
     assert generated_operation_ids() == (
         "config.report",
         "defaults.report",
+        "delegation-outcome.append",
         "doctor.report",
+        "external-intent.refresh-github",
         "implement.context",
+        "init.lifecycle",
+        "install.lifecycle",
+        "memory.front-door",
         "modules.report",
         "ownership.report",
+        "planning.front-door",
         "preflight.report",
+        "prompt.init",
+        "prompt.uninstall",
+        "prompt.upgrade",
         "proof.report",
         "reconcile.report",
         "report.combined",
@@ -833,6 +967,9 @@ def test_generated_python_command_package_metadata_is_current() -> None:
         "start.context",
         "status.report",
         "summary.report",
+        "system-intent.sync",
+        "uninstall.lifecycle",
+        "upgrade.lifecycle",
     )
     assert supports_generated_command(["defaults", "--format", "json"]) is True
     assert supports_generated_command(["config", "--format", "json"]) is True
@@ -840,15 +977,25 @@ def test_generated_python_command_package_metadata_is_current() -> None:
     assert supports_generated_command(["start", "--format", "json"]) is True
     assert supports_generated_command(["summary", "--format", "json"]) is True
     assert supports_generated_command(["implement", "--format", "json"]) is True
+    assert supports_generated_command(["init", "--format", "json"]) is True
+    assert supports_generated_command(["install", "--format", "json"]) is True
     assert supports_generated_command(["preflight", "--format", "json"]) is True
     assert supports_generated_command(["proof", "--format", "json"]) is True
     assert supports_generated_command(["ownership", "--format", "json"]) is True
+    assert supports_generated_command(["system-intent", "--format", "json"]) is True
+    assert supports_generated_command(["note-delegation-outcome", "--help"]) is True
     assert supports_generated_command(["skills", "--format", "json"]) is True
+    assert supports_generated_command(["planning", "--format", "json"]) is True
+    assert supports_generated_command(["memory", "--format", "json"]) is True
+    assert supports_generated_command(["external-intent", "refresh-github", "--help"]) is True
+    assert supports_generated_command(["prompt", "init", "--help"]) is True
     assert supports_generated_command(["report", "--format", "json"]) is True
     assert supports_generated_command(["reconcile", "--format", "json"]) is True
     assert supports_generated_command(["setup", "--format", "json"]) is True
     assert supports_generated_command(["status", "--format", "json"]) is True
     assert supports_generated_command(["doctor", "--format", "json"]) is True
+    assert supports_generated_command(["uninstall", "--format", "json"]) is True
+    assert supports_generated_command(["upgrade", "--format", "json"]) is True
 
 
 def test_generated_python_command_package_parses_and_dispatches_runtime_operations() -> None:
@@ -875,15 +1022,30 @@ def test_generated_python_command_package_parses_and_dispatches_runtime_operatio
         )
         == 0
     )
+    assert (
+        run_generated_command(["install", "--target", ".", "--modules", "planning", "--dry-run", "--format", "json"], runtime_handler) == 0
+    )
+    assert run_generated_command(["init", "--target", ".", "--modules", "planning", "--dry-run", "--format", "json"], runtime_handler) == 0
     assert run_generated_command(["preflight", "--target", ".", "--active-only", "--format", "json"], runtime_handler) == 0
     assert run_generated_command(["proof", "--target", ".", "--changed", "README.md", "--format", "json"], runtime_handler) == 0
     assert run_generated_command(["ownership", "--target", ".", "--concern", "startup", "--format", "json"], runtime_handler) == 0
     assert run_generated_command(["skills", "--target", ".", "--task", "proof", "--format", "json"], runtime_handler) == 0
+    assert run_generated_command(["planning", "--target", ".", "--format", "json"], runtime_handler) == 0
+    assert run_generated_command(["planning", "--target", ".", "--format", "json", "report"], runtime_handler) == 0
+    assert run_generated_command(["memory", "--target", ".", "--format", "json"], runtime_handler) == 0
+    assert run_generated_command(["memory", "--target", ".", "--format", "json", "report"], runtime_handler) == 0
     assert run_generated_command(["report", "--target", ".", "--format", "json"], runtime_handler) == 0
     assert run_generated_command(["reconcile", "--target", ".", "--format", "json"], runtime_handler) == 0
     assert run_generated_command(["setup", "--target", ".", "--modules", "planning", "--format", "json"], runtime_handler) == 0
     assert run_generated_command(["status", "--target", ".", "--modules", "planning", "--format", "json"], runtime_handler) == 0
     assert run_generated_command(["doctor", "--target", ".", "--modules", "planning", "--format", "json"], runtime_handler) == 0
+    assert (
+        run_generated_command(["uninstall", "--target", ".", "--modules", "planning", "--dry-run", "--format", "json"], runtime_handler)
+        == 0
+    )
+    assert (
+        run_generated_command(["upgrade", "--target", ".", "--modules", "planning", "--dry-run", "--format", "json"], runtime_handler) == 0
+    )
     assert calls == [
         ("defaults.report", None, "json", "startup"),
         ("config.report", ".", "json", None),
@@ -891,15 +1053,23 @@ def test_generated_python_command_package_parses_and_dispatches_runtime_operatio
         ("start.context", ".", "json", None),
         ("summary.report", ".", "json", None),
         ("implement.context", ".", "json", None),
+        ("install.lifecycle", ".", "json", None),
+        ("init.lifecycle", ".", "json", None),
         ("preflight.report", ".", "json", None),
         ("proof.report", ".", "json", None),
         ("ownership.report", ".", "json", None),
         ("skills.report", ".", "json", None),
+        ("planning.front-door", ".", "json", None),
+        ("planning.front-door", ".", "json", None),
+        ("memory.front-door", ".", "json", None),
+        ("memory.front-door", ".", "json", None),
         ("report.combined", ".", "json", None),
         ("reconcile.report", ".", "json", None),
         ("setup.guidance", ".", "json", None),
         ("status.report", ".", "json", None),
         ("doctor.report", ".", "json", None),
+        ("uninstall.lifecycle", ".", "json", None),
+        ("upgrade.lifecycle", ".", "json", None),
     ]
 
 
@@ -1137,31 +1307,41 @@ def test_contract_tooling_check_reports_generated_adapter_status() -> None:
     assert all(status["where_to_edit"]["runtime_behavior"] == "hand-written operation/primitive implementation code" for status in statuses)
     commands_by_program = {status["program"]: status["command_surfaces"] for status in statuses}
     assert commands_by_program["agentic-workspace"] == [
-        "defaults",
-        "config",
         "modules",
-        "start",
         "summary",
+        "planning",
+        "memory",
+        "start",
         "implement",
-        "preflight",
+        "defaults",
         "proof",
+        "setup",
         "ownership",
+        "config",
+        "system-intent",
+        "note-delegation-outcome",
         "skills",
         "report",
         "reconcile",
-        "setup",
+        "external-intent",
+        "preflight",
+        "install",
+        "init",
+        "prompt",
         "status",
         "doctor",
+        "upgrade",
+        "uninstall",
     ]
-    assert commands_by_program["agentic-planning"] == ["status", "doctor", "summary", "report", "reconcile"]
+    assert commands_by_program["agentic-planning"] == ["doctor", "reconcile", "report", "status", "summary"]
     assert commands_by_program["agentic-memory"] == [
         "doctor",
-        "report",
-        "status",
-        "route-report",
-        "promotion-report",
         "list-files",
         "list-skills",
+        "promotion-report",
+        "report",
+        "route-report",
+        "status",
     ]
 
 

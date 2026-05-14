@@ -129,9 +129,10 @@
       ],
       "proof_requirements": [
         "generated-package proof distinguishes adapter maturity from full Python generated CLI completion",
-        "static proof rejects treating weak-agent-safe-adapter as full Python generated CLI completion while cli.py owns parser or dispatch behavior",
+        "static proof rejects treating weak-agent-safe-adapter as full Python generated CLI completion while generated Python package main functions delegate generated-command parser or dispatch behavior to runtime main",
         "future package command/interface work changes contracts, IR, generators, and regenerated outputs instead of package-local executable cli.py files",
-        "runtime primitive code remains hand-owned only when it performs live behavior, mutation orchestration, or package-specific runtime logic"
+        "runtime primitive code remains hand-owned only when it performs live behavior, mutation orchestration, or package-specific runtime logic",
+        "root console smoke proof executes at least one generated root command through the installed console path, not only through generated parser/help imports"
       ],
       "completion_gate": {
         "state": "satisfied",
@@ -139,12 +140,12 @@
         "satisfied_by": [
           {
             "id": "parser-shape-generated",
-            "evidence": "Generated Python packages own command parser shape for command_package_ir generated commands.",
+            "evidence": "Generated Python packages own command parser shape for command_package_ir generated commands, and handwritten runtime parsers reject those generated command names.",
             "proof": "scripts/check/check_generated_command_packages.py::_validate_generated_python_commands_absent_from_handwritten_parsers"
           },
           {
             "id": "dispatch-selection-generated",
-            "evidence": "cli.py routes generated commands through generated_cli_package before handwritten parsers.",
+            "evidence": "Generated Python package main functions route generated commands through run_generated_command and runtime handler maps before any compatibility fallback to runtime main.",
             "proof": "scripts/check/check_generated_command_packages.py generated_entrypoints order check"
           },
           {
@@ -181,6 +182,11 @@
             "id": "operation-execution-inventory-exhaustive",
             "evidence": "python_operation_execution_inventory.json covers every generated Python operation id and rejects unaccepted compatibility handlers.",
             "proof": "scripts/check/check_generated_command_packages.py::_validate_python_operation_execution_inventory"
+          },
+          {
+            "id": "root-console-generated-command-smoke",
+            "evidence": "The root console script executes at least one generated root command through generated dispatch and the runtime handler map.",
+            "proof": "tests/test_workspace_cli_blackbox.py::test_blackbox_root_generated_command_executes_through_console_script"
           }
         ]
       }
@@ -274,204 +280,6 @@
       ],
       "commands": [
         {
-          "adapter_id": "defaults.report.cli",
-          "status": "generated",
-          "command": {
-            "name": "defaults",
-            "manifest_ref": "cli_commands.json"
-          },
-          "interface": {
-            "name": "defaults",
-            "help": "Show the machine-readable default-route contract for startup, lifecycle, skills, validation, and combined installs.",
-            "options": [
-              {
-                "name": "format",
-                "flags": [
-                  "--format"
-                ],
-                "choices": [
-                  "text",
-                  "json"
-                ],
-                "default": "text",
-                "help": "Output format."
-              },
-              {
-                "name": "verbose",
-                "flags": [
-                  "--verbose"
-                ],
-                "action": "store_true",
-                "help": "Emit the complete default-route contract. Prefer --section or default output for ordinary lookup."
-              },
-              {
-                "name": "section",
-                "flags": [
-                  "--section"
-                ],
-                "help": "Return only one top-level defaults section in the compact contract profile."
-              },
-              {
-                "name": "select",
-                "flags": [
-                  "--select"
-                ],
-                "help": "Return only comma-separated top-level or dotted JSON fields from the defaults payload. Prefer this over --verbose when one or a few fields are needed."
-              }
-            ]
-          },
-          "operation_ref": {
-            "id": "defaults.report",
-            "path": "operations/defaults.report.json"
-          },
-          "runtime_binding": {
-            "kind": "operation-primitive-sequence",
-            "primitive_refs": [
-              "workspace.defaults.load",
-              "workspace.defaults.select",
-              "output.emit"
-            ]
-          },
-          "schemas": {
-            "input": [],
-            "output": [
-              "compact_contract_answer.schema.json"
-            ]
-          },
-          "effect_hints": {
-            "read_only": true,
-            "destructive": false,
-            "idempotent": true,
-            "writes_repo_state": false,
-            "requires_preflight_gate": false
-          },
-          "conformance_refs": [
-            "defaults.report.process"
-          ],
-          "projection_boundary": {
-            "universal": [
-              "command identity",
-              "option semantics",
-              "operation reference",
-              "runtime primitive reference",
-              "effect hints",
-              "schema refs",
-              "conformance refs"
-            ],
-            "target_specific": [
-              "parser library",
-              "package entrypoint wiring",
-              "help text layout",
-              "test container image"
-            ],
-            "runtime_owned": [
-              "defaults payload assembly",
-              "section selection",
-              "output emission"
-            ]
-          }
-        },
-        {
-          "adapter_id": "config.report.cli",
-          "status": "generated",
-          "command": {
-            "name": "config",
-            "manifest_ref": "cli_commands.json"
-          },
-          "interface": {
-            "name": "config",
-            "help": "Show the resolved repo-owned workspace config layered onto product defaults.",
-            "options": [
-              {
-                "name": "target",
-                "flags": [
-                  "--target"
-                ],
-                "help": "Target repository path. Defaults to the current directory."
-              },
-              {
-                "name": "format",
-                "flags": [
-                  "--format"
-                ],
-                "choices": [
-                  "text",
-                  "json"
-                ],
-                "default": "text",
-                "help": "Output format."
-              },
-              {
-                "name": "select",
-                "flags": [
-                  "--select"
-                ],
-                "help": "Return only comma-separated top-level or dotted JSON fields from the full command payload. Prefer this over --verbose when one or a few fields are needed."
-              },
-              {
-                "name": "verbose",
-                "flags": [
-                  "--verbose"
-                ],
-                "action": "store_true",
-                "help": "Emit full resolved config detail. Prefer default output or targeted fields for ordinary posture checks."
-              }
-            ]
-          },
-          "operation_ref": {
-            "id": "config.report",
-            "path": "operations/config.report.json"
-          },
-          "runtime_binding": {
-            "kind": "operation-primitive-sequence",
-            "primitive_refs": [
-              "workspace.root.resolve",
-              "workspace.config.load",
-              "output.fields.select",
-              "workspace.config.emit"
-            ]
-          },
-          "schemas": {
-            "input": [],
-            "output": [
-              "workspace_config.schema.json"
-            ]
-          },
-          "effect_hints": {
-            "read_only": true,
-            "destructive": false,
-            "idempotent": true,
-            "writes_repo_state": false,
-            "requires_preflight_gate": false
-          },
-          "conformance_refs": [
-            "config.report.process"
-          ],
-          "projection_boundary": {
-            "universal": [
-              "command identity",
-              "option semantics",
-              "operation reference",
-              "runtime primitive reference",
-              "effect hints",
-              "schema refs",
-              "conformance refs"
-            ],
-            "target_specific": [
-              "parser library",
-              "package entrypoint wiring",
-              "help text layout",
-              "test container image"
-            ],
-            "runtime_owned": [
-              "target root resolution",
-              "config loading",
-              "payload assembly",
-              "output emission"
-            ]
-          }
-        },
-        {
           "adapter_id": "modules.report.cli",
           "status": "generated",
           "command": {
@@ -556,6 +364,1168 @@
               "target root resolution",
               "module descriptor inspection",
               "installed-signal detection",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "summary.report.cli",
+          "status": "generated",
+          "command": {
+            "name": "summary",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "summary",
+            "help": "Show the active execution summary from the planning module.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path to read summary from."
+              },
+              {
+                "name": "select",
+                "flags": [
+                  "--select"
+                ],
+                "help": "Return only comma-separated top-level or dotted JSON fields from the full command payload. Prefer this over --verbose when one or a few fields are needed."
+              },
+              {
+                "name": "verbose",
+                "flags": [
+                  "--verbose"
+                ],
+                "action": "store_true",
+                "help": "Emit full planning summary detail. Prefer selectors/default routing for ordinary startup."
+              },
+              {
+                "name": "task",
+                "flags": [
+                  "--task"
+                ],
+                "help": "Optional task text used to return a task-scoped compact summary."
+              },
+              {
+                "name": "changed",
+                "flags": [
+                  "--changed"
+                ],
+                "nargs": "*",
+                "default": [],
+                "help": "Optional changed paths used to scope compact summary output."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "summary.report",
+            "path": "operations/summary.report.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.root.resolve",
+              "planning.summary.load",
+              "output.fields.select",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "summary.report.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "target root resolution",
+              "planning summary loading",
+              "memory consult augmentation",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "planning.front-door.cli",
+          "status": "generated",
+          "command": {
+            "name": "planning",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "planning",
+            "help": "Show planning workflow help or run Planning operations through the workspace front door.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path used in example commands."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ],
+            "subcommand_dest": "planning_command",
+            "subcommands_required": false,
+            "subcommands": [
+              {
+                "name": "new-plan",
+                "help": "Create a schema-valid execplan scaffold and optionally register it.",
+                "options": [
+                  {
+                    "name": "id",
+                    "flags": [
+                      "--id"
+                    ],
+                    "required": true,
+                    "help": "Stable slug/id for the plan; used as the .plan.json filename."
+                  },
+                  {
+                    "name": "title",
+                    "flags": [
+                      "--title"
+                    ],
+                    "required": true,
+                    "help": "Human-readable plan title."
+                  },
+                  {
+                    "name": "source",
+                    "flags": [
+                      "--source"
+                    ],
+                    "default": "",
+                    "help": "Optional source reference such as an issue URL or chat-intake summary."
+                  },
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "activate",
+                    "flags": [
+                      "--activate"
+                    ],
+                    "action": "store_true",
+                    "help": "Register the new plan in todo.active_items."
+                  },
+                  {
+                    "name": "queue",
+                    "flags": [
+                      "--queue"
+                    ],
+                    "action": "store_true",
+                    "help": "Register the new plan in todo.queued_items."
+                  },
+                  {
+                    "name": "switch_active",
+                    "flags": [
+                      "--switch-active"
+                    ],
+                    "action": "store_true",
+                    "help": "When used with --activate, demote existing active items into the queue before registering the new active plan."
+                  },
+                  {
+                    "name": "prep_only",
+                    "flags": [
+                      "--prep-only"
+                    ],
+                    "action": "store_true",
+                    "help": "Mark this scaffold as a planning-only handoff slice."
+                  },
+                  {
+                    "name": "overwrite",
+                    "flags": [
+                      "--overwrite"
+                    ],
+                    "action": "store_true",
+                    "help": "Replace an existing scaffold with the same id."
+                  },
+                  {
+                    "name": "dry_run",
+                    "flags": [
+                      "--dry-run"
+                    ],
+                    "action": "store_true",
+                    "help": "Show planned changes without mutating files."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
+                ]
+              },
+              {
+                "name": "promote-to-plan",
+                "help": "Promote a planning item into an execplan scaffold.",
+                "options": [
+                  {
+                    "name": "item_id",
+                    "flags": [
+                      "--item-id"
+                    ],
+                    "required": true,
+                    "help": "Planning item id to promote."
+                  },
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "plan_slug",
+                    "flags": [
+                      "--plan-slug"
+                    ],
+                    "help": "Optional generated plan slug override."
+                  },
+                  {
+                    "name": "dry_run",
+                    "flags": [
+                      "--dry-run"
+                    ],
+                    "action": "store_true",
+                    "help": "Show planned changes without mutating files."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
+                ]
+              },
+              {
+                "name": "archive-plan",
+                "help": "Close a completed execplan or parent lane after distillation.",
+                "options": [
+                  {
+                    "name": "plan",
+                    "flags": [
+                      "--plan"
+                    ],
+                    "help": "Plan path, slug, or id to archive."
+                  },
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "dry_run",
+                    "flags": [
+                      "--dry-run"
+                    ],
+                    "action": "store_true",
+                    "help": "Show planned changes without mutating files."
+                  },
+                  {
+                    "name": "apply_cleanup",
+                    "flags": [
+                      "--apply-cleanup"
+                    ],
+                    "action": "store_true",
+                    "help": "Apply narrow cleanup tied to the archived plan."
+                  },
+                  {
+                    "name": "prepare_closeout",
+                    "flags": [
+                      "--prepare-closeout"
+                    ],
+                    "action": "store_true",
+                    "help": "Write package-normalized closeout fields before archive validation runs."
+                  },
+                  {
+                    "name": "retain_archive",
+                    "flags": [
+                      "--retain-archive"
+                    ],
+                    "action": "store_true",
+                    "help": "Keep a completed execplan record under execplans/archive."
+                  },
+                  {
+                    "name": "parent_lane_closeout",
+                    "flags": [
+                      "--parent-lane-closeout"
+                    ],
+                    "help": "Close a parent lane from structured planning state."
+                  },
+                  {
+                    "name": "closure_decision",
+                    "flags": [
+                      "--closure-decision"
+                    ],
+                    "choices": [
+                      "archive-and-close",
+                      "archive-but-keep-lane-open"
+                    ],
+                    "help": "Closeout decision to write when --prepare-closeout is used."
+                  },
+                  {
+                    "name": "intent_satisfied",
+                    "flags": [
+                      "--intent-satisfied"
+                    ],
+                    "choices": [
+                      "yes",
+                      "no",
+                      "true",
+                      "false"
+                    ],
+                    "help": "Whether the larger original intent is fully satisfied."
+                  },
+                  {
+                    "name": "unsolved_intent",
+                    "flags": [
+                      "--unsolved-intent"
+                    ],
+                    "help": "Continuation owner for unsolved larger intent."
+                  },
+                  {
+                    "name": "intent_evidence",
+                    "flags": [
+                      "--intent-evidence"
+                    ],
+                    "help": "Evidence of intent satisfaction for prepared closeout."
+                  },
+                  {
+                    "name": "closure_reason",
+                    "flags": [
+                      "--closure-reason"
+                    ],
+                    "help": "Why the prepared closure decision is honest."
+                  },
+                  {
+                    "name": "closure_evidence",
+                    "flags": [
+                      "--closure-evidence"
+                    ],
+                    "help": "Evidence carried forward by the prepared closure."
+                  },
+                  {
+                    "name": "reopen_trigger",
+                    "flags": [
+                      "--reopen-trigger"
+                    ],
+                    "help": "Reopen trigger for the prepared closure."
+                  },
+                  {
+                    "name": "discard_summary",
+                    "flags": [
+                      "--discard-summary"
+                    ],
+                    "help": "Closeout distillation discard bucket summary."
+                  },
+                  {
+                    "name": "continuation_summary",
+                    "flags": [
+                      "--continuation-summary"
+                    ],
+                    "help": "Closeout distillation continuation bucket summary."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
+                ]
+              },
+              {
+                "name": "close-item",
+                "help": "Close completed planning residue by id without hand-editing checked-in state.",
+                "options": [
+                  {
+                    "name": "item",
+                    "flags": [
+                      "--item"
+                    ],
+                    "required": true,
+                    "help": "Planning item id to close."
+                  },
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "reason",
+                    "flags": [
+                      "--reason"
+                    ],
+                    "help": "Optional closure reason to record in the action detail."
+                  },
+                  {
+                    "name": "issue",
+                    "flags": [
+                      "--issue"
+                    ],
+                    "help": "Optional upstream issue reference tied to the closeout."
+                  },
+                  {
+                    "name": "dry_run",
+                    "flags": [
+                      "--dry-run"
+                    ],
+                    "action": "store_true",
+                    "help": "Show planned changes without mutating files."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
+                ]
+              },
+              {
+                "name": "create-review",
+                "help": "Create a schema-valid planning review record skeleton.",
+                "options": [
+                  {
+                    "name": "slug",
+                    "flags": [
+                      "--slug"
+                    ],
+                    "required": true,
+                    "help": "Stable review record slug."
+                  },
+                  {
+                    "name": "title",
+                    "flags": [
+                      "--title"
+                    ],
+                    "required": true,
+                    "help": "Human-readable review title."
+                  },
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "scope",
+                    "flags": [
+                      "--scope"
+                    ],
+                    "help": "Review scope summary."
+                  },
+                  {
+                    "name": "classification",
+                    "flags": [
+                      "--classification"
+                    ],
+                    "default": "review",
+                    "help": "Review classification."
+                  },
+                  {
+                    "name": "render_markdown",
+                    "flags": [
+                      "--render-markdown"
+                    ],
+                    "action": "store_true",
+                    "help": "Also render the derived markdown companion."
+                  },
+                  {
+                    "name": "dry_run",
+                    "flags": [
+                      "--dry-run"
+                    ],
+                    "action": "store_true",
+                    "help": "Show planned changes without mutating files."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
+                ]
+              },
+              {
+                "name": "delegation-decision",
+                "help": "Record the delegation route chosen for the active execplan before mechanical lane work proceeds.",
+                "options": [
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "plan",
+                    "flags": [
+                      "--plan"
+                    ],
+                    "help": "Plan path, slug, or id; defaults to the active execplan."
+                  },
+                  {
+                    "name": "route",
+                    "flags": [
+                      "--route"
+                    ],
+                    "required": true,
+                    "choices": [
+                      "keep-local",
+                      "delegate-exploration",
+                      "delegate-implementation",
+                      "delegate-validation",
+                      "escalate-review",
+                      "no-safe-route"
+                    ],
+                    "help": "Delegation route chosen for this slice."
+                  },
+                  {
+                    "name": "skipped_reason",
+                    "flags": [
+                      "--skipped-reason"
+                    ],
+                    "default": "",
+                    "help": "Required explanation when route is keep-local."
+                  },
+                  {
+                    "name": "expected_savings",
+                    "flags": [
+                      "--expected-savings"
+                    ],
+                    "default": "",
+                    "help": "Expected time or token savings."
+                  },
+                  {
+                    "name": "actual_friction",
+                    "flags": [
+                      "--actual-friction"
+                    ],
+                    "default": "",
+                    "help": "Observed delegation friction."
+                  },
+                  {
+                    "name": "proof_result",
+                    "flags": [
+                      "--proof-result"
+                    ],
+                    "default": "",
+                    "help": "Proof or validation result for the delegation decision."
+                  },
+                  {
+                    "name": "quality_concern",
+                    "flags": [
+                      "--quality-concern"
+                    ],
+                    "default": "",
+                    "help": "Any quality concern from delegation or skipping it."
+                  },
+                  {
+                    "name": "decomposition_adjustment",
+                    "flags": [
+                      "--decomposition-adjustment"
+                    ],
+                    "default": "",
+                    "help": "Any follow-up adjustment needed in the decomposition."
+                  },
+                  {
+                    "name": "dry_run",
+                    "flags": [
+                      "--dry-run"
+                    ],
+                    "action": "store_true",
+                    "help": "Show planned changes without mutating files."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
+                ]
+              },
+              {
+                "name": "record-recovery",
+                "help": "Bless an emergency manual repair to managed planning surfaces with explicit provenance.",
+                "options": [
+                  {
+                    "name": "paths",
+                    "flags": [
+                      "--path"
+                    ],
+                    "nargs": "*",
+                    "default": [],
+                    "required": true,
+                    "help": "Managed planning file path to stamp; repeat or pass multiple values."
+                  },
+                  {
+                    "name": "reason",
+                    "flags": [
+                      "--reason"
+                    ],
+                    "required": true,
+                    "help": "Emergency repair reason."
+                  },
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "dry_run",
+                    "flags": [
+                      "--dry-run"
+                    ],
+                    "action": "store_true",
+                    "help": "Show planned changes without mutating files."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
+                ]
+              },
+              {
+                "name": "handoff",
+                "help": "Emit the compact delegated-worker handoff derived from active planning state.",
+                "options": [
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
+                ]
+              },
+              {
+                "name": "report",
+                "help": "Report compact planning module state.",
+                "options": [
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "verbose",
+                    "flags": [
+                      "--verbose"
+                    ],
+                    "action": "store_true",
+                    "help": "Emit broad diagnostic report detail."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
+                ]
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "planning.front-door",
+            "path": "operations/planning.front-door.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "planning.front_door.dispatch",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": [
+              "compact_contract_answer.schema.json"
+            ]
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": false,
+            "writes_repo_state": true,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "planning.front-door.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "root command identity",
+              "nested subcommand option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "schema refs",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "planning module policy",
+              "module runtime execution",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "memory.front-door.cli",
+          "status": "generated",
+          "command": {
+            "name": "memory",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "memory",
+            "help": "Show memory workflow help or run Memory operations through the workspace front door.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path used in example commands."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ],
+            "subcommand_dest": "memory_command",
+            "subcommands_required": false,
+            "subcommands": [
+              {
+                "name": "route",
+                "help": "Suggest the smallest relevant durable note set for touched files or surfaces.",
+                "options": [
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "files",
+                    "flags": [
+                      "--files"
+                    ],
+                    "nargs": "*",
+                    "default": [],
+                    "help": "Touched file paths to route from."
+                  },
+                  {
+                    "name": "surfaces",
+                    "flags": [
+                      "--surface"
+                    ],
+                    "nargs": "*",
+                    "default": [],
+                    "help": "Explicit routing surfaces."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
+                ]
+              },
+              {
+                "name": "sync-memory",
+                "help": "Suggest memory updates for changed work.",
+                "options": [
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "files",
+                    "flags": [
+                      "--files"
+                    ],
+                    "nargs": "*",
+                    "default": [],
+                    "help": "Changed file paths to inspect."
+                  },
+                  {
+                    "name": "notes",
+                    "flags": [
+                      "--notes"
+                    ],
+                    "nargs": "*",
+                    "default": [],
+                    "help": "Explicit memory notes to review."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
+                ]
+              },
+              {
+                "name": "promotion-report",
+                "help": "Suggest memory notes that should be promoted or eliminated.",
+                "options": [
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "notes",
+                    "flags": [
+                      "--notes"
+                    ],
+                    "nargs": "*",
+                    "default": [],
+                    "help": "Explicit memory notes to inspect."
+                  },
+                  {
+                    "name": "mode",
+                    "flags": [
+                      "--mode"
+                    ],
+                    "choices": [
+                      "all",
+                      "remediation"
+                    ],
+                    "default": "all",
+                    "help": "Report all candidates or only remediation candidates."
+                  },
+                  {
+                    "name": "verbose",
+                    "flags": [
+                      "--verbose"
+                    ],
+                    "action": "store_true",
+                    "help": "Emit broad diagnostic report detail."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
+                ]
+              },
+              {
+                "name": "capture-note",
+                "help": "Recommend whether durable learning should update or create a Memory note.",
+                "options": [
+                  {
+                    "name": "slug",
+                    "flags": [
+                      "--slug"
+                    ],
+                    "default": "",
+                    "help": "Suggested note slug."
+                  },
+                  {
+                    "name": "summary",
+                    "flags": [
+                      "--summary"
+                    ],
+                    "default": "",
+                    "help": "Memory learning summary."
+                  },
+                  {
+                    "name": "files",
+                    "flags": [
+                      "--files"
+                    ],
+                    "nargs": "*",
+                    "default": [],
+                    "help": "Changed files associated with the learning."
+                  },
+                  {
+                    "name": "surfaces",
+                    "flags": [
+                      "--surface"
+                    ],
+                    "nargs": "*",
+                    "default": [],
+                    "help": "Explicit routing surfaces."
+                  },
+                  {
+                    "name": "existing_note",
+                    "flags": [
+                      "--existing-note"
+                    ],
+                    "default": "",
+                    "help": "Existing note path to update."
+                  },
+                  {
+                    "name": "force_new_reason",
+                    "flags": [
+                      "--force-new-reason"
+                    ],
+                    "default": "",
+                    "help": "Reason a new note is required."
+                  },
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
+                ]
+              },
+              {
+                "name": "report",
+                "help": "Report compact memory module state.",
+                "options": [
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "verbose",
+                    "flags": [
+                      "--verbose"
+                    ],
+                    "action": "store_true",
+                    "help": "Emit broad diagnostic report detail."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
+                ]
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "memory.front-door",
+            "path": "operations/memory.front-door.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "memory.front_door.dispatch",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": [
+              "compact_contract_answer.schema.json"
+            ]
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": false,
+            "writes_repo_state": true,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "memory.front-door.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "root command identity",
+              "nested subcommand option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "schema refs",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "memory module policy",
+              "module runtime execution",
               "output emission"
             ]
           }
@@ -672,119 +1642,6 @@
               "target root resolution",
               "startup context assembly",
               "changed-path proof selection",
-              "output emission"
-            ]
-          }
-        },
-        {
-          "adapter_id": "summary.report.cli",
-          "status": "generated",
-          "command": {
-            "name": "summary",
-            "manifest_ref": "cli_commands.json"
-          },
-          "interface": {
-            "name": "summary",
-            "help": "Show the active execution summary from the planning module.",
-            "options": [
-              {
-                "name": "target",
-                "flags": [
-                  "--target"
-                ],
-                "help": "Optional repository path to read summary from."
-              },
-              {
-                "name": "select",
-                "flags": [
-                  "--select"
-                ],
-                "help": "Return only comma-separated top-level or dotted JSON fields from the full command payload. Prefer this over --verbose when one or a few fields are needed."
-              },
-              {
-                "name": "verbose",
-                "flags": [
-                  "--verbose"
-                ],
-                "action": "store_true",
-                "help": "Emit full planning summary detail. Prefer selectors/default routing for ordinary startup."
-              },
-              {
-                "name": "task",
-                "flags": [
-                  "--task"
-                ],
-                "help": "Optional task text used to return a task-scoped compact summary."
-              },
-              {
-                "name": "changed",
-                "flags": [
-                  "--changed"
-                ],
-                "nargs": "*",
-                "default": [],
-                "help": "Optional changed paths used to scope compact summary output."
-              },
-              {
-                "name": "format",
-                "flags": [
-                  "--format"
-                ],
-                "choices": [
-                  "text",
-                  "json"
-                ],
-                "default": "text",
-                "help": "Output format."
-              }
-            ]
-          },
-          "operation_ref": {
-            "id": "summary.report",
-            "path": "operations/summary.report.json"
-          },
-          "runtime_binding": {
-            "kind": "operation-primitive-sequence",
-            "primitive_refs": [
-              "workspace.root.resolve",
-              "planning.summary.load",
-              "output.fields.select",
-              "output.emit"
-            ]
-          },
-          "schemas": {
-            "input": [],
-            "output": []
-          },
-          "effect_hints": {
-            "read_only": true,
-            "destructive": false,
-            "idempotent": true,
-            "writes_repo_state": false,
-            "requires_preflight_gate": false
-          },
-          "conformance_refs": [
-            "summary.report.process"
-          ],
-          "projection_boundary": {
-            "universal": [
-              "command identity",
-              "option semantics",
-              "operation reference",
-              "runtime primitive reference",
-              "effect hints",
-              "conformance refs"
-            ],
-            "target_specific": [
-              "parser library",
-              "package entrypoint wiring",
-              "help text layout",
-              "test container image"
-            ],
-            "runtime_owned": [
-              "target root resolution",
-              "planning summary loading",
-              "memory consult augmentation",
               "output emission"
             ]
           }
@@ -912,46 +1769,16 @@
           }
         },
         {
-          "adapter_id": "preflight.report.cli",
+          "adapter_id": "defaults.report.cli",
           "status": "generated",
           "command": {
-            "name": "preflight",
+            "name": "defaults",
             "manifest_ref": "cli_commands.json"
           },
           "interface": {
-            "name": "preflight",
-            "help": "Get compact takeover-safe context: startup defaults + resolved config + active planning state in one call.",
+            "name": "defaults",
+            "help": "Show the machine-readable default-route contract for startup, lifecycle, skills, validation, and combined installs.",
             "options": [
-              {
-                "name": "target",
-                "flags": [
-                  "--target"
-                ],
-                "help": "Optional repository path for preflight context (defaults to current workspace)."
-              },
-              {
-                "name": "active_only",
-                "flags": [
-                  "--active-only"
-                ],
-                "action": "store_true",
-                "help": "Return only active planning state without startup defaults and config."
-              },
-              {
-                "name": "task",
-                "flags": [
-                  "--task"
-                ],
-                "help": "Optional task description used to include task-specific skill recommendations in preflight context."
-              },
-              {
-                "name": "verbose",
-                "flags": [
-                  "--verbose"
-                ],
-                "action": "store_true",
-                "help": "Emit complete takeover/recovery context. Prefer default output for ordinary recovery routing."
-              },
               {
                 "name": "format",
                 "flags": [
@@ -963,38 +1790,58 @@
                 ],
                 "default": "text",
                 "help": "Output format."
+              },
+              {
+                "name": "verbose",
+                "flags": [
+                  "--verbose"
+                ],
+                "action": "store_true",
+                "help": "Emit the complete default-route contract. Prefer --section or default output for ordinary lookup."
+              },
+              {
+                "name": "section",
+                "flags": [
+                  "--section"
+                ],
+                "help": "Return only one top-level defaults section in the compact contract profile."
+              },
+              {
+                "name": "select",
+                "flags": [
+                  "--select"
+                ],
+                "help": "Return only comma-separated top-level or dotted JSON fields from the defaults payload. Prefer this over --verbose when one or a few fields are needed."
               }
             ]
           },
           "operation_ref": {
-            "id": "preflight.report",
-            "path": "operations/preflight.report.json"
+            "id": "defaults.report",
+            "path": "operations/defaults.report.json"
           },
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "workspace.root.resolve",
               "workspace.defaults.load",
-              "workspace.config.load",
-              "planning.summary.load",
-              "preflight.token.create",
-              "preflight.context.assemble",
+              "workspace.defaults.select",
               "output.emit"
             ]
           },
           "schemas": {
             "input": [],
-            "output": []
+            "output": [
+              "compact_contract_answer.schema.json"
+            ]
           },
           "effect_hints": {
             "read_only": true,
             "destructive": false,
-            "idempotent": false,
+            "idempotent": true,
             "writes_repo_state": false,
             "requires_preflight_gate": false
           },
           "conformance_refs": [
-            "preflight.report.process"
+            "defaults.report.process"
           ],
           "projection_boundary": {
             "universal": [
@@ -1013,9 +1860,8 @@
               "test container image"
             ],
             "runtime_owned": [
-              "target root resolution",
-              "preflight token creation",
-              "takeover context assembly",
+              "defaults payload assembly",
+              "section selection",
               "output emission"
             ]
           }
@@ -1146,6 +1992,111 @@
           }
         },
         {
+          "adapter_id": "setup.guidance.cli",
+          "status": "generated",
+          "command": {
+            "name": "setup",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "setup",
+            "help": "Show the bounded post-bootstrap setup guidance for a mature repository.",
+            "options": [
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              },
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "preset",
+                "flags": [
+                  "--preset"
+                ],
+                "help": "Named module bundle."
+              },
+              {
+                "name": "modules",
+                "flags": [
+                  "--modules"
+                ],
+                "help": "Comma-separated module selection."
+              },
+              {
+                "name": "non_interactive",
+                "flags": [
+                  "--non-interactive"
+                ],
+                "action": "store_true",
+                "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "setup.guidance",
+            "path": "operations/setup.guidance.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.root.resolve",
+              "workspace.selection.resolve",
+              "workspace.report.assemble",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "setup.guidance.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "schema refs",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "target root resolution",
+              "module selection",
+              "setup guidance assembly",
+              "output emission"
+            ]
+          }
+        },
+        {
           "adapter_id": "ownership.report.cli",
           "status": "generated",
           "command": {
@@ -1237,6 +2188,340 @@
               "target root resolution",
               "ownership ledger loading",
               "authority answer selection",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "config.report.cli",
+          "status": "generated",
+          "command": {
+            "name": "config",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "config",
+            "help": "Show the resolved repo-owned workspace config layered onto product defaults.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              },
+              {
+                "name": "select",
+                "flags": [
+                  "--select"
+                ],
+                "help": "Return only comma-separated top-level or dotted JSON fields from the full command payload. Prefer this over --verbose when one or a few fields are needed."
+              },
+              {
+                "name": "verbose",
+                "flags": [
+                  "--verbose"
+                ],
+                "action": "store_true",
+                "help": "Emit full resolved config detail. Prefer default output or targeted fields for ordinary posture checks."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "config.report",
+            "path": "operations/config.report.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.root.resolve",
+              "workspace.config.load",
+              "output.fields.select",
+              "workspace.config.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": [
+              "workspace_config.schema.json"
+            ]
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "config.report.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "schema refs",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "target root resolution",
+              "config loading",
+              "payload assembly",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "system-intent.sync.cli",
+          "status": "generated",
+          "command": {
+            "name": "system-intent",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "system-intent",
+            "help": "Show or refresh the workspace-owned compiled system-intent declaration.",
+            "options": [
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              },
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path used to inspect system intent."
+              },
+              {
+                "name": "sync",
+                "flags": [
+                  "--sync"
+                ],
+                "action": "store_true",
+                "help": "Refresh source discovery metadata and create the compiled system-intent declaration if it is missing."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "system-intent.sync",
+            "path": "operations/system-intent.sync.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.root.resolve",
+              "system_intent.config.resolve",
+              "system_intent.source_metadata.refresh",
+              "system_intent.mirror.read_or_create",
+              "system_intent.result.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": true,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "system-intent.sync.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "target root resolution",
+              "system-intent source metadata refresh",
+              "compiled intent mirror loading",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "delegation-outcome.append.cli",
+          "status": "generated",
+          "command": {
+            "name": "note-delegation-outcome",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "note-delegation-outcome",
+            "help": "Append one local-only delegation outcome record for target-profile tuning.",
+            "options": [
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              },
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path used to record the local outcome."
+              },
+              {
+                "name": "delegation_target",
+                "flags": [
+                  "--delegation-target"
+                ],
+                "required": true,
+                "help": "Local delegation target alias."
+              },
+              {
+                "name": "task_class",
+                "flags": [
+                  "--task-class"
+                ],
+                "required": true,
+                "help": "Bounded task class label for this delegated run."
+              },
+              {
+                "name": "outcome",
+                "flags": [
+                  "--outcome"
+                ],
+                "required": true,
+                "help": "High-level delegated execution outcome.",
+                "choices": [
+                  "success",
+                  "mixed",
+                  "failed"
+                ]
+              },
+              {
+                "name": "handoff_sufficiency",
+                "flags": [
+                  "--handoff-sufficiency"
+                ],
+                "default": "sufficient",
+                "help": "Whether the checked-in handoff was enough for the delegated worker.",
+                "choices": [
+                  "sufficient",
+                  "borderline",
+                  "insufficient"
+                ]
+              },
+              {
+                "name": "review_burden",
+                "flags": [
+                  "--review-burden"
+                ],
+                "default": "normal",
+                "help": "How much review/rework burden remained after delegation.",
+                "choices": [
+                  "light",
+                  "normal",
+                  "high"
+                ]
+              },
+              {
+                "name": "escalation_required",
+                "flags": [
+                  "--escalation-required"
+                ],
+                "action": "store_true",
+                "help": "Record that the delegated run had to stop and escalate."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "delegation-outcome.append",
+            "path": "operations/delegation-outcome.append.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.root.resolve",
+              "delegation.outcome.append",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": false,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "delegation-outcome.append.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "target root resolution",
+              "local delegation outcome append",
               "output emission"
             ]
           }
@@ -1571,15 +2856,264 @@
           }
         },
         {
-          "adapter_id": "setup.guidance.cli",
+          "adapter_id": "external-intent.refresh-github.cli",
           "status": "generated",
           "command": {
-            "name": "setup",
+            "name": "external-intent",
             "manifest_ref": "cli_commands.json"
           },
           "interface": {
-            "name": "setup",
-            "help": "Show the bounded post-bootstrap setup guidance for a mature repository.",
+            "name": "external-intent",
+            "help": "Refresh optional provider-agnostic external intent evidence through adapter subcommands.",
+            "subcommand_dest": "external_intent_command",
+            "subcommands": [
+              {
+                "name": "refresh-github",
+                "help": "Refresh external intent evidence from GitHub issues through the optional gh CLI adapter.",
+                "options": [
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  },
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path whose external intent evidence should be refreshed."
+                  },
+                  {
+                    "name": "repo",
+                    "flags": [
+                      "--repo"
+                    ],
+                    "help": "GitHub repository in owner/name form. Defaults to the gh repository for the target."
+                  },
+                  {
+                    "name": "state",
+                    "flags": [
+                      "--state"
+                    ],
+                    "choices": [
+                      "open",
+                      "closed",
+                      "all"
+                    ],
+                    "help": "GitHub issue state to import. Defaults to open; closed or all are explicit audit scopes."
+                  },
+                  {
+                    "name": "limit",
+                    "flags": [
+                      "--limit"
+                    ],
+                    "type": "integer",
+                    "help": "Maximum number of GitHub issues to import. Defaults to 1000."
+                  },
+                  {
+                    "name": "storage",
+                    "flags": [
+                      "--storage"
+                    ],
+                    "choices": [
+                      "cache",
+                      "planning"
+                    ],
+                    "default": "cache",
+                    "help": "Where to write refreshed evidence. Defaults to ignored local cache; planning writes the legacy planning evidence path explicitly."
+                  },
+                  {
+                    "name": "dry_run",
+                    "flags": [
+                      "--dry-run"
+                    ],
+                    "action": "store_true",
+                    "help": "Preview refresh counts without writing external intent evidence."
+                  }
+                ]
+              }
+            ],
+            "options": []
+          },
+          "operation_ref": {
+            "id": "external-intent.refresh-github",
+            "path": "operations/external-intent.refresh-github.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.root.resolve",
+              "external_intent.github.repo.resolve",
+              "external_intent.github.issues.list",
+              "external_intent.evidence.normalize",
+              "external_intent.evidence.write",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "external-intent.refresh-github.help.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "target root resolution",
+              "optional gh adapter invocation",
+              "provider-agnostic evidence normalization",
+              "evidence write policy",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "preflight.report.cli",
+          "status": "generated",
+          "command": {
+            "name": "preflight",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "preflight",
+            "help": "Get compact takeover-safe context: startup defaults + resolved config + active planning state in one call.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path for preflight context (defaults to current workspace)."
+              },
+              {
+                "name": "active_only",
+                "flags": [
+                  "--active-only"
+                ],
+                "action": "store_true",
+                "help": "Return only active planning state without startup defaults and config."
+              },
+              {
+                "name": "task",
+                "flags": [
+                  "--task"
+                ],
+                "help": "Optional task description used to include task-specific skill recommendations in preflight context."
+              },
+              {
+                "name": "verbose",
+                "flags": [
+                  "--verbose"
+                ],
+                "action": "store_true",
+                "help": "Emit complete takeover/recovery context. Prefer default output for ordinary recovery routing."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "preflight.report",
+            "path": "operations/preflight.report.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.root.resolve",
+              "workspace.defaults.load",
+              "workspace.config.load",
+              "planning.summary.load",
+              "preflight.token.create",
+              "preflight.context.assemble",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": false,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "preflight.report.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "schema refs",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "target root resolution",
+              "preflight token creation",
+              "takeover context assembly",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "install.lifecycle.cli",
+          "status": "generated",
+          "command": {
+            "name": "install",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "install",
+            "help": "Bootstrap selected modules into a target repository.",
             "options": [
               {
                 "name": "format",
@@ -1610,7 +3144,8 @@
               {
                 "name": "modules",
                 "flags": [
-                  "--modules"
+                  "--modules",
+                  "--module"
                 ],
                 "help": "Comma-separated module selection."
               },
@@ -1621,19 +3156,91 @@
                 ],
                 "action": "store_true",
                 "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents."
+              },
+              {
+                "name": "strict_preflight",
+                "flags": [
+                  "--strict-preflight"
+                ],
+                "action": "store_true",
+                "help": "Require a fresh --preflight-token before running high-risk mutating commands."
+              },
+              {
+                "name": "preflight_token",
+                "flags": [
+                  "--preflight-token"
+                ],
+                "help": "Token emitted by 'agentic-workspace preflight --format json'."
+              },
+              {
+                "name": "preflight_max_age_seconds",
+                "flags": [
+                  "--preflight-max-age-seconds"
+                ],
+                "type": "integer",
+                "default": 900,
+                "help": "Maximum token age when --strict-preflight is enabled (default: 900)."
+              },
+              {
+                "name": "local_only",
+                "flags": [
+                  "--local-only"
+                ],
+                "action": "store_true",
+                "help": "Install in the normal repository layout while recording `.agentic-workspace/` in git-local exclude metadata."
+              },
+              {
+                "name": "agent_instructions_file",
+                "flags": [
+                  "--agent-instructions-file"
+                ],
+                "help": "Canonical startup instructions filename to use for this repo (for example AGENTS.md or GEMINI.md)."
+              },
+              {
+                "name": "adopt",
+                "flags": [
+                  "--adopt"
+                ],
+                "action": "store_true",
+                "help": "Force conservative adopt behavior."
+              },
+              {
+                "name": "dry_run",
+                "flags": [
+                  "--dry-run"
+                ],
+                "action": "store_true",
+                "help": "Show planned changes without mutating files."
+              },
+              {
+                "name": "print_prompt",
+                "flags": [
+                  "--print-prompt"
+                ],
+                "action": "store_true",
+                "help": "Print the generated handoff prompt."
+              },
+              {
+                "name": "write_prompt",
+                "flags": [
+                  "--write-prompt"
+                ],
+                "help": "Write the generated handoff prompt to a file."
               }
             ]
           },
           "operation_ref": {
-            "id": "setup.guidance",
-            "path": "operations/setup.guidance.json"
+            "id": "install.lifecycle",
+            "path": "operations/install.lifecycle.json"
           },
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
               "workspace.root.resolve",
+              "workspace.config.load",
               "workspace.selection.resolve",
-              "workspace.report.assemble",
+              "workspace.lifecycle.plan",
+              "workspace.lifecycle.apply",
               "output.emit"
             ]
           },
@@ -1642,14 +3249,14 @@
             "output": []
           },
           "effect_hints": {
-            "read_only": true,
+            "read_only": false,
             "destructive": false,
             "idempotent": true,
-            "writes_repo_state": false,
+            "writes_repo_state": true,
             "requires_preflight_gate": false
           },
           "conformance_refs": [
-            "setup.guidance.process"
+            "install.lifecycle.dry-run.process"
           ],
           "projection_boundary": {
             "universal": [
@@ -1668,9 +3275,420 @@
               "test container image"
             ],
             "runtime_owned": [
-              "target root resolution",
+              "lifecycle selection",
+              "preflight/destructive safety gates",
+              "module mutation policy",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "init.lifecycle.cli",
+          "status": "generated",
+          "command": {
+            "name": "init",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "init",
+            "help": "Bootstrap selected modules into a target repository.",
+            "options": [
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              },
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "preset",
+                "flags": [
+                  "--preset"
+                ],
+                "help": "Named module bundle."
+              },
+              {
+                "name": "modules",
+                "flags": [
+                  "--modules",
+                  "--module"
+                ],
+                "help": "Comma-separated module selection."
+              },
+              {
+                "name": "non_interactive",
+                "flags": [
+                  "--non-interactive"
+                ],
+                "action": "store_true",
+                "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents."
+              },
+              {
+                "name": "strict_preflight",
+                "flags": [
+                  "--strict-preflight"
+                ],
+                "action": "store_true",
+                "help": "Require a fresh --preflight-token before running high-risk mutating commands."
+              },
+              {
+                "name": "preflight_token",
+                "flags": [
+                  "--preflight-token"
+                ],
+                "help": "Token emitted by 'agentic-workspace preflight --format json'."
+              },
+              {
+                "name": "preflight_max_age_seconds",
+                "flags": [
+                  "--preflight-max-age-seconds"
+                ],
+                "type": "integer",
+                "default": 900,
+                "help": "Maximum token age when --strict-preflight is enabled (default: 900)."
+              },
+              {
+                "name": "local_only",
+                "flags": [
+                  "--local-only"
+                ],
+                "action": "store_true",
+                "help": "Install in the normal repository layout while recording `.agentic-workspace/` in git-local exclude metadata."
+              },
+              {
+                "name": "agent_instructions_file",
+                "flags": [
+                  "--agent-instructions-file"
+                ],
+                "help": "Canonical startup instructions filename to use for this repo (for example AGENTS.md or GEMINI.md)."
+              },
+              {
+                "name": "adopt",
+                "flags": [
+                  "--adopt"
+                ],
+                "action": "store_true",
+                "help": "Force conservative adopt behavior."
+              },
+              {
+                "name": "dry_run",
+                "flags": [
+                  "--dry-run"
+                ],
+                "action": "store_true",
+                "help": "Show planned changes without mutating files."
+              },
+              {
+                "name": "print_prompt",
+                "flags": [
+                  "--print-prompt"
+                ],
+                "action": "store_true",
+                "help": "Print the generated handoff prompt."
+              },
+              {
+                "name": "write_prompt",
+                "flags": [
+                  "--write-prompt"
+                ],
+                "help": "Write the generated handoff prompt to a file."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "init.lifecycle",
+            "path": "operations/init.lifecycle.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.root.resolve",
+              "workspace.config.load",
+              "workspace.selection.resolve",
+              "workspace.lifecycle.plan",
+              "workspace.lifecycle.apply",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": true,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "init.lifecycle.dry-run.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "schema refs",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "lifecycle selection",
+              "preflight/destructive safety gates",
+              "module mutation policy",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "prompt.lifecycle.cli",
+          "status": "generated",
+          "command": {
+            "name": "prompt",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "prompt",
+            "help": "Print a ready-to-paste workspace lifecycle handoff prompt.",
+            "subcommand_dest": "prompt_command",
+            "subcommands": [
+              {
+                "name": "init",
+                "help": "Print the workspace bootstrap handoff prompt.",
+                "options": [
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  },
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Target repository path. Defaults to the current directory."
+                  },
+                  {
+                    "name": "preset",
+                    "flags": [
+                      "--preset"
+                    ],
+                    "help": "Named module bundle."
+                  },
+                  {
+                    "name": "modules",
+                    "flags": [
+                      "--modules"
+                    ],
+                    "help": "Comma-separated module selection."
+                  },
+                  {
+                    "name": "non_interactive",
+                    "flags": [
+                      "--non-interactive"
+                    ],
+                    "action": "store_true",
+                    "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents."
+                  },
+                  {
+                    "name": "agent_instructions_file",
+                    "flags": [
+                      "--agent-instructions-file"
+                    ],
+                    "help": "Canonical startup instructions filename to use for this repo (for example AGENTS.md or GEMINI.md)."
+                  },
+                  {
+                    "name": "adopt",
+                    "flags": [
+                      "--adopt"
+                    ],
+                    "action": "store_true",
+                    "help": "Force conservative adopt behavior."
+                  }
+                ],
+                "operation_ref": {
+                  "id": "prompt.init",
+                  "path": "operations/prompt.init.json"
+                }
+              },
+              {
+                "name": "upgrade",
+                "help": "Print the workspace upgrade handoff prompt.",
+                "options": [
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  },
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Target repository path. Defaults to the current directory."
+                  },
+                  {
+                    "name": "preset",
+                    "flags": [
+                      "--preset"
+                    ],
+                    "help": "Named module bundle."
+                  },
+                  {
+                    "name": "modules",
+                    "flags": [
+                      "--modules"
+                    ],
+                    "help": "Comma-separated module selection."
+                  },
+                  {
+                    "name": "non_interactive",
+                    "flags": [
+                      "--non-interactive"
+                    ],
+                    "action": "store_true",
+                    "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents."
+                  }
+                ],
+                "operation_ref": {
+                  "id": "prompt.upgrade",
+                  "path": "operations/prompt.upgrade.json"
+                }
+              },
+              {
+                "name": "uninstall",
+                "help": "Print the workspace uninstall handoff prompt.",
+                "options": [
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  },
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Target repository path. Defaults to the current directory."
+                  },
+                  {
+                    "name": "preset",
+                    "flags": [
+                      "--preset"
+                    ],
+                    "help": "Named module bundle."
+                  },
+                  {
+                    "name": "modules",
+                    "flags": [
+                      "--modules"
+                    ],
+                    "help": "Comma-separated module selection."
+                  },
+                  {
+                    "name": "non_interactive",
+                    "flags": [
+                      "--non-interactive"
+                    ],
+                    "action": "store_true",
+                    "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents."
+                  }
+                ],
+                "operation_ref": {
+                  "id": "prompt.uninstall",
+                  "path": "operations/prompt.uninstall.json"
+                }
+              }
+            ],
+            "options": []
+          },
+          "operation_ref": {
+            "id": "prompt.init",
+            "path": "operations/prompt.init.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.selection.resolve",
+              "prompt.render",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "prompt.init.process",
+            "prompt.upgrade.process",
+            "prompt.uninstall.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
               "module selection",
-              "setup guidance assembly",
+              "lifecycle handoff prompt rendering",
               "output emission"
             ]
           }
@@ -1906,6 +3924,296 @@
               "module selection",
               "doctor report assembly",
               "repair guidance assembly",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "upgrade.lifecycle.cli",
+          "status": "generated",
+          "command": {
+            "name": "upgrade",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "upgrade",
+            "help": "Refresh managed surfaces for selected installed modules.",
+            "options": [
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              },
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "preset",
+                "flags": [
+                  "--preset"
+                ],
+                "help": "Named module bundle."
+              },
+              {
+                "name": "modules",
+                "flags": [
+                  "--modules",
+                  "--module"
+                ],
+                "help": "Comma-separated module selection."
+              },
+              {
+                "name": "non_interactive",
+                "flags": [
+                  "--non-interactive"
+                ],
+                "action": "store_true",
+                "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents."
+              },
+              {
+                "name": "strict_preflight",
+                "flags": [
+                  "--strict-preflight"
+                ],
+                "action": "store_true",
+                "help": "Require a fresh --preflight-token before running high-risk mutating commands."
+              },
+              {
+                "name": "preflight_token",
+                "flags": [
+                  "--preflight-token"
+                ],
+                "help": "Token emitted by 'agentic-workspace preflight --format json'."
+              },
+              {
+                "name": "preflight_max_age_seconds",
+                "flags": [
+                  "--preflight-max-age-seconds"
+                ],
+                "type": "integer",
+                "default": 900,
+                "help": "Maximum token age when --strict-preflight is enabled (default: 900)."
+              },
+              {
+                "name": "dry_run",
+                "flags": [
+                  "--dry-run"
+                ],
+                "action": "store_true",
+                "help": "Show planned changes without mutating files."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "upgrade.lifecycle",
+            "path": "operations/upgrade.lifecycle.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.root.resolve",
+              "workspace.config.load",
+              "workspace.selection.resolve",
+              "workspace.lifecycle.plan",
+              "workspace.lifecycle.apply",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": true,
+            "requires_preflight_gate": true
+          },
+          "conformance_refs": [
+            "upgrade.lifecycle.dry-run.process",
+            "upgrade.lifecycle.strict-preflight-refusal.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "schema refs",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "lifecycle selection",
+              "preflight/destructive safety gates",
+              "module mutation policy",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "uninstall.lifecycle.cli",
+          "status": "generated",
+          "command": {
+            "name": "uninstall",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "uninstall",
+            "help": "Remove managed surfaces conservatively for selected installed modules.",
+            "options": [
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              },
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "preset",
+                "flags": [
+                  "--preset"
+                ],
+                "help": "Named module bundle."
+              },
+              {
+                "name": "modules",
+                "flags": [
+                  "--modules",
+                  "--module"
+                ],
+                "help": "Comma-separated module selection."
+              },
+              {
+                "name": "non_interactive",
+                "flags": [
+                  "--non-interactive"
+                ],
+                "action": "store_true",
+                "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents."
+              },
+              {
+                "name": "strict_preflight",
+                "flags": [
+                  "--strict-preflight"
+                ],
+                "action": "store_true",
+                "help": "Require a fresh --preflight-token before running high-risk mutating commands."
+              },
+              {
+                "name": "preflight_token",
+                "flags": [
+                  "--preflight-token"
+                ],
+                "help": "Token emitted by 'agentic-workspace preflight --format json'."
+              },
+              {
+                "name": "preflight_max_age_seconds",
+                "flags": [
+                  "--preflight-max-age-seconds"
+                ],
+                "type": "integer",
+                "default": 900,
+                "help": "Maximum token age when --strict-preflight is enabled (default: 900)."
+              },
+              {
+                "name": "dry_run",
+                "flags": [
+                  "--dry-run"
+                ],
+                "action": "store_true",
+                "help": "Show planned changes without mutating files."
+              },
+              {
+                "name": "local_only",
+                "flags": [
+                  "--local-only"
+                ],
+                "action": "store_true",
+                "help": "Remove the local-only workspace state from the normal repository layout."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "uninstall.lifecycle",
+            "path": "operations/uninstall.lifecycle.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.root.resolve",
+              "workspace.config.load",
+              "workspace.selection.resolve",
+              "workspace.lifecycle.plan",
+              "workspace.lifecycle.apply",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": true,
+            "idempotent": true,
+            "writes_repo_state": true,
+            "requires_preflight_gate": true
+          },
+          "conformance_refs": [
+            "uninstall.lifecycle.destructive-refusal.process",
+            "uninstall.lifecycle.strict-preflight-refusal.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "schema refs",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "lifecycle selection",
+              "preflight/destructive safety gates",
+              "module mutation policy",
               "output emission"
             ]
           }

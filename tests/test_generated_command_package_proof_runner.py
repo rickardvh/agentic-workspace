@@ -273,6 +273,8 @@ def test_static_generated_package_proof_rejects_python_completion_proof_surface_
 def test_static_generated_package_proof_rejects_full_completion_with_compatibility_handlers(monkeypatch) -> None:
     checker = _load_checker()
     ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+    ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
+    ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
     original_load_json = checker._load_json
 
     def fake_load_json(path: str) -> dict[str, object]:
@@ -290,6 +292,55 @@ def test_static_generated_package_proof_rejects_full_completion_with_compatibili
     errors = checker._validate_static_surfaces()
 
     assert any("compatibility-runtime-handler" in error for error in errors)
+
+
+def test_static_generated_package_proof_rejects_full_completion_when_generated_main_delegates_first(monkeypatch) -> None:
+    checker = _load_checker()
+    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+    ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
+    ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
+    original_read_text = checker.Path.read_text
+
+    def fake_read_text(self, *args, **kwargs):
+        text = original_read_text(self, *args, **kwargs)
+        if self.as_posix().endswith("generated/python/workspace-cli/generated_cli_package/__init__.py"):
+            return text.replace(
+                "    if supports_generated_command(argv_list):\n        return run_generated_command(argv_list, _run_runtime_handler)\n\n"
+                "    # Compatibility fallback for package commands that have not entered command_package_ir yet.\n"
+                "    return runtime_main(argv_list)\n",
+                "    return runtime_main(argv_list)\n",
+            ).replace(
+                "    if supports_generated_command(argv_list):\n"
+                "        try:\n"
+                "            return run_generated_command(argv_list, _run_runtime_handler)\n"
+                "        except Exception as exc:\n"
+                "            if exc.__class__.__name__.endswith('UsageError') or exc.__class__.__name__ == 'RepoDetectionError':\n"
+                "                build_generated_parser().error(str(exc))\n"
+                "            raise\n\n"
+                "    # Compatibility fallback for package commands that have not entered command_package_ir yet.\n"
+                "    return runtime_main(argv_list)\n",
+                "    return runtime_main(argv_list)\n",
+            )
+        return text
+
+    monkeypatch.setattr(checker, "load_workspace_command_package_ir", lambda *, repo_root: ir)
+    monkeypatch.setattr(checker.Path, "read_text", fake_read_text)
+
+    errors = checker._validate_static_surfaces()
+
+    assert any("missing generated-main boundary fragment" in error for error in errors)
+
+
+def test_static_generated_package_proof_rejects_satisfied_gate_for_non_full_state(monkeypatch) -> None:
+    checker = _load_checker()
+    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+    ir["generation_policy"]["python_cli_completion"]["current_state"] = "adapter-layer-proven-not-full-generated-cli"
+    ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
+    monkeypatch.setattr(checker, "load_workspace_command_package_ir", lambda *, repo_root: ir)
+
+    errors = checker._validate_static_surfaces()
+
+    assert any("cannot mark the Python CLI completion gate satisfied" in error for error in errors)
 
 
 def test_static_generated_package_proof_accepts_python_completion_gate() -> None:

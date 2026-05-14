@@ -67,6 +67,26 @@ def _python_adapter_commands(package: dict[str, Any]) -> list[dict[str, Any]]:
     ]
 
 
+def _interface_operation_refs(interface: dict[str, Any], inherited_operation_ref: dict[str, Any]) -> list[dict[str, Any]]:
+    operation_ref = interface.get("operation_ref", inherited_operation_ref)
+    current_operation_ref = operation_ref if isinstance(operation_ref, dict) else inherited_operation_ref
+    refs = [current_operation_ref]
+    for subcommand in interface.get("subcommands", []):
+        if isinstance(subcommand, dict):
+            refs.extend(_interface_operation_refs(subcommand, current_operation_ref))
+    return refs
+
+
+def _command_operation_refs(command: dict[str, Any]) -> list[dict[str, Any]]:
+    operation_ref = command.get("operation_ref", {})
+    interface = command.get("interface", {})
+    if not isinstance(operation_ref, dict):
+        return []
+    if not isinstance(interface, dict):
+        return [operation_ref]
+    return _interface_operation_refs(interface, operation_ref)
+
+
 def _python_adapter_command_payload(package: dict[str, Any]) -> list[dict[str, Any]]:
     payload: list[dict[str, Any]] = []
     for command in _python_adapter_commands(package):
@@ -93,19 +113,19 @@ def _runtime_consumed_operation_outputs(
     emitted: set[str] = set()
     contracts_package_root = "agentic" + "_workspace"
     for command in _python_adapter_commands(package):
-        operation_ref = command["operation_ref"]
-        operation_path = str(operation_ref["path"])
-        if operation_path in emitted:
-            continue
-        source = repo_root / "src" / contracts_package_root / "contracts" / operation_path
-        if not source.is_file():
-            continue
-        operation = json.loads(source.read_text(encoding="utf-8"))
-        ir_plan = operation.get("ir_plan", {})
-        if not isinstance(ir_plan, dict) or ir_plan.get("status") not in {"representative", "complete"}:
-            continue
-        emitted.add(operation_path)
-        outputs.append(GeneratedOutput(root / "generated_cli_package" / operation_path, _json_block(operation) + "\n"))
+        for operation_ref in _command_operation_refs(command):
+            operation_path = str(operation_ref.get("path", ""))
+            if not operation_path or operation_path in emitted:
+                continue
+            source = repo_root / "src" / contracts_package_root / "contracts" / operation_path
+            if not source.is_file():
+                continue
+            operation = json.loads(source.read_text(encoding="utf-8"))
+            ir_plan = operation.get("ir_plan", {})
+            if not isinstance(ir_plan, dict) or ir_plan.get("status") not in {"representative", "complete"}:
+                continue
+            emitted.add(operation_path)
+            outputs.append(GeneratedOutput(root / "generated_cli_package" / operation_path, _json_block(operation) + "\n"))
     return outputs
 
 
@@ -117,9 +137,30 @@ def _python_runtime_adapter_module(package: dict[str, Any], target: dict[str, An
     if runtime_module:
         main_function = (
             "\n\n"
+            "def _run_runtime_handler(operation_id: str, args: argparse.Namespace) -> int:\n"
+            f"    from {runtime_module} import _GENERATED_RUNTIME_HANDLERS\n\n"
+            "    handler = _GENERATED_RUNTIME_HANDLERS.get(operation_id)\n"
+            "    if handler is None:\n"
+            "        build_generated_parser().error(\n"
+            "            f\"Generated adapter for {getattr(args, 'command', operation_id)} references unsupported operation {operation_id}.\"\n"
+            "        )\n"
+            "    return handler(args)\n\n\n"
             "def main(argv: list[str] | None = None) -> int:\n"
+            "    import sys\n"
             f"    from {runtime_module} import main as runtime_main\n\n"
-            "    return runtime_main(argv)\n"
+            "    argv_list = list(sys.argv[1:] if argv is None else argv)\n"
+            "    if argv_list and argv_list[0] in {'-h', '--help'}:\n"
+            "        build_generated_parser().parse_args(argv_list)\n"
+            "        return 0\n"
+            "    if supports_generated_command(argv_list):\n"
+            "        try:\n"
+            "            return run_generated_command(argv_list, _run_runtime_handler)\n"
+            "        except Exception as exc:\n"
+            "            if exc.__class__.__name__.endswith('UsageError') or exc.__class__.__name__ == 'RepoDetectionError':\n"
+            "                build_generated_parser().error(str(exc))\n"
+            "            raise\n\n"
+            "    # Compatibility fallback for package commands that have not entered command_package_ir yet.\n"
+            "    return runtime_main(argv_list)\n"
         )
     return (
         '"""Generated runtime-backed Python command adapter.\n\n'
@@ -150,11 +191,7 @@ def _python_runtime_adapter_module(package: dict[str, Any], target: dict[str, An
         "_GENERATED_COMMANDS_BY_NAME: dict[str, dict[str, Any]] = {\n"
         '    str(command["interface"]["name"]): command for command in _GENERATED_ADAPTER_COMMANDS\n'
         "}\n\n"
-        "_GENERATED_OPERATION_PATHS_BY_ID: dict[str, str] = {\n"
-        '    str(command["operation_id"]): str(command["operation_path"])\n'
-        "    for command in _GENERATED_ADAPTER_COMMANDS\n"
-        '    if "operation_path" in command\n'
-        "}\n\n"
+        "_GENERATED_OPERATION_PATHS_BY_ID: dict[str, str] = {}\n\n"
         f"_GENERATED_MATURITY_ID = {target['maturity_level_ref']!r}\n"
         f"_GENERATED_WEAK_AGENT_ROUTING = {weak_agent_routing!r}\n"
         f"_GENERATED_RUNNABLE = {runnable}\n\n"
@@ -169,8 +206,31 @@ def _python_runtime_adapter_module(package: dict[str, Any], target: dict[str, An
         "    return _GENERATED_WEAK_AGENT_ROUTING\n\n\n"
         "def generated_command_names() -> tuple[str, ...]:\n"
         "    return tuple(sorted(_GENERATED_COMMANDS_BY_NAME))\n\n\n"
+        "def _interface_operation_ref(interface: dict[str, Any], inherited_operation_id: str, inherited_operation_path: str) -> tuple[str, str]:\n"
+        '    operation_ref = interface.get("operation_ref", {})\n'
+        "    if isinstance(operation_ref, dict):\n"
+        '        return str(operation_ref.get("id", inherited_operation_id)), str(operation_ref.get("path", inherited_operation_path))\n'
+        "    return inherited_operation_id, inherited_operation_path\n\n\n"
+        "def _interface_operation_paths_by_id(interface: dict[str, Any], inherited_operation_id: str, inherited_operation_path: str) -> dict[str, str]:\n"
+        "    operation_id, operation_path = _interface_operation_ref(interface, inherited_operation_id, inherited_operation_path)\n"
+        "    paths = {operation_id: operation_path}\n"
+        '    for subcommand in interface.get("subcommands", []):\n'
+        "        if isinstance(subcommand, dict):\n"
+        "            paths.update(_interface_operation_paths_by_id(subcommand, operation_id, operation_path))\n"
+        "    return paths\n\n\n"
+        "_GENERATED_OPERATION_PATHS_BY_ID.update(\n"
+        "    {\n"
+        "        operation_id: operation_path\n"
+        "        for command in _GENERATED_ADAPTER_COMMANDS\n"
+        "        for operation_id, operation_path in _interface_operation_paths_by_id(\n"
+        '            command["interface"],\n'
+        '            str(command["operation_id"]),\n'
+        '            str(command["operation_path"]),\n'
+        "        ).items()\n"
+        "    }\n"
+        ")\n\n\n"
         "def generated_operation_ids() -> tuple[str, ...]:\n"
-        '    return tuple(sorted(str(command["operation_id"]) for command in _GENERATED_ADAPTER_COMMANDS))\n\n\n'
+        "    return tuple(sorted(_GENERATED_OPERATION_PATHS_BY_ID))\n\n\n"
         "def generated_operation_contract(operation_id: str) -> dict[str, Any]:\n"
         "    operation_path = _GENERATED_OPERATION_PATHS_BY_ID[str(operation_id)]\n"
         "    return _load_generated_json(operation_path)\n\n\n"
@@ -180,14 +240,16 @@ def _python_runtime_adapter_module(package: dict[str, Any], target: dict[str, An
         '    if option_spec.get("type") == "integer":\n'
         "        return int\n"
         "    return None\n\n\n"
-        "def _add_option(parser: argparse.ArgumentParser, option_spec: dict[str, Any]) -> None:\n"
+        "def _add_option(parser: argparse.ArgumentParser, option_spec: dict[str, Any], *, suppress_default: bool = False) -> None:\n"
         "    kwargs: dict[str, Any] = {}\n"
         '    action = option_spec.get("action")\n'
         "    if isinstance(action, str):\n"
         '        kwargs["action"] = action\n'
         '    if "choices" in option_spec:\n'
         '        kwargs["choices"] = tuple(option_spec["choices"])\n'
-        '    if "default" in option_spec:\n'
+        "    if suppress_default:\n"
+        '        kwargs["default"] = argparse.SUPPRESS\n'
+        '    elif "default" in option_spec:\n'
         '        kwargs["default"] = option_spec["default"]\n'
         '    if "nargs" in option_spec:\n'
         '        kwargs["nargs"] = option_spec["nargs"]\n'
@@ -200,6 +262,47 @@ def _python_runtime_adapter_module(package: dict[str, Any], target: dict[str, An
         "    if isinstance(help_text, str):\n"
         '        kwargs["help"] = help_text\n'
         '    parser.add_argument(*option_spec["flags"], **kwargs)\n\n\n'
+        "def _add_interface_options(\n"
+        "    parser: argparse.ArgumentParser,\n"
+        "    interface: dict[str, Any],\n"
+        "    inherited_option_names: frozenset[str] = frozenset(),\n"
+        ") -> frozenset[str]:\n"
+        "    option_names: set[str] = set()\n"
+        '    for option in interface.get("options", []):\n'
+        '        option_name = str(option.get("name", ""))\n'
+        "        if option_name:\n"
+        "            option_names.add(option_name)\n"
+        "        _add_option(parser, option, suppress_default=option_name in inherited_option_names)\n"
+        "    return frozenset(option_names)\n\n\n"
+        "def _set_generated_operation_id(parser: argparse.ArgumentParser, operation_id: str) -> None:\n"
+        "    parser.set_defaults(_generated_operation_id=operation_id)\n\n\n"
+        "def _add_interface_command(\n"
+        "    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],\n"
+        "    interface: dict[str, Any],\n"
+        "    operation_id: str,\n"
+        "    inherited_option_names: frozenset[str] = frozenset(),\n"
+        ") -> None:\n"
+        "    command_parser = subparsers.add_parser(\n"
+        '        str(interface["name"]),\n'
+        '        help=str(interface["help"]),\n'
+        '        description=str(interface["help"]),\n'
+        "    )\n"
+        '    nested_operation_ref = interface.get("operation_ref", {})\n'
+        "    if isinstance(nested_operation_ref, dict):\n"
+        '        operation_id = str(nested_operation_ref.get("id", operation_id))\n'
+        "    _set_generated_operation_id(command_parser, operation_id)\n"
+        "    option_names = _add_interface_options(command_parser, interface, inherited_option_names)\n"
+        '    subcommands = interface.get("subcommands", [])\n'
+        "    if not subcommands:\n"
+        "        return\n"
+        '    subcommand_dest = str(interface.get("subcommand_dest", "subcommand"))\n'
+        "    child_subparsers = command_parser.add_subparsers(\n"
+        "        dest=subcommand_dest,\n"
+        '        required=bool(interface.get("subcommands_required", True)),\n'
+        "    )\n"
+        "    child_inherited_option_names = inherited_option_names | option_names\n"
+        "    for subcommand in subcommands:\n"
+        "        _add_interface_command(child_subparsers, subcommand, operation_id, child_inherited_option_names)\n\n\n"
         "def build_generated_parser() -> argparse.ArgumentParser:\n"
         "    epilog = (\n"
         '        f"Weak-agent routing: {_GENERATED_WEAK_AGENT_ROUTING}\\n"\n'
@@ -209,14 +312,7 @@ def _python_runtime_adapter_module(package: dict[str, Any], target: dict[str, An
         '    subparsers = parser.add_subparsers(dest="command", required=True)\n'
         "    for command in _GENERATED_ADAPTER_COMMANDS:\n"
         '        interface = command["interface"]\n'
-        "        command_parser = subparsers.add_parser(\n"
-        '            str(interface["name"]),\n'
-        '            help=str(interface["help"]),\n'
-        '            description=str(interface["help"]),\n'
-        "        )\n"
-        '        command_parser.set_defaults(_generated_operation_id=command["operation_id"])\n'
-        '        for option in interface.get("options", []):\n'
-        "            _add_option(command_parser, option)\n"
+        '        _add_interface_command(subparsers, interface, str(command["operation_id"]))\n'
         "    return parser\n\n\n"
         "def run_generated_command(argv: list[str] | tuple[str, ...], runtime_handler: RuntimeHandler) -> int:\n"
         "    parser = build_generated_parser()\n"

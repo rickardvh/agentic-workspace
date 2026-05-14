@@ -66,6 +66,7 @@ PYTHON_COMPLETION_REQUIRED_EVIDENCE_IDS = {
     "runtime-handlers-thin",
     "representative-operation-ir-runtime-consumed",
     "operation-execution-inventory-exhaustive",
+    "root-console-generated-command-smoke",
 }
 PYTHON_COMPLETION_EXPECTED_PROOF_SUBSTRINGS = {
     "parser-shape-generated": "_validate_generated_python_commands_absent_from_handwritten_parsers",
@@ -77,6 +78,7 @@ PYTHON_COMPLETION_EXPECTED_PROOF_SUBSTRINGS = {
     "runtime-handlers-thin": "_validate_python_runtime_handler_boundary",
     "representative-operation-ir-runtime-consumed": "_validate_python_operation_execution_inventory",
     "operation-execution-inventory-exhaustive": "_validate_python_operation_execution_inventory",
+    "root-console-generated-command-smoke": "test_workspace_cli_blackbox.py::test_blackbox_root_generated_command_executes_through_console_script",
 }
 PYTHON_OPERATION_EXECUTION_FINAL_STATUSES = {"runtime-consumed", "accepted-hand-owned-runtime-primitive"}
 REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE = {
@@ -211,6 +213,42 @@ def _load_json(relative_path: str) -> dict[str, object]:
     return json.loads((REPO_ROOT / "src" / "agentic_workspace" / "contracts" / relative_path).read_text(encoding="utf-8"))
 
 
+def _interface_operation_refs(interface: dict[str, object], inherited_operation_ref: dict[str, object]) -> list[dict[str, object]]:
+    operation_ref = interface.get("operation_ref", inherited_operation_ref)
+    current_operation_ref = operation_ref if isinstance(operation_ref, dict) else inherited_operation_ref
+    refs = [current_operation_ref]
+    subcommands = interface.get("subcommands", [])
+    if isinstance(subcommands, list):
+        for subcommand in subcommands:
+            if isinstance(subcommand, dict):
+                refs.extend(_interface_operation_refs(subcommand, current_operation_ref))
+    return refs
+
+
+def _command_operation_refs(command: dict[str, object]) -> list[dict[str, object]]:
+    operation_ref = command.get("operation_ref", {})
+    interface = command.get("interface", {})
+    if not isinstance(operation_ref, dict):
+        return []
+    if not isinstance(interface, dict):
+        return [operation_ref]
+    return _interface_operation_refs(interface, operation_ref)
+
+
+def _command_conformance_ref_for_operation(command: dict[str, object], operation_id: str) -> object:
+    refs = command.get("conformance_refs") or []
+    if not isinstance(refs, list):
+        return None
+    exact = f"{operation_id}.process"
+    if exact in refs:
+        return exact
+    prefix = f"{operation_id}."
+    for ref in refs:
+        if isinstance(ref, str) and ref.startswith(prefix):
+            return ref
+    return refs[0] if refs else None
+
+
 def _field_value(payload: object, path: list[str]) -> object:
     current = payload
     for part in path:
@@ -221,6 +259,8 @@ def _field_value(payload: object, path: list[str]) -> object:
 
 
 def _selected_contract_fields(stdout: str, assertions: list[dict[str, object]]) -> dict[str, object]:
+    if not assertions:
+        return {}
     payload = json.loads(stdout)
     selected: dict[str, object] = {}
     for assertion in assertions:
@@ -600,6 +640,12 @@ def _validate_python_cli_completion_policy(policy: dict[str, object]) -> list[st
     if not any("weak-agent-safe-adapter" in item and "full Python generated CLI completion" in item for item in proof_requirements):
         errors.append("command_package_ir.json Python CLI completion proof must distinguish adapter maturity from full generated CLI completion")
     completion_gate = policy.get("completion_gate", {})
+    if isinstance(completion_gate, dict) and current_state != "full-generated-cli-complete":
+        if completion_gate.get("state") == "satisfied":
+            errors.append(
+                "command_package_ir.json cannot mark the Python CLI completion gate satisfied while "
+                f"current_state is {current_state!r}"
+            )
     if current_state == "full-generated-cli-complete":
         if not isinstance(completion_gate, dict):
             errors.append("command_package_ir.json full Python CLI completion requires a completion_gate object")
@@ -631,6 +677,45 @@ def _validate_python_cli_completion_policy(policy: dict[str, object]) -> list[st
     return errors
 
 
+def _validate_full_python_completion_runtime_ownership(ir: dict[str, object]) -> list[str]:
+    python_completion = ir.get("generation_policy", {}).get("python_cli_completion", {})
+    if not isinstance(python_completion, dict) or python_completion.get("current_state") != "full-generated-cli-complete":
+        return []
+
+    errors: list[str] = []
+    generated_runtime_adapters = {
+        "generated/python/workspace-cli/generated_cli_package/__init__.py": "agentic_workspace._runtime_cli",
+        "generated/python/planning-cli/generated_cli_package/__init__.py": "repo_planning_bootstrap._runtime_cli",
+        "generated/python/memory-cli/generated_cli_package/__init__.py": "repo_memory_bootstrap._runtime_cli",
+    }
+    for relative_path, runtime_module in generated_runtime_adapters.items():
+        text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
+        required_fragments = [
+            "def _run_runtime_handler(",
+            f"from {runtime_module} import _GENERATED_RUNTIME_HANDLERS",
+            "if argv_list and argv_list[0] in {'-h', '--help'}:",
+            "build_generated_parser().parse_args(argv_list)",
+            "if supports_generated_command(argv_list):",
+            "return run_generated_command(argv_list, _run_runtime_handler)",
+            "from " + runtime_module + " import main as runtime_main",
+            "return runtime_main(argv_list)",
+        ]
+        for fragment in required_fragments:
+            if fragment not in text:
+                errors.append(
+                    "command_package_ir.json cannot claim full Python generated CLI completion while "
+                    f"{relative_path} is missing generated-main boundary fragment {fragment!r}"
+                )
+        generated_route_index = text.find("return run_generated_command(argv_list, _run_runtime_handler)")
+        fallback_index = text.find("return runtime_main(argv_list)")
+        if generated_route_index == -1 or fallback_index == -1 or generated_route_index > fallback_index:
+            errors.append(
+                "command_package_ir.json cannot claim full Python generated CLI completion while "
+                f"{relative_path} can reach runtime main before generated command dispatch"
+            )
+    return errors
+
+
 def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> list[str]:
     errors: list[str] = []
     try:
@@ -657,20 +742,20 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         for command in package.get("commands", []):
             if not isinstance(command, dict):
                 continue
-            operation_ref = command.get("operation_ref", {})
             interface = command.get("interface", {})
-            if not isinstance(operation_ref, dict) or not isinstance(interface, dict):
+            if not isinstance(interface, dict):
                 continue
-            operation_id = str(operation_ref.get("id", ""))
-            if not operation_id:
-                continue
-            generated_operations[operation_id] = {
-                "program": package.get("program"),
-                "command": interface.get("name"),
-                "operation_contract": operation_ref.get("path"),
-                "generated_transport": generated_transport,
-                "conformance_ref": (command.get("conformance_refs") or [None])[0],
-            }
+            for operation_ref in _command_operation_refs(command):
+                operation_id = str(operation_ref.get("id", ""))
+                if not operation_id:
+                    continue
+                generated_operations[operation_id] = {
+                    "program": package.get("program"),
+                    "command": interface.get("name"),
+                    "operation_contract": operation_ref.get("path"),
+                    "generated_transport": generated_transport,
+                    "conformance_ref": _command_conformance_ref_for_operation(command, operation_id),
+                }
     missing_inventory = sorted(set(generated_operations) - set(by_operation))
     extra_inventory = sorted(set(by_operation) - set(generated_operations))
     if missing_inventory:
@@ -904,11 +989,17 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
                 cwd=fixture_root,
                 env=_conformance_env(),
             )
-            if canonical_process.returncode != 0:
+            if canonical_process.returncode != case.expected_exit:
                 errors.append(
                     f"runtime primitive failure: canonical {runnable_case.package_id} {case.label} command exited "
-                    f"{canonical_process.returncode}; "
+                    f"{canonical_process.returncode}, expected {case.expected_exit}; "
                     f"stderr={canonical_process.stderr!r}"
+                )
+                return
+            if canonical_process.stderr.strip() and not case.allow_stderr:
+                errors.append(
+                    f"runtime primitive failure: canonical {runnable_case.package_id} {case.label} emitted unexpected stderr: "
+                    f"{canonical_process.stderr!r}"
                 )
                 return
             try:
@@ -947,7 +1038,7 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
                             f"adapter failure: {runnable_case.package_id} {case.label} JSON selected fields drifted from canonical process; "
                             f"expected {canonical_selected!r}, got {adapter_selected!r}"
                         )
-            if adapter_process.stderr.strip():
+            if adapter_process.stderr.strip() and not case.allow_stderr:
                 errors.append(
                     f"adapter failure: {runnable_case.package_id} {case.label} emitted unexpected stderr: {adapter_process.stderr!r}"
                 )
@@ -1064,6 +1155,7 @@ def _validate_static_surfaces() -> list[str]:
             errors.append("command_package_ir.json generation_policy.python_cli_completion is missing or malformed")
         else:
             errors.extend(_validate_python_cli_completion_policy(python_cli_completion))
+            errors.extend(_validate_full_python_completion_runtime_ownership(ir))
         errors.extend(_validate_python_operation_execution_inventory(ir))
         shell_policy = str(ir.get("generation_policy", {}).get("shell_adapter_policy", ""))
         if "Issue #909 evaluation selects Bash as the first additional generated command transport candidate" not in shell_policy:
@@ -1143,16 +1235,24 @@ def _validate_static_surfaces() -> list[str]:
                 if resource_name == "command_package.json" and payload != package:
                     errors.append(f"{generated_root}/generated_cli_package/command_package.json drifted from command_package_ir.json package {package_id!r}")
                 if resource_name == "adapter_commands.json":
-                    expected_adapter_commands = [
-                        {
-                            "adapter_id": command["adapter_id"],
-                            "operation_id": command["operation_ref"]["id"],
-                            "operation_path": command["operation_ref"]["path"],
-                            "interface": dict(command["interface"]),
-                        }
-                        for command in package.get("commands", [])
-                        if isinstance(command, dict) and command.get("status") == "generated" and isinstance(command.get("interface"), dict)
-                    ]
+                    expected_adapter_commands = []
+                    for command in package.get("commands", []):
+                        if not (
+                            isinstance(command, dict)
+                            and command.get("status") == "generated"
+                            and isinstance(command.get("interface"), dict)
+                            and isinstance(command.get("operation_ref"), dict)
+                        ):
+                            continue
+                        operation_ref = command["operation_ref"]
+                        expected_adapter_commands.append(
+                            {
+                                "adapter_id": command["adapter_id"],
+                                "operation_id": operation_ref["id"],
+                                "operation_path": operation_ref["path"],
+                                "interface": dict(command["interface"]),
+                            }
+                        )
                     if payload != expected_adapter_commands:
                         errors.append(
                             f"{generated_root}/generated_cli_package/adapter_commands.json drifted from generated adapter projection"

@@ -89,13 +89,38 @@
   },
   "primitives": [
     {
-      "id": "path.target_root.resolve",
-      "summary": "Resolve an optional target path to a root-contained operation target.",
+      "id": "check.run.allowed",
+      "summary": "Run an explicitly allowed validation command.",
+      "kind": "check",
+      "portability": "target-executor",
+      "semantics": "Execute only a command declared by the operation or proof route and report structured exit/output data."
+    },
+    {
+      "id": "delegation.outcome.append",
+      "summary": "Append a local-only delegation outcome record for future target-profile tuning."
+    },
+    {
+      "id": "external_intent.evidence.normalize",
+      "summary": "Normalize provider-specific issue data into provider-agnostic external intent evidence records."
+    },
+    {
+      "id": "external_intent.evidence.write",
+      "summary": "Write provider-agnostic external intent evidence under the planning evidence surface."
+    },
+    {
+      "id": "external_intent.github.issues.list",
+      "summary": "Read GitHub issues through the optional gh CLI adapter."
+    },
+    {
+      "id": "external_intent.github.repo.resolve",
+      "summary": "Resolve a GitHub repository for optional external intent refresh from an explicit repo or local gh context."
+    },
+    {
+      "id": "filesystem.copy",
+      "summary": "Copy a package resource or root-contained file to a root-contained destination.",
       "kind": "filesystem",
       "portability": "target-executor",
-      "semantics": "Resolve the target input or current working directory into a normalized target root and reject path escape.",
-      "input_schema_ref": "schemas/primitives/path_target_root_resolve.input.schema.json",
-      "output_schema_ref": "schemas/primitives/path_target_root_resolve.output.schema.json"
+      "semantics": "Copy bytes between declared roots without allowing path escape."
     },
     {
       "id": "filesystem.exists",
@@ -103,6 +128,15 @@
       "kind": "filesystem",
       "portability": "target-executor",
       "semantics": "Return a boolean for a normalized path without escaping the operation root."
+    },
+    {
+      "id": "filesystem.glob",
+      "summary": "List root-contained paths matching a declared glob.",
+      "kind": "filesystem",
+      "portability": "target-executor",
+      "semantics": "Return sorted relative paths that match a non-escaping glob expression.",
+      "input_schema_ref": "schemas/primitives/filesystem_glob.input.schema.json",
+      "output_schema_ref": "schemas/primitives/filesystem_glob.output.schema.json"
     },
     {
       "id": "filesystem.read",
@@ -114,20 +148,6 @@
       "output_schema_ref": "schemas/primitives/filesystem_read.output.schema.json"
     },
     {
-      "id": "filesystem.write",
-      "summary": "Write a UTF-8 text file within the operation root.",
-      "kind": "filesystem",
-      "portability": "target-executor",
-      "semantics": "Write text to a normalized path after root containment and operation effect checks."
-    },
-    {
-      "id": "filesystem.copy",
-      "summary": "Copy a package resource or root-contained file to a root-contained destination.",
-      "kind": "filesystem",
-      "portability": "target-executor",
-      "semantics": "Copy bytes between declared roots without allowing path escape."
-    },
-    {
       "id": "filesystem.remove",
       "summary": "Remove a root-contained file when the operation allows the mutation.",
       "kind": "filesystem",
@@ -135,13 +155,15 @@
       "semantics": "Remove a normalized root-contained path only when operation effects and guards permit removal."
     },
     {
-      "id": "filesystem.glob",
-      "summary": "List root-contained paths matching a declared glob.",
+      "id": "filesystem.write",
+      "summary": "Write a UTF-8 text file within the operation root.",
       "kind": "filesystem",
       "portability": "target-executor",
-      "semantics": "Return sorted relative paths that match a non-escaping glob expression.",
-      "input_schema_ref": "schemas/primitives/filesystem_glob.input.schema.json",
-      "output_schema_ref": "schemas/primitives/filesystem_glob.output.schema.json"
+      "semantics": "Write text to a normalized path after root containment and operation effect checks."
+    },
+    {
+      "id": "implementer.context.assemble",
+      "summary": "Assemble bounded implementer context from changed paths, boundary markers, and proof selection."
     },
     {
       "id": "json.parse",
@@ -160,25 +182,158 @@
       "semantics": "Emit deterministic UTF-8 JSON using the contract-selected formatting policy."
     },
     {
-      "id": "toml.parse",
-      "summary": "Parse TOML text into a structured value.",
-      "kind": "structured-data",
-      "portability": "target-executor",
-      "semantics": "Parse TOML using the target runtime's declared TOML library and fail the operation on invalid TOML."
-    },
-    {
-      "id": "toml.write",
-      "summary": "Serialize a structured value as TOML text.",
-      "kind": "structured-data",
-      "portability": "target-executor",
-      "semantics": "Write deterministic TOML for the limited record shapes owned by package contracts."
-    },
-    {
       "id": "markdown.sections.parse",
       "summary": "Parse Markdown into heading-addressable sections.",
       "kind": "structured-data",
       "portability": "target-executor",
       "semantics": "Build a conservative section map from Markdown headings without interpreting arbitrary Markdown syntax."
+    },
+    {
+      "id": "memory.bootstrap.doctor.load",
+      "summary": "Load package-local memory doctor diagnostics for a target repository."
+    },
+    {
+      "id": "memory.bootstrap.files.list",
+      "summary": "List packaged memory bootstrap files without mutating a target repository."
+    },
+    {
+      "id": "memory.bootstrap.skills.list",
+      "summary": "List packaged memory bootstrap lifecycle skills."
+    },
+    {
+      "id": "memory.bootstrap.status.load",
+      "summary": "Load package-local memory bootstrap status for a target repository."
+    },
+    {
+      "id": "memory.front_door.dispatch",
+      "summary": "Dispatch generated workspace memory front-door argv to the Memory module runtime boundary.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "memory.promotion_report.load",
+      "summary": "Load package-local memory promotion candidate report state."
+    },
+    {
+      "id": "memory.report.load",
+      "summary": "Load package-local memory report state for a target repository."
+    },
+    {
+      "id": "memory.route_report.load",
+      "summary": "Load package-local memory routing aggregate report state."
+    },
+    {
+      "id": "output.emit",
+      "summary": "Render text or JSON output according to the operation format option.",
+      "kind": "output",
+      "portability": "target-executor",
+      "semantics": "Emit either stable JSON or declared text from an already assembled structured payload.",
+      "input_schema_ref": "schemas/primitives/output_emit.input.schema.json",
+      "output_schema_ref": "schemas/primitives/output_emit.output.schema.json"
+    },
+    {
+      "id": "output.fields.select",
+      "summary": "Select exact top-level or dotted JSON fields before rendering output."
+    },
+    {
+      "id": "output.profile.select",
+      "summary": "Select the smallest requested output projection that preserves the operation's next decision."
+    },
+    {
+      "id": "ownership.answer.resolve",
+      "summary": "Resolve ownership, authority, concern, or path-specific boundary answers."
+    },
+    {
+      "id": "path.target_root.resolve",
+      "summary": "Resolve an optional target path to a root-contained operation target.",
+      "kind": "filesystem",
+      "portability": "target-executor",
+      "semantics": "Resolve the target input or current working directory into a normalized target root and reject path escape.",
+      "input_schema_ref": "schemas/primitives/path_target_root_resolve.input.schema.json",
+      "output_schema_ref": "schemas/primitives/path_target_root_resolve.output.schema.json"
+    },
+    {
+      "id": "payload.assemble",
+      "summary": "Assemble an output payload from named step results.",
+      "kind": "output",
+      "portability": "target-executor",
+      "semantics": "Build a JSON-serializable payload from declared step outputs and constants.",
+      "input_schema_ref": "schemas/primitives/payload_assemble.input.schema.json",
+      "output_schema_ref": "schemas/primitives/payload_assemble.output.schema.json"
+    },
+    {
+      "id": "planning.bootstrap.doctor.load",
+      "summary": "Load package-local planning doctor diagnostics for a target repository."
+    },
+    {
+      "id": "planning.bootstrap.status.load",
+      "summary": "Load package-local planning bootstrap status for a target repository."
+    },
+    {
+      "id": "planning.front_door.dispatch",
+      "summary": "Dispatch generated workspace planning front-door argv to the Planning module runtime boundary.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "planning.help.build",
+      "summary": "Build planning orientation guidance and lifecycle command affordances without mutating planning state."
+    },
+    {
+      "id": "planning.reconcile.load",
+      "summary": "Load provider-agnostic planning reconciliation state when the planning module is installed."
+    },
+    {
+      "id": "planning.report.load",
+      "summary": "Load package-local planning report state for a target repository."
+    },
+    {
+      "id": "planning.summary.load",
+      "summary": "Load compact active planning summary when the planning module is installed."
+    },
+    {
+      "id": "preflight.context.assemble",
+      "summary": "Assemble startup defaults, resolved config, and active planning state into takeover-safe context."
+    },
+    {
+      "id": "preflight.token.create",
+      "summary": "Create a fresh preflight token using the configured token policy."
+    },
+    {
+      "id": "prompt.render",
+      "summary": "Render a ready-to-paste lifecycle handoff prompt without mutating repo state."
+    },
+    {
+      "id": "proof.routes.resolve",
+      "summary": "Resolve canonical proof routes, current proof state, or changed-path proof recommendations."
+    },
+    {
+      "id": "record.append",
+      "summary": "Append an item to a structured record list.",
+      "kind": "record",
+      "portability": "target-executor",
+      "semantics": "Append one item to a declared list path after schema validation."
+    },
+    {
+      "id": "record.delete",
+      "summary": "Delete a field or list item from a structured record.",
+      "kind": "record",
+      "portability": "target-executor",
+      "semantics": "Remove only the declared path or matched item and return the updated record."
+    },
+    {
+      "id": "record.merge",
+      "summary": "Merge structured records using a declared shallow merge policy.",
+      "kind": "record",
+      "portability": "target-executor",
+      "semantics": "Apply an operation-declared merge policy without target-specific conflict heuristics."
+    },
+    {
+      "id": "record.normalize",
+      "summary": "Normalize a structured record into its canonical contract shape.",
+      "kind": "record",
+      "portability": "target-executor",
+      "semantics": "Apply schema-backed defaults, sorting, and field projection declared by the operation."
     },
     {
       "id": "record.select",
@@ -195,34 +350,6 @@
       "semantics": "Return an updated record with the declared path set to a contract-valid value."
     },
     {
-      "id": "record.append",
-      "summary": "Append an item to a structured record list.",
-      "kind": "record",
-      "portability": "target-executor",
-      "semantics": "Append one item to a declared list path after schema validation."
-    },
-    {
-      "id": "record.merge",
-      "summary": "Merge structured records using a declared shallow merge policy.",
-      "kind": "record",
-      "portability": "target-executor",
-      "semantics": "Apply an operation-declared merge policy without target-specific conflict heuristics."
-    },
-    {
-      "id": "record.delete",
-      "summary": "Delete a field or list item from a structured record.",
-      "kind": "record",
-      "portability": "target-executor",
-      "semantics": "Remove only the declared path or matched item and return the updated record."
-    },
-    {
-      "id": "record.normalize",
-      "summary": "Normalize a structured record into its canonical contract shape.",
-      "kind": "record",
-      "portability": "target-executor",
-      "semantics": "Apply schema-backed defaults, sorting, and field projection declared by the operation."
-    },
-    {
       "id": "schema.validate",
       "summary": "Validate a structured value against a JSON Schema.",
       "kind": "validation",
@@ -230,153 +357,16 @@
       "semantics": "Evaluate the declared JSON Schema and surface validation errors as operation failures."
     },
     {
-      "id": "template.render",
-      "summary": "Render a declared template from a structured value.",
-      "kind": "rendering",
-      "portability": "target-executor",
-      "semantics": "Render only named templates with structured inputs; do not execute arbitrary template code."
-    },
-    {
-      "id": "payload.assemble",
-      "summary": "Assemble an output payload from named step results.",
-      "kind": "output",
-      "portability": "target-executor",
-      "semantics": "Build a JSON-serializable payload from declared step outputs and constants.",
-      "input_schema_ref": "schemas/primitives/payload_assemble.input.schema.json",
-      "output_schema_ref": "schemas/primitives/payload_assemble.output.schema.json"
-    },
-    {
-      "id": "check.run.allowed",
-      "summary": "Run an explicitly allowed validation command.",
-      "kind": "check",
-      "portability": "target-executor",
-      "semantics": "Execute only a command declared by the operation or proof route and report structured exit/output data."
-    },
-    {
-      "id": "workspace.root.resolve",
-      "summary": "Resolve the effective workspace root from a target path or current working directory.",
-      "kind": "workspace-runtime",
-      "portability": "domain-runtime"
-    },
-    {
-      "id": "workspace.config.load",
-      "summary": "Load resolved workspace config layered over product defaults and local override state."
-    },
-    {
-      "id": "workspace.config.emit",
-      "summary": "Emit the resolved workspace config payload in the requested output format."
-    },
-    {
-      "id": "planning.summary.load",
-      "summary": "Load compact active planning summary when the planning module is installed."
-    },
-    {
-      "id": "planning.help.build",
-      "summary": "Build planning orientation guidance and lifecycle command affordances without mutating planning state."
-    },
-    {
-      "id": "planning.reconcile.load",
-      "summary": "Load provider-agnostic planning reconciliation state when the planning module is installed."
-    },
-    {
-      "id": "external_intent.github.repo.resolve",
-      "summary": "Resolve a GitHub repository for optional external intent refresh from an explicit repo or local gh context."
-    },
-    {
-      "id": "external_intent.github.issues.list",
-      "summary": "Read GitHub issues through the optional gh CLI adapter."
-    },
-    {
-      "id": "external_intent.evidence.normalize",
-      "summary": "Normalize provider-specific issue data into provider-agnostic external intent evidence records."
-    },
-    {
-      "id": "external_intent.evidence.write",
-      "summary": "Write provider-agnostic external intent evidence under the planning evidence surface."
-    },
-    {
-      "id": "planning.bootstrap.status.load",
-      "summary": "Load package-local planning bootstrap status for a target repository."
-    },
-    {
-      "id": "memory.bootstrap.status.load",
-      "summary": "Load package-local memory bootstrap status for a target repository."
-    },
-    {
-      "id": "workspace.defaults.load",
-      "summary": "Load compact startup defaults, route contracts, and generated policy answers."
-    },
-    {
-      "id": "workspace.defaults.select",
-      "summary": "Select a requested defaults section when the operation supports compact section filtering."
-    },
-    {
-      "id": "workspace.modules.inspect",
-      "summary": "Inspect module descriptors and installed-module signals for the target repository."
-    },
-    {
-      "id": "workspace.selection.resolve",
-      "summary": "Resolve module selection options, presets, and configured defaults."
-    },
-    {
-      "id": "workspace.lifecycle.plan",
-      "summary": "Plan lifecycle changes for selected modules without applying file mutations."
-    },
-    {
-      "id": "workspace.lifecycle.apply",
-      "summary": "Apply lifecycle mutations for selected modules when the operation is not a dry run."
-    },
-    {
-      "id": "workspace.report.assemble",
-      "summary": "Assemble combined workspace status, doctor, setup, or report payloads from module and workspace surfaces."
-    },
-    {
-      "id": "workspace.report.select",
-      "summary": "Select the compact report router profile, the full report profile, or one top-level report section."
+      "id": "skills.registry.inspect",
+      "summary": "Inspect installed and repo-owned skill registries and optionally rank them for a task."
     },
     {
       "id": "startup.context.assemble",
       "summary": "Assemble bounded startup context from preflight state, authority markers, and optional changed paths."
     },
     {
-      "id": "implementer.context.assemble",
-      "summary": "Assemble bounded implementer context from changed paths, boundary markers, and proof selection."
-    },
-    {
-      "id": "proof.routes.resolve",
-      "summary": "Resolve canonical proof routes, current proof state, or changed-path proof recommendations."
-    },
-    {
-      "id": "ownership.answer.resolve",
-      "summary": "Resolve ownership, authority, concern, or path-specific boundary answers."
-    },
-    {
-      "id": "skills.registry.inspect",
-      "summary": "Inspect installed and repo-owned skill registries and optionally rank them for a task."
-    },
-    {
-      "id": "delegation.outcome.append",
-      "summary": "Append a local-only delegation outcome record for future target-profile tuning."
-    },
-    {
-      "id": "prompt.render",
-      "summary": "Render a ready-to-paste lifecycle handoff prompt without mutating repo state."
-    },
-    {
-      "id": "preflight.token.create",
-      "summary": "Create a fresh preflight token using the configured token policy."
-    },
-    {
-      "id": "preflight.context.assemble",
-      "summary": "Assemble startup defaults, resolved config, and active planning state into takeover-safe context."
-    },
-    {
       "id": "system_intent.config.resolve",
       "summary": "Resolve configured or autodetected system-intent source hints from workspace config."
-    },
-    {
-      "id": "system_intent.source_metadata.refresh",
-      "summary": "Refresh metadata for configured system-intent source hints without interpreting source prose."
     },
     {
       "id": "system_intent.mirror.read_or_create",
@@ -387,57 +377,79 @@
       "summary": "Emit compiled system-intent declaration status and metadata in the requested format."
     },
     {
-      "id": "output.fields.select",
-      "summary": "Select exact top-level or dotted JSON fields before rendering output."
+      "id": "system_intent.source_metadata.refresh",
+      "summary": "Refresh metadata for configured system-intent source hints without interpreting source prose."
     },
     {
-      "id": "output.emit",
-      "summary": "Render text or JSON output according to the operation format option.",
-      "kind": "output",
+      "id": "template.render",
+      "summary": "Render a declared template from a structured value.",
+      "kind": "rendering",
       "portability": "target-executor",
-      "semantics": "Emit either stable JSON or declared text from an already assembled structured payload.",
-      "input_schema_ref": "schemas/primitives/output_emit.input.schema.json",
-      "output_schema_ref": "schemas/primitives/output_emit.output.schema.json"
+      "semantics": "Render only named templates with structured inputs; do not execute arbitrary template code."
     },
     {
-      "id": "output.profile.select",
-      "summary": "Select the smallest requested output projection that preserves the operation's next decision."
+      "id": "toml.parse",
+      "summary": "Parse TOML text into a structured value.",
+      "kind": "structured-data",
+      "portability": "target-executor",
+      "semantics": "Parse TOML using the target runtime's declared TOML library and fail the operation on invalid TOML."
+    },
+    {
+      "id": "toml.write",
+      "summary": "Serialize a structured value as TOML text.",
+      "kind": "structured-data",
+      "portability": "target-executor",
+      "semantics": "Write deterministic TOML for the limited record shapes owned by package contracts."
     },
     {
       "id": "usage.error",
       "summary": "Stop with a user-facing usage error when operation preconditions are violated."
     },
     {
-      "id": "planning.bootstrap.doctor.load",
-      "summary": "Load package-local planning doctor diagnostics for a target repository."
+      "id": "workspace.config.emit",
+      "summary": "Emit the resolved workspace config payload in the requested output format."
     },
     {
-      "id": "planning.report.load",
-      "summary": "Load package-local planning report state for a target repository."
+      "id": "workspace.config.load",
+      "summary": "Load resolved workspace config layered over product defaults and local override state."
     },
     {
-      "id": "memory.bootstrap.doctor.load",
-      "summary": "Load package-local memory doctor diagnostics for a target repository."
+      "id": "workspace.defaults.load",
+      "summary": "Load compact startup defaults, route contracts, and generated policy answers."
     },
     {
-      "id": "memory.report.load",
-      "summary": "Load package-local memory report state for a target repository."
+      "id": "workspace.defaults.select",
+      "summary": "Select a requested defaults section when the operation supports compact section filtering."
     },
     {
-      "id": "memory.route_report.load",
-      "summary": "Load package-local memory routing aggregate report state."
+      "id": "workspace.lifecycle.apply",
+      "summary": "Apply lifecycle mutations for selected modules when the operation is not a dry run."
     },
     {
-      "id": "memory.promotion_report.load",
-      "summary": "Load package-local memory promotion candidate report state."
+      "id": "workspace.lifecycle.plan",
+      "summary": "Plan lifecycle changes for selected modules without applying file mutations."
     },
     {
-      "id": "memory.bootstrap.files.list",
-      "summary": "List packaged memory bootstrap files without mutating a target repository."
+      "id": "workspace.modules.inspect",
+      "summary": "Inspect module descriptors and installed-module signals for the target repository."
     },
     {
-      "id": "memory.bootstrap.skills.list",
-      "summary": "List packaged memory bootstrap lifecycle skills."
+      "id": "workspace.report.assemble",
+      "summary": "Assemble combined workspace status, doctor, setup, or report payloads from module and workspace surfaces."
+    },
+    {
+      "id": "workspace.report.select",
+      "summary": "Select the compact report router profile, the full report profile, or one top-level report section."
+    },
+    {
+      "id": "workspace.root.resolve",
+      "summary": "Resolve the effective workspace root from a target path or current working directory.",
+      "kind": "workspace-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "workspace.selection.resolve",
+      "summary": "Resolve module selection options, presets, and configured defaults."
     }
   ]
 }
