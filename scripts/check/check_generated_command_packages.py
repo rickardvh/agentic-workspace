@@ -107,9 +107,15 @@ PYTHON_MODULE_SOURCE_EXECUTABLE_MARKERS = {
     "generic operation executor": ("def run_operation_ir(", "run_operation_steps("),
 }
 PYTHON_MODULE_SOURCE_EXECUTABLE_PATHS = (
-    "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py",
-    "packages/command-generation/src/agentic_command_generation/planning_runtime_cli.py",
-    "packages/command-generation/src/agentic_command_generation/memory_runtime_cli.py",
+    "src/agentic_workspace/_runtime_cli.py",
+    "packages/planning/src/repo_planning_bootstrap/_runtime_cli.py",
+    "packages/memory/src/repo_memory_bootstrap/_runtime_cli.py",
+    "src/agentic_workspace/generated_cli_package.py",
+    "packages/planning/src/repo_planning_bootstrap/generated_cli_package.py",
+    "packages/memory/src/repo_memory_bootstrap/generated_cli_package.py",
+    "src/agentic_workspace/operation_ir_executor.py",
+    "packages/planning/src/repo_planning_bootstrap/operation_ir_executor.py",
+    "packages/memory/src/repo_memory_bootstrap/operation_ir_executor.py",
 )
 
 

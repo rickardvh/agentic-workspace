@@ -1264,6 +1264,14 @@
       "reason": "Record operation_ir_executor.py migration from shipped module source into command-generation before continuing _runtime_cli.py cleanup.",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-14T19:27:53+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-cli-src-executable-cleanup",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T20:03:30+00:00"
     }
   ]
 }

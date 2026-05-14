@@ -12,9 +12,7 @@ work_items = []
 execplans = []
 
 [todo]
-active_items = [
-  { id = "python-cli-src-executable-cleanup", title = "Remove executable CLI code from src after Python generation", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/python-cli-src-executable-cleanup.plan.json", why_now = "Created by new-plan scaffold.", owner_role = "implementation", handoff_ready = true },
-]
+active_items = []
 queued_items = []
 
 [roadmap]

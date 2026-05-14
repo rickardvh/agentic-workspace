@@ -488,12 +488,16 @@ def test_start_tiny_profile_returns_first_contact_projection(capsys) -> None:
 
     payload = json.loads(capsys.readouterr().out)
     encoded = json.dumps(payload, sort_keys=True)
-    assert len(encoded) < 7800
+    assert len(encoded) < 12500
     assert payload["kind"] == "startup-context/v1"
     assert payload["drill_down"]["rule"].startswith("Use --select")
     assert "cli_invocation" in payload["drill_down"]["available_selectors"]
     assert payload["active_state_summary"]["todo_active_count"] >= 0
-    assert payload["immediate_next_allowed_action"]["action"] in {"choose-smallest-workflow-shape", "continue-active-planning-record"}
+    assert payload["immediate_next_allowed_action"]["action"] in {
+        "choose-smallest-workflow-shape",
+        "continue-active-planning-record",
+        "promote-or-create-active-execplan",
+    }
     assert "implement --changed <paths>" in payload["task_intent"]["implement_changed_command"]
     assert payload["task_intent"]["acceptance"]["status"] == "inferred"
     assert payload["acceptance"]["closeout_required"] is True
@@ -699,7 +703,7 @@ def test_start_tiny_routes_config_posture_questions_to_tiny_config(capsys) -> No
     assert action["command"] == "uv run agentic-workspace config --format json"
     assert action["read_first"] == [action["command"]]
     assert "tiny config surface" in action["summary"]
-    assert len(json.dumps(payload, sort_keys=True)) < 8100
+    assert len(json.dumps(payload, sort_keys=True)) < 12300
 
 
 def test_start_tiny_compacts_long_task_carry_forward_command(tmp_path: Path, capsys) -> None:

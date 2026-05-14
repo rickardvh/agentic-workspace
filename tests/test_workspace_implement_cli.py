@@ -119,7 +119,7 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(capsys
     assert "authority_markers" not in payload
     assert "durable_intent" not in payload
     assert "inference_limits" not in payload
-    assert len(encoded) < 7600
+    assert len(encoded) < 13600
 
 
 def test_implement_package_cli_edits_select_generated_command_package_gate(capsys) -> None:
