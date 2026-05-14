@@ -543,7 +543,7 @@ def _run_status_report_adapter(args: argparse.Namespace) -> int:
 
 
 def _run_doctor_report_adapter(args: argparse.Namespace) -> int:
-    return _emit(doctor_bootstrap(target=args.target), args.format)
+    return run_operation_ir(generated_cli_package_operation_contract("planning.doctor.report"), args)
 
 
 def _run_summary_report_adapter(args: argparse.Namespace) -> int:
@@ -562,12 +562,7 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
 
 
 def _run_report_adapter(args: argparse.Namespace) -> int:
-    report = planning_report_tiny(target=args.target) if not getattr(args, "verbose", False) else planning_report(target=args.target)
-    if args.format == "json":
-        print(json.dumps(report, indent=2))
-    else:
-        _print_report(report)
-    return 0
+    return run_operation_ir(generated_cli_package_operation_contract("planning.report.report"), args)
 
 
 def _tiny_report(report: dict) -> dict:

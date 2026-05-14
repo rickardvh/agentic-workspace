@@ -807,6 +807,8 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         "memory.list-files.report",
         "memory.list-skills.report",
         "memory.status.report",
+        "planning.doctor.report",
+        "planning.report.report",
         "planning.status.report",
     }
     for operation_id in sorted(runtime_consumed_operations):
@@ -836,6 +838,8 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         "memory.list-files.report": "repo_memory_bootstrap.generated_cli_package",
         "memory.list-skills.report": "repo_memory_bootstrap.generated_cli_package",
         "memory.status.report": "repo_memory_bootstrap.generated_cli_package",
+        "planning.doctor.report": "repo_planning_bootstrap.generated_cli_package",
+        "planning.report.report": "repo_planning_bootstrap.generated_cli_package",
         "planning.status.report": "repo_planning_bootstrap.generated_cli_package",
     }
     for operation_id, module_name in sorted(generated_operation_modules.items()):
@@ -877,12 +881,12 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
     planning_cli_text = (REPO_ROOT / "packages" / "planning" / "src" / "repo_planning_bootstrap" / "_runtime_cli.py").read_text(
         encoding="utf-8"
     )
-    function_name = "_run_status_report_adapter"
-    function_index = planning_cli_text.find(f"def {function_name}")
-    next_function_index = planning_cli_text.find("\ndef ", function_index + 1)
-    function_text = planning_cli_text[function_index:next_function_index] if function_index != -1 else ""
-    if "run_operation_ir(" not in function_text:
-        errors.append(f"{function_name} must execute generated operation IR through run_operation_ir")
+    for function_name in ("_run_doctor_report_adapter", "_run_report_adapter", "_run_status_report_adapter"):
+        function_index = planning_cli_text.find(f"def {function_name}")
+        next_function_index = planning_cli_text.find("\ndef ", function_index + 1)
+        function_text = planning_cli_text[function_index:next_function_index] if function_index != -1 else ""
+        if "run_operation_ir(" not in function_text:
+            errors.append(f"{function_name} must execute generated operation IR through run_operation_ir")
 
     workspace_operation_executor_text = (REPO_ROOT / "src" / "agentic_workspace" / "operation_ir_executor.py").read_text(
         encoding="utf-8"

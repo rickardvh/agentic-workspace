@@ -122,15 +122,13 @@
       "command": "doctor",
       "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
       "operation_contract": "operations/planning.doctor.report.json",
-      "primitive_executor": null,
+      "primitive_executor": "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "planning.bootstrap.doctor.load",
-        "output emission mechanics"
+        "module-result text/json compatibility formatting"
       ],
-      "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "planning.doctor.process",
-      "runtime_boundary_class": "generic-deterministic-runtime-debt",
-      "runtime_boundary_reason": "Package doctor payload loading and emission are deterministic data/output behavior that need a portable IR boundary before full completion."
+      "status": "runtime-consumed",
+      "conformance_ref": "planning.doctor.process"
     },
     {
       "operation_id": "planning.reconcile.report",
@@ -155,15 +153,13 @@
       "command": "report",
       "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
       "operation_contract": "operations/planning.report.report.json",
-      "primitive_executor": null,
+      "primitive_executor": "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "planning.report.load",
-        "output emission mechanics"
+        "module-result text/json compatibility formatting"
       ],
-      "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "planning.report.process",
-      "runtime_boundary_class": "generic-deterministic-runtime-debt",
-      "runtime_boundary_reason": "Package report payload loading and emission are deterministic data/output behavior that need a portable IR boundary before full completion."
+      "status": "runtime-consumed",
+      "conformance_ref": "planning.report.process"
     },
     {
       "operation_id": "planning.status.report",

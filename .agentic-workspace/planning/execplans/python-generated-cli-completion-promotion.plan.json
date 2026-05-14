@@ -108,12 +108,12 @@
     "activation trigger": "none"
   },
   "iterative_follow_through": {
-    "what this slice enabled": "memory.status.report and planning.status.report now execute generated operation resources through codegen-owned run_operation_steps while preserving package-local status payload sources and text/json compatibility formatting.",
+    "what this slice enabled": "planning.doctor.report and planning.report.report now execute generated operation resources through codegen-owned run_operation_steps while preserving planning payload sources and JSON/text compatibility formatting.",
     "intentionally deferred": "Migrating the remaining generic deterministic runtime-debt operations into codegen-owned primitive executors.",
-    "discovered implications": "Planning generated operation resources must be classified in the planning payload surface inventory when force-included in the wheel; memory status compact JSON parity must be preserved when replacing _handle_status delegation.",
+    "discovered implications": "Generated operation resource packaging/classification scales mechanically for each runtime-consumed planning operation; planning report text compatibility currently remains package-specific formatting in the thin operation executor.",
     "proof achieved now": "partial",
     "validation still needed": "Migrate or retire the remaining generic-deterministic-runtime-debt entries, then rerun Python generated-package static, local conformance, Docker conformance, package tests/lint, contract tooling, structured inventory, and primitive conformance.",
-    "next likely slice": "Move the next deterministic report/doctor group behind codegen-owned primitive execution."
+    "next likely slice": "Move the memory deterministic report/doctor group behind codegen-owned primitive execution."
   },
   "intent_interpretation": {
     "literal request": "Python generated CLI completion promotion",
@@ -223,12 +223,12 @@
     "run status": "partial-slice-complete",
     "executor": "Codex",
     "handoff source": "agentic-planning promote-to-plan decomposition lane",
-    "what happened": "Migrated memory.status.report and planning.status.report to generated operation resources executed through codegen-owned run_operation_steps; added a planning operation IR executor; preserved memory compact JSON status behavior; included planning generated operations in package build metadata and payload surface classification; extended static proof to require status adapters to consume generated operation IR.",
-    "scope touched": "Memory and planning runtime adapters, operation IR executors, operation contracts/registry, Python execution inventory, generated Python operation resources, planning packaging metadata/classification, generated-package static proof, and lock metadata.",
-    "changed surfaces": "packages/memory/src/repo_memory_bootstrap/_runtime_cli.py; packages/memory/src/repo_memory_bootstrap/operation_ir_executor.py; packages/planning/src/repo_planning_bootstrap/_runtime_cli.py; packages/planning/src/repo_planning_bootstrap/operation_ir_executor.py; packages/planning/pyproject.toml; packages/planning/payload-surface-classification.json; scripts/check/check_generated_command_packages.py; src/agentic_workspace/contracts/operation_contracts.json; src/agentic_workspace/contracts/operations/memory.status.report.json; src/agentic_workspace/contracts/operations/planning.status.report.json; src/agentic_workspace/contracts/python_operation_execution_inventory.json; generated/python/memory-cli/generated_cli_package/operations/memory.status.report.json; generated/python/planning-cli/generated_cli_package/operations/planning.status.report.json; uv.lock",
-    "validations run": "uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; uv run python scripts/generate/generate_command_packages.py --check; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py tests/test_command_generation_artifacts.py packages/memory/tests/test_install.py packages/planning/tests/test_install.py -q; make test-memory; make lint-memory; make test-planning; make lint-planning; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make test-workspace; make lint-workspace",
-    "result for continuation": "#892 remains open; status reports are no longer generic runtime debt, and remaining generic-deterministic-runtime-debt entries continue to block full completion claims: memory.doctor.report, memory.promotion-report.report, memory.report.report, memory.route-report.report, planning.doctor.report, planning.report.report, delegation-outcome.append, prompt.init, prompt.uninstall, prompt.upgrade, system-intent.sync.",
-    "next step": "Migrate the next deterministic report/doctor operation group into codegen-owned primitive execution."
+    "what happened": "Migrated planning.doctor.report and planning.report.report to generated operation resources executed through codegen-owned run_operation_steps; expanded the planning operation IR executor for doctor/report payload loading and report text/json compatibility; generated planning operation resources; extended static proof to require planning doctor/report adapters to consume generated operation IR.",
+    "scope touched": "Planning runtime adapter, planning operation IR executor, planning operation contracts, Python execution inventory, generated planning operation resources, planning package payload classification, generated-package static proof, and active #892 planning surface.",
+    "changed surfaces": "packages/planning/src/repo_planning_bootstrap/_runtime_cli.py; packages/planning/src/repo_planning_bootstrap/operation_ir_executor.py; packages/planning/payload-surface-classification.json; scripts/check/check_generated_command_packages.py; src/agentic_workspace/contracts/operations/planning.doctor.report.json; src/agentic_workspace/contracts/operations/planning.report.report.json; src/agentic_workspace/contracts/python_operation_execution_inventory.json; generated/python/planning-cli/generated_cli_package/operations/planning.doctor.report.json; generated/python/planning-cli/generated_cli_package/operations/planning.report.report.json; .agentic-workspace/planning/execplans/python-generated-cli-completion-promotion.plan.json",
+    "validations run": "uv run agentic-planning doctor --target . --format json; uv run agentic-planning report --target . --format json; uv run agentic-planning report --target . --format text; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; uv run python scripts/generate/generate_command_packages.py --check; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py tests/test_command_generation_artifacts.py packages/planning/tests/test_install.py packages/planning/tests/test_packaging.py -q; make test-planning; make lint-planning; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check packages/planning/src/repo_planning_bootstrap/operation_ir_executor.py; make test-workspace; make lint-workspace",
+    "result for continuation": "#892 remains open; planning doctor/report are no longer generic runtime debt, and remaining generic-deterministic-runtime-debt entries continue to block full completion claims: memory.doctor.report, memory.promotion-report.report, memory.report.report, memory.route-report.report, delegation-outcome.append, prompt.init, prompt.uninstall, prompt.upgrade, system-intent.sync.",
+    "next step": "Migrate the memory deterministic report/doctor operation group into codegen-owned primitive execution."
   },
   "finished_run_review": {
     "review status": "pending",
@@ -249,23 +249,23 @@
     "decomposition adjustment": "none"
   },
   "proof_report": {
-    "validation proof": "uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; uv run python scripts/generate/generate_command_packages.py --check; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py tests/test_command_generation_artifacts.py packages/memory/tests/test_install.py packages/planning/tests/test_install.py -q; make test-memory; make lint-memory; make test-planning; make lint-planning; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make test-workspace; make lint-workspace",
+    "validation proof": "uv run agentic-planning doctor --target . --format json; uv run agentic-planning report --target . --format json; uv run agentic-planning report --target . --format text; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; uv run python scripts/generate/generate_command_packages.py --check; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py tests/test_command_generation_artifacts.py packages/planning/tests/test_install.py packages/planning/tests/test_packaging.py -q; make test-planning; make lint-planning; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check packages/planning/src/repo_planning_bootstrap/operation_ir_executor.py; make test-workspace; make lint-workspace",
     "proof achieved now": "partial",
-    "evidence for \"proof achieved\" state": "Static proof requires memory.status.report and planning.status.report to be runtime-consumed, generated operation artifacts drift-check against source contracts, Python local and Docker conformance pass, and package/workspace tests and lint pass."
+    "evidence for \"proof achieved\" state": "Static proof requires planning.doctor.report and planning.report.report to be runtime-consumed, generated operation artifacts drift-check against source contracts, Python local and Docker conformance pass, and planning/workspace tests and lint pass."
   },
   "intent_satisfaction": {
     "original intent": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane python-generated-cli-completion-promotion.",
     "was original intent fully satisfied?": "no",
-    "evidence of intent satisfaction": "Two more generic deterministic runtime-debt operations were migrated, but full Python generated-CLI completion is still blocked by remaining generic-deterministic-runtime-debt inventory entries.",
+    "evidence of intent satisfaction": "Planning doctor/report moved out of generic deterministic runtime debt, but full Python generated-CLI completion remains blocked by remaining generic-deterministic-runtime-debt inventory entries.",
     "unsolved intent passed to": "same active execplan"
   },
   "execution_summary": {
-    "outcome delivered": "partial status-report migration delivered; full #892 completion not yet satisfied.",
-    "validation confirmed": "green for status report generated operation migration, generated package static proof, local conformance, Docker conformance, package tests/lint, contract tooling, structured inventory, and workspace tests/lint",
+    "outcome delivered": "partial planning doctor/report migration delivered; full #892 completion not yet satisfied.",
+    "validation confirmed": "green for planning doctor/report generated operation migration, generated package static proof, local conformance, Docker conformance, planning tests/lint, contract tooling, structured inventory, and workspace tests/lint",
     "follow-on routed to": "same active execplan",
     "post-work posterity capture": "plan updated with remaining generic deterministic debt list",
     "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "migrate next deterministic report/doctor group"
+    "resume from": "migrate memory deterministic report/doctor group"
   },
   "durable_residue": {
     "status": "none",
@@ -310,7 +310,7 @@
     "buckets": {
       "discard": [],
       "continuation": [
-        "Migrate remaining generic-deterministic-runtime-debt entries from python_operation_execution_inventory.json into codegen-owned primitive execution before claiming #892 completion: memory.doctor.report, memory.promotion-report.report, memory.report.report, memory.route-report.report, planning.doctor.report, planning.report.report, delegation-outcome.append, prompt.init, prompt.uninstall, prompt.upgrade, system-intent.sync."
+        "Migrate remaining generic-deterministic-runtime-debt entries from python_operation_execution_inventory.json into codegen-owned primitive execution before claiming #892 completion: memory.doctor.report, memory.promotion-report.report, memory.report.report, memory.route-report.report, delegation-outcome.append, prompt.init, prompt.uninstall, prompt.upgrade, system-intent.sync."
       ],
       "memory": [],
       "config_check": [],
@@ -326,6 +326,7 @@
     "2026-05-14: Added runtime boundary classes so generic deterministic runtime debt blocks full Python completion claims.",
     "2026-05-14: Migrated defaults.report to generated operation IR executed through the codegen-owned primitive dataflow runner.",
     "2026-05-14: Migrated config.report to generated operation IR executed through the codegen-owned primitive dataflow runner.",
-    "2026-05-14: Migrated memory.status.report and planning.status.report to generated operation IR executed through the codegen-owned primitive dataflow runner."
+    "2026-05-14: Migrated memory.status.report and planning.status.report to generated operation IR executed through the codegen-owned primitive dataflow runner.",
+    "2026-05-14: Migrated planning.doctor.report and planning.report.report to generated operation IR executed through the codegen-owned primitive dataflow runner."
   ]
 }
