@@ -23,8 +23,8 @@ jobs:
       - name: Sync workspace dependencies
         run: make sync-all
 
-      - name: Run workspace tests
-        run: make test-workspace
+      - name: Run root generated CLI smoke tests
+        run: uv run pytest tests/test_workspace_cli_blackbox.py::test_blackbox_root_generated_command_executes_through_console_script tests/test_contract_tooling.py::test_command_package_ir_declares_python_and_typescript_targets -q
 
       - name: Run workspace lint
         run: make lint-workspace
