@@ -66,6 +66,7 @@ PYTHON_COMPLETION_REQUIRED_EVIDENCE_IDS = {
     "runtime-handlers-thin",
     "representative-operation-ir-runtime-consumed",
     "operation-execution-inventory-exhaustive",
+    "root-console-generated-command-smoke",
 }
 PYTHON_COMPLETION_EXPECTED_PROOF_SUBSTRINGS = {
     "parser-shape-generated": "_validate_generated_python_commands_absent_from_handwritten_parsers",
@@ -77,6 +78,7 @@ PYTHON_COMPLETION_EXPECTED_PROOF_SUBSTRINGS = {
     "runtime-handlers-thin": "_validate_python_runtime_handler_boundary",
     "representative-operation-ir-runtime-consumed": "_validate_python_operation_execution_inventory",
     "operation-execution-inventory-exhaustive": "_validate_python_operation_execution_inventory",
+    "root-console-generated-command-smoke": "test_workspace_cli_blackbox.py::test_blackbox_root_generated_command_executes_through_console_script",
 }
 PYTHON_OPERATION_EXECUTION_FINAL_STATUSES = {"runtime-consumed", "accepted-hand-owned-runtime-primitive"}
 REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE = {

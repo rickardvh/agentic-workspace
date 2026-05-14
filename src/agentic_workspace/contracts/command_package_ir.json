@@ -131,7 +131,8 @@
         "generated-package proof distinguishes adapter maturity from full Python generated CLI completion",
         "static proof rejects treating weak-agent-safe-adapter as full Python generated CLI completion while generated Python package main functions delegate generated-command parser or dispatch behavior to runtime main",
         "future package command/interface work changes contracts, IR, generators, and regenerated outputs instead of package-local executable cli.py files",
-        "runtime primitive code remains hand-owned only when it performs live behavior, mutation orchestration, or package-specific runtime logic"
+        "runtime primitive code remains hand-owned only when it performs live behavior, mutation orchestration, or package-specific runtime logic",
+        "root console smoke proof executes at least one generated root command through the installed console path, not only through generated parser/help imports"
       ],
       "completion_gate": {
         "state": "satisfied",
@@ -181,6 +182,11 @@
             "id": "operation-execution-inventory-exhaustive",
             "evidence": "python_operation_execution_inventory.json covers every generated Python operation id and rejects unaccepted compatibility handlers.",
             "proof": "scripts/check/check_generated_command_packages.py::_validate_python_operation_execution_inventory"
+          },
+          {
+            "id": "root-console-generated-command-smoke",
+            "evidence": "The root console script executes at least one generated root command through generated dispatch and the runtime handler map.",
+            "proof": "tests/test_workspace_cli_blackbox.py::test_blackbox_root_generated_command_executes_through_console_script"
           }
         ]
       }

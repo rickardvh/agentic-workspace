@@ -312,6 +312,7 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
     assert "runtime-handlers-thin" in completion_evidence
     assert "representative-operation-ir-runtime-consumed" in completion_evidence
     assert "operation-execution-inventory-exhaustive" in completion_evidence
+    assert "root-console-generated-command-smoke" in completion_evidence
     assert "runtime primitive implementation" in python_completion["allowed_hand_owned_cli_responsibilities"]
     assert "command parser shape" in python_completion["must_move_behind_contracts_or_generation"]
     assert "option and help interface semantics" in python_completion["must_move_behind_contracts_or_generation"]
