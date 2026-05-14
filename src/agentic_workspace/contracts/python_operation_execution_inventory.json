@@ -223,16 +223,13 @@
       "command": "defaults",
       "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
       "operation_contract": "operations/defaults.report.json",
-      "primitive_executor": null,
+      "primitive_executor": "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
-        "workspace.defaults.load",
-        "workspace.defaults.select",
-        "output emission mechanics"
+        "workspace defaults payload source",
+        "workspace defaults text compatibility formatting"
       ],
-      "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "defaults.report.process",
-      "runtime_boundary_class": "generic-deterministic-runtime-debt",
-      "runtime_boundary_reason": "Default contract loading, section selection, and emission are deterministic data/output behavior that should move to codegen-owned primitives before full completion."
+      "status": "runtime-consumed",
+      "conformance_ref": "defaults.report.process"
     },
     {
       "operation_id": "delegation-outcome.append",

@@ -116,6 +116,9 @@ from agentic_workspace.generated_cli_package import (
     generated_command_names as generated_cli_package_command_names,
 )
 from agentic_workspace.generated_cli_package import (
+    generated_operation_contract as generated_cli_package_operation_contract,
+)
+from agentic_workspace.generated_cli_package import (
     run_generated_command as run_generated_cli_package_command,
 )
 from agentic_workspace.generated_cli_package import (
@@ -19300,13 +19303,9 @@ def _run_generated_cli_operation(operation_id: str, args: argparse.Namespace) ->
 
 
 def _run_defaults_report_adapter(args: argparse.Namespace) -> int:
-    _emit_defaults(
-        format_name=args.format,
-        section=getattr(args, "section", None),
-        profile=_diagnostic_profile(args, default="tiny"),
-        select=getattr(args, "select", None),
-    )
-    return 0
+    from agentic_workspace.operation_ir_executor import run_operation_ir
+
+    return run_operation_ir(generated_cli_package_operation_contract("defaults.report"), args)
 
 
 def _run_config_report_adapter(args: argparse.Namespace) -> int:

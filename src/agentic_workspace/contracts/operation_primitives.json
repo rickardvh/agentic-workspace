@@ -26,6 +26,13 @@
         "future_contract_root": "modules/workspace/contracts"
       },
       {
+        "id": "workspace-defaults",
+        "operation_id_prefix": "defaults.",
+        "contract_owner": "src/agentic_workspace/contracts",
+        "current_contract_root": "src/agentic_workspace/contracts/operations",
+        "future_contract_root": "modules/workspace/contracts"
+      },
+      {
         "id": "planning",
         "operation_id_prefix": "planning.",
         "contract_owner": "packages/planning",

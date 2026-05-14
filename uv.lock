@@ -48,6 +48,7 @@ name = "agentic-workspace"
 version = "0.0.0"
 source = { editable = "." }
 dependencies = [
+    { name = "agentic-command-generation" },
     { name = "agentic-memory" },
     { name = "agentic-planning" },
 ]
@@ -66,6 +67,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "agentic-command-generation", editable = "packages/command-generation" },
     { name = "agentic-memory", editable = "packages/memory" },
     { name = "agentic-planning", editable = "packages/planning" },
 ]

@@ -801,11 +801,12 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
                     "must explain runtime_boundary_reason"
                 )
 
-    runtime_consumed_memory_operations = {
+    runtime_consumed_operations = {
+        "defaults.report",
         "memory.list-files.report",
         "memory.list-skills.report",
     }
-    for operation_id in sorted(runtime_consumed_memory_operations):
+    for operation_id in sorted(runtime_consumed_operations):
         entry = by_operation.get(operation_id)
         if not isinstance(entry, dict):
             errors.append(f"python_operation_execution_inventory.json must track {operation_id} as runtime-consumed")
@@ -818,7 +819,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         if entry.get("operation_contract") != operation_contract:
             errors.append(f"{operation_id} must point at {operation_contract}")
 
-    operations_by_id = {operation_id: _load_json(f"operations/{operation_id}.json") for operation_id in runtime_consumed_memory_operations}
+    operations_by_id = {operation_id: _load_json(f"operations/{operation_id}.json") for operation_id in runtime_consumed_operations}
     for operation_id, operation in operations_by_id.items():
         if operation.get("migration_status") != "runtime-consumed":
             errors.append(f"operations/{operation_id}.json must be marked runtime-consumed")
@@ -826,17 +827,22 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         if not isinstance(ir_plan, dict) or ir_plan.get("status") not in {"representative", "complete"}:
             errors.append(f"{operation_id} must keep a representative or complete ir_plan")
 
-    try:
-        generated_memory = importlib.import_module("repo_memory_bootstrap.generated_cli_package")
-        generated_operation_contract = getattr(generated_memory, "generated_operation_contract", None)
-        if not callable(generated_operation_contract):
-            errors.append("repo_memory_bootstrap.generated_cli_package must expose generated_operation_contract()")
-        else:
-            for operation_id, operation in operations_by_id.items():
-                if generated_operation_contract(operation_id) != operation:
-                    errors.append(f"generated memory operation contract drifted from source operation contract: {operation_id}")
-    except (ImportError, KeyError, FileNotFoundError, json.JSONDecodeError) as exc:
-        errors.append(f"generated memory operation contract could not be loaded: {exc}")
+    generated_operation_modules = {
+        "defaults.report": "agentic_workspace.generated_cli_package",
+        "memory.list-files.report": "repo_memory_bootstrap.generated_cli_package",
+        "memory.list-skills.report": "repo_memory_bootstrap.generated_cli_package",
+    }
+    for operation_id, module_name in sorted(generated_operation_modules.items()):
+        try:
+            generated_module = importlib.import_module(module_name)
+            generated_operation_contract = getattr(generated_module, "generated_operation_contract", None)
+            if not callable(generated_operation_contract):
+                errors.append(f"{module_name} must expose generated_operation_contract()")
+                continue
+            if generated_operation_contract(operation_id) != operations_by_id[operation_id]:
+                errors.append(f"generated operation contract drifted from source operation contract: {operation_id}")
+        except (ImportError, KeyError, FileNotFoundError, json.JSONDecodeError) as exc:
+            errors.append(f"generated operation contract could not be loaded for {operation_id}: {exc}")
 
     memory_operation_executor_text = (
         REPO_ROOT / "packages" / "memory" / "src" / "repo_memory_bootstrap" / "operation_ir_executor.py"
@@ -854,6 +860,20 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         function_text = memory_cli_text[function_index:next_function_index] if function_index != -1 else ""
         if "run_operation_ir(" not in function_text:
             errors.append(f"{function_name} must execute generated operation IR through run_operation_ir")
+
+    workspace_operation_executor_text = (REPO_ROOT / "src" / "agentic_workspace" / "operation_ir_executor.py").read_text(
+        encoding="utf-8"
+    )
+    if "from agentic_command_generation.primitive_executor import" not in workspace_operation_executor_text:
+        errors.append("workspace operation IR executor must import the codegen-owned primitive executor")
+    if "run_operation_steps(" not in workspace_operation_executor_text:
+        errors.append("workspace operation IR executor must execute operation plans through codegen-owned run_operation_steps")
+    workspace_cli_text = (REPO_ROOT / "src" / "agentic_workspace" / "_runtime_cli.py").read_text(encoding="utf-8")
+    defaults_function_index = workspace_cli_text.find("def _run_defaults_report_adapter")
+    defaults_next_function_index = workspace_cli_text.find("\ndef ", defaults_function_index + 1)
+    defaults_function_text = workspace_cli_text[defaults_function_index:defaults_next_function_index] if defaults_function_index != -1 else ""
+    if "run_operation_ir(" not in defaults_function_text:
+        errors.append("_run_defaults_report_adapter must execute generated operation IR through run_operation_ir")
 
     python_completion = ir.get("generation_policy", {}).get("python_cli_completion", {})
     if isinstance(python_completion, dict) and python_completion.get("current_state") == "full-generated-cli-complete":

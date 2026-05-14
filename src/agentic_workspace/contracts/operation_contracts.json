@@ -14,7 +14,7 @@
       "id": "defaults.report",
       "path": "operations/defaults.report.json",
       "command": "defaults",
-      "migration_status": "draft-contract-only"
+      "migration_status": "runtime-consumed"
     },
     {
       "id": "delegation-outcome.append",
