@@ -12,6 +12,12 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+      - id: typecheck
+        name: typecheck
+        entry: make typecheck
+        language: system
+        pass_filenames: false
+        always_run: true
       - id: no-absolute-paths
         name: no absolute paths
         entry: uv run python scripts/check/check_no_absolute_paths.py
