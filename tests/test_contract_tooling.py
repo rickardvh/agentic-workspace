@@ -345,11 +345,15 @@ def test_command_package_ir_reuses_generated_adapter_truth() -> None:
         "preflight.report.cli",
         "proof.report.cli",
         "ownership.report.cli",
+        "system-intent.sync.cli",
+        "delegation-outcome.append.cli",
         "skills.report.cli",
         "planning.front-door.cli",
         "memory.front-door.cli",
+        "external-intent.refresh-github.cli",
         "install.lifecycle.cli",
         "init.lifecycle.cli",
+        "prompt.lifecycle.cli",
         "upgrade.lifecycle.cli",
         "uninstall.lifecycle.cli",
         "report.combined.cli",
@@ -787,11 +791,15 @@ def test_generated_python_command_package_metadata_is_current() -> None:
         "preflight.report.cli",
         "proof.report.cli",
         "ownership.report.cli",
+        "system-intent.sync.cli",
+        "delegation-outcome.append.cli",
         "skills.report.cli",
         "planning.front-door.cli",
         "memory.front-door.cli",
+        "external-intent.refresh-github.cli",
         "install.lifecycle.cli",
         "init.lifecycle.cli",
+        "prompt.lifecycle.cli",
         "upgrade.lifecycle.cli",
         "uninstall.lifecycle.cli",
         "report.combined.cli",
@@ -816,14 +824,17 @@ def test_generated_python_command_package_metadata_is_current() -> None:
         "config",
         "defaults",
         "doctor",
+        "external-intent",
         "implement",
         "init",
         "install",
         "memory",
         "modules",
+        "note-delegation-outcome",
         "ownership",
         "planning",
         "preflight",
+        "prompt",
         "proof",
         "reconcile",
         "report",
@@ -832,13 +843,16 @@ def test_generated_python_command_package_metadata_is_current() -> None:
         "start",
         "status",
         "summary",
+        "system-intent",
         "uninstall",
         "upgrade",
     )
     assert generated_operation_ids() == (
         "config.report",
         "defaults.report",
+        "delegation-outcome.append",
         "doctor.report",
+        "external-intent.refresh-github",
         "implement.context",
         "init.lifecycle",
         "install.lifecycle",
@@ -847,6 +861,7 @@ def test_generated_python_command_package_metadata_is_current() -> None:
         "ownership.report",
         "planning.front-door",
         "preflight.report",
+        "prompt.init",
         "proof.report",
         "reconcile.report",
         "report.combined",
@@ -855,6 +870,7 @@ def test_generated_python_command_package_metadata_is_current() -> None:
         "start.context",
         "status.report",
         "summary.report",
+        "system-intent.sync",
         "uninstall.lifecycle",
         "upgrade.lifecycle",
     )
@@ -869,9 +885,13 @@ def test_generated_python_command_package_metadata_is_current() -> None:
     assert supports_generated_command(["preflight", "--format", "json"]) is True
     assert supports_generated_command(["proof", "--format", "json"]) is True
     assert supports_generated_command(["ownership", "--format", "json"]) is True
+    assert supports_generated_command(["system-intent", "--format", "json"]) is True
+    assert supports_generated_command(["note-delegation-outcome", "--help"]) is True
     assert supports_generated_command(["skills", "--format", "json"]) is True
     assert supports_generated_command(["planning", "--format", "json"]) is True
     assert supports_generated_command(["memory", "--format", "json"]) is True
+    assert supports_generated_command(["external-intent", "refresh-github", "--help"]) is True
+    assert supports_generated_command(["prompt", "init", "--help"]) is True
     assert supports_generated_command(["report", "--format", "json"]) is True
     assert supports_generated_command(["reconcile", "--format", "json"]) is True
     assert supports_generated_command(["setup", "--format", "json"]) is True
@@ -1190,27 +1210,31 @@ def test_contract_tooling_check_reports_generated_adapter_status() -> None:
     assert all(status["where_to_edit"]["runtime_behavior"] == "hand-written operation/primitive implementation code" for status in statuses)
     commands_by_program = {status["program"]: status["command_surfaces"] for status in statuses}
     assert commands_by_program["agentic-workspace"] == [
-        "config",
-        "defaults",
-        "doctor",
-        "implement",
-        "init",
-        "install",
-        "memory",
         "modules",
-        "ownership",
-        "planning",
-        "preflight",
-        "proof",
-        "reconcile",
-        "report",
-        "setup",
-        "skills",
-        "start",
-        "status",
         "summary",
-        "uninstall",
+        "planning",
+        "memory",
+        "start",
+        "implement",
+        "defaults",
+        "proof",
+        "setup",
+        "ownership",
+        "config",
+        "system-intent",
+        "note-delegation-outcome",
+        "skills",
+        "report",
+        "reconcile",
+        "external-intent",
+        "preflight",
+        "install",
+        "init",
+        "prompt",
+        "status",
+        "doctor",
         "upgrade",
+        "uninstall",
     ]
     assert commands_by_program["agentic-planning"] == ["doctor", "reconcile", "report", "status", "summary"]
     assert commands_by_program["agentic-memory"] == [

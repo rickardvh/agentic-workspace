@@ -993,6 +993,7 @@ def load_delegation_outcomes(*, target_root: Path) -> tuple[Path, dict[str, Any]
 
 
 def write_delegation_outcomes(*, path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(serialise_value(payload), indent=2) + "\n", encoding="utf-8")
 
 

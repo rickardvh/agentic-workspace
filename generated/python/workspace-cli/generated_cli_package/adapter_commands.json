@@ -1,95 +1,5 @@
 [
   {
-    "adapter_id": "defaults.report.cli",
-    "interface": {
-      "help": "Show the machine-readable default-route contract for startup, lifecycle, skills, validation, and combined installs.",
-      "name": "defaults",
-      "options": [
-        {
-          "choices": [
-            "text",
-            "json"
-          ],
-          "default": "text",
-          "flags": [
-            "--format"
-          ],
-          "help": "Output format.",
-          "name": "format"
-        },
-        {
-          "action": "store_true",
-          "flags": [
-            "--verbose"
-          ],
-          "help": "Emit the complete default-route contract. Prefer --section or default output for ordinary lookup.",
-          "name": "verbose"
-        },
-        {
-          "flags": [
-            "--section"
-          ],
-          "help": "Return only one top-level defaults section in the compact contract profile.",
-          "name": "section"
-        },
-        {
-          "flags": [
-            "--select"
-          ],
-          "help": "Return only comma-separated top-level or dotted JSON fields from the defaults payload. Prefer this over --verbose when one or a few fields are needed.",
-          "name": "select"
-        }
-      ]
-    },
-    "operation_id": "defaults.report",
-    "operation_path": "operations/defaults.report.json"
-  },
-  {
-    "adapter_id": "config.report.cli",
-    "interface": {
-      "help": "Show the resolved repo-owned workspace config layered onto product defaults.",
-      "name": "config",
-      "options": [
-        {
-          "flags": [
-            "--target"
-          ],
-          "help": "Target repository path. Defaults to the current directory.",
-          "name": "target"
-        },
-        {
-          "choices": [
-            "text",
-            "json"
-          ],
-          "default": "text",
-          "flags": [
-            "--format"
-          ],
-          "help": "Output format.",
-          "name": "format"
-        },
-        {
-          "flags": [
-            "--select"
-          ],
-          "help": "Return only comma-separated top-level or dotted JSON fields from the full command payload. Prefer this over --verbose when one or a few fields are needed.",
-          "name": "select"
-        },
-        {
-          "action": "store_true",
-          "flags": [
-            "--verbose"
-          ],
-          "help": "Emit full resolved config detail. Prefer default output or targeted fields for ordinary posture checks.",
-          "name": "verbose"
-        }
-      ]
-    },
-    "operation_id": "config.report",
-    "operation_path": "operations/config.report.json"
-  },
-  {
     "adapter_id": "modules.report.cli",
     "interface": {
       "help": "List workspace modules available to the orchestrator.",
@@ -126,67 +36,6 @@
     },
     "operation_id": "modules.report",
     "operation_path": "operations/modules.report.json"
-  },
-  {
-    "adapter_id": "start.context.cli",
-    "interface": {
-      "help": "Return the minimum safe startup context for beginning work in a target repository.",
-      "name": "start",
-      "options": [
-        {
-          "flags": [
-            "--target"
-          ],
-          "help": "Optional repository path for startup context (defaults to current workspace).",
-          "name": "target"
-        },
-        {
-          "default": [],
-          "flags": [
-            "--changed"
-          ],
-          "help": "Optional repo-relative changed paths used to include a proof recommendation.",
-          "name": "changed",
-          "nargs": "*"
-        },
-        {
-          "flags": [
-            "--task"
-          ],
-          "help": "Optional task description used to include task-specific skill recommendations in startup context.",
-          "name": "task"
-        },
-        {
-          "flags": [
-            "--select"
-          ],
-          "help": "Comma-separated startup fields to return, such as cli_invocation,durable_intent,skill_routing.",
-          "name": "select"
-        },
-        {
-          "action": "store_true",
-          "flags": [
-            "--verbose"
-          ],
-          "help": "Emit broad diagnostic startup output. Prefer --select for ordinary detail.",
-          "name": "verbose"
-        },
-        {
-          "choices": [
-            "text",
-            "json"
-          ],
-          "default": "text",
-          "flags": [
-            "--format"
-          ],
-          "help": "Output format.",
-          "name": "format"
-        }
-      ]
-    },
-    "operation_id": "start.context",
-    "operation_path": "operations/start.context.json"
   },
   {
     "adapter_id": "summary.report.cli",
@@ -248,284 +97,6 @@
     },
     "operation_id": "summary.report",
     "operation_path": "operations/summary.report.json"
-  },
-  {
-    "adapter_id": "implement.context.cli",
-    "interface": {
-      "help": "Return a cheap-implementer context for a bounded changed-path scope.",
-      "name": "implement",
-      "options": [
-        {
-          "flags": [
-            "--target"
-          ],
-          "help": "Optional repository path for implementer context (defaults to current workspace).",
-          "name": "target"
-        },
-        {
-          "default": [],
-          "flags": [
-            "--changed"
-          ],
-          "help": "Repo-relative changed paths used to select inspect scope, boundary warnings, and proof commands.",
-          "name": "changed",
-          "nargs": "*"
-        },
-        {
-          "flags": [
-            "--task"
-          ],
-          "help": "Optional task text used to route broad external-work requests before implementation.",
-          "name": "task"
-        },
-        {
-          "flags": [
-            "--task-file"
-          ],
-          "help": "Optional repo-local file containing task text; use this instead of repeating long task prompts.",
-          "name": "task_file"
-        },
-        {
-          "flags": [
-            "--select"
-          ],
-          "help": "Return only comma-separated top-level or dotted JSON fields from the implementer context. Prefer this when one or a few fields are needed.",
-          "name": "select"
-        },
-        {
-          "action": "store_true",
-          "flags": [
-            "--verbose"
-          ],
-          "help": "Emit full implementer context. Prefer the default output for ordinary bounded implementation.",
-          "name": "verbose"
-        },
-        {
-          "choices": [
-            "text",
-            "json"
-          ],
-          "default": "text",
-          "flags": [
-            "--format"
-          ],
-          "help": "Output format.",
-          "name": "format"
-        }
-      ]
-    },
-    "operation_id": "implement.context",
-    "operation_path": "operations/implement.context.json"
-  },
-  {
-    "adapter_id": "preflight.report.cli",
-    "interface": {
-      "help": "Get compact takeover-safe context: startup defaults + resolved config + active planning state in one call.",
-      "name": "preflight",
-      "options": [
-        {
-          "flags": [
-            "--target"
-          ],
-          "help": "Optional repository path for preflight context (defaults to current workspace).",
-          "name": "target"
-        },
-        {
-          "action": "store_true",
-          "flags": [
-            "--active-only"
-          ],
-          "help": "Return only active planning state without startup defaults and config.",
-          "name": "active_only"
-        },
-        {
-          "flags": [
-            "--task"
-          ],
-          "help": "Optional task description used to include task-specific skill recommendations in preflight context.",
-          "name": "task"
-        },
-        {
-          "action": "store_true",
-          "flags": [
-            "--verbose"
-          ],
-          "help": "Emit complete takeover/recovery context. Prefer default output for ordinary recovery routing.",
-          "name": "verbose"
-        },
-        {
-          "choices": [
-            "text",
-            "json"
-          ],
-          "default": "text",
-          "flags": [
-            "--format"
-          ],
-          "help": "Output format.",
-          "name": "format"
-        }
-      ]
-    },
-    "operation_id": "preflight.report",
-    "operation_path": "operations/preflight.report.json"
-  },
-  {
-    "adapter_id": "proof.report.cli",
-    "interface": {
-      "help": "Show the canonical proof routes and current workspace proof summary.",
-      "name": "proof",
-      "options": [
-        {
-          "flags": [
-            "--target"
-          ],
-          "help": "Optional repository path used to inspect installed modules and proof state.",
-          "name": "target"
-        },
-        {
-          "flags": [
-            "--route"
-          ],
-          "help": "Return one proof route by id instead of the full proof surface.",
-          "name": "route"
-        },
-        {
-          "action": "store_true",
-          "flags": [
-            "--current"
-          ],
-          "help": "Return only the current proof summary.",
-          "name": "current"
-        },
-        {
-          "default": [],
-          "flags": [
-            "--changed"
-          ],
-          "help": "Return required proof commands for the provided repo-relative changed paths.",
-          "name": "changed",
-          "nargs": "*"
-        },
-        {
-          "flags": [
-            "--select"
-          ],
-          "help": "Return exact comma-separated field paths from the proof answer.",
-          "name": "select"
-        },
-        {
-          "action": "store_true",
-          "flags": [
-            "--verbose"
-          ],
-          "help": "Emit all proof routing detail. Prefer the default changed-path proof answer for ordinary validation.",
-          "name": "verbose"
-        },
-        {
-          "choices": [
-            "text",
-            "json"
-          ],
-          "default": "text",
-          "flags": [
-            "--format"
-          ],
-          "help": "Output format.",
-          "name": "format"
-        }
-      ]
-    },
-    "operation_id": "proof.report",
-    "operation_path": "operations/proof.report.json"
-  },
-  {
-    "adapter_id": "ownership.report.cli",
-    "interface": {
-      "help": "Show the canonical ownership and authority mapping for the target repository.",
-      "name": "ownership",
-      "options": [
-        {
-          "flags": [
-            "--target"
-          ],
-          "help": "Optional repository path used to inspect the ownership ledger.",
-          "name": "target"
-        },
-        {
-          "flags": [
-            "--concern"
-          ],
-          "help": "Return one authority-surface answer by concern.",
-          "name": "concern"
-        },
-        {
-          "flags": [
-            "--path"
-          ],
-          "help": "Return the ownership answer for one repo-relative path.",
-          "name": "path"
-        },
-        {
-          "choices": [
-            "text",
-            "json"
-          ],
-          "default": "text",
-          "flags": [
-            "--format"
-          ],
-          "help": "Output format.",
-          "name": "format"
-        }
-      ]
-    },
-    "operation_id": "ownership.report",
-    "operation_path": "operations/ownership.report.json"
-  },
-  {
-    "adapter_id": "skills.report.cli",
-    "interface": {
-      "help": "List registered workspace skills from installed package registries and repo-owned skill registries.",
-      "name": "skills",
-      "options": [
-        {
-          "flags": [
-            "--target"
-          ],
-          "help": "Optional repository path used to inspect installed and repo-owned skills.",
-          "name": "target"
-        },
-        {
-          "flags": [
-            "--task"
-          ],
-          "help": "Optional task description used to recommend likely skills.",
-          "name": "task"
-        },
-        {
-          "flags": [
-            "--select"
-          ],
-          "help": "Comma-separated JSON fields to return, such as recommendations,warnings or top_recommendations,warnings.",
-          "name": "select"
-        },
-        {
-          "choices": [
-            "text",
-            "json"
-          ],
-          "default": "text",
-          "flags": [
-            "--format"
-          ],
-          "help": "Output format.",
-          "name": "format"
-        }
-      ]
-    },
-    "operation_id": "skills.report",
-    "operation_path": "operations/skills.report.json"
   },
   {
     "adapter_id": "planning.front-door.cli",
@@ -1473,6 +1044,824 @@
     "operation_path": "operations/memory.front-door.json"
   },
   {
+    "adapter_id": "start.context.cli",
+    "interface": {
+      "help": "Return the minimum safe startup context for beginning work in a target repository.",
+      "name": "start",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path for startup context (defaults to current workspace).",
+          "name": "target"
+        },
+        {
+          "default": [],
+          "flags": [
+            "--changed"
+          ],
+          "help": "Optional repo-relative changed paths used to include a proof recommendation.",
+          "name": "changed",
+          "nargs": "*"
+        },
+        {
+          "flags": [
+            "--task"
+          ],
+          "help": "Optional task description used to include task-specific skill recommendations in startup context.",
+          "name": "task"
+        },
+        {
+          "flags": [
+            "--select"
+          ],
+          "help": "Comma-separated startup fields to return, such as cli_invocation,durable_intent,skill_routing.",
+          "name": "select"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--verbose"
+          ],
+          "help": "Emit broad diagnostic startup output. Prefer --select for ordinary detail.",
+          "name": "verbose"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "start.context",
+    "operation_path": "operations/start.context.json"
+  },
+  {
+    "adapter_id": "implement.context.cli",
+    "interface": {
+      "help": "Return a cheap-implementer context for a bounded changed-path scope.",
+      "name": "implement",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path for implementer context (defaults to current workspace).",
+          "name": "target"
+        },
+        {
+          "default": [],
+          "flags": [
+            "--changed"
+          ],
+          "help": "Repo-relative changed paths used to select inspect scope, boundary warnings, and proof commands.",
+          "name": "changed",
+          "nargs": "*"
+        },
+        {
+          "flags": [
+            "--task"
+          ],
+          "help": "Optional task text used to route broad external-work requests before implementation.",
+          "name": "task"
+        },
+        {
+          "flags": [
+            "--task-file"
+          ],
+          "help": "Optional repo-local file containing task text; use this instead of repeating long task prompts.",
+          "name": "task_file"
+        },
+        {
+          "flags": [
+            "--select"
+          ],
+          "help": "Return only comma-separated top-level or dotted JSON fields from the implementer context. Prefer this when one or a few fields are needed.",
+          "name": "select"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--verbose"
+          ],
+          "help": "Emit full implementer context. Prefer the default output for ordinary bounded implementation.",
+          "name": "verbose"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "implement.context",
+    "operation_path": "operations/implement.context.json"
+  },
+  {
+    "adapter_id": "defaults.report.cli",
+    "interface": {
+      "help": "Show the machine-readable default-route contract for startup, lifecycle, skills, validation, and combined installs.",
+      "name": "defaults",
+      "options": [
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--verbose"
+          ],
+          "help": "Emit the complete default-route contract. Prefer --section or default output for ordinary lookup.",
+          "name": "verbose"
+        },
+        {
+          "flags": [
+            "--section"
+          ],
+          "help": "Return only one top-level defaults section in the compact contract profile.",
+          "name": "section"
+        },
+        {
+          "flags": [
+            "--select"
+          ],
+          "help": "Return only comma-separated top-level or dotted JSON fields from the defaults payload. Prefer this over --verbose when one or a few fields are needed.",
+          "name": "select"
+        }
+      ]
+    },
+    "operation_id": "defaults.report",
+    "operation_path": "operations/defaults.report.json"
+  },
+  {
+    "adapter_id": "proof.report.cli",
+    "interface": {
+      "help": "Show the canonical proof routes and current workspace proof summary.",
+      "name": "proof",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path used to inspect installed modules and proof state.",
+          "name": "target"
+        },
+        {
+          "flags": [
+            "--route"
+          ],
+          "help": "Return one proof route by id instead of the full proof surface.",
+          "name": "route"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--current"
+          ],
+          "help": "Return only the current proof summary.",
+          "name": "current"
+        },
+        {
+          "default": [],
+          "flags": [
+            "--changed"
+          ],
+          "help": "Return required proof commands for the provided repo-relative changed paths.",
+          "name": "changed",
+          "nargs": "*"
+        },
+        {
+          "flags": [
+            "--select"
+          ],
+          "help": "Return exact comma-separated field paths from the proof answer.",
+          "name": "select"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--verbose"
+          ],
+          "help": "Emit all proof routing detail. Prefer the default changed-path proof answer for ordinary validation.",
+          "name": "verbose"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "proof.report",
+    "operation_path": "operations/proof.report.json"
+  },
+  {
+    "adapter_id": "setup.guidance.cli",
+    "interface": {
+      "help": "Show the bounded post-bootstrap setup guidance for a mature repository.",
+      "name": "setup",
+      "options": [
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        },
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "flags": [
+            "--preset"
+          ],
+          "help": "Named module bundle.",
+          "name": "preset"
+        },
+        {
+          "flags": [
+            "--modules"
+          ],
+          "help": "Comma-separated module selection.",
+          "name": "modules"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--non-interactive"
+          ],
+          "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
+          "name": "non_interactive"
+        }
+      ]
+    },
+    "operation_id": "setup.guidance",
+    "operation_path": "operations/setup.guidance.json"
+  },
+  {
+    "adapter_id": "ownership.report.cli",
+    "interface": {
+      "help": "Show the canonical ownership and authority mapping for the target repository.",
+      "name": "ownership",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path used to inspect the ownership ledger.",
+          "name": "target"
+        },
+        {
+          "flags": [
+            "--concern"
+          ],
+          "help": "Return one authority-surface answer by concern.",
+          "name": "concern"
+        },
+        {
+          "flags": [
+            "--path"
+          ],
+          "help": "Return the ownership answer for one repo-relative path.",
+          "name": "path"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "ownership.report",
+    "operation_path": "operations/ownership.report.json"
+  },
+  {
+    "adapter_id": "config.report.cli",
+    "interface": {
+      "help": "Show the resolved repo-owned workspace config layered onto product defaults.",
+      "name": "config",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        },
+        {
+          "flags": [
+            "--select"
+          ],
+          "help": "Return only comma-separated top-level or dotted JSON fields from the full command payload. Prefer this over --verbose when one or a few fields are needed.",
+          "name": "select"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--verbose"
+          ],
+          "help": "Emit full resolved config detail. Prefer default output or targeted fields for ordinary posture checks.",
+          "name": "verbose"
+        }
+      ]
+    },
+    "operation_id": "config.report",
+    "operation_path": "operations/config.report.json"
+  },
+  {
+    "adapter_id": "system-intent.sync.cli",
+    "interface": {
+      "help": "Show or refresh the workspace-owned compiled system-intent declaration.",
+      "name": "system-intent",
+      "options": [
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        },
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path used to inspect system intent.",
+          "name": "target"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--sync"
+          ],
+          "help": "Refresh source discovery metadata and create the compiled system-intent declaration if it is missing.",
+          "name": "sync"
+        }
+      ]
+    },
+    "operation_id": "system-intent.sync",
+    "operation_path": "operations/system-intent.sync.json"
+  },
+  {
+    "adapter_id": "delegation-outcome.append.cli",
+    "interface": {
+      "help": "Append one local-only delegation outcome record for target-profile tuning.",
+      "name": "note-delegation-outcome",
+      "options": [
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        },
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path used to record the local outcome.",
+          "name": "target"
+        },
+        {
+          "flags": [
+            "--delegation-target"
+          ],
+          "help": "Local delegation target alias.",
+          "name": "delegation_target",
+          "required": true
+        },
+        {
+          "flags": [
+            "--task-class"
+          ],
+          "help": "Bounded task class label for this delegated run.",
+          "name": "task_class",
+          "required": true
+        },
+        {
+          "choices": [
+            "success",
+            "mixed",
+            "failed"
+          ],
+          "flags": [
+            "--outcome"
+          ],
+          "help": "High-level delegated execution outcome.",
+          "name": "outcome",
+          "required": true
+        },
+        {
+          "choices": [
+            "sufficient",
+            "borderline",
+            "insufficient"
+          ],
+          "default": "sufficient",
+          "flags": [
+            "--handoff-sufficiency"
+          ],
+          "help": "Whether the checked-in handoff was enough for the delegated worker.",
+          "name": "handoff_sufficiency"
+        },
+        {
+          "choices": [
+            "light",
+            "normal",
+            "high"
+          ],
+          "default": "normal",
+          "flags": [
+            "--review-burden"
+          ],
+          "help": "How much review/rework burden remained after delegation.",
+          "name": "review_burden"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--escalation-required"
+          ],
+          "help": "Record that the delegated run had to stop and escalate.",
+          "name": "escalation_required"
+        }
+      ]
+    },
+    "operation_id": "delegation-outcome.append",
+    "operation_path": "operations/delegation-outcome.append.json"
+  },
+  {
+    "adapter_id": "skills.report.cli",
+    "interface": {
+      "help": "List registered workspace skills from installed package registries and repo-owned skill registries.",
+      "name": "skills",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path used to inspect installed and repo-owned skills.",
+          "name": "target"
+        },
+        {
+          "flags": [
+            "--task"
+          ],
+          "help": "Optional task description used to recommend likely skills.",
+          "name": "task"
+        },
+        {
+          "flags": [
+            "--select"
+          ],
+          "help": "Comma-separated JSON fields to return, such as recommendations,warnings or top_recommendations,warnings.",
+          "name": "select"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "skills.report",
+    "operation_path": "operations/skills.report.json"
+  },
+  {
+    "adapter_id": "report.combined.cli",
+    "interface": {
+      "help": "Show a compact combined workspace report for installed modules, mixed-agent posture, and next-action guidance.",
+      "name": "report",
+      "options": [
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        },
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "flags": [
+            "--preset"
+          ],
+          "help": "Named module bundle.",
+          "name": "preset"
+        },
+        {
+          "flags": [
+            "--modules"
+          ],
+          "help": "Comma-separated module selection.",
+          "name": "modules"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--non-interactive"
+          ],
+          "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
+          "name": "non_interactive"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--startup"
+          ],
+          "help": "Return the high-signal orientation block for fresh agents.",
+          "name": "startup"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--verbose"
+          ],
+          "help": "Emit the full combined workspace report. Prefer default router output or --section for ordinary inspection.",
+          "name": "verbose"
+        },
+        {
+          "flags": [
+            "--section"
+          ],
+          "help": "Return one top-level full-report section in the compact contract profile.",
+          "name": "section"
+        }
+      ]
+    },
+    "operation_id": "report.combined",
+    "operation_path": "operations/report.combined.json"
+  },
+  {
+    "adapter_id": "reconcile.report.cli",
+    "interface": {
+      "help": "Show stale planning state against provider-agnostic external work evidence.",
+      "name": "reconcile",
+      "options": [
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        },
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path used to reconcile planning state.",
+          "name": "target"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--apply-safe-prune"
+          ],
+          "help": "Apply only reconcile cleanup targets that are already marked safe_to_prune.",
+          "name": "apply_safe_prune"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--dry-run"
+          ],
+          "help": "Preview --apply-safe-prune without writing files.",
+          "name": "dry_run"
+        }
+      ]
+    },
+    "operation_id": "reconcile.report",
+    "operation_path": "operations/reconcile.report.json"
+  },
+  {
+    "adapter_id": "external-intent.refresh-github.cli",
+    "interface": {
+      "help": "Refresh optional provider-agnostic external intent evidence through adapter subcommands.",
+      "name": "external-intent",
+      "options": [],
+      "subcommand_dest": "external_intent_command",
+      "subcommands": [
+        {
+          "help": "Refresh external intent evidence from GitHub issues through the optional gh CLI adapter.",
+          "name": "refresh-github",
+          "options": [
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path whose external intent evidence should be refreshed.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--repo"
+              ],
+              "help": "GitHub repository in owner/name form. Defaults to the gh repository for the target.",
+              "name": "repo"
+            },
+            {
+              "choices": [
+                "open",
+                "closed",
+                "all"
+              ],
+              "flags": [
+                "--state"
+              ],
+              "help": "GitHub issue state to import. Defaults to open; closed or all are explicit audit scopes.",
+              "name": "state"
+            },
+            {
+              "flags": [
+                "--limit"
+              ],
+              "help": "Maximum number of GitHub issues to import. Defaults to 1000.",
+              "name": "limit",
+              "type": "integer"
+            },
+            {
+              "choices": [
+                "cache",
+                "planning"
+              ],
+              "default": "cache",
+              "flags": [
+                "--storage"
+              ],
+              "help": "Where to write refreshed evidence. Defaults to ignored local cache; planning writes the legacy planning evidence path explicitly.",
+              "name": "storage"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--dry-run"
+              ],
+              "help": "Preview refresh counts without writing external intent evidence.",
+              "name": "dry_run"
+            }
+          ]
+        }
+      ]
+    },
+    "operation_id": "external-intent.refresh-github",
+    "operation_path": "operations/external-intent.refresh-github.json"
+  },
+  {
+    "adapter_id": "preflight.report.cli",
+    "interface": {
+      "help": "Get compact takeover-safe context: startup defaults + resolved config + active planning state in one call.",
+      "name": "preflight",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path for preflight context (defaults to current workspace).",
+          "name": "target"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--active-only"
+          ],
+          "help": "Return only active planning state without startup defaults and config.",
+          "name": "active_only"
+        },
+        {
+          "flags": [
+            "--task"
+          ],
+          "help": "Optional task description used to include task-specific skill recommendations in preflight context.",
+          "name": "task"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--verbose"
+          ],
+          "help": "Emit complete takeover/recovery context. Prefer default output for ordinary recovery routing.",
+          "name": "verbose"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "preflight.report",
+    "operation_path": "operations/preflight.report.json"
+  },
+  {
     "adapter_id": "install.lifecycle.cli",
     "interface": {
       "help": "Bootstrap selected modules into a target repository.",
@@ -1719,6 +2108,302 @@
     "operation_path": "operations/init.lifecycle.json"
   },
   {
+    "adapter_id": "prompt.lifecycle.cli",
+    "interface": {
+      "help": "Print a ready-to-paste workspace lifecycle handoff prompt.",
+      "name": "prompt",
+      "options": [],
+      "subcommand_dest": "prompt_command",
+      "subcommands": [
+        {
+          "help": "Print the workspace bootstrap handoff prompt.",
+          "name": "init",
+          "options": [
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to the current directory.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--preset"
+              ],
+              "help": "Named module bundle.",
+              "name": "preset"
+            },
+            {
+              "flags": [
+                "--modules"
+              ],
+              "help": "Comma-separated module selection.",
+              "name": "modules"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--non-interactive"
+              ],
+              "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
+              "name": "non_interactive"
+            },
+            {
+              "flags": [
+                "--agent-instructions-file"
+              ],
+              "help": "Canonical startup instructions filename to use for this repo (for example AGENTS.md or GEMINI.md).",
+              "name": "agent_instructions_file"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--adopt"
+              ],
+              "help": "Force conservative adopt behavior.",
+              "name": "adopt"
+            }
+          ]
+        },
+        {
+          "help": "Print the workspace upgrade handoff prompt.",
+          "name": "upgrade",
+          "options": [
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to the current directory.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--preset"
+              ],
+              "help": "Named module bundle.",
+              "name": "preset"
+            },
+            {
+              "flags": [
+                "--modules"
+              ],
+              "help": "Comma-separated module selection.",
+              "name": "modules"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--non-interactive"
+              ],
+              "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
+              "name": "non_interactive"
+            }
+          ]
+        },
+        {
+          "help": "Print the workspace uninstall handoff prompt.",
+          "name": "uninstall",
+          "options": [
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to the current directory.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--preset"
+              ],
+              "help": "Named module bundle.",
+              "name": "preset"
+            },
+            {
+              "flags": [
+                "--modules"
+              ],
+              "help": "Comma-separated module selection.",
+              "name": "modules"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--non-interactive"
+              ],
+              "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
+              "name": "non_interactive"
+            }
+          ]
+        }
+      ]
+    },
+    "operation_id": "prompt.init",
+    "operation_path": "operations/prompt.init.json"
+  },
+  {
+    "adapter_id": "status.report.cli",
+    "interface": {
+      "help": "Report installed modules and workspace health summary.",
+      "name": "status",
+      "options": [
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        },
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "flags": [
+            "--preset"
+          ],
+          "help": "Named module bundle.",
+          "name": "preset"
+        },
+        {
+          "flags": [
+            "--modules"
+          ],
+          "help": "Comma-separated module selection.",
+          "name": "modules"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--non-interactive"
+          ],
+          "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
+          "name": "non_interactive"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--verbose"
+          ],
+          "help": "Emit all module lifecycle status detail. Prefer default output for ordinary health routing.",
+          "name": "verbose"
+        }
+      ]
+    },
+    "operation_id": "status.report",
+    "operation_path": "operations/status.report.json"
+  },
+  {
+    "adapter_id": "doctor.report.cli",
+    "interface": {
+      "help": "Report drift, missing surfaces, and recommended remediation.",
+      "name": "doctor",
+      "options": [
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        },
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "flags": [
+            "--preset"
+          ],
+          "help": "Named module bundle.",
+          "name": "preset"
+        },
+        {
+          "flags": [
+            "--modules"
+          ],
+          "help": "Comma-separated module selection.",
+          "name": "modules"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--non-interactive"
+          ],
+          "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
+          "name": "non_interactive"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--verbose"
+          ],
+          "help": "Emit all diagnostic detail. Prefer default output for ordinary remediation routing.",
+          "name": "verbose"
+        },
+        {
+          "flags": [
+            "--select"
+          ],
+          "help": "Return only comma-separated top-level or dotted JSON fields from the full command payload. Prefer this over --verbose when one or a few fields are needed.",
+          "name": "select"
+        }
+      ]
+    },
+    "operation_id": "doctor.report",
+    "operation_path": "operations/doctor.report.json"
+  },
+  {
     "adapter_id": "upgrade.lifecycle.cli",
     "interface": {
       "help": "Refresh managed surfaces for selected installed modules.",
@@ -1895,305 +2580,5 @@
     },
     "operation_id": "uninstall.lifecycle",
     "operation_path": "operations/uninstall.lifecycle.json"
-  },
-  {
-    "adapter_id": "report.combined.cli",
-    "interface": {
-      "help": "Show a compact combined workspace report for installed modules, mixed-agent posture, and next-action guidance.",
-      "name": "report",
-      "options": [
-        {
-          "choices": [
-            "text",
-            "json"
-          ],
-          "default": "text",
-          "flags": [
-            "--format"
-          ],
-          "help": "Output format.",
-          "name": "format"
-        },
-        {
-          "flags": [
-            "--target"
-          ],
-          "help": "Target repository path. Defaults to the current directory.",
-          "name": "target"
-        },
-        {
-          "flags": [
-            "--preset"
-          ],
-          "help": "Named module bundle.",
-          "name": "preset"
-        },
-        {
-          "flags": [
-            "--modules"
-          ],
-          "help": "Comma-separated module selection.",
-          "name": "modules"
-        },
-        {
-          "action": "store_true",
-          "flags": [
-            "--non-interactive"
-          ],
-          "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
-          "name": "non_interactive"
-        },
-        {
-          "action": "store_true",
-          "flags": [
-            "--startup"
-          ],
-          "help": "Return the high-signal orientation block for fresh agents.",
-          "name": "startup"
-        },
-        {
-          "action": "store_true",
-          "flags": [
-            "--verbose"
-          ],
-          "help": "Emit the full combined workspace report. Prefer default router output or --section for ordinary inspection.",
-          "name": "verbose"
-        },
-        {
-          "flags": [
-            "--section"
-          ],
-          "help": "Return one top-level full-report section in the compact contract profile.",
-          "name": "section"
-        }
-      ]
-    },
-    "operation_id": "report.combined",
-    "operation_path": "operations/report.combined.json"
-  },
-  {
-    "adapter_id": "reconcile.report.cli",
-    "interface": {
-      "help": "Show stale planning state against provider-agnostic external work evidence.",
-      "name": "reconcile",
-      "options": [
-        {
-          "choices": [
-            "text",
-            "json"
-          ],
-          "default": "text",
-          "flags": [
-            "--format"
-          ],
-          "help": "Output format.",
-          "name": "format"
-        },
-        {
-          "flags": [
-            "--target"
-          ],
-          "help": "Optional repository path used to reconcile planning state.",
-          "name": "target"
-        },
-        {
-          "action": "store_true",
-          "flags": [
-            "--apply-safe-prune"
-          ],
-          "help": "Apply only reconcile cleanup targets that are already marked safe_to_prune.",
-          "name": "apply_safe_prune"
-        },
-        {
-          "action": "store_true",
-          "flags": [
-            "--dry-run"
-          ],
-          "help": "Preview --apply-safe-prune without writing files.",
-          "name": "dry_run"
-        }
-      ]
-    },
-    "operation_id": "reconcile.report",
-    "operation_path": "operations/reconcile.report.json"
-  },
-  {
-    "adapter_id": "setup.guidance.cli",
-    "interface": {
-      "help": "Show the bounded post-bootstrap setup guidance for a mature repository.",
-      "name": "setup",
-      "options": [
-        {
-          "choices": [
-            "text",
-            "json"
-          ],
-          "default": "text",
-          "flags": [
-            "--format"
-          ],
-          "help": "Output format.",
-          "name": "format"
-        },
-        {
-          "flags": [
-            "--target"
-          ],
-          "help": "Target repository path. Defaults to the current directory.",
-          "name": "target"
-        },
-        {
-          "flags": [
-            "--preset"
-          ],
-          "help": "Named module bundle.",
-          "name": "preset"
-        },
-        {
-          "flags": [
-            "--modules"
-          ],
-          "help": "Comma-separated module selection.",
-          "name": "modules"
-        },
-        {
-          "action": "store_true",
-          "flags": [
-            "--non-interactive"
-          ],
-          "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
-          "name": "non_interactive"
-        }
-      ]
-    },
-    "operation_id": "setup.guidance",
-    "operation_path": "operations/setup.guidance.json"
-  },
-  {
-    "adapter_id": "status.report.cli",
-    "interface": {
-      "help": "Report installed modules and workspace health summary.",
-      "name": "status",
-      "options": [
-        {
-          "choices": [
-            "text",
-            "json"
-          ],
-          "default": "text",
-          "flags": [
-            "--format"
-          ],
-          "help": "Output format.",
-          "name": "format"
-        },
-        {
-          "flags": [
-            "--target"
-          ],
-          "help": "Target repository path. Defaults to the current directory.",
-          "name": "target"
-        },
-        {
-          "flags": [
-            "--preset"
-          ],
-          "help": "Named module bundle.",
-          "name": "preset"
-        },
-        {
-          "flags": [
-            "--modules"
-          ],
-          "help": "Comma-separated module selection.",
-          "name": "modules"
-        },
-        {
-          "action": "store_true",
-          "flags": [
-            "--non-interactive"
-          ],
-          "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
-          "name": "non_interactive"
-        },
-        {
-          "action": "store_true",
-          "flags": [
-            "--verbose"
-          ],
-          "help": "Emit all module lifecycle status detail. Prefer default output for ordinary health routing.",
-          "name": "verbose"
-        }
-      ]
-    },
-    "operation_id": "status.report",
-    "operation_path": "operations/status.report.json"
-  },
-  {
-    "adapter_id": "doctor.report.cli",
-    "interface": {
-      "help": "Report drift, missing surfaces, and recommended remediation.",
-      "name": "doctor",
-      "options": [
-        {
-          "choices": [
-            "text",
-            "json"
-          ],
-          "default": "text",
-          "flags": [
-            "--format"
-          ],
-          "help": "Output format.",
-          "name": "format"
-        },
-        {
-          "flags": [
-            "--target"
-          ],
-          "help": "Target repository path. Defaults to the current directory.",
-          "name": "target"
-        },
-        {
-          "flags": [
-            "--preset"
-          ],
-          "help": "Named module bundle.",
-          "name": "preset"
-        },
-        {
-          "flags": [
-            "--modules"
-          ],
-          "help": "Comma-separated module selection.",
-          "name": "modules"
-        },
-        {
-          "action": "store_true",
-          "flags": [
-            "--non-interactive"
-          ],
-          "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
-          "name": "non_interactive"
-        },
-        {
-          "action": "store_true",
-          "flags": [
-            "--verbose"
-          ],
-          "help": "Emit all diagnostic detail. Prefer default output for ordinary remediation routing.",
-          "name": "verbose"
-        },
-        {
-          "flags": [
-            "--select"
-          ],
-          "help": "Return only comma-separated top-level or dotted JSON fields from the full command payload. Prefer this over --verbose when one or a few fields are needed.",
-          "name": "select"
-        }
-      ]
-    },
-    "operation_id": "doctor.report",
-    "operation_path": "operations/doctor.report.json"
   }
 ]

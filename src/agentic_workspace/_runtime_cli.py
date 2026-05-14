@@ -19488,6 +19488,67 @@ def _run_skills_report_adapter(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_system_intent_sync_adapter(args: argparse.Namespace) -> int:
+    descriptors = _module_operations()
+    _validate_descriptor_contract(descriptors)
+    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+    _validate_target_root(command_name="system-intent", target_root=target_root)
+    config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(_preset_modules(descriptors)))
+    _emit_system_intent(format_name=args.format, target_root=target_root, config=config, sync=bool(getattr(args, "sync", False)))
+    return 0
+
+
+def _run_delegation_outcome_append_adapter(args: argparse.Namespace) -> int:
+    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+    _validate_target_root(command_name="note-delegation-outcome", target_root=target_root)
+    _emit_payload(
+        payload=_record_delegation_outcome(
+            target_root=target_root,
+            delegation_target=args.delegation_target,
+            task_class=args.task_class,
+            outcome=args.outcome,
+            handoff_sufficiency=args.handoff_sufficiency,
+            review_burden=args.review_burden,
+            escalation_required=bool(args.escalation_required),
+        ),
+        format_name=args.format,
+    )
+    return 0
+
+
+def _run_external_intent_refresh_github_adapter(args: argparse.Namespace) -> int:
+    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+    _validate_target_root(command_name="external-intent", target_root=target_root)
+    if args.external_intent_command != "refresh-github":
+        raise WorkspaceUsageError(f"Unsupported external-intent command: {args.external_intent_command}")
+    payload = _refresh_github_external_intent_evidence(
+        target_root=target_root,
+        repo=getattr(args, "repo", None),
+        limit=getattr(args, "limit", None),
+        state=getattr(args, "state", None),
+        storage=str(getattr(args, "storage", "cache") or "cache"),
+        dry_run=bool(getattr(args, "dry_run", False)),
+    )
+    _emit_payload(payload=payload, format_name=args.format)
+    return 0
+
+
+def _run_prompt_lifecycle_adapter(args: argparse.Namespace) -> int:
+    target_root, descriptors, config, selected_modules, resolved_preset = _selected_runtime_context(args=args, command_name="prompt")
+    payload = _run_prompt_command(
+        prompt_command=args.prompt_command,
+        target_root=target_root,
+        selected_modules=selected_modules,
+        resolved_preset=resolved_preset,
+        descriptors=descriptors,
+        force_adopt=bool(getattr(args, "adopt", False)),
+        non_interactive=bool(getattr(args, "non_interactive", False)),
+        config=config,
+    )
+    _emit_payload(payload=payload, format_name=args.format)
+    return 0
+
+
 def _selected_runtime_context(
     *,
     args: argparse.Namespace,
@@ -19498,6 +19559,13 @@ def _selected_runtime_context(
     target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
     _validate_target_root(command_name=command_name, target_root=target_root)
     config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(_preset_modules(descriptors)))
+    explicit_agent_instructions_file = getattr(args, "agent_instructions_file", None)
+    if explicit_agent_instructions_file:
+        config = _with_agent_instructions_file(
+            config,
+            filename=config_lib.validate_agent_instructions_filename(explicit_agent_instructions_file),
+            source="explicit-argument",
+        )
     selected_modules, resolved_preset = _selected_modules(
         command_name=command_name,
         preset_name=getattr(args, "preset", None),
@@ -19707,7 +19775,9 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
 _GENERATED_RUNTIME_HANDLERS: dict[str, Callable[[argparse.Namespace], int]] = {
     "config.report": _run_config_report_adapter,
     "defaults.report": _run_defaults_report_adapter,
+    "delegation-outcome.append": _run_delegation_outcome_append_adapter,
     "doctor.report": _run_lifecycle_report_adapter,
+    "external-intent.refresh-github": _run_external_intent_refresh_github_adapter,
     "implement.context": _run_implement_context_adapter,
     "init.lifecycle": _run_init_lifecycle_adapter,
     "install.lifecycle": _run_init_lifecycle_adapter,
@@ -19716,6 +19786,7 @@ _GENERATED_RUNTIME_HANDLERS: dict[str, Callable[[argparse.Namespace], int]] = {
     "ownership.report": _run_ownership_report_adapter,
     "planning.front-door": _run_planning_front_door_adapter,
     "preflight.report": _run_preflight_report_adapter,
+    "prompt.init": _run_prompt_lifecycle_adapter,
     "proof.report": _run_proof_report_adapter,
     "reconcile.report": _run_reconcile_report_adapter,
     "report.combined": _run_report_combined_adapter,
@@ -19724,6 +19795,7 @@ _GENERATED_RUNTIME_HANDLERS: dict[str, Callable[[argparse.Namespace], int]] = {
     "start.context": _run_start_context_adapter,
     "status.report": _run_lifecycle_report_adapter,
     "summary.report": _run_summary_report_adapter,
+    "system-intent.sync": _run_system_intent_sync_adapter,
     "uninstall.lifecycle": _run_lifecycle_mutation_adapter,
     "upgrade.lifecycle": _run_lifecycle_mutation_adapter,
 }

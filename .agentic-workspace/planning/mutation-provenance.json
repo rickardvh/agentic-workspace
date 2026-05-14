@@ -760,6 +760,14 @@
       "reason": "record delegation decision route=keep-local",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-14T12:10:45+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-final-root-command-generation",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T12:32:33+00:00"
     }
   ]
 }

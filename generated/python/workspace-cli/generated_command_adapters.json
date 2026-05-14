@@ -106,6 +106,43 @@
       },
       "status": "generated"
     },
+    "external-intent": {
+      "command": {
+        "command_manifest": "cli_commands.json",
+        "name": "external-intent",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-workspace",
+        "subcommand": "refresh-github"
+      },
+      "conformance_refs": [
+        "external-intent.refresh-github.help.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "id": "external-intent.refresh-github.cli",
+      "operation_id": "external-intent.refresh-github",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "external_intent.github.repo.resolve",
+          "external_intent.github.issues.list",
+          "external_intent.evidence.normalize",
+          "external_intent.evidence.write",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
     "implement": {
       "command": {
         "command_manifest": "cli_commands.json",
@@ -280,6 +317,39 @@
       },
       "status": "generated"
     },
+    "note-delegation-outcome": {
+      "command": {
+        "command_manifest": "cli_commands.json",
+        "name": "note-delegation-outcome",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-workspace"
+      },
+      "conformance_refs": [
+        "delegation-outcome.append.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "id": "delegation-outcome.append.cli",
+      "operation_id": "delegation-outcome.append",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "delegation.outcome.append",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
     "ownership": {
       "command": {
         "command_manifest": "cli_commands.json",
@@ -375,6 +445,40 @@
           "planning.summary.load",
           "preflight.token.create",
           "preflight.context.assemble",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    "prompt": {
+      "command": {
+        "command_manifest": "cli_commands.json",
+        "name": "prompt",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-workspace",
+        "subcommand": "init"
+      },
+      "conformance_refs": [
+        "prompt.init.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "id": "prompt.lifecycle.cli",
+      "operation_id": "prompt.init",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.selection.resolve",
+          "prompt.render",
           "output.emit"
         ]
       },
@@ -654,6 +758,41 @@
           "planning.summary.load",
           "output.fields.select",
           "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    "system-intent": {
+      "command": {
+        "command_manifest": "cli_commands.json",
+        "name": "system-intent",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-workspace"
+      },
+      "conformance_refs": [
+        "system-intent.sync.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "system-intent.sync.cli",
+      "operation_id": "system-intent.sync",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "system_intent.config.resolve",
+          "system_intent.source_metadata.refresh",
+          "system_intent.mirror.read_or_create",
+          "system_intent.result.emit"
         ]
       },
       "schemas": {

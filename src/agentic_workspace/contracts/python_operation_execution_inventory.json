@@ -8,107 +8,6 @@
   },
   "entries": [
     {
-      "operation_id": "config.report",
-      "program": "agentic-workspace",
-      "command": "config",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
-      "operation_contract": "operations/config.report.json",
-      "primitive_executor": null,
-      "hand_owned_runtime_code": [
-        "workspace.root.resolve",
-        "workspace.config.load",
-        "output.fields.select",
-        "workspace.config.emit"
-      ],
-      "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "config.report.process"
-    },
-    {
-      "operation_id": "defaults.report",
-      "program": "agentic-workspace",
-      "command": "defaults",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
-      "operation_contract": "operations/defaults.report.json",
-      "primitive_executor": null,
-      "hand_owned_runtime_code": [
-        "workspace.defaults.load",
-        "workspace.defaults.select",
-        "output emission mechanics"
-      ],
-      "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "defaults.report.process"
-    },
-    {
-      "operation_id": "doctor.report",
-      "program": "agentic-workspace",
-      "command": "doctor",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
-      "operation_contract": "operations/doctor.report.json",
-      "primitive_executor": null,
-      "hand_owned_runtime_code": [
-        "workspace.root.resolve",
-        "workspace.selection.resolve",
-        "workspace.report.assemble",
-        "output.fields.select",
-        "output emission mechanics"
-      ],
-      "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "doctor.report.process"
-    },
-    {
-      "operation_id": "implement.context",
-      "program": "agentic-workspace",
-      "command": "implement",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
-      "operation_contract": "operations/implement.context.json",
-      "primitive_executor": null,
-      "hand_owned_runtime_code": [
-        "workspace.root.resolve",
-        "implementer.context.assemble",
-        "output.profile.select",
-        "output.fields.select",
-        "output emission mechanics"
-      ],
-      "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "implement.context.process"
-    },
-    {
-      "operation_id": "init.lifecycle",
-      "program": "agentic-workspace",
-      "command": "init",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
-      "operation_contract": "operations/init.lifecycle.json",
-      "primitive_executor": null,
-      "hand_owned_runtime_code": [
-        "workspace.root.resolve",
-        "workspace.config.load",
-        "workspace.selection.resolve",
-        "workspace.lifecycle.plan",
-        "workspace.lifecycle.apply",
-        "output emission mechanics"
-      ],
-      "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "init.lifecycle.dry-run.process"
-    },
-    {
-      "operation_id": "install.lifecycle",
-      "program": "agentic-workspace",
-      "command": "install",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
-      "operation_contract": "operations/install.lifecycle.json",
-      "primitive_executor": null,
-      "hand_owned_runtime_code": [
-        "workspace.root.resolve",
-        "workspace.config.load",
-        "workspace.selection.resolve",
-        "workspace.lifecycle.plan",
-        "workspace.lifecycle.apply",
-        "output emission mechanics"
-      ],
-      "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "install.lifecycle.dry-run.process"
-    },
-    {
       "operation_id": "memory.doctor.report",
       "program": "agentic-memory",
       "command": "doctor",
@@ -121,21 +20,6 @@
       ],
       "status": "accepted-hand-owned-runtime-primitive",
       "conformance_ref": "memory.doctor.process"
-    },
-    {
-      "operation_id": "memory.front-door",
-      "program": "agentic-workspace",
-      "command": "memory",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
-      "operation_contract": "operations/memory.front-door.json",
-      "primitive_executor": null,
-      "hand_owned_runtime_code": [
-        "memory.front_door.dispatch",
-        "module generated CLI fallback",
-        "output emission mechanics"
-      ],
-      "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "memory.front-door.process"
     },
     {
       "operation_id": "memory.list-files.report",
@@ -223,36 +107,6 @@
       "conformance_ref": "memory.status.process"
     },
     {
-      "operation_id": "modules.report",
-      "program": "agentic-workspace",
-      "command": "modules",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
-      "operation_contract": "operations/modules.report.json",
-      "primitive_executor": null,
-      "hand_owned_runtime_code": [
-        "workspace.root.resolve",
-        "workspace.modules.inspect",
-        "output emission mechanics"
-      ],
-      "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "modules.report.process"
-    },
-    {
-      "operation_id": "ownership.report",
-      "program": "agentic-workspace",
-      "command": "ownership",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
-      "operation_contract": "operations/ownership.report.json",
-      "primitive_executor": null,
-      "hand_owned_runtime_code": [
-        "workspace.root.resolve",
-        "ownership.answer.resolve",
-        "output emission mechanics"
-      ],
-      "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "ownership.report.process"
-    },
-    {
       "operation_id": "planning.doctor.report",
       "program": "agentic-planning",
       "command": "doctor",
@@ -265,21 +119,6 @@
       ],
       "status": "accepted-hand-owned-runtime-primitive",
       "conformance_ref": "planning.doctor.process"
-    },
-    {
-      "operation_id": "planning.front-door",
-      "program": "agentic-workspace",
-      "command": "planning",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
-      "operation_contract": "operations/planning.front-door.json",
-      "primitive_executor": null,
-      "hand_owned_runtime_code": [
-        "planning.front_door.dispatch",
-        "module generated CLI fallback",
-        "output emission mechanics"
-      ],
-      "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "planning.front-door.process"
     },
     {
       "operation_id": "planning.reconcile.report",
@@ -339,6 +178,200 @@
       "conformance_ref": "planning.summary.process"
     },
     {
+      "operation_id": "config.report",
+      "program": "agentic-workspace",
+      "command": "config",
+      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/config.report.json",
+      "primitive_executor": null,
+      "hand_owned_runtime_code": [
+        "workspace.root.resolve",
+        "workspace.config.load",
+        "output.fields.select",
+        "workspace.config.emit"
+      ],
+      "status": "accepted-hand-owned-runtime-primitive",
+      "conformance_ref": "config.report.process"
+    },
+    {
+      "operation_id": "defaults.report",
+      "program": "agentic-workspace",
+      "command": "defaults",
+      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/defaults.report.json",
+      "primitive_executor": null,
+      "hand_owned_runtime_code": [
+        "workspace.defaults.load",
+        "workspace.defaults.select",
+        "output emission mechanics"
+      ],
+      "status": "accepted-hand-owned-runtime-primitive",
+      "conformance_ref": "defaults.report.process"
+    },
+    {
+      "operation_id": "doctor.report",
+      "program": "agentic-workspace",
+      "command": "doctor",
+      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/doctor.report.json",
+      "primitive_executor": null,
+      "hand_owned_runtime_code": [
+        "workspace.root.resolve",
+        "workspace.selection.resolve",
+        "workspace.report.assemble",
+        "output.fields.select",
+        "output emission mechanics"
+      ],
+      "status": "accepted-hand-owned-runtime-primitive",
+      "conformance_ref": "doctor.report.process"
+    },
+    {
+      "operation_id": "external-intent.refresh-github",
+      "program": "agentic-workspace",
+      "command": "external-intent",
+      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/external-intent.refresh-github.json",
+      "primitive_executor": null,
+      "hand_owned_runtime_code": [
+        "workspace.root.resolve",
+        "external_intent.github.repo.resolve",
+        "external_intent.github.issues.list",
+        "external_intent.evidence.normalize",
+        "external_intent.evidence.write",
+        "output emission mechanics"
+      ],
+      "status": "accepted-hand-owned-runtime-primitive",
+      "conformance_ref": "external-intent.refresh-github.help.process"
+    },
+    {
+      "operation_id": "implement.context",
+      "program": "agentic-workspace",
+      "command": "implement",
+      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/implement.context.json",
+      "primitive_executor": null,
+      "hand_owned_runtime_code": [
+        "workspace.root.resolve",
+        "implementer.context.assemble",
+        "output.profile.select",
+        "output.fields.select",
+        "output emission mechanics"
+      ],
+      "status": "accepted-hand-owned-runtime-primitive",
+      "conformance_ref": "implement.context.process"
+    },
+    {
+      "operation_id": "init.lifecycle",
+      "program": "agentic-workspace",
+      "command": "init",
+      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/init.lifecycle.json",
+      "primitive_executor": null,
+      "hand_owned_runtime_code": [
+        "workspace.root.resolve",
+        "workspace.config.load",
+        "workspace.selection.resolve",
+        "workspace.lifecycle.plan",
+        "workspace.lifecycle.apply",
+        "output emission mechanics"
+      ],
+      "status": "accepted-hand-owned-runtime-primitive",
+      "conformance_ref": "init.lifecycle.dry-run.process"
+    },
+    {
+      "operation_id": "install.lifecycle",
+      "program": "agentic-workspace",
+      "command": "install",
+      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/install.lifecycle.json",
+      "primitive_executor": null,
+      "hand_owned_runtime_code": [
+        "workspace.root.resolve",
+        "workspace.config.load",
+        "workspace.selection.resolve",
+        "workspace.lifecycle.plan",
+        "workspace.lifecycle.apply",
+        "output emission mechanics"
+      ],
+      "status": "accepted-hand-owned-runtime-primitive",
+      "conformance_ref": "install.lifecycle.dry-run.process"
+    },
+    {
+      "operation_id": "memory.front-door",
+      "program": "agentic-workspace",
+      "command": "memory",
+      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/memory.front-door.json",
+      "primitive_executor": null,
+      "hand_owned_runtime_code": [
+        "memory.front_door.dispatch",
+        "module generated CLI fallback",
+        "output emission mechanics"
+      ],
+      "status": "accepted-hand-owned-runtime-primitive",
+      "conformance_ref": "memory.front-door.process"
+    },
+    {
+      "operation_id": "modules.report",
+      "program": "agentic-workspace",
+      "command": "modules",
+      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/modules.report.json",
+      "primitive_executor": null,
+      "hand_owned_runtime_code": [
+        "workspace.root.resolve",
+        "workspace.modules.inspect",
+        "output emission mechanics"
+      ],
+      "status": "accepted-hand-owned-runtime-primitive",
+      "conformance_ref": "modules.report.process"
+    },
+    {
+      "operation_id": "delegation-outcome.append",
+      "program": "agentic-workspace",
+      "command": "note-delegation-outcome",
+      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/delegation-outcome.append.json",
+      "primitive_executor": null,
+      "hand_owned_runtime_code": [
+        "workspace.root.resolve",
+        "delegation.outcome.append",
+        "output emission mechanics"
+      ],
+      "status": "accepted-hand-owned-runtime-primitive",
+      "conformance_ref": "delegation-outcome.append.process"
+    },
+    {
+      "operation_id": "ownership.report",
+      "program": "agentic-workspace",
+      "command": "ownership",
+      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/ownership.report.json",
+      "primitive_executor": null,
+      "hand_owned_runtime_code": [
+        "workspace.root.resolve",
+        "ownership.answer.resolve",
+        "output emission mechanics"
+      ],
+      "status": "accepted-hand-owned-runtime-primitive",
+      "conformance_ref": "ownership.report.process"
+    },
+    {
+      "operation_id": "planning.front-door",
+      "program": "agentic-workspace",
+      "command": "planning",
+      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/planning.front-door.json",
+      "primitive_executor": null,
+      "hand_owned_runtime_code": [
+        "planning.front_door.dispatch",
+        "module generated CLI fallback",
+        "output emission mechanics"
+      ],
+      "status": "accepted-hand-owned-runtime-primitive",
+      "conformance_ref": "planning.front-door.process"
+    },
+    {
       "operation_id": "preflight.report",
       "program": "agentic-workspace",
       "command": "preflight",
@@ -356,6 +389,21 @@
       ],
       "status": "accepted-hand-owned-runtime-primitive",
       "conformance_ref": "preflight.report.process"
+    },
+    {
+      "operation_id": "prompt.init",
+      "program": "agentic-workspace",
+      "command": "prompt",
+      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/prompt.init.json",
+      "primitive_executor": null,
+      "hand_owned_runtime_code": [
+        "workspace.selection.resolve",
+        "prompt.render",
+        "output emission mechanics"
+      ],
+      "status": "accepted-hand-owned-runtime-primitive",
+      "conformance_ref": "prompt.init.process"
     },
     {
       "operation_id": "proof.report",
@@ -488,6 +536,23 @@
       ],
       "status": "accepted-hand-owned-runtime-primitive",
       "conformance_ref": "summary.report.process"
+    },
+    {
+      "operation_id": "system-intent.sync",
+      "program": "agentic-workspace",
+      "command": "system-intent",
+      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/system-intent.sync.json",
+      "primitive_executor": null,
+      "hand_owned_runtime_code": [
+        "workspace.root.resolve",
+        "system_intent.config.resolve",
+        "system_intent.source_metadata.refresh",
+        "system_intent.mirror.read_or_create",
+        "output emission mechanics"
+      ],
+      "status": "accepted-hand-owned-runtime-primitive",
+      "conformance_ref": "system-intent.sync.process"
     },
     {
       "operation_id": "uninstall.lifecycle",

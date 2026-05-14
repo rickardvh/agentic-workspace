@@ -16,9 +16,21 @@
       "adapter_kind": "process"
     },
     {
+      "id": "delegation-outcome.append.process",
+      "operation_id": "delegation-outcome.append",
+      "path": "conformance/delegation-outcome.append.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "doctor.report.process",
       "path": "conformance/doctor.report.process.json",
       "operation_id": "doctor.report",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "external-intent.refresh-github.help.process",
+      "operation_id": "external-intent.refresh-github",
+      "path": "conformance/external-intent.refresh-github.help.process.json",
       "adapter_kind": "process"
     },
     {
@@ -142,6 +154,12 @@
       "adapter_kind": "process"
     },
     {
+      "id": "prompt.init.process",
+      "operation_id": "prompt.init",
+      "path": "conformance/prompt.init.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "proof.report.process",
       "operation_id": "proof.report",
       "path": "conformance/proof.report.process.json",
@@ -187,6 +205,12 @@
       "id": "summary.report.process",
       "operation_id": "summary.report",
       "path": "conformance/summary.report.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "system-intent.sync.process",
+      "operation_id": "system-intent.sync",
+      "path": "conformance/system-intent.sync.process.json",
       "adapter_kind": "process"
     },
     {
