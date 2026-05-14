@@ -108,13 +108,10 @@ PYTHON_MODULE_SOURCE_EXECUTABLE_MARKERS = {
 }
 PYTHON_MODULE_SOURCE_EXECUTABLE_PATHS = (
     "src/agentic_workspace/_runtime_cli.py",
-    "src/agentic_workspace/generated_cli_package.py",
     "src/agentic_workspace/operation_ir_executor.py",
     "packages/planning/src/repo_planning_bootstrap/_runtime_cli.py",
-    "packages/planning/src/repo_planning_bootstrap/generated_cli_package.py",
     "packages/planning/src/repo_planning_bootstrap/operation_ir_executor.py",
     "packages/memory/src/repo_memory_bootstrap/_runtime_cli.py",
-    "packages/memory/src/repo_memory_bootstrap/generated_cli_package.py",
     "packages/memory/src/repo_memory_bootstrap/operation_ir_executor.py",
 )
 
@@ -147,9 +144,9 @@ def _conformance_env(*, runtime: str | None = None) -> dict[str, str]:
 
 def _runtime_module_for_package(package_id: str) -> str:
     modules = {
-        "root-workspace": "agentic_workspace.generated_cli_package",
-        "planning-bootstrap": "repo_planning_bootstrap.generated_cli_package",
-        "memory-bootstrap": "repo_memory_bootstrap.generated_cli_package",
+        "root-workspace": "agentic_command_generation.workspace_generated_cli_package",
+        "planning-bootstrap": "agentic_command_generation.planning_generated_cli_package",
+        "memory-bootstrap": "agentic_command_generation.memory_generated_cli_package",
     }
     return modules[package_id]
 
@@ -885,23 +882,23 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
             errors.append(f"{operation_id} must keep a representative or complete ir_plan")
 
     generated_operation_modules = {
-        "config.report": "agentic_workspace.generated_cli_package",
-        "delegation-outcome.append": "agentic_workspace.generated_cli_package",
-        "defaults.report": "agentic_workspace.generated_cli_package",
-        "memory.doctor.report": "repo_memory_bootstrap.generated_cli_package",
-        "memory.list-files.report": "repo_memory_bootstrap.generated_cli_package",
-        "memory.list-skills.report": "repo_memory_bootstrap.generated_cli_package",
-        "memory.promotion-report.report": "repo_memory_bootstrap.generated_cli_package",
-        "memory.report.report": "repo_memory_bootstrap.generated_cli_package",
-        "memory.route-report.report": "repo_memory_bootstrap.generated_cli_package",
-        "memory.status.report": "repo_memory_bootstrap.generated_cli_package",
-        "planning.doctor.report": "repo_planning_bootstrap.generated_cli_package",
-        "planning.report.report": "repo_planning_bootstrap.generated_cli_package",
-        "planning.status.report": "repo_planning_bootstrap.generated_cli_package",
-        "prompt.init": "agentic_workspace.generated_cli_package",
-        "prompt.uninstall": "agentic_workspace.generated_cli_package",
-        "prompt.upgrade": "agentic_workspace.generated_cli_package",
-        "system-intent.sync": "agentic_workspace.generated_cli_package",
+        "config.report": "agentic_command_generation.workspace_generated_cli_package",
+        "delegation-outcome.append": "agentic_command_generation.workspace_generated_cli_package",
+        "defaults.report": "agentic_command_generation.workspace_generated_cli_package",
+        "memory.doctor.report": "agentic_command_generation.memory_generated_cli_package",
+        "memory.list-files.report": "agentic_command_generation.memory_generated_cli_package",
+        "memory.list-skills.report": "agentic_command_generation.memory_generated_cli_package",
+        "memory.promotion-report.report": "agentic_command_generation.memory_generated_cli_package",
+        "memory.report.report": "agentic_command_generation.memory_generated_cli_package",
+        "memory.route-report.report": "agentic_command_generation.memory_generated_cli_package",
+        "memory.status.report": "agentic_command_generation.memory_generated_cli_package",
+        "planning.doctor.report": "agentic_command_generation.planning_generated_cli_package",
+        "planning.report.report": "agentic_command_generation.planning_generated_cli_package",
+        "planning.status.report": "agentic_command_generation.planning_generated_cli_package",
+        "prompt.init": "agentic_command_generation.workspace_generated_cli_package",
+        "prompt.uninstall": "agentic_command_generation.workspace_generated_cli_package",
+        "prompt.upgrade": "agentic_command_generation.workspace_generated_cli_package",
+        "system-intent.sync": "agentic_command_generation.workspace_generated_cli_package",
     }
     for operation_id, module_name in sorted(generated_operation_modules.items()):
         try:
@@ -1013,9 +1010,9 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
 def _validate_python_runtime_handler_boundary() -> list[str]:
     errors: list[str] = []
     package_modules = {
-        "root-workspace": ("agentic_workspace.generated_cli_package", "agentic_workspace._runtime_cli"),
-        "planning-bootstrap": ("repo_planning_bootstrap.generated_cli_package", "repo_planning_bootstrap._runtime_cli"),
-        "memory-bootstrap": ("repo_memory_bootstrap.generated_cli_package", "repo_memory_bootstrap._runtime_cli"),
+        "root-workspace": ("agentic_command_generation.workspace_generated_cli_package", "agentic_workspace._runtime_cli"),
+        "planning-bootstrap": ("agentic_command_generation.planning_generated_cli_package", "repo_planning_bootstrap._runtime_cli"),
+        "memory-bootstrap": ("agentic_command_generation.memory_generated_cli_package", "repo_memory_bootstrap._runtime_cli"),
     }
     for package_id, (generated_module_name, runtime_module_name) in package_modules.items():
         try:
@@ -1066,9 +1063,9 @@ def _validate_no_legacy_generated_adapter_runtime_import(*, relative_path: str, 
 def _validate_generated_python_commands_absent_from_handwritten_parsers() -> list[str]:
     errors: list[str] = []
     package_modules = {
-        "root-workspace": ("agentic_workspace.generated_cli_package", "agentic_workspace._runtime_cli"),
-        "planning-bootstrap": ("repo_planning_bootstrap.generated_cli_package", "repo_planning_bootstrap._runtime_cli"),
-        "memory-bootstrap": ("repo_memory_bootstrap.generated_cli_package", "repo_memory_bootstrap._runtime_cli"),
+        "root-workspace": ("agentic_command_generation.workspace_generated_cli_package", "agentic_workspace._runtime_cli"),
+        "planning-bootstrap": ("agentic_command_generation.planning_generated_cli_package", "repo_planning_bootstrap._runtime_cli"),
+        "memory-bootstrap": ("agentic_command_generation.memory_generated_cli_package", "repo_memory_bootstrap._runtime_cli"),
     }
     for package_id, (generated_module_name, runtime_module_name) in package_modules.items():
         generated_module = importlib.import_module(generated_module_name)
@@ -1426,9 +1423,9 @@ def _validate_static_surfaces() -> list[str]:
                             f"{generated_root}/generated_cli_package/adapter_commands.json drifted from generated adapter projection"
                         )
         generated_entrypoints = {
-            "src/agentic_workspace/_runtime_cli.py": "agentic_workspace.generated_cli_package",
-            "packages/planning/src/repo_planning_bootstrap/_runtime_cli.py": "repo_planning_bootstrap.generated_cli_package",
-            "packages/memory/src/repo_memory_bootstrap/_runtime_cli.py": "repo_memory_bootstrap.generated_cli_package",
+            "src/agentic_workspace/_runtime_cli.py": "agentic_command_generation.workspace_generated_cli_package",
+            "packages/planning/src/repo_planning_bootstrap/_runtime_cli.py": "agentic_command_generation.planning_generated_cli_package",
+            "packages/memory/src/repo_memory_bootstrap/_runtime_cli.py": "agentic_command_generation.memory_generated_cli_package",
         }
         for relative_path, import_name in generated_entrypoints.items():
             text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
@@ -1442,30 +1439,20 @@ def _validate_static_surfaces() -> list[str]:
                 errors.append(f"{relative_path} does not route generated Python adapters before the handwritten parser")
         errors.extend(_validate_python_runtime_handler_boundary())
         errors.extend(_validate_generated_python_commands_absent_from_handwritten_parsers())
-        durable_source_roots = {
-            "src/agentic_workspace/generated_cli_package.py": "generated/python/workspace-cli",
-            "packages/planning/src/repo_planning_bootstrap/generated_cli_package.py": "generated/python/planning-cli",
-            "packages/memory/src/repo_memory_bootstrap/generated_cli_package.py": "generated/python/memory-cli",
-        }
         forbidden_generated_entrypoints = [
+            "src/agentic_workspace/generated_cli_package.py",
             "src/agentic_workspace/generated_cli_entrypoint.py",
             "src/agentic_workspace/generated_cli_package/__init__.py",
+            "packages/planning/src/repo_planning_bootstrap/generated_cli_package.py",
             "packages/planning/src/repo_planning_bootstrap/generated_cli_entrypoint.py",
             "packages/planning/src/repo_planning_bootstrap/generated_cli_package/__init__.py",
+            "packages/memory/src/repo_memory_bootstrap/generated_cli_package.py",
             "packages/memory/src/repo_memory_bootstrap/generated_cli_entrypoint.py",
             "packages/memory/src/repo_memory_bootstrap/generated_cli_package/__init__.py",
         ]
         for relative_path in forbidden_generated_entrypoints:
             if (REPO_ROOT / relative_path).exists():
                 errors.append(f"{relative_path} is obsolete generated-owned source layout outside generated/python")
-        for relative_path, generated_root in durable_source_roots.items():
-            text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
-            if "Generated runtime-backed Python command adapter" in text or "DO NOT EDIT DIRECTLY." in text:
-                errors.append(f"{relative_path} still contains durable generated Python output instead of package-local glue")
-            if generated_root not in text:
-                errors.append(f"{relative_path} does not bridge to {generated_root}")
-            if "main = _generated.main" not in text:
-                errors.append(f"{relative_path} does not expose generated package main() from generated/python")
         conformance_cases, conformance_errors = _runnable_typescript_conformance_cases()
         errors.extend(f"static conformance coverage drift: {error}" for error in conformance_errors)
         if not conformance_errors and not conformance_cases:

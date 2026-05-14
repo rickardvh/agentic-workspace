@@ -1223,33 +1223,33 @@ def _known_command_names_for_program(program: str) -> set[str]:
 
 def _program_generated_parser(program: str) -> argparse.ArgumentParser | None:
     if program == "agentic-workspace":
-        from agentic_workspace import generated_cli_package
+        from agentic_command_generation import workspace_generated_cli_package
 
-        return generated_cli_package.build_generated_parser()
+        return workspace_generated_cli_package.build_generated_parser()
     if program == "agentic-planning":
-        from repo_planning_bootstrap import generated_cli_package
+        from agentic_command_generation import planning_generated_cli_package
 
-        return generated_cli_package.build_generated_parser()
+        return planning_generated_cli_package.build_generated_parser()
     if program == "agentic-memory":
-        from repo_memory_bootstrap import generated_cli_package
+        from agentic_command_generation import memory_generated_cli_package
 
-        return generated_cli_package.build_generated_parser()
+        return memory_generated_cli_package.build_generated_parser()
     return None
 
 
 def _program_generated_command_names(program: str) -> set[str]:
     if program == "agentic-workspace":
-        from agentic_workspace import generated_cli_package
+        from agentic_command_generation import workspace_generated_cli_package
 
-        return set(generated_cli_package.generated_command_names())
+        return set(workspace_generated_cli_package.generated_command_names())
     if program == "agentic-planning":
-        from repo_planning_bootstrap import generated_cli_package
+        from agentic_command_generation import planning_generated_cli_package
 
-        return set(generated_cli_package.generated_command_names())
+        return set(planning_generated_cli_package.generated_command_names())
     if program == "agentic-memory":
-        from repo_memory_bootstrap import generated_cli_package
+        from agentic_command_generation import memory_generated_cli_package
 
-        return set(generated_cli_package.generated_command_names())
+        return set(memory_generated_cli_package.generated_command_names())
     return set()
 
 

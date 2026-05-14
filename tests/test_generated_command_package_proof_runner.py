@@ -106,9 +106,9 @@ def test_generated_python_conformance_uses_contract_artifacts() -> None:
     planning_status = registries["planning-bootstrap"]["planning.status.process"]
     memory_skills = registries["memory-bootstrap"]["memory.list-skills.process"]
 
-    assert "agentic_workspace.generated_cli_package" in checker._python_command_for_package("root-workspace")[-1]
-    assert "repo_planning_bootstrap.generated_cli_package" in checker._python_command_for_package("planning-bootstrap")[-1]
-    assert "repo_memory_bootstrap.generated_cli_package" in checker._python_command_for_package("memory-bootstrap")[-1]
+    assert "agentic_command_generation.workspace_generated_cli_package" in checker._python_command_for_package("root-workspace")[-1]
+    assert "agentic_command_generation.planning_generated_cli_package" in checker._python_command_for_package("planning-bootstrap")[-1]
+    assert "agentic_command_generation.memory_generated_cli_package" in checker._python_command_for_package("memory-bootstrap")[-1]
     assert defaults.success_args == ["defaults", "--section", "startup", "--format", "json"]
     assert defaults.expected_exit == 0
     assert defaults.allow_stderr is False
@@ -370,7 +370,6 @@ def test_static_generated_package_proof_rejects_full_completion_with_shipped_mod
         "src/agentic_workspace/_runtime_cli.py owns executable behavior markers" in error and "parser construction" in error
         for error in errors
     )
-    assert any("generated_cli_package.py owns executable behavior markers" in error for error in errors)
 
 
 def test_static_generated_package_proof_rejects_satisfied_gate_for_non_full_state(monkeypatch) -> None:

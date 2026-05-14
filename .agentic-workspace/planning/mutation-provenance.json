@@ -1248,6 +1248,14 @@
       "reason": "Record intentional execplan update after linking active source-executable retirement lane to the parent decomposition and dogfooding issue #975.",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-14T19:13:22+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-cli-src-executable-cleanup.plan.json",
+      "sha256": "39bfad479a5e912b4e0b3dd9d9c090bc63f848c78df06859f83c853f35764801",
+      "command": "agentic-planning record-recovery",
+      "reason": "Record validated generated_cli_package.py bridge retirement slice and dogfooding issue #977 before continuing #892 source executable cleanup.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T19:24:13+00:00"
     }
   ]
 }

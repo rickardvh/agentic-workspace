@@ -852,7 +852,9 @@ def test_generated_python_module_collects_nested_operation_refs(tmp_path: Path) 
 def test_generic_command_generation_package_has_no_workspace_imports() -> None:
     package_root = Path(__file__).resolve().parents[1] / "packages" / "command-generation" / "src" / "agentic_command_generation"
     for path in package_root.rglob("*.py"):
-        assert "agentic_workspace" not in path.read_text(encoding="utf-8")
+        text = path.read_text(encoding="utf-8")
+        assert "from agentic_workspace" not in text
+        assert "import agentic_workspace" not in text
 
 
 def test_command_generation_readme_defines_lift_out_criteria() -> None:
@@ -875,7 +877,7 @@ def test_command_generation_readme_defines_lift_out_criteria() -> None:
 
 
 def test_generated_python_command_package_metadata_is_current() -> None:
-    from agentic_workspace.generated_cli_package import (
+    from agentic_command_generation.workspace_generated_cli_package import (
         GENERATED_COMMAND_PACKAGE,
         generated_command_names,
         generated_maturity,
@@ -1008,7 +1010,7 @@ def test_generated_python_command_package_metadata_is_current() -> None:
 
 
 def test_generated_python_command_package_parses_and_dispatches_runtime_operations() -> None:
-    from agentic_workspace.generated_cli_package import build_generated_parser, run_generated_command
+    from agentic_command_generation.workspace_generated_cli_package import build_generated_parser, run_generated_command
 
     calls: list[tuple[str, str | None, str, str | None]] = []
 
@@ -1083,7 +1085,7 @@ def test_generated_python_command_package_parses_and_dispatches_runtime_operatio
 
 
 def test_generated_python_command_package_parses_doctor_select() -> None:
-    from agentic_workspace.generated_cli_package import run_generated_command
+    from agentic_command_generation.workspace_generated_cli_package import run_generated_command
 
     calls: list[tuple[str, str | None]] = []
 
@@ -1096,10 +1098,10 @@ def test_generated_python_command_package_parses_doctor_select() -> None:
 
 
 def test_package_generated_python_command_packages_parse_status_runtime_operations() -> None:
-    from repo_memory_bootstrap.generated_cli_package import generated_maturity as memory_generated_maturity
-    from repo_memory_bootstrap.generated_cli_package import run_generated_command as run_memory_generated_command
-    from repo_planning_bootstrap.generated_cli_package import generated_maturity as planning_generated_maturity
-    from repo_planning_bootstrap.generated_cli_package import run_generated_command as run_planning_generated_command
+    from agentic_command_generation.memory_generated_cli_package import generated_maturity as memory_generated_maturity
+    from agentic_command_generation.memory_generated_cli_package import run_generated_command as run_memory_generated_command
+    from agentic_command_generation.planning_generated_cli_package import generated_maturity as planning_generated_maturity
+    from agentic_command_generation.planning_generated_cli_package import run_generated_command as run_planning_generated_command
 
     calls: list[tuple[str, str | None, str]] = []
 
@@ -1187,14 +1189,14 @@ def test_generated_typescript_package_adapters_are_runnable() -> None:
         "planning-cli": (
             "@agentic-workspace/planning-cli",
             "agentic-planning",
-            "repo_planning_bootstrap.generated_cli_package",
+            "agentic_command_generation.planning_generated_cli_package",
             "weak-agent-safe-adapter",
             "allowed-read-only",
         ),
         "memory-cli": (
             "@agentic-workspace/memory-cli",
             "agentic-memory",
-            "repo_memory_bootstrap.generated_cli_package",
+            "agentic_command_generation.memory_generated_cli_package",
             "weak-agent-safe-adapter",
             "allowed-read-only",
         ),

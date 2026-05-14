@@ -20,6 +20,21 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, NoReturn, cast
 
+from agentic_command_generation.workspace_generated_cli_package import (
+    build_generated_parser as build_generated_cli_package_parser,
+)
+from agentic_command_generation.workspace_generated_cli_package import (
+    generated_command_names as generated_cli_package_command_names,
+)
+from agentic_command_generation.workspace_generated_cli_package import (
+    generated_operation_contract as generated_cli_package_operation_contract,
+)
+from agentic_command_generation.workspace_generated_cli_package import (
+    run_generated_command as run_generated_cli_package_command,
+)
+from agentic_command_generation.workspace_generated_cli_package import (
+    supports_generated_command as supports_generated_cli_package_command,
+)
 from agentic_workspace import __version__, doctor
 from agentic_workspace import config as config_lib
 from agentic_workspace._schema import (
@@ -108,21 +123,6 @@ from agentic_workspace.contract_tooling import (
     workflow_artifact_profiles_manifest,
     workflow_definition_format_manifest,
     workspace_surfaces_manifest,
-)
-from agentic_workspace.generated_cli_package import (
-    build_generated_parser as build_generated_cli_package_parser,
-)
-from agentic_workspace.generated_cli_package import (
-    generated_command_names as generated_cli_package_command_names,
-)
-from agentic_workspace.generated_cli_package import (
-    generated_operation_contract as generated_cli_package_operation_contract,
-)
-from agentic_workspace.generated_cli_package import (
-    run_generated_command as run_generated_cli_package_command,
-)
-from agentic_workspace.generated_cli_package import (
-    supports_generated_command as supports_generated_cli_package_command,
 )
 from agentic_workspace.reporting_support import (
     output_contract_payload,
@@ -1628,7 +1628,7 @@ def _memory_module_argv(args: argparse.Namespace) -> list[str]:
 
 
 def _run_planning_front_door(args: argparse.Namespace) -> int:
-    from repo_planning_bootstrap.generated_cli_package import main as planning_main
+    from agentic_command_generation.planning_generated_cli_package import main as planning_main
 
     buffer = io.StringIO()
     with contextlib.redirect_stdout(buffer):
@@ -1638,7 +1638,7 @@ def _run_planning_front_door(args: argparse.Namespace) -> int:
 
 
 def _run_memory_front_door(args: argparse.Namespace) -> int:
-    from repo_memory_bootstrap.generated_cli_package import main as memory_main
+    from agentic_command_generation.memory_generated_cli_package import main as memory_main
 
     buffer = io.StringIO()
     with contextlib.redirect_stdout(buffer):

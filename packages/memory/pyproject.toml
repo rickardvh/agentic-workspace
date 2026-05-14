@@ -33,7 +33,7 @@ Repository = "https://github.com/rickardvh/agentic-workspace"
 Issues = "https://github.com/rickardvh/agentic-workspace/issues"
 
 [project.scripts]
-agentic-memory = "repo_memory_bootstrap.generated_cli_package:main"
+agentic-memory = "agentic_command_generation.memory_generated_cli_package:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/repo_memory_bootstrap"]

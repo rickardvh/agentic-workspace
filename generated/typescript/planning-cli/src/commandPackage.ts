@@ -466,7 +466,7 @@ export const generatedCommandPackage = {
   "package_role": "planning-module-cli",
   "program": "agentic-planning",
   "python_runtime_binding": {
-    "generated_package_module": "repo_planning_bootstrap.generated_cli_package",
+    "generated_package_module": "agentic_command_generation.planning_generated_cli_package",
     "runtime_module": "repo_planning_bootstrap._runtime_cli"
   },
   "targets": [

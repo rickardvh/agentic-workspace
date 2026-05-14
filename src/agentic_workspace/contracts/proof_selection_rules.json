@@ -45,9 +45,7 @@
         "generated/typescript/",
         "scripts/generate/generate_command_packages.py",
         "scripts/check/check_generated_command_packages.py",
-        "src/agentic_workspace/generated_cli_package.py",
-        "packages/planning/src/repo_planning_bootstrap/generated_cli_package.py",
-        "packages/memory/src/repo_memory_bootstrap/generated_cli_package.py"
+        "packages/command-generation/src/agentic_command_generation/"
       ]
     },
     {
@@ -167,18 +165,16 @@
         "edit_policy": "Do not hand-edit generated command package outputs; change the command package IR or generator and regenerate/prove the projection."
       },
       {
-        "id": "python-generated-package-bridge",
-        "role": "hand-owned-executable",
-        "exact": [
-          "src/agentic_workspace/generated_cli_package.py",
-          "packages/planning/src/repo_planning_bootstrap/generated_cli_package.py",
-          "packages/memory/src/repo_memory_bootstrap/generated_cli_package.py"
+        "id": "python-generated-package-loader",
+        "role": "generator",
+        "prefixes": [
+          "packages/command-generation/src/agentic_command_generation/"
         ],
         "direct_edit_allowed": true,
         "source_contract": "src/agentic_workspace/contracts/command_package_ir.json",
-        "generator_contract": null,
-        "regeneration_path": null,
-        "edit_policy": "These files are package-local bridges to generated/python, not generated output. Keep them small and prove package import behavior when editing."
+        "generator_contract": "packages/command-generation/src/agentic_command_generation/",
+        "regeneration_path": "uv run python scripts/generate/generate_command_packages.py",
+        "edit_policy": "Package-local source must not own generated CLI bridges. Codegen-owned loader changes must prove generated package import behavior, generated output freshness, and packaging entry points."
       },
       {
         "id": "root-workspace-cli-runtime",

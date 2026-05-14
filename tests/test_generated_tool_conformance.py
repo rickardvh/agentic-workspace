@@ -20,13 +20,13 @@ CLI_SHIM = (
 PLANNING_CLI_SHIM = (
     "import sys; "
     f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'planning' / 'src')!r}); "
-    "from repo_planning_bootstrap.generated_cli_package import main; "
+    "from agentic_command_generation.planning_generated_cli_package import main; "
     "raise SystemExit(main(sys.argv[1:]))"
 )
 MEMORY_CLI_SHIM = (
     "import sys; "
     f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'memory' / 'src')!r}); "
-    "from repo_memory_bootstrap.generated_cli_package import main; "
+    "from agentic_command_generation.memory_generated_cli_package import main; "
     "raise SystemExit(main(sys.argv[1:]))"
 )
 

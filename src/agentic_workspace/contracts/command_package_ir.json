@@ -195,7 +195,7 @@
     },
     "non_python_runtime_binding": {
       "selected_model": "generated parser/help with process handoff to canonical Python CLI",
-      "default_runtime_command": "python -c \"import sys; from agentic_workspace.generated_cli_package import main; raise SystemExit(main(sys.argv[1:]))\"",
+      "default_runtime_command": "python -c \"import sys; from agentic_command_generation.workspace_generated_cli_package import main; raise SystemExit(main(sys.argv[1:]))\"",
       "scope": "Read-only generated non-Python adapters may invoke the existing Python command surface as the runtime boundary; mutation-capable commands remain deferred until lifecycle dry-run, preflight, and refusal conformance are explicit.",
       "universal_contract_owns": [
         "command identity",
@@ -231,7 +231,7 @@
       "program": "agentic-workspace",
       "package_role": "root-workspace-cli",
       "python_runtime_binding": {
-        "generated_package_module": "agentic_workspace.generated_cli_package",
+        "generated_package_module": "agentic_command_generation.workspace_generated_cli_package",
         "runtime_module": "agentic_workspace._runtime_cli"
       },
       "targets": [
@@ -4227,7 +4227,7 @@
       "program": "agentic-planning",
       "package_role": "planning-module-cli",
       "python_runtime_binding": {
-        "generated_package_module": "repo_planning_bootstrap.generated_cli_package",
+        "generated_package_module": "agentic_command_generation.planning_generated_cli_package",
         "runtime_module": "repo_planning_bootstrap._runtime_cli"
       },
       "targets": [
@@ -4717,7 +4717,7 @@
       "program": "agentic-memory",
       "package_role": "memory-module-cli",
       "python_runtime_binding": {
-        "generated_package_module": "repo_memory_bootstrap.generated_cli_package",
+        "generated_package_module": "agentic_command_generation.memory_generated_cli_package",
         "runtime_module": "repo_memory_bootstrap._runtime_cli"
       },
       "targets": [

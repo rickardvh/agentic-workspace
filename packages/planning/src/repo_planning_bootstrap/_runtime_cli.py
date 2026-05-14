@@ -5,23 +5,24 @@ import json
 import shutil
 import sys
 
-from repo_planning_bootstrap import __version__
-from repo_planning_bootstrap._source import UpgradeSource, resolve_upgrade_source
-from repo_planning_bootstrap.generated_cli_package import (
+from agentic_command_generation.planning_generated_cli_package import (
     build_generated_parser as build_generated_cli_package_parser,
 )
-from repo_planning_bootstrap.generated_cli_package import (
+from agentic_command_generation.planning_generated_cli_package import (
     generated_command_names as generated_cli_package_command_names,
 )
-from repo_planning_bootstrap.generated_cli_package import (
+from agentic_command_generation.planning_generated_cli_package import (
     generated_operation_contract as generated_cli_package_operation_contract,
 )
-from repo_planning_bootstrap.generated_cli_package import (
+from agentic_command_generation.planning_generated_cli_package import (
     run_generated_command as run_generated_cli_package_command,
 )
-from repo_planning_bootstrap.generated_cli_package import (
+from agentic_command_generation.planning_generated_cli_package import (
     supports_generated_command as supports_generated_cli_package_command,
 )
+
+from repo_planning_bootstrap import __version__
+from repo_planning_bootstrap._source import UpgradeSource, resolve_upgrade_source
 from repo_planning_bootstrap.installer import (
     adopt_bootstrap,
     archive_execplan,
