@@ -1144,6 +1144,14 @@
       "reason": "Recorded config.report runtime-consumed migration slice outcome before commit.",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-14T17:25:40+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-generated-cli-completion-promotion.plan.json",
+      "sha256": "75dfbe9ac1c972d00961ebd048333fad129c90d7b34eb6739026bdd12fb9d80d",
+      "command": "agentic-planning record-recovery",
+      "reason": "Recorded validated #892 status-report operation IR migration slice; no dedicated progress-update command exists for active execplan run fields.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T17:37:23+00:00"
     }
   ]
 }

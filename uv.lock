@@ -37,11 +37,15 @@ name = "agentic-planning"
 version = "0.1.2"
 source = { editable = "packages/planning" }
 dependencies = [
+    { name = "agentic-command-generation" },
     { name = "jsonschema" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "jsonschema", specifier = ">=4.0" }]
+requires-dist = [
+    { name = "agentic-command-generation", editable = "packages/command-generation" },
+    { name = "jsonschema", specifier = ">=4.0" },
+]
 
 [[package]]
 name = "agentic-workspace"

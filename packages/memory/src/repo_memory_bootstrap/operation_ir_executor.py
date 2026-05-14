@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import argparse
+import json
+import tomllib
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from agentic_command_generation.primitive_executor import PrimitiveContext, PrimitiveExecutionError, run_operation_steps
 
@@ -10,6 +12,7 @@ from repo_memory_bootstrap._installer_output import _new_result, format_actions,
 from repo_memory_bootstrap._installer_paths import _record_repo_context_warnings, payload_root, resolve_target_root, skills_root
 from repo_memory_bootstrap._installer_payload import _payload_entries
 from repo_memory_bootstrap._installer_shared import OPTIONAL_APPEND_TARGETS, InstallResult
+from repo_memory_bootstrap.installer import MANIFEST_PATH, collect_status
 
 
 class OperationIrExecutionError(RuntimeError):
@@ -17,7 +20,7 @@ class OperationIrExecutionError(RuntimeError):
 
 
 def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int:
-    if operation.get("id") not in {"memory.list-files.report", "memory.list-skills.report"}:
+    if operation.get("id") not in {"memory.list-files.report", "memory.list-skills.report", "memory.status.report"}:
         raise OperationIrExecutionError(f"unsupported operation IR contract: {operation.get('id')!r}")
     if operation.get("migration_status") != "runtime-consumed":
         raise OperationIrExecutionError(f"operation is not marked runtime-consumed: {operation.get('id')!r}")
@@ -32,10 +35,15 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
     try:
         run_operation_steps(
             operation,
-            initial_values={"target": getattr(args, "target", None), "format": getattr(args, "format", "text")},
+            initial_values={
+                "target": getattr(args, "target", None),
+                "format": getattr(args, "format", "text"),
+                "verbose": getattr(args, "verbose", False),
+            },
             context=context,
             handlers={
                 "path.target_root.resolve": _resolve_memory_target_root,
+                "memory.bootstrap.status.load": _load_memory_bootstrap_status,
                 "payload.assemble": lambda values, arguments, _context: _assemble_payload(
                     operation_id=str(operation["id"]), values=values, arguments=arguments
                 ),
@@ -49,6 +57,12 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
 
 def _resolve_memory_target_root(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Path:
     return resolve_target_root(values.get("target"))
+
+
+def _load_memory_bootstrap_status(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    if values.get("format") == "json" and not values.get("verbose"):
+        return _tiny_memory_lifecycle_payload(target=values.get("target"), command="status")
+    return collect_status(target=values.get("target"))
 
 
 def _assemble_payload(*, operation_id: str, values: dict[str, Any], arguments: dict[str, Any]):
@@ -155,6 +169,9 @@ def _assemble_memory_list_skills_payload(*, registry: Any, arguments: dict[str, 
 
 def _emit_operation_output(result, *, output_format: str) -> None:
     if output_format == "json":
+        if isinstance(result, dict):
+            print(json.dumps(result, indent=2))
+            return
         print(format_result_json(result))
         return
 
@@ -170,3 +187,78 @@ def _emit_operation_output(result, *, output_format: str) -> None:
 
 def _emit_memory_operation_output(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> None:
     _emit_operation_output(values["result"], output_format=str(values.get("format") or "text"))
+
+
+def _tiny_memory_manifest_counts(*, target_root: Path) -> dict[str, object]:
+    manifest_path = target_root / MANIFEST_PATH
+    if not manifest_path.exists():
+        return {
+            "status": "missing",
+            "note_count": 0,
+            "required_count": 0,
+            "optional_count": 0,
+            "routing_only_count": 0,
+            "path": MANIFEST_PATH.as_posix(),
+        }
+    try:
+        payload = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return {
+            "status": "invalid",
+            "note_count": 0,
+            "required_count": 0,
+            "optional_count": 0,
+            "routing_only_count": 0,
+            "path": MANIFEST_PATH.as_posix(),
+        }
+    notes = payload.get("notes", {}) if isinstance(payload, dict) else {}
+    note_values = list(notes.values()) if isinstance(notes, dict) else []
+    required_count = 0
+    optional_count = 0
+    routing_only_count = 0
+    for note in note_values:
+        if not isinstance(note, dict):
+            continue
+        note_map = cast(dict[str, object], note)
+        relevance = str(note_map.get("task_relevance", "")).strip().lower()
+        if relevance == "required":
+            required_count += 1
+        elif relevance == "optional":
+            optional_count += 1
+        if bool(note_map.get("routing_only", False)):
+            routing_only_count += 1
+    return {
+        "status": "present",
+        "note_count": len(note_values),
+        "required_count": required_count,
+        "optional_count": optional_count,
+        "routing_only_count": routing_only_count,
+        "path": MANIFEST_PATH.as_posix(),
+    }
+
+
+def _tiny_memory_lifecycle_payload(*, target: str | Path | None, command: str) -> dict[str, object]:
+    target_root = resolve_target_root(target)
+    counts = _tiny_memory_manifest_counts(target_root=target_root)
+    health = "healthy" if counts["status"] == "present" else "attention-needed"
+    return {
+        "target_root": str(target_root),
+        "dry_run": command == "doctor",
+        "mode": "",
+        "message": "Status report" if command == "status" else "Doctor report",
+        "health": health,
+        "detected_version": None,
+        "bootstrap_version": None,
+        "action_count": 0 if health == "healthy" else 1,
+        "actions": []
+        if health == "healthy"
+        else [
+            {
+                "kind": counts["status"],
+                "path": counts["path"],
+                "detail": "memory manifest is not readable; run full doctor for remediation detail",
+            }
+        ],
+        "active": counts,
+        "detail_command": f"agentic-memory {command} --target . --verbose --format json",
+    }

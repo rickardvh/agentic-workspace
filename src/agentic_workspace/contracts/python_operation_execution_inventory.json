@@ -108,15 +108,13 @@
       "command": "status",
       "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
       "operation_contract": "operations/memory.status.report.json",
-      "primitive_executor": null,
+      "primitive_executor": "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "memory.bootstrap.status.load",
-        "output emission mechanics"
+        "module-result text/json compatibility formatting"
       ],
-      "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "memory.status.process",
-      "runtime_boundary_class": "generic-deterministic-runtime-debt",
-      "runtime_boundary_reason": "Bootstrap file presence inspection and module-result emission are deterministic file/data/output behavior that should move to codegen-owned primitives before full completion."
+      "status": "runtime-consumed",
+      "conformance_ref": "memory.status.process"
     },
     {
       "operation_id": "planning.doctor.report",
@@ -173,15 +171,13 @@
       "command": "status",
       "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
       "operation_contract": "operations/planning.status.report.json",
-      "primitive_executor": null,
+      "primitive_executor": "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "planning.bootstrap.status.load",
-        "output emission mechanics"
+        "module-result text/json compatibility formatting"
       ],
-      "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "planning.status.process",
-      "runtime_boundary_class": "generic-deterministic-runtime-debt",
-      "runtime_boundary_reason": "Bootstrap file presence inspection and module-result emission are deterministic file/data/output behavior that should move to codegen-owned primitives before full completion."
+      "status": "runtime-consumed",
+      "conformance_ref": "planning.status.process"
     },
     {
       "operation_id": "planning.summary.report",

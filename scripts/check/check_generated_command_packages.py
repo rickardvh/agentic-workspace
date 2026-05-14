@@ -806,6 +806,8 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         "defaults.report",
         "memory.list-files.report",
         "memory.list-skills.report",
+        "memory.status.report",
+        "planning.status.report",
     }
     for operation_id in sorted(runtime_consumed_operations):
         entry = by_operation.get(operation_id)
@@ -833,6 +835,8 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         "defaults.report": "agentic_workspace.generated_cli_package",
         "memory.list-files.report": "repo_memory_bootstrap.generated_cli_package",
         "memory.list-skills.report": "repo_memory_bootstrap.generated_cli_package",
+        "memory.status.report": "repo_memory_bootstrap.generated_cli_package",
+        "planning.status.report": "repo_planning_bootstrap.generated_cli_package",
     }
     for operation_id, module_name in sorted(generated_operation_modules.items()):
         try:
@@ -856,12 +860,29 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
     memory_cli_text = (REPO_ROOT / "packages" / "memory" / "src" / "repo_memory_bootstrap" / "_runtime_cli.py").read_text(
         encoding="utf-8"
     )
-    for function_name in ("_run_list_files_report_adapter", "_run_list_skills_report_adapter"):
+    for function_name in ("_run_list_files_report_adapter", "_run_list_skills_report_adapter", "_run_status_report_adapter"):
         function_index = memory_cli_text.find(f"def {function_name}")
         next_function_index = memory_cli_text.find("\ndef ", function_index + 1)
         function_text = memory_cli_text[function_index:next_function_index] if function_index != -1 else ""
         if "run_operation_ir(" not in function_text:
             errors.append(f"{function_name} must execute generated operation IR through run_operation_ir")
+
+    planning_operation_executor_text = (
+        REPO_ROOT / "packages" / "planning" / "src" / "repo_planning_bootstrap" / "operation_ir_executor.py"
+    ).read_text(encoding="utf-8")
+    if "from agentic_command_generation.primitive_executor import" not in planning_operation_executor_text:
+        errors.append("planning operation IR executor must import the codegen-owned primitive executor")
+    if "run_operation_steps(" not in planning_operation_executor_text:
+        errors.append("planning operation IR executor must execute operation plans through codegen-owned run_operation_steps")
+    planning_cli_text = (REPO_ROOT / "packages" / "planning" / "src" / "repo_planning_bootstrap" / "_runtime_cli.py").read_text(
+        encoding="utf-8"
+    )
+    function_name = "_run_status_report_adapter"
+    function_index = planning_cli_text.find(f"def {function_name}")
+    next_function_index = planning_cli_text.find("\ndef ", function_index + 1)
+    function_text = planning_cli_text[function_index:next_function_index] if function_index != -1 else ""
+    if "run_operation_ir(" not in function_text:
+        errors.append(f"{function_name} must execute generated operation IR through run_operation_ir")
 
     workspace_operation_executor_text = (REPO_ROOT / "src" / "agentic_workspace" / "operation_ir_executor.py").read_text(
         encoding="utf-8"

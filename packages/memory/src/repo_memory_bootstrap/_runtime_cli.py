@@ -965,7 +965,7 @@ def _run_route_report_adapter(args: argparse.Namespace) -> int | None:
 
 
 def _run_status_report_adapter(args: argparse.Namespace) -> int | None:
-    return _handle_status(args)
+    return run_operation_ir(generated_cli_package_operation_contract("memory.status.report"), args)
 
 
 _GENERATED_RUNTIME_HANDLERS = {

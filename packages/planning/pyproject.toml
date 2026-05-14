@@ -21,7 +21,10 @@ classifiers = [
 authors = [
   { name = "Rickard von Haugwitz" },
 ]
-dependencies = ["jsonschema>=4.0"]
+dependencies = ["agentic-command-generation", "jsonschema>=4.0"]
+
+[tool.uv.sources]
+agentic-command-generation = { workspace = true }
 
 [project.urls]
 Homepage = "https://github.com/rickardvh/agentic-workspace/tree/master/packages/planning"
@@ -50,6 +53,7 @@ packages = ["src/repo_planning_bootstrap"]
 "../../generated/python/planning-cli/generated_cli_package/__init__.py" = "src/repo_planning_bootstrap/_generated_cli_package_impl/__init__.py"
 "../../generated/python/planning-cli/generated_cli_package/command_package.json" = "src/repo_planning_bootstrap/_generated_cli_package_impl/command_package.json"
 "../../generated/python/planning-cli/generated_cli_package/adapter_commands.json" = "src/repo_planning_bootstrap/_generated_cli_package_impl/adapter_commands.json"
+"../../generated/python/planning-cli/generated_cli_package/operations" = "src/repo_planning_bootstrap/_generated_cli_package_impl/operations"
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -64,6 +68,7 @@ include = [
 "../../generated/python/planning-cli/generated_cli_package/__init__.py" = "src/repo_planning_bootstrap/_generated_cli_package_impl/__init__.py"
 "../../generated/python/planning-cli/generated_cli_package/command_package.json" = "src/repo_planning_bootstrap/_generated_cli_package_impl/command_package.json"
 "../../generated/python/planning-cli/generated_cli_package/adapter_commands.json" = "src/repo_planning_bootstrap/_generated_cli_package_impl/adapter_commands.json"
+"../../generated/python/planning-cli/generated_cli_package/operations" = "src/repo_planning_bootstrap/_generated_cli_package_impl/operations"
 
 [tool.pytest.ini_options]
 addopts = [
@@ -84,4 +89,3 @@ select = ["E", "F", "I"]
 
 [tool.coverage.run]
 source = ["repo_planning_bootstrap"]
-

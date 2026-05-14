@@ -14,6 +14,9 @@ from repo_planning_bootstrap.generated_cli_package import (
     generated_command_names as generated_cli_package_command_names,
 )
 from repo_planning_bootstrap.generated_cli_package import (
+    generated_operation_contract as generated_cli_package_operation_contract,
+)
+from repo_planning_bootstrap.generated_cli_package import (
     run_generated_command as run_generated_cli_package_command,
 )
 from repo_planning_bootstrap.generated_cli_package import (
@@ -48,6 +51,7 @@ from repo_planning_bootstrap.installer import (
     upgrade_bootstrap,
     verify_payload,
 )
+from repo_planning_bootstrap.operation_ir_executor import run_operation_ir
 
 
 def _program_name() -> str:
@@ -535,7 +539,7 @@ def _run_generated_cli_operation(operation_id: str, args: argparse.Namespace) ->
 
 
 def _run_status_report_adapter(args: argparse.Namespace) -> int:
-    return _emit(collect_status(target=args.target), args.format)
+    return run_operation_ir(generated_cli_package_operation_contract("planning.status.report"), args)
 
 
 def _run_doctor_report_adapter(args: argparse.Namespace) -> int:

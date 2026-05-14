@@ -122,7 +122,7 @@
       "id": "memory.status.report",
       "path": "operations/memory.status.report.json",
       "command": "status",
-      "migration_status": "draft-contract-only"
+      "migration_status": "runtime-consumed"
     },
     {
       "id": "memory.sync-memory.report",
@@ -224,7 +224,7 @@
       "id": "planning.status.report",
       "path": "operations/planning.status.report.json",
       "command": "status",
-      "migration_status": "draft-contract-only"
+      "migration_status": "runtime-consumed"
     },
     {
       "id": "planning.summary.report",
