@@ -13280,7 +13280,8 @@ def _close_item_state_candidates(state: dict[str, Any], *, item_id: str, target_
         for index, raw in enumerate(items):
             if not isinstance(raw, dict):
                 continue
-            raw_id = str(raw.get("id", "")).strip()
+            raw_record = cast(dict[str, Any], raw)
+            raw_id = str(raw_record.get("id", "")).strip()
             if not raw_id:
                 continue
             match = _close_item_id_match(raw_id, item_id)
@@ -13293,8 +13294,8 @@ def _close_item_state_candidates(state: dict[str, Any], *, item_id: str, target_
                     "path": path,
                     "index": index,
                     "id": raw_id,
-                    "status": str(raw.get("status", "")).strip(),
-                    "surface": _active_execplan_reference(raw),
+                    "status": str(raw_record.get("status", "")).strip(),
+                    "surface": _active_execplan_reference(raw_record),
                     "match": match,
                     "target_root": target_root,
                 }
