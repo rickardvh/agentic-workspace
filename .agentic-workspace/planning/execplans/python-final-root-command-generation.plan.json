@@ -1,0 +1,310 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Python final root command generation",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "#933/#954 Python generated CLI completion",
+    "hard_constraints": "Keep scope to the remaining root workspace commands already present in cli_commands.json but absent from command_package_ir: system-intent, note-delegation-outcome, external-intent refresh-github, and prompt init/upgrade/uninstall.",
+    "agent_may_decide": "Exact adapter ids, runtime handler helper names, focused conformance probes, and directly related checker hardening.",
+    "escalate_when": "A correct fix requires package-resource operation IR redesign, non-Python target runtime policy changes, or unrelated module CLI behavior.",
+    "next_action": "Add the remaining root command surfaces to command_package_ir and generated adapter metadata, wire thin runtime handlers, regenerate outputs, and prove there are no root compatibility fallback commands left.",
+    "proof_expectations": [
+      "uv run python scripts/generate/generate_command_packages.py --check",
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+      "focused root help/probe commands for system-intent, note-delegation-outcome, external-intent, and prompt"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/contracts/command_package_ir.json",
+      "src/agentic_workspace/contracts/command_adapter_generation.json",
+      "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+      "src/agentic_workspace/_runtime_cli.py",
+      "generated/python/workspace-cli/generated_cli_package/*",
+      "generated/typescript/workspace-cli/*",
+      "tests/test_contract_tooling.py and focused workspace CLI tests when assertions need updating"
+    ],
+    "completion_criteria": [
+      "All executable root workspace CLI command surfaces in cli_commands.json are represented by command_package_ir generated commands.",
+      "Generated root parser/help includes system-intent, note-delegation-outcome, external-intent, and prompt without relying on compatibility parser ownership.",
+      "Runtime behavior remains hand-owned only behind _GENERATED_RUNTIME_HANDLERS thin adapters.",
+      "Generated package freshness, static proof, Python conformance, and focused CLI probes pass."
+    ],
+    "continuation_owner": "python-generated-cli-completion-promotion",
+    "closeout_decision": "pending until proof confirms the root compatibility fallback no longer owns visible Python CLI command surfaces"
+  },
+  "goal": [
+    "#933/#954 Python generated CLI completion"
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "#933/#954 Python generated CLI completion",
+      "constraints": "Keep scope to the remaining root workspace command surfaces already present in cli_commands.json but absent from command_package_ir.",
+      "latitude": "Exact adapter ids, runtime helper names, focused conformance probes, and checker hardening directly needed by this slice.",
+      "escalation": "Escalate when a correct fix requires package-resource primitive redesign, non-Python target runtime policy changes, or unrelated module CLI behavior."
+    },
+    "execution": {
+      "milestone": "python-final-root-command-generation",
+      "status": "active",
+      "next_step": "Implement the final root workspace command generation slice and prove parser/dispatch ownership has moved to generated outputs.",
+      "proof": "Generated package freshness/static proof, Python conformance, and focused root CLI help/probe commands."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/contracts/command_package_ir.json",
+        "src/agentic_workspace/contracts/command_adapter_generation.json",
+        "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+        "src/agentic_workspace/_runtime_cli.py",
+        "generated/python/workspace-cli/generated_cli_package/*",
+        "generated/typescript/workspace-cli/*",
+        "tests/test_contract_tooling.py and focused workspace CLI tests when assertions need updating"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#933/#954 Python generated CLI completion",
+    "this slice completes the larger intended outcome": "only if closeout proof also confirms no remaining Python CLI command surfaces are hand-owned outside generated dispatch",
+    "continuation surface": "python-generated-cli-completion-promotion"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "conditional",
+    "owner surface": "command_package_ir python_cli_completion gate and python-generated-cli-completion-promotion lane",
+    "activation trigger": "Any remaining hand-owned visible Python CLI surface, stale generated output, or failed completion proof."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Final root workspace command surfaces can be tested as generated parser/dispatch entries.",
+    "intentionally deferred": "TypeScript semantic primitive parity, Bash, and PowerShell generated CLIs remain outside this Python branch.",
+    "discovered implications": "If generated command completeness checks do not detect fallback-only root commands, harden them in this slice.",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "completion-promotion closeout only after this slice proves the remaining root commands are generated"
+  },
+  "intent_interpretation": {
+    "literal request": "Python final root command generation",
+    "inferred intended outcome": "#933/#954 Python generated CLI completion",
+    "chosen concrete what": "Promote the four fallback-only root command groups into generated command_package_ir entries and runtime handler mappings.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Command contracts, generated command outputs, root runtime handler glue, targeted tests, and planning state for this execplan.",
+    "max changed files": "About 15 files; broaden only for checker hardening directly needed to prove no fallback-only root commands remain.",
+    "required validation commands": "generate_command_packages --check, check_generated_command_packages with Python conformance, focused root command help/probe commands, and targeted pytest if tests change.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs package-resource primitive redesign, non-Python target runtime policy changes, or unrelated module CLI behavior.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, python-generated-cli decomposition, command_package_ir, command_adapter_generation, python_operation_execution_inventory, _runtime_cli, generated outputs, and focused tests.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Finish final fallback-only root command generation: system-intent, note-delegation-outcome, external-intent refresh-github, and prompt init/upgrade/uninstall.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "#933/#954 Python generated CLI completion",
+    "hard constraints": "Keep scope to the remaining root workspace command surfaces already present in cli_commands.json but absent from command_package_ir.",
+    "agent may decide locally": "Exact adapter ids, runtime helper names, focused conformance probes, and checker hardening directly needed by this slice.",
+    "escalate when": "A correct fix requires package-resource primitive redesign, non-Python target runtime policy changes, or unrelated module CLI behavior."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "The internal subagent tool requires an explicit current-turn delegation request, and this slice needs tightly coupled contract/runtime edits before a cheaper external handoff would be useful.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-14T12:10:45+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "#933/#954 Python generated CLI completion",
+      "label": "#933/#954 Python generated CLI completion",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "python-final-root-command-generation",
+    "status": "active",
+    "scope": "Move the remaining fallback-only root workspace command groups into generated command_package_ir/parser/dispatch ownership.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Add command_package_ir entries for system-intent, note-delegation-outcome, external-intent refresh-github, and prompt init/upgrade/uninstall; wire runtime handlers; regenerate; prove."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    "src/agentic_workspace/contracts/command_adapter_generation.json",
+    "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+    "src/agentic_workspace/_runtime_cli.py",
+    "generated/python/workspace-cli/generated_cli_package/*",
+    "generated/typescript/workspace-cli/*",
+    "tests/test_contract_tooling.py and focused workspace CLI tests when assertions need updating"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run python scripts/generate/generate_command_packages.py --check",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+    "uv run agentic-workspace system-intent --help",
+    "uv run agentic-workspace external-intent refresh-github --help",
+    "uv run agentic-workspace prompt init --help",
+    "uv run agentic-workspace note-delegation-outcome --help"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Python final root command generation is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "not-run-yet",
+    "executor": "",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "execution has not started",
+    "scope touched": "none yet",
+    "changed surfaces": "none yet; execution has not changed files",
+    "validations run": "pending",
+    "result for continuation": "continue from this scaffolded execplan",
+    "next step": "Implement generated command entries and runtime handler mappings."
+  },
+  "finished_run_review": {
+    "review status": "pending",
+    "scope respected": "pending",
+    "proof status": "pending",
+    "intent served": "pending",
+    "config compliance": "pending",
+    "misinterpretation risk": "pending",
+    "follow-on decision": "pending"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "The internal subagent tool requires an explicit current-turn delegation request, and this slice needs tightly coupled contract/runtime edits before a cheaper external handoff would be useful.",
+    "expected savings": "low for the setup step; possible later for validation if proof failures appear",
+    "actual friction": "pending",
+    "proof result": "pending",
+    "quality concern": "None; keep the plan and implementation local until the command boundary is explicit.",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "pending",
+    "proof achieved now": "pending",
+    "evidence for \"proof achieved\" state": ""
+  },
+  "intent_satisfaction": {
+    "original intent": "#933/#954 Python generated CLI completion",
+    "was original intent fully satisfied?": "pending",
+    "evidence of intent satisfaction": "",
+    "unsolved intent passed to": "none yet"
+  },
+  "execution_summary": {
+    "outcome delivered": "not completed yet",
+    "validation confirmed": "pending",
+    "follow-on routed to": "none yet",
+    "post-work posterity capture": "pending",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "current milestone"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "pending",
+    "larger-intent status": "pending",
+    "closure decision": "pending",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "",
+    "evidence carried forward": "",
+    "reopen trigger": ""
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-14: Scaffolded by agentic-planning new-plan.",
+    "2026-05-14: Recorded delegation decision route=keep-local."
+  ]
+}

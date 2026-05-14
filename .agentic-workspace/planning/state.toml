@@ -12,7 +12,9 @@ work_items = []
 execplans = []
 
 [todo]
-active_items = []
+active_items = [
+  { id = "python-final-root-command-generation", title = "Python final root command generation", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/python-final-root-command-generation.plan.json", why_now = "#933/#954 Python generated CLI completion", owner_role = "implementation", handoff_ready = true, refs = ["#933/#954 Python generated CLI completion"] },
+]
 queued_items = []
 
 [roadmap]
