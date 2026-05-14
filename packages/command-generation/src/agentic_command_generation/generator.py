@@ -67,6 +67,26 @@ def _python_adapter_commands(package: dict[str, Any]) -> list[dict[str, Any]]:
     ]
 
 
+def _interface_operation_refs(interface: dict[str, Any], inherited_operation_ref: dict[str, Any]) -> list[dict[str, Any]]:
+    operation_ref = interface.get("operation_ref", inherited_operation_ref)
+    current_operation_ref = operation_ref if isinstance(operation_ref, dict) else inherited_operation_ref
+    refs = [current_operation_ref]
+    for subcommand in interface.get("subcommands", []):
+        if isinstance(subcommand, dict):
+            refs.extend(_interface_operation_refs(subcommand, current_operation_ref))
+    return refs
+
+
+def _command_operation_refs(command: dict[str, Any]) -> list[dict[str, Any]]:
+    operation_ref = command.get("operation_ref", {})
+    interface = command.get("interface", {})
+    if not isinstance(operation_ref, dict):
+        return []
+    if not isinstance(interface, dict):
+        return [operation_ref]
+    return _interface_operation_refs(interface, operation_ref)
+
+
 def _python_adapter_command_payload(package: dict[str, Any]) -> list[dict[str, Any]]:
     payload: list[dict[str, Any]] = []
     for command in _python_adapter_commands(package):
@@ -93,19 +113,19 @@ def _runtime_consumed_operation_outputs(
     emitted: set[str] = set()
     contracts_package_root = "agentic" + "_workspace"
     for command in _python_adapter_commands(package):
-        operation_ref = command["operation_ref"]
-        operation_path = str(operation_ref["path"])
-        if operation_path in emitted:
-            continue
-        source = repo_root / "src" / contracts_package_root / "contracts" / operation_path
-        if not source.is_file():
-            continue
-        operation = json.loads(source.read_text(encoding="utf-8"))
-        ir_plan = operation.get("ir_plan", {})
-        if not isinstance(ir_plan, dict) or ir_plan.get("status") not in {"representative", "complete"}:
-            continue
-        emitted.add(operation_path)
-        outputs.append(GeneratedOutput(root / "generated_cli_package" / operation_path, _json_block(operation) + "\n"))
+        for operation_ref in _command_operation_refs(command):
+            operation_path = str(operation_ref.get("path", ""))
+            if not operation_path or operation_path in emitted:
+                continue
+            source = repo_root / "src" / contracts_package_root / "contracts" / operation_path
+            if not source.is_file():
+                continue
+            operation = json.loads(source.read_text(encoding="utf-8"))
+            ir_plan = operation.get("ir_plan", {})
+            if not isinstance(ir_plan, dict) or ir_plan.get("status") not in {"representative", "complete"}:
+                continue
+            emitted.add(operation_path)
+            outputs.append(GeneratedOutput(root / "generated_cli_package" / operation_path, _json_block(operation) + "\n"))
     return outputs
 
 
@@ -171,11 +191,7 @@ def _python_runtime_adapter_module(package: dict[str, Any], target: dict[str, An
         "_GENERATED_COMMANDS_BY_NAME: dict[str, dict[str, Any]] = {\n"
         '    str(command["interface"]["name"]): command for command in _GENERATED_ADAPTER_COMMANDS\n'
         "}\n\n"
-        "_GENERATED_OPERATION_PATHS_BY_ID: dict[str, str] = {\n"
-        '    str(command["operation_id"]): str(command["operation_path"])\n'
-        "    for command in _GENERATED_ADAPTER_COMMANDS\n"
-        '    if "operation_path" in command\n'
-        "}\n\n"
+        "_GENERATED_OPERATION_PATHS_BY_ID: dict[str, str] = {}\n\n"
         f"_GENERATED_MATURITY_ID = {target['maturity_level_ref']!r}\n"
         f"_GENERATED_WEAK_AGENT_ROUTING = {weak_agent_routing!r}\n"
         f"_GENERATED_RUNNABLE = {runnable}\n\n"
@@ -190,8 +206,31 @@ def _python_runtime_adapter_module(package: dict[str, Any], target: dict[str, An
         "    return _GENERATED_WEAK_AGENT_ROUTING\n\n\n"
         "def generated_command_names() -> tuple[str, ...]:\n"
         "    return tuple(sorted(_GENERATED_COMMANDS_BY_NAME))\n\n\n"
+        "def _interface_operation_ref(interface: dict[str, Any], inherited_operation_id: str, inherited_operation_path: str) -> tuple[str, str]:\n"
+        '    operation_ref = interface.get("operation_ref", {})\n'
+        "    if isinstance(operation_ref, dict):\n"
+        '        return str(operation_ref.get("id", inherited_operation_id)), str(operation_ref.get("path", inherited_operation_path))\n'
+        "    return inherited_operation_id, inherited_operation_path\n\n\n"
+        "def _interface_operation_paths_by_id(interface: dict[str, Any], inherited_operation_id: str, inherited_operation_path: str) -> dict[str, str]:\n"
+        "    operation_id, operation_path = _interface_operation_ref(interface, inherited_operation_id, inherited_operation_path)\n"
+        "    paths = {operation_id: operation_path}\n"
+        '    for subcommand in interface.get("subcommands", []):\n'
+        "        if isinstance(subcommand, dict):\n"
+        "            paths.update(_interface_operation_paths_by_id(subcommand, operation_id, operation_path))\n"
+        "    return paths\n\n\n"
+        "_GENERATED_OPERATION_PATHS_BY_ID.update(\n"
+        "    {\n"
+        "        operation_id: operation_path\n"
+        "        for command in _GENERATED_ADAPTER_COMMANDS\n"
+        "        for operation_id, operation_path in _interface_operation_paths_by_id(\n"
+        '            command["interface"],\n'
+        '            str(command["operation_id"]),\n'
+        '            str(command["operation_path"]),\n'
+        "        ).items()\n"
+        "    }\n"
+        ")\n\n\n"
         "def generated_operation_ids() -> tuple[str, ...]:\n"
-        '    return tuple(sorted(str(command["operation_id"]) for command in _GENERATED_ADAPTER_COMMANDS))\n\n\n'
+        "    return tuple(sorted(_GENERATED_OPERATION_PATHS_BY_ID))\n\n\n"
         "def generated_operation_contract(operation_id: str) -> dict[str, Any]:\n"
         "    operation_path = _GENERATED_OPERATION_PATHS_BY_ID[str(operation_id)]\n"
         "    return _load_generated_json(operation_path)\n\n\n"
@@ -248,6 +287,9 @@ def _python_runtime_adapter_module(package: dict[str, Any], target: dict[str, An
         '        help=str(interface["help"]),\n'
         '        description=str(interface["help"]),\n'
         "    )\n"
+        '    nested_operation_ref = interface.get("operation_ref", {})\n'
+        "    if isinstance(nested_operation_ref, dict):\n"
+        '        operation_id = str(nested_operation_ref.get("id", operation_id))\n'
         "    _set_generated_operation_id(command_parser, operation_id)\n"
         "    option_names = _add_interface_options(command_parser, interface, inherited_option_names)\n"
         '    subcommands = interface.get("subcommands", [])\n'

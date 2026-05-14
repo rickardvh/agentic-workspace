@@ -35,11 +35,7 @@ _GENERATED_COMMANDS_BY_NAME: dict[str, dict[str, Any]] = {
     str(command["interface"]["name"]): command for command in _GENERATED_ADAPTER_COMMANDS
 }
 
-_GENERATED_OPERATION_PATHS_BY_ID: dict[str, str] = {
-    str(command["operation_id"]): str(command["operation_path"])
-    for command in _GENERATED_ADAPTER_COMMANDS
-    if "operation_path" in command
-}
+_GENERATED_OPERATION_PATHS_BY_ID: dict[str, str] = {}
 
 _GENERATED_MATURITY_ID = 'weak-agent-safe-adapter'
 _GENERATED_WEAK_AGENT_ROUTING = 'allowed-read-only'
@@ -64,8 +60,37 @@ def generated_command_names() -> tuple[str, ...]:
     return tuple(sorted(_GENERATED_COMMANDS_BY_NAME))
 
 
+def _interface_operation_ref(interface: dict[str, Any], inherited_operation_id: str, inherited_operation_path: str) -> tuple[str, str]:
+    operation_ref = interface.get("operation_ref", {})
+    if isinstance(operation_ref, dict):
+        return str(operation_ref.get("id", inherited_operation_id)), str(operation_ref.get("path", inherited_operation_path))
+    return inherited_operation_id, inherited_operation_path
+
+
+def _interface_operation_paths_by_id(interface: dict[str, Any], inherited_operation_id: str, inherited_operation_path: str) -> dict[str, str]:
+    operation_id, operation_path = _interface_operation_ref(interface, inherited_operation_id, inherited_operation_path)
+    paths = {operation_id: operation_path}
+    for subcommand in interface.get("subcommands", []):
+        if isinstance(subcommand, dict):
+            paths.update(_interface_operation_paths_by_id(subcommand, operation_id, operation_path))
+    return paths
+
+
+_GENERATED_OPERATION_PATHS_BY_ID.update(
+    {
+        operation_id: operation_path
+        for command in _GENERATED_ADAPTER_COMMANDS
+        for operation_id, operation_path in _interface_operation_paths_by_id(
+            command["interface"],
+            str(command["operation_id"]),
+            str(command["operation_path"]),
+        ).items()
+    }
+)
+
+
 def generated_operation_ids() -> tuple[str, ...]:
-    return tuple(sorted(str(command["operation_id"]) for command in _GENERATED_ADAPTER_COMMANDS))
+    return tuple(sorted(_GENERATED_OPERATION_PATHS_BY_ID))
 
 
 def generated_operation_contract(operation_id: str) -> dict[str, Any]:
@@ -136,6 +161,9 @@ def _add_interface_command(
         help=str(interface["help"]),
         description=str(interface["help"]),
     )
+    nested_operation_ref = interface.get("operation_ref", {})
+    if isinstance(nested_operation_ref, dict):
+        operation_id = str(nested_operation_ref.get("id", operation_id))
     _set_generated_operation_id(command_parser, operation_id)
     option_names = _add_interface_options(command_parser, interface, inherited_option_names)
     subcommands = interface.get("subcommands", [])

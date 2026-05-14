@@ -4,12 +4,32 @@ import argparse
 import copy
 import importlib.util
 import json
+import sys
 from pathlib import Path
 
 import pytest
 from jsonschema import Draft202012Validator
 
 from agentic_workspace import contract_tooling
+
+
+def _command_operation_ids(command: dict[str, object]) -> set[str]:
+    operation_ref = command.get("operation_ref", {})
+    operation_ids = {str(operation_ref["id"])} if isinstance(operation_ref, dict) and "id" in operation_ref else set()
+
+    def collect_interface(interface: object) -> None:
+        if not isinstance(interface, dict):
+            return
+        nested_operation_ref = interface.get("operation_ref", {})
+        if isinstance(nested_operation_ref, dict) and "id" in nested_operation_ref:
+            operation_ids.add(str(nested_operation_ref["id"]))
+        subcommands = interface.get("subcommands", [])
+        if isinstance(subcommands, list):
+            for subcommand in subcommands:
+                collect_interface(subcommand)
+
+    collect_interface(command.get("interface"))
+    return operation_ids
 
 
 def test_contract_tooling_check_passes() -> None:
@@ -706,9 +726,10 @@ def test_python_operation_execution_inventory_tracks_representative_runtime_cons
     assert "compatibility-runtime-handler" not in {entry["status"] for entry in entries.values()}
     assert "accepted-hand-owned-runtime-primitive" in {entry["status"] for entry in entries.values()}
     generated_operations = {
-        command["operation_ref"]["id"]
+        operation_id
         for package in contract_tooling.command_package_ir_manifest()["packages"]
         for command in package["commands"]
+        for operation_id in _command_operation_ids(command)
     }
     assert set(entries) == generated_operations
 
@@ -743,6 +764,79 @@ def test_command_package_generator_normalizes_line_endings() -> None:
 
     assert 'newline="\\n"' in generator.read_text(encoding="utf-8")
     assert "line-ending drift" in wrapper.read_text(encoding="utf-8")
+
+
+def test_generated_python_module_collects_nested_operation_refs(tmp_path: Path) -> None:
+    generator_path = (
+        Path(__file__).resolve().parents[1] / "packages" / "command-generation" / "src" / "agentic_command_generation" / "generator.py"
+    )
+    spec = importlib.util.spec_from_file_location("agentic_command_generation_generator", generator_path)
+    assert spec is not None and spec.loader is not None
+    generator = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = generator
+    spec.loader.exec_module(generator)
+    package = {
+        "program": "example",
+        "summary": "Example generated package",
+        "commands": [
+            {
+                "adapter_id": "prompt.lifecycle.cli",
+                "operation_ref": {"id": "prompt.init", "path": "operations/prompt.init.json"},
+                "status": "generated",
+                "interface": {
+                    "name": "prompt",
+                    "help": "Prompt lifecycle",
+                    "subcommand_dest": "prompt_command",
+                    "subcommands": [
+                        {
+                            "name": "upgrade",
+                            "help": "Upgrade prompt",
+                            "operation_ref": {"id": "prompt.upgrade", "path": "operations/prompt.upgrade.json"},
+                        },
+                        {
+                            "name": "uninstall",
+                            "help": "Uninstall prompt",
+                            "operation_ref": {"id": "prompt.uninstall", "path": "operations/prompt.uninstall.json"},
+                        },
+                    ],
+                },
+            },
+        ],
+    }
+    target = {"maturity_level_ref": "weak-agent-safe-adapter", "kind": "python"}
+    package_dir = tmp_path / "nested_generated_cli_package"
+    package_dir.mkdir()
+    (package_dir / "command_package.json").write_text(json.dumps(package), encoding="utf-8")
+    (package_dir / "adapter_commands.json").write_text(
+        json.dumps(
+            [
+                {
+                    "adapter_id": "prompt.lifecycle.cli",
+                    "operation_id": "prompt.init",
+                    "operation_path": "operations/prompt.init.json",
+                    "interface": package["commands"][0]["interface"],
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    module_text = generator._python_runtime_adapter_module(
+        package,
+        target,
+        source_path="src/agentic_workspace/contracts/command_package_ir.json",
+        regenerate_command="uv run python scripts/generate/generate_command_packages.py",
+    )
+    (package_dir / "__init__.py").write_text(module_text, encoding="utf-8")
+    sys.path.insert(0, str(tmp_path))
+    try:
+        generated = __import__("nested_generated_cli_package")
+    finally:
+        sys.path.remove(str(tmp_path))
+
+    assert generated.generated_operation_ids() == ("prompt.init", "prompt.uninstall", "prompt.upgrade")
+    parser = generated.build_generated_parser()
+    assert parser.parse_args(["prompt", "upgrade"])._generated_operation_id == "prompt.upgrade"
+    assert parser.parse_args(["prompt", "uninstall"])._generated_operation_id == "prompt.uninstall"
 
 
 def test_generic_command_generation_package_has_no_workspace_imports() -> None:
@@ -862,6 +956,8 @@ def test_generated_python_command_package_metadata_is_current() -> None:
         "planning.front-door",
         "preflight.report",
         "prompt.init",
+        "prompt.uninstall",
+        "prompt.upgrade",
         "proof.report",
         "reconcile.report",
         "report.combined",

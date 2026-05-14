@@ -1776,7 +1776,11 @@
         "name": "prompt",
         "command_manifest": "cli_commands.json",
         "option_group_manifest": "cli_option_groups.json",
-        "subcommand": "init"
+        "subcommands": [
+          "init",
+          "upgrade",
+          "uninstall"
+        ]
       },
       "operation_ref": {
         "id": "prompt.init",
@@ -1806,6 +1810,7 @@
         "universal_fields": [
           "command.name",
           "command.options",
+          "command.subcommands",
           "operation_ref.id",
           "runtime_binding.primitive_refs",
           "effect_hints",
@@ -1844,7 +1849,9 @@
         ]
       },
       "conformance_refs": [
-        "prompt.init.process"
+        "prompt.init.process",
+        "prompt.upgrade.process",
+        "prompt.uninstall.process"
       ]
     },
     {

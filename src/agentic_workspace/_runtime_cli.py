@@ -19787,6 +19787,8 @@ _GENERATED_RUNTIME_HANDLERS: dict[str, Callable[[argparse.Namespace], int]] = {
     "planning.front-door": _run_planning_front_door_adapter,
     "preflight.report": _run_preflight_report_adapter,
     "prompt.init": _run_prompt_lifecycle_adapter,
+    "prompt.upgrade": _run_prompt_lifecycle_adapter,
+    "prompt.uninstall": _run_prompt_lifecycle_adapter,
     "proof.report": _run_proof_report_adapter,
     "reconcile.report": _run_reconcile_report_adapter,
     "report.combined": _run_report_combined_adapter,

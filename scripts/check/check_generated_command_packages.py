@@ -211,6 +211,42 @@ def _load_json(relative_path: str) -> dict[str, object]:
     return json.loads((REPO_ROOT / "src" / "agentic_workspace" / "contracts" / relative_path).read_text(encoding="utf-8"))
 
 
+def _interface_operation_refs(interface: dict[str, object], inherited_operation_ref: dict[str, object]) -> list[dict[str, object]]:
+    operation_ref = interface.get("operation_ref", inherited_operation_ref)
+    current_operation_ref = operation_ref if isinstance(operation_ref, dict) else inherited_operation_ref
+    refs = [current_operation_ref]
+    subcommands = interface.get("subcommands", [])
+    if isinstance(subcommands, list):
+        for subcommand in subcommands:
+            if isinstance(subcommand, dict):
+                refs.extend(_interface_operation_refs(subcommand, current_operation_ref))
+    return refs
+
+
+def _command_operation_refs(command: dict[str, object]) -> list[dict[str, object]]:
+    operation_ref = command.get("operation_ref", {})
+    interface = command.get("interface", {})
+    if not isinstance(operation_ref, dict):
+        return []
+    if not isinstance(interface, dict):
+        return [operation_ref]
+    return _interface_operation_refs(interface, operation_ref)
+
+
+def _command_conformance_ref_for_operation(command: dict[str, object], operation_id: str) -> object:
+    refs = command.get("conformance_refs") or []
+    if not isinstance(refs, list):
+        return None
+    exact = f"{operation_id}.process"
+    if exact in refs:
+        return exact
+    prefix = f"{operation_id}."
+    for ref in refs:
+        if isinstance(ref, str) and ref.startswith(prefix):
+            return ref
+    return refs[0] if refs else None
+
+
 def _field_value(payload: object, path: list[str]) -> object:
     current = payload
     for part in path:
@@ -704,20 +740,20 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         for command in package.get("commands", []):
             if not isinstance(command, dict):
                 continue
-            operation_ref = command.get("operation_ref", {})
             interface = command.get("interface", {})
-            if not isinstance(operation_ref, dict) or not isinstance(interface, dict):
+            if not isinstance(interface, dict):
                 continue
-            operation_id = str(operation_ref.get("id", ""))
-            if not operation_id:
-                continue
-            generated_operations[operation_id] = {
-                "program": package.get("program"),
-                "command": interface.get("name"),
-                "operation_contract": operation_ref.get("path"),
-                "generated_transport": generated_transport,
-                "conformance_ref": (command.get("conformance_refs") or [None])[0],
-            }
+            for operation_ref in _command_operation_refs(command):
+                operation_id = str(operation_ref.get("id", ""))
+                if not operation_id:
+                    continue
+                generated_operations[operation_id] = {
+                    "program": package.get("program"),
+                    "command": interface.get("name"),
+                    "operation_contract": operation_ref.get("path"),
+                    "generated_transport": generated_transport,
+                    "conformance_ref": _command_conformance_ref_for_operation(command, operation_id),
+                }
     missing_inventory = sorted(set(generated_operations) - set(by_operation))
     extra_inventory = sorted(set(by_operation) - set(generated_operations))
     if missing_inventory:
@@ -1197,16 +1233,24 @@ def _validate_static_surfaces() -> list[str]:
                 if resource_name == "command_package.json" and payload != package:
                     errors.append(f"{generated_root}/generated_cli_package/command_package.json drifted from command_package_ir.json package {package_id!r}")
                 if resource_name == "adapter_commands.json":
-                    expected_adapter_commands = [
-                        {
-                            "adapter_id": command["adapter_id"],
-                            "operation_id": command["operation_ref"]["id"],
-                            "operation_path": command["operation_ref"]["path"],
-                            "interface": dict(command["interface"]),
-                        }
-                        for command in package.get("commands", [])
-                        if isinstance(command, dict) and command.get("status") == "generated" and isinstance(command.get("interface"), dict)
-                    ]
+                    expected_adapter_commands = []
+                    for command in package.get("commands", []):
+                        if not (
+                            isinstance(command, dict)
+                            and command.get("status") == "generated"
+                            and isinstance(command.get("interface"), dict)
+                            and isinstance(command.get("operation_ref"), dict)
+                        ):
+                            continue
+                        operation_ref = command["operation_ref"]
+                        expected_adapter_commands.append(
+                            {
+                                "adapter_id": command["adapter_id"],
+                                "operation_id": operation_ref["id"],
+                                "operation_path": operation_ref["path"],
+                                "interface": dict(command["interface"]),
+                            }
+                        )
                     if payload != expected_adapter_commands:
                         errors.append(
                             f"{generated_root}/generated_cli_package/adapter_commands.json drifted from generated adapter projection"

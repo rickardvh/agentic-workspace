@@ -3194,7 +3194,9 @@ export const generatedCommandPackage = {
         "name": "prompt"
       },
       "conformance_refs": [
-        "prompt.init.process"
+        "prompt.init.process",
+        "prompt.upgrade.process",
+        "prompt.uninstall.process"
       ],
       "effect_hints": {
         "destructive": false,
@@ -3212,6 +3214,10 @@ export const generatedCommandPackage = {
           {
             "help": "Print the workspace bootstrap handoff prompt.",
             "name": "init",
+            "operation_ref": {
+              "id": "prompt.init",
+              "path": "operations/prompt.init.json"
+            },
             "options": [
               {
                 "choices": [
@@ -3274,6 +3280,10 @@ export const generatedCommandPackage = {
           {
             "help": "Print the workspace upgrade handoff prompt.",
             "name": "upgrade",
+            "operation_ref": {
+              "id": "prompt.upgrade",
+              "path": "operations/prompt.upgrade.json"
+            },
             "options": [
               {
                 "choices": [
@@ -3321,6 +3331,10 @@ export const generatedCommandPackage = {
           {
             "help": "Print the workspace uninstall handoff prompt.",
             "name": "uninstall",
+            "operation_ref": {
+              "id": "prompt.uninstall",
+              "path": "operations/prompt.uninstall.json"
+            },
             "options": [
               {
                 "choices": [

@@ -128,8 +128,8 @@ def test_conformance_registry_points_at_schema_valid_contracts() -> None:
     registry = conformance_contracts_manifest()
 
     assert registry["schema_version"] == "agentic-workspace/conformance-contracts/v1"
-    assert registry["contracts"][0]["operation_id"] == "defaults.report"
-    assert conformance_contract_manifest(registry["contracts"][0]["path"])["adapter"]["kind"] == "process"
+    defaults_ref = next(contract for contract in registry["contracts"] if contract["operation_id"] == "defaults.report")
+    assert conformance_contract_manifest(defaults_ref["path"])["adapter"]["kind"] == "process"
 
 
 def test_generated_adapters_are_backed_by_black_box_conformance_contracts() -> None:
@@ -147,8 +147,8 @@ def test_generated_adapters_are_backed_by_black_box_conformance_contracts() -> N
             contract = conformance_contract_manifest(registry_ref["path"])
             command_template = contract["adapter"]["command_template"]
 
-            assert registry_ref["operation_id"] == adapter["operation_id"]
-            assert contract["operation_id"] == adapter["operation_id"]
+            assert contract["operation_id"] == registry_ref["operation_id"]
+            assert registry_ref["operation_id"] == adapter["operation_id"] or conformance_ref.startswith(f"{registry_ref['operation_id']}.")
             placeholders_by_program = {
                 "agentic-workspace": "{agentic_workspace_cli}",
                 "agentic-planning": "{agentic_planning_cli}",

@@ -209,6 +209,21 @@
       "conformance_ref": "defaults.report.process"
     },
     {
+      "operation_id": "delegation-outcome.append",
+      "program": "agentic-workspace",
+      "command": "note-delegation-outcome",
+      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/delegation-outcome.append.json",
+      "primitive_executor": null,
+      "hand_owned_runtime_code": [
+        "workspace.root.resolve",
+        "delegation.outcome.append",
+        "output emission mechanics"
+      ],
+      "status": "accepted-hand-owned-runtime-primitive",
+      "conformance_ref": "delegation-outcome.append.process"
+    },
+    {
       "operation_id": "doctor.report",
       "program": "agentic-workspace",
       "command": "doctor",
@@ -327,21 +342,6 @@
       "conformance_ref": "modules.report.process"
     },
     {
-      "operation_id": "delegation-outcome.append",
-      "program": "agentic-workspace",
-      "command": "note-delegation-outcome",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
-      "operation_contract": "operations/delegation-outcome.append.json",
-      "primitive_executor": null,
-      "hand_owned_runtime_code": [
-        "workspace.root.resolve",
-        "delegation.outcome.append",
-        "output emission mechanics"
-      ],
-      "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "delegation-outcome.append.process"
-    },
-    {
       "operation_id": "ownership.report",
       "program": "agentic-workspace",
       "command": "ownership",
@@ -404,6 +404,36 @@
       ],
       "status": "accepted-hand-owned-runtime-primitive",
       "conformance_ref": "prompt.init.process"
+    },
+    {
+      "operation_id": "prompt.uninstall",
+      "program": "agentic-workspace",
+      "command": "prompt",
+      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/prompt.uninstall.json",
+      "primitive_executor": null,
+      "hand_owned_runtime_code": [
+        "workspace.selection.resolve",
+        "prompt.render",
+        "output emission mechanics"
+      ],
+      "status": "accepted-hand-owned-runtime-primitive",
+      "conformance_ref": "prompt.uninstall.process"
+    },
+    {
+      "operation_id": "prompt.upgrade",
+      "program": "agentic-workspace",
+      "command": "prompt",
+      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/prompt.upgrade.json",
+      "primitive_executor": null,
+      "hand_owned_runtime_code": [
+        "workspace.selection.resolve",
+        "prompt.render",
+        "output emission mechanics"
+      ],
+      "status": "accepted-hand-owned-runtime-primitive",
+      "conformance_ref": "prompt.upgrade.process"
     },
     {
       "operation_id": "proof.report",

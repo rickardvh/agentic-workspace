@@ -460,10 +460,16 @@
         "name": "prompt",
         "option_group_manifest": "cli_option_groups.json",
         "program": "agentic-workspace",
-        "subcommand": "init"
+        "subcommands": [
+          "init",
+          "upgrade",
+          "uninstall"
+        ]
       },
       "conformance_refs": [
-        "prompt.init.process"
+        "prompt.init.process",
+        "prompt.upgrade.process",
+        "prompt.uninstall.process"
       ],
       "effect_hints": {
         "destructive": false,

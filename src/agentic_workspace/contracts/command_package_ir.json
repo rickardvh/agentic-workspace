@@ -3526,7 +3526,11 @@
                     "action": "store_true",
                     "help": "Force conservative adopt behavior."
                   }
-                ]
+                ],
+                "operation_ref": {
+                  "id": "prompt.init",
+                  "path": "operations/prompt.init.json"
+                }
               },
               {
                 "name": "upgrade",
@@ -3573,7 +3577,11 @@
                     "action": "store_true",
                     "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents."
                   }
-                ]
+                ],
+                "operation_ref": {
+                  "id": "prompt.upgrade",
+                  "path": "operations/prompt.upgrade.json"
+                }
               },
               {
                 "name": "uninstall",
@@ -3620,7 +3628,11 @@
                     "action": "store_true",
                     "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents."
                   }
-                ]
+                ],
+                "operation_ref": {
+                  "id": "prompt.uninstall",
+                  "path": "operations/prompt.uninstall.json"
+                }
               }
             ],
             "options": []
@@ -3649,7 +3661,9 @@
             "requires_preflight_gate": false
           },
           "conformance_refs": [
-            "prompt.init.process"
+            "prompt.init.process",
+            "prompt.upgrade.process",
+            "prompt.uninstall.process"
           ],
           "projection_boundary": {
             "universal": [

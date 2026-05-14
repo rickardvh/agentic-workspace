@@ -48,6 +48,16 @@
           "minLength": 1,
           "description": "Subcommand text value used by this contract."
         },
+        "subcommands": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true,
+          "description": "Set of subcommand text values exposed by a generated command front door."
+        },
         "format_option": {
           "type": "string",
           "minLength": 1,

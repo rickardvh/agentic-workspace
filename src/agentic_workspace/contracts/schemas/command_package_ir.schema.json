@@ -687,6 +687,27 @@
           "type": "boolean",
           "description": "Whether the nested subcommand is required by the generated parser."
         },
+        "operation_ref": {
+          "type": "object",
+          "required": [
+            "id",
+            "path"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Operation id selected when this nested interface is invoked."
+            },
+            "path": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Operation contract path selected when this nested interface is invoked."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Optional operation identity for nested generated subcommands."
+        },
         "subcommands": {
           "type": "array",
           "items": {

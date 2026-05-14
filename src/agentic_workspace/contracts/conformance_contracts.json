@@ -4,15 +4,15 @@
   "schema": "schemas/conformance.schema.json",
   "contracts": [
     {
-      "id": "defaults.report.process",
-      "operation_id": "defaults.report",
-      "path": "conformance/defaults.report.process.json",
-      "adapter_kind": "process"
-    },
-    {
       "id": "config.report.process",
       "operation_id": "config.report",
       "path": "conformance/config.report.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "defaults.report.process",
+      "operation_id": "defaults.report",
+      "path": "conformance/defaults.report.process.json",
       "adapter_kind": "process"
     },
     {
@@ -157,6 +157,18 @@
       "id": "prompt.init.process",
       "operation_id": "prompt.init",
       "path": "conformance/prompt.init.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "prompt.uninstall.process",
+      "operation_id": "prompt.uninstall",
+      "path": "conformance/prompt.uninstall.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "prompt.upgrade.process",
+      "operation_id": "prompt.upgrade",
+      "path": "conformance/prompt.upgrade.process.json",
       "adapter_kind": "process"
     },
     {
