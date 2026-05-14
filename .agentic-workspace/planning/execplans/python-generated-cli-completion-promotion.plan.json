@@ -1,0 +1,328 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Python generated CLI completion promotion",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "lane",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "required_continuation",
+      "iterative_follow_through",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Promote Python #892 completion only when the clarified finish line is proven: generated Python owns parser/help/dispatch and codegen-owned primitive executors own generic deterministic file/data/schema/template/output behavior; remaining module-local runtime code is explicitly limited to package-specific judgment, live inspection, mutation orchestration, or thin target adapters.",
+    "hard_constraints": "Keep this branch Python-scoped. Do not advance TypeScript, Bash, PowerShell, or broad transport work. Do not claim full-generated-cli-complete until static proof can reject generic deterministic behavior hidden in accepted hand-owned runtime entries.",
+    "agent_may_decide": "Tighten inventory semantics, migrate bounded representative generic operations to codegen-owned primitives, update proof gates, and route residual package-specific runtime judgment explicitly.",
+    "escalate_when": "Completion requires inventing a broad DSL, changing non-Python target architecture, or moving live package judgment into generated code.",
+    "next_action": "Make the Python operation execution inventory and generated-package proof distinguish codegen-owned generic primitive execution from accepted package-specific judgment, then promote current_state only if the proof honestly satisfies #892.",
+    "proof_expectations": [
+      "uv run python packages/command-generation/tests/primitive_conformance.py",
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+      "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
+      "uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q",
+      "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+      "uv run agentic-workspace doctor --target . --modules planning --format json"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/contracts/command_package_ir.json",
+      "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+      "src/agentic_workspace/contracts/operations/*.json",
+      "scripts/check/check_generated_command_packages.py",
+      "tests/test_contract_tooling.py",
+      "tests/test_generated_command_package_proof_runner.py",
+      "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
+      "packages/command-generation/tests/primitive_conformance.py",
+      ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      ".agentic-workspace/planning/execplans/python-generated-cli-completion-promotion.plan.json"
+    ],
+    "completion_criteria": [
+      "Generated package static proof, Python Docker conformance, root CLI authority, closeout trust, package planning summary, and codegen-owned primitive executor conformance all agree that original Python generated-CLI intent is satisfied."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane python-generated-cli-completion-promotion."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane python-generated-cli-completion-promotion.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "python-generated-cli-completion-promotion",
+      "status": "active",
+      "next_step": "Make the Python operation execution inventory and generated-package proof distinguish codegen-owned generic primitive execution from accepted package-specific judgment, then promote current_state only if the proof honestly satisfies #892.",
+      "proof": "uv run python packages/command-generation/tests/primitive_conformance.py; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run agentic-workspace doctor --target . --modules planning --format json"
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/contracts/command_package_ir.json",
+        "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+        "src/agentic_workspace/contracts/operations/*.json",
+        "scripts/check/check_generated_command_packages.py",
+        "tests/test_contract_tooling.py",
+        "tests/test_generated_command_package_proof_runner.py",
+        "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
+        "packages/command-generation/tests/primitive_conformance.py",
+        ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+        ".agentic-workspace/planning/execplans/python-generated-cli-completion-promotion.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane python-generated-cli-completion-promotion.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Static proof now distinguishes accepted package-specific runtime judgment from generic deterministic runtime debt before any full Python completion claim.",
+    "intentionally deferred": "Migrating the newly classified generic deterministic runtime-debt operations into codegen-owned primitive executors.",
+    "discovered implications": "Accepted hand-owned runtime entries were too broad without typed boundary classes; output, template, config/default, status, and simple report loaders remain blockers.",
+    "proof achieved now": "partial",
+    "validation still needed": "Migrate or retire generic-deterministic-runtime-debt entries, then rerun Python generated-package static, local conformance, Docker conformance, and primitive conformance.",
+    "next likely slice": "Move generic output/selection/template primitives and one affected operation group behind codegen-owned primitive execution."
+  },
+  "intent_interpretation": {
+    "literal request": "Python generated CLI completion promotion",
+    "inferred intended outcome": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane python-generated-cli-completion-promotion.",
+    "chosen concrete what": "The command-package IR can promote Python from adapter-layer-proven-not-full-generated-cli to full generated CLI completion only after parser, dispatch, interface, proof, runtime-handler boundaries, and codegen-owned generic primitive execution are all proven.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Fill in the concrete write scope before implementation starts.",
+    "max changed files": "Fill in an expected upper bound before implementation starts.",
+    "required validation commands": "Fill in the narrowest command that proves the promoted work.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "The command-package IR can promote Python from adapter-layer-proven-not-full-generated-cli to full generated CLI completion only after parser, dispatch, interface, proof, runtime-handler boundaries, and codegen-owned generic primitive execution are all proven.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane python-generated-cli-completion-promotion.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "Read-only classification request; local inspection is cheaper and preserves direct control.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-14T17:06:19+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "label": "decomposition lane python-generated-cli-completion-promotion",
+      "role": "intake",
+      "locator": "candidate_lanes[5]"
+    }
+  ],
+  "active_milestone": {
+    "id": "python-generated-cli-completion-promotion",
+    "status": "active",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Make the Python operation execution inventory and generated-package proof distinguish codegen-owned generic primitive execution from accepted package-specific judgment, then promote current_state only if the proof honestly satisfies #892."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+    "src/agentic_workspace/contracts/operations/*.json",
+    "scripts/check/check_generated_command_packages.py",
+    "tests/test_contract_tooling.py",
+    "tests/test_generated_command_package_proof_runner.py",
+    "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
+    "packages/command-generation/tests/primitive_conformance.py",
+    ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+    ".agentic-workspace/planning/execplans/python-generated-cli-completion-promotion.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run python packages/command-generation/tests/primitive_conformance.py",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+    "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
+    "uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Generated package static proof, Python Docker conformance, root CLI authority, closeout trust, package planning summary, and codegen-owned primitive executor conformance all agree that original Python generated-CLI intent is satisfied."
+  ],
+  "execution_run": {
+    "run status": "partial-slice-complete",
+    "executor": "Codex",
+    "handoff source": "agentic-planning promote-to-plan decomposition lane",
+    "what happened": "Added runtime_boundary_class/runtime_boundary_reason to accepted hand-owned runtime inventory entries and taught static proof to reject full-generated-cli-complete when any accepted entry is classified as generic-deterministic-runtime-debt.",
+    "scope touched": "Python operation execution inventory, generated-package checker, focused tests, and active #892 planning surfaces.",
+    "changed surfaces": "scripts/check/check_generated_command_packages.py; src/agentic_workspace/contracts/python_operation_execution_inventory.json; tests/test_contract_tooling.py; tests/test_generated_command_package_proof_runner.py; .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json; .agentic-workspace/planning/execplans/python-generated-cli-completion-promotion.plan.json",
+    "validations run": "uv run python scripts/check/check_generated_command_packages.py; uv run python packages/command-generation/tests/primitive_conformance.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check selected files; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "result for continuation": "#892 remains open; generic-deterministic-runtime-debt entries now provide the next migration backlog and block full completion claims.",
+    "next step": "Migrate the generic output/selection/template operation group into codegen-owned primitive execution."
+  },
+  "finished_run_review": {
+    "review status": "pending",
+    "scope respected": "pending",
+    "proof status": "pending",
+    "intent served": "pending",
+    "config compliance": "pending",
+    "misinterpretation risk": "pending",
+    "follow-on decision": "pending"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "Read-only classification request; local inspection is cheaper and preserves direct control.",
+    "expected savings": "unknown",
+    "actual friction": "pending",
+    "proof result": "green for runtime-debt proof gate slice",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "uv run python scripts/check/check_generated_command_packages.py; uv run python packages/command-generation/tests/primitive_conformance.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check selected files; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "proof achieved now": "partial",
+    "evidence for \"proof achieved\" state": "Static proof now fails a full completion claim when accepted hand-owned runtime inventory still contains generic-deterministic-runtime-debt."
+  },
+  "intent_satisfaction": {
+    "original intent": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane python-generated-cli-completion-promotion.",
+    "was original intent fully satisfied?": "pending",
+    "evidence of intent satisfaction": "",
+    "unsolved intent passed to": "none yet"
+  },
+  "execution_summary": {
+    "outcome delivered": "partial proof gate delivered; full #892 completion not yet satisfied.",
+    "validation confirmed": "green for the proof gate slice",
+    "follow-on routed to": "same active execplan",
+    "post-work posterity capture": "pending",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "current milestone"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "pending",
+    "larger-intent status": "pending",
+    "closure decision": "pending",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "",
+    "evidence carried forward": "",
+    "reopen trigger": ""
+  },
+  "improvement_signal_review": {
+    "status": "reviewed",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [
+      "#967: promote-to-plan reintroduced schema-invalid decomposition metadata; encountered again while promoting the completion lane."
+    ],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [
+        "Migrate generic-deterministic-runtime-debt entries from python_operation_execution_inventory.json into codegen-owned primitive execution before claiming #892 completion."
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        "#967"
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-05-14: Scaffolded by agentic-planning promote-to-plan from decomposition lane python-generated-cli-completion-promotion.",
+    "2026-05-14: Recorded delegation decision route=keep-local.",
+    "2026-05-14: Added runtime boundary classes so generic deterministic runtime debt blocks full Python completion claims."
+  ]
+}

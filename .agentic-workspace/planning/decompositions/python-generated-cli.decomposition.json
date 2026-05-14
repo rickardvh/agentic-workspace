@@ -74,9 +74,9 @@
     {
       "id": "python-generated-cli-completion-promotion",
       "title": "Python generated CLI completion promotion",
-      "readiness": "needs-shaping",
+      "readiness": "promoted",
       "outcome": "The command-package IR can promote Python from adapter-layer-proven-not-full-generated-cli to full generated CLI completion only after parser, dispatch, interface, proof, runtime-handler boundaries, and codegen-owned generic primitive execution are all proven.",
-      "owner_surface": "src/agentic_workspace/contracts/command_package_ir.json",
+      "owner_surface": ".agentic-workspace/planning/execplans/python-generated-cli-completion-promotion.plan.json",
       "proof": "Generated package static proof, Python Docker conformance, root CLI authority, closeout trust, package planning summary, and codegen-owned primitive executor conformance all agree that original Python generated-CLI intent is satisfied.",
       "depends_on": [
         "python-runtime-handler-boundary",

@@ -730,6 +730,10 @@ def test_python_operation_execution_inventory_tracks_representative_runtime_cons
     assert entries["memory.list-skills.report"]["status"] == "runtime-consumed"
     assert "compatibility-runtime-handler" not in {entry["status"] for entry in entries.values()}
     assert "accepted-hand-owned-runtime-primitive" in {entry["status"] for entry in entries.values()}
+    accepted = [entry for entry in entries.values() if entry["status"] == "accepted-hand-owned-runtime-primitive"]
+    assert all(entry.get("runtime_boundary_class") for entry in accepted)
+    assert all(entry.get("runtime_boundary_reason") for entry in accepted)
+    assert "generic-deterministic-runtime-debt" in {entry["runtime_boundary_class"] for entry in accepted}
     generated_operations = {
         operation_id
         for package in contract_tooling.command_package_ir_manifest()["packages"]

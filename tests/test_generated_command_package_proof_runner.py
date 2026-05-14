@@ -294,6 +294,31 @@ def test_static_generated_package_proof_rejects_full_completion_with_compatibili
     assert any("compatibility-runtime-handler" in error for error in errors)
 
 
+def test_static_generated_package_proof_rejects_full_completion_with_generic_runtime_debt(monkeypatch) -> None:
+    checker = _load_checker()
+    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+    ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
+    ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
+    original_load_json = checker._load_json
+
+    def fake_load_json(path: str) -> dict[str, object]:
+        payload = original_load_json(path)
+        if path == "python_operation_execution_inventory.json":
+            payload = dict(payload)
+            entries = [dict(entry) for entry in payload["entries"]]
+            entries[0]["runtime_boundary_class"] = "generic-deterministic-runtime-debt"
+            entries[0]["runtime_boundary_reason"] = "still generic runtime debt"
+            payload["entries"] = entries
+        return payload
+
+    monkeypatch.setattr(checker, "load_workspace_command_package_ir", lambda *, repo_root: ir)
+    monkeypatch.setattr(checker, "_load_json", fake_load_json)
+
+    errors = checker._validate_static_surfaces()
+
+    assert any("generic deterministic behavior as runtime debt" in error for error in errors)
+
+
 def test_static_generated_package_proof_rejects_full_completion_when_generated_main_delegates_first(monkeypatch) -> None:
     checker = _load_checker()
     ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)

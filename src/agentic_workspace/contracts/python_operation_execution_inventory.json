@@ -3,8 +3,9 @@
   "purpose": "Track how each generated Python command executes implementation-independent command/operation contracts while keeping unavoidable live package behavior explicit.",
   "status_meanings": {
     "runtime-consumed": "Generated Python command loads a generated operation artifact and executes a portable or representative operation IR plan through a thin primitive executor.",
-    "accepted-hand-owned-runtime-primitive": "Generated Python parser/dispatch/interface metadata selects an operation id, then a thin _run_*_adapter delegates to hand-owned package runtime primitives for live report assembly or workspace inspection.",
-    "compatibility-runtime-handler": "Temporary unaccepted fallback status; full Python completion must reject this status."
+    "accepted-hand-owned-runtime-primitive": "Generated Python parser/dispatch/interface metadata selects an operation id, then a thin _run_*_adapter delegates to hand-owned package runtime primitives. Each accepted entry must declare runtime_boundary_class and runtime_boundary_reason so full completion can distinguish package-specific judgment/live inspection/mutation orchestration from generic deterministic runtime debt.",
+    "compatibility-runtime-handler": "Temporary unaccepted fallback status; full Python completion must reject this status.",
+    "runtime_boundary_class": "Classifies accepted hand-owned runtime entries as package-specific-judgment, live-workspace-inspection, mutation-orchestration, front-door-dispatch, provider-integration, or generic-deterministic-runtime-debt. generic-deterministic-runtime-debt blocks full-generated-cli-complete."
   },
   "entries": [
     {
@@ -19,7 +20,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "memory.doctor.process"
+      "conformance_ref": "memory.doctor.process",
+      "runtime_boundary_class": "generic-deterministic-runtime-debt",
+      "runtime_boundary_reason": "Package doctor payload loading and emission are deterministic data/output behavior that need a portable IR boundary before full completion."
     },
     {
       "operation_id": "memory.list-files.report",
@@ -63,7 +66,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "memory.promotion-report.process"
+      "conformance_ref": "memory.promotion-report.process",
+      "runtime_boundary_class": "generic-deterministic-runtime-debt",
+      "runtime_boundary_reason": "Promotion report aggregation over package data is deterministic data/output behavior that needs a portable IR boundary before full completion."
     },
     {
       "operation_id": "memory.report.report",
@@ -77,7 +82,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "memory.report.process"
+      "conformance_ref": "memory.report.process",
+      "runtime_boundary_class": "generic-deterministic-runtime-debt",
+      "runtime_boundary_reason": "Package report payload loading and emission are deterministic data/output behavior that need a portable IR boundary before full completion."
     },
     {
       "operation_id": "memory.route-report.report",
@@ -91,7 +98,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "memory.route-report.process"
+      "conformance_ref": "memory.route-report.process",
+      "runtime_boundary_class": "generic-deterministic-runtime-debt",
+      "runtime_boundary_reason": "Route report aggregation over package fixtures is deterministic data/output behavior that needs a portable IR boundary before full completion."
     },
     {
       "operation_id": "memory.status.report",
@@ -105,7 +114,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "memory.status.process"
+      "conformance_ref": "memory.status.process",
+      "runtime_boundary_class": "generic-deterministic-runtime-debt",
+      "runtime_boundary_reason": "Bootstrap file presence inspection and module-result emission are deterministic file/data/output behavior that should move to codegen-owned primitives before full completion."
     },
     {
       "operation_id": "planning.doctor.report",
@@ -119,7 +130,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "planning.doctor.process"
+      "conformance_ref": "planning.doctor.process",
+      "runtime_boundary_class": "generic-deterministic-runtime-debt",
+      "runtime_boundary_reason": "Package doctor payload loading and emission are deterministic data/output behavior that need a portable IR boundary before full completion."
     },
     {
       "operation_id": "planning.reconcile.report",
@@ -134,7 +147,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "planning.reconcile.process"
+      "conformance_ref": "planning.reconcile.process",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Planning reconciliation includes safe-prune and recovery judgment over live planning state."
     },
     {
       "operation_id": "planning.report.report",
@@ -148,7 +163,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "planning.report.process"
+      "conformance_ref": "planning.report.process",
+      "runtime_boundary_class": "generic-deterministic-runtime-debt",
+      "runtime_boundary_reason": "Package report payload loading and emission are deterministic data/output behavior that need a portable IR boundary before full completion."
     },
     {
       "operation_id": "planning.status.report",
@@ -162,7 +179,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "planning.status.process"
+      "conformance_ref": "planning.status.process",
+      "runtime_boundary_class": "generic-deterministic-runtime-debt",
+      "runtime_boundary_reason": "Bootstrap file presence inspection and module-result emission are deterministic file/data/output behavior that should move to codegen-owned primitives before full completion."
     },
     {
       "operation_id": "planning.summary.report",
@@ -176,7 +195,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "planning.summary.process"
+      "conformance_ref": "planning.summary.process",
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Planning summary loading and projection applies package-specific planning view policy."
     },
     {
       "operation_id": "config.report",
@@ -192,7 +213,9 @@
         "workspace.config.emit"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "config.report.process"
+      "conformance_ref": "config.report.process",
+      "runtime_boundary_class": "generic-deterministic-runtime-debt",
+      "runtime_boundary_reason": "Config/default layering, field selection, and JSON/text emission are deterministic file/data/output behavior that should move to codegen-owned primitives before full completion."
     },
     {
       "operation_id": "defaults.report",
@@ -207,7 +230,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "defaults.report.process"
+      "conformance_ref": "defaults.report.process",
+      "runtime_boundary_class": "generic-deterministic-runtime-debt",
+      "runtime_boundary_reason": "Default contract loading, section selection, and emission are deterministic data/output behavior that should move to codegen-owned primitives before full completion."
     },
     {
       "operation_id": "delegation-outcome.append",
@@ -222,7 +247,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "delegation-outcome.append.process"
+      "conformance_ref": "delegation-outcome.append.process",
+      "runtime_boundary_class": "generic-deterministic-runtime-debt",
+      "runtime_boundary_reason": "Local JSON record append/write is deterministic data mutation suitable for codegen-owned primitives once mutation guards are represented."
     },
     {
       "operation_id": "doctor.report",
@@ -239,7 +266,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "doctor.report.process"
+      "conformance_ref": "doctor.report.process",
+      "runtime_boundary_class": "live-workspace-inspection",
+      "runtime_boundary_reason": "Workspace doctor assembles live module, generated-surface, config, and planning diagnostics."
     },
     {
       "operation_id": "external-intent.refresh-github",
@@ -257,7 +286,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "external-intent.refresh-github.help.process"
+      "conformance_ref": "external-intent.refresh-github.help.process",
+      "runtime_boundary_class": "provider-integration",
+      "runtime_boundary_reason": "GitHub issue discovery and provider evidence refresh depend on external provider behavior and explicit provider integration boundaries."
     },
     {
       "operation_id": "implement.context",
@@ -274,7 +305,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "implement.context.process"
+      "conformance_ref": "implement.context.process",
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Implement context assembly applies changed-path, proof, planning, and delegation policy."
     },
     {
       "operation_id": "init.lifecycle",
@@ -292,7 +325,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "init.lifecycle.dry-run.process"
+      "conformance_ref": "init.lifecycle.dry-run.process",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Lifecycle planning/apply behavior owns managed-surface safety, dry-run, and mutation orchestration."
     },
     {
       "operation_id": "install.lifecycle",
@@ -310,7 +345,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "install.lifecycle.dry-run.process"
+      "conformance_ref": "install.lifecycle.dry-run.process",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Lifecycle planning/apply behavior owns managed-surface safety, dry-run, and mutation orchestration."
     },
     {
       "operation_id": "memory.front-door",
@@ -325,7 +362,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "memory.front-door.process"
+      "conformance_ref": "memory.front-door.process",
+      "runtime_boundary_class": "front-door-dispatch",
+      "runtime_boundary_reason": "The root command delegates to the module front door, including commands outside this Python generated CLI completion lane."
     },
     {
       "operation_id": "modules.report",
@@ -340,7 +379,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "modules.report.process"
+      "conformance_ref": "modules.report.process",
+      "runtime_boundary_class": "live-workspace-inspection",
+      "runtime_boundary_reason": "Module inspection detects installed module state and descriptors in the target repository."
     },
     {
       "operation_id": "ownership.report",
@@ -355,7 +396,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "ownership.report.process"
+      "conformance_ref": "ownership.report.process",
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Ownership answers apply package-specific ownership policy and route resolution."
     },
     {
       "operation_id": "planning.front-door",
@@ -370,7 +413,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "planning.front-door.process"
+      "conformance_ref": "planning.front-door.process",
+      "runtime_boundary_class": "front-door-dispatch",
+      "runtime_boundary_reason": "The root command delegates to the module front door, including commands outside this Python generated CLI completion lane."
     },
     {
       "operation_id": "preflight.report",
@@ -389,7 +434,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "preflight.report.process"
+      "conformance_ref": "preflight.report.process",
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Preflight context assembly applies package startup, planning, proof, and token policy."
     },
     {
       "operation_id": "prompt.init",
@@ -404,7 +451,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "prompt.init.process"
+      "conformance_ref": "prompt.init.process",
+      "runtime_boundary_class": "generic-deterministic-runtime-debt",
+      "runtime_boundary_reason": "Prompt selection and rendering are deterministic template behavior that should move to codegen-owned primitives before full completion."
     },
     {
       "operation_id": "prompt.uninstall",
@@ -419,7 +468,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "prompt.uninstall.process"
+      "conformance_ref": "prompt.uninstall.process",
+      "runtime_boundary_class": "generic-deterministic-runtime-debt",
+      "runtime_boundary_reason": "Prompt selection and rendering are deterministic template behavior that should move to codegen-owned primitives before full completion."
     },
     {
       "operation_id": "prompt.upgrade",
@@ -434,7 +485,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "prompt.upgrade.process"
+      "conformance_ref": "prompt.upgrade.process",
+      "runtime_boundary_class": "generic-deterministic-runtime-debt",
+      "runtime_boundary_reason": "Prompt selection and rendering are deterministic template behavior that should move to codegen-owned primitives before full completion."
     },
     {
       "operation_id": "proof.report",
@@ -452,7 +505,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "proof.report.process"
+      "conformance_ref": "proof.report.process",
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Proof route selection applies package-specific proof policy, changed-path routing, and durable-surface review."
     },
     {
       "operation_id": "reconcile.report",
@@ -468,7 +523,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "reconcile.report.process"
+      "conformance_ref": "reconcile.report.process",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Planning reconciliation includes safe-prune and recovery judgment over live planning state."
     },
     {
       "operation_id": "report.combined",
@@ -486,7 +543,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "report.combined.process"
+      "conformance_ref": "report.combined.process",
+      "runtime_boundary_class": "live-workspace-inspection",
+      "runtime_boundary_reason": "Combined report assembles live workspace/module state and planning summaries."
     },
     {
       "operation_id": "setup.guidance",
@@ -502,7 +561,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "setup.guidance.process"
+      "conformance_ref": "setup.guidance.process",
+      "runtime_boundary_class": "live-workspace-inspection",
+      "runtime_boundary_reason": "Setup guidance depends on selected module and workspace state inspection."
     },
     {
       "operation_id": "skills.report",
@@ -518,7 +579,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "skills.report.process"
+      "conformance_ref": "skills.report.process",
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Skill recommendation and ranking applies package-specific registry and task-routing policy."
     },
     {
       "operation_id": "start.context",
@@ -534,7 +597,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "start.context.process"
+      "conformance_ref": "start.context.process",
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Startup context assembly applies package routing, planning, skill, and proof policy."
     },
     {
       "operation_id": "status.report",
@@ -550,7 +615,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "status.report.process"
+      "conformance_ref": "status.report.process",
+      "runtime_boundary_class": "live-workspace-inspection",
+      "runtime_boundary_reason": "Workspace status assembles live module and target repository state."
     },
     {
       "operation_id": "summary.report",
@@ -566,7 +633,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "summary.report.process"
+      "conformance_ref": "summary.report.process",
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Planning summary loading and projection applies package-specific planning view policy."
     },
     {
       "operation_id": "system-intent.sync",
@@ -583,7 +652,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "system-intent.sync.process"
+      "conformance_ref": "system-intent.sync.process",
+      "runtime_boundary_class": "generic-deterministic-runtime-debt",
+      "runtime_boundary_reason": "TOML mirror read/create/write and source metadata normalization are deterministic file/data operations that should move to codegen-owned primitives before full completion."
     },
     {
       "operation_id": "uninstall.lifecycle",
@@ -601,7 +672,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "uninstall.lifecycle.destructive-refusal.process"
+      "conformance_ref": "uninstall.lifecycle.destructive-refusal.process",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Lifecycle planning/apply behavior owns destructive preflight and managed-surface mutation orchestration."
     },
     {
       "operation_id": "upgrade.lifecycle",
@@ -619,7 +692,9 @@
         "output emission mechanics"
       ],
       "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "upgrade.lifecycle.dry-run.process"
+      "conformance_ref": "upgrade.lifecycle.dry-run.process",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Lifecycle planning/apply behavior owns managed-surface safety, dry-run, and mutation orchestration."
     }
   ],
   "completion_rule": "Python completion can be claimed only when every generated Python operation is inventoried and each entry is either runtime-consumed or accepted-hand-owned-runtime-primitive; compatibility-runtime-handler remains a blocking temporary status."

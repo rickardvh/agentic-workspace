@@ -81,6 +81,15 @@ PYTHON_COMPLETION_EXPECTED_PROOF_SUBSTRINGS = {
     "root-console-generated-command-smoke": "test_workspace_cli_blackbox.py::test_blackbox_root_generated_command_executes_through_console_script",
 }
 PYTHON_OPERATION_EXECUTION_FINAL_STATUSES = {"runtime-consumed", "accepted-hand-owned-runtime-primitive"}
+PYTHON_OPERATION_ACCEPTED_BOUNDARY_CLASSES = {
+    "front-door-dispatch",
+    "generic-deterministic-runtime-debt",
+    "live-workspace-inspection",
+    "mutation-orchestration",
+    "package-specific-judgment",
+    "provider-integration",
+}
+PYTHON_OPERATION_FULL_COMPLETION_BLOCKING_BOUNDARY_CLASSES = {"generic-deterministic-runtime-debt"}
 REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE = {
     "path.target_root.resolve",
     "filesystem.read",
@@ -778,6 +787,19 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         hand_owned = entry.get("hand_owned_runtime_code")
         if not isinstance(hand_owned, list) or not all(isinstance(item, str) and item.strip() for item in hand_owned):
             errors.append(f"python_operation_execution_inventory.json {operation_id} must name hand_owned_runtime_code entries")
+        if status == "accepted-hand-owned-runtime-primitive":
+            boundary_class = str(entry.get("runtime_boundary_class", ""))
+            if boundary_class not in PYTHON_OPERATION_ACCEPTED_BOUNDARY_CLASSES:
+                errors.append(
+                    f"python_operation_execution_inventory.json {operation_id} accepted hand-owned runtime entry "
+                    f"must declare runtime_boundary_class in {sorted(PYTHON_OPERATION_ACCEPTED_BOUNDARY_CLASSES)!r}"
+                )
+            boundary_reason = str(entry.get("runtime_boundary_reason", "")).strip()
+            if not boundary_reason:
+                errors.append(
+                    f"python_operation_execution_inventory.json {operation_id} accepted hand-owned runtime entry "
+                    "must explain runtime_boundary_reason"
+                )
 
     runtime_consumed_memory_operations = {
         "memory.list-files.report",
@@ -849,6 +871,18 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
             errors.append(
                 "command_package_ir.json cannot claim full Python generated CLI completion while "
                 f"inventory entries remain outside accepted operation execution statuses: {incomplete_statuses!r}"
+            )
+        blocking_runtime_debt = sorted(
+            operation_id
+            for operation_id, entry in by_operation.items()
+            if isinstance(entry, dict)
+            and entry.get("status") == "accepted-hand-owned-runtime-primitive"
+            and entry.get("runtime_boundary_class") in PYTHON_OPERATION_FULL_COMPLETION_BLOCKING_BOUNDARY_CLASSES
+        )
+        if blocking_runtime_debt:
+            errors.append(
+                "command_package_ir.json cannot claim full Python generated CLI completion while accepted hand-owned "
+                f"runtime entries still classify generic deterministic behavior as runtime debt: {blocking_runtime_debt!r}"
             )
     return errors
 
