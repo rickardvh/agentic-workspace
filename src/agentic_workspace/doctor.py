@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from agentic_command_generation import workspace_runtime_cli as cli
 from agentic_workspace import config
 from agentic_workspace.contract_tooling import (
     compact_contract_manifest,
@@ -13,6 +12,7 @@ from agentic_workspace.contract_tooling import (
 def check_contract_integrity() -> list[str]:
     """Check for drift between code constants and JSON contract schemas."""
     errors: list[str] = []
+    from agentic_command_generation import workspace_runtime_cli as cli
 
     try:
         from jsonschema import Draft202012Validator

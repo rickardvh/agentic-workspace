@@ -1336,6 +1336,78 @@
       "reason": "archive execplan python-codegen-intent-correction",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-14T20:28:07+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
+      "sha256": "2ba17d75e1ff3fa39357dccb07bfdfff3e173eb665072599cb4a44a41b2c9408",
+      "command": "agentic-planning promote-to-plan",
+      "reason": "promote decomposition lane python-product-runtime-source-generation",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T20:40:48+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "7785acbc297c8e7ed5f34a2ba6ae26fcf082b8197dddd56884413d43723196bc",
+      "command": "agentic-planning promote-to-plan",
+      "reason": "promote decomposition lane python-product-runtime-source-generation",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T20:40:48+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "47406ea71a36e42b3b28d50d7630532b187958c435404118ed1398747fa77f79",
+      "command": "agentic-planning promote-to-plan",
+      "reason": "promote decomposition lane python-product-runtime-source-generation",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T20:40:48+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
+      "sha256": "cf485cdbc45ff63cf65d130c6f365328555d10786effa5c3f197e5e7c7c8db74",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=delegate-exploration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T20:40:58+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "2cd322339edf675a06e407fa7a31b66186b199bce0dd88cbede619adc9593289",
+      "command": "agentic-planning record-recovery",
+      "reason": "Promote Python product runtime source generation and completion lanes after generated/python runtime ownership migration.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T20:52:20+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "08ec76d8b3d63b5428289a370a71ed2ac9e9089e09c7b22bed0e1b83ecdcab6c",
+      "command": "agentic-planning record-recovery",
+      "reason": "Remove promoted_execplan compatibility field so decomposition schema is clean after lane promotion.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T20:54:03+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
+      "sha256": "c42dfa7bab79328549f838def89efde1bbad7a769bc333c53541e5dac0328ca7",
+      "command": "agentic-planning record-recovery",
+      "reason": "Closeout fields updated after Python generated runtime ownership migration and proof.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T21:01:48+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
+      "sha256": "1837ddfd21513e621245b5e7998e4ac58febe7ec8d0d6b46606722cb6326a3b5",
+      "command": "agentic-planning record-recovery",
+      "reason": "Mark Python lane closeout as no unsolved Python intent before archive.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T21:02:03+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-product-runtime-source-generation",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T21:02:04+00:00"
     }
   ]
 }

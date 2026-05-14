@@ -61,6 +61,17 @@ def _runtime_module_for_package(package: dict[str, Any]) -> str:
     return str(binding.get("runtime_module") or "")
 
 
+def _runtime_module_file_for_package(package: dict[str, Any]) -> str:
+    binding = package.get("python_runtime_binding", {})
+    if not isinstance(binding, dict):
+        return ""
+    configured = str(binding.get("runtime_module_file") or "")
+    if configured:
+        return configured
+    runtime_module = str(binding.get("runtime_module") or "")
+    return runtime_module.rsplit(".", 1)[-1] if runtime_module else ""
+
+
 def _python_adapter_commands(package: dict[str, Any]) -> list[dict[str, Any]]:
     return [
         command for command in package["commands"] if command.get("status") == "generated" and isinstance(command.get("interface"), dict)
@@ -132,13 +143,13 @@ def _runtime_consumed_operation_outputs(
 def _python_runtime_adapter_module(package: dict[str, Any], target: dict[str, Any], *, source_path: str, regenerate_command: str) -> str:
     weak_agent_routing = "allowed-read-only" if _is_weak_agent_safe_python_target(target) else "review-required"
     runnable = str(target.get("maturity_level_ref") in {"runtime-backed-read-only-adapter", "weak-agent-safe-adapter"})
-    runtime_module = _runtime_module_for_package(package)
+    runtime_module_file = _runtime_module_file_for_package(package)
     main_function = ""
-    if runtime_module:
+    if runtime_module_file:
         main_function = (
             "\n\n"
             "def _run_runtime_handler(operation_id: str, args: argparse.Namespace) -> int:\n"
-            f"    from {runtime_module} import _GENERATED_RUNTIME_HANDLERS\n\n"
+            f"    from .{runtime_module_file} import _GENERATED_RUNTIME_HANDLERS\n\n"
             "    handler = _GENERATED_RUNTIME_HANDLERS.get(operation_id)\n"
             "    if handler is None:\n"
             "        build_generated_parser().error(\n"
@@ -147,7 +158,7 @@ def _python_runtime_adapter_module(package: dict[str, Any], target: dict[str, An
             "    return handler(args)\n\n\n"
             "def main(argv: list[str] | None = None) -> int:\n"
             "    import sys\n"
-            f"    from {runtime_module} import main as runtime_main\n\n"
+            f"    from .{runtime_module_file} import main as runtime_main\n\n"
             "    argv_list = list(sys.argv[1:] if argv is None else argv)\n"
             "    if argv_list and argv_list[0] in {'-h', '--help'}:\n"
             "        build_generated_parser().parse_args(argv_list)\n"

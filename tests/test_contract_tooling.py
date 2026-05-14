@@ -305,8 +305,8 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
     assert "runtime handoff failures" in " ".join(maturity["weak-agent-safe-adapter"]["promotion_requires"])
     assert "implementation-independent contracts or IR" in python_completion["finish_line"]
     assert "codegen-owned primitive executors" in python_completion["finish_line"]
-    assert python_completion["current_state"] == "adapter-layer-proven-not-full-generated-cli"
-    assert python_completion["completion_gate"]["state"] == "pending"
+    assert python_completion["current_state"] == "full-generated-cli-complete"
+    assert python_completion["completion_gate"]["state"] == "satisfied"
     assert python_completion["completion_gate"]["scope"] == "python-only"
     completion_evidence = {item["id"] for item in python_completion["completion_gate"]["satisfied_by"]}
     assert "python-docker-conformance" in completion_evidence

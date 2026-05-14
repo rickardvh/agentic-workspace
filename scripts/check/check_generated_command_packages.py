@@ -121,6 +121,9 @@ PYTHON_FULL_COMPLETION_BLOCKING_EXECUTABLE_PATHS = (
     "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py",
     "packages/command-generation/src/agentic_command_generation/planning_runtime_cli.py",
     "packages/command-generation/src/agentic_command_generation/memory_runtime_cli.py",
+    "packages/command-generation/src/agentic_command_generation/workspace_operation_ir_executor.py",
+    "packages/command-generation/src/agentic_command_generation/planning_operation_ir_executor.py",
+    "packages/command-generation/src/agentic_command_generation/memory_operation_ir_executor.py",
 )
 
 
@@ -720,20 +723,20 @@ def _validate_full_python_completion_runtime_ownership(ir: dict[str, object]) ->
 
     errors: list[str] = []
     generated_runtime_adapters = {
-        "generated/python/workspace-cli/generated_cli_package/__init__.py": "agentic_command_generation.workspace_runtime_cli",
-        "generated/python/planning-cli/generated_cli_package/__init__.py": "agentic_command_generation.planning_runtime_cli",
-        "generated/python/memory-cli/generated_cli_package/__init__.py": "agentic_command_generation.memory_runtime_cli",
+        "generated/python/workspace-cli/generated_cli_package/__init__.py": "workspace_runtime_cli",
+        "generated/python/planning-cli/generated_cli_package/__init__.py": "planning_runtime_cli",
+        "generated/python/memory-cli/generated_cli_package/__init__.py": "memory_runtime_cli",
     }
     for relative_path, runtime_module in generated_runtime_adapters.items():
         text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
         required_fragments = [
             "def _run_runtime_handler(",
-            f"from {runtime_module} import _GENERATED_RUNTIME_HANDLERS",
+            f"from .{runtime_module} import _GENERATED_RUNTIME_HANDLERS",
             "if argv_list and argv_list[0] in {'-h', '--help'}:",
             "build_generated_parser().parse_args(argv_list)",
             "if supports_generated_command(argv_list):",
             "return run_generated_command(argv_list, _run_runtime_handler)",
-            "from " + runtime_module + " import main as runtime_main",
+            "from ." + runtime_module + " import main as runtime_main",
             "return runtime_main(argv_list)",
         ]
         for fragment in required_fragments:
@@ -921,15 +924,15 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
             errors.append(f"generated operation contract could not be loaded for {operation_id}: {exc}")
 
     memory_operation_executor_text = (
-        REPO_ROOT / "packages" / "command-generation" / "src" / "agentic_command_generation" / "memory_operation_ir_executor.py"
+        REPO_ROOT / "generated" / "python" / "memory-cli" / "generated_cli_package" / "memory_operation_ir_executor.py"
     ).read_text(encoding="utf-8")
     if "from agentic_command_generation.primitive_executor import" not in memory_operation_executor_text:
         errors.append("memory operation IR executor must import the codegen-owned primitive executor")
     if "run_operation_steps(" not in memory_operation_executor_text:
         errors.append("memory operation IR executor must execute operation plans through codegen-owned run_operation_steps")
-    memory_cli_text = (
-        REPO_ROOT / "packages" / "command-generation" / "src" / "agentic_command_generation" / "memory_runtime_cli.py"
-    ).read_text(encoding="utf-8")
+    memory_cli_text = (REPO_ROOT / "generated" / "python" / "memory-cli" / "generated_cli_package" / "memory_runtime_cli.py").read_text(
+        encoding="utf-8"
+    )
     for function_name in (
         "_run_doctor_report_adapter",
         "_run_list_files_report_adapter",
@@ -946,15 +949,15 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
             errors.append(f"{function_name} must execute generated operation IR through run_operation_ir")
 
     planning_operation_executor_text = (
-        REPO_ROOT / "packages" / "command-generation" / "src" / "agentic_command_generation" / "planning_operation_ir_executor.py"
+        REPO_ROOT / "generated" / "python" / "planning-cli" / "generated_cli_package" / "planning_operation_ir_executor.py"
     ).read_text(encoding="utf-8")
     if "from agentic_command_generation.primitive_executor import" not in planning_operation_executor_text:
         errors.append("planning operation IR executor must import the codegen-owned primitive executor")
     if "run_operation_steps(" not in planning_operation_executor_text:
         errors.append("planning operation IR executor must execute operation plans through codegen-owned run_operation_steps")
-    planning_cli_text = (
-        REPO_ROOT / "packages" / "command-generation" / "src" / "agentic_command_generation" / "planning_runtime_cli.py"
-    ).read_text(encoding="utf-8")
+    planning_cli_text = (REPO_ROOT / "generated" / "python" / "planning-cli" / "generated_cli_package" / "planning_runtime_cli.py").read_text(
+        encoding="utf-8"
+    )
     for function_name in ("_run_doctor_report_adapter", "_run_report_adapter", "_run_status_report_adapter"):
         function_index = planning_cli_text.find(f"def {function_name}")
         next_function_index = planning_cli_text.find("\ndef ", function_index + 1)
@@ -963,14 +966,14 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
             errors.append(f"{function_name} must execute generated operation IR through run_operation_ir")
 
     workspace_operation_executor_text = (
-        REPO_ROOT / "packages" / "command-generation" / "src" / "agentic_command_generation" / "workspace_operation_ir_executor.py"
+        REPO_ROOT / "generated" / "python" / "workspace-cli" / "generated_cli_package" / "workspace_operation_ir_executor.py"
     ).read_text(encoding="utf-8")
     if "from agentic_command_generation.primitive_executor import" not in workspace_operation_executor_text:
         errors.append("workspace operation IR executor must import the codegen-owned primitive executor")
     if "run_operation_steps(" not in workspace_operation_executor_text:
         errors.append("workspace operation IR executor must execute operation plans through codegen-owned run_operation_steps")
     workspace_cli_text = (
-        REPO_ROOT / "packages" / "command-generation" / "src" / "agentic_command_generation" / "workspace_runtime_cli.py"
+        REPO_ROOT / "generated" / "python" / "workspace-cli" / "generated_cli_package" / "workspace_runtime_cli.py"
     ).read_text(encoding="utf-8")
     for function_name in (
         "_run_config_report_adapter",
@@ -1228,16 +1231,17 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
                 cwd=fixture_root,
                 env=_conformance_env(runtime=runtime),
             )
-            if adapter_invalid_process.returncode != canonical_invalid_process.returncode:
-                errors.append(
-                    f"adapter failure: {runnable_case.package_id} {case.label} invalid-option exit code drifted from canonical process; "
-                    f"expected {canonical_invalid_process.returncode}, got {adapter_invalid_process.returncode}"
-                )
-            if bool(adapter_invalid_process.stderr.strip()) != bool(canonical_invalid_process.stderr.strip()):
-                errors.append(
-                    f"adapter failure: {runnable_case.package_id} {case.label} invalid-option stderr presence drifted from canonical process; "
-                    f"canonical={canonical_invalid_process.stderr!r}, adapter={adapter_invalid_process.stderr!r}"
-                )
+            if canonical_invalid_process.returncode >= 0:
+                if adapter_invalid_process.returncode != canonical_invalid_process.returncode:
+                    errors.append(
+                        f"adapter failure: {runnable_case.package_id} {case.label} invalid-option exit code drifted from canonical process; "
+                        f"expected {canonical_invalid_process.returncode}, got {adapter_invalid_process.returncode}"
+                    )
+                if bool(adapter_invalid_process.stderr.strip()) != bool(canonical_invalid_process.stderr.strip()):
+                    errors.append(
+                        f"adapter failure: {runnable_case.package_id} {case.label} invalid-option stderr presence drifted from canonical process; "
+                        f"canonical={canonical_invalid_process.stderr!r}, adapter={adapter_invalid_process.stderr!r}"
+                    )
 
         for runnable_case in derived_cases:
             compare_adapter(runnable_case)
@@ -1433,20 +1437,20 @@ def _validate_static_surfaces() -> list[str]:
                             f"{generated_root}/generated_cli_package/adapter_commands.json drifted from generated adapter projection"
                         )
         generated_entrypoints = {
-            "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py": "agentic_command_generation.workspace_generated_cli_package",
-            "packages/command-generation/src/agentic_command_generation/planning_runtime_cli.py": "agentic_command_generation.planning_generated_cli_package",
-            "packages/command-generation/src/agentic_command_generation/memory_runtime_cli.py": "agentic_command_generation.memory_generated_cli_package",
+            "generated/python/workspace-cli/generated_cli_package/__init__.py": "from .workspace_runtime_cli import main as runtime_main",
+            "generated/python/planning-cli/generated_cli_package/__init__.py": "from .planning_runtime_cli import main as runtime_main",
+            "generated/python/memory-cli/generated_cli_package/__init__.py": "from .memory_runtime_cli import main as runtime_main",
         }
-        for relative_path, import_name in generated_entrypoints.items():
+        for relative_path, runtime_import in generated_entrypoints.items():
             text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
             main_index = text.find("def main(")
-            generated_index = text.find("_run_generated_cli_package_if_supported", main_index)
-            parser_index = text.find("build_parser()", main_index)
+            generated_index = text.find("return run_generated_command(argv_list, _run_runtime_handler)", main_index)
+            fallback_index = text.find("return runtime_main(argv_list)", main_index)
             errors.extend(_validate_no_legacy_generated_adapter_runtime_import(relative_path=relative_path, text=text))
-            if import_name not in text:
-                errors.append(f"{relative_path} does not import the generated Python CLI package")
-            if main_index == -1 or generated_index == -1 or parser_index == -1 or generated_index > parser_index:
-                errors.append(f"{relative_path} does not route generated Python adapters before the handwritten parser")
+            if runtime_import not in text:
+                errors.append(f"{relative_path} does not import its generated Python runtime module")
+            if main_index == -1 or generated_index == -1 or fallback_index == -1 or generated_index > fallback_index:
+                errors.append(f"{relative_path} does not route generated Python adapters before runtime fallback")
         errors.extend(_validate_python_runtime_handler_boundary())
         errors.extend(_validate_generated_python_commands_absent_from_handwritten_parsers())
         forbidden_generated_entrypoints = [

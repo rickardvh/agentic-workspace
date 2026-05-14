@@ -46,6 +46,8 @@ packages = ["src/repo_memory_bootstrap"]
 "../../generated/python/memory-cli/generated_cli_package/command_package.json" = "src/repo_memory_bootstrap/_generated_cli_package_impl/command_package.json"
 "../../generated/python/memory-cli/generated_cli_package/adapter_commands.json" = "src/repo_memory_bootstrap/_generated_cli_package_impl/adapter_commands.json"
 "../../generated/python/memory-cli/generated_cli_package/operations" = "src/repo_memory_bootstrap/_generated_cli_package_impl/operations"
+"../../generated/python/memory-cli/generated_cli_package/memory_runtime_cli.py" = "src/repo_memory_bootstrap/_generated_cli_package_impl/memory_runtime_cli.py"
+"../../generated/python/memory-cli/generated_cli_package/memory_operation_ir_executor.py" = "src/repo_memory_bootstrap/_generated_cli_package_impl/memory_operation_ir_executor.py"
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -60,6 +62,8 @@ include = [
 "../../generated/python/memory-cli/generated_cli_package/command_package.json" = "src/repo_memory_bootstrap/_generated_cli_package_impl/command_package.json"
 "../../generated/python/memory-cli/generated_cli_package/adapter_commands.json" = "src/repo_memory_bootstrap/_generated_cli_package_impl/adapter_commands.json"
 "../../generated/python/memory-cli/generated_cli_package/operations" = "src/repo_memory_bootstrap/_generated_cli_package_impl/operations"
+"../../generated/python/memory-cli/generated_cli_package/memory_runtime_cli.py" = "src/repo_memory_bootstrap/_generated_cli_package_impl/memory_runtime_cli.py"
+"../../generated/python/memory-cli/generated_cli_package/memory_operation_ir_executor.py" = "src/repo_memory_bootstrap/_generated_cli_package_impl/memory_operation_ir_executor.py"
 
 [tool.pytest.ini_options]
 addopts = [

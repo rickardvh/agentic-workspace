@@ -54,6 +54,8 @@ packages = ["src/repo_planning_bootstrap"]
 "../../generated/python/planning-cli/generated_cli_package/command_package.json" = "src/repo_planning_bootstrap/_generated_cli_package_impl/command_package.json"
 "../../generated/python/planning-cli/generated_cli_package/adapter_commands.json" = "src/repo_planning_bootstrap/_generated_cli_package_impl/adapter_commands.json"
 "../../generated/python/planning-cli/generated_cli_package/operations" = "src/repo_planning_bootstrap/_generated_cli_package_impl/operations"
+"../../generated/python/planning-cli/generated_cli_package/planning_runtime_cli.py" = "src/repo_planning_bootstrap/_generated_cli_package_impl/planning_runtime_cli.py"
+"../../generated/python/planning-cli/generated_cli_package/planning_operation_ir_executor.py" = "src/repo_planning_bootstrap/_generated_cli_package_impl/planning_operation_ir_executor.py"
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -69,6 +71,8 @@ include = [
 "../../generated/python/planning-cli/generated_cli_package/command_package.json" = "src/repo_planning_bootstrap/_generated_cli_package_impl/command_package.json"
 "../../generated/python/planning-cli/generated_cli_package/adapter_commands.json" = "src/repo_planning_bootstrap/_generated_cli_package_impl/adapter_commands.json"
 "../../generated/python/planning-cli/generated_cli_package/operations" = "src/repo_planning_bootstrap/_generated_cli_package_impl/operations"
+"../../generated/python/planning-cli/generated_cli_package/planning_runtime_cli.py" = "src/repo_planning_bootstrap/_generated_cli_package_impl/planning_runtime_cli.py"
+"../../generated/python/planning-cli/generated_cli_package/planning_operation_ir_executor.py" = "src/repo_planning_bootstrap/_generated_cli_package_impl/planning_operation_ir_executor.py"
 
 [tool.pytest.ini_options]
 addopts = [

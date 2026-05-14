@@ -111,7 +111,7 @@
     },
     "python_cli_completion": {
       "finish_line": "Python CLI completion means parser, dispatch, command/interface behavior, adapter metadata, conformance expectations, product-specific runtime binding, and generic deterministic file/data behavior are generated from implementation-independent contracts or IR into generated/python outputs and executed by codegen-owned primitive executors; packages/command-generation/src owns only generic generation, rendering, primitive execution, schema, freshness, and conformance machinery.",
-      "current_state": "adapter-layer-proven-not-full-generated-cli",
+      "current_state": "full-generated-cli-complete",
       "allowed_hand_owned_cli_responsibilities": [
         "live workspace inspection",
         "package-specific runtime primitive implementation that cannot yet be represented by codegen-owned primitives",
@@ -139,7 +139,7 @@
         "root console smoke proof executes at least one generated root command through the installed console path, not only through generated parser/help imports"
       ],
       "completion_gate": {
-        "state": "pending",
+        "state": "satisfied",
         "scope": "python-only",
         "satisfied_by": [
           {

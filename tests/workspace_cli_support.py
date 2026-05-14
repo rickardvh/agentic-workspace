@@ -69,7 +69,11 @@ def _assert_invoked_cli_identity(payload: dict[str, object], *, target_relation:
     assert identity["source_class"] in {"source-checkout", "installed-package", "unknown"}
     if "confidence" in identity:
         assert identity["confidence"] in {"high", "medium", "low"}
-    assert str(identity["module_path"]).endswith("packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py")
+    assert (
+        str(identity["module_path"])
+        .replace("\\", "/")
+        .endswith("generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py")
+    )
     if "python_executable" in identity:
         assert identity["python_executable"]
     assert identity["target_relation"] == target_relation

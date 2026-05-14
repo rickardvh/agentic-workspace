@@ -362,7 +362,15 @@ def test_static_generated_package_proof_rejects_full_completion_with_product_run
     ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
     ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
     ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
+    original_read_text = checker.Path.read_text
+
+    def fake_read_text(self, *args, **kwargs):
+        if self.as_posix().endswith("packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py"):
+            return "import argparse\n\ndef main(argv=None):\n    parser = argparse.ArgumentParser()\n    parser.add_subparsers()\n"
+        return original_read_text(self, *args, **kwargs)
+
     monkeypatch.setattr(checker, "load_workspace_command_package_ir", lambda *, repo_root: ir)
+    monkeypatch.setattr(checker.Path, "read_text", fake_read_text)
 
     errors = checker._validate_static_surfaces()
 

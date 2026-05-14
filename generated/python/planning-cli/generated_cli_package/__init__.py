@@ -200,7 +200,7 @@ def run_generated_command(argv: list[str] | tuple[str, ...], runtime_handler: Ru
 
 
 def _run_runtime_handler(operation_id: str, args: argparse.Namespace) -> int:
-    from agentic_command_generation.planning_runtime_cli import _GENERATED_RUNTIME_HANDLERS
+    from .planning_runtime_cli import _GENERATED_RUNTIME_HANDLERS
 
     handler = _GENERATED_RUNTIME_HANDLERS.get(operation_id)
     if handler is None:
@@ -212,7 +212,7 @@ def _run_runtime_handler(operation_id: str, args: argparse.Namespace) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     import sys
-    from agentic_command_generation.planning_runtime_cli import main as runtime_main
+    from .planning_runtime_cli import main as runtime_main
 
     argv_list = list(sys.argv[1:] if argv is None else argv)
     if argv_list and argv_list[0] in {'-h', '--help'}:

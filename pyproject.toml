@@ -51,6 +51,9 @@ packages = ["src/agentic_workspace"]
 "generated/python/workspace-cli/generated_cli_package/__init__.py" = "src/agentic_workspace/_generated_cli_package_impl/__init__.py"
 "generated/python/workspace-cli/generated_cli_package/command_package.json" = "src/agentic_workspace/_generated_cli_package_impl/command_package.json"
 "generated/python/workspace-cli/generated_cli_package/adapter_commands.json" = "src/agentic_workspace/_generated_cli_package_impl/adapter_commands.json"
+"generated/python/workspace-cli/generated_cli_package/operations" = "src/agentic_workspace/_generated_cli_package_impl/operations"
+"generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py" = "src/agentic_workspace/_generated_cli_package_impl/workspace_runtime_cli.py"
+"generated/python/workspace-cli/generated_cli_package/workspace_operation_ir_executor.py" = "src/agentic_workspace/_generated_cli_package_impl/workspace_operation_ir_executor.py"
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -61,6 +64,9 @@ include = [
   "/generated/python/workspace-cli/generated_cli_package/__init__.py",
   "/generated/python/workspace-cli/generated_cli_package/command_package.json",
   "/generated/python/workspace-cli/generated_cli_package/adapter_commands.json",
+  "/generated/python/workspace-cli/generated_cli_package/operations",
+  "/generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
+  "/generated/python/workspace-cli/generated_cli_package/workspace_operation_ir_executor.py",
   "/src/agentic_workspace",
   "/tests",
 ]
