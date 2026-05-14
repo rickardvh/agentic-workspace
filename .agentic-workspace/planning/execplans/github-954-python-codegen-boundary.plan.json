@@ -1,0 +1,302 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Validate Python generated CLI boundary issue #954",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Ingest and validate GitHub #954: the Python generated CLI completion boundary must be internally consistent and must not overclaim generated ownership.",
+    "hard_constraints": "Treat GitHub #954 as intake, not execution authority. First verify the reported root-runtime and parser-ownership claims against the current branch before changing product code.",
+    "agent_may_decide": "Whether the issue resolves as stale evidence, contract wording, static proof, runtime entrypoint repair, or a narrower follow-up inside the Python codegen lane.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Verify #954's reported evidence against the current tree and decide the smallest product correction.",
+    "proof_expectations": [
+      "uv run agentic-workspace --help",
+      "uv run agentic-workspace defaults --section root_cli_authority --format json",
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+      "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/contracts/command_package_ir.json",
+      "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+      "scripts/check/check_generated_command_packages.py",
+      "generated/python/workspace-cli/generated_cli_package/",
+      "src/agentic_workspace/generated_cli_entrypoint.py",
+      "src/agentic_workspace/_runtime_cli.py",
+      "packages/*/src/*/_runtime_cli.py only if static proof or runtime-boundary wording requires it"
+    ],
+    "completion_criteria": [
+      "#954 is reconciled against current code; any real runtime failure or overclaim is fixed or routed to a narrower checked-in continuation; the issue is updated with the verified finding and proof."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "Validate whether #954 exposes a real Python generated CLI completion defect, then fix or route the verified finding."
+  ],
+  "non_goals": [
+    "Do not restart the full Python codegen epic.",
+    "Do not touch TypeScript, Bash, or PowerShell target conformance.",
+    "Do not implement broad parser extraction unless the static proof shows the completion gate is actually overclaiming."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Validate whether #954 exposes a real Python generated CLI completion defect, then fix or route the verified finding.",
+      "constraints": "Treat GitHub #954 as intake, not execution authority. First verify the reported root-runtime and parser-ownership claims against the current branch before changing product code.",
+      "latitude": "Whether the issue resolves as stale evidence, contract wording, static proof, runtime entrypoint repair, or a narrower follow-up inside the Python codegen lane.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "github-954-python-codegen-boundary",
+      "status": "active",
+      "next_step": "Verify #954's reported evidence against the current tree and decide the smallest product correction.",
+      "proof": "Root CLI smoke tests plus generated command package static, Python conformance, and Python Docker conformance checks."
+    },
+    "scope": {
+      "touched": [
+        "Python generated CLI completion gate, root generated entrypoint, runtime boundary contracts, generated package proof, and this execplan."
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Keep the Python generated CLI completion claim trustworthy: generated entrypoints must be callable, runtime bridges must be explicit, and static proof must reject overclaims.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Checked-in planning now owns the #954 reconciliation before product code changes.",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Ingest #954",
+    "inferred intended outcome": "Turn the upstream GitHub issue into checked-in planning without making GitHub the execution authority.",
+    "chosen concrete what": "Active execplan for validating and reconciling the Python generated CLI boundary defect report.",
+    "interpretation distance": "low",
+    "review guidance": "Check whether reported evidence is stale before changing code; preserve the verified product defect in contracts or proof."
+  },
+  "execution_bounds": {
+    "allowed paths": "Python generated CLI completion contract/proof surfaces, root generated entrypoint/runtime boundary, generated Python workspace package, focused tests, GitHub #954 update, and this execplan.",
+    "max changed files": "Keep the first implementation slice below 10 changed files unless verification proves a broader contract correction is required.",
+    "required validation commands": "Root CLI smoke tests, generated package static proof, Python conformance, Python Docker conformance when Docker is available, and any focused tests for changed proof rules.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "TypeScript/Bash/PowerShell lanes, broad operation IR migration, unrelated generated package cleanup, or issue closure without verified proof."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Start by verifying #954's reported root runtime and parser-ownership claims against the current tree.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Ingest and validate GitHub #954: the Python generated CLI completion boundary must be internally consistent and must not overclaim generated ownership.",
+    "hard constraints": "Treat GitHub #954 as intake, not execution authority. First verify the reported root-runtime and parser-ownership claims against the current branch before changing product code.",
+    "agent may decide locally": "Whether the issue resolves as stale evidence, contract wording, static proof, runtime entrypoint repair, or a narrower follow-up inside the Python codegen lane.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "Ingestion and first verification are tightly coupled to current tree state; delegate only after the verified defect narrows to a mechanical proof or contract patch.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-14T09:40:41+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "GitHub #954 https://github.com/rickardvh/agentic-workspace/issues/954",
+      "label": "Python generated CLI boundary bug report",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "github-954-python-codegen-boundary",
+    "status": "active",
+    "scope": "Validate and reconcile Python generated CLI completion boundary issue #954.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Verify #954's reported evidence against the current tree and decide the smallest product correction."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+    "scripts/check/check_generated_command_packages.py",
+    "generated/python/workspace-cli/generated_cli_package/",
+    "src/agentic_workspace/generated_cli_entrypoint.py",
+    "src/agentic_workspace/_runtime_cli.py",
+    "packages/*/src/*/_runtime_cli.py only if static proof or runtime-boundary wording requires it"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run agentic-workspace --help",
+    "uv run agentic-workspace defaults --section root_cli_authority --format json",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+    "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "#954 is reconciled against current code; any real runtime failure or overclaim is fixed or routed to a narrower checked-in continuation; the issue is updated with the verified finding and proof."
+  ],
+  "execution_run": {
+    "run status": "not-run-yet",
+    "executor": "",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "execution has not started",
+    "scope touched": "none yet",
+    "changed surfaces": "none yet; execution has not changed files",
+    "validations run": "pending",
+    "result for continuation": "continue from this scaffolded execplan",
+    "next step": "Verify #954's reported evidence against the current tree and decide the smallest product correction."
+  },
+  "finished_run_review": {
+    "review status": "pending",
+    "scope respected": "pending",
+    "proof status": "pending",
+    "intent served": "pending",
+    "config compliance": "pending",
+    "misinterpretation risk": "pending",
+    "follow-on decision": "pending"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "Ingestion and first verification are tightly coupled to current tree state; delegate only after the verified defect narrows to a mechanical proof or contract patch.",
+    "expected savings": "none for intake; possible after verification",
+    "actual friction": "pending",
+    "proof result": "pending",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "pending",
+    "proof achieved now": "pending",
+    "evidence for \"proof achieved\" state": ""
+  },
+  "intent_satisfaction": {
+    "original intent": "GitHub #954: Python generated CLI completion leaves root runtime empty and parser ownership in _runtime_cli.",
+    "was original intent fully satisfied?": "pending",
+    "evidence of intent satisfaction": "",
+    "unsolved intent passed to": "none yet"
+  },
+  "execution_summary": {
+    "outcome delivered": "not completed yet",
+    "validation confirmed": "pending",
+    "follow-on routed to": "none yet",
+    "post-work posterity capture": "pending",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "current milestone"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "pending",
+    "larger-intent status": "pending",
+    "closure decision": "pending",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "",
+    "evidence carried forward": "",
+    "reopen trigger": ""
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-14: Scaffolded by agentic-planning new-plan.",
+    "2026-05-14: Recorded delegation decision route=keep-local."
+  ]
+}

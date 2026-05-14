@@ -488,6 +488,38 @@
       "reason": "archive execplan planning-skill-and-close-item-942-953",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-14T09:28:07+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-954-python-codegen-boundary.plan.json",
+      "sha256": "93c318a3cc33299f5fab3bf798e06a772a0f66514bfed5308e9b26166c73f126",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold github-954-python-codegen-boundary",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T09:39:40+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "3f525c099a3c9478845dde15690cf5c04a73a7cb03974b05e90fc767f48d9afe",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold github-954-python-codegen-boundary",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T09:39:40+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-954-python-codegen-boundary.plan.json",
+      "sha256": "b1ec90afddd89b62db90dc5c1e8adea41d2b87d486de791c52f60a376d588380",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T09:40:41+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-954-python-codegen-boundary.plan.json",
+      "sha256": "1b02e0e054e25680bc4f460fd74e945853f12c6e049f1a133dce958ecee2249a",
+      "command": "agentic-planning record-recovery",
+      "reason": "Tightened scaffold after upstream issue intake with normalized #954 scope, proof, and handoff fields.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T09:41:47+00:00"
     }
   ]
 }
