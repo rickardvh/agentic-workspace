@@ -1192,6 +1192,62 @@
       "reason": "archive execplan python-generated-cli-completion-promotion",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-14T18:07:21+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-cli-src-executable-cleanup.plan.json",
+      "sha256": "daf1304680ac2feee7adfd4b45322b1fc55d64fa13db3d01345a43484b059c01",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-cli-src-executable-cleanup",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T18:38:07+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "745d21d73fa5bebcc0cba080d65d9a930b15f5be6f3f832607bd177eb81b68ad",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-cli-src-executable-cleanup",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T18:38:07+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-cli-src-executable-cleanup.plan.json",
+      "sha256": "97bc5ab186d032861952d691f8e82f0c3b9b20266b0145c969ba5bdf8cdcfe9a",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T18:56:39+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-cli-src-executable-cleanup.plan.json",
+      "sha256": "f7d13f7daa1f076ffb2e1daaf10f5a773a6f924eb0986e65d068251ae6d6b3b9",
+      "command": "agentic-planning record-recovery",
+      "reason": "Intent tightening after #892 closeout failure: encode behavior-level module executable ownership gates before implementation.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T18:59:01+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-cli-src-executable-cleanup.plan.json",
+      "sha256": "cd8aac68fe231b63dcf3732ae284cf38e879c0ec2bd4c0974917427e1948ef22",
+      "command": "agentic-planning record-recovery",
+      "reason": "Projection repair after intent tightening: align canonical touched scope and projections before implementation.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T18:59:31+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "bd9c23516259539060d28a7388e8c0ff915e72d18618967b082e68a0ea474b8a",
+      "command": "agentic-planning record-recovery",
+      "reason": "Repair epic-level decomposition drift before continuing #892 implementation: link active python-cli-src-executable-cleanup execplan and route dogfooding issue #975.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T19:12:52+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-cli-src-executable-cleanup.plan.json",
+      "sha256": "22193123410ba3d853603aa4bd249da6f8f4dd683cf5ff9bdacdf3ca2b72aa1c",
+      "command": "agentic-planning record-recovery",
+      "reason": "Record intentional execplan update after linking active source-executable retirement lane to the parent decomposition and dogfooding issue #975.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T19:13:22+00:00"
     }
   ]
 }

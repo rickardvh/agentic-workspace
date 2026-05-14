@@ -98,6 +98,25 @@ REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE = {
     "payload.assemble",
     "output.emit",
 }
+PYTHON_MODULE_SOURCE_EXECUTABLE_MARKERS = {
+    "parser construction": ("argparse.ArgumentParser", ".add_subparsers(", ".add_parser("),
+    "command parsing": (".parse_args(",),
+    "console entrypoint": ("def main(",),
+    "generated runtime dispatch": ("run_generated_command", "supports_generated_command", "_GENERATED_RUNTIME_HANDLERS"),
+    "runtime fallback dispatch": ("runtime_main", "_run_generated_cli_package_if_supported"),
+    "generic operation executor": ("def run_operation_ir(", "run_operation_steps("),
+}
+PYTHON_MODULE_SOURCE_EXECUTABLE_PATHS = (
+    "src/agentic_workspace/_runtime_cli.py",
+    "src/agentic_workspace/generated_cli_package.py",
+    "src/agentic_workspace/operation_ir_executor.py",
+    "packages/planning/src/repo_planning_bootstrap/_runtime_cli.py",
+    "packages/planning/src/repo_planning_bootstrap/generated_cli_package.py",
+    "packages/planning/src/repo_planning_bootstrap/operation_ir_executor.py",
+    "packages/memory/src/repo_memory_bootstrap/_runtime_cli.py",
+    "packages/memory/src/repo_memory_bootstrap/generated_cli_package.py",
+    "packages/memory/src/repo_memory_bootstrap/operation_ir_executor.py",
+)
 
 
 def _run(command: list[str]) -> int:
@@ -728,6 +747,30 @@ def _validate_full_python_completion_runtime_ownership(ir: dict[str, object]) ->
     return errors
 
 
+def _validate_full_python_completion_module_source_executable_ownership(ir: dict[str, object]) -> list[str]:
+    python_completion = ir.get("generation_policy", {}).get("python_cli_completion", {})
+    if not isinstance(python_completion, dict) or python_completion.get("current_state") != "full-generated-cli-complete":
+        return []
+
+    errors: list[str] = []
+    for relative_path in PYTHON_MODULE_SOURCE_EXECUTABLE_PATHS:
+        path = REPO_ROOT / relative_path
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8")
+        matched_categories = sorted(
+            category
+            for category, markers in PYTHON_MODULE_SOURCE_EXECUTABLE_MARKERS.items()
+            if any(marker in text for marker in markers)
+        )
+        if matched_categories:
+            errors.append(
+                "command_package_ir.json cannot claim full Python generated CLI completion while shipped module "
+                f"source {relative_path} owns executable behavior markers: {matched_categories!r}"
+            )
+    return errors
+
+
 def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> list[str]:
     errors: list[str] = []
     try:
@@ -1280,6 +1323,7 @@ def _validate_static_surfaces() -> list[str]:
         else:
             errors.extend(_validate_python_cli_completion_policy(python_cli_completion))
             errors.extend(_validate_full_python_completion_runtime_ownership(ir))
+            errors.extend(_validate_full_python_completion_module_source_executable_ownership(ir))
         errors.extend(_validate_python_operation_execution_inventory(ir))
         shell_policy = str(ir.get("generation_policy", {}).get("shell_adapter_policy", ""))
         if "Issue #909 evaluation selects Bash as the first additional generated command transport candidate" not in shell_policy:

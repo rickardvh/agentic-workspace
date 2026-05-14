@@ -357,6 +357,22 @@ def test_static_generated_package_proof_rejects_full_completion_when_generated_m
     assert any("missing generated-main boundary fragment" in error for error in errors)
 
 
+def test_static_generated_package_proof_rejects_full_completion_with_shipped_module_executable_source(monkeypatch) -> None:
+    checker = _load_checker()
+    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+    ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
+    ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
+    monkeypatch.setattr(checker, "load_workspace_command_package_ir", lambda *, repo_root: ir)
+
+    errors = checker._validate_static_surfaces()
+
+    assert any(
+        "src/agentic_workspace/_runtime_cli.py owns executable behavior markers" in error and "parser construction" in error
+        for error in errors
+    )
+    assert any("generated_cli_package.py owns executable behavior markers" in error for error in errors)
+
+
 def test_static_generated_package_proof_rejects_satisfied_gate_for_non_full_state(monkeypatch) -> None:
     checker = _load_checker()
     ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)

@@ -1,0 +1,332 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Remove executable CLI code from src after Python generation",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Complete the Python-scoped #892 transition so shipped module packages, including the root module, do not own executable CLI/runtime implementation code; modules own IR contracts/product truth, command-generation owns primitive execution machinery, and generated/python owns shipped executable projections.",
+    "hard_constraints": "Do not count generated parser coverage, no cli.py inventory, or live _runtime_cli.py references as completion. Completion requires behavior-level proof that executable CLI/parser/dispatch/generic primitive ownership has left shipped module src surfaces or is explicitly classified as non-complete residue.",
+    "agent_may_decide": "Tighten proof, add static detectors, move generic deterministic execution machinery into command-generation, update generated outputs, and route any remaining product-domain residue into explicit inventory/follow-up.",
+    "escalate_when": "A proposed fix would preserve shipped module-owned executable behavior as completion, require redefining the #892 architecture, or broaden into TypeScript/non-Python target completion.",
+    "next_action": "Inventory shipped module Python behavior, add a behavior-based source executable gate, then migrate or classify each remaining executable surface until the gate proves the #892 Python completion bar.",
+    "proof_expectations": [
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+      "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
+      "uv run python scripts/generate/generate_command_packages.py --check",
+      "uv run pytest tests/test_generated_command_package_proof_runner.py packages/command-generation/tests -q",
+      "make test-workspace",
+      "make lint-workspace"
+    ],
+    "touched_scope": [
+      ".agentic-workspace/planning/execplans/python-cli-src-executable-cleanup.plan.json",
+      ".agentic-workspace/planning/state.toml",
+      "scripts/check/check_generated_command_packages.py",
+      "tests/test_generated_command_package_proof_runner.py",
+      "packages/command-generation/src/agentic_command_generation/",
+      "generated/python/",
+      "src/agentic_workspace/",
+      "packages/planning/src/repo_planning_bootstrap/",
+      "packages/memory/src/repo_memory_bootstrap/",
+      "packages/command-generation/tests/"
+    ],
+    "completion_criteria": [
+      "No shipped module source owns executable CLI front doors, parser/help construction, command dispatch/fallback envelopes, generated-command runtime dispatch, or generic deterministic file/data/schema/template/output primitive execution.",
+      "Modules own command/interface contracts, operation IR, data schemas, conformance fixtures, product payload/templates, and at most tiny non-shipped generation wrappers.",
+      "Command-generation owns reusable primitive executors, primitive schemas/catalog, target renderers, generated-output freshness checks, primitive conformance, and target conformance harnesses.",
+      "Generated output under generated/python owns shipped Python executable entrypoints, parser/help/dispatch code, operation bindings, resource loaders, and target-tied fixtures/tests.",
+      "Package behavior changes can be made by editing artifacts and regenerating outputs without hand-editing shipped executable module Python."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "Complete the Python-scoped #892 transition so modules own IR contracts/product truth only, command-generation owns reusable execution machinery, and generated/python owns shipped executable CLI projections."
+  ],
+  "non_goals": [
+    "Do not complete TypeScript, Bash, PowerShell, MCP, or other target implementations in this plan.",
+    "Do not treat moving executable behavior from cli.py into _runtime_cli.py as completion.",
+    "Do not remove product-domain behavior blindly; migrate generic deterministic behavior to codegen primitives or classify remaining module-owned behavior as explicit residue."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Complete the Python-scoped #892 transition so shipped module packages own IR/product truth, not executable CLI/runtime implementation.",
+      "constraints": "Completion cannot be based on filename inventory or generated parser proof alone; it must prove behavior-level ownership boundaries.",
+      "latitude": "Move generic deterministic executable behavior to command-generation primitives/executors, regenerate Python outputs, add source executable gates, and explicitly inventory residue.",
+      "escalation": "Escalate when implementation would preserve module-local executable behavior as completion or redefine the #892 architecture."
+    },
+    "execution": {
+      "milestone": "python-cli-src-executable-cleanup",
+      "status": "active",
+      "next_step": "Inventory shipped module Python behavior, add a behavior-based source executable gate, then migrate or classify each remaining executable surface until the gate proves the #892 Python completion bar.",
+      "proof": "uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; uv run python scripts/generate/generate_command_packages.py --check; uv run pytest tests/test_generated_command_package_proof_runner.py packages/command-generation/tests -q; make test-workspace; make lint-workspace"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/execplans/python-cli-src-executable-cleanup.plan.json",
+        ".agentic-workspace/planning/state.toml",
+        "scripts/check/check_generated_command_packages.py",
+        "tests/test_generated_command_package_proof_runner.py",
+        "packages/command-generation/src/agentic_command_generation/",
+        "generated/python/",
+        "src/agentic_workspace/",
+        "packages/planning/src/repo_planning_bootstrap/",
+        "packages/memory/src/repo_memory_bootstrap/",
+        "packages/command-generation/tests/"
+      ],
+      "invariants": [
+        "No shipped module-owned executable CLI/front-door/parser/dispatch/generic primitive implementation may be counted as completion.",
+        "Remaining module-owned Python must be non-shipped generation support or explicitly inventoried product-domain residue.",
+        "A new target should not need to import Workspace, Planning, or Memory internals for generic deterministic behavior."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#892 implementation-independent generated command packages: modules own behavior meaning as artifacts, command-generation owns executable machinery, generated outputs are disposable shipped projections.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Complete #892 so package changes never require hand-writing shipped executable CLI code and modules own only IR/contracts/product truth.",
+    "inferred intended outcome": "Move or gate remaining shipped module executable CLI/runtime implementation code so Python completion satisfies the architecture, not a proxy invariant.",
+    "chosen concrete what": "Behavior-level source executable inventory and static gate, followed by migration/classification of _runtime_cli.py and module operation executor responsibilities.",
+    "interpretation distance": "low",
+    "review guidance": "Do not accept no cli.py, generated parser coverage, or internal completion-state consistency as evidence of full intent satisfaction."
+  },
+  "execution_bounds": {
+    "allowed paths": ".agentic-workspace/planning/, scripts/check/check_generated_command_packages.py, tests/test_generated_command_package_proof_runner.py, packages/command-generation/src/agentic_command_generation/, packages/command-generation/tests/, generated/python/, src/agentic_workspace/, packages/planning/src/repo_planning_bootstrap/, packages/memory/src/repo_memory_bootstrap/, focused tests for changed behavior.",
+    "max changed files": "Expected broad lane; keep each implementation slice reviewable and commit after each validated milestone.",
+    "required validation commands": "uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; primitive conformance tests; package tests/lint selected by proof.",
+    "ask-before-refactor threshold": "Ask only before changing the architecture target, deleting product-domain behavior without an IR replacement, or widening to non-Python target completion.",
+    "stop before touching": "TypeScript target completion, Bash/PowerShell/MCP transports, unrelated planning cleanup, and unrelated product behavior."
+  },
+  "stop_conditions": {
+    "stop when": "The behavior-level completion gate proves shipped module packages no longer own executable CLI/runtime implementation code, or a blocker shows the architecture needs human product review.",
+    "escalate when boundary reached": "A correct fix requires changing the #892 ownership boundary or accepting shipped module executable code as final architecture.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, #892/#970/#971/#972 intent, source executable inventory, generated-package checker, command-generation primitive executor surfaces, and the module runtime files being migrated.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Resume by running summary, then the source-executable inventory/gate; migrate generic deterministic behavior from module src to command-generation or generated/python, not by renaming files.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Complete #892 Python lane under the architecture where modules own only IR/contracts/product truth and shipped executable behavior is generated/codegen-owned.",
+    "hard constraints": "No proxy completion from filenames, generated parser coverage, or self-authored completion gates; prove behavior-level ownership.",
+    "agent may decide locally": "Migration slice ordering, static gate implementation, codegen primitive extraction, generated output regeneration, focused proof, and residue routing.",
+    "escalate when": "A correct fix would require changing the architecture target or widening to non-Python target completion."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "Current turn must repair active planning and implementation boundaries in one shared workspace; no explicit subagent delegation requested in this turn, and first slice is plan tightening plus behavior inventory before separable write scopes exist.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-14T18:56:39+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    "#892",
+    "#970",
+    "#971",
+    "#972",
+    "#975"
+  ],
+  "active_milestone": {
+    "id": "python-cli-src-executable-cleanup",
+    "status": "active",
+    "scope": "Python-scoped #892 architecture completion: remove shipped module-owned executable CLI/runtime implementation ownership or classify remaining module-owned behavior as explicit non-complete residue.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inventory shipped module Python behavior, add a behavior-based source executable gate, then migrate or classify each remaining executable surface until the gate proves the #892 Python completion bar."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/execplans/python-cli-src-executable-cleanup.plan.json",
+    ".agentic-workspace/planning/state.toml",
+    "scripts/check/check_generated_command_packages.py",
+    "tests/test_generated_command_package_proof_runner.py",
+    "packages/command-generation/src/agentic_command_generation/",
+    "generated/python/",
+    "src/agentic_workspace/",
+    "packages/planning/src/repo_planning_bootstrap/",
+    "packages/memory/src/repo_memory_bootstrap/",
+    "packages/command-generation/tests/"
+  ],
+  "invariants": [
+    "Modules own product truth, not target execution machinery.",
+    "Command-generation owns reusable primitive executors and generated-output proof.",
+    "Generated output owns shipped Python executable code.",
+    "No shipped module-local executable behavior may be counted as completion unless explicitly recorded as incomplete residue."
+  ],
+  "validation_commands": [
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+    "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
+    "uv run python scripts/generate/generate_command_packages.py --check",
+    "uv run pytest tests/test_generated_command_package_proof_runner.py packages/command-generation/tests -q",
+    "make test-workspace",
+    "make lint-workspace"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "No shipped module source owns executable CLI front doors, parser/help construction, command dispatch/fallback envelopes, generated-command runtime dispatch, or generic deterministic file/data/schema/template/output primitive execution.",
+    "Modules own command/interface contracts, operation IR, data schemas, conformance fixtures, product payload/templates, and at most tiny non-shipped generation wrappers.",
+    "Command-generation owns reusable primitive executors, primitive schemas/catalog, target renderers, generated-output freshness checks, primitive conformance, and target conformance harnesses.",
+    "Generated output under generated/python owns shipped Python executable entrypoints, parser/help/dispatch code, operation bindings, resource loaders, and target-tied fixtures/tests.",
+    "Package behavior changes can be made by editing artifacts and regenerating outputs without hand-editing shipped executable module Python."
+  ],
+  "execution_run": {
+    "run status": "in-progress",
+    "executor": "codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Tightened the execplan, updated the parent python-generated-cli decomposition with the active source-executable retirement lane, filed dogfooding issue #975 for the decomposition drift, demoted command_package_ir python_cli_completion from full-generated-cli-complete to pending adapter-layer state, and added a behavior-marker static gate that rejects full completion while shipped module src still owns executable CLI/runtime markers.",
+    "scope touched": ".agentic-workspace planning surfaces, command_package_ir completion state, generated-package static checker, and focused proof tests.",
+    "changed surfaces": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json; .agentic-workspace/planning/execplans/python-cli-src-executable-cleanup.plan.json; scripts/check/check_generated_command_packages.py; src/agentic_workspace/contracts/command_package_ir.json; tests/test_contract_tooling.py; tests/test_generated_command_package_proof_runner.py",
+    "validations run": "uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run python scripts/check/check_generated_command_packages.py --docker --require-docker; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker; uv run python scripts/generate/generate_command_packages.py --check; uv run pytest tests/test_contract_tooling.py::test_command_package_ir_declares_python_and_typescript_targets tests/test_generated_command_package_proof_runner.py -q; make test-workspace; make lint-workspace",
+    "result for continuation": "First slice prevents false completion claims but the lane remains active; continue by migrating or explicitly classifying remaining shipped module executable behavior, especially _runtime_cli.py, generated_cli_package.py, and operation_ir_executor.py surfaces.",
+    "next step": "Use the updated decomposition and active execplan as the control loop, then inventory remaining source executable markers and move generic deterministic behavior into command-generation/generated Python until the full completion gate can honestly pass."
+  },
+  "finished_run_review": {
+    "review status": "pending",
+    "scope respected": "pending",
+    "proof status": "pending",
+    "intent served": "pending",
+    "config compliance": "pending",
+    "misinterpretation risk": "pending",
+    "follow-on decision": "pending"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "Current turn must repair active planning and implementation boundaries in one shared workspace; no explicit subagent delegation requested in this turn, and first slice is plan tightening plus behavior inventory before separable write scopes exist.",
+    "expected savings": "unknown",
+    "actual friction": "pending",
+    "proof result": "pending",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "pending",
+    "proof achieved now": "pending",
+    "evidence for \"proof achieved\" state": ""
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Remove executable CLI code from src after Python generation.",
+    "was original intent fully satisfied?": "pending",
+    "evidence of intent satisfaction": "",
+    "unsolved intent passed to": "none yet"
+  },
+  "execution_summary": {
+    "outcome delivered": "not completed yet",
+    "validation confirmed": "pending",
+    "follow-on routed to": "none yet",
+    "post-work posterity capture": "pending",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "current milestone"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "pending",
+    "larger-intent status": "pending",
+    "closure decision": "pending",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "",
+    "evidence carried forward": "",
+    "reopen trigger": ""
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-14: Scaffolded by agentic-planning new-plan.",
+    "2026-05-14: Recorded delegation decision route=keep-local."
+  ]
+}
