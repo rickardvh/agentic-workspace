@@ -12,9 +12,7 @@ work_items = []
 execplans = []
 
 [todo]
-active_items = [
-  { id = "github-954-python-codegen-boundary", title = "Validate Python generated CLI boundary issue #954", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/github-954-python-codegen-boundary.plan.json", why_now = "GitHub #954 https://github.com/rickardvh/agentic-workspace/issues/954", owner_role = "implementation", handoff_ready = true, refs = ["GitHub #954 https://github.com/rickardvh/agentic-workspace/issues/954"] },
-]
+active_items = []
 queued_items = []
 
 [roadmap]

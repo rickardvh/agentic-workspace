@@ -111,7 +111,7 @@
     },
     "python_cli_completion": {
       "finish_line": "Python CLI completion means parser, dispatch, command/interface behavior, adapter metadata, and conformance expectations are generated from implementation-independent contracts or IR, with hand-owned Python code limited to thin runtime primitive adapters.",
-      "current_state": "full-generated-cli-complete",
+      "current_state": "adapter-layer-proven-not-full-generated-cli",
       "allowed_hand_owned_cli_responsibilities": [
         "live workspace inspection",
         "runtime primitive implementation",
@@ -129,22 +129,22 @@
       ],
       "proof_requirements": [
         "generated-package proof distinguishes adapter maturity from full Python generated CLI completion",
-        "static proof rejects treating weak-agent-safe-adapter as full Python generated CLI completion while cli.py owns parser or dispatch behavior",
+        "static proof rejects treating weak-agent-safe-adapter as full Python generated CLI completion while _runtime_cli.py owns parser or dispatch behavior",
         "future package command/interface work changes contracts, IR, generators, and regenerated outputs instead of package-local executable cli.py files",
         "runtime primitive code remains hand-owned only when it performs live behavior, mutation orchestration, or package-specific runtime logic"
       ],
       "completion_gate": {
-        "state": "satisfied",
+        "state": "pending",
         "scope": "python-only",
         "satisfied_by": [
           {
             "id": "parser-shape-generated",
-            "evidence": "Generated Python packages own command parser shape for command_package_ir generated commands.",
+            "evidence": "Generated Python packages own command parser shape for command_package_ir generated commands, but root and module runtime compatibility layers still own non-generated parser construction.",
             "proof": "scripts/check/check_generated_command_packages.py::_validate_generated_python_commands_absent_from_handwritten_parsers"
           },
           {
             "id": "dispatch-selection-generated",
-            "evidence": "cli.py routes generated commands through generated_cli_package before handwritten parsers.",
+            "evidence": "_runtime_cli.py routes generated commands through generated_cli_package before handwritten parsers, but generated package main functions still delegate through runtime main for full CLI compatibility.",
             "proof": "scripts/check/check_generated_command_packages.py generated_entrypoints order check"
           },
           {

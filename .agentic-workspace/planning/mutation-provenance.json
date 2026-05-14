@@ -520,6 +520,14 @@
       "reason": "Tightened scaffold after upstream issue intake with normalized #954 scope, proof, and handoff fields.",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-14T09:41:47+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan github-954-python-codegen-boundary",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T09:53:23+00:00"
     }
   ]
 }

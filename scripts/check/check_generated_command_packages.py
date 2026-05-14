@@ -600,6 +600,12 @@ def _validate_python_cli_completion_policy(policy: dict[str, object]) -> list[st
     if not any("weak-agent-safe-adapter" in item and "full Python generated CLI completion" in item for item in proof_requirements):
         errors.append("command_package_ir.json Python CLI completion proof must distinguish adapter maturity from full generated CLI completion")
     completion_gate = policy.get("completion_gate", {})
+    if isinstance(completion_gate, dict) and current_state != "full-generated-cli-complete":
+        if completion_gate.get("state") == "satisfied":
+            errors.append(
+                "command_package_ir.json cannot mark the Python CLI completion gate satisfied while "
+                f"current_state is {current_state!r}"
+            )
     if current_state == "full-generated-cli-complete":
         if not isinstance(completion_gate, dict):
             errors.append("command_package_ir.json full Python CLI completion requires a completion_gate object")
@@ -628,6 +634,45 @@ def _validate_python_cli_completion_policy(policy: dict[str, object]) -> list[st
                     f"command_package_ir.json Python completion evidence {evidence_id!r} must reference "
                     f"expected proof surface {expected_proof!r}; got {proof!r}"
                 )
+    return errors
+
+
+def _validate_full_python_completion_runtime_ownership(ir: dict[str, object]) -> list[str]:
+    python_completion = ir.get("generation_policy", {}).get("python_cli_completion", {})
+    if not isinstance(python_completion, dict) or python_completion.get("current_state") != "full-generated-cli-complete":
+        return []
+
+    errors: list[str] = []
+    runtime_paths = [
+        "src/agentic_workspace/_runtime_cli.py",
+        "packages/planning/src/repo_planning_bootstrap/_runtime_cli.py",
+        "packages/memory/src/repo_memory_bootstrap/_runtime_cli.py",
+    ]
+    for relative_path in runtime_paths:
+        text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
+        if "def build_parser(" in text or ".add_subparsers(" in text:
+            errors.append(
+                "command_package_ir.json cannot claim full Python generated CLI completion while "
+                f"{relative_path} still owns parser construction"
+            )
+        if "_run_generated_cli_package_if_supported" in text and "build_parser()" in text:
+            errors.append(
+                "command_package_ir.json cannot claim full Python generated CLI completion while "
+                f"{relative_path} still owns runtime parser fallback and dispatch ordering"
+            )
+
+    generated_runtime_adapters = [
+        "generated/python/workspace-cli/generated_cli_package/__init__.py",
+        "generated/python/planning-cli/generated_cli_package/__init__.py",
+        "generated/python/memory-cli/generated_cli_package/__init__.py",
+    ]
+    for relative_path in generated_runtime_adapters:
+        text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
+        if "import main as runtime_main" in text and "return runtime_main(argv)" in text:
+            errors.append(
+                "command_package_ir.json cannot claim full Python generated CLI completion while "
+                f"{relative_path} delegates generated main(argv) to runtime main(argv)"
+            )
     return errors
 
 
@@ -1064,6 +1109,7 @@ def _validate_static_surfaces() -> list[str]:
             errors.append("command_package_ir.json generation_policy.python_cli_completion is missing or malformed")
         else:
             errors.extend(_validate_python_cli_completion_policy(python_cli_completion))
+            errors.extend(_validate_full_python_completion_runtime_ownership(ir))
         errors.extend(_validate_python_operation_execution_inventory(ir))
         shell_policy = str(ir.get("generation_policy", {}).get("shell_adapter_policy", ""))
         if "Issue #909 evaluation selects Bash as the first additional generated command transport candidate" not in shell_policy:

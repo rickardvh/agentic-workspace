@@ -273,6 +273,8 @@ def test_static_generated_package_proof_rejects_python_completion_proof_surface_
 def test_static_generated_package_proof_rejects_full_completion_with_compatibility_handlers(monkeypatch) -> None:
     checker = _load_checker()
     ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+    ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
+    ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
     original_load_json = checker._load_json
 
     def fake_load_json(path: str) -> dict[str, object]:
@@ -292,7 +294,32 @@ def test_static_generated_package_proof_rejects_full_completion_with_compatibili
     assert any("compatibility-runtime-handler" in error for error in errors)
 
 
-def test_static_generated_package_proof_accepts_python_completion_gate() -> None:
+def test_static_generated_package_proof_rejects_full_completion_with_runtime_parser_ownership(monkeypatch) -> None:
+    checker = _load_checker()
+    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+    ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
+    ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
+    monkeypatch.setattr(checker, "load_workspace_command_package_ir", lambda *, repo_root: ir)
+
+    errors = checker._validate_static_surfaces()
+
+    assert any("_runtime_cli.py still owns parser construction" in error for error in errors)
+    assert any("delegates generated main(argv) to runtime main(argv)" in error for error in errors)
+
+
+def test_static_generated_package_proof_rejects_satisfied_gate_for_non_full_state(monkeypatch) -> None:
+    checker = _load_checker()
+    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+    ir["generation_policy"]["python_cli_completion"]["current_state"] = "adapter-layer-proven-not-full-generated-cli"
+    ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
+    monkeypatch.setattr(checker, "load_workspace_command_package_ir", lambda *, repo_root: ir)
+
+    errors = checker._validate_static_surfaces()
+
+    assert any("cannot mark the Python CLI completion gate satisfied" in error for error in errors)
+
+
+def test_static_generated_package_proof_accepts_python_adapter_layer_state() -> None:
     checker = _load_checker()
 
     errors = checker._validate_static_surfaces()
