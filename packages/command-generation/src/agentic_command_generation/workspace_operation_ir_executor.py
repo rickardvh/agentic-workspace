@@ -75,7 +75,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
 
 
 def _resolve_workspace_target_root(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Path:
-    from agentic_workspace._runtime_cli import _resolve_target_root, _validate_target_root
+    from agentic_command_generation.workspace_runtime_cli import _resolve_target_root, _validate_target_root
 
     target_root = _resolve_target_root(values.get("target")) if values.get("target") else _resolve_target_root(None)
     _validate_target_root(command_name="config", target_root=target_root)
@@ -83,8 +83,8 @@ def _resolve_workspace_target_root(values: dict[str, Any], _arguments: dict[str,
 
 
 def _load_workspace_config(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from agentic_command_generation.workspace_runtime_cli import _module_operations, _preset_modules, _validate_descriptor_contract
     from agentic_workspace import config as config_lib
-    from agentic_workspace._runtime_cli import _module_operations, _preset_modules, _validate_descriptor_contract
 
     descriptors = _module_operations()
     _validate_descriptor_contract(descriptors)
@@ -95,13 +95,18 @@ def _load_workspace_config(values: dict[str, Any], _arguments: dict[str, Any], _
 
 
 def _load_defaults(_values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> dict[str, Any]:
-    from agentic_workspace._runtime_cli import _defaults_payload
+    from agentic_command_generation.workspace_runtime_cli import _defaults_payload
 
     return _defaults_payload()
 
 
 def _select_defaults(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> dict[str, Any]:
-    from agentic_workspace._runtime_cli import _select_defaults_section, _select_payload_fields, _tiny_defaults_payload, serialise_value
+    from agentic_command_generation.workspace_runtime_cli import (
+        _select_defaults_section,
+        _select_payload_fields,
+        _tiny_defaults_payload,
+        serialise_value,
+    )
 
     payload = values["defaults_payload"]
     section = values.get("section")
@@ -116,7 +121,7 @@ def _select_defaults(values: dict[str, Any], _arguments: dict[str, Any], _contex
 
 
 def _select_fields(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> dict[str, Any]:
-    from agentic_workspace._runtime_cli import (
+    from agentic_command_generation.workspace_runtime_cli import (
         _compact_config_payload,
         _config_payload,
         _select_payload_fields,
@@ -136,7 +141,7 @@ def _select_fields(values: dict[str, Any], _arguments: dict[str, Any], _context:
 
 
 def _resolve_workspace_selection(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> dict[str, Any]:
-    from agentic_workspace._runtime_cli import _selected_runtime_context
+    from agentic_command_generation.workspace_runtime_cli import _selected_runtime_context
 
     args = argparse.Namespace(
         target=values.get("target"),
@@ -155,7 +160,7 @@ def _resolve_workspace_selection(values: dict[str, Any], _arguments: dict[str, A
 
 
 def _render_prompt(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> dict[str, Any]:
-    from agentic_workspace._runtime_cli import _run_prompt_command
+    from agentic_command_generation.workspace_runtime_cli import _run_prompt_command
 
     selection = values["selection"]
     prompt_command = values.get("prompt_command")
@@ -175,7 +180,7 @@ def _render_prompt(values: dict[str, Any], _arguments: dict[str, Any], _context:
 
 
 def _append_delegation_outcome(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> dict[str, Any]:
-    from agentic_workspace._runtime_cli import _record_delegation_outcome
+    from agentic_command_generation.workspace_runtime_cli import _record_delegation_outcome
 
     return _record_delegation_outcome(
         target_root=values["target_root"],
@@ -189,8 +194,8 @@ def _append_delegation_outcome(values: dict[str, Any], _arguments: dict[str, Any
 
 
 def _load_system_intent_config(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from agentic_command_generation.workspace_runtime_cli import _module_operations, _preset_modules, _validate_descriptor_contract
     from agentic_workspace import config as config_lib
-    from agentic_workspace._runtime_cli import _module_operations, _preset_modules, _validate_descriptor_contract
 
     descriptors = _module_operations()
     _validate_descriptor_contract(descriptors)
@@ -200,7 +205,7 @@ def _load_system_intent_config(values: dict[str, Any], _arguments: dict[str, Any
 def _refresh_system_intent_metadata(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
     if not values.get("sync"):
         return None
-    from agentic_workspace._runtime_cli import _system_intent_command_payload
+    from agentic_command_generation.workspace_runtime_cli import _system_intent_command_payload
 
     return _system_intent_command_payload(target_root=values["target_root"], config=values["system_intent_config"], sync=True)
 
@@ -208,13 +213,19 @@ def _refresh_system_intent_metadata(values: dict[str, Any], _arguments: dict[str
 def _read_or_create_system_intent_mirror(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> dict[str, Any]:
     if values.get("result") is not None:
         return values["result"]
-    from agentic_workspace._runtime_cli import _system_intent_command_payload
+    from agentic_command_generation.workspace_runtime_cli import _system_intent_command_payload
 
     return _system_intent_command_payload(target_root=values["target_root"], config=values["system_intent_config"], sync=False)
 
 
 def _emit_workspace_output(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> None:
-    from agentic_workspace._runtime_cli import _emit_compact_answer_text, _emit_config, _emit_defaults, _emit_payload, serialise_value
+    from agentic_command_generation.workspace_runtime_cli import (
+        _emit_compact_answer_text,
+        _emit_config,
+        _emit_defaults,
+        _emit_payload,
+        serialise_value,
+    )
 
     payload = values["result"]
     output_format = str(values.get("format") or "text")
@@ -276,6 +287,6 @@ def _emit_system_intent_payload_text(payload: dict[str, Any]) -> None:
 
 
 def _diagnostic_profile(args: argparse.Namespace, *, default: str) -> str:
-    from agentic_workspace._runtime_cli import _diagnostic_profile as runtime_diagnostic_profile
+    from agentic_command_generation.workspace_runtime_cli import _diagnostic_profile as runtime_diagnostic_profile
 
     return runtime_diagnostic_profile(args, default=default)

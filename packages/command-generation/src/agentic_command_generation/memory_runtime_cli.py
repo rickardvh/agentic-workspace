@@ -8,23 +8,6 @@ import tomllib
 from pathlib import Path
 from typing import Any, cast
 
-from agentic_command_generation.memory_generated_cli_package import (
-    build_generated_parser as build_generated_cli_package_parser,
-)
-from agentic_command_generation.memory_generated_cli_package import (
-    generated_command_names as generated_cli_package_command_names,
-)
-from agentic_command_generation.memory_generated_cli_package import (
-    generated_operation_contract as generated_cli_package_operation_contract,
-)
-from agentic_command_generation.memory_generated_cli_package import (
-    run_generated_command as run_generated_cli_package_command,
-)
-from agentic_command_generation.memory_generated_cli_package import (
-    supports_generated_command as supports_generated_cli_package_command,
-)
-from agentic_command_generation.memory_operation_ir_executor import run_operation_ir
-
 from repo_memory_bootstrap import __version__
 from repo_memory_bootstrap.installer import (
     BOOTSTRAP_WORKSPACE_ROOT,
@@ -58,6 +41,23 @@ from repo_memory_bootstrap.installer import (
     upgrade_bootstrap,
     verify_payload,
 )
+
+from agentic_command_generation.memory_generated_cli_package import (
+    build_generated_parser as build_generated_cli_package_parser,
+)
+from agentic_command_generation.memory_generated_cli_package import (
+    generated_command_names as generated_cli_package_command_names,
+)
+from agentic_command_generation.memory_generated_cli_package import (
+    generated_operation_contract as generated_cli_package_operation_contract,
+)
+from agentic_command_generation.memory_generated_cli_package import (
+    run_generated_command as run_generated_cli_package_command,
+)
+from agentic_command_generation.memory_generated_cli_package import (
+    supports_generated_command as supports_generated_cli_package_command,
+)
+from agentic_command_generation.memory_operation_ir_executor import run_operation_ir
 
 
 def _program_name() -> str:

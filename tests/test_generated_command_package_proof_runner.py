@@ -367,7 +367,8 @@ def test_static_generated_package_proof_rejects_full_completion_with_shipped_mod
     errors = checker._validate_static_surfaces()
 
     assert any(
-        "src/agentic_workspace/_runtime_cli.py owns executable behavior markers" in error and "parser construction" in error
+        "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py owns executable behavior markers" in error
+        and "parser construction" in error
         for error in errors
     )
 
@@ -403,7 +404,7 @@ def test_static_generated_package_proof_rejects_missing_primitive_conformance_ca
 
 def test_python_runtime_handler_boundary_rejects_non_adapter_handlers(monkeypatch) -> None:
     checker = _load_checker()
-    memory_cli = checker.importlib.import_module("repo_memory_bootstrap._runtime_cli")
+    memory_cli = checker.importlib.import_module("agentic_command_generation.memory_runtime_cli")
     drifted_handlers = dict(memory_cli._GENERATED_RUNTIME_HANDLERS)
     drifted_handlers["memory.status.report"] = memory_cli._handle_status
     monkeypatch.setattr(memory_cli, "_GENERATED_RUNTIME_HANDLERS", drifted_handlers)
@@ -416,19 +417,19 @@ def test_python_runtime_handler_boundary_rejects_non_adapter_handlers(monkeypatc
 def test_python_runtime_import_boundary_rejects_legacy_generated_adapter_dispatch() -> None:
     checker = _load_checker()
     errors = checker._validate_no_legacy_generated_adapter_runtime_import(
-        relative_path="src/agentic_workspace/_runtime_cli.py",
+        relative_path="packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py",
         text="from agentic_workspace.generated_command_adapters import GENERATED_COMMAND_ADAPTERS_BY_COMMAND\n",
     )
 
     assert errors == [
-        "src/agentic_workspace/_runtime_cli.py must route generated Python commands through generated_cli_package, "
+        "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py must route generated Python commands through generated_cli_package, "
         "not legacy generated_command_adapters runtime dispatch"
     ]
 
 
 def test_python_parser_retirement_rejects_generated_command_in_handwritten_parser(monkeypatch) -> None:
     checker = _load_checker()
-    root_cli = checker.importlib.import_module("agentic_workspace._runtime_cli")
+    root_cli = checker.importlib.import_module("agentic_command_generation.workspace_runtime_cli")
 
     def build_drifted_parser() -> argparse.ArgumentParser:
         parser = argparse.ArgumentParser()

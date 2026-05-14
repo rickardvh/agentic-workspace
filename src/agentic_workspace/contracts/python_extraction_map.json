@@ -21,7 +21,7 @@
   "candidates": [
     {
       "id": "authority-marker-policy",
-      "source": "src/agentic_workspace/_runtime_cli.py:_authority_marker_for_path",
+      "source": "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py:_authority_marker_for_path",
       "candidate_content": [
         "authority labels",
         "canonical source mapping",
@@ -37,7 +37,7 @@
     },
     {
       "id": "changed-path-proof-rules",
-      "source": "src/agentic_workspace/_runtime_cli.py:_proof_selection_for_changed_paths",
+      "source": "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py:_proof_selection_for_changed_paths",
       "candidate_content": [
         "path prefix to validation lane mapping",
         "cross-lane escalation rule",
@@ -52,7 +52,7 @@
     },
     {
       "id": "implementer-context-template",
-      "source": "src/agentic_workspace/_runtime_cli.py:_implement_payload",
+      "source": "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py:_implement_payload",
       "candidate_content": [
         "implementer-context/v1 result shape",
         "files_to_avoid text",
@@ -69,7 +69,7 @@
     },
     {
       "id": "startup-context-template",
-      "source": "src/agentic_workspace/_runtime_cli.py:_start_payload",
+      "source": "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py:_start_payload",
       "candidate_content": [
         "startup-context/v1 result shape",
         "startup sequence labels",
@@ -85,7 +85,7 @@
     },
     {
       "id": "ownership-path-classifier",
-      "source": "src/agentic_workspace/_runtime_cli.py:_ownership_answer_for_path",
+      "source": "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py:_ownership_answer_for_path",
       "candidate_content": [
         "authority surface matching order",
         "module root matching",
@@ -101,7 +101,7 @@
     },
     {
       "id": "workspace-agent-template",
-      "source": "src/agentic_workspace/_runtime_cli.py:_workspace_agents_template",
+      "source": "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py:_workspace_agents_template",
       "candidate_content": [
         "root AGENTS.md template",
         "startup command text",
@@ -131,7 +131,7 @@
     },
     {
       "id": "report-assembly",
-      "source": "src/agentic_workspace/_runtime_cli.py:_run_report_command and workspace_output.py",
+      "source": "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py:_run_report_command and workspace_output.py",
       "candidate_content": [
         "combined report assembly",
         "module status/doctor composition",
@@ -146,7 +146,7 @@
     },
     {
       "id": "preflight-token-validation",
-      "source": "src/agentic_workspace/_runtime_cli.py:_enforce_preflight_gate",
+      "source": "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py:_enforce_preflight_gate",
       "candidate_content": [
         "token parsing",
         "freshness checks",

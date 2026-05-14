@@ -166,7 +166,7 @@ def test_installed_workspace_wheel_imports_cli_module() -> None:
             [
                 sys.executable,
                 "-c",
-                "import agentic_workspace._runtime_cli; from agentic_command_generation.workspace_generated_cli_package import build_generated_parser",
+                "import agentic_command_generation.workspace_runtime_cli; from agentic_command_generation.workspace_generated_cli_package import build_generated_parser",
             ],
             cwd=Path(tmpdir),
             env={**os.environ, "PYTHONPATH": str(install_root)},

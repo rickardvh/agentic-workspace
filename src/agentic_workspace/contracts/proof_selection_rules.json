@@ -35,6 +35,27 @@
   },
   "rules": [
     {
+      "id": "workspace-codegen-runtime",
+      "lane": "workspace_cli",
+      "exact": [
+        "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py"
+      ]
+    },
+    {
+      "id": "planning-codegen-runtime",
+      "lane": "planning_package",
+      "exact": [
+        "packages/command-generation/src/agentic_command_generation/planning_runtime_cli.py"
+      ]
+    },
+    {
+      "id": "memory-codegen-runtime",
+      "lane": "memory_package",
+      "exact": [
+        "packages/command-generation/src/agentic_command_generation/memory_runtime_cli.py"
+      ]
+    },
+    {
       "id": "generated-command-packages",
       "lane": "generated_command_packages",
       "exact": [
@@ -152,6 +173,31 @@
     "lane": "cli_authority",
     "classifications": [
       {
+        "id": "root-workspace-cli-runtime",
+        "role": "hand-owned-executable",
+        "exact": [
+          "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py"
+        ],
+        "direct_edit_allowed": true,
+        "source_contract": "src/agentic_workspace/contracts/operation_contracts.json + src/agentic_workspace/contracts/cli_commands.json + src/agentic_workspace/contracts/python_runtime_boundary.json",
+        "generator_contract": null,
+        "regeneration_path": null,
+        "edit_policy": "Direct edits are allowed only for runtime primitives, live inspection, dispatch glue, or explicit migration exceptions; visible interface authority should route to contracts or generated metadata, and any cli.py edit must select generated command package proof so interface drift cannot bypass the generated package gate."
+      },
+      {
+        "id": "package-cli-runtime",
+        "role": "hand-owned-executable",
+        "exact": [
+          "packages/command-generation/src/agentic_command_generation/planning_runtime_cli.py",
+          "packages/command-generation/src/agentic_command_generation/memory_runtime_cli.py"
+        ],
+        "direct_edit_allowed": true,
+        "source_contract": "package-local CLI source plus package bootstrap payload checks",
+        "generator_contract": null,
+        "regeneration_path": null,
+        "edit_policy": "Direct edits are package-source work and may require package payload and install-surface proof before closeout. Any package cli.py edit must also select generated command package proof so command/interface drift cannot bypass command_package_ir and generated_cli_package checks."
+      },
+      {
         "id": "generated-command-package-output",
         "role": "projection",
         "prefixes": [
@@ -175,31 +221,6 @@
         "generator_contract": "packages/command-generation/src/agentic_command_generation/",
         "regeneration_path": "uv run python scripts/generate/generate_command_packages.py",
         "edit_policy": "Package-local source must not own generated CLI bridges. Codegen-owned loader changes must prove generated package import behavior, generated output freshness, and packaging entry points."
-      },
-      {
-        "id": "root-workspace-cli-runtime",
-        "role": "hand-owned-executable",
-        "exact": [
-          "src/agentic_workspace/_runtime_cli.py"
-        ],
-        "direct_edit_allowed": true,
-        "source_contract": "src/agentic_workspace/contracts/operation_contracts.json + src/agentic_workspace/contracts/cli_commands.json + src/agentic_workspace/contracts/python_runtime_boundary.json",
-        "generator_contract": null,
-        "regeneration_path": null,
-        "edit_policy": "Direct edits are allowed only for runtime primitives, live inspection, dispatch glue, or explicit migration exceptions; visible interface authority should route to contracts or generated metadata, and any cli.py edit must select generated command package proof so interface drift cannot bypass the generated package gate."
-      },
-      {
-        "id": "package-cli-runtime",
-        "role": "hand-owned-executable",
-        "exact": [
-          "packages/planning/src/repo_planning_bootstrap/_runtime_cli.py",
-          "packages/memory/src/repo_memory_bootstrap/_runtime_cli.py"
-        ],
-        "direct_edit_allowed": true,
-        "source_contract": "package-local CLI source plus package bootstrap payload checks",
-        "generator_contract": null,
-        "regeneration_path": null,
-        "edit_policy": "Direct edits are package-source work and may require package payload and install-surface proof before closeout. Any package cli.py edit must also select generated command package proof so command/interface drift cannot bypass command_package_ir and generated_cli_package checks."
       }
     ]
   }

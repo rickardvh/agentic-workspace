@@ -9,7 +9,7 @@ from pathlib import Path
 
 from jsonschema import Draft202012Validator
 
-from agentic_workspace import _runtime_cli as cli
+from agentic_command_generation import workspace_runtime_cli as cli
 from agentic_workspace.contract_tooling import (
     authority_markers_manifest,
     cli_commands_manifest,
@@ -204,7 +204,7 @@ def _sample_setup_findings_payload() -> dict[str, object]:
                 "class": "repo_friction_evidence",
                 "summary": "Large shared workspace CLI surface is still a hotspot.",
                 "confidence": 0.91,
-                "path": "src/agentic_workspace/_runtime_cli.py",
+                "path": "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py",
                 "refs": [".agentic-workspace/docs/reporting-contract.md"],
                 "why": "Would reduce rediscovery during later repo work.",
             },
@@ -251,7 +251,7 @@ def _sample_startup_context_payload() -> dict[str, object]:
         (target / ".git").mkdir(exist_ok=True)
         return cli._start_payload(  # type: ignore[attr-defined]
             target_root=target,
-            changed_paths=["src/agentic_workspace/_runtime_cli.py"],
+            changed_paths=["packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py"],
         )
 
 
@@ -264,7 +264,7 @@ def _sample_implementer_context_payload() -> dict[str, object]:
             target_root=target,
             changed_paths=[
                 "packages/planning/bootstrap/repo_planning_bootstrap/installer.py",
-                "src/agentic_workspace/_runtime_cli.py",
+                "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py",
             ],
         )
 
@@ -1257,13 +1257,13 @@ def _program_parser(program: str) -> argparse.ArgumentParser | None:
     if program == "agentic-workspace":
         return cli.build_parser()
     if program == "agentic-planning":
-        from repo_planning_bootstrap import _runtime_cli as planning_cli
+        from agentic_command_generation import planning_runtime_cli
 
-        return planning_cli.build_parser()
+        return planning_runtime_cli.build_parser()
     if program == "agentic-memory":
-        from repo_memory_bootstrap import _runtime_cli as memory_cli
+        from agentic_command_generation import memory_runtime_cli
 
-        return memory_cli.build_parser()
+        return memory_runtime_cli.build_parser()
     return None
 
 

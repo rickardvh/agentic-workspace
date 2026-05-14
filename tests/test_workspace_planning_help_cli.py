@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from agentic_workspace import _runtime_cli as cli
+from agentic_command_generation import workspace_runtime_cli as cli
 
 
 def test_invalid_command_shows_preflight_fallback_hint(capsys) -> None:

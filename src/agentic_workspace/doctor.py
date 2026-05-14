@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agentic_workspace import _runtime_cli as cli
+from agentic_command_generation import workspace_runtime_cli as cli
 from agentic_workspace import config
 from agentic_workspace.contract_tooling import (
     compact_contract_manifest,

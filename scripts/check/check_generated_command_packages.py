@@ -107,9 +107,9 @@ PYTHON_MODULE_SOURCE_EXECUTABLE_MARKERS = {
     "generic operation executor": ("def run_operation_ir(", "run_operation_steps("),
 }
 PYTHON_MODULE_SOURCE_EXECUTABLE_PATHS = (
-    "src/agentic_workspace/_runtime_cli.py",
-    "packages/planning/src/repo_planning_bootstrap/_runtime_cli.py",
-    "packages/memory/src/repo_memory_bootstrap/_runtime_cli.py",
+    "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py",
+    "packages/command-generation/src/agentic_command_generation/planning_runtime_cli.py",
+    "packages/command-generation/src/agentic_command_generation/memory_runtime_cli.py",
 )
 
 
@@ -709,9 +709,9 @@ def _validate_full_python_completion_runtime_ownership(ir: dict[str, object]) ->
 
     errors: list[str] = []
     generated_runtime_adapters = {
-        "generated/python/workspace-cli/generated_cli_package/__init__.py": "agentic_workspace._runtime_cli",
-        "generated/python/planning-cli/generated_cli_package/__init__.py": "repo_planning_bootstrap._runtime_cli",
-        "generated/python/memory-cli/generated_cli_package/__init__.py": "repo_memory_bootstrap._runtime_cli",
+        "generated/python/workspace-cli/generated_cli_package/__init__.py": "agentic_command_generation.workspace_runtime_cli",
+        "generated/python/planning-cli/generated_cli_package/__init__.py": "agentic_command_generation.planning_runtime_cli",
+        "generated/python/memory-cli/generated_cli_package/__init__.py": "agentic_command_generation.memory_runtime_cli",
     }
     for relative_path, runtime_module in generated_runtime_adapters.items():
         text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
@@ -916,9 +916,9 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         errors.append("memory operation IR executor must import the codegen-owned primitive executor")
     if "run_operation_steps(" not in memory_operation_executor_text:
         errors.append("memory operation IR executor must execute operation plans through codegen-owned run_operation_steps")
-    memory_cli_text = (REPO_ROOT / "packages" / "memory" / "src" / "repo_memory_bootstrap" / "_runtime_cli.py").read_text(
-        encoding="utf-8"
-    )
+    memory_cli_text = (
+        REPO_ROOT / "packages" / "command-generation" / "src" / "agentic_command_generation" / "memory_runtime_cli.py"
+    ).read_text(encoding="utf-8")
     for function_name in (
         "_run_doctor_report_adapter",
         "_run_list_files_report_adapter",
@@ -941,9 +941,9 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         errors.append("planning operation IR executor must import the codegen-owned primitive executor")
     if "run_operation_steps(" not in planning_operation_executor_text:
         errors.append("planning operation IR executor must execute operation plans through codegen-owned run_operation_steps")
-    planning_cli_text = (REPO_ROOT / "packages" / "planning" / "src" / "repo_planning_bootstrap" / "_runtime_cli.py").read_text(
-        encoding="utf-8"
-    )
+    planning_cli_text = (
+        REPO_ROOT / "packages" / "command-generation" / "src" / "agentic_command_generation" / "planning_runtime_cli.py"
+    ).read_text(encoding="utf-8")
     for function_name in ("_run_doctor_report_adapter", "_run_report_adapter", "_run_status_report_adapter"):
         function_index = planning_cli_text.find(f"def {function_name}")
         next_function_index = planning_cli_text.find("\ndef ", function_index + 1)
@@ -958,7 +958,9 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         errors.append("workspace operation IR executor must import the codegen-owned primitive executor")
     if "run_operation_steps(" not in workspace_operation_executor_text:
         errors.append("workspace operation IR executor must execute operation plans through codegen-owned run_operation_steps")
-    workspace_cli_text = (REPO_ROOT / "src" / "agentic_workspace" / "_runtime_cli.py").read_text(encoding="utf-8")
+    workspace_cli_text = (
+        REPO_ROOT / "packages" / "command-generation" / "src" / "agentic_command_generation" / "workspace_runtime_cli.py"
+    ).read_text(encoding="utf-8")
     for function_name in (
         "_run_config_report_adapter",
         "_run_defaults_report_adapter",
@@ -1007,9 +1009,9 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
 def _validate_python_runtime_handler_boundary() -> list[str]:
     errors: list[str] = []
     package_modules = {
-        "root-workspace": ("agentic_command_generation.workspace_generated_cli_package", "agentic_workspace._runtime_cli"),
-        "planning-bootstrap": ("agentic_command_generation.planning_generated_cli_package", "repo_planning_bootstrap._runtime_cli"),
-        "memory-bootstrap": ("agentic_command_generation.memory_generated_cli_package", "repo_memory_bootstrap._runtime_cli"),
+        "root-workspace": ("agentic_command_generation.workspace_generated_cli_package", "agentic_command_generation.workspace_runtime_cli"),
+        "planning-bootstrap": ("agentic_command_generation.planning_generated_cli_package", "agentic_command_generation.planning_runtime_cli"),
+        "memory-bootstrap": ("agentic_command_generation.memory_generated_cli_package", "agentic_command_generation.memory_runtime_cli"),
     }
     for package_id, (generated_module_name, runtime_module_name) in package_modules.items():
         try:
@@ -1060,9 +1062,9 @@ def _validate_no_legacy_generated_adapter_runtime_import(*, relative_path: str, 
 def _validate_generated_python_commands_absent_from_handwritten_parsers() -> list[str]:
     errors: list[str] = []
     package_modules = {
-        "root-workspace": ("agentic_command_generation.workspace_generated_cli_package", "agentic_workspace._runtime_cli"),
-        "planning-bootstrap": ("agentic_command_generation.planning_generated_cli_package", "repo_planning_bootstrap._runtime_cli"),
-        "memory-bootstrap": ("agentic_command_generation.memory_generated_cli_package", "repo_memory_bootstrap._runtime_cli"),
+        "root-workspace": ("agentic_command_generation.workspace_generated_cli_package", "agentic_command_generation.workspace_runtime_cli"),
+        "planning-bootstrap": ("agentic_command_generation.planning_generated_cli_package", "agentic_command_generation.planning_runtime_cli"),
+        "memory-bootstrap": ("agentic_command_generation.memory_generated_cli_package", "agentic_command_generation.memory_runtime_cli"),
     }
     for package_id, (generated_module_name, runtime_module_name) in package_modules.items():
         generated_module = importlib.import_module(generated_module_name)
@@ -1420,9 +1422,9 @@ def _validate_static_surfaces() -> list[str]:
                             f"{generated_root}/generated_cli_package/adapter_commands.json drifted from generated adapter projection"
                         )
         generated_entrypoints = {
-            "src/agentic_workspace/_runtime_cli.py": "agentic_command_generation.workspace_generated_cli_package",
-            "packages/planning/src/repo_planning_bootstrap/_runtime_cli.py": "agentic_command_generation.planning_generated_cli_package",
-            "packages/memory/src/repo_memory_bootstrap/_runtime_cli.py": "agentic_command_generation.memory_generated_cli_package",
+            "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py": "agentic_command_generation.workspace_generated_cli_package",
+            "packages/command-generation/src/agentic_command_generation/planning_runtime_cli.py": "agentic_command_generation.planning_generated_cli_package",
+            "packages/command-generation/src/agentic_command_generation/memory_runtime_cli.py": "agentic_command_generation.memory_generated_cli_package",
         }
         for relative_path, import_name in generated_entrypoints.items():
             text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")

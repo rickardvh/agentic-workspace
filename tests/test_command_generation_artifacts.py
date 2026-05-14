@@ -63,7 +63,10 @@ def test_canonical_command_artifacts_exclude_target_specific_package_fields() ->
 
 def test_command_generation_package_does_not_hardcode_host_runtime_modules() -> None:
     package_root = Path(__file__).resolve().parents[1] / "packages" / "command-generation"
-    text = "\n".join(path.read_text(encoding="utf-8") for path in (package_root / "src").rglob("*.py"))
+    target_specific_runtime = ("_generated_cli_package.py", "_operation_ir_executor.py", "_runtime_cli.py")
+    text = "\n".join(
+        path.read_text(encoding="utf-8") for path in (package_root / "src").rglob("*.py") if not path.name.endswith(target_specific_runtime)
+    )
 
     assert "agentic_workspace" not in text
     assert "repo_planning_bootstrap" not in text

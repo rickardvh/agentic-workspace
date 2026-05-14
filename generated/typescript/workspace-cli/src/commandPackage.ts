@@ -3951,7 +3951,7 @@ export const generatedCommandPackage = {
   "program": "agentic-workspace",
   "python_runtime_binding": {
     "generated_package_module": "agentic_command_generation.workspace_generated_cli_package",
-    "runtime_module": "agentic_workspace._runtime_cli"
+    "runtime_module": "agentic_command_generation.workspace_runtime_cli"
   },
   "targets": [
     {

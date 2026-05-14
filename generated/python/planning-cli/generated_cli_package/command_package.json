@@ -461,7 +461,7 @@
   "program": "agentic-planning",
   "python_runtime_binding": {
     "generated_package_module": "agentic_command_generation.planning_generated_cli_package",
-    "runtime_module": "repo_planning_bootstrap._runtime_cli"
+    "runtime_module": "agentic_command_generation.planning_runtime_cli"
   },
   "targets": [
     {

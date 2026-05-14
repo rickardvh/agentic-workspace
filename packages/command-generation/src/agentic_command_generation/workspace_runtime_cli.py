@@ -211,8 +211,10 @@ def _is_agentic_workspace_source_checkout(target_root: Path | None) -> bool:
 
 
 def _agentic_workspace_package_root() -> Path | None:
-    module_path = Path(__file__).resolve()
-    for candidate in module_path.parents:
+    import agentic_workspace
+
+    product_module_path = Path(agentic_workspace.__file__).resolve()
+    for candidate in product_module_path.parents:
         pyproject_path = candidate / "pyproject.toml"
         if not pyproject_path.exists():
             continue
@@ -2426,8 +2428,9 @@ def main(argv: list[str] | None = None) -> int:
         try:
             target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
             _validate_target_root(command_name="summary", target_root=target_root)
-            from repo_planning_bootstrap._runtime_cli import _print_summary
             from repo_planning_bootstrap.installer import format_summary_json, planning_summary
+
+            from agentic_command_generation.planning_runtime_cli import _print_summary
 
             config = _load_workspace_config(target_root=target_root)
             changed_paths = list(getattr(args, "changed", []) or [])
@@ -2711,8 +2714,9 @@ def main(argv: list[str] | None = None) -> int:
         try:
             target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
             _validate_target_root(command_name="reconcile", target_root=target_root)
-            from repo_planning_bootstrap._runtime_cli import _print_reconcile
             from repo_planning_bootstrap.installer import planning_reconcile
+
+            from agentic_command_generation.planning_runtime_cli import _print_reconcile
         except ImportError:
             parser.error("The planning module must be installed to use the reconcile command.")
         except WorkspaceUsageError as exc:
@@ -2973,7 +2977,12 @@ def _build_module_descriptor(
 
 
 def _workspace_payload_root() -> Path:
-    return Path(__file__).resolve().parent / "_payload"
+    local_payload = Path(__file__).resolve().parent / "_payload"
+    if local_payload.exists():
+        return local_payload
+    import agentic_workspace
+
+    return Path(agentic_workspace.__file__).resolve().parent / "_payload"
 
 
 def _workspace_payload_source(relative: Path) -> Path:
@@ -3797,7 +3806,8 @@ def _write_action_kind(*, dry_run: bool, existing: str | None) -> str:
 def _is_retired_generated_llms_adapter(text: str) -> bool:
     lowered = text.lower()
     return (
-        "canonical_source: `src/agentic_workspace/_runtime_cli.py:_external_agent_handoff_text`" in lowered
+        "canonical_source: `packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py:_external_agent_handoff_text`"
+        in lowered
         or "generated compatibility adapter" in lowered
         or "agent entrypoint router" in lowered
     )
@@ -16104,7 +16114,7 @@ def _prompt_routing_contract_payload() -> dict[str, Any]:
             {
                 "class": "workspace lifecycle change",
                 "proof_lane": "workspace_cli",
-                "owner_surface": "src/agentic_workspace/_runtime_cli.py",
+                "owner_surface": "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py",
             },
             {
                 "class": "planning state or contract change",
@@ -16793,7 +16803,7 @@ def _effective_authority_payload(
                 "concern": "runtime implementation",
                 "authority_class": "procedural-owned",
                 "owner": "workspace",
-                "surface": "src/agentic_workspace/_runtime_cli.py",
+                "surface": "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py",
                 "status": "present",
             },
         ],
@@ -19341,8 +19351,9 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
 def _run_summary_report_adapter(args: argparse.Namespace) -> int:
     target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
     _validate_target_root(command_name="summary", target_root=target_root)
-    from repo_planning_bootstrap._runtime_cli import _print_summary
     from repo_planning_bootstrap.installer import format_summary_json, planning_summary
+
+    from agentic_command_generation.planning_runtime_cli import _print_summary
 
     config = _load_workspace_config(target_root=target_root)
     changed_paths = list(getattr(args, "changed", []) or [])
@@ -19585,8 +19596,9 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
 def _run_reconcile_report_adapter(args: argparse.Namespace) -> int:
     target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
     _validate_target_root(command_name="reconcile", target_root=target_root)
-    from repo_planning_bootstrap._runtime_cli import _print_reconcile
     from repo_planning_bootstrap.installer import planning_reconcile
+
+    from agentic_command_generation.planning_runtime_cli import _print_reconcile
 
     _ensure_external_intent_cache_if_available(target_root=target_root)
     payload = planning_reconcile(
@@ -21642,7 +21654,7 @@ def _direct_cli_edit_review_for_changed_paths(changed_paths: list[str]) -> dict[
     cli_paths = [
         path
         for path in changed_paths
-        if path == "src/agentic_workspace/_runtime_cli.py"
+        if path == "packages/command-generation/src/agentic_command_generation/workspace_runtime_cli.py"
         or path.endswith("/src/repo_planning_bootstrap/cli.py")
         or path.endswith("/src/repo_memory_bootstrap/cli.py")
     ]
