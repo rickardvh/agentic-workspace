@@ -19603,11 +19603,114 @@ def _run_lifecycle_report_adapter(args: argparse.Namespace) -> int:
     return 0
 
 
+def _load_lifecycle_mutation_context(
+    args: argparse.Namespace, *, command_name: str
+) -> tuple[
+    Path,
+    Path | None,
+    list[str],
+    str | None,
+    dict[str, ModuleDescriptor],
+    WorkspaceConfig,
+]:
+    parser = build_generated_cli_package_parser()
+    local_only_repo_root: Path | None = None
+    try:
+        descriptors = _module_operations()
+        _validate_descriptor_contract(descriptors)
+        if command_name == "uninstall" and bool(getattr(args, "local_only", False)):
+            local_only_repo_root = _resolve_target_root(args.target)
+            _validate_target_root(command_name=command_name, target_root=local_only_repo_root, local_only=True)
+            target_root = local_only_repo_root
+        else:
+            target_root = _resolve_target_root(args.target)
+            _validate_target_root(command_name=command_name, target_root=target_root, local_only=bool(getattr(args, "local_only", False)))
+            if command_name in {"install", "init"} and bool(getattr(args, "local_only", False)):
+                local_only_repo_root = target_root
+        _enforce_preflight_gate(parser=parser, args=args, command_name=command_name)
+        config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(_preset_modules(descriptors)))
+        explicit_agent_instructions_file = getattr(args, "agent_instructions_file", None)
+        if explicit_agent_instructions_file:
+            config = _with_agent_instructions_file(
+                config,
+                filename=config_lib.validate_agent_instructions_filename(explicit_agent_instructions_file),
+                source="explicit-argument",
+            )
+        selected_modules, resolved_preset = _selected_modules(
+            command_name=command_name,
+            preset_name=args.preset,
+            module_arg=args.modules,
+            target_root=target_root,
+            descriptors=descriptors,
+            config=config,
+        )
+        _validate_selected_module_contract(selected_modules=selected_modules, descriptors=descriptors)
+    except (ModuleSelectionError, WorkspaceUsageError) as exc:
+        raise WorkspaceUsageError(str(exc)) from exc
+    return target_root, local_only_repo_root, selected_modules, resolved_preset, descriptors, config
+
+
+def _run_init_lifecycle_adapter(args: argparse.Namespace) -> int:
+    command_name = str(args.command)
+    target_root, local_only_repo_root, selected_modules, resolved_preset, descriptors, config = _load_lifecycle_mutation_context(
+        args,
+        command_name=command_name,
+    )
+    payload = _run_init(
+        target_root=target_root,
+        local_only_repo_root=local_only_repo_root,
+        selected_modules=selected_modules,
+        resolved_preset=resolved_preset,
+        descriptors=descriptors,
+        dry_run=args.dry_run,
+        force_adopt=args.adopt,
+        non_interactive=args.non_interactive,
+        print_prompt=args.print_prompt,
+        write_prompt=args.write_prompt,
+        config=config,
+    )
+    payload["command"] = command_name
+    payload["lifecycle_plan"] = _lifecycle_plan_payload(
+        payload=payload,
+        command_name=command_name,
+        target_root=target_root,
+        selected_modules=selected_modules,
+        dry_run=args.dry_run,
+        local_only=bool(getattr(args, "local_only", False)),
+        cli_invoke=_lifecycle_cli_invoke(config=config),
+    )
+    _emit_payload(payload=payload, format_name=args.format)
+    return 0
+
+
+def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
+    command_name = str(args.command)
+    target_root, local_only_repo_root, selected_modules, resolved_preset, descriptors, config = _load_lifecycle_mutation_context(
+        args,
+        command_name=command_name,
+    )
+    payload = _run_lifecycle_command(
+        command_name=command_name,
+        target_root=target_root,
+        local_only_repo_root=local_only_repo_root,
+        selected_modules=selected_modules,
+        resolved_preset=resolved_preset,
+        descriptors=descriptors,
+        dry_run=bool(getattr(args, "dry_run", False)),
+        non_interactive=args.non_interactive,
+        config=config,
+    )
+    _emit_payload(payload=payload, format_name=args.format)
+    return 0
+
+
 _GENERATED_RUNTIME_HANDLERS: dict[str, Callable[[argparse.Namespace], int]] = {
     "config.report": _run_config_report_adapter,
     "defaults.report": _run_defaults_report_adapter,
     "doctor.report": _run_lifecycle_report_adapter,
     "implement.context": _run_implement_context_adapter,
+    "init.lifecycle": _run_init_lifecycle_adapter,
+    "install.lifecycle": _run_init_lifecycle_adapter,
     "modules.report": _run_modules_report_adapter,
     "memory.front-door": _run_memory_front_door_adapter,
     "ownership.report": _run_ownership_report_adapter,
@@ -19621,6 +19724,8 @@ _GENERATED_RUNTIME_HANDLERS: dict[str, Callable[[argparse.Namespace], int]] = {
     "start.context": _run_start_context_adapter,
     "status.report": _run_lifecycle_report_adapter,
     "summary.report": _run_summary_report_adapter,
+    "uninstall.lifecycle": _run_lifecycle_mutation_adapter,
+    "upgrade.lifecycle": _run_lifecycle_mutation_adapter,
 }
 
 

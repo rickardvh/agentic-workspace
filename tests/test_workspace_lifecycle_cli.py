@@ -350,9 +350,9 @@ def test_selection_commands_accept_non_interactive_flag() -> None:
     parser = cli.build_parser()
     generated_parser = cli.build_generated_cli_package_parser()
 
-    install_args = parser.parse_args(["install", "--target", ".", "--local-only", "--non-interactive"])
-    init_args = parser.parse_args(["init", "--target", ".", "--non-interactive"])
-    uninstall_args = parser.parse_args(["uninstall", "--target", ".", "--local-only", "--non-interactive"])
+    install_args = generated_parser.parse_args(["install", "--target", ".", "--local-only", "--non-interactive"])
+    init_args = generated_parser.parse_args(["init", "--target", ".", "--non-interactive"])
+    uninstall_args = generated_parser.parse_args(["uninstall", "--target", ".", "--local-only", "--non-interactive"])
     status_args = generated_parser.parse_args(["status", "--target", ".", "--non-interactive"])
     prompt_args = parser.parse_args(["prompt", "upgrade", "--modules", "planning", "--target", ".", "--non-interactive"])
 

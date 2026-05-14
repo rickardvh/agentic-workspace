@@ -1473,6 +1473,430 @@
     "operation_path": "operations/memory.front-door.json"
   },
   {
+    "adapter_id": "install.lifecycle.cli",
+    "interface": {
+      "help": "Bootstrap selected modules into a target repository.",
+      "name": "install",
+      "options": [
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        },
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "flags": [
+            "--preset"
+          ],
+          "help": "Named module bundle.",
+          "name": "preset"
+        },
+        {
+          "flags": [
+            "--modules",
+            "--module"
+          ],
+          "help": "Comma-separated module selection.",
+          "name": "modules"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--non-interactive"
+          ],
+          "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
+          "name": "non_interactive"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--strict-preflight"
+          ],
+          "help": "Require a fresh --preflight-token before running high-risk mutating commands.",
+          "name": "strict_preflight"
+        },
+        {
+          "flags": [
+            "--preflight-token"
+          ],
+          "help": "Token emitted by 'agentic-workspace preflight --format json'.",
+          "name": "preflight_token"
+        },
+        {
+          "default": 900,
+          "flags": [
+            "--preflight-max-age-seconds"
+          ],
+          "help": "Maximum token age when --strict-preflight is enabled (default: 900).",
+          "name": "preflight_max_age_seconds",
+          "type": "integer"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--local-only"
+          ],
+          "help": "Install in the normal repository layout while recording `.agentic-workspace/` in git-local exclude metadata.",
+          "name": "local_only"
+        },
+        {
+          "flags": [
+            "--agent-instructions-file"
+          ],
+          "help": "Canonical startup instructions filename to use for this repo (for example AGENTS.md or GEMINI.md).",
+          "name": "agent_instructions_file"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--adopt"
+          ],
+          "help": "Force conservative adopt behavior.",
+          "name": "adopt"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--dry-run"
+          ],
+          "help": "Show planned changes without mutating files.",
+          "name": "dry_run"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--print-prompt"
+          ],
+          "help": "Print the generated handoff prompt.",
+          "name": "print_prompt"
+        },
+        {
+          "flags": [
+            "--write-prompt"
+          ],
+          "help": "Write the generated handoff prompt to a file.",
+          "name": "write_prompt"
+        }
+      ]
+    },
+    "operation_id": "install.lifecycle",
+    "operation_path": "operations/install.lifecycle.json"
+  },
+  {
+    "adapter_id": "init.lifecycle.cli",
+    "interface": {
+      "help": "Bootstrap selected modules into a target repository.",
+      "name": "init",
+      "options": [
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        },
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "flags": [
+            "--preset"
+          ],
+          "help": "Named module bundle.",
+          "name": "preset"
+        },
+        {
+          "flags": [
+            "--modules",
+            "--module"
+          ],
+          "help": "Comma-separated module selection.",
+          "name": "modules"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--non-interactive"
+          ],
+          "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
+          "name": "non_interactive"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--strict-preflight"
+          ],
+          "help": "Require a fresh --preflight-token before running high-risk mutating commands.",
+          "name": "strict_preflight"
+        },
+        {
+          "flags": [
+            "--preflight-token"
+          ],
+          "help": "Token emitted by 'agentic-workspace preflight --format json'.",
+          "name": "preflight_token"
+        },
+        {
+          "default": 900,
+          "flags": [
+            "--preflight-max-age-seconds"
+          ],
+          "help": "Maximum token age when --strict-preflight is enabled (default: 900).",
+          "name": "preflight_max_age_seconds",
+          "type": "integer"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--local-only"
+          ],
+          "help": "Install in the normal repository layout while recording `.agentic-workspace/` in git-local exclude metadata.",
+          "name": "local_only"
+        },
+        {
+          "flags": [
+            "--agent-instructions-file"
+          ],
+          "help": "Canonical startup instructions filename to use for this repo (for example AGENTS.md or GEMINI.md).",
+          "name": "agent_instructions_file"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--adopt"
+          ],
+          "help": "Force conservative adopt behavior.",
+          "name": "adopt"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--dry-run"
+          ],
+          "help": "Show planned changes without mutating files.",
+          "name": "dry_run"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--print-prompt"
+          ],
+          "help": "Print the generated handoff prompt.",
+          "name": "print_prompt"
+        },
+        {
+          "flags": [
+            "--write-prompt"
+          ],
+          "help": "Write the generated handoff prompt to a file.",
+          "name": "write_prompt"
+        }
+      ]
+    },
+    "operation_id": "init.lifecycle",
+    "operation_path": "operations/init.lifecycle.json"
+  },
+  {
+    "adapter_id": "upgrade.lifecycle.cli",
+    "interface": {
+      "help": "Refresh managed surfaces for selected installed modules.",
+      "name": "upgrade",
+      "options": [
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        },
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "flags": [
+            "--preset"
+          ],
+          "help": "Named module bundle.",
+          "name": "preset"
+        },
+        {
+          "flags": [
+            "--modules",
+            "--module"
+          ],
+          "help": "Comma-separated module selection.",
+          "name": "modules"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--non-interactive"
+          ],
+          "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
+          "name": "non_interactive"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--strict-preflight"
+          ],
+          "help": "Require a fresh --preflight-token before running high-risk mutating commands.",
+          "name": "strict_preflight"
+        },
+        {
+          "flags": [
+            "--preflight-token"
+          ],
+          "help": "Token emitted by 'agentic-workspace preflight --format json'.",
+          "name": "preflight_token"
+        },
+        {
+          "default": 900,
+          "flags": [
+            "--preflight-max-age-seconds"
+          ],
+          "help": "Maximum token age when --strict-preflight is enabled (default: 900).",
+          "name": "preflight_max_age_seconds",
+          "type": "integer"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--dry-run"
+          ],
+          "help": "Show planned changes without mutating files.",
+          "name": "dry_run"
+        }
+      ]
+    },
+    "operation_id": "upgrade.lifecycle",
+    "operation_path": "operations/upgrade.lifecycle.json"
+  },
+  {
+    "adapter_id": "uninstall.lifecycle.cli",
+    "interface": {
+      "help": "Remove managed surfaces conservatively for selected installed modules.",
+      "name": "uninstall",
+      "options": [
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        },
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "flags": [
+            "--preset"
+          ],
+          "help": "Named module bundle.",
+          "name": "preset"
+        },
+        {
+          "flags": [
+            "--modules",
+            "--module"
+          ],
+          "help": "Comma-separated module selection.",
+          "name": "modules"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--non-interactive"
+          ],
+          "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents.",
+          "name": "non_interactive"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--strict-preflight"
+          ],
+          "help": "Require a fresh --preflight-token before running high-risk mutating commands.",
+          "name": "strict_preflight"
+        },
+        {
+          "flags": [
+            "--preflight-token"
+          ],
+          "help": "Token emitted by 'agentic-workspace preflight --format json'.",
+          "name": "preflight_token"
+        },
+        {
+          "default": 900,
+          "flags": [
+            "--preflight-max-age-seconds"
+          ],
+          "help": "Maximum token age when --strict-preflight is enabled (default: 900).",
+          "name": "preflight_max_age_seconds",
+          "type": "integer"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--dry-run"
+          ],
+          "help": "Show planned changes without mutating files.",
+          "name": "dry_run"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--local-only"
+          ],
+          "help": "Remove the local-only workspace state from the normal repository layout.",
+          "name": "local_only"
+        }
+      ]
+    },
+    "operation_id": "uninstall.lifecycle",
+    "operation_path": "operations/uninstall.lifecycle.json"
+  },
+  {
     "adapter_id": "report.combined.cli",
     "interface": {
       "help": "Show a compact combined workspace report for installed modules, mixed-agent posture, and next-action guidance.",

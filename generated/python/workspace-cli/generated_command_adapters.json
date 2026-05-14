@@ -141,6 +141,78 @@
       },
       "status": "generated"
     },
+    "init": {
+      "command": {
+        "command_manifest": "cli_commands.json",
+        "name": "init",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-workspace"
+      },
+      "conformance_refs": [
+        "init.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "init.lifecycle.cli",
+      "operation_id": "init.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "workspace.config.load",
+          "workspace.selection.resolve",
+          "workspace.lifecycle.plan",
+          "workspace.lifecycle.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    "install": {
+      "command": {
+        "command_manifest": "cli_commands.json",
+        "name": "install",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-workspace"
+      },
+      "conformance_refs": [
+        "install.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "install.lifecycle.cli",
+      "operation_id": "install.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "workspace.config.load",
+          "workspace.selection.resolve",
+          "workspace.lifecycle.plan",
+          "workspace.lifecycle.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
     "memory": {
       "command": {
         "command_manifest": "cli_commands.json",
@@ -581,6 +653,80 @@
           "workspace.root.resolve",
           "planning.summary.load",
           "output.fields.select",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    "uninstall": {
+      "command": {
+        "command_manifest": "cli_commands.json",
+        "name": "uninstall",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-workspace"
+      },
+      "conformance_refs": [
+        "uninstall.lifecycle.destructive-refusal.process",
+        "uninstall.lifecycle.strict-preflight-refusal.process"
+      ],
+      "effect_hints": {
+        "destructive": true,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": true,
+        "writes_repo_state": true
+      },
+      "id": "uninstall.lifecycle.cli",
+      "operation_id": "uninstall.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "workspace.config.load",
+          "workspace.selection.resolve",
+          "workspace.lifecycle.plan",
+          "workspace.lifecycle.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    "upgrade": {
+      "command": {
+        "command_manifest": "cli_commands.json",
+        "name": "upgrade",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-workspace"
+      },
+      "conformance_refs": [
+        "upgrade.lifecycle.dry-run.process",
+        "upgrade.lifecycle.strict-preflight-refusal.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": true,
+        "writes_repo_state": true
+      },
+      "id": "upgrade.lifecycle.cli",
+      "operation_id": "upgrade.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "workspace.config.load",
+          "workspace.selection.resolve",
+          "workspace.lifecycle.plan",
+          "workspace.lifecycle.apply",
           "output.emit"
         ]
       },

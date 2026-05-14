@@ -348,6 +348,10 @@ def test_command_package_ir_reuses_generated_adapter_truth() -> None:
         "skills.report.cli",
         "planning.front-door.cli",
         "memory.front-door.cli",
+        "install.lifecycle.cli",
+        "init.lifecycle.cli",
+        "upgrade.lifecycle.cli",
+        "uninstall.lifecycle.cli",
         "report.combined.cli",
         "reconcile.report.cli",
         "setup.guidance.cli",
@@ -786,6 +790,10 @@ def test_generated_python_command_package_metadata_is_current() -> None:
         "skills.report.cli",
         "planning.front-door.cli",
         "memory.front-door.cli",
+        "install.lifecycle.cli",
+        "init.lifecycle.cli",
+        "upgrade.lifecycle.cli",
+        "uninstall.lifecycle.cli",
         "report.combined.cli",
         "reconcile.report.cli",
         "setup.guidance.cli",
@@ -809,6 +817,8 @@ def test_generated_python_command_package_metadata_is_current() -> None:
         "defaults",
         "doctor",
         "implement",
+        "init",
+        "install",
         "memory",
         "modules",
         "ownership",
@@ -822,12 +832,16 @@ def test_generated_python_command_package_metadata_is_current() -> None:
         "start",
         "status",
         "summary",
+        "uninstall",
+        "upgrade",
     )
     assert generated_operation_ids() == (
         "config.report",
         "defaults.report",
         "doctor.report",
         "implement.context",
+        "init.lifecycle",
+        "install.lifecycle",
         "memory.front-door",
         "modules.report",
         "ownership.report",
@@ -841,6 +855,8 @@ def test_generated_python_command_package_metadata_is_current() -> None:
         "start.context",
         "status.report",
         "summary.report",
+        "uninstall.lifecycle",
+        "upgrade.lifecycle",
     )
     assert supports_generated_command(["defaults", "--format", "json"]) is True
     assert supports_generated_command(["config", "--format", "json"]) is True
@@ -848,6 +864,8 @@ def test_generated_python_command_package_metadata_is_current() -> None:
     assert supports_generated_command(["start", "--format", "json"]) is True
     assert supports_generated_command(["summary", "--format", "json"]) is True
     assert supports_generated_command(["implement", "--format", "json"]) is True
+    assert supports_generated_command(["init", "--format", "json"]) is True
+    assert supports_generated_command(["install", "--format", "json"]) is True
     assert supports_generated_command(["preflight", "--format", "json"]) is True
     assert supports_generated_command(["proof", "--format", "json"]) is True
     assert supports_generated_command(["ownership", "--format", "json"]) is True
@@ -859,6 +877,8 @@ def test_generated_python_command_package_metadata_is_current() -> None:
     assert supports_generated_command(["setup", "--format", "json"]) is True
     assert supports_generated_command(["status", "--format", "json"]) is True
     assert supports_generated_command(["doctor", "--format", "json"]) is True
+    assert supports_generated_command(["uninstall", "--format", "json"]) is True
+    assert supports_generated_command(["upgrade", "--format", "json"]) is True
 
 
 def test_generated_python_command_package_parses_and_dispatches_runtime_operations() -> None:
@@ -885,6 +905,10 @@ def test_generated_python_command_package_parses_and_dispatches_runtime_operatio
         )
         == 0
     )
+    assert (
+        run_generated_command(["install", "--target", ".", "--modules", "planning", "--dry-run", "--format", "json"], runtime_handler) == 0
+    )
+    assert run_generated_command(["init", "--target", ".", "--modules", "planning", "--dry-run", "--format", "json"], runtime_handler) == 0
     assert run_generated_command(["preflight", "--target", ".", "--active-only", "--format", "json"], runtime_handler) == 0
     assert run_generated_command(["proof", "--target", ".", "--changed", "README.md", "--format", "json"], runtime_handler) == 0
     assert run_generated_command(["ownership", "--target", ".", "--concern", "startup", "--format", "json"], runtime_handler) == 0
@@ -898,6 +922,13 @@ def test_generated_python_command_package_parses_and_dispatches_runtime_operatio
     assert run_generated_command(["setup", "--target", ".", "--modules", "planning", "--format", "json"], runtime_handler) == 0
     assert run_generated_command(["status", "--target", ".", "--modules", "planning", "--format", "json"], runtime_handler) == 0
     assert run_generated_command(["doctor", "--target", ".", "--modules", "planning", "--format", "json"], runtime_handler) == 0
+    assert (
+        run_generated_command(["uninstall", "--target", ".", "--modules", "planning", "--dry-run", "--format", "json"], runtime_handler)
+        == 0
+    )
+    assert (
+        run_generated_command(["upgrade", "--target", ".", "--modules", "planning", "--dry-run", "--format", "json"], runtime_handler) == 0
+    )
     assert calls == [
         ("defaults.report", None, "json", "startup"),
         ("config.report", ".", "json", None),
@@ -905,6 +936,8 @@ def test_generated_python_command_package_parses_and_dispatches_runtime_operatio
         ("start.context", ".", "json", None),
         ("summary.report", ".", "json", None),
         ("implement.context", ".", "json", None),
+        ("install.lifecycle", ".", "json", None),
+        ("init.lifecycle", ".", "json", None),
         ("preflight.report", ".", "json", None),
         ("proof.report", ".", "json", None),
         ("ownership.report", ".", "json", None),
@@ -918,6 +951,8 @@ def test_generated_python_command_package_parses_and_dispatches_runtime_operatio
         ("setup.guidance", ".", "json", None),
         ("status.report", ".", "json", None),
         ("doctor.report", ".", "json", None),
+        ("uninstall.lifecycle", ".", "json", None),
+        ("upgrade.lifecycle", ".", "json", None),
     ]
 
 
@@ -1159,6 +1194,8 @@ def test_contract_tooling_check_reports_generated_adapter_status() -> None:
         "defaults",
         "doctor",
         "implement",
+        "init",
+        "install",
         "memory",
         "modules",
         "ownership",
@@ -1172,6 +1209,8 @@ def test_contract_tooling_check_reports_generated_adapter_status() -> None:
         "start",
         "status",
         "summary",
+        "uninstall",
+        "upgrade",
     ]
     assert commands_by_program["agentic-planning"] == ["doctor", "reconcile", "report", "status", "summary"]
     assert commands_by_program["agentic-memory"] == [

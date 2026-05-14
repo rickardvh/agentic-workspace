@@ -2388,6 +2388,652 @@
           }
         },
         {
+          "adapter_id": "install.lifecycle.cli",
+          "status": "generated",
+          "command": {
+            "name": "install",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "install",
+            "help": "Bootstrap selected modules into a target repository.",
+            "options": [
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              },
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "preset",
+                "flags": [
+                  "--preset"
+                ],
+                "help": "Named module bundle."
+              },
+              {
+                "name": "modules",
+                "flags": [
+                  "--modules",
+                  "--module"
+                ],
+                "help": "Comma-separated module selection."
+              },
+              {
+                "name": "non_interactive",
+                "flags": [
+                  "--non-interactive"
+                ],
+                "action": "store_true",
+                "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents."
+              },
+              {
+                "name": "strict_preflight",
+                "flags": [
+                  "--strict-preflight"
+                ],
+                "action": "store_true",
+                "help": "Require a fresh --preflight-token before running high-risk mutating commands."
+              },
+              {
+                "name": "preflight_token",
+                "flags": [
+                  "--preflight-token"
+                ],
+                "help": "Token emitted by 'agentic-workspace preflight --format json'."
+              },
+              {
+                "name": "preflight_max_age_seconds",
+                "flags": [
+                  "--preflight-max-age-seconds"
+                ],
+                "type": "integer",
+                "default": 900,
+                "help": "Maximum token age when --strict-preflight is enabled (default: 900)."
+              },
+              {
+                "name": "local_only",
+                "flags": [
+                  "--local-only"
+                ],
+                "action": "store_true",
+                "help": "Install in the normal repository layout while recording `.agentic-workspace/` in git-local exclude metadata."
+              },
+              {
+                "name": "agent_instructions_file",
+                "flags": [
+                  "--agent-instructions-file"
+                ],
+                "help": "Canonical startup instructions filename to use for this repo (for example AGENTS.md or GEMINI.md)."
+              },
+              {
+                "name": "adopt",
+                "flags": [
+                  "--adopt"
+                ],
+                "action": "store_true",
+                "help": "Force conservative adopt behavior."
+              },
+              {
+                "name": "dry_run",
+                "flags": [
+                  "--dry-run"
+                ],
+                "action": "store_true",
+                "help": "Show planned changes without mutating files."
+              },
+              {
+                "name": "print_prompt",
+                "flags": [
+                  "--print-prompt"
+                ],
+                "action": "store_true",
+                "help": "Print the generated handoff prompt."
+              },
+              {
+                "name": "write_prompt",
+                "flags": [
+                  "--write-prompt"
+                ],
+                "help": "Write the generated handoff prompt to a file."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "install.lifecycle",
+            "path": "operations/install.lifecycle.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.root.resolve",
+              "workspace.config.load",
+              "workspace.selection.resolve",
+              "workspace.lifecycle.plan",
+              "workspace.lifecycle.apply",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": true,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "install.lifecycle.dry-run.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "schema refs",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "lifecycle selection",
+              "preflight/destructive safety gates",
+              "module mutation policy",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "init.lifecycle.cli",
+          "status": "generated",
+          "command": {
+            "name": "init",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "init",
+            "help": "Bootstrap selected modules into a target repository.",
+            "options": [
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              },
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "preset",
+                "flags": [
+                  "--preset"
+                ],
+                "help": "Named module bundle."
+              },
+              {
+                "name": "modules",
+                "flags": [
+                  "--modules",
+                  "--module"
+                ],
+                "help": "Comma-separated module selection."
+              },
+              {
+                "name": "non_interactive",
+                "flags": [
+                  "--non-interactive"
+                ],
+                "action": "store_true",
+                "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents."
+              },
+              {
+                "name": "strict_preflight",
+                "flags": [
+                  "--strict-preflight"
+                ],
+                "action": "store_true",
+                "help": "Require a fresh --preflight-token before running high-risk mutating commands."
+              },
+              {
+                "name": "preflight_token",
+                "flags": [
+                  "--preflight-token"
+                ],
+                "help": "Token emitted by 'agentic-workspace preflight --format json'."
+              },
+              {
+                "name": "preflight_max_age_seconds",
+                "flags": [
+                  "--preflight-max-age-seconds"
+                ],
+                "type": "integer",
+                "default": 900,
+                "help": "Maximum token age when --strict-preflight is enabled (default: 900)."
+              },
+              {
+                "name": "local_only",
+                "flags": [
+                  "--local-only"
+                ],
+                "action": "store_true",
+                "help": "Install in the normal repository layout while recording `.agentic-workspace/` in git-local exclude metadata."
+              },
+              {
+                "name": "agent_instructions_file",
+                "flags": [
+                  "--agent-instructions-file"
+                ],
+                "help": "Canonical startup instructions filename to use for this repo (for example AGENTS.md or GEMINI.md)."
+              },
+              {
+                "name": "adopt",
+                "flags": [
+                  "--adopt"
+                ],
+                "action": "store_true",
+                "help": "Force conservative adopt behavior."
+              },
+              {
+                "name": "dry_run",
+                "flags": [
+                  "--dry-run"
+                ],
+                "action": "store_true",
+                "help": "Show planned changes without mutating files."
+              },
+              {
+                "name": "print_prompt",
+                "flags": [
+                  "--print-prompt"
+                ],
+                "action": "store_true",
+                "help": "Print the generated handoff prompt."
+              },
+              {
+                "name": "write_prompt",
+                "flags": [
+                  "--write-prompt"
+                ],
+                "help": "Write the generated handoff prompt to a file."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "init.lifecycle",
+            "path": "operations/init.lifecycle.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.root.resolve",
+              "workspace.config.load",
+              "workspace.selection.resolve",
+              "workspace.lifecycle.plan",
+              "workspace.lifecycle.apply",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": true,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "init.lifecycle.dry-run.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "schema refs",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "lifecycle selection",
+              "preflight/destructive safety gates",
+              "module mutation policy",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "upgrade.lifecycle.cli",
+          "status": "generated",
+          "command": {
+            "name": "upgrade",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "upgrade",
+            "help": "Refresh managed surfaces for selected installed modules.",
+            "options": [
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              },
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "preset",
+                "flags": [
+                  "--preset"
+                ],
+                "help": "Named module bundle."
+              },
+              {
+                "name": "modules",
+                "flags": [
+                  "--modules",
+                  "--module"
+                ],
+                "help": "Comma-separated module selection."
+              },
+              {
+                "name": "non_interactive",
+                "flags": [
+                  "--non-interactive"
+                ],
+                "action": "store_true",
+                "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents."
+              },
+              {
+                "name": "strict_preflight",
+                "flags": [
+                  "--strict-preflight"
+                ],
+                "action": "store_true",
+                "help": "Require a fresh --preflight-token before running high-risk mutating commands."
+              },
+              {
+                "name": "preflight_token",
+                "flags": [
+                  "--preflight-token"
+                ],
+                "help": "Token emitted by 'agentic-workspace preflight --format json'."
+              },
+              {
+                "name": "preflight_max_age_seconds",
+                "flags": [
+                  "--preflight-max-age-seconds"
+                ],
+                "type": "integer",
+                "default": 900,
+                "help": "Maximum token age when --strict-preflight is enabled (default: 900)."
+              },
+              {
+                "name": "dry_run",
+                "flags": [
+                  "--dry-run"
+                ],
+                "action": "store_true",
+                "help": "Show planned changes without mutating files."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "upgrade.lifecycle",
+            "path": "operations/upgrade.lifecycle.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.root.resolve",
+              "workspace.config.load",
+              "workspace.selection.resolve",
+              "workspace.lifecycle.plan",
+              "workspace.lifecycle.apply",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": true,
+            "requires_preflight_gate": true
+          },
+          "conformance_refs": [
+            "upgrade.lifecycle.dry-run.process",
+            "upgrade.lifecycle.strict-preflight-refusal.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "schema refs",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "lifecycle selection",
+              "preflight/destructive safety gates",
+              "module mutation policy",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "uninstall.lifecycle.cli",
+          "status": "generated",
+          "command": {
+            "name": "uninstall",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "uninstall",
+            "help": "Remove managed surfaces conservatively for selected installed modules.",
+            "options": [
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              },
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "preset",
+                "flags": [
+                  "--preset"
+                ],
+                "help": "Named module bundle."
+              },
+              {
+                "name": "modules",
+                "flags": [
+                  "--modules",
+                  "--module"
+                ],
+                "help": "Comma-separated module selection."
+              },
+              {
+                "name": "non_interactive",
+                "flags": [
+                  "--non-interactive"
+                ],
+                "action": "store_true",
+                "help": "Require prompt-free lifecycle behavior and handoff guidance suitable for unattended agents."
+              },
+              {
+                "name": "strict_preflight",
+                "flags": [
+                  "--strict-preflight"
+                ],
+                "action": "store_true",
+                "help": "Require a fresh --preflight-token before running high-risk mutating commands."
+              },
+              {
+                "name": "preflight_token",
+                "flags": [
+                  "--preflight-token"
+                ],
+                "help": "Token emitted by 'agentic-workspace preflight --format json'."
+              },
+              {
+                "name": "preflight_max_age_seconds",
+                "flags": [
+                  "--preflight-max-age-seconds"
+                ],
+                "type": "integer",
+                "default": 900,
+                "help": "Maximum token age when --strict-preflight is enabled (default: 900)."
+              },
+              {
+                "name": "dry_run",
+                "flags": [
+                  "--dry-run"
+                ],
+                "action": "store_true",
+                "help": "Show planned changes without mutating files."
+              },
+              {
+                "name": "local_only",
+                "flags": [
+                  "--local-only"
+                ],
+                "action": "store_true",
+                "help": "Remove the local-only workspace state from the normal repository layout."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "uninstall.lifecycle",
+            "path": "operations/uninstall.lifecycle.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.root.resolve",
+              "workspace.config.load",
+              "workspace.selection.resolve",
+              "workspace.lifecycle.plan",
+              "workspace.lifecycle.apply",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": true,
+            "idempotent": true,
+            "writes_repo_state": true,
+            "requires_preflight_gate": true
+          },
+          "conformance_refs": [
+            "uninstall.lifecycle.destructive-refusal.process",
+            "uninstall.lifecycle.strict-preflight-refusal.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "schema refs",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "lifecycle selection",
+              "preflight/destructive safety gates",
+              "module mutation policy",
+              "output emission"
+            ]
+          }
+        },
+        {
           "adapter_id": "report.combined.cli",
           "status": "generated",
           "command": {

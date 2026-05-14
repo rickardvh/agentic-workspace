@@ -458,6 +458,174 @@
       ]
     },
     {
+      "id": "init.lifecycle.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-workspace",
+        "name": "init",
+        "command_manifest": "cli_commands.json",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "init.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/init.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "workspace.config.load",
+          "workspace.selection.resolve",
+          "workspace.lifecycle.plan",
+          "workspace.lifecycle.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "schemas.output",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "schema refs",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "lifecycle primitive implementation",
+          "live workspace inspection",
+          "mutation policy",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "init.lifecycle.dry-run.process"
+      ]
+    },
+    {
+      "id": "install.lifecycle.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-workspace",
+        "name": "install",
+        "command_manifest": "cli_commands.json",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "install.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/install.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "workspace.config.load",
+          "workspace.selection.resolve",
+          "workspace.lifecycle.plan",
+          "workspace.lifecycle.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "schemas.output",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "schema refs",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "lifecycle primitive implementation",
+          "live workspace inspection",
+          "mutation policy",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "install.lifecycle.dry-run.process"
+      ]
+    },
+    {
       "id": "memory.doctor.cli",
       "status": "generated",
       "command": {
@@ -2410,6 +2578,176 @@
       },
       "conformance_refs": [
         "summary.report.process"
+      ]
+    },
+    {
+      "id": "uninstall.lifecycle.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-workspace",
+        "name": "uninstall",
+        "command_manifest": "cli_commands.json",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "uninstall.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/uninstall.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "workspace.config.load",
+          "workspace.selection.resolve",
+          "workspace.lifecycle.plan",
+          "workspace.lifecycle.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": true,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": true
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "schemas.output",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "schema refs",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "lifecycle primitive implementation",
+          "live workspace inspection",
+          "mutation policy",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "uninstall.lifecycle.destructive-refusal.process",
+        "uninstall.lifecycle.strict-preflight-refusal.process"
+      ]
+    },
+    {
+      "id": "upgrade.lifecycle.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-workspace",
+        "name": "upgrade",
+        "command_manifest": "cli_commands.json",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "upgrade.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/upgrade.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "workspace.config.load",
+          "workspace.selection.resolve",
+          "workspace.lifecycle.plan",
+          "workspace.lifecycle.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": true
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "schemas.output",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "schema refs",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "lifecycle primitive implementation",
+          "live workspace inspection",
+          "mutation policy",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "upgrade.lifecycle.dry-run.process",
+        "upgrade.lifecycle.strict-preflight-refusal.process"
       ]
     }
   ]

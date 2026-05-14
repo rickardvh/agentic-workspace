@@ -73,6 +73,42 @@
       "conformance_ref": "implement.context.process"
     },
     {
+      "operation_id": "init.lifecycle",
+      "program": "agentic-workspace",
+      "command": "init",
+      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/init.lifecycle.json",
+      "primitive_executor": null,
+      "hand_owned_runtime_code": [
+        "workspace.root.resolve",
+        "workspace.config.load",
+        "workspace.selection.resolve",
+        "workspace.lifecycle.plan",
+        "workspace.lifecycle.apply",
+        "output emission mechanics"
+      ],
+      "status": "accepted-hand-owned-runtime-primitive",
+      "conformance_ref": "init.lifecycle.dry-run.process"
+    },
+    {
+      "operation_id": "install.lifecycle",
+      "program": "agentic-workspace",
+      "command": "install",
+      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/install.lifecycle.json",
+      "primitive_executor": null,
+      "hand_owned_runtime_code": [
+        "workspace.root.resolve",
+        "workspace.config.load",
+        "workspace.selection.resolve",
+        "workspace.lifecycle.plan",
+        "workspace.lifecycle.apply",
+        "output emission mechanics"
+      ],
+      "status": "accepted-hand-owned-runtime-primitive",
+      "conformance_ref": "install.lifecycle.dry-run.process"
+    },
+    {
       "operation_id": "memory.doctor.report",
       "program": "agentic-memory",
       "command": "doctor",
@@ -452,6 +488,42 @@
       ],
       "status": "accepted-hand-owned-runtime-primitive",
       "conformance_ref": "summary.report.process"
+    },
+    {
+      "operation_id": "uninstall.lifecycle",
+      "program": "agentic-workspace",
+      "command": "uninstall",
+      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/uninstall.lifecycle.json",
+      "primitive_executor": null,
+      "hand_owned_runtime_code": [
+        "workspace.root.resolve",
+        "workspace.config.load",
+        "workspace.selection.resolve",
+        "workspace.lifecycle.plan",
+        "workspace.lifecycle.apply",
+        "output emission mechanics"
+      ],
+      "status": "accepted-hand-owned-runtime-primitive",
+      "conformance_ref": "uninstall.lifecycle.destructive-refusal.process"
+    },
+    {
+      "operation_id": "upgrade.lifecycle",
+      "program": "agentic-workspace",
+      "command": "upgrade",
+      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/upgrade.lifecycle.json",
+      "primitive_executor": null,
+      "hand_owned_runtime_code": [
+        "workspace.root.resolve",
+        "workspace.config.load",
+        "workspace.selection.resolve",
+        "workspace.lifecycle.plan",
+        "workspace.lifecycle.apply",
+        "output emission mechanics"
+      ],
+      "status": "accepted-hand-owned-runtime-primitive",
+      "conformance_ref": "upgrade.lifecycle.dry-run.process"
     }
   ],
   "completion_rule": "Python completion can be claimed only when every generated Python operation is inventoried and each entry is either runtime-consumed or accepted-hand-owned-runtime-primitive; compatibility-runtime-handler remains a blocking temporary status."

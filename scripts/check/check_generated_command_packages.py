@@ -221,6 +221,8 @@ def _field_value(payload: object, path: list[str]) -> object:
 
 
 def _selected_contract_fields(stdout: str, assertions: list[dict[str, object]]) -> dict[str, object]:
+    if not assertions:
+        return {}
     payload = json.loads(stdout)
     selected: dict[str, object] = {}
     for assertion in assertions:
@@ -949,11 +951,17 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
                 cwd=fixture_root,
                 env=_conformance_env(),
             )
-            if canonical_process.returncode != 0:
+            if canonical_process.returncode != case.expected_exit:
                 errors.append(
                     f"runtime primitive failure: canonical {runnable_case.package_id} {case.label} command exited "
-                    f"{canonical_process.returncode}; "
+                    f"{canonical_process.returncode}, expected {case.expected_exit}; "
                     f"stderr={canonical_process.stderr!r}"
+                )
+                return
+            if canonical_process.stderr.strip() and not case.allow_stderr:
+                errors.append(
+                    f"runtime primitive failure: canonical {runnable_case.package_id} {case.label} emitted unexpected stderr: "
+                    f"{canonical_process.stderr!r}"
                 )
                 return
             try:
@@ -992,7 +1000,7 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
                             f"adapter failure: {runnable_case.package_id} {case.label} JSON selected fields drifted from canonical process; "
                             f"expected {canonical_selected!r}, got {adapter_selected!r}"
                         )
-            if adapter_process.stderr.strip():
+            if adapter_process.stderr.strip() and not case.allow_stderr:
                 errors.append(
                     f"adapter failure: {runnable_case.package_id} {case.label} emitted unexpected stderr: {adapter_process.stderr!r}"
                 )

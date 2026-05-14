@@ -712,6 +712,30 @@
       "reason": "Removed slash-separated command wording that planning reference checker interpreted as missing paths.",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-14T11:16:29+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-cli-lifecycle-root-generation.plan.json",
+      "sha256": "7e29c3e148ee38e72cc4c3cb305398858c17b8335ae3b8e9f12a1aa72a5882a1",
+      "command": "agentic-planning record-recovery",
+      "reason": "Expanded lifecycle slice scope to include conformance checker fix for text-mode refusal fixtures discovered during proof.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T11:59:56+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-cli-lifecycle-root-generation.plan.json",
+      "sha256": "f1cfc3fc3d10062adab54a554ace62e7a0b7ced60e3f005578a0f31b4c942c6a",
+      "command": "agentic-planning record-recovery",
+      "reason": "Completed lifecycle generated CLI slice closeout with proof, continuation, and dogfooding issue #957.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T12:06:59+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-cli-lifecycle-root-generation",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T12:07:05+00:00"
     }
   ]
 }
