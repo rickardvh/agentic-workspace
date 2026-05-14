@@ -802,6 +802,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
                 )
 
     runtime_consumed_operations = {
+        "config.report",
         "defaults.report",
         "memory.list-files.report",
         "memory.list-skills.report",
@@ -828,6 +829,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
             errors.append(f"{operation_id} must keep a representative or complete ir_plan")
 
     generated_operation_modules = {
+        "config.report": "agentic_workspace.generated_cli_package",
         "defaults.report": "agentic_workspace.generated_cli_package",
         "memory.list-files.report": "repo_memory_bootstrap.generated_cli_package",
         "memory.list-skills.report": "repo_memory_bootstrap.generated_cli_package",
@@ -869,11 +871,12 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
     if "run_operation_steps(" not in workspace_operation_executor_text:
         errors.append("workspace operation IR executor must execute operation plans through codegen-owned run_operation_steps")
     workspace_cli_text = (REPO_ROOT / "src" / "agentic_workspace" / "_runtime_cli.py").read_text(encoding="utf-8")
-    defaults_function_index = workspace_cli_text.find("def _run_defaults_report_adapter")
-    defaults_next_function_index = workspace_cli_text.find("\ndef ", defaults_function_index + 1)
-    defaults_function_text = workspace_cli_text[defaults_function_index:defaults_next_function_index] if defaults_function_index != -1 else ""
-    if "run_operation_ir(" not in defaults_function_text:
-        errors.append("_run_defaults_report_adapter must execute generated operation IR through run_operation_ir")
+    for function_name in ("_run_config_report_adapter", "_run_defaults_report_adapter"):
+        function_index = workspace_cli_text.find(f"def {function_name}")
+        next_function_index = workspace_cli_text.find("\ndef ", function_index + 1)
+        function_text = workspace_cli_text[function_index:next_function_index] if function_index != -1 else ""
+        if "run_operation_ir(" not in function_text:
+            errors.append(f"{function_name} must execute generated operation IR through run_operation_ir")
 
     python_completion = ir.get("generation_policy", {}).get("python_cli_completion", {})
     if isinstance(python_completion, dict) and python_completion.get("current_state") == "full-generated-cli-complete":

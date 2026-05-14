@@ -19309,17 +19309,9 @@ def _run_defaults_report_adapter(args: argparse.Namespace) -> int:
 
 
 def _run_config_report_adapter(args: argparse.Namespace) -> int:
-    descriptors = _module_operations()
-    _validate_descriptor_contract(descriptors)
-    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
-    _validate_target_root(command_name="config", target_root=target_root)
-    _emit_config(
-        format_name=args.format,
-        profile=_diagnostic_profile(args, default="tiny"),
-        config=config_lib.load_workspace_config(target_root=target_root, valid_presets=set(_preset_modules(descriptors))),
-        select=getattr(args, "select", None),
-    )
-    return 0
+    from agentic_workspace.operation_ir_executor import run_operation_ir
+
+    return run_operation_ir(generated_cli_package_operation_contract("config.report"), args)
 
 
 def _run_modules_report_adapter(args: argparse.Namespace) -> int:

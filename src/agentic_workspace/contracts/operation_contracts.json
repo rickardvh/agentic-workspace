@@ -8,7 +8,7 @@
       "id": "config.report",
       "path": "operations/config.report.json",
       "command": "config",
-      "migration_status": "draft-contract-only"
+      "migration_status": "runtime-consumed"
     },
     {
       "id": "defaults.report",

@@ -1136,6 +1136,14 @@
       "reason": "Recorded defaults.report runtime-consumed migration slice outcome before commit.",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-14T17:20:23+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-generated-cli-completion-promotion.plan.json",
+      "sha256": "9823dbcbe96e0fff1473c264c42db70b3306b4697eee37a23c5f64628a48cd57",
+      "command": "agentic-planning record-recovery",
+      "reason": "Recorded config.report runtime-consumed migration slice outcome before commit.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T17:25:40+00:00"
     }
   ]
 }

@@ -205,17 +205,13 @@
       "command": "config",
       "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
       "operation_contract": "operations/config.report.json",
-      "primitive_executor": null,
+      "primitive_executor": "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
-        "workspace.root.resolve",
-        "workspace.config.load",
-        "output.fields.select",
-        "workspace.config.emit"
+        "workspace config loading",
+        "workspace config text compatibility formatting"
       ],
-      "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "config.report.process",
-      "runtime_boundary_class": "generic-deterministic-runtime-debt",
-      "runtime_boundary_reason": "Config/default layering, field selection, and JSON/text emission are deterministic file/data/output behavior that should move to codegen-owned primitives before full completion."
+      "status": "runtime-consumed",
+      "conformance_ref": "config.report.process"
     },
     {
       "operation_id": "defaults.report",
