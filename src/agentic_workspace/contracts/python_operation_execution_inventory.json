@@ -27,9 +27,10 @@
       "command": "list-files",
       "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
       "operation_contract": "operations/memory.list-files.report.json",
-      "primitive_executor": "packages/memory/src/repo_memory_bootstrap/operation_ir_executor.py",
+      "primitive_executor": "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
-        "memory package payload enumeration",
+        "codegen-owned filesystem glob primitive",
+        "memory package payload metadata enrichment",
         "target-root resolution",
         "module-result emission mechanics"
       ],
@@ -42,9 +43,9 @@
       "command": "list-skills",
       "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
       "operation_contract": "operations/memory.list-skills.report.json",
-      "primitive_executor": "packages/memory/src/repo_memory_bootstrap/operation_ir_executor.py",
+      "primitive_executor": "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
-        "memory package skill registry loading",
+        "codegen-owned filesystem read and JSON parse primitives",
         "module-result emission mechanics"
       ],
       "status": "runtime-consumed",

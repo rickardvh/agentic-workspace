@@ -984,6 +984,94 @@
       "reason": "archive execplan python-codegen-demote-after-clarification",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-14T16:35:48+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-owned-primitive-executor-migration.plan.json",
+      "sha256": "a0b5f21fde026bd013723e868bdd4c6311061a258fb0e1422328af7a3dc835d7",
+      "command": "agentic-planning promote-to-plan",
+      "reason": "promote decomposition lane python-codegen-owned-primitive-executor-migration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T16:53:15+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "2f2a05c01de0342663ed81fc37efe5a25f9f935dd48872917968f0e673b1f324",
+      "command": "agentic-planning promote-to-plan",
+      "reason": "promote decomposition lane python-codegen-owned-primitive-executor-migration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T16:53:15+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "39215b323c9f39a8250b42e6053d16741b8f43968088388790ad7c70db2811cc",
+      "command": "agentic-planning promote-to-plan",
+      "reason": "promote decomposition lane python-codegen-owned-primitive-executor-migration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T16:53:15+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "b9b63b7ac0bc2a631744dd8c3458aea93aebeb33325e51bb2f9f078780fe5386",
+      "command": "agentic-planning record-recovery",
+      "reason": "Removed promote-to-plan schema drift and avoided slash-like prose path after lane promotion.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T16:54:14+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-owned-primitive-executor-migration.plan.json",
+      "sha256": "55e188acf2836857e71ccbdd272af17a71ddada916d28384c52674d4c36b14fb",
+      "command": "agentic-planning record-recovery",
+      "reason": "Tightened primitive executor migration execplan with bounded representative slice and validation.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T16:54:14+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-owned-primitive-executor-migration.plan.json",
+      "sha256": "346ff5da7b12b36d0396e0a68612519f3a77e53efdfdc2172e07a54e23818984",
+      "command": "agentic-planning record-recovery",
+      "reason": "Aligned immediate_next_action with canonical next_action and removed slash-like prose path.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T16:54:36+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-owned-primitive-executor-migration.plan.json",
+      "sha256": "8f59b0c146445d691653842a377c137c95dd081edb562c2b7aee147456330d5f",
+      "command": "agentic-planning record-recovery",
+      "reason": "Closed representative codegen-owned primitive executor migration slice while keeping #892 open.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T17:01:55+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-owned-primitive-executor-migration.plan.json",
+      "sha256": "2e537cd1043da870cc59b1c092b9b84981a98e8e1034b16b1aff1f75d74cde5c",
+      "command": "agentic-planning record-recovery",
+      "reason": "Normalized intent_satisfaction value for archive compatibility.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T17:02:06+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "9005c47e51a048285f67be2d08c5623a570981c505b03f40bcb8dcdabd5fff91",
+      "command": "agentic-planning record-recovery",
+      "reason": "Removed completed primitive executor migration TODO reference before retaining archive.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T17:02:17+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/python-codegen-owned-primitive-executor-migration.plan.json",
+      "sha256": "7a56cc7b0e9d69a522c3556cbcf961d119dea507a25dae7a57535b00b7bb8690",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-codegen-owned-primitive-executor-migration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T17:02:17+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/python-codegen-owned-primitive-executor-migration.plan.json",
+      "sha256": "63195625be6d65a82fe10f39eeee0dece7fcd95ddba025c2a33339cfea872215",
+      "command": "agentic-planning record-recovery",
+      "reason": "Recorded dogfooding issue #967 in primitive executor migration closeout.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T17:03:15+00:00"
     }
   ]
 }

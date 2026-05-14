@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import argparse
-import json
 from pathlib import Path
 from typing import Any
+
+from agentic_command_generation.primitive_executor import PrimitiveContext, PrimitiveExecutionError, run_operation_steps
 
 from repo_memory_bootstrap._installer_output import _new_result, format_actions, format_result_json
 from repo_memory_bootstrap._installer_paths import _record_repo_context_warnings, payload_root, resolve_target_root, skills_root
@@ -21,62 +22,33 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
     if operation.get("migration_status") != "runtime-consumed":
         raise OperationIrExecutionError(f"operation is not marked runtime-consumed: {operation.get('id')!r}")
 
-    values: dict[str, Any] = {"target": getattr(args, "target", None), "format": getattr(args, "format", "text")}
-    for step in operation.get("ir_plan", {}).get("steps", []):
-        primitive = step.get("uses")
-        if primitive == "path.target_root.resolve":
-            values["target_root"] = resolve_target_root(values["target"])
-        elif primitive == "filesystem.read":
-            values["registry_text"] = _read_memory_package_file(step.get("arguments", {}))
-        elif primitive == "json.parse":
-            values["registry"] = json.loads(str(values["registry_text"]))
-        elif primitive == "filesystem.glob":
-            values["files"] = _list_memory_payload_entries(step.get("arguments", {}))
-        elif primitive == "payload.assemble":
-            values["result"] = _assemble_payload(operation_id=str(operation["id"]), values=values, arguments=step.get("arguments", {}))
-        elif primitive == "output.emit":
-            _emit_operation_output(values["result"], output_format=str(values["format"]))
-        else:
-            raise OperationIrExecutionError(f"unsupported primitive in operation IR: {primitive!r}")
+    context = PrimitiveContext(
+        cwd=Path.cwd(),
+        roots={
+            "memory.package-payload": payload_root(),
+            "memory.package-skills": skills_root(),
+        },
+    )
+    try:
+        run_operation_steps(
+            operation,
+            initial_values={"target": getattr(args, "target", None), "format": getattr(args, "format", "text")},
+            context=context,
+            handlers={
+                "path.target_root.resolve": _resolve_memory_target_root,
+                "payload.assemble": lambda values, arguments, _context: _assemble_payload(
+                    operation_id=str(operation["id"]), values=values, arguments=arguments
+                ),
+                "output.emit": _emit_memory_operation_output,
+            },
+        )
+    except PrimitiveExecutionError as exc:
+        raise OperationIrExecutionError(str(exc)) from exc
     return 0
 
 
-def _read_memory_package_file(arguments: dict[str, Any]) -> str:
-    if arguments.get("root") != "memory.package-skills":
-        raise OperationIrExecutionError(f"unsupported filesystem.read root: {arguments.get('root')!r}")
-    relative_path = Path(str(arguments.get("path", "")))
-    if relative_path.as_posix() != "REGISTRY.json":
-        raise OperationIrExecutionError(f"unsupported filesystem.read path: {relative_path.as_posix()!r}")
-    return (skills_root() / relative_path).read_text(encoding="utf-8")
-
-
-def _list_memory_payload_entries(arguments: dict[str, Any]) -> list[dict[str, str]]:
-    if arguments.get("root") != "memory.package-payload":
-        raise OperationIrExecutionError(f"unsupported filesystem.glob root: {arguments.get('root')!r}")
-    if arguments.get("pattern") != "**/*":
-        raise OperationIrExecutionError(f"unsupported filesystem.glob pattern: {arguments.get('pattern')!r}")
-
-    entries = [
-        {
-            "relative_path": entry.relative_path.as_posix(),
-            "role": entry.role,
-            "strategy": entry.strategy,
-            "kind": "managed file",
-            "source": entry.relative_path.as_posix(),
-        }
-        for entry in _payload_entries(payload_root(), target_layout="managed-root")
-    ]
-    entries.extend(
-        {
-            "relative_path": target_file.as_posix(),
-            "role": "append-target",
-            "strategy": f"optional fragment {fragment_path}",
-            "kind": "append target",
-            "source": fragment_path.as_posix(),
-        }
-        for target_file, fragment_path in OPTIONAL_APPEND_TARGETS.items()
-    )
-    return sorted(entries, key=lambda item: (item["kind"], item["relative_path"], item["source"]))
+def _resolve_memory_target_root(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Path:
+    return resolve_target_root(values.get("target"))
 
 
 def _assemble_payload(*, operation_id: str, values: dict[str, Any], arguments: dict[str, Any]):
@@ -102,7 +74,8 @@ def _assemble_memory_list_files_payload(*, target_root: Path, files: list[dict[s
         message=str(fields.get("message", "Packaged bootstrap file preview")),
     )
     _record_repo_context_warnings(target_root, result)
-    for file_entry in files:
+    payload_entries = _memory_payload_entries_by_relative()
+    for file_entry in _enriched_memory_payload_files(files=files, payload_entries=payload_entries):
         result.add(
             file_entry["kind"],
             target_root / file_entry["relative_path"],
@@ -112,6 +85,43 @@ def _assemble_memory_list_files_payload(*, target_root: Path, files: list[dict[s
             source=file_entry["source"],
         )
     return result
+
+
+def _memory_payload_entries_by_relative() -> dict[str, dict[str, str]]:
+    entries = {
+        entry.source_path.relative_to(payload_root()).as_posix(): {
+            "relative_path": entry.relative_path.as_posix(),
+            "role": entry.role,
+            "strategy": entry.strategy,
+            "kind": "managed file",
+            "source": entry.relative_path.as_posix(),
+        }
+        for entry in _payload_entries(payload_root(), target_layout="managed-root")
+    }
+    entries.update(
+        {
+            f"__append_target__/{target_file.as_posix()}": {
+                "relative_path": target_file.as_posix(),
+                "role": "append-target",
+                "strategy": f"optional fragment {fragment_path}",
+                "kind": "append target",
+                "source": fragment_path.as_posix(),
+            }
+            for target_file, fragment_path in OPTIONAL_APPEND_TARGETS.items()
+        }
+    )
+    return entries
+
+
+def _enriched_memory_payload_files(*, files: list[dict[str, str]], payload_entries: dict[str, dict[str, str]]) -> list[dict[str, str]]:
+    entries = []
+    for file_entry in files:
+        relative_path = str(file_entry.get("relative_path", ""))
+        payload_entry = payload_entries.get(relative_path)
+        if payload_entry is not None:
+            entries.append(payload_entry)
+    entries.extend(payload_entry for key, payload_entry in payload_entries.items() if key.startswith("__append_target__/"))
+    return sorted(entries, key=lambda item: (item["kind"], item["relative_path"], item["source"]))
 
 
 def _assemble_memory_list_skills_payload(*, registry: Any, arguments: dict[str, Any]) -> InstallResult:
@@ -156,3 +166,7 @@ def _emit_operation_output(result, *, output_format: str) -> None:
         print(f"Detected version: {result.detected_version} (payload version {result.bootstrap_version})")
     for line in format_actions(result.actions, result.target_root):
         print(f"- {line}")
+
+
+def _emit_memory_operation_output(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> None:
+    _emit_operation_output(values["result"], output_format=str(values.get("format") or "text"))

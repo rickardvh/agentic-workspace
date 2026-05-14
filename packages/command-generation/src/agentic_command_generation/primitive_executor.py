@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -8,6 +9,9 @@ from typing import Any
 
 class PrimitiveExecutionError(RuntimeError):
     pass
+
+
+PrimitiveHandler = Callable[[dict[str, Any], dict[str, Any], "PrimitiveContext"], Any]
 
 
 @dataclass(frozen=True)
@@ -20,6 +24,36 @@ class PrimitiveContext:
             return self.roots[name].resolve()
         except KeyError as exc:
             raise PrimitiveExecutionError(f"unknown primitive root: {name!r}") from exc
+
+
+def run_operation_steps(
+    operation: dict[str, Any],
+    *,
+    initial_values: dict[str, Any],
+    context: PrimitiveContext,
+    handlers: Mapping[str, PrimitiveHandler] | None = None,
+) -> dict[str, Any]:
+    """Execute an operation ir_plan with codegen-owned primitive dataflow."""
+    values = dict(initial_values)
+    custom_handlers = dict(handlers or {})
+    steps = operation.get("ir_plan", {}).get("steps", [])
+    if not isinstance(steps, list):
+        raise PrimitiveExecutionError("operation ir_plan.steps must be a list")
+    for raw_step in steps:
+        if not isinstance(raw_step, dict):
+            raise PrimitiveExecutionError("operation ir_plan step must be an object")
+        primitive = str(raw_step.get("uses", ""))
+        arguments = raw_step.get("arguments", {})
+        if not isinstance(arguments, dict):
+            raise PrimitiveExecutionError(f"step {raw_step.get('id', primitive)!r} arguments must be an object")
+        handler = custom_handlers.get(primitive)
+        result = (
+            handler(values, arguments, context)
+            if handler is not None
+            else execute_primitive(primitive, values=values, arguments=arguments, context=context)
+        )
+        _store_step_result(values=values, outputs=raw_step.get("outputs", []), result=result)
+    return values
 
 
 def execute_primitive(
@@ -43,6 +77,27 @@ def execute_primitive(
     if primitive == "output.emit":
         return _emit_output(values=values)
     raise PrimitiveExecutionError(f"unsupported portable primitive: {primitive!r}")
+
+
+def _store_step_result(*, values: dict[str, Any], outputs: Any, result: Any) -> None:
+    if result is None:
+        return
+    if isinstance(outputs, Sequence) and not isinstance(outputs, (str, bytes)):
+        output_names = [str(output) for output in outputs if str(output)]
+    else:
+        output_names = []
+    if not output_names:
+        values["_last"] = result
+        return
+    if len(output_names) == 1:
+        values[output_names[0]] = result
+        return
+    if not isinstance(result, Mapping):
+        raise PrimitiveExecutionError("multi-output primitive results must be mappings")
+    for output_name in output_names:
+        if output_name not in result:
+            raise PrimitiveExecutionError(f"primitive result missing declared output: {output_name!r}")
+        values[output_name] = result[output_name]
 
 
 def _resolve_target_root(*, values: dict[str, Any], context: PrimitiveContext) -> str:

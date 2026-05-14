@@ -4,7 +4,7 @@ import json
 import tempfile
 from pathlib import Path
 
-from agentic_command_generation.primitive_executor import PrimitiveContext, PrimitiveExecutionError, execute_primitive
+from agentic_command_generation.primitive_executor import PrimitiveContext, PrimitiveExecutionError, execute_primitive, run_operation_steps
 
 
 def main() -> int:
@@ -83,6 +83,29 @@ def main() -> int:
         )
         assert "Files" in emitted_text
         assert "- nested/beta.txt" in emitted_text
+
+        operation = {
+            "ir_plan": {
+                "steps": [
+                    {
+                        "id": "read_registry",
+                        "uses": "filesystem.read",
+                        "arguments": {"root": "package", "path": "REGISTRY.json"},
+                        "outputs": ["registry_text"],
+                    },
+                    {"id": "parse_registry", "uses": "json.parse", "outputs": ["registry"]},
+                    {
+                        "id": "assemble",
+                        "uses": "payload.assemble",
+                        "arguments": {"fields": {"dry_run": True, "message": "Skills", "actions_from": "registry.skills"}},
+                        "outputs": ["result"],
+                    },
+                    {"id": "emit", "uses": "output.emit", "outputs": ["emitted"]},
+                ]
+            }
+        }
+        values = run_operation_steps(operation, initial_values={"format": "json"}, context=context)
+        assert json.loads(values["emitted"])["actions"][0]["id"] == "review"
 
         try:
             execute_primitive(

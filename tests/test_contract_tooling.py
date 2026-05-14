@@ -726,7 +726,7 @@ def test_python_operation_execution_inventory_tracks_representative_runtime_cons
     representative = entries["memory.list-files.report"]
 
     assert representative["status"] == "runtime-consumed"
-    assert representative["primitive_executor"] == "packages/memory/src/repo_memory_bootstrap/operation_ir_executor.py"
+    assert representative["primitive_executor"] == "packages/command-generation/src/agentic_command_generation/primitive_executor.py"
     assert entries["memory.list-skills.report"]["status"] == "runtime-consumed"
     assert "compatibility-runtime-handler" not in {entry["status"] for entry in entries.values()}
     assert "accepted-hand-owned-runtime-primitive" in {entry["status"] for entry in entries.values()}

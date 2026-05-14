@@ -22,7 +22,10 @@ classifiers = [
 authors = [
   { name = "Rickard von Haugwitz" },
 ]
-dependencies = []
+dependencies = ["agentic-command-generation"]
+
+[tool.uv.sources]
+agentic-command-generation = { workspace = true }
 
 [project.urls]
 Homepage = "https://github.com/rickardvh/agentic-workspace/tree/master/packages/memory"

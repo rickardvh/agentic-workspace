@@ -106,6 +106,7 @@ def _conformance_env(*, runtime: str | None = None) -> dict[str, str]:
         str(REPO_ROOT / "src"),
         str(REPO_ROOT / "packages" / "planning" / "src"),
         str(REPO_ROOT / "packages" / "memory" / "src"),
+        str(REPO_ROOT / "packages" / "command-generation" / "src"),
     ]
     existing_pythonpath = env.get("PYTHONPATH")
     if existing_pythonpath:
@@ -790,8 +791,8 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         operation_contract = f"operations/{operation_id}.json"
         if entry.get("status") != "runtime-consumed":
             errors.append(f"{operation_id} must be marked runtime-consumed in python_operation_execution_inventory.json")
-        if entry.get("primitive_executor") != "packages/memory/src/repo_memory_bootstrap/operation_ir_executor.py":
-            errors.append(f"{operation_id} must point at the Python operation IR executor")
+        if entry.get("primitive_executor") != "packages/command-generation/src/agentic_command_generation/primitive_executor.py":
+            errors.append(f"{operation_id} must point at the codegen-owned Python primitive executor")
         if entry.get("operation_contract") != operation_contract:
             errors.append(f"{operation_id} must point at {operation_contract}")
 
@@ -815,9 +816,16 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
     except (ImportError, KeyError, FileNotFoundError, json.JSONDecodeError) as exc:
         errors.append(f"generated memory operation contract could not be loaded: {exc}")
 
-    memory_cli_text = (
-        REPO_ROOT / "packages" / "memory" / "src" / "repo_memory_bootstrap" / "_runtime_cli.py"
+    memory_operation_executor_text = (
+        REPO_ROOT / "packages" / "memory" / "src" / "repo_memory_bootstrap" / "operation_ir_executor.py"
     ).read_text(encoding="utf-8")
+    if "from agentic_command_generation.primitive_executor import" not in memory_operation_executor_text:
+        errors.append("memory operation IR executor must import the codegen-owned primitive executor")
+    if "run_operation_steps(" not in memory_operation_executor_text:
+        errors.append("memory operation IR executor must execute operation plans through codegen-owned run_operation_steps")
+    memory_cli_text = (REPO_ROOT / "packages" / "memory" / "src" / "repo_memory_bootstrap" / "_runtime_cli.py").read_text(
+        encoding="utf-8"
+    )
     for function_name in ("_run_list_files_report_adapter", "_run_list_skills_report_adapter"):
         function_index = memory_cli_text.find(f"def {function_name}")
         next_function_index = memory_cli_text.find("\ndef ", function_index + 1)
