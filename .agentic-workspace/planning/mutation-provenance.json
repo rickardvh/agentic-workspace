@@ -888,6 +888,14 @@
       "reason": "Closed Python codegen decomposition after #892 closeout evidence and removed stale closeout-plan reference.",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-14T14:12:25+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "29a184ef60bef561495279e7282ba1fe87fe8cd00f61f2ee97e8d4f3d9624e02",
+      "command": "agentic-planning record-recovery",
+      "reason": "Clarified PR #966 closeout evidence: root runtime dispatch was implemented in already-merged PR #956, not newly in this closeout diff.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T15:22:25+00:00"
     }
   ]
 }
