@@ -1256,6 +1256,14 @@
       "reason": "Record validated generated_cli_package.py bridge retirement slice and dogfooding issue #977 before continuing #892 source executable cleanup.",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-14T19:24:13+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-cli-src-executable-cleanup.plan.json",
+      "sha256": "4b34700c4096163648acb5e87ba9720682162fff4b05dad1223e5dc0b2fe0352",
+      "command": "agentic-planning record-recovery",
+      "reason": "Record operation_ir_executor.py migration from shipped module source into command-generation before continuing _runtime_cli.py cleanup.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T19:27:53+00:00"
     }
   ]
 }

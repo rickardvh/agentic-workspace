@@ -20,6 +20,7 @@ from agentic_command_generation.planning_generated_cli_package import (
 from agentic_command_generation.planning_generated_cli_package import (
     supports_generated_command as supports_generated_cli_package_command,
 )
+from agentic_command_generation.planning_operation_ir_executor import run_operation_ir
 
 from repo_planning_bootstrap import __version__
 from repo_planning_bootstrap._source import UpgradeSource, resolve_upgrade_source
@@ -52,7 +53,6 @@ from repo_planning_bootstrap.installer import (
     upgrade_bootstrap,
     verify_payload,
 )
-from repo_planning_bootstrap.operation_ir_executor import run_operation_ir
 
 
 def _program_name() -> str:

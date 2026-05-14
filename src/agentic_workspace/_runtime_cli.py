@@ -19303,13 +19303,13 @@ def _run_generated_cli_operation(operation_id: str, args: argparse.Namespace) ->
 
 
 def _run_defaults_report_adapter(args: argparse.Namespace) -> int:
-    from agentic_workspace.operation_ir_executor import run_operation_ir
+    from agentic_command_generation.workspace_operation_ir_executor import run_operation_ir
 
     return run_operation_ir(generated_cli_package_operation_contract("defaults.report"), args)
 
 
 def _run_config_report_adapter(args: argparse.Namespace) -> int:
-    from agentic_workspace.operation_ir_executor import run_operation_ir
+    from agentic_command_generation.workspace_operation_ir_executor import run_operation_ir
 
     return run_operation_ir(generated_cli_package_operation_contract("config.report"), args)
 
@@ -19480,13 +19480,13 @@ def _run_skills_report_adapter(args: argparse.Namespace) -> int:
 
 
 def _run_system_intent_sync_adapter(args: argparse.Namespace) -> int:
-    from agentic_workspace.operation_ir_executor import run_operation_ir
+    from agentic_command_generation.workspace_operation_ir_executor import run_operation_ir
 
     return run_operation_ir(generated_cli_package_operation_contract("system-intent.sync"), args)
 
 
 def _run_delegation_outcome_append_adapter(args: argparse.Namespace) -> int:
-    from agentic_workspace.operation_ir_executor import run_operation_ir
+    from agentic_command_generation.workspace_operation_ir_executor import run_operation_ir
 
     return run_operation_ir(generated_cli_package_operation_contract("delegation-outcome.append"), args)
 
@@ -19509,7 +19509,7 @@ def _run_external_intent_refresh_github_adapter(args: argparse.Namespace) -> int
 
 
 def _run_prompt_lifecycle_adapter(args: argparse.Namespace) -> int:
-    from agentic_workspace.operation_ir_executor import run_operation_ir
+    from agentic_command_generation.workspace_operation_ir_executor import run_operation_ir
 
     return run_operation_ir(generated_cli_package_operation_contract(f"prompt.{args.prompt_command}"), args)
 

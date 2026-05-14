@@ -108,11 +108,8 @@ PYTHON_MODULE_SOURCE_EXECUTABLE_MARKERS = {
 }
 PYTHON_MODULE_SOURCE_EXECUTABLE_PATHS = (
     "src/agentic_workspace/_runtime_cli.py",
-    "src/agentic_workspace/operation_ir_executor.py",
     "packages/planning/src/repo_planning_bootstrap/_runtime_cli.py",
-    "packages/planning/src/repo_planning_bootstrap/operation_ir_executor.py",
     "packages/memory/src/repo_memory_bootstrap/_runtime_cli.py",
-    "packages/memory/src/repo_memory_bootstrap/operation_ir_executor.py",
 )
 
 
@@ -913,7 +910,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
             errors.append(f"generated operation contract could not be loaded for {operation_id}: {exc}")
 
     memory_operation_executor_text = (
-        REPO_ROOT / "packages" / "memory" / "src" / "repo_memory_bootstrap" / "operation_ir_executor.py"
+        REPO_ROOT / "packages" / "command-generation" / "src" / "agentic_command_generation" / "memory_operation_ir_executor.py"
     ).read_text(encoding="utf-8")
     if "from agentic_command_generation.primitive_executor import" not in memory_operation_executor_text:
         errors.append("memory operation IR executor must import the codegen-owned primitive executor")
@@ -938,7 +935,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
             errors.append(f"{function_name} must execute generated operation IR through run_operation_ir")
 
     planning_operation_executor_text = (
-        REPO_ROOT / "packages" / "planning" / "src" / "repo_planning_bootstrap" / "operation_ir_executor.py"
+        REPO_ROOT / "packages" / "command-generation" / "src" / "agentic_command_generation" / "planning_operation_ir_executor.py"
     ).read_text(encoding="utf-8")
     if "from agentic_command_generation.primitive_executor import" not in planning_operation_executor_text:
         errors.append("planning operation IR executor must import the codegen-owned primitive executor")
@@ -954,9 +951,9 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         if "run_operation_ir(" not in function_text:
             errors.append(f"{function_name} must execute generated operation IR through run_operation_ir")
 
-    workspace_operation_executor_text = (REPO_ROOT / "src" / "agentic_workspace" / "operation_ir_executor.py").read_text(
-        encoding="utf-8"
-    )
+    workspace_operation_executor_text = (
+        REPO_ROOT / "packages" / "command-generation" / "src" / "agentic_command_generation" / "workspace_operation_ir_executor.py"
+    ).read_text(encoding="utf-8")
     if "from agentic_command_generation.primitive_executor import" not in workspace_operation_executor_text:
         errors.append("workspace operation IR executor must import the codegen-owned primitive executor")
     if "run_operation_steps(" not in workspace_operation_executor_text:

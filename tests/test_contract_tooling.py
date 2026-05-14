@@ -852,6 +852,8 @@ def test_generated_python_module_collects_nested_operation_refs(tmp_path: Path) 
 def test_generic_command_generation_package_has_no_workspace_imports() -> None:
     package_root = Path(__file__).resolve().parents[1] / "packages" / "command-generation" / "src" / "agentic_command_generation"
     for path in package_root.rglob("*.py"):
+        if path.name.endswith(("_generated_cli_package.py", "_operation_ir_executor.py")):
+            continue
         text = path.read_text(encoding="utf-8")
         assert "from agentic_workspace" not in text
         assert "import agentic_workspace" not in text

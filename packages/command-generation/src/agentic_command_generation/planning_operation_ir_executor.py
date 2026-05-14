@@ -5,8 +5,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-from agentic_command_generation.primitive_executor import PrimitiveContext, PrimitiveExecutionError, run_operation_steps
-
 from repo_planning_bootstrap.installer import (
     InstallResult,
     collect_status,
@@ -16,6 +14,8 @@ from repo_planning_bootstrap.installer import (
     planning_report,
     planning_report_tiny,
 )
+
+from agentic_command_generation.primitive_executor import PrimitiveContext, PrimitiveExecutionError, run_operation_steps
 
 
 class OperationIrExecutionError(RuntimeError):

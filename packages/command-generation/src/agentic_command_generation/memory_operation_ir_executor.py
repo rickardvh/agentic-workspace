@@ -6,13 +6,13 @@ import tomllib
 from pathlib import Path
 from typing import Any, cast
 
-from agentic_command_generation.primitive_executor import PrimitiveContext, PrimitiveExecutionError, run_operation_steps
-
 from repo_memory_bootstrap._installer_output import _new_result, format_actions, format_result_json
 from repo_memory_bootstrap._installer_paths import _record_repo_context_warnings, payload_root, resolve_target_root, skills_root
 from repo_memory_bootstrap._installer_payload import _payload_entries
 from repo_memory_bootstrap._installer_shared import OPTIONAL_APPEND_TARGETS, InstallResult
 from repo_memory_bootstrap.installer import MANIFEST_PATH, collect_status, doctor_bootstrap, memory_report, promotion_report, report_routes
+
+from agentic_command_generation.primitive_executor import PrimitiveContext, PrimitiveExecutionError, run_operation_steps
 
 
 class OperationIrExecutionError(RuntimeError):

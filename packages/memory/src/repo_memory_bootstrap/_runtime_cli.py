@@ -23,6 +23,7 @@ from agentic_command_generation.memory_generated_cli_package import (
 from agentic_command_generation.memory_generated_cli_package import (
     supports_generated_command as supports_generated_cli_package_command,
 )
+from agentic_command_generation.memory_operation_ir_executor import run_operation_ir
 
 from repo_memory_bootstrap import __version__
 from repo_memory_bootstrap.installer import (
@@ -57,7 +58,6 @@ from repo_memory_bootstrap.installer import (
     upgrade_bootstrap,
     verify_payload,
 )
-from repo_memory_bootstrap.operation_ir_executor import run_operation_ir
 
 
 def _program_name() -> str:
