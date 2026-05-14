@@ -12,7 +12,9 @@ work_items = []
 execplans = []
 
 [todo]
-active_items = []
+active_items = [
+  { id = "python-cli-lifecycle-root-generation", title = "Generate Python lifecycle root commands", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/python-cli-lifecycle-root-generation.plan.json", why_now = "Created by new-plan scaffold.", owner_role = "implementation", handoff_ready = true },
+]
 queued_items = []
 
 [roadmap]

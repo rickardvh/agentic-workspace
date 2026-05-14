@@ -672,6 +672,46 @@
       "reason": "archive execplan python-cli-remaining-command-migration",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-14T11:14:03+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-cli-lifecycle-root-generation.plan.json",
+      "sha256": "e0cb04739587536ef8aa194aebb965c5ee1419c692e1c7548013d7ec66878c10",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-cli-lifecycle-root-generation",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T11:15:14+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "954ee4b1804808e069e953e014ea80315668c2095c0ebeca1c8cda88c255233d",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-cli-lifecycle-root-generation",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T11:15:14+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-cli-lifecycle-root-generation.plan.json",
+      "sha256": "9181b22ce61e11baa69b5a31e35ee8d300c027b9e649db20946f1a8b8c267136",
+      "command": "agentic-planning record-recovery",
+      "reason": "Tightened lifecycle root command generation execplan before implementation.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T11:15:58+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-cli-lifecycle-root-generation.plan.json",
+      "sha256": "ec95367a27f727acdb0540186b0033408b0013a8d401d395527e213144e8737d",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T11:15:58+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-cli-lifecycle-root-generation.plan.json",
+      "sha256": "6808b3ccadcc327c6c2ab7c3408f6c1171dde5a6b37e78efaeb9ad2116fd9f22",
+      "command": "agentic-planning record-recovery",
+      "reason": "Removed slash-separated command wording that planning reference checker interpreted as missing paths.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T11:16:29+00:00"
     }
   ]
 }
