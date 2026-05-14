@@ -1403,6 +1403,25 @@ def test_planning_delegation_decision_front_door_keeps_plan_option() -> None:
     assert argv[argv.index("--plan") + 1] == "plan-alpha"
 
 
+def test_planning_close_item_front_door_forwards_item_positionally() -> None:
+    args = argparse.Namespace(
+        planning_command="close-item",
+        item="done-item",
+        reason="completed residue",
+        issue="#953",
+        target=".",
+        dry_run=True,
+        format="json",
+    )
+
+    argv = cli._planning_module_argv(args)
+
+    assert argv[:2] == ["close-item", "done-item"]
+    assert "--item" not in argv
+    assert argv[argv.index("--reason") + 1] == "completed residue"
+    assert argv[argv.index("--issue") + 1] == "#953"
+
+
 def test_start_task_surfaces_vague_outcome_orientation(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

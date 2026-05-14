@@ -1348,6 +1348,7 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
             delegation_command,
             f"agentic-workspace planning record-recovery --path <managed-planning-file> --reason <reason>{target_arg} --format json",
             f"agentic-workspace planning create-review --slug <slug> --title <title>{target_arg} --format json",
+            f"agentic-workspace planning close-item --item <item-id>{target_arg} --format json",
             f"agentic-workspace planning archive-plan --plan <plan>{target_arg} --format json",
         ],
         "post_new_plan_tightening": {
@@ -1544,6 +1545,8 @@ def _planning_module_argv(args: argparse.Namespace) -> list[str]:
         argv.append(str(args.item_id))
     elif command == "archive-plan" and getattr(args, "plan", None):
         argv.append(str(args.plan))
+    elif command == "close-item" and getattr(args, "item", None):
+        argv.append(str(args.item))
     elif command == "create-review" and getattr(args, "slug", None):
         argv.append(str(args.slug))
     for option, attr in (
@@ -1562,6 +1565,7 @@ def _planning_module_argv(args: argparse.Namespace) -> list[str]:
         ("--quality-concern", "quality_concern"),
         ("--decomposition-adjustment", "decomposition_adjustment"),
         ("--reason", "reason"),
+        ("--issue", "issue"),
         ("--parent-lane-closeout", "parent_lane_closeout"),
         ("--closure-decision", "closure_decision"),
         ("--intent-satisfied", "intent_satisfied"),

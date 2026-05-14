@@ -456,6 +456,30 @@
       "reason": "archive execplan .agentic-workspace/planning/execplans/generated-cli-package-source-folder-cleanup.plan.json",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-13T20:44:42+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/planning-skill-and-close-item-942-953.plan.json",
+      "sha256": "a4f866126b3667477ed7c4d6523fe8b6315d9b81d673784111503e6fedf86f85",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold planning-skill-and-close-item-942-953",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T09:12:29+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "5359b7b9a732e6a2c9d65b82800ab43ac10f293fa7f76553f0527dfdd68f6e85",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold planning-skill-and-close-item-942-953",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T09:12:29+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/planning-skill-and-close-item-942-953.plan.json",
+      "sha256": "bf39873d24460e3b044a3467c7edadb8d8d9b4616b1adbd350ec6ca47b39cf4a",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T09:12:36+00:00"
     }
   ]
 }

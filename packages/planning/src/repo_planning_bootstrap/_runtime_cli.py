@@ -23,6 +23,7 @@ from repo_planning_bootstrap.installer import (
     adopt_bootstrap,
     archive_execplan,
     archive_parent_lane_closeout,
+    close_planning_item,
     collect_status,
     create_execplan_scaffold,
     create_review_record,
@@ -234,6 +235,17 @@ def build_parser() -> argparse.ArgumentParser:
     archive_parser.add_argument("--continuation-summary", help="Closeout distillation continuation bucket summary.")
     archive_parser.add_argument("--format", choices=("text", "json"), default="text")
 
+    close_item_parser = subparsers.add_parser(
+        "close-item",
+        help="Close completed planning residue by id without hand-editing checked-in state.",
+    )
+    close_item_parser.add_argument("item")
+    close_item_parser.add_argument("--target")
+    close_item_parser.add_argument("--reason", default="")
+    close_item_parser.add_argument("--issue", default="")
+    close_item_parser.add_argument("--dry-run", action="store_true")
+    close_item_parser.add_argument("--format", choices=("text", "json"), default="text")
+
     review_parser = subparsers.add_parser("create-review", help="Create a valid planning review record skeleton.")
     review_parser.add_argument("slug")
     review_parser.add_argument("--title", required=True)
@@ -423,6 +435,17 @@ def main(argv: list[str] | None = None) -> int:
                 discard_summary=args.discard_summary,
                 continuation_summary=args.continuation_summary,
                 retain_archive=args.retain_archive,
+            ),
+            args.format,
+        )
+    if args.command == "close-item":
+        return _emit(
+            close_planning_item(
+                args.item,
+                target=args.target,
+                reason=args.reason,
+                issue=args.issue,
+                dry_run=args.dry_run,
             ),
             args.format,
         )
