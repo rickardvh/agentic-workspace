@@ -6,6 +6,35 @@ on:
     branches: [ main, master ]
 
 jobs:
+  workspace-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Sync workspace dependencies
+        run: make sync-all
+
+      - name: Run workspace tests
+        run: make test-workspace
+
+      - name: Run workspace lint
+        run: make lint-workspace
+
+      - name: Verify root generated CLI
+        run: make verify-workspace
+
+      - name: Check generated command packages
+        run: uv run python scripts/check/check_generated_command_packages.py
+
   package-checks:
     runs-on: ubuntu-latest
     strategy:
