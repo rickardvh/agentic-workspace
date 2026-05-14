@@ -304,18 +304,22 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
     assert "unsupported command errors" in " ".join(maturity["weak-agent-safe-adapter"]["promotion_requires"])
     assert "runtime handoff failures" in " ".join(maturity["weak-agent-safe-adapter"]["promotion_requires"])
     assert "implementation-independent contracts or IR" in python_completion["finish_line"]
-    assert python_completion["current_state"] == "full-generated-cli-complete"
+    assert "codegen-owned primitive executors" in python_completion["finish_line"]
+    assert python_completion["current_state"] == "adapter-layer-proven-not-full-generated-cli"
     assert python_completion["completion_gate"]["scope"] == "python-only"
-    assert python_completion["completion_gate"]["state"] == "satisfied"
+    assert python_completion["completion_gate"]["state"] == "pending"
     completion_evidence = {item["id"] for item in python_completion["completion_gate"]["satisfied_by"]}
     assert "python-docker-conformance" in completion_evidence
     assert "runtime-handlers-thin" in completion_evidence
     assert "representative-operation-ir-runtime-consumed" in completion_evidence
     assert "operation-execution-inventory-exhaustive" in completion_evidence
     assert "root-console-generated-command-smoke" in completion_evidence
-    assert "runtime primitive implementation" in python_completion["allowed_hand_owned_cli_responsibilities"]
+    assert any(
+        "package-specific runtime primitive implementation" in item for item in python_completion["allowed_hand_owned_cli_responsibilities"]
+    )
     assert "command parser shape" in python_completion["must_move_behind_contracts_or_generation"]
     assert "option and help interface semantics" in python_completion["must_move_behind_contracts_or_generation"]
+    assert any("generic file" in item and "Markdown" in item for item in python_completion["must_move_behind_contracts_or_generation"])
     assert any("weak-agent-safe-adapter" in item for item in python_completion["proof_requirements"])
     assert runtime_binding["selected_model"] == "generated parser/help with process handoff to canonical Python CLI"
     assert "operation primitive implementation" in runtime_binding["runtime_owns"]

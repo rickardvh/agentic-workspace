@@ -1,0 +1,353 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Demote Python codegen closeout after clarified #892 intent",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Correct the #892 Python generated CLI closeout after the clarified architecture shows the previous full-completion claim was too narrow.",
+    "hard_constraints": "Do not claim full Python generated CLI completion while generic deterministic behavior remains in module-local Python runtime code instead of codegen-owned primitive executors. Keep TypeScript, Bash, PowerShell, and broad primitive migration implementation out of this corrective PR.",
+    "agent_may_decide": "Demote completion state, reopen/reroute issue evidence, update tests and PR wording, and route the remaining work back to #892.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Demote the canonical completion and planning closeout claims, then validate static proof and planning health.",
+    "proof_expectations": [
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+      "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+      "uv run pytest tests/test_contract_tooling.py tests/test_generated_command_package_proof_runner.py -q",
+      "uv run agentic-workspace summary --target . --select todo.active_count,execplans.active_count,planning_surface_health,finished_work_inspection_contract.counts,finished_work_inspection_contract.derived_follow_up_candidates --format json",
+      "uv run agentic-workspace doctor --target . --modules planning --format json"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/contracts/command_package_ir.json",
+      ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      ".agentic-workspace/planning/finished-work-evidence.json",
+      "tests/test_contract_tooling.py",
+      "tests/test_generated_command_package_proof_runner.py",
+      ".agentic-workspace/planning/execplans/python-codegen-demote-after-clarification.plan.json",
+      ".agentic-workspace/planning/state.toml",
+      ".agentic-workspace/planning/mutation-provenance.json"
+    ],
+    "completion_criteria": [
+      "command_package_ir no longer reports full-generated-cli-complete for Python.",
+      "The Python generated CLI decomposition no longer reports closed completion.",
+      "Finished-work evidence and external issue state no longer treat #892 as closed.",
+      "The PR body/comment explains the demotion and the remaining codegen-owned primitive/executor finish line.",
+      "Static proof, contract tooling, structured inventory, focused tests, and planning health pass."
+    ],
+    "continuation_owner": "#892",
+    "closeout_decision": "archive-but-keep-lane-open"
+  },
+  "goal": [
+    "Create a bounded plan for Demote Python codegen closeout after clarified #892 intent."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Correct the #892 Python generated CLI closeout after the clarified architecture shows the previous full-completion claim was too narrow.",
+      "constraints": "Do not claim full Python generated CLI completion while generic deterministic behavior remains in module-local Python runtime code instead of codegen-owned primitive executors. Keep TypeScript, Bash, PowerShell, and broad primitive migration implementation out of this corrective PR.",
+      "latitude": "Demote completion state, reopen/reroute issue evidence, update tests and PR wording, and route the remaining work back to #892.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "python-codegen-demote-after-clarification",
+      "status": "active",
+      "next_step": "Demote the canonical completion and planning closeout claims, then validate static proof and planning health.",
+      "proof": "Static generated-package proof, contract tooling, structured inventory, focused tests, summary, and planning doctor."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/contracts/command_package_ir.json",
+        ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+        ".agentic-workspace/planning/finished-work-evidence.json",
+        "tests/test_contract_tooling.py",
+        "tests/test_generated_command_package_proof_runner.py"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#892 should remain the coordination surface for implementation-independent generated command packages until the codegen-owned primitive/executor finish line is satisfied.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "#892"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "#892",
+    "activation trigger": "Promote the next bounded primitive/executor migration lane from #892."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "Implementing the generic primitive executor migration itself.",
+    "discovered implications": "The previous completion gate accepted module-local runtime primitive ownership too broadly; it must distinguish transitional package-specific judgment from generic codegen-owned execution machinery.",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "Plan and implement the first bounded migration of generic deterministic Python runtime behavior into codegen-owned primitives."
+  },
+  "intent_interpretation": {
+    "literal request": "Demote Python codegen closeout after clarified #892 intent",
+    "inferred intended outcome": "Prevent PR #966 from closing #892 under a narrowed proxy finish line.",
+    "chosen concrete what": "Demote the completion claims and route the remaining codegen-owned primitive/executor work back to #892.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "command package IR, Python codegen decomposition, finished-work evidence, focused tests, this execplan/state/provenance, and PR/issue metadata.",
+    "max changed files": "8 tracked files plus GitHub issue/PR metadata.",
+    "required validation commands": "Static generated-package proof, contract tooling, structured inventory, focused tests, planning summary, and planning doctor.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Demote full-generated-cli-complete claims and keep #892 open for the codegen-owned primitive/executor finish line.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Correct the #892 Python generated CLI closeout after the clarified architecture shows the previous full-completion claim was too narrow.",
+    "hard constraints": "Do not claim full Python generated CLI completion while generic deterministic behavior remains in module-local Python runtime code instead of codegen-owned primitive executors. Keep TypeScript, Bash, PowerShell, and broad primitive migration implementation out of this corrective PR.",
+    "agent may decide locally": "Demote completion state, reopen/reroute issue evidence, update tests and PR wording, and route the remaining work back to #892.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "Corrective demotion is small and tightly coupled to PR/issue comments; delegation would add coordination cost without independent implementation surface.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-14T16:29:05+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#892",
+      "label": "Codegen epic clarified finish line",
+      "role": "parent_intent"
+    },
+    {
+      "kind": "github-pr",
+      "target": "#966",
+      "label": "Closeout PR being corrected",
+      "role": "source_intent"
+    }
+  ],
+  "active_milestone": {
+    "id": "python-codegen-demote-after-clarification",
+    "status": "completed",
+    "scope": "Correct completion claims and evidence after clarified #892 intent.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Demote the canonical completion and planning closeout claims, then validate static proof and planning health."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+    ".agentic-workspace/planning/finished-work-evidence.json",
+    "tests/test_contract_tooling.py",
+    "tests/test_generated_command_package_proof_runner.py",
+    ".agentic-workspace/planning/execplans/python-codegen-demote-after-clarification.plan.json",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/mutation-provenance.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run pytest tests/test_contract_tooling.py tests/test_generated_command_package_proof_runner.py -q",
+    "uv run agentic-workspace summary --target . --select todo.active_count,execplans.active_count,planning_surface_health,finished_work_inspection_contract.counts,finished_work_inspection_contract.derived_follow_up_candidates --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "command_package_ir no longer reports full-generated-cli-complete for Python.",
+    "The Python generated CLI decomposition no longer reports closed completion.",
+    "Finished-work evidence and external issue state no longer treat #892 as closed.",
+    "The PR body/comment explains the demotion and the remaining codegen-owned primitive/executor finish line.",
+    "Static proof, contract tooling, structured inventory, focused tests, and planning health pass."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Demoted Python generated CLI completion after clarified #892 intent, reopened #892, and updated PR #966 from a closeout claim to a corrective demotion.",
+    "scope touched": "command package IR completion policy, Python generated CLI decomposition, finished-work evidence, focused tests, and planning state/provenance.",
+    "changed surfaces": "src/agentic_workspace/contracts/command_package_ir.json; scripts/check/check_generated_command_packages.py; tests/test_contract_tooling.py; tests/test_generated_command_package_proof_runner.py; .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json; .agentic-workspace/planning/finished-work-evidence.json",
+    "validations run": "check_generated_command_packages; check_contract_tooling_surfaces; check_structured_file_inventory; focused pytest; ruff; generate_command_packages --check; planning summary; planning doctor",
+    "result for continuation": "#892 remains open for the codegen-owned primitive/executor migration finish line.",
+    "next step": "Promote the next bounded #892 slice that migrates generic deterministic behavior into codegen-owned primitive executors."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes, for the corrective demotion slice",
+    "config compliance": "used uv run agentic-workspace and checked planning health",
+    "misinterpretation risk": "reduced by demoting the full-completion claim and reopening #892",
+    "follow-on decision": "#892 remains open"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "Corrective demotion is small and tightly coupled to PR/issue comments; delegation would add coordination cost without independent implementation surface.",
+    "expected savings": "none",
+    "actual friction": "none",
+    "proof result": "passed",
+    "quality concern": "avoid re-closing #892 under narrowed completion proxy",
+    "decomposition adjustment": "demote Python generated CLI completion lane from closed to partial/open continuation"
+  },
+  "proof_report": {
+    "validation proof": "uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run pytest tests/test_contract_tooling.py tests/test_generated_command_package_proof_runner.py -q; uv run ruff check scripts/check/check_generated_command_packages.py tests/test_contract_tooling.py tests/test_generated_command_package_proof_runner.py; uv run python scripts/generate/generate_command_packages.py --check; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "proof achieved now": "passed",
+    "evidence for \"proof achieved\" state": "Focused tests passed 72/72; static generated-package proof, contract tooling, structured inventory, ruff, generation check, and planning doctor all passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Demote Python codegen closeout after clarified #892 intent.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "PR #966 and checked-in planning now demote rather than close #892 under the clarified finish line.",
+    "unsolved intent passed to": "#892"
+  },
+  "execution_summary": {
+    "outcome delivered": "Python generated CLI closeout claim demoted after clarified #892 intent.",
+    "validation confirmed": "passed",
+    "follow-on routed to": "#892",
+    "post-work posterity capture": "updated issue, PR, decomposition, and finished-work evidence",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "#892 next bounded primitive/executor migration slice"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "none",
+    "proposed durable intent": "none yet",
+    "confidence": "low",
+    "needs review": "True",
+    "owner surface": "none"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The corrective demotion is complete, but #892 remains open because full generated CLI completion still requires codegen-owned primitive executors for generic deterministic behavior.",
+    "evidence carried forward": "command_package_ir current_state is adapter-layer-proven-not-full-generated-cli; Python decomposition status is partially-promoted; #892 was reopened.",
+    "reopen trigger": "none; the larger lane is already open"
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#892",
+          "owner": "#892",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "Codegen epic clarified finish line",
+          "owner": "github-issue",
+          "source": "#892"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-05-14: Scaffolded by agentic-planning new-plan.",
+    "2026-05-14: Recorded delegation decision route=keep-local."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Create a bounded plan for Demote Python codegen closeout after clarified #892 intent.\nIntent satisfied: yes\nArchive decision: archive-but-keep-lane-open\nProof: uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run pytest tests/test_contract_tooling.py tests/test_generated_command_package_proof_runner.py -q; uv run ruff check scripts/check/check_generated_command_packages.py tests/test_contract_tooling.py tests/test_generated_command_package_proof_runner.py; uv run python scripts/generate/generate_command_packages.py --check; uv run agentic-workspace doctor --target . --modules planning --format json\nChanged surfaces: src/agentic_workspace/contracts/command_package_ir.json; scripts/check/check_generated_command_packages.py; tests/test_contract_tooling.py; tests/test_generated_command_package_proof_runner.py; .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json; .agentic-workspace/planning/finished-work-evidence.json\nDurable residue: none (none)\nMemory learning: none\nFollow-up: #892"
+  }
+}

@@ -896,6 +896,94 @@
       "reason": "Clarified PR #966 closeout evidence: root runtime dispatch was implemented in already-merged PR #956, not newly in this closeout diff.",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-14T15:22:25+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-demote-after-clarification.plan.json",
+      "sha256": "a3714129441e81f33a2e7294514498189690d71a33b738dc9fe78ee068bc8280",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-codegen-demote-after-clarification",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T16:28:07+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "871fac13c7f4c19f69937267d9001d12176aedc0b519d3e1a78588ef2ccb1898",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-codegen-demote-after-clarification",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T16:28:07+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-demote-after-clarification.plan.json",
+      "sha256": "85afa77c99f8132e9caff54b448e29c0096b205c07076c034abf483ad1341238",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T16:29:05+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-demote-after-clarification.plan.json",
+      "sha256": "85afa77c99f8132e9caff54b448e29c0096b205c07076c034abf483ad1341238",
+      "command": "agentic-planning record-recovery",
+      "reason": "Tightened corrective execplan for demoting #892 Python completion after clarified codegen-owned primitive executor finish line.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T16:32:02+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/finished-work-evidence.json",
+      "sha256": "7bd8292e39f017c5d703e935b45cc7122f065e5ca7560e002f9fd1f9b6d357db",
+      "command": "agentic-planning record-recovery",
+      "reason": "Updated finished-work evidence so #892 remains open after clarified codegen-owned primitive executor finish line.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T16:32:02+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "aef73b62e0026dc6a80dc8d3e7af445f99e7ad2aa49f2187fa6b9cb67d0bcef0",
+      "command": "agentic-planning record-recovery",
+      "reason": "Demoted Python generated CLI decomposition from closed to partially-promoted after clarified #892 finish line.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T16:32:03+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-demote-after-clarification.plan.json",
+      "sha256": "1b05ad4f8c24c64e956019a8439d6d2f8d13dd30c9da84b240f75bad1d3b6b08",
+      "command": "agentic-planning record-recovery",
+      "reason": "Aligned corrective execplan compatibility projections with canonical core after health warning.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T16:32:46+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-demote-after-clarification.plan.json",
+      "sha256": "8a2dd5da04881c3492b322a97b7c3c8894048510d5db3e586cd89e9b7ae82d3d",
+      "command": "agentic-planning record-recovery",
+      "reason": "Closed corrective demotion slice while leaving #892 open for codegen-owned primitive executor continuation.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T16:34:37+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-codegen-demote-after-clarification.plan.json",
+      "sha256": "716d66bd9a8ea40c063cd78347323c1537a4c10ff3754dd36ad53d5d1c6b155d",
+      "command": "agentic-planning record-recovery",
+      "reason": "Added explicit #892 resume cue before archiving corrective demotion slice.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T16:35:02+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "9005c47e51a048285f67be2d08c5623a570981c505b03f40bcb8dcdabd5fff91",
+      "command": "agentic-planning record-recovery",
+      "reason": "Removed completed corrective demotion TODO reference so execplan can be archived instead of deleted by close-item.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T16:35:48+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/python-codegen-demote-after-clarification.plan.json",
+      "sha256": "d50911ced46307210ad606eaa1ec542323efc0cce0e4ff520b9bec5d73edb8bd",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-codegen-demote-after-clarification",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T16:35:48+00:00"
     }
   ]
 }

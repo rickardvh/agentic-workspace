@@ -628,8 +628,8 @@ def _validate_python_cli_completion_policy(policy: dict[str, object]) -> list[st
     must_move = [str(item) for item in policy.get("must_move_behind_contracts_or_generation", []) if isinstance(item, str)]
     proof_requirements = [str(item) for item in policy.get("proof_requirements", []) if isinstance(item, str)]
     finish_line_lower = finish_line.lower()
-    if "implementation-independent" not in finish_line_lower or "thin runtime primitive adapters" not in finish_line_lower:
-        errors.append("command_package_ir.json Python CLI completion finish_line must require implementation-independent artifacts and thin runtime primitive adapters")
+    if "implementation-independent" not in finish_line_lower or "codegen-owned primitive executors" not in finish_line_lower:
+        errors.append("command_package_ir.json Python CLI completion finish_line must require implementation-independent artifacts and codegen-owned primitive executors")
     if current_state not in PYTHON_COMPLETION_STATES:
         errors.append(f"command_package_ir.json Python CLI completion current_state is unknown: {current_state!r}")
     if not any("runtime primitive implementation" in item for item in allowed):
@@ -637,6 +637,8 @@ def _validate_python_cli_completion_policy(policy: dict[str, object]) -> list[st
     for required in ("command parser shape", "option and help interface semantics", "generated command dispatch selection"):
         if not any(required in item for item in must_move):
             errors.append(f"command_package_ir.json Python CLI completion policy must move {required!r} behind contracts or generation")
+    if not any("generic file" in item and "json" in item.lower() and "markdown" in item.lower() for item in must_move):
+        errors.append("command_package_ir.json Python CLI completion policy must move generic deterministic file/data behavior behind codegen-owned primitives")
     if not any("weak-agent-safe-adapter" in item and "full Python generated CLI completion" in item for item in proof_requirements):
         errors.append("command_package_ir.json Python CLI completion proof must distinguish adapter maturity from full generated CLI completion")
     completion_gate = policy.get("completion_gate", {})

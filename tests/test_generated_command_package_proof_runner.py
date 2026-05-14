@@ -343,7 +343,7 @@ def test_static_generated_package_proof_rejects_satisfied_gate_for_non_full_stat
     assert any("cannot mark the Python CLI completion gate satisfied" in error for error in errors)
 
 
-def test_static_generated_package_proof_accepts_python_completion_gate() -> None:
+def test_static_generated_package_proof_accepts_pending_python_completion_gate() -> None:
     checker = _load_checker()
 
     errors = checker._validate_static_surfaces()

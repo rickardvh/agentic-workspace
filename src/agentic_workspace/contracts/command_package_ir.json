@@ -110,11 +110,11 @@
       ]
     },
     "python_cli_completion": {
-      "finish_line": "Python CLI completion means parser, dispatch, command/interface behavior, adapter metadata, and conformance expectations are generated from implementation-independent contracts or IR, with hand-owned Python code limited to thin runtime primitive adapters.",
-      "current_state": "full-generated-cli-complete",
+      "finish_line": "Python CLI completion means parser, dispatch, command/interface behavior, adapter metadata, conformance expectations, and generic deterministic file/data behavior are generated from implementation-independent contracts or IR and executed by codegen-owned primitive executors, with module-local Python limited to package-specific judgment that cannot yet be represented portably.",
+      "current_state": "adapter-layer-proven-not-full-generated-cli",
       "allowed_hand_owned_cli_responsibilities": [
         "live workspace inspection",
-        "runtime primitive implementation",
+        "package-specific runtime primitive implementation that cannot yet be represented by codegen-owned primitives",
         "mutation orchestration and safety checks",
         "output emission mechanics",
         "thin operation handler adapters that call runtime primitives"
@@ -123,6 +123,7 @@
         "command parser shape",
         "option and help interface semantics",
         "generated command dispatch selection",
+        "generic file, JSON, TOML, Markdown, schema, template, managed payload, and JSON/text emission behavior",
         "package CLI command/interface additions",
         "weak-agent routing and maturity claims for generated command surfaces",
         "black-box conformance fixture selection"
@@ -131,11 +132,12 @@
         "generated-package proof distinguishes adapter maturity from full Python generated CLI completion",
         "static proof rejects treating weak-agent-safe-adapter as full Python generated CLI completion while generated Python package main functions delegate generated-command parser or dispatch behavior to runtime main",
         "future package command/interface work changes contracts, IR, generators, and regenerated outputs instead of package-local executable cli.py files",
-        "runtime primitive code remains hand-owned only when it performs live behavior, mutation orchestration, or package-specific runtime logic",
+        "runtime primitive code remains module-owned only when it performs live behavior, mutation orchestration, or package-specific judgment that is explicitly inventoried as not yet portable",
+        "generic deterministic operations over files, JSON, TOML, Markdown, schemas, templates, managed payloads, and emitted JSON/text are codegen-owned primitive executor behavior before full completion is claimed",
         "root console smoke proof executes at least one generated root command through the installed console path, not only through generated parser/help imports"
       ],
       "completion_gate": {
-        "state": "satisfied",
+        "state": "pending",
         "scope": "python-only",
         "satisfied_by": [
           {
