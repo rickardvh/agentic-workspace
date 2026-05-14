@@ -370,6 +370,55 @@
           "classification_note": "Planning closeout front door"
         },
         {
+          "name": "close-item",
+          "help": "Close completed planning residue by id without hand-editing checked-in state.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "item",
+              "flags": [
+                "--item"
+              ],
+              "required": true,
+              "help": "Planning item id to close."
+            },
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path."
+            },
+            {
+              "name": "reason",
+              "flags": [
+                "--reason"
+              ],
+              "help": "Optional closure reason to record in the action detail."
+            },
+            {
+              "name": "issue",
+              "flags": [
+                "--issue"
+              ],
+              "help": "Optional upstream issue reference tied to the closeout."
+            },
+            {
+              "name": "dry_run",
+              "flags": [
+                "--dry-run"
+              ],
+              "action": "store_true",
+              "help": "Show planned changes without mutating files."
+            }
+          ],
+          "role": "core_context_router",
+          "audience": "ordinary_host_repo",
+          "classification_note": "Planning generic closeout front door"
+        },
+        {
           "name": "create-review",
           "help": "Create a schema-valid planning review record skeleton.",
           "uses_option_groups": [

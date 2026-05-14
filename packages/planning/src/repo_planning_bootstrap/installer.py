@@ -10190,6 +10190,94 @@ def archive_parent_lane_closeout(
     return result
 
 
+def close_planning_item(
+    item: str,
+    *,
+    target: str | Path | None = None,
+    reason: str = "",
+    issue: str = "",
+    dry_run: bool = False,
+) -> InstallResult:
+    """Close a completed planning item through package-owned state mutation."""
+    target_root = resolve_target_root(target)
+    item_id = item.strip()
+    result = InstallResult(
+        target_root=target_root,
+        message=f"Close planning item {item_id}",
+        dry_run=dry_run,
+    )
+    if not item_id:
+        result.add("manual review", target_root / PLANNING_STATE_PATH, "close-item requires a non-empty item id")
+        return result
+
+    state = _read_state_from_toml(target_root) or {}
+    state_candidates = _close_item_state_candidates(state, item_id=item_id, target_root=target_root)
+    execplan_candidates = _close_item_execplan_candidates(target_root, item_id=item_id)
+    exact_candidates = [candidate for candidate in [*state_candidates, *execplan_candidates] if candidate["match"] == "exact"]
+    candidates = exact_candidates or [*state_candidates, *execplan_candidates]
+    if not candidates:
+        result.add("manual review", target_root / PLANNING_STATE_PATH, f"planning item '{item_id}' was not found")
+        return result
+
+    candidates = _collapse_close_item_plan_state_pairs(candidates)
+    if len(candidates) != 1:
+        candidate_text = "; ".join(f"{candidate['kind']}:{candidate['id']}:{candidate['path']}" for candidate in candidates)
+        result.warnings.append(
+            {
+                "warning_class": "close_item_ambiguous",
+                "path": PLANNING_STATE_PATH.as_posix(),
+                "message": f"close-item '{item_id}' matched multiple candidates: {candidate_text}",
+            }
+        )
+        result.add("manual review", target_root / PLANNING_STATE_PATH, f"ambiguous close-item id '{item_id}': {candidate_text}")
+        return result
+
+    candidate = candidates[0]
+    if candidate["kind"] == "execplan":
+        archive_result = archive_execplan(
+            str(candidate["plan_arg"]),
+            target=target_root,
+            dry_run=dry_run,
+            apply_cleanup=True,
+        )
+        archive_result.message = f"Close planning item {item_id} through execplan archive flow"
+        return archive_result
+
+    status = str(candidate.get("status", "")).strip().lower()
+    normalized_status = _normalize_status(status)
+    if normalized_status not in {"completed", "done", "closed"}:
+        result.warnings.append(
+            {
+                "warning_class": "close_item_not_completed",
+                "path": PLANNING_STATE_PATH.as_posix(),
+                "message": f"planning item '{item_id}' has status '{status or '<unset>'}' and was not closed",
+            }
+        )
+        result.add("manual review", target_root / PLANNING_STATE_PATH, f"item '{item_id}' must be completed before close-item removes it")
+        return result
+
+    updated_state = _remove_close_item_state_candidate(state, candidate)
+    if updated_state is None:
+        result.add("manual review", target_root / PLANNING_STATE_PATH, f"item '{item_id}' could not be removed from structured state")
+        return result
+
+    state_path = target_root / PLANNING_STATE_PATH
+    detail_parts = [f"closed completed {candidate['kind']} item '{item_id}' from {candidate['bucket']}"]
+    if issue.strip():
+        detail_parts.append(f"issue: {issue.strip()}")
+    if reason.strip():
+        detail_parts.append(f"reason: {reason.strip()}")
+    detail = "; ".join(detail_parts)
+    if dry_run:
+        result.add("would update", state_path, detail)
+        return result
+
+    _write_state_to_toml(target_root, updated_state)
+    result.add("updated", state_path, detail)
+    _stamp_result_action_mutations(result, command="agentic-planning close-item", reason=f"close planning item {item_id}")
+    return result
+
+
 def archive_execplan(
     plan: str,
     *,
@@ -13181,6 +13269,144 @@ def _read_state_from_toml(target_root: Path) -> dict[str, Any] | None:
         return tomllib.loads(raw.decode("utf-8"))
     except Exception:
         return None
+
+
+def _close_item_state_candidates(state: dict[str, Any], *, item_id: str, target_root: Path) -> list[dict[str, Any]]:
+    candidates: list[dict[str, Any]] = []
+
+    def add_collection(*, kind: str, bucket: str, path: str, items: Any) -> None:
+        if not isinstance(items, list):
+            return
+        for index, raw in enumerate(items):
+            if not isinstance(raw, dict):
+                continue
+            raw_record = cast(dict[str, Any], raw)
+            raw_id = str(raw_record.get("id", "")).strip()
+            if not raw_id:
+                continue
+            match = _close_item_id_match(raw_id, item_id)
+            if match is None:
+                continue
+            candidates.append(
+                {
+                    "kind": kind,
+                    "bucket": bucket,
+                    "path": path,
+                    "index": index,
+                    "id": raw_id,
+                    "status": str(raw_record.get("status", "")).strip(),
+                    "surface": _active_execplan_reference(raw_record),
+                    "match": match,
+                    "target_root": target_root,
+                }
+            )
+
+    todo = state.get("todo")
+    if isinstance(todo, dict):
+        add_collection(kind="todo", bucket="todo.active_items", path=PLANNING_STATE_PATH.as_posix(), items=todo.get("active_items"))
+        add_collection(kind="todo", bucket="todo.queued_items", path=PLANNING_STATE_PATH.as_posix(), items=todo.get("queued_items"))
+    roadmap = state.get("roadmap")
+    if isinstance(roadmap, dict):
+        add_collection(kind="roadmap", bucket="roadmap.lanes", path=PLANNING_STATE_PATH.as_posix(), items=roadmap.get("lanes"))
+        add_collection(kind="roadmap", bucket="roadmap.candidates", path=PLANNING_STATE_PATH.as_posix(), items=roadmap.get("candidates"))
+    add_collection(kind="work_item", bucket="work_items", path=PLANNING_STATE_PATH.as_posix(), items=state.get("work_items"))
+    active = state.get("active")
+    if isinstance(active, dict):
+        add_collection(
+            kind="active_execplan_ref", bucket="active.execplans", path=PLANNING_STATE_PATH.as_posix(), items=active.get("execplans")
+        )
+    return candidates
+
+
+def _close_item_execplan_candidates(target_root: Path, *, item_id: str) -> list[dict[str, Any]]:
+    execplan_root = target_root / PLANNING_MANAGED_ROOT / "execplans"
+    if not execplan_root.exists():
+        return []
+    candidates: list[dict[str, Any]] = []
+    for path in sorted([*execplan_root.glob("*.plan.json"), *execplan_root.glob("*.md")]):
+        if path.name in {"README.md", "TEMPLATE.md"}:
+            continue
+        plan_id = path.name[:-10] if path.name.endswith(".plan.json") else path.stem
+        match = _close_item_id_match(plan_id, item_id)
+        if match is None:
+            continue
+        candidates.append(
+            {
+                "kind": "execplan",
+                "bucket": "execplans",
+                "path": path.relative_to(target_root).as_posix(),
+                "id": plan_id,
+                "status": _execplan_status(path),
+                "match": match,
+                "plan_arg": plan_id,
+            }
+        )
+    return candidates
+
+
+def _close_item_id_match(candidate_id: str, item_id: str) -> str | None:
+    if candidate_id == item_id:
+        return "exact"
+    if candidate_id.startswith(item_id):
+        return "prefix"
+    return None
+
+
+def _collapse_close_item_plan_state_pairs(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    execplans = [candidate for candidate in candidates if candidate["kind"] == "execplan"]
+    if not execplans:
+        return candidates
+    if len(execplans) != 1:
+        return candidates
+    execplan = execplans[0]
+    execplan_path = str(execplan.get("path", ""))
+    related_state = []
+    unrelated_state = []
+    for candidate in candidates:
+        if candidate["kind"] == "execplan":
+            continue
+        surface = str(candidate.get("surface", "")).replace("\\", "/")
+        if surface and (surface == execplan_path or surface.endswith("/" + execplan_path) or surface.endswith(execplan_path)):
+            related_state.append(candidate)
+        else:
+            unrelated_state.append(candidate)
+    if related_state and not unrelated_state:
+        return [execplan]
+    return candidates
+
+
+def _remove_close_item_state_candidate(state: dict[str, Any], candidate: dict[str, Any]) -> dict[str, Any] | None:
+    updated = copy.deepcopy(state)
+    bucket = str(candidate.get("bucket", ""))
+    index = int(candidate.get("index", -1))
+    if index < 0:
+        return None
+
+    if bucket.startswith("todo."):
+        parent = updated.get("todo")
+        key = bucket.split(".", 1)[1]
+    elif bucket.startswith("roadmap."):
+        parent = updated.get("roadmap")
+        key = bucket.split(".", 1)[1]
+    elif bucket == "active.execplans":
+        parent = updated.get("active")
+        key = "execplans"
+    elif bucket == "work_items":
+        parent = updated
+        key = "work_items"
+    else:
+        return None
+
+    if not isinstance(parent, dict):
+        return None
+    items = parent.get(key)
+    if not isinstance(items, list) or index >= len(items):
+        return None
+    raw = items[index]
+    if not isinstance(raw, dict) or str(raw.get("id", "")).strip() != str(candidate.get("id", "")):
+        return None
+    parent[key] = [item for item_index, item in enumerate(items) if item_index != index]
+    return updated
 
 
 def _write_state_to_toml(target_root: Path, state: dict[str, Any]) -> None:

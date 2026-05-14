@@ -118,6 +118,32 @@
       }
     },
     {
+      "id": "planning-high-assurance-lifecycle",
+      "path": "planning-high-assurance-lifecycle/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "preserve intent, decomposition, assurance, delegation, proof, and closeout for broad or high-assurance planning work",
+      "activation_hints": {
+        "verbs": ["classify", "decompose", "plan", "delegate", "prove", "close"],
+        "nouns": ["high assurance", "lifecycle", "intent satisfaction", "multi-lane work", "epic", "closeout", "delegation packet"],
+        "phrases": [
+          "high assurance planning lifecycle",
+          "preserve intent satisfaction",
+          "broad high assurance work",
+          "multi-lane planning work",
+          "whole epic",
+          "recoverable planned work",
+          "intent proof closeout"
+        ],
+        "when": [
+          "work is broad or cross-boundary",
+          "an initially small slice grows into multiple planning lanes",
+          "intent preservation matters more than local task completion",
+          "delegation should be possible from structured planning artifacts"
+        ]
+      }
+    },
+    {
       "id": "planning-closeout-trust",
       "path": "planning-closeout-trust/SKILL.md",
       "scope": "bundled",

@@ -20,6 +20,7 @@ from repo_planning_bootstrap.installer import (
     REQUIRED_PAYLOAD_FILES,
     adopt_bootstrap,
     archive_execplan,
+    close_planning_item,
     collect_status,
     doctor_bootstrap,
     install_bootstrap,
