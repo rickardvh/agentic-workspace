@@ -832,6 +832,62 @@
       "reason": "archive execplan pr-956-root-console-review",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-14T13:10:11+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-892-python-epic-closeout.plan.json",
+      "sha256": "b8d6c7de1fd67380f5a3e109f674433be72c461c969ab2701d79d27a391efd20",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold github-892-python-epic-closeout",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T14:00:13+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "fde0d8ad17603dd7fce1d9b6789dab0cfc1f9d38eb36d5702a6709f47ee32332",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold github-892-python-epic-closeout",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T14:00:13+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-892-python-epic-closeout.plan.json",
+      "sha256": "e48b458401add57491d4a49949bddefad9e03430f512f2caeedc88f5ebbaf4ee",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T14:01:34+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan github-892-python-epic-closeout",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T14:07:38+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "e091f226d8c5bb244f40574fa7328ad4baacae3f35a5c86f7dd882fafd542444",
+      "command": "agentic-planning record-recovery",
+      "reason": "Closed Python codegen decomposition after #892 Python-scoped closeout proof and #929 continuation routing.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T14:08:02+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/finished-work-evidence.json",
+      "sha256": "9773c99c8d302e342f1649e13b8de81b66096eae6abd86b0c8dca1ad2ae6e166",
+      "command": "agentic-planning record-recovery",
+      "reason": "Record closed #892/#931/#933 chain so finished-work inspection suppresses obsolete Python codegen continuation.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T14:09:10+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "6ccaa18f7d1536ff4a5a9a60f7f8c08e247b2491c8dfea12d8fcbdf79871606e",
+      "command": "agentic-planning record-recovery",
+      "reason": "Closed Python codegen decomposition after #892 closeout evidence and removed stale closeout-plan reference.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T14:12:25+00:00"
     }
   ]
 }

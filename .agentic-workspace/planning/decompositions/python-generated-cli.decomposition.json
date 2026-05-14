@@ -1,7 +1,7 @@
 {
   "kind": "planning-decomposition/v1",
   "title": "Python generated CLI completion",
-  "status": "partially-promoted",
+  "status": "closed",
   "larger_intended_outcome": "Complete the Python side of #892 by moving command parser, dispatch, interface behavior, adapter metadata, runtime operation contracts, and conformance expectations behind implementation-independent contracts or IR, so later implementation targets are not forced to depend on Python internals unless that dependency is explicit and temporary.",
   "non_goals": [
     "Do not claim weak-agent-safe adapter maturity is full Python generated CLI completion.",
@@ -136,5 +136,5 @@
       "role": "active package-resource operation IR slice"
     }
   ],
-  "notes": "Created after #921 showed that adapter maturity was incorrectly treated as Python generated-CLI completion. Updated after user clarification that non-Python generated CLI targets are not meant to depend implicitly on Python internals. #930 established the small JSON-Schema-backed operation IR boundary with memory.list-files.report as the representative portable command. #931 promoted memory.list-files to runtime-consumed operation IR and opened #933 for remaining command groups. Root, planning, and memory executable front doors have now been moved off package-local cli.py files and through generated_cli_entrypoint modules while runtime helpers remain in _runtime_cli.py. The active execplan .agentic-workspace/planning/execplans/python-codegen-completion.plan.json now owns final Python completion reconciliation before #892 Python-lane completion is claimed. Bash, PowerShell, TypeScript follow-through, and any future mutation-capable generated adapters remain outside this Python branch unless the shared operation contract must change."
+  "notes": "Created after #921 showed that adapter maturity was incorrectly treated as Python generated-CLI completion. Updated after user clarification that non-Python generated CLI targets are not meant to depend implicitly on Python internals. #930 established the small JSON-Schema-backed operation IR boundary with memory.list-files.report as the representative portable command. #931 promoted memory.list-files to runtime-consumed operation IR and opened #933 for remaining command groups. #933 is now closed: every generated Python operation id is inventoried as runtime-consumed or accepted-hand-owned-runtime-primitive, with compatibility-runtime-handler rejected for full Python completion. Root, planning, and memory executable front doors have been moved off package-local cli.py files and through generated_cli_entrypoint modules while runtime helpers remain in _runtime_cli.py. #954 closed the root runtime dispatch and completion-contract blocker with root console CI proof. The Python-scoped #892 lane is closed by refreshed external intent evidence, finished-work evidence, and the GitHub closeout comment on #892. Bash, PowerShell, TypeScript follow-through, and any future mutation-capable generated adapters remain outside this Python branch unless the shared operation contract must change; TypeScript generated-resource completion is tracked by #929."
 }
