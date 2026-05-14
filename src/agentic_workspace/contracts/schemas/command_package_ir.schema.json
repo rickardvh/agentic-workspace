@@ -503,33 +503,7 @@
           "description": "Command string or command name used by this contract."
         },
         "interface": {
-          "type": "object",
-          "required": [
-            "name",
-            "help",
-            "options"
-          ],
-          "properties": {
-            "name": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Visible command name parsed by generated adapters."
-            },
-            "help": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Command help text rendered by generated adapters."
-            },
-            "options": {
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/option",
-                "description": "One generated option accepted by this command."
-              },
-              "description": "Flattened option semantics for generated parser projection."
-            }
-          },
-          "additionalProperties": false,
+          "$ref": "#/$defs/interface",
           "description": "Generated parser-facing interface for migrated command surfaces."
         },
         "operation_ref": {
@@ -677,6 +651,53 @@
         "description": "One entry in the schema refs list."
       },
       "description": "Ordered schema refs entries used by this contract."
+    },
+    "interface": {
+      "type": "object",
+      "required": [
+        "name",
+        "help",
+        "options"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Visible command name parsed by generated adapters."
+        },
+        "help": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Command help text rendered by generated adapters."
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/option",
+            "description": "One generated option accepted by this command."
+          },
+          "description": "Option semantics for this generated command level."
+        },
+        "subcommand_dest": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Parser destination used for this command's nested subcommand."
+        },
+        "subcommands_required": {
+          "type": "boolean",
+          "description": "Whether the nested subcommand is required by the generated parser."
+        },
+        "subcommands": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/interface",
+            "description": "Nested generated subcommand interface."
+          },
+          "description": "Nested command interfaces owned by the generated parser."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Generated parser-facing interface for migrated command surfaces."
     },
     "option": {
       "type": "object",

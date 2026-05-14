@@ -1644,6 +1644,34 @@ def _run_memory_front_door(args: argparse.Namespace) -> int:
     return result
 
 
+def _run_planning_front_door_adapter(args: argparse.Namespace) -> int:
+    if not getattr(args, "planning_command", None):
+        payload = _planning_help_payload(target=getattr(args, "target", None))
+        if getattr(args, "format", None) == "json":
+            print(json.dumps(payload, indent=2))
+        else:
+            _print_planning_help(payload)
+        return 0
+    try:
+        return _run_planning_front_door(args)
+    except ImportError:
+        build_generated_cli_package_parser().error("The planning module must be installed to use planning subcommands.")
+
+
+def _run_memory_front_door_adapter(args: argparse.Namespace) -> int:
+    if not getattr(args, "memory_command", None):
+        payload = _memory_help_payload(target=getattr(args, "target", None))
+        if getattr(args, "format", None) == "json":
+            print(json.dumps(payload, indent=2))
+        else:
+            _print_memory_help(payload)
+        return 0
+    try:
+        return _run_memory_front_door(args)
+    except ImportError:
+        build_generated_cli_package_parser().error("The memory module must be installed to use memory subcommands.")
+
+
 def _print_planning_help(payload: dict[str, Any]) -> None:
     print(payload["summary"])
     print("")
@@ -19581,7 +19609,9 @@ _GENERATED_RUNTIME_HANDLERS: dict[str, Callable[[argparse.Namespace], int]] = {
     "doctor.report": _run_lifecycle_report_adapter,
     "implement.context": _run_implement_context_adapter,
     "modules.report": _run_modules_report_adapter,
+    "memory.front-door": _run_memory_front_door_adapter,
     "ownership.report": _run_ownership_report_adapter,
+    "planning.front-door": _run_planning_front_door_adapter,
     "preflight.report": _run_preflight_report_adapter,
     "proof.report": _run_proof_report_adapter,
     "reconcile.report": _run_reconcile_report_adapter,

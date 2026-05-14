@@ -141,6 +141,40 @@
       },
       "status": "generated"
     },
+    "memory": {
+      "command": {
+        "command_manifest": "cli_commands.json",
+        "name": "memory",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-workspace"
+      },
+      "conformance_refs": [
+        "memory.front-door.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "memory.front-door.cli",
+      "operation_id": "memory.front-door",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.front_door.dispatch",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "status": "generated"
+    },
     "modules": {
       "command": {
         "command_manifest": "cli_commands.json",
@@ -204,6 +238,40 @@
       "schemas": {
         "input": [],
         "output": []
+      },
+      "status": "generated"
+    },
+    "planning": {
+      "command": {
+        "command_manifest": "cli_commands.json",
+        "name": "planning",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-workspace"
+      },
+      "conformance_refs": [
+        "planning.front-door.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "planning.front-door.cli",
+      "operation_id": "planning.front-door",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.front_door.dispatch",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
       },
       "status": "generated"
     },

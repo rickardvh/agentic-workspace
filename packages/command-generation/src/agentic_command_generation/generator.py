@@ -201,14 +201,16 @@ def _python_runtime_adapter_module(package: dict[str, Any], target: dict[str, An
         '    if option_spec.get("type") == "integer":\n'
         "        return int\n"
         "    return None\n\n\n"
-        "def _add_option(parser: argparse.ArgumentParser, option_spec: dict[str, Any]) -> None:\n"
+        "def _add_option(parser: argparse.ArgumentParser, option_spec: dict[str, Any], *, suppress_default: bool = False) -> None:\n"
         "    kwargs: dict[str, Any] = {}\n"
         '    action = option_spec.get("action")\n'
         "    if isinstance(action, str):\n"
         '        kwargs["action"] = action\n'
         '    if "choices" in option_spec:\n'
         '        kwargs["choices"] = tuple(option_spec["choices"])\n'
-        '    if "default" in option_spec:\n'
+        "    if suppress_default:\n"
+        '        kwargs["default"] = argparse.SUPPRESS\n'
+        '    elif "default" in option_spec:\n'
         '        kwargs["default"] = option_spec["default"]\n'
         '    if "nargs" in option_spec:\n'
         '        kwargs["nargs"] = option_spec["nargs"]\n'
@@ -221,6 +223,44 @@ def _python_runtime_adapter_module(package: dict[str, Any], target: dict[str, An
         "    if isinstance(help_text, str):\n"
         '        kwargs["help"] = help_text\n'
         '    parser.add_argument(*option_spec["flags"], **kwargs)\n\n\n'
+        "def _add_interface_options(\n"
+        "    parser: argparse.ArgumentParser,\n"
+        "    interface: dict[str, Any],\n"
+        "    inherited_option_names: frozenset[str] = frozenset(),\n"
+        ") -> frozenset[str]:\n"
+        "    option_names: set[str] = set()\n"
+        '    for option in interface.get("options", []):\n'
+        '        option_name = str(option.get("name", ""))\n'
+        "        if option_name:\n"
+        "            option_names.add(option_name)\n"
+        "        _add_option(parser, option, suppress_default=option_name in inherited_option_names)\n"
+        "    return frozenset(option_names)\n\n\n"
+        "def _set_generated_operation_id(parser: argparse.ArgumentParser, operation_id: str) -> None:\n"
+        "    parser.set_defaults(_generated_operation_id=operation_id)\n\n\n"
+        "def _add_interface_command(\n"
+        "    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],\n"
+        "    interface: dict[str, Any],\n"
+        "    operation_id: str,\n"
+        "    inherited_option_names: frozenset[str] = frozenset(),\n"
+        ") -> None:\n"
+        "    command_parser = subparsers.add_parser(\n"
+        '        str(interface["name"]),\n'
+        '        help=str(interface["help"]),\n'
+        '        description=str(interface["help"]),\n'
+        "    )\n"
+        "    _set_generated_operation_id(command_parser, operation_id)\n"
+        "    option_names = _add_interface_options(command_parser, interface, inherited_option_names)\n"
+        '    subcommands = interface.get("subcommands", [])\n'
+        "    if not subcommands:\n"
+        "        return\n"
+        '    subcommand_dest = str(interface.get("subcommand_dest", "subcommand"))\n'
+        "    child_subparsers = command_parser.add_subparsers(\n"
+        "        dest=subcommand_dest,\n"
+        '        required=bool(interface.get("subcommands_required", True)),\n'
+        "    )\n"
+        "    child_inherited_option_names = inherited_option_names | option_names\n"
+        "    for subcommand in subcommands:\n"
+        "        _add_interface_command(child_subparsers, subcommand, operation_id, child_inherited_option_names)\n\n\n"
         "def build_generated_parser() -> argparse.ArgumentParser:\n"
         "    epilog = (\n"
         '        f"Weak-agent routing: {_GENERATED_WEAK_AGENT_ROUTING}\\n"\n'
@@ -230,14 +270,7 @@ def _python_runtime_adapter_module(package: dict[str, Any], target: dict[str, An
         '    subparsers = parser.add_subparsers(dest="command", required=True)\n'
         "    for command in _GENERATED_ADAPTER_COMMANDS:\n"
         '        interface = command["interface"]\n'
-        "        command_parser = subparsers.add_parser(\n"
-        '            str(interface["name"]),\n'
-        '            help=str(interface["help"]),\n'
-        '            description=str(interface["help"]),\n'
-        "        )\n"
-        '        command_parser.set_defaults(_generated_operation_id=command["operation_id"])\n'
-        '        for option in interface.get("options", []):\n'
-        "            _add_option(command_parser, option)\n"
+        '        _add_interface_command(subparsers, interface, str(command["operation_id"]))\n'
         "    return parser\n\n\n"
         "def run_generated_command(argv: list[str] | tuple[str, ...], runtime_handler: RuntimeHandler) -> int:\n"
         "    parser = build_generated_parser()\n"

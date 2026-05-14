@@ -346,6 +346,8 @@ def test_command_package_ir_reuses_generated_adapter_truth() -> None:
         "proof.report.cli",
         "ownership.report.cli",
         "skills.report.cli",
+        "planning.front-door.cli",
+        "memory.front-door.cli",
         "report.combined.cli",
         "reconcile.report.cli",
         "setup.guidance.cli",
@@ -782,6 +784,8 @@ def test_generated_python_command_package_metadata_is_current() -> None:
         "proof.report.cli",
         "ownership.report.cli",
         "skills.report.cli",
+        "planning.front-door.cli",
+        "memory.front-door.cli",
         "report.combined.cli",
         "reconcile.report.cli",
         "setup.guidance.cli",
@@ -805,8 +809,10 @@ def test_generated_python_command_package_metadata_is_current() -> None:
         "defaults",
         "doctor",
         "implement",
+        "memory",
         "modules",
         "ownership",
+        "planning",
         "preflight",
         "proof",
         "reconcile",
@@ -822,8 +828,10 @@ def test_generated_python_command_package_metadata_is_current() -> None:
         "defaults.report",
         "doctor.report",
         "implement.context",
+        "memory.front-door",
         "modules.report",
         "ownership.report",
+        "planning.front-door",
         "preflight.report",
         "proof.report",
         "reconcile.report",
@@ -844,6 +852,8 @@ def test_generated_python_command_package_metadata_is_current() -> None:
     assert supports_generated_command(["proof", "--format", "json"]) is True
     assert supports_generated_command(["ownership", "--format", "json"]) is True
     assert supports_generated_command(["skills", "--format", "json"]) is True
+    assert supports_generated_command(["planning", "--format", "json"]) is True
+    assert supports_generated_command(["memory", "--format", "json"]) is True
     assert supports_generated_command(["report", "--format", "json"]) is True
     assert supports_generated_command(["reconcile", "--format", "json"]) is True
     assert supports_generated_command(["setup", "--format", "json"]) is True
@@ -879,6 +889,10 @@ def test_generated_python_command_package_parses_and_dispatches_runtime_operatio
     assert run_generated_command(["proof", "--target", ".", "--changed", "README.md", "--format", "json"], runtime_handler) == 0
     assert run_generated_command(["ownership", "--target", ".", "--concern", "startup", "--format", "json"], runtime_handler) == 0
     assert run_generated_command(["skills", "--target", ".", "--task", "proof", "--format", "json"], runtime_handler) == 0
+    assert run_generated_command(["planning", "--target", ".", "--format", "json"], runtime_handler) == 0
+    assert run_generated_command(["planning", "--target", ".", "--format", "json", "report"], runtime_handler) == 0
+    assert run_generated_command(["memory", "--target", ".", "--format", "json"], runtime_handler) == 0
+    assert run_generated_command(["memory", "--target", ".", "--format", "json", "report"], runtime_handler) == 0
     assert run_generated_command(["report", "--target", ".", "--format", "json"], runtime_handler) == 0
     assert run_generated_command(["reconcile", "--target", ".", "--format", "json"], runtime_handler) == 0
     assert run_generated_command(["setup", "--target", ".", "--modules", "planning", "--format", "json"], runtime_handler) == 0
@@ -895,6 +909,10 @@ def test_generated_python_command_package_parses_and_dispatches_runtime_operatio
         ("proof.report", ".", "json", None),
         ("ownership.report", ".", "json", None),
         ("skills.report", ".", "json", None),
+        ("planning.front-door", ".", "json", None),
+        ("planning.front-door", ".", "json", None),
+        ("memory.front-door", ".", "json", None),
+        ("memory.front-door", ".", "json", None),
         ("report.combined", ".", "json", None),
         ("reconcile.report", ".", "json", None),
         ("setup.guidance", ".", "json", None),
@@ -1137,31 +1155,33 @@ def test_contract_tooling_check_reports_generated_adapter_status() -> None:
     assert all(status["where_to_edit"]["runtime_behavior"] == "hand-written operation/primitive implementation code" for status in statuses)
     commands_by_program = {status["program"]: status["command_surfaces"] for status in statuses}
     assert commands_by_program["agentic-workspace"] == [
-        "defaults",
         "config",
-        "modules",
-        "start",
-        "summary",
+        "defaults",
+        "doctor",
         "implement",
+        "memory",
+        "modules",
+        "ownership",
+        "planning",
         "preflight",
         "proof",
-        "ownership",
-        "skills",
-        "report",
         "reconcile",
+        "report",
         "setup",
+        "skills",
+        "start",
         "status",
-        "doctor",
+        "summary",
     ]
-    assert commands_by_program["agentic-planning"] == ["status", "doctor", "summary", "report", "reconcile"]
+    assert commands_by_program["agentic-planning"] == ["doctor", "reconcile", "report", "status", "summary"]
     assert commands_by_program["agentic-memory"] == [
         "doctor",
-        "report",
-        "status",
-        "route-report",
-        "promotion-report",
         "list-files",
         "list-skills",
+        "promotion-report",
+        "report",
+        "route-report",
+        "status",
     ]
 
 

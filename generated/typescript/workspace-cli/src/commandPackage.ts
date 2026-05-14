@@ -1072,6 +1072,1055 @@ export const generatedCommandPackage = {
       "status": "generated"
     },
     {
+      "adapter_id": "planning.front-door.cli",
+      "command": {
+        "manifest_ref": "cli_commands.json",
+        "name": "planning"
+      },
+      "conformance_refs": [
+        "planning.front-door.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "interface": {
+        "help": "Show planning workflow help or run Planning operations through the workspace front door.",
+        "name": "planning",
+        "options": [
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Optional repository path used in example commands.",
+            "name": "target"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ],
+        "subcommand_dest": "planning_command",
+        "subcommands": [
+          {
+            "help": "Create a schema-valid execplan scaffold and optionally register it.",
+            "name": "new-plan",
+            "options": [
+              {
+                "flags": [
+                  "--id"
+                ],
+                "help": "Stable slug/id for the plan; used as the .plan.json filename.",
+                "name": "id",
+                "required": true
+              },
+              {
+                "flags": [
+                  "--title"
+                ],
+                "help": "Human-readable plan title.",
+                "name": "title",
+                "required": true
+              },
+              {
+                "default": "",
+                "flags": [
+                  "--source"
+                ],
+                "help": "Optional source reference such as an issue URL or chat-intake summary.",
+                "name": "source"
+              },
+              {
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path.",
+                "name": "target"
+              },
+              {
+                "action": "store_true",
+                "flags": [
+                  "--activate"
+                ],
+                "help": "Register the new plan in todo.active_items.",
+                "name": "activate"
+              },
+              {
+                "action": "store_true",
+                "flags": [
+                  "--queue"
+                ],
+                "help": "Register the new plan in todo.queued_items.",
+                "name": "queue"
+              },
+              {
+                "action": "store_true",
+                "flags": [
+                  "--switch-active"
+                ],
+                "help": "When used with --activate, demote existing active items into the queue before registering the new active plan.",
+                "name": "switch_active"
+              },
+              {
+                "action": "store_true",
+                "flags": [
+                  "--prep-only"
+                ],
+                "help": "Mark this scaffold as a planning-only handoff slice.",
+                "name": "prep_only"
+              },
+              {
+                "action": "store_true",
+                "flags": [
+                  "--overwrite"
+                ],
+                "help": "Replace an existing scaffold with the same id.",
+                "name": "overwrite"
+              },
+              {
+                "action": "store_true",
+                "flags": [
+                  "--dry-run"
+                ],
+                "help": "Show planned changes without mutating files.",
+                "name": "dry_run"
+              },
+              {
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "flags": [
+                  "--format"
+                ],
+                "help": "Output format.",
+                "name": "format"
+              }
+            ]
+          },
+          {
+            "help": "Promote a planning item into an execplan scaffold.",
+            "name": "promote-to-plan",
+            "options": [
+              {
+                "flags": [
+                  "--item-id"
+                ],
+                "help": "Planning item id to promote.",
+                "name": "item_id",
+                "required": true
+              },
+              {
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path.",
+                "name": "target"
+              },
+              {
+                "flags": [
+                  "--plan-slug"
+                ],
+                "help": "Optional generated plan slug override.",
+                "name": "plan_slug"
+              },
+              {
+                "action": "store_true",
+                "flags": [
+                  "--dry-run"
+                ],
+                "help": "Show planned changes without mutating files.",
+                "name": "dry_run"
+              },
+              {
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "flags": [
+                  "--format"
+                ],
+                "help": "Output format.",
+                "name": "format"
+              }
+            ]
+          },
+          {
+            "help": "Close a completed execplan or parent lane after distillation.",
+            "name": "archive-plan",
+            "options": [
+              {
+                "flags": [
+                  "--plan"
+                ],
+                "help": "Plan path, slug, or id to archive.",
+                "name": "plan"
+              },
+              {
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path.",
+                "name": "target"
+              },
+              {
+                "action": "store_true",
+                "flags": [
+                  "--dry-run"
+                ],
+                "help": "Show planned changes without mutating files.",
+                "name": "dry_run"
+              },
+              {
+                "action": "store_true",
+                "flags": [
+                  "--apply-cleanup"
+                ],
+                "help": "Apply narrow cleanup tied to the archived plan.",
+                "name": "apply_cleanup"
+              },
+              {
+                "action": "store_true",
+                "flags": [
+                  "--prepare-closeout"
+                ],
+                "help": "Write package-normalized closeout fields before archive validation runs.",
+                "name": "prepare_closeout"
+              },
+              {
+                "action": "store_true",
+                "flags": [
+                  "--retain-archive"
+                ],
+                "help": "Keep a completed execplan record under execplans/archive.",
+                "name": "retain_archive"
+              },
+              {
+                "flags": [
+                  "--parent-lane-closeout"
+                ],
+                "help": "Close a parent lane from structured planning state.",
+                "name": "parent_lane_closeout"
+              },
+              {
+                "choices": [
+                  "archive-and-close",
+                  "archive-but-keep-lane-open"
+                ],
+                "flags": [
+                  "--closure-decision"
+                ],
+                "help": "Closeout decision to write when --prepare-closeout is used.",
+                "name": "closure_decision"
+              },
+              {
+                "choices": [
+                  "yes",
+                  "no",
+                  "true",
+                  "false"
+                ],
+                "flags": [
+                  "--intent-satisfied"
+                ],
+                "help": "Whether the larger original intent is fully satisfied.",
+                "name": "intent_satisfied"
+              },
+              {
+                "flags": [
+                  "--unsolved-intent"
+                ],
+                "help": "Continuation owner for unsolved larger intent.",
+                "name": "unsolved_intent"
+              },
+              {
+                "flags": [
+                  "--intent-evidence"
+                ],
+                "help": "Evidence of intent satisfaction for prepared closeout.",
+                "name": "intent_evidence"
+              },
+              {
+                "flags": [
+                  "--closure-reason"
+                ],
+                "help": "Why the prepared closure decision is honest.",
+                "name": "closure_reason"
+              },
+              {
+                "flags": [
+                  "--closure-evidence"
+                ],
+                "help": "Evidence carried forward by the prepared closure.",
+                "name": "closure_evidence"
+              },
+              {
+                "flags": [
+                  "--reopen-trigger"
+                ],
+                "help": "Reopen trigger for the prepared closure.",
+                "name": "reopen_trigger"
+              },
+              {
+                "flags": [
+                  "--discard-summary"
+                ],
+                "help": "Closeout distillation discard bucket summary.",
+                "name": "discard_summary"
+              },
+              {
+                "flags": [
+                  "--continuation-summary"
+                ],
+                "help": "Closeout distillation continuation bucket summary.",
+                "name": "continuation_summary"
+              },
+              {
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "flags": [
+                  "--format"
+                ],
+                "help": "Output format.",
+                "name": "format"
+              }
+            ]
+          },
+          {
+            "help": "Close completed planning residue by id without hand-editing checked-in state.",
+            "name": "close-item",
+            "options": [
+              {
+                "flags": [
+                  "--item"
+                ],
+                "help": "Planning item id to close.",
+                "name": "item",
+                "required": true
+              },
+              {
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path.",
+                "name": "target"
+              },
+              {
+                "flags": [
+                  "--reason"
+                ],
+                "help": "Optional closure reason to record in the action detail.",
+                "name": "reason"
+              },
+              {
+                "flags": [
+                  "--issue"
+                ],
+                "help": "Optional upstream issue reference tied to the closeout.",
+                "name": "issue"
+              },
+              {
+                "action": "store_true",
+                "flags": [
+                  "--dry-run"
+                ],
+                "help": "Show planned changes without mutating files.",
+                "name": "dry_run"
+              },
+              {
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "flags": [
+                  "--format"
+                ],
+                "help": "Output format.",
+                "name": "format"
+              }
+            ]
+          },
+          {
+            "help": "Create a schema-valid planning review record skeleton.",
+            "name": "create-review",
+            "options": [
+              {
+                "flags": [
+                  "--slug"
+                ],
+                "help": "Stable review record slug.",
+                "name": "slug",
+                "required": true
+              },
+              {
+                "flags": [
+                  "--title"
+                ],
+                "help": "Human-readable review title.",
+                "name": "title",
+                "required": true
+              },
+              {
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path.",
+                "name": "target"
+              },
+              {
+                "flags": [
+                  "--scope"
+                ],
+                "help": "Review scope summary.",
+                "name": "scope"
+              },
+              {
+                "default": "review",
+                "flags": [
+                  "--classification"
+                ],
+                "help": "Review classification.",
+                "name": "classification"
+              },
+              {
+                "action": "store_true",
+                "flags": [
+                  "--render-markdown"
+                ],
+                "help": "Also render the derived markdown companion.",
+                "name": "render_markdown"
+              },
+              {
+                "action": "store_true",
+                "flags": [
+                  "--dry-run"
+                ],
+                "help": "Show planned changes without mutating files.",
+                "name": "dry_run"
+              },
+              {
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "flags": [
+                  "--format"
+                ],
+                "help": "Output format.",
+                "name": "format"
+              }
+            ]
+          },
+          {
+            "help": "Record the delegation route chosen for the active execplan before mechanical lane work proceeds.",
+            "name": "delegation-decision",
+            "options": [
+              {
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path.",
+                "name": "target"
+              },
+              {
+                "flags": [
+                  "--plan"
+                ],
+                "help": "Plan path, slug, or id; defaults to the active execplan.",
+                "name": "plan"
+              },
+              {
+                "choices": [
+                  "keep-local",
+                  "delegate-exploration",
+                  "delegate-implementation",
+                  "delegate-validation",
+                  "escalate-review",
+                  "no-safe-route"
+                ],
+                "flags": [
+                  "--route"
+                ],
+                "help": "Delegation route chosen for this slice.",
+                "name": "route",
+                "required": true
+              },
+              {
+                "default": "",
+                "flags": [
+                  "--skipped-reason"
+                ],
+                "help": "Required explanation when route is keep-local.",
+                "name": "skipped_reason"
+              },
+              {
+                "default": "",
+                "flags": [
+                  "--expected-savings"
+                ],
+                "help": "Expected time or token savings.",
+                "name": "expected_savings"
+              },
+              {
+                "default": "",
+                "flags": [
+                  "--actual-friction"
+                ],
+                "help": "Observed delegation friction.",
+                "name": "actual_friction"
+              },
+              {
+                "default": "",
+                "flags": [
+                  "--proof-result"
+                ],
+                "help": "Proof or validation result for the delegation decision.",
+                "name": "proof_result"
+              },
+              {
+                "default": "",
+                "flags": [
+                  "--quality-concern"
+                ],
+                "help": "Any quality concern from delegation or skipping it.",
+                "name": "quality_concern"
+              },
+              {
+                "default": "",
+                "flags": [
+                  "--decomposition-adjustment"
+                ],
+                "help": "Any follow-up adjustment needed in the decomposition.",
+                "name": "decomposition_adjustment"
+              },
+              {
+                "action": "store_true",
+                "flags": [
+                  "--dry-run"
+                ],
+                "help": "Show planned changes without mutating files.",
+                "name": "dry_run"
+              },
+              {
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "flags": [
+                  "--format"
+                ],
+                "help": "Output format.",
+                "name": "format"
+              }
+            ]
+          },
+          {
+            "help": "Bless an emergency manual repair to managed planning surfaces with explicit provenance.",
+            "name": "record-recovery",
+            "options": [
+              {
+                "default": [],
+                "flags": [
+                  "--path"
+                ],
+                "help": "Managed planning file path to stamp; repeat or pass multiple values.",
+                "name": "paths",
+                "nargs": "*",
+                "required": true
+              },
+              {
+                "flags": [
+                  "--reason"
+                ],
+                "help": "Emergency repair reason.",
+                "name": "reason",
+                "required": true
+              },
+              {
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path.",
+                "name": "target"
+              },
+              {
+                "action": "store_true",
+                "flags": [
+                  "--dry-run"
+                ],
+                "help": "Show planned changes without mutating files.",
+                "name": "dry_run"
+              },
+              {
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "flags": [
+                  "--format"
+                ],
+                "help": "Output format.",
+                "name": "format"
+              }
+            ]
+          },
+          {
+            "help": "Emit the compact delegated-worker handoff derived from active planning state.",
+            "name": "handoff",
+            "options": [
+              {
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path.",
+                "name": "target"
+              },
+              {
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "flags": [
+                  "--format"
+                ],
+                "help": "Output format.",
+                "name": "format"
+              }
+            ]
+          },
+          {
+            "help": "Report compact planning module state.",
+            "name": "report",
+            "options": [
+              {
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path.",
+                "name": "target"
+              },
+              {
+                "action": "store_true",
+                "flags": [
+                  "--verbose"
+                ],
+                "help": "Emit broad diagnostic report detail.",
+                "name": "verbose"
+              },
+              {
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "flags": [
+                  "--format"
+                ],
+                "help": "Output format.",
+                "name": "format"
+              }
+            ]
+          }
+        ],
+        "subcommands_required": false
+      },
+      "operation_ref": {
+        "id": "planning.front-door",
+        "path": "operations/planning.front-door.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "planning module policy",
+          "module runtime execution",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "root command identity",
+          "nested subcommand option semantics",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "schema refs",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.front_door.dispatch",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "status": "generated"
+    },
+    {
+      "adapter_id": "memory.front-door.cli",
+      "command": {
+        "manifest_ref": "cli_commands.json",
+        "name": "memory"
+      },
+      "conformance_refs": [
+        "memory.front-door.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "interface": {
+        "help": "Show memory workflow help or run Memory operations through the workspace front door.",
+        "name": "memory",
+        "options": [
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Optional repository path used in example commands.",
+            "name": "target"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ],
+        "subcommand_dest": "memory_command",
+        "subcommands": [
+          {
+            "help": "Suggest the smallest relevant durable note set for touched files or surfaces.",
+            "name": "route",
+            "options": [
+              {
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path.",
+                "name": "target"
+              },
+              {
+                "default": [],
+                "flags": [
+                  "--files"
+                ],
+                "help": "Touched file paths to route from.",
+                "name": "files",
+                "nargs": "*"
+              },
+              {
+                "default": [],
+                "flags": [
+                  "--surface"
+                ],
+                "help": "Explicit routing surfaces.",
+                "name": "surfaces",
+                "nargs": "*"
+              },
+              {
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "flags": [
+                  "--format"
+                ],
+                "help": "Output format.",
+                "name": "format"
+              }
+            ]
+          },
+          {
+            "help": "Suggest memory updates for changed work.",
+            "name": "sync-memory",
+            "options": [
+              {
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path.",
+                "name": "target"
+              },
+              {
+                "default": [],
+                "flags": [
+                  "--files"
+                ],
+                "help": "Changed file paths to inspect.",
+                "name": "files",
+                "nargs": "*"
+              },
+              {
+                "default": [],
+                "flags": [
+                  "--notes"
+                ],
+                "help": "Explicit memory notes to review.",
+                "name": "notes",
+                "nargs": "*"
+              },
+              {
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "flags": [
+                  "--format"
+                ],
+                "help": "Output format.",
+                "name": "format"
+              }
+            ]
+          },
+          {
+            "help": "Suggest memory notes that should be promoted or eliminated.",
+            "name": "promotion-report",
+            "options": [
+              {
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path.",
+                "name": "target"
+              },
+              {
+                "default": [],
+                "flags": [
+                  "--notes"
+                ],
+                "help": "Explicit memory notes to inspect.",
+                "name": "notes",
+                "nargs": "*"
+              },
+              {
+                "choices": [
+                  "all",
+                  "remediation"
+                ],
+                "default": "all",
+                "flags": [
+                  "--mode"
+                ],
+                "help": "Report all candidates or only remediation candidates.",
+                "name": "mode"
+              },
+              {
+                "action": "store_true",
+                "flags": [
+                  "--verbose"
+                ],
+                "help": "Emit broad diagnostic report detail.",
+                "name": "verbose"
+              },
+              {
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "flags": [
+                  "--format"
+                ],
+                "help": "Output format.",
+                "name": "format"
+              }
+            ]
+          },
+          {
+            "help": "Recommend whether durable learning should update or create a Memory note.",
+            "name": "capture-note",
+            "options": [
+              {
+                "default": "",
+                "flags": [
+                  "--slug"
+                ],
+                "help": "Suggested note slug.",
+                "name": "slug"
+              },
+              {
+                "default": "",
+                "flags": [
+                  "--summary"
+                ],
+                "help": "Memory learning summary.",
+                "name": "summary"
+              },
+              {
+                "default": [],
+                "flags": [
+                  "--files"
+                ],
+                "help": "Changed files associated with the learning.",
+                "name": "files",
+                "nargs": "*"
+              },
+              {
+                "default": [],
+                "flags": [
+                  "--surface"
+                ],
+                "help": "Explicit routing surfaces.",
+                "name": "surfaces",
+                "nargs": "*"
+              },
+              {
+                "default": "",
+                "flags": [
+                  "--existing-note"
+                ],
+                "help": "Existing note path to update.",
+                "name": "existing_note"
+              },
+              {
+                "default": "",
+                "flags": [
+                  "--force-new-reason"
+                ],
+                "help": "Reason a new note is required.",
+                "name": "force_new_reason"
+              },
+              {
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path.",
+                "name": "target"
+              },
+              {
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "flags": [
+                  "--format"
+                ],
+                "help": "Output format.",
+                "name": "format"
+              }
+            ]
+          },
+          {
+            "help": "Report compact memory module state.",
+            "name": "report",
+            "options": [
+              {
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path.",
+                "name": "target"
+              },
+              {
+                "action": "store_true",
+                "flags": [
+                  "--verbose"
+                ],
+                "help": "Emit broad diagnostic report detail.",
+                "name": "verbose"
+              },
+              {
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "flags": [
+                  "--format"
+                ],
+                "help": "Output format.",
+                "name": "format"
+              }
+            ]
+          }
+        ],
+        "subcommands_required": false
+      },
+      "operation_ref": {
+        "id": "memory.front-door",
+        "path": "operations/memory.front-door.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "memory module policy",
+          "module runtime execution",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "root command identity",
+          "nested subcommand option semantics",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "schema refs",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.front_door.dispatch",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "status": "generated"
+    },
+    {
       "adapter_id": "report.combined.cli",
       "command": {
         "manifest_ref": "cli_commands.json",

@@ -576,6 +576,102 @@
       "reason": "archive execplan python-full-generated-cli-completion",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-14T10:27:28+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-cli-remaining-command-migration.plan.json",
+      "sha256": "0fb7d7318bbf2dba2c7527148268155de304bce75831578c1cd3f7d3ab52cb8e",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-cli-remaining-command-migration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T10:55:55+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "d1af097aa1d62172f9c2965224a554034c586f3494df933c0565205b6c33d8c5",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-cli-remaining-command-migration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T10:55:55+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-cli-remaining-command-migration.plan.json",
+      "sha256": "8c87873b094b2509f27266a5dbfbe2c0690a238973169b39ae865f14eca6a8f7",
+      "command": "agentic-planning record-recovery",
+      "reason": "Tightened scaffolded execplan with concrete Python planning/memory front-door migration scope, proof, and continuation boundary before implementation.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T10:58:30+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-cli-remaining-command-migration.plan.json",
+      "sha256": "f4f0e53ea0ede4c82241b7fb41204fae264b6a900afc993a583686151d82e183",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T10:58:34+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-cli-remaining-command-migration.plan.json",
+      "sha256": "1a3b7b62ae58d2048e51e417fd88338c6aae30aad3682a2fcf8a6b91f6272244",
+      "command": "agentic-planning record-recovery",
+      "reason": "Synchronized execplan projections with tightened canonical core so planning summary can be trusted before implementation.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T10:59:27+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-cli-remaining-command-migration.plan.json",
+      "sha256": "4eaba0aa87c27bc87351974359744eeb29f5f7ee63eaca09f3dd3972925f6ffb",
+      "command": "agentic-planning record-recovery",
+      "reason": "Expanded active plan scope to include command_package_ir schema required for nested generated command interfaces.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T11:00:32+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-cli-remaining-command-migration.plan.json",
+      "sha256": "5e6b8763d1977107e9f3a7b23b0d222c80ee53fc433f60bee96bbb3bf181858d",
+      "command": "agentic-planning record-recovery",
+      "reason": "Expanded active plan scope to include command-generation package schema used by the generator validation path.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T11:03:28+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-cli-remaining-command-migration.plan.json",
+      "sha256": "65287f3cfd35c4319bd90426d1ea7c676e7c4e1368367f1c8fb7f4fbc6358dc9",
+      "command": "agentic-planning record-recovery",
+      "reason": "Expanded scope for adapter-generation truth, primitive registry, and generated artifacts required by root front-door generation.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T11:06:07+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-cli-remaining-command-migration.plan.json",
+      "sha256": "1ea1956c50cd4d13757497addd0d0eff9bb1a384c0f7c82e26283338e5eb66c2",
+      "command": "agentic-planning record-recovery",
+      "reason": "Expanded scope to include regenerated legacy adapter metadata kept in sync with command_adapter_generation.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T11:07:22+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-cli-remaining-command-migration.plan.json",
+      "sha256": "d84895b598deb6d2b8bec25f013200064d9846bf6dd6288128685436250a4498",
+      "command": "agentic-planning record-recovery",
+      "reason": "Prepared completed closeout fields after archive-plan reported the milestone needed completed status first.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T11:13:44+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-cli-remaining-command-migration.plan.json",
+      "sha256": "9ec997ab0930ecbac0fb39788f63f0b4bb4da0070c29a283104ac98be1ddda3c",
+      "command": "agentic-planning record-recovery",
+      "reason": "Normalized intent satisfaction boolean for archive-plan while keeping larger-intent continuation explicit.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T11:13:59+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-cli-remaining-command-migration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T11:14:03+00:00"
     }
   ]
 }
