@@ -923,7 +923,7 @@ def _run_generated_cli_operation(operation_id: str, args: argparse.Namespace) ->
     raise SystemExit(2)
 
 
-def _handle_generated_doctor(args: argparse.Namespace) -> int | None:
+def _run_doctor_report_adapter(args: argparse.Namespace) -> int | None:
     for name in (
         "project_name",
         "project_purpose",
@@ -937,11 +937,7 @@ def _handle_generated_doctor(args: argparse.Namespace) -> int | None:
             setattr(args, name, None)
     if not hasattr(args, "policy_profile"):
         args.policy_profile = "default"
-    return _handle_doctor(args)
-
-
-def _run_doctor_report_adapter(args: argparse.Namespace) -> int | None:
-    return _handle_generated_doctor(args)
+    return run_operation_ir(generated_cli_package_operation_contract("memory.doctor.report"), args)
 
 
 def _run_list_files_report_adapter(args: argparse.Namespace) -> int | None:
@@ -953,15 +949,15 @@ def _run_list_skills_report_adapter(args: argparse.Namespace) -> int | None:
 
 
 def _run_promotion_report_adapter(args: argparse.Namespace) -> int | None:
-    return _handle_promotion_report(args)
+    return run_operation_ir(generated_cli_package_operation_contract("memory.promotion-report.report"), args)
 
 
 def _run_report_adapter(args: argparse.Namespace) -> int | None:
-    return _handle_report(args)
+    return run_operation_ir(generated_cli_package_operation_contract("memory.report.report"), args)
 
 
 def _run_route_report_adapter(args: argparse.Namespace) -> int | None:
-    return _handle_route_report(args)
+    return run_operation_ir(generated_cli_package_operation_contract("memory.route-report.report"), args)
 
 
 def _run_status_report_adapter(args: argparse.Namespace) -> int | None:

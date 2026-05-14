@@ -1,1 +1,100 @@
-{"schema_version":"agentic-workspace/operation/v1","id":"memory.report.report","command_surface":{"program":"agentic-memory","command":"report","format_option":"format"},"summary":"Read-only agentic-memory report report.","classification":"read-only-report","inputs":[{"name":"target","source":"cli-option","required":false},{"name":"verbose","source":"cli-option","required":false},{"name":"format","source":"cli-option","required":false}],"output":{"kind":"text-or-json"},"effects":{"read_only":true,"destructive":false,"idempotent":true,"writes_repo_state":false,"requires_preflight_gate":false},"locality":{"requires_repo":false,"network":"forbidden","outside_repo_writes":"forbidden"},"reads":[{"surface":"package-local runtime state","required":false},{"surface":"verbose flag for broad diagnostic output","required":false}],"writes":[],"steps":[{"id":"load_report","uses":"memory.report.load","description":"Load package-local report payload."},{"id":"emit_output","uses":"output.emit","description":"Emit report in the requested format."}],"guards":["report must remain read-only."],"proof":["operation contract validates against operation.schema.json","process conformance remains compatible"],"migration_status":"runtime-consumed"}
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "memory.report.report",
+  "command_surface": {
+    "program": "agentic-memory",
+    "command": "report",
+    "format_option": "format"
+  },
+  "summary": "Read-only agentic-memory report report.",
+  "classification": "read-only-report",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "verbose",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "text-or-json"
+  },
+  "effects": {
+    "read_only": true,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": false,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": "package-local runtime state",
+      "required": false
+    },
+    {
+      "surface": "verbose flag for broad diagnostic output",
+      "required": false
+    }
+  ],
+  "writes": [],
+  "steps": [
+    {
+      "id": "load_report",
+      "uses": "memory.report.load",
+      "description": "Load package-local report payload."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit report in the requested format."
+    }
+  ],
+  "guards": [
+    "report must remain read-only."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "process conformance remains compatible"
+  ],
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Memory report executes generated operation IR through codegen-owned primitive dataflow while memory runtime supplies report payload sources and text/json compatibility formatting.",
+    "steps": [
+      {
+        "id": "load_report",
+        "uses": "memory.report.load",
+        "description": "Load the tiny or verbose memory report payload for the requested target.",
+        "arguments": {},
+        "outputs": [
+          "result"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit",
+        "description": "Emit the memory report payload in the requested format.",
+        "arguments": {},
+        "outputs": [
+          "emitted"
+        ],
+        "on_error": "emit_usage_error"
+      }
+    ]
+  }
+}

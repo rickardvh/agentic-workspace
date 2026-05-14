@@ -1,0 +1,145 @@
+{
+  "classification": "read-only-report",
+  "command_surface": {
+    "command": "doctor",
+    "format_option": "format",
+    "program": "agentic-memory"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": true,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
+  },
+  "guards": [
+    "doctor must remain read-only."
+  ],
+  "id": "memory.doctor.report",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "strict_doc_ownership",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "verbose",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "project_name",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "project_purpose",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "key_repo_docs",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "key_subsystems",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "primary_build_command",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "primary_test_command",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "other_key_commands",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "policy_profile",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "arguments": {},
+        "description": "Load the memory bootstrap doctor payload for the requested target.",
+        "id": "load_report",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "memory.bootstrap.doctor.load"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the memory report payload in the requested format.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Memory doctor executes generated operation IR through codegen-owned primitive dataflow while memory runtime supplies the bootstrap doctor payload source and text/json compatibility formatting."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "text-or-json"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "process conformance remains compatible"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": "package-local runtime state"
+    },
+    {
+      "required": false,
+      "surface": "verbose flag for broad diagnostic output"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Load package-local report payload.",
+      "id": "load_report",
+      "uses": "memory.bootstrap.doctor.load"
+    },
+    {
+      "description": "Emit report in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Read-only agentic-memory doctor report.",
+  "writes": []
+}

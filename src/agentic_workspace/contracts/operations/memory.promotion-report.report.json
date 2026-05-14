@@ -71,6 +71,31 @@
     "operation contract validates against operation.schema.json",
     "operation command parity checks agentic-memory live parser"
   ],
-  "migration_status": "validated-contract"
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Memory promotion-report executes generated operation IR through codegen-owned primitive dataflow while memory runtime supplies promotion candidate payload sources and text/json compatibility formatting.",
+    "steps": [
+      {
+        "id": "load_report",
+        "uses": "memory.promotion_report.load",
+        "description": "Load the memory promotion report payload for the requested target.",
+        "arguments": {},
+        "outputs": [
+          "result"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit",
+        "description": "Emit the memory report payload in the requested format.",
+        "arguments": {},
+        "outputs": [
+          "emitted"
+        ],
+        "on_error": "emit_usage_error"
+      }
+    ]
+  }
 }
-

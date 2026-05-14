@@ -1160,6 +1160,14 @@
       "reason": "Recorded validated #892 planning doctor/report operation IR migration slice; no dedicated progress-update command exists for active execplan run fields.",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-14T17:43:34+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-generated-cli-completion-promotion.plan.json",
+      "sha256": "b07d7ea66f98b5c3545c50f60a295b2a0b1ec80404302107c984fed7f0a4d9cc",
+      "command": "agentic-planning record-recovery",
+      "reason": "Recorded validated #892 memory report operation IR migration slice and #968 dogfooding follow-up; no dedicated progress-update command exists for active execplan run fields.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T17:50:01+00:00"
     }
   ]
 }

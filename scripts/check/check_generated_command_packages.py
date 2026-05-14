@@ -804,8 +804,12 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
     runtime_consumed_operations = {
         "config.report",
         "defaults.report",
+        "memory.doctor.report",
         "memory.list-files.report",
         "memory.list-skills.report",
+        "memory.promotion-report.report",
+        "memory.report.report",
+        "memory.route-report.report",
         "memory.status.report",
         "planning.doctor.report",
         "planning.report.report",
@@ -835,8 +839,12 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
     generated_operation_modules = {
         "config.report": "agentic_workspace.generated_cli_package",
         "defaults.report": "agentic_workspace.generated_cli_package",
+        "memory.doctor.report": "repo_memory_bootstrap.generated_cli_package",
         "memory.list-files.report": "repo_memory_bootstrap.generated_cli_package",
         "memory.list-skills.report": "repo_memory_bootstrap.generated_cli_package",
+        "memory.promotion-report.report": "repo_memory_bootstrap.generated_cli_package",
+        "memory.report.report": "repo_memory_bootstrap.generated_cli_package",
+        "memory.route-report.report": "repo_memory_bootstrap.generated_cli_package",
         "memory.status.report": "repo_memory_bootstrap.generated_cli_package",
         "planning.doctor.report": "repo_planning_bootstrap.generated_cli_package",
         "planning.report.report": "repo_planning_bootstrap.generated_cli_package",
@@ -864,7 +872,15 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
     memory_cli_text = (REPO_ROOT / "packages" / "memory" / "src" / "repo_memory_bootstrap" / "_runtime_cli.py").read_text(
         encoding="utf-8"
     )
-    for function_name in ("_run_list_files_report_adapter", "_run_list_skills_report_adapter", "_run_status_report_adapter"):
+    for function_name in (
+        "_run_doctor_report_adapter",
+        "_run_list_files_report_adapter",
+        "_run_list_skills_report_adapter",
+        "_run_promotion_report_adapter",
+        "_run_report_adapter",
+        "_run_route_report_adapter",
+        "_run_status_report_adapter",
+    ):
         function_index = memory_cli_text.find(f"def {function_name}")
         next_function_index = memory_cli_text.find("\ndef ", function_index + 1)
         function_text = memory_cli_text[function_index:next_function_index] if function_index != -1 else ""

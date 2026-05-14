@@ -1,1 +1,145 @@
-{"schema_version":"agentic-workspace/operation/v1","id":"memory.doctor.report","command_surface":{"program":"agentic-memory","command":"doctor","format_option":"format"},"summary":"Read-only agentic-memory doctor report.","classification":"read-only-report","inputs":[{"name":"target","source":"cli-option","required":false},{"name":"strict_doc_ownership","source":"cli-option","required":false},{"name":"verbose","source":"cli-option","required":false},{"name":"format","source":"cli-option","required":false},{"name":"project_name","source":"cli-option","required":false},{"name":"project_purpose","source":"cli-option","required":false},{"name":"key_repo_docs","source":"cli-option","required":false},{"name":"key_subsystems","source":"cli-option","required":false},{"name":"primary_build_command","source":"cli-option","required":false},{"name":"primary_test_command","source":"cli-option","required":false},{"name":"other_key_commands","source":"cli-option","required":false},{"name":"policy_profile","source":"cli-option","required":false}],"output":{"kind":"text-or-json"},"effects":{"read_only":true,"destructive":false,"idempotent":true,"writes_repo_state":false,"requires_preflight_gate":false},"locality":{"requires_repo":false,"network":"forbidden","outside_repo_writes":"forbidden"},"reads":[{"surface":"package-local runtime state","required":false},{"surface":"verbose flag for broad diagnostic output","required":false}],"writes":[],"steps":[{"id":"load_report","uses":"memory.bootstrap.doctor.load","description":"Load package-local report payload."},{"id":"emit_output","uses":"output.emit","description":"Emit report in the requested format."}],"guards":["doctor must remain read-only."],"proof":["operation contract validates against operation.schema.json","process conformance remains compatible"],"migration_status":"runtime-consumed"}
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "memory.doctor.report",
+  "command_surface": {
+    "program": "agentic-memory",
+    "command": "doctor",
+    "format_option": "format"
+  },
+  "summary": "Read-only agentic-memory doctor report.",
+  "classification": "read-only-report",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "strict_doc_ownership",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "verbose",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "project_name",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "project_purpose",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "key_repo_docs",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "key_subsystems",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "primary_build_command",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "primary_test_command",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "other_key_commands",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "policy_profile",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "text-or-json"
+  },
+  "effects": {
+    "read_only": true,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": false,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": "package-local runtime state",
+      "required": false
+    },
+    {
+      "surface": "verbose flag for broad diagnostic output",
+      "required": false
+    }
+  ],
+  "writes": [],
+  "steps": [
+    {
+      "id": "load_report",
+      "uses": "memory.bootstrap.doctor.load",
+      "description": "Load package-local report payload."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit report in the requested format."
+    }
+  ],
+  "guards": [
+    "doctor must remain read-only."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "process conformance remains compatible"
+  ],
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Memory doctor executes generated operation IR through codegen-owned primitive dataflow while memory runtime supplies the bootstrap doctor payload source and text/json compatibility formatting.",
+    "steps": [
+      {
+        "id": "load_report",
+        "uses": "memory.bootstrap.doctor.load",
+        "description": "Load the memory bootstrap doctor payload for the requested target.",
+        "arguments": {},
+        "outputs": [
+          "result"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit",
+        "description": "Emit the memory report payload in the requested format.",
+        "arguments": {},
+        "outputs": [
+          "emitted"
+        ],
+        "on_error": "emit_usage_error"
+      }
+    ]
+  }
+}
