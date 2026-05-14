@@ -463,6 +463,7 @@ export const generatedCommandPackage = {
     }
   ],
   "id": "planning-bootstrap",
+  "operation_contract_root": "packages/planning/src/repo_planning_bootstrap/contracts",
   "package_role": "planning-module-cli",
   "program": "agentic-planning",
   "python_runtime_binding": {

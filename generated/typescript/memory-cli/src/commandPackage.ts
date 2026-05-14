@@ -604,6 +604,7 @@ export const generatedCommandPackage = {
     }
   ],
   "id": "memory-bootstrap",
+  "operation_contract_root": "packages/memory/src/repo_memory_bootstrap/contracts",
   "package_role": "memory-module-cli",
   "program": "agentic-memory",
   "python_runtime_binding": {

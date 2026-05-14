@@ -39,7 +39,7 @@
       "title": "Python package-resource operation IR migration",
       "readiness": "promoted",
       "outcome": "Simple package-resource generated Python commands consume checked-in operation contracts and target-executor primitives instead of compatibility runtime handlers.",
-      "owner_surface": "src/agentic_workspace/contracts/operations/memory.list-*.report.json, src/agentic_workspace/contracts/python_operation_execution_inventory.json, packages/command-generation/src/command_generation/primitive_executor.py, and generated/python/memory-cli/generated_cli_package/operations/",
+      "owner_surface": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.list-*.report.json, src/agentic_workspace/contracts/python_operation_execution_inventory.json, packages/command-generation/src/command_generation/primitive_executor.py, and generated/python/memory-cli/generated_cli_package/operations/",
       "proof": "Contract tooling, generated Python conformance, generated package freshness, and structured operation inventory passed before Python completion promotion.",
       "depends_on": [
         "json-schema-operation-ir",

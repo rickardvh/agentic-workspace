@@ -527,6 +527,27 @@ def _validate_operation_ir_plans() -> list[str]:
     return errors
 
 
+def _validate_module_operation_contract_locations() -> list[str]:
+    errors: list[str] = []
+    root_operations = REPO_ROOT / "src" / "agentic_workspace" / "contracts" / "operations"
+    misplaced = sorted(path.name for prefix in ("planning.", "memory.") for path in root_operations.glob(f"{prefix}*.json"))
+    if misplaced:
+        errors.append("module-owned operation contracts must not live under root workspace operations: " + ", ".join(misplaced))
+
+    module_roots = {
+        "planning.": REPO_ROOT / "packages" / "planning" / "src" / "repo_planning_bootstrap" / "contracts" / "operations",
+        "memory.": REPO_ROOT / "packages" / "memory" / "src" / "repo_memory_bootstrap" / "contracts" / "operations",
+    }
+    for operation_ref in operation_contracts_manifest()["operations"]:
+        operation_id = str(operation_ref.get("id", ""))
+        operation_file = Path(str(operation_ref.get("path", ""))).name
+        for prefix, module_root in module_roots.items():
+            if operation_id.startswith(prefix) and not (module_root / operation_file).is_file():
+                relative_root = module_root.relative_to(REPO_ROOT).as_posix()
+                errors.append(f"module-owned operation {operation_id} must live under {relative_root}")
+    return errors
+
+
 def _validate_conformance_registry(payload: dict[str, object]) -> list[str]:
     errors: list[str] = []
     if payload.get("schema_version") != "agentic-workspace/conformance-contracts/v1":
@@ -1586,6 +1607,10 @@ def main(argv: list[str] | None = None) -> int:
             "operation contracts registry",
             _validate(operation_contracts_manifest(), "operation_contracts.schema.json")
             + _validate_operation_registry(operation_contracts_manifest()),
+        ),
+        (
+            "module operation contract locations",
+            _validate_module_operation_contract_locations(),
         ),
         (
             "conformance contracts registry",

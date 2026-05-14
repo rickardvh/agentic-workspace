@@ -110,13 +110,13 @@ def _runtime_consumed_operation_outputs(
 ) -> list[GeneratedOutput]:
     outputs: list[GeneratedOutput] = []
     emitted: set[str] = set()
-    contracts_package_root = "agentic" + "_workspace"
+    operation_contract_root = repo_root / str(package["operation_contract_root"])
     for command in _python_adapter_commands(package):
         for operation_ref in _command_operation_refs(command):
             operation_path = str(operation_ref.get("path", ""))
             if not operation_path or operation_path in emitted:
                 continue
-            source = repo_root / "src" / contracts_package_root / "contracts" / operation_path
+            source = operation_contract_root / operation_path
             if not source.is_file():
                 continue
             operation = json.loads(source.read_text(encoding="utf-8"))

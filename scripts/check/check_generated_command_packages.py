@@ -27,6 +27,7 @@ for SOURCE_ROOT in (
 
 from workspace_command_generation import SCHEMA_PATH, SOURCE_PATH, load_workspace_command_package_ir  # noqa: E402
 
+from agentic_workspace.contract_tooling import operation_manifest  # noqa: E402
 from command_generation.generated_package_loader import (  # noqa: E402
     load_generated_cli_module_for_entrypoint,
     load_generated_cli_package_for_entrypoint,
@@ -266,7 +267,9 @@ def _format_generated_adapter_retry_recovery(
 
 
 def _load_json(relative_path: str) -> dict[str, object]:
-    return json.loads((REPO_ROOT / "src" / "agentic_workspace" / "contracts" / relative_path).read_text(encoding="utf-8"))
+    return operation_manifest(relative_path) if relative_path.startswith("operations/") else json.loads(
+        (REPO_ROOT / "src" / "agentic_workspace" / "contracts" / relative_path).read_text(encoding="utf-8")
+    )
 
 
 def _interface_operation_refs(interface: dict[str, object], inherited_operation_ref: dict[str, object]) -> list[dict[str, object]]:

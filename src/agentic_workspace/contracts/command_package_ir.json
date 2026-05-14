@@ -4227,7 +4227,8 @@
             ]
           }
         }
-      ]
+      ],
+      "operation_contract_root": "src/agentic_workspace/contracts"
     },
     {
       "id": "planning-bootstrap",
@@ -4717,7 +4718,8 @@
             ]
           }
         }
-      ]
+      ],
+      "operation_contract_root": "packages/planning/src/repo_planning_bootstrap/contracts"
     },
     {
       "id": "memory-bootstrap",
@@ -5348,7 +5350,8 @@
             ]
           }
         }
-      ]
+      ],
+      "operation_contract_root": "packages/memory/src/repo_memory_bootstrap/contracts"
     }
   ]
 }

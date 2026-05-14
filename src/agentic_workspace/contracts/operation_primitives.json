@@ -16,7 +16,7 @@
     ]
   },
   "module_ir_ownership": {
-    "rule": "Module-owned operation IR may remain physically centralized during the Python lane, but each operation id must belong to an explicit module namespace and codegen must consume it as data rather than importing module runtime code.",
+    "rule": "Operation IR is owned by the module namespace that defines the behavior. The root workspace may reference module operations through command-package metadata, but module-prefixed operation artifacts live under the owning module contract root.",
     "namespaces": [
       {
         "id": "workspace",
@@ -64,15 +64,15 @@
         "id": "planning",
         "operation_id_prefix": "planning.",
         "contract_owner": "packages/planning",
-        "current_contract_root": "src/agentic_workspace/contracts/operations",
-        "future_contract_root": "packages/planning/contracts"
+        "current_contract_root": "packages/planning/src/repo_planning_bootstrap/contracts/operations",
+        "future_contract_root": "packages/planning/src/repo_planning_bootstrap/contracts"
       },
       {
         "id": "memory",
         "operation_id_prefix": "memory.",
         "contract_owner": "packages/memory",
-        "current_contract_root": "src/agentic_workspace/contracts/operations",
-        "future_contract_root": "packages/memory/contracts"
+        "current_contract_root": "packages/memory/src/repo_memory_bootstrap/contracts/operations",
+        "future_contract_root": "packages/memory/src/repo_memory_bootstrap/contracts"
       }
     ]
   },

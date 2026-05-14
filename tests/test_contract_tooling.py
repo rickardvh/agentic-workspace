@@ -701,6 +701,20 @@ def test_operation_ir_requires_declared_module_namespace(monkeypatch: pytest.Mon
     assert any("memory.list-files.report" in error and "module_ir_ownership" in error for error in errors)
 
 
+def test_module_operation_contracts_are_not_owned_by_root_operations() -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
+    spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    root_operations = Path(__file__).resolve().parents[1] / "src" / "agentic_workspace" / "contracts" / "operations"
+
+    assert module._validate_module_operation_contract_locations() == []
+    assert not list(root_operations.glob("planning.*.json"))
+    assert not list(root_operations.glob("memory.*.json"))
+
+
 def test_operation_primitives_require_target_support_matrix(monkeypatch: pytest.MonkeyPatch) -> None:
     script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
     spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)

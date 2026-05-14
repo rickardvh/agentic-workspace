@@ -1440,6 +1440,38 @@
       "reason": "archive execplan command-generation-rename-and-shim-removal",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-14T21:50:09+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/module-owned-operation-contracts.plan.json",
+      "sha256": "74bda5d9cdbdb93f12064e43038072e5f28414b80c0d1771cc7e4eeed4abc939",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold module-owned-operation-contracts",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T21:52:51+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "39f60615456361e37b02d4d4d666401cc8cd9671a67f52864263557ce1146b25",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold module-owned-operation-contracts",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T21:52:51+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/module-owned-operation-contracts.plan.json",
+      "sha256": "738c90d02846d893413c192d75538926af9e9ef1e24a7c5f5a4a7f40885a7b9b",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=delegate-exploration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T21:55:41+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan module-owned-operation-contracts",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T22:05:40+00:00"
     }
   ]
 }

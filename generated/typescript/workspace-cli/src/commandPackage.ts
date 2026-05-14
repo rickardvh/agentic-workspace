@@ -3947,6 +3947,7 @@ export const generatedCommandPackage = {
     }
   ],
   "id": "root-workspace",
+  "operation_contract_root": "src/agentic_workspace/contracts",
   "package_role": "root-workspace-cli",
   "program": "agentic-workspace",
   "python_runtime_binding": {

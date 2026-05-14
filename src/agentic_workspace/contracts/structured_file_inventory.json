@@ -59,6 +59,30 @@
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
+      "pattern": "packages/planning/src/repo_planning_bootstrap/contracts/operations/*.json",
+      "format": "json",
+      "owner": "planning-contracts",
+      "status": "schema-backed",
+      "schema_or_validator": "src/agentic_workspace/contracts/schemas/operation.schema.json",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Planning operation contracts are module-owned product truth consumed by command generation through operation_contract_root.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
+    },
+    {
+      "pattern": "packages/memory/src/repo_memory_bootstrap/contracts/operations/*.json",
+      "format": "json",
+      "owner": "memory-contracts",
+      "status": "schema-backed",
+      "schema_or_validator": "src/agentic_workspace/contracts/schemas/operation.schema.json",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Memory operation contracts are module-owned product truth consumed by command generation through operation_contract_root.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
+    },
+    {
       "pattern": "src/agentic_workspace/contracts/conformance/*.json",
       "format": "json",
       "owner": "workspace-contracts",

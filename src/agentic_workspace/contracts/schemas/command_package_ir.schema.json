@@ -272,6 +272,7 @@
         "id",
         "program",
         "package_role",
+        "operation_contract_root",
         "targets",
         "commands"
       ],
@@ -293,6 +294,11 @@
             "memory-module-cli"
           ],
           "description": "Allowed package role value for routing or validation."
+        },
+        "operation_contract_root": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Repository-relative contract root that owns this package's operation artifacts."
         },
         "python_runtime_binding": {
           "type": "object",
