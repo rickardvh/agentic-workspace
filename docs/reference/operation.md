@@ -17,6 +17,7 @@ Contract for one Agentic Workspace operation, including command shape, effects, 
 | `command_surface.program` | string | no |  | Program text value used by this contract. |  |  |
 | `command_surface.command` | string | yes |  | Command string or command name used by this contract. |  |  |
 | `command_surface.subcommand` | string | no |  | Subcommand text value used by this contract. |  |  |
+| `command_surface.subcommands` | array of string | no |  | Set of subcommand text values exposed by a generated command front door. |  |  |
 | `command_surface.format_option` | string | no |  | Format option text value used by this contract. |  |  |
 | `summary` | string | yes |  | Short human-readable operation summary. |  |  |
 | `intent` | string | no |  | User or system intent the operation is designed to satisfy. |  |  |
