@@ -117,9 +117,30 @@ def _python_runtime_adapter_module(package: dict[str, Any], target: dict[str, An
     if runtime_module:
         main_function = (
             "\n\n"
+            "def _run_runtime_handler(operation_id: str, args: argparse.Namespace) -> int:\n"
+            f"    from {runtime_module} import _GENERATED_RUNTIME_HANDLERS\n\n"
+            "    handler = _GENERATED_RUNTIME_HANDLERS.get(operation_id)\n"
+            "    if handler is None:\n"
+            "        build_generated_parser().error(\n"
+            "            f\"Generated adapter for {getattr(args, 'command', operation_id)} references unsupported operation {operation_id}.\"\n"
+            "        )\n"
+            "    return handler(args)\n\n\n"
             "def main(argv: list[str] | None = None) -> int:\n"
+            "    import sys\n"
             f"    from {runtime_module} import main as runtime_main\n\n"
-            "    return runtime_main(argv)\n"
+            "    argv_list = list(sys.argv[1:] if argv is None else argv)\n"
+            "    if argv_list and argv_list[0] in {'-h', '--help'}:\n"
+            "        build_generated_parser().parse_args(argv_list)\n"
+            "        return 0\n"
+            "    if supports_generated_command(argv_list):\n"
+            "        try:\n"
+            "            return run_generated_command(argv_list, _run_runtime_handler)\n"
+            "        except Exception as exc:\n"
+            "            if exc.__class__.__name__.endswith('UsageError') or exc.__class__.__name__ == 'RepoDetectionError':\n"
+            "                build_generated_parser().error(str(exc))\n"
+            "            raise\n\n"
+            "    # Compatibility fallback for package commands that have not entered command_package_ir yet.\n"
+            "    return runtime_main(argv_list)\n"
         )
     return (
         '"""Generated runtime-backed Python command adapter.\n\n'

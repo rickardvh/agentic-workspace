@@ -132,7 +132,32 @@ def run_generated_command(argv: list[str] | tuple[str, ...], runtime_handler: Ru
     return runtime_handler(operation_id, args)
 
 
+def _run_runtime_handler(operation_id: str, args: argparse.Namespace) -> int:
+    from repo_planning_bootstrap._runtime_cli import _GENERATED_RUNTIME_HANDLERS
+
+    handler = _GENERATED_RUNTIME_HANDLERS.get(operation_id)
+    if handler is None:
+        build_generated_parser().error(
+            f"Generated adapter for {getattr(args, 'command', operation_id)} references unsupported operation {operation_id}."
+        )
+    return handler(args)
+
+
 def main(argv: list[str] | None = None) -> int:
+    import sys
     from repo_planning_bootstrap._runtime_cli import main as runtime_main
 
-    return runtime_main(argv)
+    argv_list = list(sys.argv[1:] if argv is None else argv)
+    if argv_list and argv_list[0] in {'-h', '--help'}:
+        build_generated_parser().parse_args(argv_list)
+        return 0
+    if supports_generated_command(argv_list):
+        try:
+            return run_generated_command(argv_list, _run_runtime_handler)
+        except Exception as exc:
+            if exc.__class__.__name__.endswith('UsageError') or exc.__class__.__name__ == 'RepoDetectionError':
+                build_generated_parser().error(str(exc))
+            raise
+
+    # Compatibility fallback for package commands that have not entered command_package_ir yet.
+    return runtime_main(argv_list)

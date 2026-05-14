@@ -643,35 +643,35 @@ def _validate_full_python_completion_runtime_ownership(ir: dict[str, object]) ->
         return []
 
     errors: list[str] = []
-    runtime_paths = [
-        "src/agentic_workspace/_runtime_cli.py",
-        "packages/planning/src/repo_planning_bootstrap/_runtime_cli.py",
-        "packages/memory/src/repo_memory_bootstrap/_runtime_cli.py",
-    ]
-    for relative_path in runtime_paths:
+    generated_runtime_adapters = {
+        "generated/python/workspace-cli/generated_cli_package/__init__.py": "agentic_workspace._runtime_cli",
+        "generated/python/planning-cli/generated_cli_package/__init__.py": "repo_planning_bootstrap._runtime_cli",
+        "generated/python/memory-cli/generated_cli_package/__init__.py": "repo_memory_bootstrap._runtime_cli",
+    }
+    for relative_path, runtime_module in generated_runtime_adapters.items():
         text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
-        if "def build_parser(" in text or ".add_subparsers(" in text:
+        required_fragments = [
+            "def _run_runtime_handler(",
+            f"from {runtime_module} import _GENERATED_RUNTIME_HANDLERS",
+            "if argv_list and argv_list[0] in {'-h', '--help'}:",
+            "build_generated_parser().parse_args(argv_list)",
+            "if supports_generated_command(argv_list):",
+            "return run_generated_command(argv_list, _run_runtime_handler)",
+            "from " + runtime_module + " import main as runtime_main",
+            "return runtime_main(argv_list)",
+        ]
+        for fragment in required_fragments:
+            if fragment not in text:
+                errors.append(
+                    "command_package_ir.json cannot claim full Python generated CLI completion while "
+                    f"{relative_path} is missing generated-main boundary fragment {fragment!r}"
+                )
+        generated_route_index = text.find("return run_generated_command(argv_list, _run_runtime_handler)")
+        fallback_index = text.find("return runtime_main(argv_list)")
+        if generated_route_index == -1 or fallback_index == -1 or generated_route_index > fallback_index:
             errors.append(
                 "command_package_ir.json cannot claim full Python generated CLI completion while "
-                f"{relative_path} still owns parser construction"
-            )
-        if "_run_generated_cli_package_if_supported" in text and "build_parser()" in text:
-            errors.append(
-                "command_package_ir.json cannot claim full Python generated CLI completion while "
-                f"{relative_path} still owns runtime parser fallback and dispatch ordering"
-            )
-
-    generated_runtime_adapters = [
-        "generated/python/workspace-cli/generated_cli_package/__init__.py",
-        "generated/python/planning-cli/generated_cli_package/__init__.py",
-        "generated/python/memory-cli/generated_cli_package/__init__.py",
-    ]
-    for relative_path in generated_runtime_adapters:
-        text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
-        if "import main as runtime_main" in text and "return runtime_main(argv)" in text:
-            errors.append(
-                "command_package_ir.json cannot claim full Python generated CLI completion while "
-                f"{relative_path} delegates generated main(argv) to runtime main(argv)"
+                f"{relative_path} can reach runtime main before generated command dispatch"
             )
     return errors
 
