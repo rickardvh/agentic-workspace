@@ -768,6 +768,30 @@
       "reason": "archive execplan python-final-root-command-generation",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-14T12:32:33+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/operation-command-surface-multi-subcommand.plan.json",
+      "sha256": "65484ac29bdfd4c3ce80735ffd624ee691aa83e5188f85cb11cc0ebd76f75902",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold operation-command-surface-multi-subcommand",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T12:33:04+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "9ad7fc22aad4a0ade079c695224e5b150bc3a038200a6e9d7566eb418e71f54c",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold operation-command-surface-multi-subcommand",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T12:33:04+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/operation-command-surface-multi-subcommand.plan.json",
+      "sha256": "0e40c91d74f5a6ef56ccea7005b998425746206923d6bfcf81b8c5fde45138bb",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T12:33:09+00:00"
     }
   ]
 }

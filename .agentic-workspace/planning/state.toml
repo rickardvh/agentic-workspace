@@ -12,7 +12,9 @@ work_items = []
 execplans = []
 
 [todo]
-active_items = []
+active_items = [
+  { id = "operation-command-surface-multi-subcommand", title = "Operation command_surface multi-subcommand support", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/operation-command-surface-multi-subcommand.plan.json", why_now = "#959", owner_role = "implementation", handoff_ready = true, refs = ["#959"] },
+]
 queued_items = []
 
 [roadmap]
