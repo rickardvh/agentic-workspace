@@ -421,16 +421,14 @@
       "command": "prompt",
       "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
       "operation_contract": "operations/prompt.init.json",
-      "primitive_executor": null,
+      "primitive_executor": "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "workspace.selection.resolve",
-        "prompt.render",
-        "output emission mechanics"
+        "prompt.render compatibility payload",
+        "prompt output emission compatibility formatting"
       ],
-      "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "prompt.init.process",
-      "runtime_boundary_class": "generic-deterministic-runtime-debt",
-      "runtime_boundary_reason": "Prompt selection and rendering are deterministic template behavior that should move to codegen-owned primitives before full completion."
+      "status": "runtime-consumed",
+      "conformance_ref": "prompt.init.process"
     },
     {
       "operation_id": "prompt.uninstall",
@@ -438,16 +436,14 @@
       "command": "prompt",
       "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
       "operation_contract": "operations/prompt.uninstall.json",
-      "primitive_executor": null,
+      "primitive_executor": "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "workspace.selection.resolve",
-        "prompt.render",
-        "output emission mechanics"
+        "prompt.render compatibility payload",
+        "prompt output emission compatibility formatting"
       ],
-      "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "prompt.uninstall.process",
-      "runtime_boundary_class": "generic-deterministic-runtime-debt",
-      "runtime_boundary_reason": "Prompt selection and rendering are deterministic template behavior that should move to codegen-owned primitives before full completion."
+      "status": "runtime-consumed",
+      "conformance_ref": "prompt.uninstall.process"
     },
     {
       "operation_id": "prompt.upgrade",
@@ -455,16 +451,14 @@
       "command": "prompt",
       "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
       "operation_contract": "operations/prompt.upgrade.json",
-      "primitive_executor": null,
+      "primitive_executor": "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "workspace.selection.resolve",
-        "prompt.render",
-        "output emission mechanics"
+        "prompt.render compatibility payload",
+        "prompt output emission compatibility formatting"
       ],
-      "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "prompt.upgrade.process",
-      "runtime_boundary_class": "generic-deterministic-runtime-debt",
-      "runtime_boundary_reason": "Prompt selection and rendering are deterministic template behavior that should move to codegen-owned primitives before full completion."
+      "status": "runtime-consumed",
+      "conformance_ref": "prompt.upgrade.process"
     },
     {
       "operation_id": "proof.report",

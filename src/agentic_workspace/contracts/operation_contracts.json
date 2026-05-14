@@ -242,19 +242,19 @@
       "id": "prompt.init",
       "path": "operations/prompt.init.json",
       "command": "prompt",
-      "migration_status": "draft-contract-only"
+      "migration_status": "runtime-consumed"
     },
     {
       "id": "prompt.uninstall",
       "path": "operations/prompt.uninstall.json",
       "command": "prompt",
-      "migration_status": "draft-contract-only"
+      "migration_status": "runtime-consumed"
     },
     {
       "id": "prompt.upgrade",
       "path": "operations/prompt.upgrade.json",
       "command": "prompt",
-      "migration_status": "draft-contract-only"
+      "migration_status": "runtime-consumed"
     },
     {
       "id": "proof.report",

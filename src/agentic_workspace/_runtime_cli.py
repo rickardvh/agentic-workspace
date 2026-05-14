@@ -19525,19 +19525,9 @@ def _run_external_intent_refresh_github_adapter(args: argparse.Namespace) -> int
 
 
 def _run_prompt_lifecycle_adapter(args: argparse.Namespace) -> int:
-    target_root, descriptors, config, selected_modules, resolved_preset = _selected_runtime_context(args=args, command_name="prompt")
-    payload = _run_prompt_command(
-        prompt_command=args.prompt_command,
-        target_root=target_root,
-        selected_modules=selected_modules,
-        resolved_preset=resolved_preset,
-        descriptors=descriptors,
-        force_adopt=bool(getattr(args, "adopt", False)),
-        non_interactive=bool(getattr(args, "non_interactive", False)),
-        config=config,
-    )
-    _emit_payload(payload=payload, format_name=args.format)
-    return 0
+    from agentic_workspace.operation_ir_executor import run_operation_ir
+
+    return run_operation_ir(generated_cli_package_operation_contract(f"prompt.{args.prompt_command}"), args)
 
 
 def _selected_runtime_context(
