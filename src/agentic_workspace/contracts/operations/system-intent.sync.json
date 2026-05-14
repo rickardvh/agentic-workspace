@@ -117,5 +117,61 @@
       "instruction_summary": "Use this operation to refresh source metadata while leaving interpretation to the agent and human review."
     }
   },
-  "migration_status": "draft-contract-only"
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "System-intent sync executes generated operation IR through codegen-owned primitive dataflow while workspace runtime refreshes conservative source metadata and emits the compatibility payload.",
+    "steps": [
+      {
+        "id": "resolve_root",
+        "uses": "workspace.root.resolve",
+        "description": "Resolve and validate the effective target root.",
+        "arguments": {},
+        "outputs": [
+          "target_root"
+        ],
+        "on_error": "emit_usage_error"
+      },
+      {
+        "id": "resolve_sources",
+        "uses": "system_intent.config.resolve",
+        "description": "Load workspace config and source declarations for system intent.",
+        "arguments": {},
+        "outputs": [
+          "system_intent_config"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "refresh_metadata",
+        "uses": "system_intent.source_metadata.refresh",
+        "description": "Refresh source metadata when sync is requested without interpreting source prose.",
+        "arguments": {},
+        "outputs": [
+          "result"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "read_or_create_mirror",
+        "uses": "system_intent.mirror.read_or_create",
+        "description": "Read the compiled declaration or create the conservative missing shell.",
+        "arguments": {},
+        "outputs": [
+          "result"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "emit_status",
+        "uses": "system_intent.result.emit",
+        "description": "Emit declaration status, source metadata, and review flags.",
+        "arguments": {},
+        "outputs": [
+          "emitted"
+        ],
+        "on_error": "emit_usage_error"
+      }
+    ]
+  }
 }

@@ -803,6 +803,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
 
     runtime_consumed_operations = {
         "config.report",
+        "delegation-outcome.append",
         "defaults.report",
         "memory.doctor.report",
         "memory.list-files.report",
@@ -817,6 +818,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         "prompt.init",
         "prompt.uninstall",
         "prompt.upgrade",
+        "system-intent.sync",
     }
     for operation_id in sorted(runtime_consumed_operations):
         entry = by_operation.get(operation_id)
@@ -841,6 +843,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
 
     generated_operation_modules = {
         "config.report": "agentic_workspace.generated_cli_package",
+        "delegation-outcome.append": "agentic_workspace.generated_cli_package",
         "defaults.report": "agentic_workspace.generated_cli_package",
         "memory.doctor.report": "repo_memory_bootstrap.generated_cli_package",
         "memory.list-files.report": "repo_memory_bootstrap.generated_cli_package",
@@ -855,6 +858,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         "prompt.init": "agentic_workspace.generated_cli_package",
         "prompt.uninstall": "agentic_workspace.generated_cli_package",
         "prompt.upgrade": "agentic_workspace.generated_cli_package",
+        "system-intent.sync": "agentic_workspace.generated_cli_package",
     }
     for operation_id, module_name in sorted(generated_operation_modules.items()):
         try:
@@ -918,7 +922,13 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
     if "run_operation_steps(" not in workspace_operation_executor_text:
         errors.append("workspace operation IR executor must execute operation plans through codegen-owned run_operation_steps")
     workspace_cli_text = (REPO_ROOT / "src" / "agentic_workspace" / "_runtime_cli.py").read_text(encoding="utf-8")
-    for function_name in ("_run_config_report_adapter", "_run_defaults_report_adapter", "_run_prompt_lifecycle_adapter"):
+    for function_name in (
+        "_run_config_report_adapter",
+        "_run_defaults_report_adapter",
+        "_run_delegation_outcome_append_adapter",
+        "_run_prompt_lifecycle_adapter",
+        "_run_system_intent_sync_adapter",
+    ):
         function_index = workspace_cli_text.find(f"def {function_name}")
         next_function_index = workspace_cli_text.find("\ndef ", function_index + 1)
         function_text = workspace_cli_text[function_index:next_function_index] if function_index != -1 else ""

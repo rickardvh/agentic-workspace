@@ -305,9 +305,9 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
     assert "runtime handoff failures" in " ".join(maturity["weak-agent-safe-adapter"]["promotion_requires"])
     assert "implementation-independent contracts or IR" in python_completion["finish_line"]
     assert "codegen-owned primitive executors" in python_completion["finish_line"]
-    assert python_completion["current_state"] == "adapter-layer-proven-not-full-generated-cli"
+    assert python_completion["current_state"] == "full-generated-cli-complete"
+    assert python_completion["completion_gate"]["state"] == "satisfied"
     assert python_completion["completion_gate"]["scope"] == "python-only"
-    assert python_completion["completion_gate"]["state"] == "pending"
     completion_evidence = {item["id"] for item in python_completion["completion_gate"]["satisfied_by"]}
     assert "python-docker-conformance" in completion_evidence
     assert "runtime-handlers-thin" in completion_evidence
@@ -733,7 +733,7 @@ def test_python_operation_execution_inventory_tracks_representative_runtime_cons
     accepted = [entry for entry in entries.values() if entry["status"] == "accepted-hand-owned-runtime-primitive"]
     assert all(entry.get("runtime_boundary_class") for entry in accepted)
     assert all(entry.get("runtime_boundary_reason") for entry in accepted)
-    assert "generic-deterministic-runtime-debt" in {entry["runtime_boundary_class"] for entry in accepted}
+    assert "generic-deterministic-runtime-debt" not in {entry["runtime_boundary_class"] for entry in accepted}
     generated_operations = {
         operation_id
         for package in contract_tooling.command_package_ir_manifest()["packages"]

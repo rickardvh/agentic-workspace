@@ -19480,31 +19480,15 @@ def _run_skills_report_adapter(args: argparse.Namespace) -> int:
 
 
 def _run_system_intent_sync_adapter(args: argparse.Namespace) -> int:
-    descriptors = _module_operations()
-    _validate_descriptor_contract(descriptors)
-    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
-    _validate_target_root(command_name="system-intent", target_root=target_root)
-    config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(_preset_modules(descriptors)))
-    _emit_system_intent(format_name=args.format, target_root=target_root, config=config, sync=bool(getattr(args, "sync", False)))
-    return 0
+    from agentic_workspace.operation_ir_executor import run_operation_ir
+
+    return run_operation_ir(generated_cli_package_operation_contract("system-intent.sync"), args)
 
 
 def _run_delegation_outcome_append_adapter(args: argparse.Namespace) -> int:
-    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
-    _validate_target_root(command_name="note-delegation-outcome", target_root=target_root)
-    _emit_payload(
-        payload=_record_delegation_outcome(
-            target_root=target_root,
-            delegation_target=args.delegation_target,
-            task_class=args.task_class,
-            outcome=args.outcome,
-            handoff_sufficiency=args.handoff_sufficiency,
-            review_burden=args.review_burden,
-            escalation_required=bool(args.escalation_required),
-        ),
-        format_name=args.format,
-    )
-    return 0
+    from agentic_workspace.operation_ir_executor import run_operation_ir
+
+    return run_operation_ir(generated_cli_package_operation_contract("delegation-outcome.append"), args)
 
 
 def _run_external_intent_refresh_github_adapter(args: argparse.Namespace) -> int:

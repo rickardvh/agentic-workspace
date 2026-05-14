@@ -20,7 +20,7 @@
       "id": "delegation-outcome.append",
       "path": "operations/delegation-outcome.append.json",
       "command": "note-delegation-outcome",
-      "migration_status": "draft-contract-only"
+      "migration_status": "runtime-consumed"
     },
     {
       "id": "doctor.report",
@@ -308,7 +308,7 @@
       "id": "system-intent.sync",
       "path": "operations/system-intent.sync.json",
       "command": "system-intent",
-      "migration_status": "draft-contract-only"
+      "migration_status": "runtime-consumed"
     },
     {
       "id": "uninstall.lifecycle",

@@ -1176,6 +1176,22 @@
       "reason": "Recorded validated #892 prompt operation IR migration slice; no dedicated progress-update command exists for active execplan run fields.",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-14T17:55:44+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-generated-cli-completion-promotion.plan.json",
+      "sha256": "7be9ee4693653307840e7f7b41a9a6d7dcd78f4121b4190e5c416789159da8b7",
+      "command": "agentic-planning record-recovery",
+      "reason": "Marked active milestone complete after full #892 Python completion proof; no dedicated milestone-status command exists.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-14T18:06:51+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-generated-cli-completion-promotion",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-14T18:07:21+00:00"
     }
   ]
 }

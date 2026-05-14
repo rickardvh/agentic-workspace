@@ -217,16 +217,13 @@
       "command": "note-delegation-outcome",
       "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
       "operation_contract": "operations/delegation-outcome.append.json",
-      "primitive_executor": null,
+      "primitive_executor": "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "workspace.root.resolve",
-        "delegation.outcome.append",
-        "output emission mechanics"
+        "workspace operation compatibility formatting"
       ],
-      "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "delegation-outcome.append.process",
-      "runtime_boundary_class": "generic-deterministic-runtime-debt",
-      "runtime_boundary_reason": "Local JSON record append/write is deterministic data mutation suitable for codegen-owned primitives once mutation guards are represented."
+      "status": "runtime-consumed",
+      "conformance_ref": "delegation-outcome.append.process"
     },
     {
       "operation_id": "doctor.report",
@@ -614,18 +611,13 @@
       "command": "system-intent",
       "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
       "operation_contract": "operations/system-intent.sync.json",
-      "primitive_executor": null,
+      "primitive_executor": "packages/command-generation/src/agentic_command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "workspace.root.resolve",
-        "system_intent.config.resolve",
-        "system_intent.source_metadata.refresh",
-        "system_intent.mirror.read_or_create",
-        "output emission mechanics"
+        "workspace operation compatibility formatting"
       ],
-      "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "system-intent.sync.process",
-      "runtime_boundary_class": "generic-deterministic-runtime-debt",
-      "runtime_boundary_reason": "TOML mirror read/create/write and source metadata normalization are deterministic file/data operations that should move to codegen-owned primitives before full completion."
+      "status": "runtime-consumed",
+      "conformance_ref": "system-intent.sync.process"
     },
     {
       "operation_id": "uninstall.lifecycle",

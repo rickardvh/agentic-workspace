@@ -47,6 +47,20 @@
         "future_contract_root": "modules/workspace/contracts"
       },
       {
+        "id": "workspace-delegation-outcome",
+        "operation_id_prefix": "delegation-outcome.",
+        "contract_owner": "src/agentic_workspace/contracts",
+        "current_contract_root": "src/agentic_workspace/contracts/operations",
+        "future_contract_root": "modules/workspace/contracts"
+      },
+      {
+        "id": "workspace-system-intent",
+        "operation_id_prefix": "system-intent.",
+        "contract_owner": "src/agentic_workspace/contracts",
+        "current_contract_root": "src/agentic_workspace/contracts/operations",
+        "future_contract_root": "modules/workspace/contracts"
+      },
+      {
         "id": "planning",
         "operation_id_prefix": "planning.",
         "contract_owner": "packages/planning",

@@ -12,9 +12,7 @@ work_items = []
 execplans = []
 
 [todo]
-active_items = [
-  { id = "python-generated-cli-completion-promotion", title = "Python generated CLI completion promotion", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/python-generated-cli-completion-promotion.plan.json", why_now = "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane python-generated-cli-completion-promotion.", owner_role = "implementation", handoff_ready = true, refs = [".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"] },
-]
+active_items = []
 queued_items = []
 
 [roadmap]

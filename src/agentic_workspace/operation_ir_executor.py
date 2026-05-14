@@ -13,7 +13,15 @@ class OperationIrExecutionError(RuntimeError):
 
 
 def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int:
-    if operation.get("id") not in {"config.report", "defaults.report", "prompt.init", "prompt.uninstall", "prompt.upgrade"}:
+    if operation.get("id") not in {
+        "config.report",
+        "defaults.report",
+        "delegation-outcome.append",
+        "prompt.init",
+        "prompt.uninstall",
+        "prompt.upgrade",
+        "system-intent.sync",
+    }:
         raise OperationIrExecutionError(f"unsupported operation IR contract: {operation.get('id')!r}")
     if operation.get("migration_status") != "runtime-consumed":
         raise OperationIrExecutionError(f"operation is not marked runtime-consumed: {operation.get('id')!r}")
@@ -28,13 +36,20 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 "profile": _diagnostic_profile(args, default="tiny"),
                 "adopt": getattr(args, "adopt", False),
                 "agent_instructions_file": getattr(args, "agent_instructions_file", None),
+                "delegation_target": getattr(args, "delegation_target", None),
+                "escalation_required": getattr(args, "escalation_required", False),
+                "handoff_sufficiency": getattr(args, "handoff_sufficiency", None),
                 "module": getattr(args, "module", None),
                 "non_interactive": getattr(args, "non_interactive", False),
+                "outcome": getattr(args, "outcome", None),
                 "prompt_command": getattr(args, "prompt_command", None),
                 "preset": getattr(args, "preset", None),
+                "review_burden": getattr(args, "review_burden", None),
                 "section": getattr(args, "section", None),
                 "select": getattr(args, "select", None),
+                "sync": getattr(args, "sync", False),
                 "target": getattr(args, "target", None),
+                "task_class": getattr(args, "task_class", None),
             },
             context=context,
             handlers={
@@ -44,6 +59,11 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 "workspace.defaults.select": _select_defaults,
                 "workspace.selection.resolve": _resolve_workspace_selection,
                 "prompt.render": _render_prompt,
+                "delegation.outcome.append": _append_delegation_outcome,
+                "system_intent.config.resolve": _load_system_intent_config,
+                "system_intent.source_metadata.refresh": _refresh_system_intent_metadata,
+                "system_intent.mirror.read_or_create": _read_or_create_system_intent_mirror,
+                "system_intent.result.emit": _emit_workspace_output,
                 "output.fields.select": _select_fields,
                 "output.emit": _emit_workspace_output,
                 "workspace.config.emit": _emit_workspace_output,
@@ -154,12 +174,60 @@ def _render_prompt(values: dict[str, Any], _arguments: dict[str, Any], _context:
     )
 
 
+def _append_delegation_outcome(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> dict[str, Any]:
+    from agentic_workspace._runtime_cli import _record_delegation_outcome
+
+    return _record_delegation_outcome(
+        target_root=values["target_root"],
+        delegation_target=str(values.get("delegation_target") or ""),
+        task_class=str(values.get("task_class") or ""),
+        outcome=str(values.get("outcome") or ""),
+        handoff_sufficiency=str(values.get("handoff_sufficiency") or ""),
+        review_burden=str(values.get("review_burden") or ""),
+        escalation_required=bool(values.get("escalation_required", False)),
+    )
+
+
+def _load_system_intent_config(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from agentic_workspace import config as config_lib
+    from agentic_workspace._runtime_cli import _module_operations, _preset_modules, _validate_descriptor_contract
+
+    descriptors = _module_operations()
+    _validate_descriptor_contract(descriptors)
+    return config_lib.load_workspace_config(target_root=values["target_root"], valid_presets=set(_preset_modules(descriptors)))
+
+
+def _refresh_system_intent_metadata(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    if not values.get("sync"):
+        return None
+    from agentic_workspace._runtime_cli import _system_intent_command_payload
+
+    return _system_intent_command_payload(target_root=values["target_root"], config=values["system_intent_config"], sync=True)
+
+
+def _read_or_create_system_intent_mirror(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> dict[str, Any]:
+    if values.get("result") is not None:
+        return values["result"]
+    from agentic_workspace._runtime_cli import _system_intent_command_payload
+
+    return _system_intent_command_payload(target_root=values["target_root"], config=values["system_intent_config"], sync=False)
+
+
 def _emit_workspace_output(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> None:
-    from agentic_workspace._runtime_cli import _emit_compact_answer_text, _emit_config, _emit_defaults, _emit_payload
+    from agentic_workspace._runtime_cli import _emit_compact_answer_text, _emit_config, _emit_defaults, _emit_payload, serialise_value
 
     payload = values["result"]
     output_format = str(values.get("format") or "text")
     if isinstance(payload, dict) and payload.get("command") == "prompt":
+        _emit_payload(payload=payload, format_name=output_format)
+        return
+    if isinstance(payload, dict) and payload.get("kind") == "workspace-system-intent/v1":
+        if output_format == "json":
+            print(json.dumps(serialise_value(payload), indent=2))
+        else:
+            _emit_system_intent_payload_text(payload)
+        return
+    if isinstance(payload, dict) and payload.get("kind") == "agentic-workspace/delegation-outcomes/v1":
         _emit_payload(payload=payload, format_name=output_format)
         return
     if output_format == "json":
@@ -182,6 +250,29 @@ def _emit_workspace_output(values: dict[str, Any], _arguments: dict[str, Any], _
         profile=str(values.get("profile") or "tiny"),
         select=str(values["select"]) if values.get("select") is not None else None,
     )
+
+
+def _emit_system_intent_payload_text(payload: dict[str, Any]) -> None:
+    print(f"Target: {payload['target']}")
+    print(f"Command: {payload['command']}")
+    print(f"Sync requested: {payload['sync_requested']}")
+    print(f"Source declaration surface: {payload['source_declaration_surface']}")
+    print(f"Compiled declaration surface: {payload['mirror_surface']}")
+    print(f"Workflow surface: {payload['workflow_surface']}")
+    declaration = payload["source_declaration"]
+    print(f"Sources: {', '.join(declaration['sources']) or 'none'} ({declaration['sources_source']})")
+    print(f"Preferred source: {declaration['preferred_source'] or 'none'} ({declaration['preferred_source_source']})")
+    mirror = payload["mirror"]
+    print(f"Compiled declaration status: {mirror.get('status', 'unknown')}")
+    if mirror.get("summary"):
+        print(f"Compiled declaration summary: {mirror['summary']}")
+    if payload["actions"]:
+        print("Actions:")
+        for action in payload["actions"]:
+            print(f"- {action['kind']}: {action['path']} ({action['detail']})")
+    print(f"Next action: {payload['next_action']['summary']}")
+    for command in payload["next_action"]["commands"]:
+        print(f"- {command}")
 
 
 def _diagnostic_profile(args: argparse.Namespace, *, default: str) -> str:

@@ -306,6 +306,7 @@ def test_static_generated_package_proof_rejects_full_completion_with_generic_run
         if path == "python_operation_execution_inventory.json":
             payload = dict(payload)
             entries = [dict(entry) for entry in payload["entries"]]
+            entries[0]["status"] = "accepted-hand-owned-runtime-primitive"
             entries[0]["runtime_boundary_class"] = "generic-deterministic-runtime-debt"
             entries[0]["runtime_boundary_reason"] = "still generic runtime debt"
             payload["entries"] = entries
