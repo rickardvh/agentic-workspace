@@ -34,6 +34,17 @@ def test_blackbox_root_generated_command_executes_through_console_script() -> No
     assert "available_module_profiles" in payload
 
 
+def test_blackbox_root_generated_command_executes_primitive_ir_through_console_script() -> None:
+    result = _run_cli("defaults", "--section", "root_cli_authority", "--format", "json", cwd=Path.cwd())
+
+    assert result.returncode == 0, result.stderr
+    assert "Traceback" not in f"{result.stdout}\n{result.stderr}"
+    payload = json.loads(result.stdout)
+    assert payload["profile"] == "compact-contract-answer/v1"
+    assert payload["surface"] == "defaults"
+    assert payload["selector"] == {"section": "root_cli_authority"}
+
+
 def test_blackbox_invalid_targets_report_usage_errors_without_tracebacks(tmp_path: Path) -> None:
     repo_root = Path.cwd()
     missing = tmp_path / "missing"

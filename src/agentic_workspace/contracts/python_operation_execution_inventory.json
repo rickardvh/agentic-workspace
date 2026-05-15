@@ -2,7 +2,8 @@
   "schema_version": "agentic-workspace/python-operation-execution-inventory/v1",
   "purpose": "Track how each generated Python command executes implementation-independent command/operation contracts while keeping unavoidable live package behavior explicit.",
   "status_meanings": {
-    "runtime-consumed": "Generated Python command loads a generated operation artifact and executes a portable or representative operation IR plan through a thin primitive executor.",
+    "portable-codegen-primitive-executed": "Generated Python command loads a generated operation artifact whose steps are implemented by codegen-owned portable primitives only.",
+    "domain-runtime-primitive-via-ir": "Generated Python command loads a generated operation artifact and executes it through codegen-owned dataflow, but one or more steps are package-domain runtime primitives rather than portable codegen primitives.",
     "accepted-hand-owned-runtime-primitive": "Generated Python parser/dispatch/interface metadata selects an operation id, then a thin _run_*_adapter delegates to hand-owned package runtime primitives. Each accepted entry must declare runtime_boundary_class and runtime_boundary_reason so full completion can distinguish package-specific judgment/live inspection/mutation orchestration from generic deterministic runtime debt.",
     "compatibility-runtime-handler": "Temporary unaccepted fallback status; full Python completion must reject this status.",
     "runtime_boundary_class": "Classifies accepted hand-owned runtime entries as package-specific-judgment, live-workspace-inspection, mutation-orchestration, front-door-dispatch, provider-integration, or generic-deterministic-runtime-debt. generic-deterministic-runtime-debt blocks full-generated-cli-complete."
@@ -19,8 +20,13 @@
         "memory.bootstrap.doctor.load",
         "module-result text/json compatibility formatting"
       ],
-      "status": "runtime-consumed",
-      "conformance_ref": "memory.doctor.process"
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "memory.doctor.process",
+      "domain_runtime_primitive_refs": [
+        "memory.bootstrap.doctor.load"
+      ],
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
     },
     {
       "operation_id": "memory.list-files.report",
@@ -35,8 +41,14 @@
         "target-root resolution",
         "module-result emission mechanics"
       ],
-      "status": "runtime-consumed",
-      "conformance_ref": "memory.list-files.process"
+      "status": "portable-codegen-primitive-executed",
+      "conformance_ref": "memory.list-files.process",
+      "portable_primitive_refs": [
+        "path.target_root.resolve",
+        "filesystem.glob",
+        "payload.assemble",
+        "output.emit"
+      ]
     },
     {
       "operation_id": "memory.list-skills.report",
@@ -49,8 +61,14 @@
         "codegen-owned filesystem read and JSON parse primitives",
         "module-result emission mechanics"
       ],
-      "status": "runtime-consumed",
-      "conformance_ref": "memory.list-skills.process"
+      "status": "portable-codegen-primitive-executed",
+      "conformance_ref": "memory.list-skills.process",
+      "portable_primitive_refs": [
+        "filesystem.read",
+        "json.parse",
+        "payload.assemble",
+        "output.emit"
+      ]
     },
     {
       "operation_id": "memory.promotion-report.report",
@@ -63,8 +81,13 @@
         "memory.promotion_report.load",
         "module-result text/json compatibility formatting"
       ],
-      "status": "runtime-consumed",
-      "conformance_ref": "memory.promotion-report.process"
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "memory.promotion-report.process",
+      "domain_runtime_primitive_refs": [
+        "memory.promotion_report.load"
+      ],
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
     },
     {
       "operation_id": "memory.report.report",
@@ -77,8 +100,13 @@
         "memory.report.load",
         "module-result text/json compatibility formatting"
       ],
-      "status": "runtime-consumed",
-      "conformance_ref": "memory.report.process"
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "memory.report.process",
+      "domain_runtime_primitive_refs": [
+        "memory.report.load"
+      ],
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
     },
     {
       "operation_id": "memory.route-report.report",
@@ -91,8 +119,13 @@
         "memory.route_report.load",
         "module-result text/json compatibility formatting"
       ],
-      "status": "runtime-consumed",
-      "conformance_ref": "memory.route-report.process"
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "memory.route-report.process",
+      "domain_runtime_primitive_refs": [
+        "memory.route_report.load"
+      ],
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
     },
     {
       "operation_id": "memory.status.report",
@@ -105,8 +138,13 @@
         "memory.bootstrap.status.load",
         "module-result text/json compatibility formatting"
       ],
-      "status": "runtime-consumed",
-      "conformance_ref": "memory.status.process"
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "memory.status.process",
+      "domain_runtime_primitive_refs": [
+        "memory.bootstrap.status.load"
+      ],
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
     },
     {
       "operation_id": "planning.doctor.report",
@@ -119,8 +157,13 @@
         "planning.bootstrap.doctor.load",
         "module-result text/json compatibility formatting"
       ],
-      "status": "runtime-consumed",
-      "conformance_ref": "planning.doctor.process"
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "planning.doctor.process",
+      "domain_runtime_primitive_refs": [
+        "planning.bootstrap.doctor.load"
+      ],
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
     },
     {
       "operation_id": "planning.reconcile.report",
@@ -137,7 +180,9 @@
       "status": "accepted-hand-owned-runtime-primitive",
       "conformance_ref": "planning.reconcile.process",
       "runtime_boundary_class": "mutation-orchestration",
-      "runtime_boundary_reason": "Planning reconciliation includes safe-prune and recovery judgment over live planning state."
+      "runtime_boundary_reason": "Planning reconciliation includes safe-prune and recovery judgment over live planning state.",
+      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
+      "generic_behavior_audit": "Classified as mutation-orchestration; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
     },
     {
       "operation_id": "planning.report.report",
@@ -150,8 +195,13 @@
         "planning.report.load",
         "module-result text/json compatibility formatting"
       ],
-      "status": "runtime-consumed",
-      "conformance_ref": "planning.report.process"
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "planning.report.process",
+      "domain_runtime_primitive_refs": [
+        "planning.report.load"
+      ],
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
     },
     {
       "operation_id": "planning.status.report",
@@ -164,8 +214,13 @@
         "planning.bootstrap.status.load",
         "module-result text/json compatibility formatting"
       ],
-      "status": "runtime-consumed",
-      "conformance_ref": "planning.status.process"
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "planning.status.process",
+      "domain_runtime_primitive_refs": [
+        "planning.bootstrap.status.load"
+      ],
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
     },
     {
       "operation_id": "planning.summary.report",
@@ -181,7 +236,9 @@
       "status": "accepted-hand-owned-runtime-primitive",
       "conformance_ref": "planning.summary.process",
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Planning summary loading and projection applies package-specific planning view policy."
+      "runtime_boundary_reason": "Planning summary loading and projection applies package-specific planning view policy.",
+      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
+      "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
     },
     {
       "operation_id": "config.report",
@@ -194,8 +251,16 @@
         "workspace config loading",
         "workspace config text compatibility formatting"
       ],
-      "status": "runtime-consumed",
-      "conformance_ref": "config.report.process"
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "config.report.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.root.resolve",
+        "workspace.config.load",
+        "output.fields.select",
+        "workspace.config.emit"
+      ],
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
     },
     {
       "operation_id": "defaults.report",
@@ -208,8 +273,14 @@
         "workspace defaults payload source",
         "workspace defaults text compatibility formatting"
       ],
-      "status": "runtime-consumed",
-      "conformance_ref": "defaults.report.process"
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "defaults.report.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.defaults.load",
+        "workspace.defaults.select"
+      ],
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
     },
     {
       "operation_id": "delegation-outcome.append",
@@ -222,8 +293,14 @@
         "workspace.root.resolve",
         "workspace operation compatibility formatting"
       ],
-      "status": "runtime-consumed",
-      "conformance_ref": "delegation-outcome.append.process"
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "delegation-outcome.append.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.root.resolve",
+        "delegation.outcome.append"
+      ],
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
     },
     {
       "operation_id": "doctor.report",
@@ -242,7 +319,9 @@
       "status": "accepted-hand-owned-runtime-primitive",
       "conformance_ref": "doctor.report.process",
       "runtime_boundary_class": "live-workspace-inspection",
-      "runtime_boundary_reason": "Workspace doctor assembles live module, generated-surface, config, and planning diagnostics."
+      "runtime_boundary_reason": "Workspace doctor assembles live module, generated-surface, config, and planning diagnostics.",
+      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
+      "generic_behavior_audit": "Classified as live-workspace-inspection; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
     },
     {
       "operation_id": "external-intent.refresh-github",
@@ -262,7 +341,9 @@
       "status": "accepted-hand-owned-runtime-primitive",
       "conformance_ref": "external-intent.refresh-github.help.process",
       "runtime_boundary_class": "provider-integration",
-      "runtime_boundary_reason": "GitHub issue discovery and provider evidence refresh depend on external provider behavior and explicit provider integration boundaries."
+      "runtime_boundary_reason": "GitHub issue discovery and provider evidence refresh depend on external provider behavior and explicit provider integration boundaries.",
+      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
+      "generic_behavior_audit": "Classified as provider-integration; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
     },
     {
       "operation_id": "implement.context",
@@ -281,7 +362,9 @@
       "status": "accepted-hand-owned-runtime-primitive",
       "conformance_ref": "implement.context.process",
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Implement context assembly applies changed-path, proof, planning, and delegation policy."
+      "runtime_boundary_reason": "Implement context assembly applies changed-path, proof, planning, and delegation policy.",
+      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
+      "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
     },
     {
       "operation_id": "init.lifecycle",
@@ -301,7 +384,9 @@
       "status": "accepted-hand-owned-runtime-primitive",
       "conformance_ref": "init.lifecycle.dry-run.process",
       "runtime_boundary_class": "mutation-orchestration",
-      "runtime_boundary_reason": "Lifecycle planning/apply behavior owns managed-surface safety, dry-run, and mutation orchestration."
+      "runtime_boundary_reason": "Lifecycle planning/apply behavior owns managed-surface safety, dry-run, and mutation orchestration.",
+      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
+      "generic_behavior_audit": "Classified as mutation-orchestration; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
     },
     {
       "operation_id": "install.lifecycle",
@@ -321,7 +406,9 @@
       "status": "accepted-hand-owned-runtime-primitive",
       "conformance_ref": "install.lifecycle.dry-run.process",
       "runtime_boundary_class": "mutation-orchestration",
-      "runtime_boundary_reason": "Lifecycle planning/apply behavior owns managed-surface safety, dry-run, and mutation orchestration."
+      "runtime_boundary_reason": "Lifecycle planning/apply behavior owns managed-surface safety, dry-run, and mutation orchestration.",
+      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
+      "generic_behavior_audit": "Classified as mutation-orchestration; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
     },
     {
       "operation_id": "memory.front-door",
@@ -338,7 +425,9 @@
       "status": "accepted-hand-owned-runtime-primitive",
       "conformance_ref": "memory.front-door.process",
       "runtime_boundary_class": "front-door-dispatch",
-      "runtime_boundary_reason": "The root command delegates to the module front door, including commands outside this Python generated CLI completion lane."
+      "runtime_boundary_reason": "The root command delegates to the module front door, including commands outside this Python generated CLI completion lane.",
+      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
+      "generic_behavior_audit": "Classified as front-door-dispatch; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
     },
     {
       "operation_id": "modules.report",
@@ -355,7 +444,9 @@
       "status": "accepted-hand-owned-runtime-primitive",
       "conformance_ref": "modules.report.process",
       "runtime_boundary_class": "live-workspace-inspection",
-      "runtime_boundary_reason": "Module inspection detects installed module state and descriptors in the target repository."
+      "runtime_boundary_reason": "Module inspection detects installed module state and descriptors in the target repository.",
+      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
+      "generic_behavior_audit": "Classified as live-workspace-inspection; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
     },
     {
       "operation_id": "ownership.report",
@@ -372,7 +463,9 @@
       "status": "accepted-hand-owned-runtime-primitive",
       "conformance_ref": "ownership.report.process",
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Ownership answers apply package-specific ownership policy and route resolution."
+      "runtime_boundary_reason": "Ownership answers apply package-specific ownership policy and route resolution.",
+      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
+      "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
     },
     {
       "operation_id": "planning.front-door",
@@ -389,7 +482,9 @@
       "status": "accepted-hand-owned-runtime-primitive",
       "conformance_ref": "planning.front-door.process",
       "runtime_boundary_class": "front-door-dispatch",
-      "runtime_boundary_reason": "The root command delegates to the module front door, including commands outside this Python generated CLI completion lane."
+      "runtime_boundary_reason": "The root command delegates to the module front door, including commands outside this Python generated CLI completion lane.",
+      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
+      "generic_behavior_audit": "Classified as front-door-dispatch; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
     },
     {
       "operation_id": "preflight.report",
@@ -410,7 +505,9 @@
       "status": "accepted-hand-owned-runtime-primitive",
       "conformance_ref": "preflight.report.process",
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Preflight context assembly applies package startup, planning, proof, and token policy."
+      "runtime_boundary_reason": "Preflight context assembly applies package startup, planning, proof, and token policy.",
+      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
+      "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
     },
     {
       "operation_id": "prompt.init",
@@ -424,8 +521,14 @@
         "prompt.render compatibility payload",
         "prompt output emission compatibility formatting"
       ],
-      "status": "runtime-consumed",
-      "conformance_ref": "prompt.init.process"
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "prompt.init.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.selection.resolve",
+        "prompt.render"
+      ],
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
     },
     {
       "operation_id": "prompt.uninstall",
@@ -439,8 +542,14 @@
         "prompt.render compatibility payload",
         "prompt output emission compatibility formatting"
       ],
-      "status": "runtime-consumed",
-      "conformance_ref": "prompt.uninstall.process"
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "prompt.uninstall.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.selection.resolve",
+        "prompt.render"
+      ],
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
     },
     {
       "operation_id": "prompt.upgrade",
@@ -454,8 +563,14 @@
         "prompt.render compatibility payload",
         "prompt output emission compatibility formatting"
       ],
-      "status": "runtime-consumed",
-      "conformance_ref": "prompt.upgrade.process"
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "prompt.upgrade.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.selection.resolve",
+        "prompt.render"
+      ],
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
     },
     {
       "operation_id": "proof.report",
@@ -475,7 +590,9 @@
       "status": "accepted-hand-owned-runtime-primitive",
       "conformance_ref": "proof.report.process",
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Proof route selection applies package-specific proof policy, changed-path routing, and durable-surface review."
+      "runtime_boundary_reason": "Proof route selection applies package-specific proof policy, changed-path routing, and durable-surface review.",
+      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
+      "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
     },
     {
       "operation_id": "reconcile.report",
@@ -493,7 +610,9 @@
       "status": "accepted-hand-owned-runtime-primitive",
       "conformance_ref": "reconcile.report.process",
       "runtime_boundary_class": "mutation-orchestration",
-      "runtime_boundary_reason": "Planning reconciliation includes safe-prune and recovery judgment over live planning state."
+      "runtime_boundary_reason": "Planning reconciliation includes safe-prune and recovery judgment over live planning state.",
+      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
+      "generic_behavior_audit": "Classified as mutation-orchestration; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
     },
     {
       "operation_id": "report.combined",
@@ -513,7 +632,9 @@
       "status": "accepted-hand-owned-runtime-primitive",
       "conformance_ref": "report.combined.process",
       "runtime_boundary_class": "live-workspace-inspection",
-      "runtime_boundary_reason": "Combined report assembles live workspace/module state and planning summaries."
+      "runtime_boundary_reason": "Combined report assembles live workspace/module state and planning summaries.",
+      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
+      "generic_behavior_audit": "Classified as live-workspace-inspection; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
     },
     {
       "operation_id": "setup.guidance",
@@ -531,7 +652,9 @@
       "status": "accepted-hand-owned-runtime-primitive",
       "conformance_ref": "setup.guidance.process",
       "runtime_boundary_class": "live-workspace-inspection",
-      "runtime_boundary_reason": "Setup guidance depends on selected module and workspace state inspection."
+      "runtime_boundary_reason": "Setup guidance depends on selected module and workspace state inspection.",
+      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
+      "generic_behavior_audit": "Classified as live-workspace-inspection; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
     },
     {
       "operation_id": "skills.report",
@@ -549,7 +672,9 @@
       "status": "accepted-hand-owned-runtime-primitive",
       "conformance_ref": "skills.report.process",
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Skill recommendation and ranking applies package-specific registry and task-routing policy."
+      "runtime_boundary_reason": "Skill recommendation and ranking applies package-specific registry and task-routing policy.",
+      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
+      "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
     },
     {
       "operation_id": "start.context",
@@ -567,7 +692,9 @@
       "status": "accepted-hand-owned-runtime-primitive",
       "conformance_ref": "start.context.process",
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Startup context assembly applies package routing, planning, skill, and proof policy."
+      "runtime_boundary_reason": "Startup context assembly applies package routing, planning, skill, and proof policy.",
+      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
+      "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
     },
     {
       "operation_id": "status.report",
@@ -585,7 +712,9 @@
       "status": "accepted-hand-owned-runtime-primitive",
       "conformance_ref": "status.report.process",
       "runtime_boundary_class": "live-workspace-inspection",
-      "runtime_boundary_reason": "Workspace status assembles live module and target repository state."
+      "runtime_boundary_reason": "Workspace status assembles live module and target repository state.",
+      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
+      "generic_behavior_audit": "Classified as live-workspace-inspection; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
     },
     {
       "operation_id": "summary.report",
@@ -603,7 +732,9 @@
       "status": "accepted-hand-owned-runtime-primitive",
       "conformance_ref": "summary.report.process",
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Planning summary loading and projection applies package-specific planning view policy."
+      "runtime_boundary_reason": "Planning summary loading and projection applies package-specific planning view policy.",
+      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
+      "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
     },
     {
       "operation_id": "system-intent.sync",
@@ -616,8 +747,17 @@
         "workspace.root.resolve",
         "workspace operation compatibility formatting"
       ],
-      "status": "runtime-consumed",
-      "conformance_ref": "system-intent.sync.process"
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "system-intent.sync.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.root.resolve",
+        "system_intent.config.resolve",
+        "system_intent.source_metadata.refresh",
+        "system_intent.mirror.read_or_create",
+        "system_intent.result.emit"
+      ],
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
     },
     {
       "operation_id": "uninstall.lifecycle",
@@ -637,7 +777,9 @@
       "status": "accepted-hand-owned-runtime-primitive",
       "conformance_ref": "uninstall.lifecycle.destructive-refusal.process",
       "runtime_boundary_class": "mutation-orchestration",
-      "runtime_boundary_reason": "Lifecycle planning/apply behavior owns destructive preflight and managed-surface mutation orchestration."
+      "runtime_boundary_reason": "Lifecycle planning/apply behavior owns destructive preflight and managed-surface mutation orchestration.",
+      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
+      "generic_behavior_audit": "Classified as mutation-orchestration; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
     },
     {
       "operation_id": "upgrade.lifecycle",
@@ -657,8 +799,10 @@
       "status": "accepted-hand-owned-runtime-primitive",
       "conformance_ref": "upgrade.lifecycle.dry-run.process",
       "runtime_boundary_class": "mutation-orchestration",
-      "runtime_boundary_reason": "Lifecycle planning/apply behavior owns managed-surface safety, dry-run, and mutation orchestration."
+      "runtime_boundary_reason": "Lifecycle planning/apply behavior owns managed-surface safety, dry-run, and mutation orchestration.",
+      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
+      "generic_behavior_audit": "Classified as mutation-orchestration; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
     }
   ],
-  "completion_rule": "Python completion can be claimed only when every generated Python operation is inventoried and each entry is either runtime-consumed or accepted-hand-owned-runtime-primitive; compatibility-runtime-handler remains a blocking temporary status."
+  "completion_rule": "Python completion can be claimed only when every generated Python operation is inventoried as portable-codegen-primitive-executed, domain-runtime-primitive-via-ir, or accepted-hand-owned-runtime-primitive; domain-runtime-primitive-via-ir and accepted-hand-owned-runtime-primitive entries are transitional unless their audit proves they do not hide generic deterministic runtime debt."
 }

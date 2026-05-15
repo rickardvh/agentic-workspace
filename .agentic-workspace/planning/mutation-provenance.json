@@ -1472,6 +1472,86 @@
       "reason": "archive execplan module-owned-operation-contracts",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-14T22:05:40+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-generated-cli-review-blockers.plan.json",
+      "sha256": "5095b20bb001e7d7dbba6afb057759ae9fd8cc120c6a960175035894d055117d",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-generated-cli-review-blockers",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T07:57:43+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "32b356573d8a110d742f07816dc9739e2e364f666e3533a10642f83c4fd989e2",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-generated-cli-review-blockers",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T07:57:43+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-generated-cli-review-blockers.plan.json",
+      "sha256": "36e9a1954d704f846b604121e446068ce2672194591c5e74e99a87edabb78815",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=delegate-exploration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T07:57:48+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "3a03dada95964e1a711a60076a5fde83b87342a6d205738cf9c193497ee7a7e6",
+      "command": "agentic-planning record-recovery",
+      "reason": "Correct PR #966 review-blocker planning state after manual decomposition and execplan updates; values were schema-preserving recovery for stale premature-completion closeout.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-15T08:04:58+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-generated-cli-review-blockers.plan.json",
+      "sha256": "da8b5cea13efbb04b74e36c490ee9e0dcce62d1d9813256f225a97597eb632cf",
+      "command": "agentic-planning record-recovery",
+      "reason": "Correct PR #966 review-blocker planning state after manual decomposition and execplan updates; values were schema-preserving recovery for stale premature-completion closeout.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-15T08:04:58+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-generated-cli-review-blockers.plan.json",
+      "sha256": "e36ae80755d961c53ca3c6d18be49d86ea91a12db191b00527b0410e506d112e",
+      "command": "agentic-planning record-recovery",
+      "reason": "Mark PR #966 review-blocker execplan completed with proof before archive; closeout fields were normalized after validation.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-15T08:07:21+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-generated-cli-review-blockers.plan.json",
+      "sha256": "b0f6e815219c9cce142f6c9f858aca318b57ac314c16d11910152afaf2c35c37",
+      "command": "agentic-planning record-recovery",
+      "reason": "Fill required execution summary before archiving PR #966 review-blocker execplan.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-15T08:07:41+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-generated-cli-review-blockers.plan.json",
+      "sha256": "e5dcf5e4c85b352faf258eb009b418a3d5f3a7b2ddf99a46d1eabe50460c5722",
+      "command": "agentic-planning record-recovery",
+      "reason": "Fill closure_check for PR #966 review-blocker archive.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-15T08:08:01+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-generated-cli-review-blockers",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T08:08:08+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/python-generated-cli-review-blockers.plan.json",
+      "sha256": "e5dcf5e4c85b352faf258eb009b418a3d5f3a7b2ddf99a46d1eabe50460c5722",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-generated-cli-review-blockers",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T08:08:08+00:00"
     }
   ]
 }

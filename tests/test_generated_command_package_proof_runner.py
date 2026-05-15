@@ -388,6 +388,26 @@ def test_static_generated_package_proof_rejects_full_completion_with_product_run
     )
 
 
+def test_static_generated_package_proof_rejects_full_completion_when_runtime_outputs_are_not_rendered(monkeypatch) -> None:
+    checker = _load_checker()
+    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+    completion = ir["generation_policy"]["python_cli_completion"]
+    completion["current_state"] = "full-generated-cli-complete"
+    completion["completion_gate"]["state"] = "satisfied"
+    completion["completion_gate"]["satisfied_by"].append(
+        {
+            "id": "product-specific-runtime-generated-output-owned",
+            "evidence": "test fixture claims product runtime files are generated outputs",
+            "proof": "scripts/check/check_generated_command_packages.py::_validate_full_python_completion_executable_ownership",
+        }
+    )
+    monkeypatch.setattr(checker, "load_workspace_command_package_ir", lambda *, repo_root: ir)
+
+    errors = checker._validate_static_surfaces()
+
+    assert any("not produced by command-generation render_outputs()" in error for error in errors)
+
+
 def test_static_generated_package_proof_rejects_satisfied_gate_for_non_full_state(monkeypatch) -> None:
     checker = _load_checker()
     ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)

@@ -1,0 +1,332 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Python generated CLI review blockers",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Address PR #966 review blockers without claiming full Python generated CLI completion prematurely.",
+    "hard_constraints": "Keep scope Python-only and review-blocker focused; do not claim full-generated-cli-complete until generated runtime ownership and primitive/runtime boundaries are proven.",
+    "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Demote completion state, split primitive execution inventory statuses, add accepted-runtime audit proof, and add root primitive console smoke proof.",
+    "proof_expectations": [
+      "Static generated package proof rejects premature full completion and validates the new inventory classes.",
+      "Root black-box test exercises a root command that runs through run_operation_steps, not only hand-owned modules.report.",
+      "Contract tooling and generated package freshness remain clean."
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/contracts/command_package_ir.json",
+      "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+      ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "scripts/check/check_generated_command_packages.py",
+      "tests/test_contract_tooling.py",
+      "tests/test_generated_command_package_proof_runner.py",
+      "tests/test_workspace_cli_blackbox.py"
+    ],
+    "completion_criteria": [
+      "The PR comment is reflected in machine-checkable contracts and planning state.",
+      "Python completion is not claimed while review blockers remain.",
+      "Inventory distinguishes portable primitive execution from domain runtime primitive IR wrappers and audits accepted hand-owned runtime.",
+      "Focused tests and static proof pass."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "The PR comment is reflected in machine-checkable contracts and planning state.",
+    "Python completion is not claimed while review blockers remain.",
+    "Inventory distinguishes portable primitive execution from domain runtime primitive IR wrappers and audits accepted hand-owned runtime.",
+    "Focused tests and static proof pass."
+  ],
+  "non_goals": [
+    "Do not implement the entire remaining #892 migration in this corrective slice.",
+    "Do not advance TypeScript, Bash, or PowerShell."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "PR #966 review comment 2026-05-15",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "python-generated-cli-review-blockers",
+      "status": "active",
+      "next_step": "Demote completion state, split primitive execution inventory statuses, add accepted-runtime audit proof, and add root primitive console smoke proof.",
+      "proof": "Fill in the narrowest command that proves the promoted work."
+    },
+    "scope": {
+      "touched": [
+        "Fill in the concrete files before implementation starts."
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "PR #966 review comment 2026-05-15",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Python generated CLI review blockers",
+    "inferred intended outcome": "PR #966 review comment 2026-05-15",
+    "chosen concrete what": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "src/agentic_workspace/contracts/command_package_ir.json, src/agentic_workspace/contracts/python_operation_execution_inventory.json, .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json, scripts/check/check_generated_command_packages.py, tests/test_contract_tooling.py, tests/test_generated_command_package_proof_runner.py, tests/test_workspace_cli_blackbox.py",
+    "max changed files": "moderate: contracts, planning state, checker, and focused tests",
+    "required validation commands": "uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/generate/generate_command_packages.py --check; uv run pytest tests/test_contract_tooling.py tests/test_generated_command_package_proof_runner.py tests/test_workspace_cli_blackbox.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check scripts/check/check_generated_command_packages.py tests/test_contract_tooling.py tests/test_generated_command_package_proof_runner.py tests/test_workspace_cli_blackbox.py",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "PR #966 review comment 2026-05-15",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-15T07:57:48+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "PR #966 review comment 2026-05-15",
+      "label": "PR #966 review comment 2026-05-15",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "python-generated-cli-review-blockers",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Demote completion state, split primitive execution inventory statuses, add accepted-runtime audit proof, and add root primitive console smoke proof."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+    ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+    "scripts/check/check_generated_command_packages.py",
+    "tests/test_contract_tooling.py",
+    "tests/test_generated_command_package_proof_runner.py",
+    "tests/test_workspace_cli_blackbox.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "Static generated package proof rejects premature full completion and validates the new inventory classes.",
+    "Root black-box test exercises a root command that runs through run_operation_steps, not only hand-owned modules.report.",
+    "Contract tooling and generated package freshness remain clean."
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "The PR comment is reflected in machine-checkable contracts and planning state.",
+    "Python completion is not claimed while review blockers remain.",
+    "Inventory distinguishes portable primitive execution from domain runtime primitive IR wrappers and audits accepted hand-owned runtime.",
+    "Focused tests and static proof pass."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Read PR #966 review comment and started corrective slice to demote premature completion and add machine-checkable review blockers.",
+    "scope touched": "none yet",
+    "changed surfaces": "src/agentic_workspace/contracts/command_package_ir.json, src/agentic_workspace/contracts/python_operation_execution_inventory.json, .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json, scripts/check/check_generated_command_packages.py, tests/test_contract_tooling.py, tests/test_generated_command_package_proof_runner.py, tests/test_workspace_cli_blackbox.py",
+    "validations run": "check_generated_command_packages static; generate --check; focused pytest; contract tooling; structured inventory; ruff; generated Python conformance; primitive conformance; Docker Python and primitive conformance passed after one retry for intermittent native crash.",
+    "result for continuation": "Review-blocker corrective slice complete; #892 remains open through python-generated-cli decomposition ready lanes.",
+    "next step": "Patch checker/tests, run focused proof, and close out honestly."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "passed after Docker retry for known intermittent native crash path",
+    "intent served": "yes for PR #966 review-blocker corrective slice; no for full #892 completion",
+    "config compliance": "used uv run agentic-workspace and recorded planning recovery provenance",
+    "misinterpretation risk": "pending",
+    "follow-on decision": "archive-but-keep-lane-open"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "not skipped",
+    "expected savings": "Use the existing worker for bounded inventory/audit exploration while the main thread updates planning and implementation surfaces.",
+    "actual friction": "pending",
+    "proof result": "pending",
+    "quality concern": "Review requires preserving epic intent and not treating generated-looking runtime files or IR wrappers as completion proof.",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/generate/generate_command_packages.py --check; uv run pytest tests/test_contract_tooling.py tests/test_generated_command_package_proof_runner.py tests/test_workspace_cli_blackbox.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check scripts/check/check_generated_command_packages.py tests/test_contract_tooling.py tests/test_generated_command_package_proof_runner.py tests/test_workspace_cli_blackbox.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance --primitive-conformance; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --primitive-docker-conformance --require-docker",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Static proof and tests now reject premature full completion, distinguish portable vs domain IR execution, and cover a root primitive-backed generated command."
+  },
+  "intent_satisfaction": {
+    "original intent": "PR #966 review comment 2026-05-15",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "PR #966 review blockers are encoded in command_package_ir, python_operation_execution_inventory, static proof, and focused tests; full completion is demoted to pending.",
+    "unsolved intent passed to": "#892 Python generated CLI remains incomplete; continue runtime generation ownership and primitive migration from the reopened decomposition."
+  },
+  "execution_summary": {
+    "outcome delivered": "PR #966 review blockers were converted into machine-checkable contracts, inventory classes, static proof, tests, and reopened decomposition state; full Python completion is no longer claimed.",
+    "validation confirmed": "Focused static proof, pytest, contract tooling, structured inventory, ruff, local conformance, and Docker Python/primitive conformance passed after one rerun for intermittent native crash recovery.",
+    "follow-on routed to": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json and #892",
+    "post-work posterity capture": "Decomposition notes and archive closeout carry the review blocker and continuation owner.",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "python-generated-cli decomposition ready lanes"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "none",
+    "proposed durable intent": "none yet",
+    "confidence": "low",
+    "needs review": "True",
+    "owner surface": "none"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "PR #966 review blocker slice is complete, but #892 full Python generated CLI completion remains incomplete and explicitly demoted.",
+    "evidence carried forward": "Contracts/checker/tests now block premature completion and decomposition remains partially-promoted with ready continuation lanes.",
+    "reopen trigger": "Full completion is claimed without generated runtime provenance, primitive/domain separation, root primitive proof, or accepted runtime audit."
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Continue #892 via python-generated-cli.decomposition.json ready lanes for product runtime generation ownership and completion promotion.",
+          "owner": "#892 Python generated CLI remains incomplete; continue runtime generation ownership and primitive migration from the reopened decomposition.",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-15: Scaffolded by agentic-planning new-plan.",
+    "2026-05-15: Recorded delegation decision route=delegate-exploration."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: PR #966 review comment 2026-05-15\nIntent satisfied: no\nArchive decision: archive-but-keep-lane-open\nProof: uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/generate/generate_command_packages.py --check; uv run pytest tests/test_contract_tooling.py tests/test_generated_command_package_proof_runner.py tests/test_workspace_cli_blackbox.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check scripts/check/check_generated_command_packages.py tests/test_contract_tooling.py tests/test_generated_command_package_proof_runner.py tests/test_workspace_cli_blackbox.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance --primitive-conformance; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --primitive-docker-conformance --require-docker\nChanged surfaces: src/agentic_workspace/contracts/command_package_ir.json, src/agentic_workspace/contracts/python_operation_execution_inventory.json, .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json, scripts/check/check_generated_command_packages.py, tests/test_contract_tooling.py, tests/test_generated_command_package_proof_runner.py, tests/test_workspace_cli_blackbox.py\nDurable residue: none (none)\nMemory learning: none\nFollow-up: #892 Python generated CLI remains incomplete; continue runtime generation ownership and primitive migration from the reopened decomposition."
+  }
+}

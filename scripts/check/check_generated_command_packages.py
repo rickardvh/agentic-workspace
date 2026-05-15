@@ -25,7 +25,12 @@ for SOURCE_ROOT in (
     if str(SOURCE_ROOT) not in sys.path:
         sys.path.insert(0, str(SOURCE_ROOT))
 
-from workspace_command_generation import SCHEMA_PATH, SOURCE_PATH, load_workspace_command_package_ir  # noqa: E402
+from workspace_command_generation import (  # noqa: E402
+    SCHEMA_PATH,
+    SOURCE_PATH,
+    load_workspace_command_package_ir,
+    render_workspace_command_package_outputs,
+)
 
 from agentic_workspace.contract_tooling import operation_manifest  # noqa: E402
 from command_generation.generated_package_loader import (  # noqa: E402
@@ -61,7 +66,11 @@ CONFORMANCE_PLACEHOLDER_BY_PACKAGE = {
     "planning-bootstrap": "agentic_planning_cli",
     "memory-bootstrap": "agentic_memory_cli",
 }
-PYTHON_COMPLETION_STATES = {"adapter-layer-proven-not-full-generated-cli", "full-generated-cli-complete"}
+PYTHON_COMPLETION_STATES = {
+    "adapter-layer-proven-not-full-generated-cli",
+    "codegen-owned-primitive-migration-incomplete",
+    "full-generated-cli-complete",
+}
 PYTHON_COMPLETION_REQUIRED_EVIDENCE_IDS = {
     "parser-shape-generated",
     "dispatch-selection-generated",
@@ -85,10 +94,16 @@ PYTHON_COMPLETION_EXPECTED_PROOF_SUBSTRINGS = {
     "runtime-handlers-thin": "_validate_python_runtime_handler_boundary",
     "representative-operation-ir-runtime-consumed": "_validate_python_operation_execution_inventory",
     "operation-execution-inventory-exhaustive": "_validate_python_operation_execution_inventory",
-    "root-console-generated-command-smoke": "test_workspace_cli_blackbox.py::test_blackbox_root_generated_command_executes_through_console_script",
+    "root-console-generated-command-smoke": (
+        "test_workspace_cli_blackbox.py::test_blackbox_root_generated_command_executes_primitive_ir_through_console_script"
+    ),
     "product-specific-runtime-generated-output-owned": "_validate_full_python_completion_executable_ownership",
 }
-PYTHON_OPERATION_EXECUTION_FINAL_STATUSES = {"runtime-consumed", "accepted-hand-owned-runtime-primitive"}
+PYTHON_OPERATION_EXECUTION_FINAL_STATUSES = {
+    "portable-codegen-primitive-executed",
+    "domain-runtime-primitive-via-ir",
+    "accepted-hand-owned-runtime-primitive",
+}
 PYTHON_OPERATION_ACCEPTED_BOUNDARY_CLASSES = {
     "front-door-dispatch",
     "generic-deterministic-runtime-debt",
@@ -784,6 +799,25 @@ def _validate_full_python_completion_executable_ownership(ir: dict[str, object])
         return []
 
     errors: list[str] = []
+    rendered_outputs = {
+        output.path.relative_to(REPO_ROOT).as_posix()
+        for output in render_workspace_command_package_outputs(ir, repo_root=REPO_ROOT)
+    }
+    required_generated_runtime_outputs = {
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
+        "generated/python/workspace-cli/generated_cli_package/workspace_operation_ir_executor.py",
+        "generated/python/planning-cli/generated_cli_package/planning_runtime_cli.py",
+        "generated/python/planning-cli/generated_cli_package/planning_operation_ir_executor.py",
+        "generated/python/memory-cli/generated_cli_package/memory_runtime_cli.py",
+        "generated/python/memory-cli/generated_cli_package/memory_operation_ir_executor.py",
+    }
+    missing_generated_runtime_outputs = sorted(required_generated_runtime_outputs - rendered_outputs)
+    if missing_generated_runtime_outputs:
+        errors.append(
+            "command_package_ir.json cannot claim full Python generated CLI completion while generated/python runtime "
+            "or operation executor files are not produced by command-generation render_outputs(): "
+            f"{missing_generated_runtime_outputs!r}"
+        )
     for relative_path in PYTHON_FULL_COMPLETION_BLOCKING_EXECUTABLE_PATHS:
         path = REPO_ROOT / relative_path
         if not path.is_file():
@@ -861,6 +895,37 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         hand_owned = entry.get("hand_owned_runtime_code")
         if not isinstance(hand_owned, list) or not all(isinstance(item, str) and item.strip() for item in hand_owned):
             errors.append(f"python_operation_execution_inventory.json {operation_id} must name hand_owned_runtime_code entries")
+        if status == "portable-codegen-primitive-executed":
+            primitive_refs = entry.get("portable_primitive_refs")
+            if not isinstance(primitive_refs, list) or not primitive_refs:
+                errors.append(
+                    f"python_operation_execution_inventory.json {operation_id} portable primitive entry "
+                    "must declare portable_primitive_refs"
+                )
+            elif any(ref not in REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE for ref in primitive_refs):
+                errors.append(
+                    f"python_operation_execution_inventory.json {operation_id} portable primitive entry "
+                    f"contains non-portable primitive refs: {primitive_refs!r}"
+                )
+        if status == "domain-runtime-primitive-via-ir":
+            primitive_refs = entry.get("domain_runtime_primitive_refs")
+            if not isinstance(primitive_refs, list) or not primitive_refs:
+                errors.append(
+                    f"python_operation_execution_inventory.json {operation_id} domain runtime IR entry "
+                    "must declare domain_runtime_primitive_refs"
+                )
+            boundary_class = str(entry.get("runtime_boundary_class", ""))
+            if boundary_class not in PYTHON_OPERATION_ACCEPTED_BOUNDARY_CLASSES:
+                errors.append(
+                    f"python_operation_execution_inventory.json {operation_id} domain runtime IR entry "
+                    f"must declare runtime_boundary_class in {sorted(PYTHON_OPERATION_ACCEPTED_BOUNDARY_CLASSES)!r}"
+                )
+            boundary_reason = str(entry.get("runtime_boundary_reason", "")).strip()
+            if not boundary_reason:
+                errors.append(
+                    f"python_operation_execution_inventory.json {operation_id} domain runtime IR entry "
+                    "must explain runtime_boundary_reason"
+                )
         if status == "accepted-hand-owned-runtime-primitive":
             boundary_class = str(entry.get("runtime_boundary_class", ""))
             if boundary_class not in PYTHON_OPERATION_ACCEPTED_BOUNDARY_CLASSES:
@@ -874,8 +939,14 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
                     f"python_operation_execution_inventory.json {operation_id} accepted hand-owned runtime entry "
                     "must explain runtime_boundary_reason"
                 )
+            for field in ("what_would_make_portable_later", "generic_behavior_audit"):
+                if not str(entry.get(field, "")).strip():
+                    errors.append(
+                        f"python_operation_execution_inventory.json {operation_id} accepted hand-owned runtime entry "
+                        f"must include {field}"
+                    )
 
-    runtime_consumed_operations = {
+    ir_consumed_operations = {
         "config.report",
         "delegation-outcome.append",
         "defaults.report",
@@ -894,20 +965,26 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         "prompt.upgrade",
         "system-intent.sync",
     }
-    for operation_id in sorted(runtime_consumed_operations):
+    portable_primitive_operations = {"memory.list-files.report", "memory.list-skills.report"}
+    for operation_id in sorted(ir_consumed_operations):
         entry = by_operation.get(operation_id)
         if not isinstance(entry, dict):
-            errors.append(f"python_operation_execution_inventory.json must track {operation_id} as runtime-consumed")
+            errors.append(f"python_operation_execution_inventory.json must track {operation_id} as generated-operation-IR executed")
             continue
         operation_contract = f"operations/{operation_id}.json"
-        if entry.get("status") != "runtime-consumed":
-            errors.append(f"{operation_id} must be marked runtime-consumed in python_operation_execution_inventory.json")
+        expected_status = (
+            "portable-codegen-primitive-executed"
+            if operation_id in portable_primitive_operations
+            else "domain-runtime-primitive-via-ir"
+        )
+        if entry.get("status") != expected_status:
+            errors.append(f"{operation_id} must be marked {expected_status} in python_operation_execution_inventory.json")
         if entry.get("primitive_executor") != "packages/command-generation/src/command_generation/primitive_executor.py":
             errors.append(f"{operation_id} must point at the codegen-owned Python primitive executor")
         if entry.get("operation_contract") != operation_contract:
             errors.append(f"{operation_id} must point at {operation_contract}")
 
-    operations_by_id = {operation_id: _load_json(f"operations/{operation_id}.json") for operation_id in runtime_consumed_operations}
+    operations_by_id = {operation_id: _load_json(f"operations/{operation_id}.json") for operation_id in ir_consumed_operations}
     for operation_id, operation in operations_by_id.items():
         if operation.get("migration_status") != "runtime-consumed":
             errors.append(f"operations/{operation_id}.json must be marked runtime-consumed")
