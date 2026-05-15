@@ -129,6 +129,19 @@ PYTHON_MODULE_SOURCE_EXECUTABLE_MARKERS = {
     "runtime fallback dispatch": ("runtime_main", "_run_generated_cli_package_if_supported"),
     "generic operation executor": ("def run_operation_ir(", "run_operation_steps("),
 }
+PYTHON_SHIPPED_MODULE_SOURCE_ROOTS = (
+    "src/agentic_workspace/",
+    "packages/planning/src/repo_planning_bootstrap/",
+    "packages/memory/src/repo_memory_bootstrap/",
+)
+PYTHON_PRODUCT_RUNTIME_SOURCE_PATTERNS = (
+    "workspace_runtime_cli.py",
+    "planning_runtime_cli.py",
+    "memory_runtime_cli.py",
+    "workspace_operation_ir_executor.py",
+    "planning_operation_ir_executor.py",
+    "memory_operation_ir_executor.py",
+)
 PYTHON_FULL_COMPLETION_BLOCKING_EXECUTABLE_PATHS = (
     "src/agentic_workspace/_runtime_cli.py",
     "packages/planning/src/repo_planning_bootstrap/_runtime_cli.py",
@@ -832,6 +845,46 @@ def _validate_full_python_completion_executable_ownership(ir: dict[str, object])
             errors.append(
                 "command_package_ir.json cannot claim full Python generated CLI completion while shipped module "
                 f"or product-specific command-generation source {relative_path} owns executable behavior markers: {matched_categories!r}"
+            )
+    return errors
+
+
+def _tracked_python_source_files() -> list[str]:
+    result = subprocess.run(
+        ["git", "ls-files", "*.py"],
+        cwd=REPO_ROOT,
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+    if result.returncode:
+        return []
+    return [line.strip().replace("\\", "/") for line in result.stdout.splitlines() if line.strip()]
+
+
+def _validate_python_shipped_source_executable_retirement() -> list[str]:
+    errors: list[str] = []
+    tracked_sources = _tracked_python_source_files()
+    for relative_path in tracked_sources:
+        is_shipped_module_source = relative_path.startswith(PYTHON_SHIPPED_MODULE_SOURCE_ROOTS)
+        is_product_command_generation_source = relative_path.startswith("packages/command-generation/src/command_generation/") and relative_path.endswith(
+            PYTHON_PRODUCT_RUNTIME_SOURCE_PATTERNS
+        )
+        if not is_shipped_module_source and not is_product_command_generation_source:
+            continue
+        path = REPO_ROOT / relative_path
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8")
+        matched_categories = sorted(
+            category
+            for category, markers in PYTHON_MODULE_SOURCE_EXECUTABLE_MARKERS.items()
+            if any(marker in text for marker in markers)
+        )
+        if matched_categories:
+            errors.append(
+                "tracked shipped Python source must stay retired from generated CLI executable ownership; "
+                f"{relative_path} contains retired executable markers: {matched_categories!r}"
             )
     return errors
 
@@ -1544,6 +1597,7 @@ def _validate_static_surfaces() -> list[str]:
                 errors.append(f"{relative_path} does not import its generated Python runtime module")
             if main_index == -1 or generated_index == -1 or fallback_index == -1 or generated_index > fallback_index:
                 errors.append(f"{relative_path} does not route generated Python adapters before runtime fallback")
+        errors.extend(_validate_python_shipped_source_executable_retirement())
         errors.extend(_validate_python_runtime_handler_boundary())
         errors.extend(_validate_generated_python_commands_absent_from_handwritten_parsers())
         forbidden_generated_entrypoints = [

@@ -408,6 +408,39 @@ def test_static_generated_package_proof_rejects_full_completion_when_runtime_out
     assert any("not produced by command-generation render_outputs()" in error for error in errors)
 
 
+def test_static_generated_package_proof_rejects_shipped_source_cli_backslide(monkeypatch) -> None:
+    checker = _load_checker()
+    backslid_source = "src/agentic_workspace/cli_backslide.py"
+    original_read_text = checker.Path.read_text
+    original_is_file = checker.Path.is_file
+
+    def fake_read_text(self, *args, **kwargs):
+        if self.as_posix().endswith(backslid_source):
+            return "import argparse\n\ndef main(argv=None):\n    parser = argparse.ArgumentParser()\n    parser.add_subparsers()\n"
+        return original_read_text(self, *args, **kwargs)
+
+    def fake_is_file(self):
+        if self.as_posix().endswith(backslid_source):
+            return True
+        return original_is_file(self)
+
+    monkeypatch.setattr(checker, "_tracked_python_source_files", lambda: [backslid_source])
+    monkeypatch.setattr(checker.Path, "read_text", fake_read_text)
+    monkeypatch.setattr(checker.Path, "is_file", fake_is_file)
+
+    errors = checker._validate_python_shipped_source_executable_retirement()
+
+    assert any(backslid_source in error and "parser construction" in error for error in errors)
+
+
+def test_static_generated_package_proof_accepts_current_shipped_source_retirement() -> None:
+    checker = _load_checker()
+
+    errors = checker._validate_python_shipped_source_executable_retirement()
+
+    assert errors == []
+
+
 def test_static_generated_package_proof_rejects_satisfied_gate_for_non_full_state(monkeypatch) -> None:
     checker = _load_checker()
     ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)

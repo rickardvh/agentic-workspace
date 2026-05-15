@@ -3,38 +3,6 @@
   "entries": [
     {
       "path": ".agentic-workspace/planning/execplans/dogfooding-planning-safety-935-plus.plan.json",
-      "sha256": "daa2797b9b7a9b490c81fd62007d87efc69c17dce2678b6077d5649e3be22363",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=keep-local",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-13T11:54:16+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/dogfooding-planning-safety-935-plus.plan.json",
-      "sha256": "c682469ad9b70f329be274ee9c9e085ec7ae39479ab652a13077b3a4e89ac87e",
-      "command": "agentic-planning record-recovery",
-      "reason": "record proof and closeout after package-owned #937/#938 implementation",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-13T11:57:03+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
-      "sha256": "c09dd3d343ae812e4e14f4b75688dd03e4545260697afc46a3fcf24a1ce710ba",
-      "command": "agentic-planning promote-to-plan",
-      "reason": "promote planning item github-892-python-codegen-completion",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-13T12:13:33+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "624367b95cb293da3a4a2af48d6b69251a5a86fa2f41222c3fc660be776a8439",
-      "command": "agentic-planning promote-to-plan",
-      "reason": "promote planning item github-892-python-codegen-completion",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-13T12:13:33+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/dogfooding-planning-safety-935-plus.plan.json",
       "sha256": "21b00a697e8284cdc05f8a97af23cd67796a5ce10d79cbb0716f5bdee044862b",
       "command": "agentic-planning record-recovery",
       "reason": "mark merged dogfooding plan complete before archive cleanup",
@@ -1552,6 +1520,86 @@
       "reason": "archive execplan python-generated-cli-review-blockers",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-15T08:08:08+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-module-source-executable-retirement.plan.json",
+      "sha256": "109058c87270f9827d0b81b07bc7886b04c08d12d71dc7ba6b9522c226634184",
+      "command": "agentic-planning promote-to-plan",
+      "reason": "promote decomposition lane python-module-source-executable-retirement",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T08:17:47+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "6ebc6c9fc6c481726fd1c37e5d9868a82e50237ab8218e4af0c5cea8e74dcda6",
+      "command": "agentic-planning promote-to-plan",
+      "reason": "promote decomposition lane python-module-source-executable-retirement",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T08:17:47+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "33f0e499791c8a622b21594f2b4efbc46ea7a8dc4881faf4ac275301d0920d90",
+      "command": "agentic-planning promote-to-plan",
+      "reason": "promote decomposition lane python-module-source-executable-retirement",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T08:17:47+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-module-source-executable-retirement.plan.json",
+      "sha256": "51f16a1710407a8d6ebcf54a13963e94a4480e451cae2ea51e91b81830106775",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=delegate-exploration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T08:17:55+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "13c02024ec458f8f7a1a2e3d828b918461555a8da2069a5c05728fc007a0a889",
+      "command": "agentic-planning record-recovery",
+      "reason": "Remove schema-invalid promoted_execplan field written by promote-to-plan; filed dogfooding issue #979.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-15T08:20:31+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-module-source-executable-retirement.plan.json",
+      "sha256": "bc215abf4a9f74b0f690f286d87bf2adf6070b1a171d4b5026ffd676b4196124",
+      "command": "agentic-planning record-recovery",
+      "reason": "Close out source-retirement lane after proof and sidecar audit; archive will keep #892 continuation open.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-15T08:21:55+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-module-source-executable-retirement.plan.json",
+      "sha256": "504a97d98bfaef46a6c332eef50dad26e435de1b1d1f7007a6e4bc49897ce1d8",
+      "command": "agentic-planning record-recovery",
+      "reason": "Normalize intent satisfaction field for source-retirement lane archive.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-15T08:22:13+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-module-source-executable-retirement.plan.json",
+      "sha256": "e77c7ec0184f812eaffeec690d7a4ba63e17d727595aaacd506cc7ad3ba3b7e3",
+      "command": "agentic-planning record-recovery",
+      "reason": "Add stale-reference sweep evidence before source-retirement archive.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-15T08:22:41+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-module-source-executable-retirement",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T08:22:48+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/python-module-source-executable-retirement.plan.json",
+      "sha256": "e77c7ec0184f812eaffeec690d7a4ba63e17d727595aaacd506cc7ad3ba3b7e3",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-module-source-executable-retirement",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T08:22:48+00:00"
     }
   ]
 }

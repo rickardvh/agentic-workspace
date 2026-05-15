@@ -75,9 +75,9 @@
     {
       "id": "python-module-source-executable-retirement",
       "title": "Python shipped module executable source retirement",
-      "readiness": "ready",
+      "readiness": "promoted",
       "outcome": "Shipped module source trees, including the root module, no longer own executable CLI front doors, parser/help construction, command dispatch/fallback envelopes, generated-command runtime dispatch, or generic deterministic file/data/schema/template/output primitive execution, and this cannot be satisfied by relocating product-specific executable behavior into command-generation source.",
-      "owner_surface": "src/agentic_workspace/contracts/command_package_ir.json and scripts/check/check_generated_command_packages.py",
+      "owner_surface": ".agentic-workspace/planning/execplans/python-module-source-executable-retirement.plan.json",
       "proof": "Generated-package static checks reject full completion while executable markers remain in shipped module src or product-specific command-generation runtime source; Python black-box and Docker conformance passed; stale-reference sweep found no retired module runtime imports outside the expected static gate list.",
       "depends_on": [
         "python-handwritten-parser-retirement",
