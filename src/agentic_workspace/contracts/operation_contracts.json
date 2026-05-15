@@ -233,6 +233,12 @@
       "migration_status": "runtime-consumed"
     },
     {
+      "id": "planning.verify-payload.report",
+      "path": "operations/planning.verify-payload.report.json",
+      "command": "verify-payload",
+      "migration_status": "runtime-consumed"
+    },
+    {
       "id": "preflight.report",
       "path": "operations/preflight.report.json",
       "command": "preflight",

@@ -4420,7 +4420,8 @@
             "planning.reconcile.report",
             "planning.report.report",
             "planning.status.report",
-            "planning.summary.report"
+            "planning.summary.report",
+            "planning.verify-payload.report"
           ],
           "initial_values": [
             {
@@ -4567,6 +4568,13 @@
                   "value": "target"
                 }
               }
+            },
+            {
+              "primitive": "planning.verify-payload.load",
+              "handler": "function_call",
+              "import_module": "repo_planning_bootstrap.installer",
+              "function": "verify_payload",
+              "kwargs": {}
             },
             {
               "primitive": "planning.close-item.apply",
@@ -5413,6 +5421,77 @@
             ],
             "runtime_owned": [
               "planning handoff assembly",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "planning.verify-payload.cli",
+          "status": "generated",
+          "command": {
+            "name": "verify-payload",
+            "manifest_ref": "package:planning:cli"
+          },
+          "interface": {
+            "name": "verify-payload",
+            "help": "Verify bundled planning payload and generated operation resources.",
+            "options": [
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "planning.verify-payload.report",
+            "path": "operations/planning.verify-payload.report.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "planning.verify-payload.load",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "planning.verify-payload.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "planning payload verification",
+              "module result assembly",
               "output emission"
             ]
           }

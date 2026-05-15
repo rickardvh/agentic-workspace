@@ -345,6 +345,12 @@
       "summary": "Load compact active planning summary when the planning module is installed."
     },
     {
+      "id": "planning.verify-payload.load",
+      "summary": "Load package-local planning payload verification result.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
+    },
+    {
       "id": "preflight.context.assemble",
       "summary": "Assemble startup defaults, resolved config, and active planning state into takeover-safe context."
     },

@@ -35,7 +35,8 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
         'planning.reconcile.report',
         'planning.report.report',
         'planning.status.report',
-        'planning.summary.report'
+        'planning.summary.report',
+        'planning.verify-payload.report'
     }:
         raise OperationIrExecutionError(f"unsupported operation IR contract: {operation.get('id')!r}")
     if operation.get("migration_status") != "runtime-consumed":
@@ -70,6 +71,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'planning.reconcile.load': _handle_planning_reconcile_load,
                 'planning.bootstrap.status.load': _handle_planning_bootstrap_status_load,
                 'planning.handoff.load': _handle_planning_handoff_load,
+                'planning.verify-payload.load': _handle_planning_verify_payload_load,
                 'planning.close-item.apply': _handle_planning_close_item_apply,
                 'planning.create-review.apply': _handle_planning_create_review_apply,
                 'output.emit': _handle_output_emit,
@@ -118,6 +120,12 @@ def _handle_planning_handoff_load(values: dict[str, Any], _arguments: dict[str, 
     from repo_planning_bootstrap.installer import planning_handoff
 
     return planning_handoff(target=values.get('target'))
+
+
+def _handle_planning_verify_payload_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_planning_bootstrap.installer import verify_payload
+
+    return verify_payload()
 
 
 def _handle_planning_close_item_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:

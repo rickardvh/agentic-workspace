@@ -399,6 +399,7 @@ def test_command_package_ir_reuses_generated_adapter_truth() -> None:
         "planning.doctor.cli",
         "planning.handoff.cli",
         "planning.summary.cli",
+        "planning.verify-payload.cli",
         "planning.report.cli",
         "planning.reconcile.cli",
         "memory.status.cli",
@@ -1423,6 +1424,7 @@ def test_contract_tooling_check_reports_generated_adapter_status() -> None:
         "report",
         "status",
         "summary",
+        "verify-payload",
     ]
     assert commands_by_program["agentic-memory"] == [
         "doctor",

@@ -160,7 +160,7 @@
     "route chosen": "delegate-validation",
     "route skipped reason": "",
     "decision command": "agentic-planning delegation-decision",
-    "recorded at": "2026-05-15T10:05:13+00:00"
+    "recorded at": "2026-05-15T10:12:41+00:00"
   },
   "system_intent_alignment": {
     "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
@@ -244,11 +244,11 @@
   "delegation_outcome_feedback": {
     "route chosen": "delegate-validation",
     "route skipped reason": "not skipped",
-    "expected savings": "reused worker to audit handoff generated-operation migration gaps while local implementation proceeded",
-    "actual friction": "worker returned stale pre-implementation gaps; local checks confirmed command IR, operation IR, generated outputs, conformance, inventory, and root front-door parity were wired",
-    "proof result": "planning tests/lint, workspace tests, generated package proof, Python/TypeScript conformance including Docker, contract tooling, structured inventory, and handoff CLI smoke passed",
-    "quality concern": "planning_runtime_cli.py still owns fallback parser/main and remaining non-generated planning commands; handoff is now removed from the handwritten parser but runtime module remains blocking debt",
-    "decomposition adjustment": "continue migrating remaining planning fallback commands such as list-files, verify-payload, prompt, install/adopt/upgrade/uninstall, new-plan/promote/archive/delegation/recovery before touching completion gates"
+    "expected savings": "reused worker to audit verify-payload generated-operation migration gaps while local implementation proceeded",
+    "actual friction": "worker returned stale pre-implementation gaps; local checks confirmed generated outputs, conformance, inventory, parser fallback removal, payload classification, and contract tooling parity",
+    "proof result": "planning tests/lint, workspace tests, generated package proof, Python/TypeScript conformance including Docker, contract tooling, structured inventory, root CLI authority defaults, and verify-payload CLI smoke passed",
+    "quality concern": "planning_runtime_cli.py still owns fallback parser/main and remaining non-generated planning commands; verify-payload is now removed from the handwritten parser but runtime module remains blocking debt",
+    "decomposition adjustment": "continue migrating remaining planning fallback commands such as list-files, prompt, install/adopt/upgrade/uninstall, new-plan/promote/archive/delegation/recovery before touching completion gates"
   },
   "proof_report": {
     "validation proof": "uv run python scripts/generate/generate_command_packages.py; uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run python scripts/check/check_generated_command_packages.py --docker --require-docker; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker; uv run pytest tests/test_workspace_cli.py tests/test_contract_tooling.py -q; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q; make test-planning; make lint-planning; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check selected files; make test-workspace; make lint-workspace.",
@@ -348,6 +348,8 @@
     "2026-05-15: Filed #990 for generated CLI conformance depending on ambient terminal size, then fixed it by setting deterministic COLUMNS/LINES in conformance subprocesses.",
     "2026-05-15: Moved planning.summary.report and planning.reconcile.report into generated operation resources and planning_operation_ir_executor execution; planning_runtime_cli.py remains blocking runtime debt.",
     "2026-05-15: Filed #991 for generated operation resources being emitted from legacy steps without executable ir_plan, then fixed the generator to require ir_plan.",
+    "2026-05-15: Recorded delegation decision route=delegate-validation.",
+    "2026-05-15: Recorded delegation decision route=delegate-validation.",
     "2026-05-15: Recorded delegation decision route=delegate-validation.",
     "2026-05-15: Recorded delegation decision route=delegate-validation.",
     "2026-05-15: Recorded delegation decision route=delegate-validation."

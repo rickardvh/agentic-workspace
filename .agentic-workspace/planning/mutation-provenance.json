@@ -2,22 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan .agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-13T13:03:14+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/archive/python-codegen-completion.plan.json",
-      "sha256": "a04e721ee8d387c5d22b8a22e69baf865ae36cdce86bfc845046605d1f6ce03c",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan .agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-13T13:03:14+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/execplans/archive/python-codegen-completion.plan.json",
       "sha256": "50733d9c801fba980c4719c92c46d5a49f00e36ca44af46d7eecfd76848ae021",
       "command": "agentic-planning record-recovery",
@@ -1600,6 +1584,22 @@
       "reason": "record delegation decision route=delegate-validation",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-15T10:05:13+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
+      "sha256": "56c5fa0c451c43524920ba50e005e528e21b8414e967252ed3351386a71ea156",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=delegate-validation",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T10:10:03+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
+      "sha256": "2db6f0c9ec0bb4e0d20323ce7ea89db80dadc8484db5d12b9a14e44041fb784e",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=delegate-validation",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T10:12:41+00:00"
     }
   ]
 }

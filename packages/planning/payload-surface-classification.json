@@ -481,6 +481,13 @@
       "classification": "maintainer/development only",
       "owner": "generated operation projection",
       "rationale": "The planning wheel force-includes generated operation resource data as private runtime import data; the canonical source remains the operation contract and generator."
+    },
+    {
+      "source_path": "generated/python/planning-cli/generated_cli_package/operations/planning.verify-payload.report.json",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/operations/planning.verify-payload.report.json",
+      "classification": "maintainer/development only",
+      "owner": "generated operation projection",
+      "rationale": "The planning wheel force-includes generated operation resource data as private runtime import data; the canonical source remains the operation contract and generator."
     }
   ]
 }

@@ -544,6 +544,25 @@
       "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
     },
     {
+      "operation_id": "planning.verify-payload.report",
+      "program": "agentic-planning",
+      "command": "verify-payload",
+      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/planning.verify-payload.report.json",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "planning.verify-payload.load",
+        "module-result text/json compatibility formatting"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "planning.verify-payload.process",
+      "domain_runtime_primitive_refs": [
+        "planning.verify-payload.load"
+      ],
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but planning payload verification still owns package-specific payload judgment."
+    },
+    {
       "operation_id": "preflight.report",
       "program": "agentic-workspace",
       "command": "preflight",

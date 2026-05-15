@@ -307,8 +307,9 @@ def build_parser() -> argparse.ArgumentParser:
     list_files_parser = subparsers.add_parser("list-files")
     list_files_parser.add_argument("--format", choices=("text", "json"), default="text")
 
-    verify_parser = subparsers.add_parser("verify-payload")
-    verify_parser.add_argument("--format", choices=("text", "json"), default="text")
+    if "verify-payload" not in generated_commands:
+        verify_parser = subparsers.add_parser("verify-payload")
+        verify_parser.add_argument("--format", choices=("text", "json"), default="text")
 
     prompt_parser = subparsers.add_parser("prompt")
     prompt_parser.add_argument("prompt_command", choices=("install", "adopt"))
@@ -594,6 +595,10 @@ def _run_handoff_report_adapter(args: argparse.Namespace) -> int:
     return run_operation_ir(generated_cli_package_operation_contract("planning.handoff.report"), args)
 
 
+def _run_verify_payload_report_adapter(args: argparse.Namespace) -> int:
+    return run_operation_ir(generated_cli_package_operation_contract("planning.verify-payload.report"), args)
+
+
 def _run_close_item_lifecycle_adapter(args: argparse.Namespace) -> int:
     return run_operation_ir(generated_cli_package_operation_contract("planning.close-item.lifecycle"), args)
 
@@ -611,6 +616,7 @@ _GENERATED_RUNTIME_HANDLERS = {
     "planning.report.report": _run_report_adapter,
     "planning.status.report": _run_status_report_adapter,
     "planning.summary.report": _run_summary_report_adapter,
+    "planning.verify-payload.report": _run_verify_payload_report_adapter,
 }
 
 

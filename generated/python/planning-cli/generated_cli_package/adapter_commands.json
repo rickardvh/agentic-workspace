@@ -377,5 +377,28 @@
     },
     "operation_id": "planning.handoff.report",
     "operation_path": "operations/planning.handoff.report.json"
+  },
+  {
+    "adapter_id": "planning.verify-payload.cli",
+    "interface": {
+      "help": "Verify bundled planning payload and generated operation resources.",
+      "name": "verify-payload",
+      "options": [
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "planning.verify-payload.report",
+    "operation_path": "operations/planning.verify-payload.report.json"
   }
 ]

@@ -166,6 +166,12 @@
       "adapter_kind": "process"
     },
     {
+      "id": "planning.verify-payload.process",
+      "operation_id": "planning.verify-payload.report",
+      "path": "conformance/planning.verify-payload.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "preflight.report.process",
       "operation_id": "preflight.report",
       "path": "conformance/preflight.report.process.json",
