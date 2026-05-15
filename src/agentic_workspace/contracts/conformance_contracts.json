@@ -64,6 +64,12 @@
       "adapter_kind": "process"
     },
     {
+      "id": "memory.bootstrap-cleanup.process",
+      "operation_id": "memory.bootstrap-cleanup.apply",
+      "path": "conformance/memory.bootstrap-cleanup.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "memory.create-note.dry-run.process",
       "operation_id": "memory.create-note.apply",
       "path": "conformance/memory.create-note.dry-run.process.json",

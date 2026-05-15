@@ -84,6 +84,36 @@
     "operation_path": "operations/memory.doctor.report.json"
   },
   {
+    "adapter_id": "memory.bootstrap-cleanup.cli",
+    "interface": {
+      "help": "Remove the temporary bootstrap workspace.",
+      "name": "bootstrap-cleanup",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "memory.bootstrap-cleanup.apply",
+    "operation_path": "operations/memory.bootstrap-cleanup.apply.json"
+  },
+  {
     "adapter_id": "memory.capture-note.cli",
     "interface": {
       "arguments": [

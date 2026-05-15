@@ -218,6 +218,25 @@
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
     },
     {
+      "operation_id": "memory.bootstrap-cleanup.apply",
+      "program": "agentic-memory",
+      "command": "bootstrap-cleanup",
+      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/memory.bootstrap-cleanup.apply.json",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "memory.bootstrap.cleanup",
+        "module-result text/json compatibility formatting"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "memory.bootstrap-cleanup.process",
+      "domain_runtime_primitive_refs": [
+        "memory.bootstrap.cleanup"
+      ],
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own bootstrap cleanup safety behavior."
+    },
+    {
       "operation_id": "memory.create-note.apply",
       "program": "agentic-memory",
       "command": "create-note",

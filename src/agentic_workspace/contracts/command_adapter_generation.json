@@ -862,6 +862,81 @@
       ]
     },
     {
+      "id": "memory.bootstrap-cleanup.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-memory",
+        "name": "bootstrap-cleanup",
+        "command_manifest": "package:memory:cli",
+        "option_group_manifest": "package:memory:cli"
+      },
+      "operation_ref": {
+        "id": "memory.bootstrap-cleanup.apply",
+        "registry": "operation_contracts.json",
+        "path": "operations/memory.bootstrap-cleanup.apply.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.bootstrap.cleanup",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "memory bootstrap cleanup safety policy",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "memory.bootstrap-cleanup.process"
+      ]
+    },
+    {
       "id": "memory.capture-note.cli",
       "status": "generated",
       "command": {

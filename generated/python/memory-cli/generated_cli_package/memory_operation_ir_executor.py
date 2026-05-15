@@ -28,6 +28,7 @@ class OperationIrExecutionError(RuntimeError):
 
 def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int:
     if operation.get("id") not in {
+        'memory.bootstrap-cleanup.apply',
         'memory.capture-note.report',
         'memory.create-note.apply',
         'memory.current.report',
@@ -98,6 +99,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'path.target_root.resolve': _handle_path_target_root_resolve,
                 'memory.bootstrap.doctor.load': _handle_memory_bootstrap_doctor_load,
                 'memory.bootstrap.status.load': _handle_memory_bootstrap_status_load,
+                'memory.bootstrap.cleanup': _handle_memory_bootstrap_cleanup,
                 'memory.capture_note.load': _handle_memory_capture_note_load,
                 'memory.note.create': _handle_memory_note_create,
                 'memory.current.load': _handle_memory_current_load,
@@ -147,6 +149,12 @@ def _handle_memory_bootstrap_status_load(values: dict[str, Any], arguments: dict
     from .memory_runtime_cli import _load_memory_bootstrap_status
 
     return _load_memory_bootstrap_status(values, arguments, context)
+
+
+def _handle_memory_bootstrap_cleanup(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_memory_bootstrap.installer import cleanup_bootstrap_workspace
+
+    return cleanup_bootstrap_workspace(target=values.get('target'))
 
 
 def _handle_memory_capture_note_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:

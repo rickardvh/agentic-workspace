@@ -8,7 +8,7 @@
 import { spawnSync } from 'node:child_process';
 import { writeSync } from 'node:fs';
 
-const supportedCommands = new Set(["capture-note", "create-note", "current", "doctor", "list-files", "list-skills", "promotion-report", "prompt", "report", "route", "route-report", "route-review", "search", "status", "sync-memory", "verify-payload"]);
+const supportedCommands = new Set(["bootstrap-cleanup", "capture-note", "create-note", "current", "doctor", "list-files", "list-skills", "promotion-report", "prompt", "report", "route", "route-report", "route-review", "search", "status", "sync-memory", "verify-payload"]);
 const argv = process.argv.slice(2);
 const command = argv[0];
 

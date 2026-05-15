@@ -240,6 +240,12 @@
       "summary": "Load package-local memory bootstrap status for a target repository."
     },
     {
+      "id": "memory.bootstrap.cleanup",
+      "summary": "Remove package-local temporary Memory bootstrap workspace files.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime"
+    },
+    {
       "id": "memory.capture_note.load",
       "summary": "Load package-local Memory capture recommendations.",
       "kind": "memory-runtime",

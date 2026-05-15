@@ -187,6 +187,84 @@ export const generatedCommandPackage = {
       "status": "generated"
     },
     {
+      "adapter_id": "memory.bootstrap-cleanup.cli",
+      "command": {
+        "manifest_ref": "package:memory:cli",
+        "name": "bootstrap-cleanup"
+      },
+      "conformance_refs": [
+        "memory.bootstrap-cleanup.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "interface": {
+        "help": "Remove the temporary bootstrap workspace.",
+        "name": "bootstrap-cleanup",
+        "options": [
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Target repository path. Defaults to the current directory.",
+            "name": "target"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "memory.bootstrap-cleanup.apply",
+        "path": "operations/memory.bootstrap-cleanup.apply.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "memory bootstrap cleanup safety policy",
+          "module result assembly",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.bootstrap.cleanup",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    {
       "adapter_id": "memory.capture-note.cli",
       "command": {
         "manifest_ref": "package:memory:cli",
@@ -1640,6 +1718,17 @@ export const generatedCommandPackage = {
           "primitive": "memory.bootstrap.status.load"
         },
         {
+          "function": "cleanup_bootstrap_workspace",
+          "handler": "function_call",
+          "import_module": "repo_memory_bootstrap.installer",
+          "kwargs": {
+            "target": {
+              "value": "target"
+            }
+          },
+          "primitive": "memory.bootstrap.cleanup"
+        },
+        {
           "function": "suggest_memory_note_capture",
           "handler": "function_call",
           "import_module": "repo_memory_bootstrap.installer",
@@ -2010,6 +2099,7 @@ export const generatedCommandPackage = {
       "module_file": "memory_operation_ir_executor",
       "supported_operation_ids": [
         "memory.doctor.report",
+        "memory.bootstrap-cleanup.apply",
         "memory.capture-note.report",
         "memory.create-note.apply",
         "memory.current.report",

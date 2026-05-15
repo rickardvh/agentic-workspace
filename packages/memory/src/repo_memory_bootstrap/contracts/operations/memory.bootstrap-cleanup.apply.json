@@ -1,0 +1,97 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "memory.bootstrap-cleanup.apply",
+  "command_surface": {
+    "program": "agentic-memory",
+    "command": "bootstrap-cleanup",
+    "format_option": "format"
+  },
+  "summary": "Remove the temporary Memory bootstrap workspace through the memory module CLI.",
+  "classification": "lifecycle-mutation",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "text-or-json"
+  },
+  "effects": {
+    "read_only": false,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": true,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": true,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": "target repository Memory bootstrap workspace",
+      "required": false
+    }
+  ],
+  "writes": [
+    {
+      "surface": "target repository temporary Memory bootstrap workspace",
+      "required": false
+    }
+  ],
+  "steps": [
+    {
+      "id": "cleanup_bootstrap_workspace",
+      "uses": "memory.bootstrap.cleanup",
+      "description": "Remove the temporary Memory bootstrap workspace when it exists."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit the bootstrap-cleanup result in the requested format."
+    }
+  ],
+  "guards": [
+    "Generated code owns parser/help/dispatch shape; memory-owned cleanup policy remains behind the declared primitive.",
+    "Conformance must prove cleanup writes only inside the declared temporary bootstrap workspace."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated memory bootstrap-cleanup process conformance passes"
+  ],
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Memory bootstrap-cleanup executes generated operation IR through codegen-owned primitive dataflow while the memory module owns cleanup safety policy.",
+    "steps": [
+      {
+        "id": "cleanup_bootstrap_workspace",
+        "uses": "memory.bootstrap.cleanup",
+        "description": "Remove the temporary Memory bootstrap workspace when it exists.",
+        "arguments": {},
+        "outputs": [
+          "result"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit",
+        "description": "Emit the bootstrap-cleanup result in the requested format.",
+        "arguments": {},
+        "outputs": [
+          "emitted"
+        ],
+        "on_error": "emit_usage_error"
+      }
+    ]
+  }
+}

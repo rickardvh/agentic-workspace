@@ -416,6 +416,7 @@ def test_command_package_ir_reuses_generated_adapter_truth() -> None:
         "planning.reconcile.cli",
         "memory.status.cli",
         "memory.doctor.cli",
+        "memory.bootstrap-cleanup.cli",
         "memory.capture-note.cli",
         "memory.create-note.cli",
         "memory.current.cli",
@@ -1488,6 +1489,7 @@ def test_contract_tooling_check_reports_generated_adapter_status() -> None:
     ]
     assert commands_by_program["agentic-memory"] == [
         "doctor",
+        "bootstrap-cleanup",
         "capture-note",
         "create-note",
         "current",

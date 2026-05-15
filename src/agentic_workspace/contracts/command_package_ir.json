@@ -7201,6 +7201,7 @@
           "module_file": "memory_operation_ir_executor",
           "supported_operation_ids": [
             "memory.doctor.report",
+            "memory.bootstrap-cleanup.apply",
             "memory.capture-note.report",
             "memory.create-note.apply",
             "memory.current.report",
@@ -7421,6 +7422,17 @@
               "primitive": "memory.bootstrap.status.load",
               "handler": "runtime_handler",
               "function": "_load_memory_bootstrap_status"
+            },
+            {
+              "primitive": "memory.bootstrap.cleanup",
+              "handler": "function_call",
+              "import_module": "repo_memory_bootstrap.installer",
+              "function": "cleanup_bootstrap_workspace",
+              "kwargs": {
+                "target": {
+                  "value": "target"
+                }
+              }
             },
             {
               "primitive": "memory.capture_note.load",
@@ -7816,6 +7828,84 @@
             "runtime_owned": [
               "package-local primitive implementation",
               "payload assembly",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "memory.bootstrap-cleanup.cli",
+          "status": "generated",
+          "command": {
+            "name": "bootstrap-cleanup",
+            "manifest_ref": "package:memory:cli"
+          },
+          "interface": {
+            "name": "bootstrap-cleanup",
+            "help": "Remove the temporary bootstrap workspace.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "memory.bootstrap-cleanup.apply",
+            "path": "operations/memory.bootstrap-cleanup.apply.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "memory.bootstrap.cleanup",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": true,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "memory.bootstrap-cleanup.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "memory bootstrap cleanup safety policy",
+              "module result assembly",
               "output emission"
             ]
           }

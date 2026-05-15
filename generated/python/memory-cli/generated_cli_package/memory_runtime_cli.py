@@ -336,9 +336,10 @@ def build_parser() -> argparse.ArgumentParser:
         _add_target_arguments(verify_parser)
         _add_format_argument(verify_parser)
 
-    cleanup_parser = subparsers.add_parser("bootstrap-cleanup", help="Remove the temporary bootstrap workspace.")
-    _add_target_arguments(cleanup_parser)
-    _add_format_argument(cleanup_parser)
+    if "bootstrap-cleanup" not in generated_commands:
+        cleanup_parser = subparsers.add_parser("bootstrap-cleanup", help="Remove the temporary bootstrap workspace.")
+        _add_target_arguments(cleanup_parser)
+        _add_format_argument(cleanup_parser)
 
     return parser
 
@@ -958,6 +959,10 @@ def _run_capture_note_report_adapter(args: argparse.Namespace) -> int | None:
     return run_operation_ir(generated_cli_package_operation_contract("memory.capture-note.report"), args)
 
 
+def _run_bootstrap_cleanup_apply_adapter(args: argparse.Namespace) -> int | None:
+    return run_operation_ir(generated_cli_package_operation_contract("memory.bootstrap-cleanup.apply"), args)
+
+
 def _run_create_note_apply_adapter(args: argparse.Namespace) -> int | None:
     return run_operation_ir(generated_cli_package_operation_contract("memory.create-note.apply"), args)
 
@@ -1015,6 +1020,7 @@ def _run_sync_memory_adapter(args: argparse.Namespace) -> int | None:
 
 
 _GENERATED_RUNTIME_HANDLERS = {
+    "memory.bootstrap-cleanup.apply": _run_bootstrap_cleanup_apply_adapter,
     "memory.capture-note.report": _run_capture_note_report_adapter,
     "memory.create-note.apply": _run_create_note_apply_adapter,
     "memory.current.report": _run_current_report_adapter,

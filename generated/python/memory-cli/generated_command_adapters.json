@@ -1,5 +1,37 @@
 {
   "adapters_by_command": {
+    "bootstrap-cleanup": {
+      "command": {
+        "command_manifest": "package:memory:cli",
+        "name": "bootstrap-cleanup",
+        "option_group_manifest": "package:memory:cli",
+        "program": "agentic-memory"
+      },
+      "conformance_refs": [
+        "memory.bootstrap-cleanup.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "memory.bootstrap-cleanup.cli",
+      "operation_id": "memory.bootstrap-cleanup.apply",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.bootstrap.cleanup",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
     "capture-note": {
       "command": {
         "command_manifest": "package:memory:cli",
