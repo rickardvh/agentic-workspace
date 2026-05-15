@@ -114,6 +114,47 @@ def test_output_emit_supports_json_and_text(primitive_context: PrimitiveContext)
     assert emitted_text == "Skills\n- review/SKILL.md\n"
 
 
+def test_python_function_call_resolves_checked_in_arguments(primitive_context: PrimitiveContext) -> None:
+    result = execute_primitive(
+        "python.function.call",
+        values={"payload_text": '{"status": "ok"}'},
+        arguments={
+            "import_module": "json",
+            "function": "loads",
+            "kwargs": {
+                "s": {"value": "payload_text"},
+            },
+        },
+        context=primitive_context,
+    )
+
+    assert result == {"status": "ok"}
+
+
+def test_python_function_call_rejects_unresolved_targets(primitive_context: PrimitiveContext) -> None:
+    with pytest.raises(PrimitiveExecutionError, match="cannot resolve"):
+        execute_primitive(
+            "python.function.call",
+            values={},
+            arguments={"import_module": "json", "function": "missing_function", "kwargs": {}},
+            context=primitive_context,
+        )
+
+
+def test_python_function_call_rejects_missing_value_bindings(primitive_context: PrimitiveContext) -> None:
+    with pytest.raises(PrimitiveExecutionError, match="cannot resolve value"):
+        execute_primitive(
+            "python.function.call",
+            values={},
+            arguments={
+                "import_module": "json",
+                "function": "loads",
+                "kwargs": {"s": {"value": "missing"}},
+            },
+            context=primitive_context,
+        )
+
+
 def test_run_operation_steps_executes_declared_dataflow(primitive_context: PrimitiveContext) -> None:
     operation = {
         "ir_plan": {

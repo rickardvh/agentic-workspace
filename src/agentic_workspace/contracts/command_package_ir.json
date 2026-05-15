@@ -5211,13 +5211,6 @@
               }
             },
             {
-              "primitive": "planning.verify-payload.load",
-              "handler": "function_call",
-              "import_module": "repo_planning_bootstrap.installer",
-              "function": "verify_payload",
-              "kwargs": {}
-            },
-            {
               "primitive": "planning.close-item.apply",
               "handler": "function_call",
               "import_module": "repo_planning_bootstrap.installer",
@@ -7579,7 +7572,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "planning.verify-payload.load",
+              "python.function.call",
               "output.emit"
             ]
           },

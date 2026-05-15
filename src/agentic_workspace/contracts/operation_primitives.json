@@ -527,6 +527,13 @@
       "summary": "Create a fresh preflight token using the configured token policy."
     },
     {
+      "id": "python.function.call",
+      "summary": "Call a checked-in Python runtime function declared by operation IR.",
+      "kind": "external-runtime",
+      "portability": "external-adapter",
+      "semantics": "Resolve import module, function name, and keyword bindings only from checked-in operation artifacts; user input may supply values but never the callable target."
+    },
+    {
       "id": "prompt.render",
       "summary": "Render a ready-to-paste lifecycle handoff prompt without mutating repo state."
     },

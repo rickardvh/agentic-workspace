@@ -40,7 +40,7 @@
   "steps": [
     {
       "id": "load_verification",
-      "uses": "planning.verify-payload.load",
+      "uses": "python.function.call",
       "description": "Verify bundled planning payload files and generated operation resources."
     },
     {
@@ -63,9 +63,13 @@
     "steps": [
       {
         "id": "load_verification",
-        "uses": "planning.verify-payload.load",
+        "uses": "python.function.call",
         "description": "Verify bundled planning payload files and generated operation resources.",
-        "arguments": {},
+        "arguments": {
+          "import_module": "repo_planning_bootstrap.installer",
+          "function": "verify_payload",
+          "kwargs": {}
+        },
         "outputs": [
           "result"
         ],

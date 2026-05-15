@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 import json
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
@@ -76,6 +77,8 @@ def execute_primitive(
         return _assemble_payload(values=values, arguments=arguments)
     if primitive == "output.emit":
         return _emit_output(values=values)
+    if primitive == "python.function.call":
+        return _call_python_function(values=values, arguments=arguments)
     raise PrimitiveExecutionError(f"unsupported portable primitive: {primitive!r}")
 
 
@@ -179,6 +182,39 @@ def _emit_output(*, values: dict[str, Any]) -> str:
         label = action.get("path") or action.get("id") or action.get("kind")
         lines.append(f"- {label}")
     return "\n".join(lines).rstrip() + "\n"
+
+
+def _call_python_function(*, values: dict[str, Any], arguments: dict[str, Any]) -> Any:
+    import_module = str(arguments.get("import_module", "")).strip()
+    function_name = str(arguments.get("function", "")).strip()
+    if not import_module or not function_name:
+        raise PrimitiveExecutionError("python.function.call requires import_module and function")
+    try:
+        function = getattr(importlib.import_module(import_module), function_name)
+    except (ImportError, AttributeError) as exc:
+        raise PrimitiveExecutionError(f"python.function.call cannot resolve {import_module}.{function_name}") from exc
+    kwargs = _resolve_call_kwargs(values=values, raw_kwargs=arguments.get("kwargs", {}))
+    return function(**kwargs)
+
+
+def _resolve_call_kwargs(*, values: dict[str, Any], raw_kwargs: Any) -> dict[str, Any]:
+    if not isinstance(raw_kwargs, dict):
+        raise PrimitiveExecutionError("python.function.call kwargs must be an object")
+    kwargs: dict[str, Any] = {}
+    for name, source in raw_kwargs.items():
+        if not isinstance(source, dict):
+            kwargs[str(name)] = source
+            continue
+        if "value" in source:
+            value_name = str(source["value"])
+            if value_name not in values:
+                raise PrimitiveExecutionError(f"python.function.call cannot resolve value {value_name!r}")
+            kwargs[str(name)] = values[value_name]
+        elif "literal" in source:
+            kwargs[str(name)] = source["literal"]
+        else:
+            raise PrimitiveExecutionError(f"python.function.call kwarg {name!r} must declare value or literal")
+    return kwargs
 
 
 def _resolve_inside(root: Path, relative: str) -> Path:

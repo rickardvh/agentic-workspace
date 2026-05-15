@@ -663,7 +663,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "planning.verify-payload.load",
+          "python.function.call",
           "output.emit"
         ]
       },

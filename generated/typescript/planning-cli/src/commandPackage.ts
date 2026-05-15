@@ -2175,7 +2175,7 @@ export const generatedCommandPackage = {
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "planning.verify-payload.load",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -2261,13 +2261,6 @@ export const generatedCommandPackage = {
             }
           },
           "primitive": "planning.handoff.load"
-        },
-        {
-          "function": "verify_payload",
-          "handler": "function_call",
-          "import_module": "repo_planning_bootstrap.installer",
-          "kwargs": {},
-          "primitive": "planning.verify-payload.load"
         },
         {
           "function": "close_planning_item",
