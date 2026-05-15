@@ -264,6 +264,42 @@
       "portability": "domain-runtime"
     },
     {
+      "id": "memory.install.apply",
+      "summary": "Install or initialize package-local Memory bootstrap surfaces.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "memory.init.apply",
+      "summary": "Initialize package-local Memory bootstrap surfaces using install semantics.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "memory.adopt.apply",
+      "summary": "Adopt package-local Memory bootstrap surfaces in an existing repository.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "memory.upgrade.apply",
+      "summary": "Upgrade package-local Memory bootstrap surfaces.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "memory.migrate_layout.apply",
+      "summary": "Migrate package-local Memory bootstrap legacy layout surfaces.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "memory.uninstall.apply",
+      "summary": "Remove package-local Memory bootstrap surfaces conservatively.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime"
+    },
+    {
       "id": "memory.note.create",
       "summary": "Create or dry-run a package-local Memory note and manifest entry.",
       "kind": "memory-runtime",

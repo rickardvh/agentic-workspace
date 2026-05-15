@@ -84,66 +84,72 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
     generated_commands = set(generated_cli_package_command_names())
 
-    install_parser = subparsers.add_parser("install", help="Install bootstrap files into a repository.")
-    _add_install_arguments(install_parser)
-    init_parser = subparsers.add_parser("init", help="Alias for install, intended for clean bootstrap cases.")
-    _add_install_arguments(init_parser)
+    if "install" not in generated_commands:
+        install_parser = subparsers.add_parser("install", help="Install bootstrap files into a repository.")
+        _add_install_arguments(install_parser)
+    if "init" not in generated_commands:
+        init_parser = subparsers.add_parser("init", help="Alias for install, intended for clean bootstrap cases.")
+        _add_install_arguments(init_parser)
 
-    adopt_parser = subparsers.add_parser(
-        "adopt",
-        help="Add bootstrap capability to an existing repository conservatively.",
-    )
-    _add_target_arguments(adopt_parser)
-    adopt_parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Show the adoption plan without writing files.",
-    )
-    adopt_parser.add_argument(
-        "--apply-local-entrypoint",
-        action="store_true",
-        help="Patch AGENTS.md with the canonical workflow pointer block when needed.",
-    )
-    _add_project_metadata_arguments(adopt_parser)
-    _add_format_argument(adopt_parser)
+    if "adopt" not in generated_commands:
+        adopt_parser = subparsers.add_parser(
+            "adopt",
+            help="Add bootstrap capability to an existing repository conservatively.",
+        )
+        _add_target_arguments(adopt_parser)
+        adopt_parser.add_argument(
+            "--dry-run",
+            action="store_true",
+            help="Show the adoption plan without writing files.",
+        )
+        adopt_parser.add_argument(
+            "--apply-local-entrypoint",
+            action="store_true",
+            help="Patch AGENTS.md with the canonical workflow pointer block when needed.",
+        )
+        _add_project_metadata_arguments(adopt_parser)
+        _add_format_argument(adopt_parser)
 
-    upgrade_parser = subparsers.add_parser("upgrade", help="Upgrade an existing bootstrap install.")
-    _add_target_arguments(upgrade_parser)
-    upgrade_parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Show the upgrade plan without writing files.",
-    )
-    upgrade_parser.add_argument("--force", action="store_true", help="Allow replacing customised starter files.")
-    upgrade_parser.add_argument(
-        "--apply-local-entrypoint",
-        action="store_true",
-        help="Patch AGENTS.md with the canonical workflow pointer block when needed.",
-    )
-    _add_project_metadata_arguments(upgrade_parser)
-    _add_format_argument(upgrade_parser)
+    if "upgrade" not in generated_commands:
+        upgrade_parser = subparsers.add_parser("upgrade", help="Upgrade an existing bootstrap install.")
+        _add_target_arguments(upgrade_parser)
+        upgrade_parser.add_argument(
+            "--dry-run",
+            action="store_true",
+            help="Show the upgrade plan without writing files.",
+        )
+        upgrade_parser.add_argument("--force", action="store_true", help="Allow replacing customised starter files.")
+        upgrade_parser.add_argument(
+            "--apply-local-entrypoint",
+            action="store_true",
+            help="Patch AGENTS.md with the canonical workflow pointer block when needed.",
+        )
+        _add_project_metadata_arguments(upgrade_parser)
+        _add_format_argument(upgrade_parser)
 
-    migrate_parser = subparsers.add_parser(
-        "migrate-layout",
-        help="Move bootstrap-managed files from the legacy memory layout into `.agentic-workspace/memory/` conservatively.",
-    )
-    _add_target_arguments(migrate_parser)
-    migrate_parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Show the layout migration plan without writing files.",
-    )
-    _add_format_argument(migrate_parser)
+    if "migrate-layout" not in generated_commands:
+        migrate_parser = subparsers.add_parser(
+            "migrate-layout",
+            help="Move bootstrap-managed files from the legacy memory layout into `.agentic-workspace/memory/` conservatively.",
+        )
+        _add_target_arguments(migrate_parser)
+        migrate_parser.add_argument(
+            "--dry-run",
+            action="store_true",
+            help="Show the layout migration plan without writing files.",
+        )
+        _add_format_argument(migrate_parser)
 
-    uninstall_parser = subparsers.add_parser("uninstall", help="Remove bootstrap-managed files conservatively.")
-    _add_target_arguments(uninstall_parser)
-    uninstall_parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Show the uninstall plan without writing files.",
-    )
-    _add_project_metadata_arguments(uninstall_parser)
-    _add_format_argument(uninstall_parser)
+    if "uninstall" not in generated_commands:
+        uninstall_parser = subparsers.add_parser("uninstall", help="Remove bootstrap-managed files conservatively.")
+        _add_target_arguments(uninstall_parser)
+        uninstall_parser.add_argument(
+            "--dry-run",
+            action="store_true",
+            help="Show the uninstall plan without writing files.",
+        )
+        _add_project_metadata_arguments(uninstall_parser)
+        _add_format_argument(uninstall_parser)
 
     if "doctor" not in generated_commands:
         doctor_parser = subparsers.add_parser("doctor", help="Diagnose bootstrap state and recommended remediation.")
@@ -963,6 +969,30 @@ def _run_bootstrap_cleanup_apply_adapter(args: argparse.Namespace) -> int | None
     return run_operation_ir(generated_cli_package_operation_contract("memory.bootstrap-cleanup.apply"), args)
 
 
+def _run_install_lifecycle_adapter(args: argparse.Namespace) -> int | None:
+    return run_operation_ir(generated_cli_package_operation_contract("memory.install.lifecycle"), args)
+
+
+def _run_init_lifecycle_adapter(args: argparse.Namespace) -> int | None:
+    return run_operation_ir(generated_cli_package_operation_contract("memory.init.lifecycle"), args)
+
+
+def _run_adopt_lifecycle_adapter(args: argparse.Namespace) -> int | None:
+    return run_operation_ir(generated_cli_package_operation_contract("memory.adopt.lifecycle"), args)
+
+
+def _run_upgrade_lifecycle_adapter(args: argparse.Namespace) -> int | None:
+    return run_operation_ir(generated_cli_package_operation_contract("memory.upgrade.lifecycle"), args)
+
+
+def _run_migrate_layout_lifecycle_adapter(args: argparse.Namespace) -> int | None:
+    return run_operation_ir(generated_cli_package_operation_contract("memory.migrate-layout.lifecycle"), args)
+
+
+def _run_uninstall_lifecycle_adapter(args: argparse.Namespace) -> int | None:
+    return run_operation_ir(generated_cli_package_operation_contract("memory.uninstall.lifecycle"), args)
+
+
 def _run_create_note_apply_adapter(args: argparse.Namespace) -> int | None:
     return run_operation_ir(generated_cli_package_operation_contract("memory.create-note.apply"), args)
 
@@ -1020,6 +1050,7 @@ def _run_sync_memory_adapter(args: argparse.Namespace) -> int | None:
 
 
 _GENERATED_RUNTIME_HANDLERS = {
+    "memory.adopt.lifecycle": _run_adopt_lifecycle_adapter,
     "memory.bootstrap-cleanup.apply": _run_bootstrap_cleanup_apply_adapter,
     "memory.capture-note.report": _run_capture_note_report_adapter,
     "memory.create-note.apply": _run_create_note_apply_adapter,
@@ -1027,6 +1058,9 @@ _GENERATED_RUNTIME_HANDLERS = {
     "memory.doctor.report": _run_doctor_report_adapter,
     "memory.list-files.report": _run_list_files_report_adapter,
     "memory.list-skills.report": _run_list_skills_report_adapter,
+    "memory.init.lifecycle": _run_init_lifecycle_adapter,
+    "memory.install.lifecycle": _run_install_lifecycle_adapter,
+    "memory.migrate-layout.lifecycle": _run_migrate_layout_lifecycle_adapter,
     "memory.promotion-report.report": _run_promotion_report_adapter,
     "memory.prompt.render": _run_prompt_render_adapter,
     "memory.report.report": _run_report_adapter,
@@ -1037,6 +1071,8 @@ _GENERATED_RUNTIME_HANDLERS = {
     "memory.verify-payload.report": _run_verify_payload_report_adapter,
     "memory.status.report": _run_status_report_adapter,
     "memory.sync-memory.report": _run_sync_memory_adapter,
+    "memory.uninstall.lifecycle": _run_uninstall_lifecycle_adapter,
+    "memory.upgrade.lifecycle": _run_upgrade_lifecycle_adapter,
 }
 
 
@@ -1215,6 +1251,13 @@ def _emit_memory_operation_output(values: dict[str, Any], _arguments: dict[str, 
             print(json.dumps(result, indent=2))
             return
         print(format_result_json(result))
+        return
+    if values.get("operation_id") in {
+        "memory.install.lifecycle",
+        "memory.init.lifecycle",
+        "memory.adopt.lifecycle",
+    }:
+        _emit_result(result, output_format=output_format, include_install_summary=True)
         return
     if isinstance(result, dict):
         _print_report(result)

@@ -862,6 +862,456 @@
       ]
     },
     {
+      "id": "memory.install.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-memory",
+        "name": "install",
+        "command_manifest": "package:memory:cli",
+        "option_group_manifest": "package:memory:cli"
+      },
+      "operation_ref": {
+        "id": "memory.install.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/memory.install.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.install.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "memory lifecycle policy",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "memory.install.lifecycle.dry-run.process"
+      ]
+    },
+    {
+      "id": "memory.init.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-memory",
+        "name": "init",
+        "command_manifest": "package:memory:cli",
+        "option_group_manifest": "package:memory:cli"
+      },
+      "operation_ref": {
+        "id": "memory.init.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/memory.init.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.init.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "memory lifecycle policy",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "memory.init.lifecycle.dry-run.process"
+      ]
+    },
+    {
+      "id": "memory.adopt.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-memory",
+        "name": "adopt",
+        "command_manifest": "package:memory:cli",
+        "option_group_manifest": "package:memory:cli"
+      },
+      "operation_ref": {
+        "id": "memory.adopt.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/memory.adopt.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.adopt.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "memory lifecycle policy",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "memory.adopt.lifecycle.dry-run.process"
+      ]
+    },
+    {
+      "id": "memory.upgrade.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-memory",
+        "name": "upgrade",
+        "command_manifest": "package:memory:cli",
+        "option_group_manifest": "package:memory:cli"
+      },
+      "operation_ref": {
+        "id": "memory.upgrade.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/memory.upgrade.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.upgrade.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "memory lifecycle policy",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "memory.upgrade.lifecycle.dry-run.process"
+      ]
+    },
+    {
+      "id": "memory.migrate-layout.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-memory",
+        "name": "migrate-layout",
+        "command_manifest": "package:memory:cli",
+        "option_group_manifest": "package:memory:cli"
+      },
+      "operation_ref": {
+        "id": "memory.migrate-layout.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/memory.migrate-layout.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.migrate_layout.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "memory lifecycle policy",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "memory.migrate-layout.lifecycle.dry-run.process"
+      ]
+    },
+    {
+      "id": "memory.uninstall.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-memory",
+        "name": "uninstall",
+        "command_manifest": "package:memory:cli",
+        "option_group_manifest": "package:memory:cli"
+      },
+      "operation_ref": {
+        "id": "memory.uninstall.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/memory.uninstall.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.uninstall.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": true,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "memory lifecycle policy",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "memory.uninstall.lifecycle.dry-run.process"
+      ]
+    },
+    {
       "id": "memory.bootstrap-cleanup.cli",
       "status": "generated",
       "command": {

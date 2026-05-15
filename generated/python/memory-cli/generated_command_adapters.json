@@ -1,5 +1,37 @@
 {
   "adapters_by_command": {
+    "adopt": {
+      "command": {
+        "command_manifest": "package:memory:cli",
+        "name": "adopt",
+        "option_group_manifest": "package:memory:cli",
+        "program": "agentic-memory"
+      },
+      "conformance_refs": [
+        "memory.adopt.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "memory.adopt.cli",
+      "operation_id": "memory.adopt.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.adopt.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
     "bootstrap-cleanup": {
       "command": {
         "command_manifest": "package:memory:cli",
@@ -161,6 +193,70 @@
       },
       "status": "generated"
     },
+    "init": {
+      "command": {
+        "command_manifest": "package:memory:cli",
+        "name": "init",
+        "option_group_manifest": "package:memory:cli",
+        "program": "agentic-memory"
+      },
+      "conformance_refs": [
+        "memory.init.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "memory.init.cli",
+      "operation_id": "memory.init.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.init.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    "install": {
+      "command": {
+        "command_manifest": "package:memory:cli",
+        "name": "install",
+        "option_group_manifest": "package:memory:cli",
+        "program": "agentic-memory"
+      },
+      "conformance_refs": [
+        "memory.install.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "memory.install.cli",
+      "operation_id": "memory.install.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.install.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
     "list-files": {
       "command": {
         "command_manifest": "package:memory:cli",
@@ -220,6 +316,38 @@
           "filesystem.read",
           "json.parse",
           "payload.assemble",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    "migrate-layout": {
+      "command": {
+        "command_manifest": "package:memory:cli",
+        "name": "migrate-layout",
+        "option_group_manifest": "package:memory:cli",
+        "program": "agentic-memory"
+      },
+      "conformance_refs": [
+        "memory.migrate-layout.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "memory.migrate-layout.cli",
+      "operation_id": "memory.migrate-layout.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.migrate_layout.apply",
           "output.emit"
         ]
       },
@@ -508,6 +636,70 @@
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
           "memory.sync_memory.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    "uninstall": {
+      "command": {
+        "command_manifest": "package:memory:cli",
+        "name": "uninstall",
+        "option_group_manifest": "package:memory:cli",
+        "program": "agentic-memory"
+      },
+      "conformance_refs": [
+        "memory.uninstall.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": true,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "memory.uninstall.cli",
+      "operation_id": "memory.uninstall.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.uninstall.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    "upgrade": {
+      "command": {
+        "command_manifest": "package:memory:cli",
+        "name": "upgrade",
+        "option_group_manifest": "package:memory:cli",
+        "program": "agentic-memory"
+      },
+      "conformance_refs": [
+        "memory.upgrade.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "memory.upgrade.cli",
+      "operation_id": "memory.upgrade.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.upgrade.apply",
           "output.emit"
         ]
       },

@@ -28,13 +28,17 @@ class OperationIrExecutionError(RuntimeError):
 
 def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int:
     if operation.get("id") not in {
+        'memory.adopt.lifecycle',
         'memory.bootstrap-cleanup.apply',
         'memory.capture-note.report',
         'memory.create-note.apply',
         'memory.current.report',
         'memory.doctor.report',
+        'memory.init.lifecycle',
+        'memory.install.lifecycle',
         'memory.list-files.report',
         'memory.list-skills.report',
+        'memory.migrate-layout.lifecycle',
         'memory.promotion-report.report',
         'memory.prompt.render',
         'memory.report.report',
@@ -44,6 +48,8 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
         'memory.search.report',
         'memory.status.report',
         'memory.sync-memory.report',
+        'memory.uninstall.lifecycle',
+        'memory.upgrade.lifecycle',
         'memory.verify-payload.report'
     }:
         raise OperationIrExecutionError(f"unsupported operation IR contract: {operation.get('id')!r}")
@@ -84,6 +90,9 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'promotion_trigger': getattr(args, 'promotion_trigger', ''),
                 'retention_after_promotion': getattr(args, 'retention_after_promotion', ''),
                 'dry_run': getattr(args, 'dry_run', False),
+                'policy_profile': getattr(args, 'policy_profile', 'default'),
+                'apply_local_entrypoint': getattr(args, 'apply_local_entrypoint', False),
+                'force': getattr(args, 'force', False),
                 'summary': getattr(args, 'summary', ''),
                 'existing_note': getattr(args, 'existing_note', ''),
                 'force_new_reason': getattr(args, 'force_new_reason', ''),
@@ -99,6 +108,12 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'path.target_root.resolve': _handle_path_target_root_resolve,
                 'memory.bootstrap.doctor.load': _handle_memory_bootstrap_doctor_load,
                 'memory.bootstrap.status.load': _handle_memory_bootstrap_status_load,
+                'memory.install.apply': _handle_memory_install_apply,
+                'memory.init.apply': _handle_memory_init_apply,
+                'memory.adopt.apply': _handle_memory_adopt_apply,
+                'memory.upgrade.apply': _handle_memory_upgrade_apply,
+                'memory.migrate_layout.apply': _handle_memory_migrate_layout_apply,
+                'memory.uninstall.apply': _handle_memory_uninstall_apply,
                 'memory.bootstrap.cleanup': _handle_memory_bootstrap_cleanup,
                 'memory.capture_note.load': _handle_memory_capture_note_load,
                 'memory.note.create': _handle_memory_note_create,
@@ -149,6 +164,42 @@ def _handle_memory_bootstrap_status_load(values: dict[str, Any], arguments: dict
     from .memory_runtime_cli import _load_memory_bootstrap_status
 
     return _load_memory_bootstrap_status(values, arguments, context)
+
+
+def _handle_memory_install_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_memory_bootstrap.installer import install_bootstrap
+
+    return install_bootstrap(dry_run=values.get('dry_run'), force=values.get('force'), key_repo_docs=values.get('key_repo_docs'), key_subsystems=values.get('key_subsystems'), other_key_commands=values.get('other_key_commands'), policy_profile=values.get('policy_profile'), primary_build_command=values.get('primary_build_command'), primary_test_command=values.get('primary_test_command'), project_name=values.get('project_name'), project_purpose=values.get('project_purpose'), target=values.get('target'))
+
+
+def _handle_memory_init_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_memory_bootstrap.installer import install_bootstrap
+
+    return install_bootstrap(dry_run=values.get('dry_run'), force=values.get('force'), key_repo_docs=values.get('key_repo_docs'), key_subsystems=values.get('key_subsystems'), other_key_commands=values.get('other_key_commands'), policy_profile=values.get('policy_profile'), primary_build_command=values.get('primary_build_command'), primary_test_command=values.get('primary_test_command'), project_name=values.get('project_name'), project_purpose=values.get('project_purpose'), target=values.get('target'))
+
+
+def _handle_memory_adopt_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_memory_bootstrap.installer import adopt_bootstrap
+
+    return adopt_bootstrap(apply_local_entrypoint=values.get('apply_local_entrypoint'), dry_run=values.get('dry_run'), key_repo_docs=values.get('key_repo_docs'), key_subsystems=values.get('key_subsystems'), other_key_commands=values.get('other_key_commands'), policy_profile=values.get('policy_profile'), primary_build_command=values.get('primary_build_command'), primary_test_command=values.get('primary_test_command'), project_name=values.get('project_name'), project_purpose=values.get('project_purpose'), target=values.get('target'))
+
+
+def _handle_memory_upgrade_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_memory_bootstrap.installer import upgrade_bootstrap
+
+    return upgrade_bootstrap(apply_local_entrypoint=values.get('apply_local_entrypoint'), dry_run=values.get('dry_run'), force=values.get('force'), key_repo_docs=values.get('key_repo_docs'), key_subsystems=values.get('key_subsystems'), other_key_commands=values.get('other_key_commands'), policy_profile=values.get('policy_profile'), primary_build_command=values.get('primary_build_command'), primary_test_command=values.get('primary_test_command'), project_name=values.get('project_name'), project_purpose=values.get('project_purpose'), target=values.get('target'))
+
+
+def _handle_memory_migrate_layout_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_memory_bootstrap.installer import migrate_layout
+
+    return migrate_layout(dry_run=values.get('dry_run'), target=values.get('target'))
+
+
+def _handle_memory_uninstall_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_memory_bootstrap.installer import uninstall_bootstrap
+
+    return uninstall_bootstrap(dry_run=values.get('dry_run'), key_repo_docs=values.get('key_repo_docs'), key_subsystems=values.get('key_subsystems'), other_key_commands=values.get('other_key_commands'), primary_build_command=values.get('primary_build_command'), primary_test_command=values.get('primary_test_command'), project_name=values.get('project_name'), project_purpose=values.get('project_purpose'), target=values.get('target'))
 
 
 def _handle_memory_bootstrap_cleanup(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:

@@ -218,6 +218,120 @@
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
     },
     {
+      "operation_id": "memory.install.lifecycle",
+      "program": "agentic-memory",
+      "command": "install",
+      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/memory.install.lifecycle.json",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "memory.install.apply",
+        "module-result text/json compatibility formatting"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "memory.install.lifecycle.dry-run.process",
+      "domain_runtime_primitive_refs": [
+        "memory.install.apply"
+      ],
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own Memory lifecycle policy and mutation safety behavior."
+    },
+    {
+      "operation_id": "memory.init.lifecycle",
+      "program": "agentic-memory",
+      "command": "init",
+      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/memory.init.lifecycle.json",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "memory.init.apply",
+        "module-result text/json compatibility formatting"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "memory.init.lifecycle.dry-run.process",
+      "domain_runtime_primitive_refs": [
+        "memory.init.apply"
+      ],
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own Memory lifecycle policy and mutation safety behavior."
+    },
+    {
+      "operation_id": "memory.adopt.lifecycle",
+      "program": "agentic-memory",
+      "command": "adopt",
+      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/memory.adopt.lifecycle.json",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "memory.adopt.apply",
+        "module-result text/json compatibility formatting"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "memory.adopt.lifecycle.dry-run.process",
+      "domain_runtime_primitive_refs": [
+        "memory.adopt.apply"
+      ],
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own Memory lifecycle policy and mutation safety behavior."
+    },
+    {
+      "operation_id": "memory.upgrade.lifecycle",
+      "program": "agentic-memory",
+      "command": "upgrade",
+      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/memory.upgrade.lifecycle.json",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "memory.upgrade.apply",
+        "module-result text/json compatibility formatting"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "memory.upgrade.lifecycle.dry-run.process",
+      "domain_runtime_primitive_refs": [
+        "memory.upgrade.apply"
+      ],
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own Memory lifecycle policy and mutation safety behavior."
+    },
+    {
+      "operation_id": "memory.migrate-layout.lifecycle",
+      "program": "agentic-memory",
+      "command": "migrate-layout",
+      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/memory.migrate-layout.lifecycle.json",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "memory.migrate_layout.apply",
+        "module-result text/json compatibility formatting"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "memory.migrate-layout.lifecycle.dry-run.process",
+      "domain_runtime_primitive_refs": [
+        "memory.migrate_layout.apply"
+      ],
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own Memory lifecycle policy and mutation safety behavior."
+    },
+    {
+      "operation_id": "memory.uninstall.lifecycle",
+      "program": "agentic-memory",
+      "command": "uninstall",
+      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/memory.uninstall.lifecycle.json",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "memory.uninstall.apply",
+        "module-result text/json compatibility formatting"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "memory.uninstall.lifecycle.dry-run.process",
+      "domain_runtime_primitive_refs": [
+        "memory.uninstall.apply"
+      ],
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own Memory lifecycle policy and mutation safety behavior."
+    },
+    {
       "operation_id": "memory.bootstrap-cleanup.apply",
       "program": "agentic-memory",
       "command": "bootstrap-cleanup",

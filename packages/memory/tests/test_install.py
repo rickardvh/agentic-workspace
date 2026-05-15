@@ -692,14 +692,13 @@ def test_migrate_layout_moves_legacy_managed_files_into_agentic_memory_root(tmp_
 
 
 def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
-    parser = cli.build_parser()
     generated_parser = cli.build_generated_cli_package_parser()
 
     current_args = generated_parser.parse_args(["current", "check", "--target", "."])
     list_skills_args = generated_parser.parse_args(["list-skills", "--format", "json"])
     cleanup_args = generated_parser.parse_args(["bootstrap-cleanup", "--target", ".", "--format", "json"])
-    migrate_args = parser.parse_args(["migrate-layout", "--target", ".", "--dry-run", "--format", "json"])
-    uninstall_args = parser.parse_args(["uninstall", "--target", ".", "--dry-run", "--format", "json"])
+    migrate_args = generated_parser.parse_args(["migrate-layout", "--target", ".", "--dry-run", "--format", "json"])
+    uninstall_args = generated_parser.parse_args(["uninstall", "--target", ".", "--dry-run", "--format", "json"])
     doctor_args = generated_parser.parse_args(["doctor", "--target", "."])
     prompt_install_args = generated_parser.parse_args(["prompt", "install", "--target", "./repo"])
     prompt_args = generated_parser.parse_args(["prompt", "adopt", "--target", "./repo"])
@@ -712,7 +711,7 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
     )
     report_args = generated_parser.parse_args(["report", "--target", ".", "--format", "json"])
     verify_args = generated_parser.parse_args(["verify-payload", "--format", "json"])
-    install_args = parser.parse_args(
+    install_args = generated_parser.parse_args(
         [
             "install",
             "--project-name",

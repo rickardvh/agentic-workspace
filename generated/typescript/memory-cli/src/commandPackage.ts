@@ -187,6 +187,867 @@ export const generatedCommandPackage = {
       "status": "generated"
     },
     {
+      "adapter_id": "memory.install.cli",
+      "command": {
+        "manifest_ref": "package:memory:cli",
+        "name": "install"
+      },
+      "conformance_refs": [
+        "memory.install.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "interface": {
+        "help": "Install bootstrap files into a repository.",
+        "name": "install",
+        "options": [
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Target repository path. Defaults to the current directory.",
+            "name": "target"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--dry-run"
+            ],
+            "help": "Show planned changes without writing files.",
+            "name": "dry_run"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--force"
+            ],
+            "help": "Overwrite managed files that already exist.",
+            "name": "force"
+          },
+          {
+            "flags": [
+              "--project-name"
+            ],
+            "help": "Value used for the <PROJECT_NAME> placeholder.",
+            "name": "project_name"
+          },
+          {
+            "flags": [
+              "--project-purpose"
+            ],
+            "help": "Value used for the <PROJECT_PURPOSE> placeholder.",
+            "name": "project_purpose"
+          },
+          {
+            "flags": [
+              "--key-repo-docs"
+            ],
+            "help": "Value used for the <KEY_REPO_DOCS> placeholder.",
+            "name": "key_repo_docs"
+          },
+          {
+            "flags": [
+              "--key-subsystems"
+            ],
+            "help": "Value used for the <KEY_SUBSYSTEMS> placeholder.",
+            "name": "key_subsystems"
+          },
+          {
+            "flags": [
+              "--primary-build-command"
+            ],
+            "help": "Value used for the <PRIMARY_BUILD_COMMAND> placeholder.",
+            "name": "primary_build_command"
+          },
+          {
+            "flags": [
+              "--primary-test-command"
+            ],
+            "help": "Value used for the <PRIMARY_TEST_COMMAND> placeholder.",
+            "name": "primary_test_command"
+          },
+          {
+            "flags": [
+              "--other-key-commands"
+            ],
+            "help": "Value used for the <OTHER_KEY_COMMANDS> placeholder.",
+            "name": "other_key_commands"
+          },
+          {
+            "choices": [
+              "default",
+              "strict-doc-ownership"
+            ],
+            "default": "default",
+            "flags": [
+              "--policy-profile"
+            ],
+            "help": "Installer policy preset.",
+            "name": "policy_profile"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "memory.install.lifecycle",
+        "path": "operations/memory.install.lifecycle.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "memory lifecycle policy",
+          "module result assembly",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.install.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    {
+      "adapter_id": "memory.init.cli",
+      "command": {
+        "manifest_ref": "package:memory:cli",
+        "name": "init"
+      },
+      "conformance_refs": [
+        "memory.init.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "interface": {
+        "help": "Alias for install, intended for clean bootstrap cases.",
+        "name": "init",
+        "options": [
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Target repository path. Defaults to the current directory.",
+            "name": "target"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--dry-run"
+            ],
+            "help": "Show planned changes without writing files.",
+            "name": "dry_run"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--force"
+            ],
+            "help": "Overwrite managed files that already exist.",
+            "name": "force"
+          },
+          {
+            "flags": [
+              "--project-name"
+            ],
+            "help": "Value used for the <PROJECT_NAME> placeholder.",
+            "name": "project_name"
+          },
+          {
+            "flags": [
+              "--project-purpose"
+            ],
+            "help": "Value used for the <PROJECT_PURPOSE> placeholder.",
+            "name": "project_purpose"
+          },
+          {
+            "flags": [
+              "--key-repo-docs"
+            ],
+            "help": "Value used for the <KEY_REPO_DOCS> placeholder.",
+            "name": "key_repo_docs"
+          },
+          {
+            "flags": [
+              "--key-subsystems"
+            ],
+            "help": "Value used for the <KEY_SUBSYSTEMS> placeholder.",
+            "name": "key_subsystems"
+          },
+          {
+            "flags": [
+              "--primary-build-command"
+            ],
+            "help": "Value used for the <PRIMARY_BUILD_COMMAND> placeholder.",
+            "name": "primary_build_command"
+          },
+          {
+            "flags": [
+              "--primary-test-command"
+            ],
+            "help": "Value used for the <PRIMARY_TEST_COMMAND> placeholder.",
+            "name": "primary_test_command"
+          },
+          {
+            "flags": [
+              "--other-key-commands"
+            ],
+            "help": "Value used for the <OTHER_KEY_COMMANDS> placeholder.",
+            "name": "other_key_commands"
+          },
+          {
+            "choices": [
+              "default",
+              "strict-doc-ownership"
+            ],
+            "default": "default",
+            "flags": [
+              "--policy-profile"
+            ],
+            "help": "Installer policy preset.",
+            "name": "policy_profile"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "memory.init.lifecycle",
+        "path": "operations/memory.init.lifecycle.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "memory lifecycle policy",
+          "module result assembly",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.init.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    {
+      "adapter_id": "memory.adopt.cli",
+      "command": {
+        "manifest_ref": "package:memory:cli",
+        "name": "adopt"
+      },
+      "conformance_refs": [
+        "memory.adopt.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "interface": {
+        "help": "Add bootstrap capability to an existing repository conservatively.",
+        "name": "adopt",
+        "options": [
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Target repository path. Defaults to the current directory.",
+            "name": "target"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--dry-run"
+            ],
+            "help": "Show planned changes without writing files.",
+            "name": "dry_run"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--apply-local-entrypoint"
+            ],
+            "help": "Patch AGENTS.md with the canonical workflow pointer block when needed.",
+            "name": "apply_local_entrypoint"
+          },
+          {
+            "flags": [
+              "--project-name"
+            ],
+            "help": "Value used for the <PROJECT_NAME> placeholder.",
+            "name": "project_name"
+          },
+          {
+            "flags": [
+              "--project-purpose"
+            ],
+            "help": "Value used for the <PROJECT_PURPOSE> placeholder.",
+            "name": "project_purpose"
+          },
+          {
+            "flags": [
+              "--key-repo-docs"
+            ],
+            "help": "Value used for the <KEY_REPO_DOCS> placeholder.",
+            "name": "key_repo_docs"
+          },
+          {
+            "flags": [
+              "--key-subsystems"
+            ],
+            "help": "Value used for the <KEY_SUBSYSTEMS> placeholder.",
+            "name": "key_subsystems"
+          },
+          {
+            "flags": [
+              "--primary-build-command"
+            ],
+            "help": "Value used for the <PRIMARY_BUILD_COMMAND> placeholder.",
+            "name": "primary_build_command"
+          },
+          {
+            "flags": [
+              "--primary-test-command"
+            ],
+            "help": "Value used for the <PRIMARY_TEST_COMMAND> placeholder.",
+            "name": "primary_test_command"
+          },
+          {
+            "flags": [
+              "--other-key-commands"
+            ],
+            "help": "Value used for the <OTHER_KEY_COMMANDS> placeholder.",
+            "name": "other_key_commands"
+          },
+          {
+            "choices": [
+              "default",
+              "strict-doc-ownership"
+            ],
+            "default": "default",
+            "flags": [
+              "--policy-profile"
+            ],
+            "help": "Installer policy preset.",
+            "name": "policy_profile"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "memory.adopt.lifecycle",
+        "path": "operations/memory.adopt.lifecycle.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "memory lifecycle policy",
+          "module result assembly",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.adopt.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    {
+      "adapter_id": "memory.upgrade.cli",
+      "command": {
+        "manifest_ref": "package:memory:cli",
+        "name": "upgrade"
+      },
+      "conformance_refs": [
+        "memory.upgrade.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "interface": {
+        "help": "Upgrade an existing bootstrap install.",
+        "name": "upgrade",
+        "options": [
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Target repository path. Defaults to the current directory.",
+            "name": "target"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--dry-run"
+            ],
+            "help": "Show planned changes without writing files.",
+            "name": "dry_run"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--force"
+            ],
+            "help": "Overwrite managed files that already exist.",
+            "name": "force"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--apply-local-entrypoint"
+            ],
+            "help": "Patch AGENTS.md with the canonical workflow pointer block when needed.",
+            "name": "apply_local_entrypoint"
+          },
+          {
+            "flags": [
+              "--project-name"
+            ],
+            "help": "Value used for the <PROJECT_NAME> placeholder.",
+            "name": "project_name"
+          },
+          {
+            "flags": [
+              "--project-purpose"
+            ],
+            "help": "Value used for the <PROJECT_PURPOSE> placeholder.",
+            "name": "project_purpose"
+          },
+          {
+            "flags": [
+              "--key-repo-docs"
+            ],
+            "help": "Value used for the <KEY_REPO_DOCS> placeholder.",
+            "name": "key_repo_docs"
+          },
+          {
+            "flags": [
+              "--key-subsystems"
+            ],
+            "help": "Value used for the <KEY_SUBSYSTEMS> placeholder.",
+            "name": "key_subsystems"
+          },
+          {
+            "flags": [
+              "--primary-build-command"
+            ],
+            "help": "Value used for the <PRIMARY_BUILD_COMMAND> placeholder.",
+            "name": "primary_build_command"
+          },
+          {
+            "flags": [
+              "--primary-test-command"
+            ],
+            "help": "Value used for the <PRIMARY_TEST_COMMAND> placeholder.",
+            "name": "primary_test_command"
+          },
+          {
+            "flags": [
+              "--other-key-commands"
+            ],
+            "help": "Value used for the <OTHER_KEY_COMMANDS> placeholder.",
+            "name": "other_key_commands"
+          },
+          {
+            "choices": [
+              "default",
+              "strict-doc-ownership"
+            ],
+            "default": "default",
+            "flags": [
+              "--policy-profile"
+            ],
+            "help": "Installer policy preset.",
+            "name": "policy_profile"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "memory.upgrade.lifecycle",
+        "path": "operations/memory.upgrade.lifecycle.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "memory lifecycle policy",
+          "module result assembly",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.upgrade.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    {
+      "adapter_id": "memory.migrate-layout.cli",
+      "command": {
+        "manifest_ref": "package:memory:cli",
+        "name": "migrate-layout"
+      },
+      "conformance_refs": [
+        "memory.migrate-layout.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "interface": {
+        "help": "Move bootstrap-managed files from the legacy memory layout into `.agentic-workspace/memory/` conservatively.",
+        "name": "migrate-layout",
+        "options": [
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Target repository path. Defaults to the current directory.",
+            "name": "target"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--dry-run"
+            ],
+            "help": "Show planned changes without writing files.",
+            "name": "dry_run"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "memory.migrate-layout.lifecycle",
+        "path": "operations/memory.migrate-layout.lifecycle.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "memory lifecycle policy",
+          "module result assembly",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.migrate_layout.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    {
+      "adapter_id": "memory.uninstall.cli",
+      "command": {
+        "manifest_ref": "package:memory:cli",
+        "name": "uninstall"
+      },
+      "conformance_refs": [
+        "memory.uninstall.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": true,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "interface": {
+        "help": "Remove bootstrap-managed files conservatively.",
+        "name": "uninstall",
+        "options": [
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Target repository path. Defaults to the current directory.",
+            "name": "target"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--dry-run"
+            ],
+            "help": "Show planned changes without writing files.",
+            "name": "dry_run"
+          },
+          {
+            "flags": [
+              "--project-name"
+            ],
+            "help": "Value used for the <PROJECT_NAME> placeholder.",
+            "name": "project_name"
+          },
+          {
+            "flags": [
+              "--project-purpose"
+            ],
+            "help": "Value used for the <PROJECT_PURPOSE> placeholder.",
+            "name": "project_purpose"
+          },
+          {
+            "flags": [
+              "--key-repo-docs"
+            ],
+            "help": "Value used for the <KEY_REPO_DOCS> placeholder.",
+            "name": "key_repo_docs"
+          },
+          {
+            "flags": [
+              "--key-subsystems"
+            ],
+            "help": "Value used for the <KEY_SUBSYSTEMS> placeholder.",
+            "name": "key_subsystems"
+          },
+          {
+            "flags": [
+              "--primary-build-command"
+            ],
+            "help": "Value used for the <PRIMARY_BUILD_COMMAND> placeholder.",
+            "name": "primary_build_command"
+          },
+          {
+            "flags": [
+              "--primary-test-command"
+            ],
+            "help": "Value used for the <PRIMARY_TEST_COMMAND> placeholder.",
+            "name": "primary_test_command"
+          },
+          {
+            "flags": [
+              "--other-key-commands"
+            ],
+            "help": "Value used for the <OTHER_KEY_COMMANDS> placeholder.",
+            "name": "other_key_commands"
+          },
+          {
+            "choices": [
+              "default",
+              "strict-doc-ownership"
+            ],
+            "default": "default",
+            "flags": [
+              "--policy-profile"
+            ],
+            "help": "Installer policy preset.",
+            "name": "policy_profile"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "memory.uninstall.lifecycle",
+        "path": "operations/memory.uninstall.lifecycle.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "memory lifecycle policy",
+          "module result assembly",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.uninstall.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    {
       "adapter_id": "memory.bootstrap-cleanup.cli",
       "command": {
         "manifest_ref": "package:memory:cli",
@@ -1718,6 +2579,222 @@ export const generatedCommandPackage = {
           "primitive": "memory.bootstrap.status.load"
         },
         {
+          "function": "install_bootstrap",
+          "handler": "function_call",
+          "import_module": "repo_memory_bootstrap.installer",
+          "kwargs": {
+            "dry_run": {
+              "value": "dry_run"
+            },
+            "force": {
+              "value": "force"
+            },
+            "key_repo_docs": {
+              "value": "key_repo_docs"
+            },
+            "key_subsystems": {
+              "value": "key_subsystems"
+            },
+            "other_key_commands": {
+              "value": "other_key_commands"
+            },
+            "policy_profile": {
+              "value": "policy_profile"
+            },
+            "primary_build_command": {
+              "value": "primary_build_command"
+            },
+            "primary_test_command": {
+              "value": "primary_test_command"
+            },
+            "project_name": {
+              "value": "project_name"
+            },
+            "project_purpose": {
+              "value": "project_purpose"
+            },
+            "target": {
+              "value": "target"
+            }
+          },
+          "primitive": "memory.install.apply"
+        },
+        {
+          "function": "install_bootstrap",
+          "handler": "function_call",
+          "import_module": "repo_memory_bootstrap.installer",
+          "kwargs": {
+            "dry_run": {
+              "value": "dry_run"
+            },
+            "force": {
+              "value": "force"
+            },
+            "key_repo_docs": {
+              "value": "key_repo_docs"
+            },
+            "key_subsystems": {
+              "value": "key_subsystems"
+            },
+            "other_key_commands": {
+              "value": "other_key_commands"
+            },
+            "policy_profile": {
+              "value": "policy_profile"
+            },
+            "primary_build_command": {
+              "value": "primary_build_command"
+            },
+            "primary_test_command": {
+              "value": "primary_test_command"
+            },
+            "project_name": {
+              "value": "project_name"
+            },
+            "project_purpose": {
+              "value": "project_purpose"
+            },
+            "target": {
+              "value": "target"
+            }
+          },
+          "primitive": "memory.init.apply"
+        },
+        {
+          "function": "adopt_bootstrap",
+          "handler": "function_call",
+          "import_module": "repo_memory_bootstrap.installer",
+          "kwargs": {
+            "apply_local_entrypoint": {
+              "value": "apply_local_entrypoint"
+            },
+            "dry_run": {
+              "value": "dry_run"
+            },
+            "key_repo_docs": {
+              "value": "key_repo_docs"
+            },
+            "key_subsystems": {
+              "value": "key_subsystems"
+            },
+            "other_key_commands": {
+              "value": "other_key_commands"
+            },
+            "policy_profile": {
+              "value": "policy_profile"
+            },
+            "primary_build_command": {
+              "value": "primary_build_command"
+            },
+            "primary_test_command": {
+              "value": "primary_test_command"
+            },
+            "project_name": {
+              "value": "project_name"
+            },
+            "project_purpose": {
+              "value": "project_purpose"
+            },
+            "target": {
+              "value": "target"
+            }
+          },
+          "primitive": "memory.adopt.apply"
+        },
+        {
+          "function": "upgrade_bootstrap",
+          "handler": "function_call",
+          "import_module": "repo_memory_bootstrap.installer",
+          "kwargs": {
+            "apply_local_entrypoint": {
+              "value": "apply_local_entrypoint"
+            },
+            "dry_run": {
+              "value": "dry_run"
+            },
+            "force": {
+              "value": "force"
+            },
+            "key_repo_docs": {
+              "value": "key_repo_docs"
+            },
+            "key_subsystems": {
+              "value": "key_subsystems"
+            },
+            "other_key_commands": {
+              "value": "other_key_commands"
+            },
+            "policy_profile": {
+              "value": "policy_profile"
+            },
+            "primary_build_command": {
+              "value": "primary_build_command"
+            },
+            "primary_test_command": {
+              "value": "primary_test_command"
+            },
+            "project_name": {
+              "value": "project_name"
+            },
+            "project_purpose": {
+              "value": "project_purpose"
+            },
+            "target": {
+              "value": "target"
+            }
+          },
+          "primitive": "memory.upgrade.apply"
+        },
+        {
+          "function": "migrate_layout",
+          "handler": "function_call",
+          "import_module": "repo_memory_bootstrap.installer",
+          "kwargs": {
+            "dry_run": {
+              "value": "dry_run"
+            },
+            "target": {
+              "value": "target"
+            }
+          },
+          "primitive": "memory.migrate_layout.apply"
+        },
+        {
+          "function": "uninstall_bootstrap",
+          "handler": "function_call",
+          "import_module": "repo_memory_bootstrap.installer",
+          "kwargs": {
+            "dry_run": {
+              "value": "dry_run"
+            },
+            "key_repo_docs": {
+              "value": "key_repo_docs"
+            },
+            "key_subsystems": {
+              "value": "key_subsystems"
+            },
+            "other_key_commands": {
+              "value": "other_key_commands"
+            },
+            "primary_build_command": {
+              "value": "primary_build_command"
+            },
+            "primary_test_command": {
+              "value": "primary_test_command"
+            },
+            "project_name": {
+              "value": "project_name"
+            },
+            "project_purpose": {
+              "value": "project_purpose"
+            },
+            "target": {
+              "value": "target"
+            }
+          },
+          "primitive": "memory.uninstall.apply"
+        },
+        {
           "function": "cleanup_bootstrap_workspace",
           "handler": "function_call",
           "import_module": "repo_memory_bootstrap.installer",
@@ -2066,6 +3143,21 @@ export const generatedCommandPackage = {
           "name": "dry_run"
         },
         {
+          "arg": "policy_profile",
+          "default": "default",
+          "name": "policy_profile"
+        },
+        {
+          "arg": "apply_local_entrypoint",
+          "default": false,
+          "name": "apply_local_entrypoint"
+        },
+        {
+          "arg": "force",
+          "default": false,
+          "name": "force"
+        },
+        {
           "arg": "summary",
           "default": "",
           "name": "summary"
@@ -2099,6 +3191,12 @@ export const generatedCommandPackage = {
       "module_file": "memory_operation_ir_executor",
       "supported_operation_ids": [
         "memory.doctor.report",
+        "memory.install.lifecycle",
+        "memory.init.lifecycle",
+        "memory.adopt.lifecycle",
+        "memory.upgrade.lifecycle",
+        "memory.migrate-layout.lifecycle",
+        "memory.uninstall.lifecycle",
         "memory.bootstrap-cleanup.apply",
         "memory.capture-note.report",
         "memory.create-note.apply",

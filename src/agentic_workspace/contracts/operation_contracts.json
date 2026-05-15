@@ -59,6 +59,42 @@
       "migration_status": "runtime-consumed"
     },
     {
+      "id": "memory.install.lifecycle",
+      "path": "operations/memory.install.lifecycle.json",
+      "command": "install",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "memory.init.lifecycle",
+      "path": "operations/memory.init.lifecycle.json",
+      "command": "init",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "memory.adopt.lifecycle",
+      "path": "operations/memory.adopt.lifecycle.json",
+      "command": "adopt",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "memory.upgrade.lifecycle",
+      "path": "operations/memory.upgrade.lifecycle.json",
+      "command": "upgrade",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "memory.migrate-layout.lifecycle",
+      "path": "operations/memory.migrate-layout.lifecycle.json",
+      "command": "migrate-layout",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "memory.uninstall.lifecycle",
+      "path": "operations/memory.uninstall.lifecycle.json",
+      "command": "uninstall",
+      "migration_status": "runtime-consumed"
+    },
+    {
       "id": "memory.bootstrap-cleanup.apply",
       "path": "operations/memory.bootstrap-cleanup.apply.json",
       "command": "bootstrap-cleanup",

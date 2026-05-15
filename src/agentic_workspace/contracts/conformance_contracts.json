@@ -64,6 +64,42 @@
       "adapter_kind": "process"
     },
     {
+      "id": "memory.install.lifecycle.dry-run.process",
+      "operation_id": "memory.install.lifecycle",
+      "path": "conformance/memory.install.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "memory.init.lifecycle.dry-run.process",
+      "operation_id": "memory.init.lifecycle",
+      "path": "conformance/memory.init.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "memory.adopt.lifecycle.dry-run.process",
+      "operation_id": "memory.adopt.lifecycle",
+      "path": "conformance/memory.adopt.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "memory.upgrade.lifecycle.dry-run.process",
+      "operation_id": "memory.upgrade.lifecycle",
+      "path": "conformance/memory.upgrade.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "memory.migrate-layout.lifecycle.dry-run.process",
+      "operation_id": "memory.migrate-layout.lifecycle",
+      "path": "conformance/memory.migrate-layout.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "memory.uninstall.lifecycle.dry-run.process",
+      "operation_id": "memory.uninstall.lifecycle",
+      "path": "conformance/memory.uninstall.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "memory.bootstrap-cleanup.process",
       "operation_id": "memory.bootstrap-cleanup.apply",
       "path": "conformance/memory.bootstrap-cleanup.process.json",
