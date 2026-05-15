@@ -823,7 +823,7 @@ def _validate_full_python_completion_runtime_ownership(ir: dict[str, object]) ->
         required_fragments = [
             "def _run_runtime_handler(",
             f"from .{runtime_module} import _GENERATED_RUNTIME_HANDLERS",
-            "if argv_list and argv_list[0] in {'-h', '--help'}:",
+            "if argv_list and argv_list[0] in {'-h', '--help', '--version'}:",
             "build_generated_parser().parse_args(argv_list)",
             "if supports_generated_command(argv_list):",
             "return run_generated_command(argv_list, _run_runtime_handler)",
@@ -1089,6 +1089,17 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
                     f"python_operation_execution_inventory.json {operation_id} domain runtime IR entry "
                     "must explain runtime_boundary_reason"
                 )
+            for field in ("what_would_make_portable_later", "generic_behavior_audit"):
+                if not str(entry.get(field, "")).strip():
+                    errors.append(
+                        f"python_operation_execution_inventory.json {operation_id} domain runtime IR entry "
+                        f"must include {field}"
+                    )
+            if "python.function.call" in primitive_refs and not str(entry.get("external_adapter_note", "")).strip():
+                errors.append(
+                    f"python_operation_execution_inventory.json {operation_id} domain runtime IR entry "
+                    "using python.function.call must state that it is external-adapter debt, not portable primitive coverage"
+                )
         if status == "accepted-hand-owned-runtime-primitive":
             boundary_class = str(entry.get("runtime_boundary_class", ""))
             if boundary_class not in PYTHON_OPERATION_ACCEPTED_BOUNDARY_CLASSES:
@@ -1290,7 +1301,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
             operation_id
             for operation_id, entry in by_operation.items()
             if isinstance(entry, dict)
-            and entry.get("status") == "accepted-hand-owned-runtime-primitive"
+            and entry.get("status") in {"domain-runtime-primitive-via-ir", "accepted-hand-owned-runtime-primitive"}
             and entry.get("runtime_boundary_class") in PYTHON_OPERATION_FULL_COMPLETION_BLOCKING_BOUNDARY_CLASSES
         )
         if blocking_runtime_debt:

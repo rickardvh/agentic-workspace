@@ -101,9 +101,9 @@
     {
       "id": "python-generated-cli-completion-promotion",
       "title": "Python generated CLI completion promotion",
-      "readiness": "ready",
+      "readiness": "promoted",
       "outcome": "Promote Python to full generated CLI completion only after the PR #966 review blockers prove generated ownership, not merely generated placement or IR wrapping.",
-      "owner_surface": "src/agentic_workspace/contracts/command_package_ir.json",
+      "owner_surface": ".agentic-workspace/planning/execplans/python-generated-cli-completion-promotion.plan.json",
       "proof": "Generated package static proof, Python Docker conformance, root CLI authority, clean package planning summary, and codegen-owned primitive executor conformance agree that original Python generated-CLI intent is satisfied.",
       "depends_on": [
         "python-runtime-handler-boundary",

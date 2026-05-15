@@ -111,7 +111,7 @@
     },
     "python_cli_completion": {
       "finish_line": "Python CLI completion means parser, dispatch, command/interface behavior, adapter metadata, conformance expectations, product-specific runtime binding, and generic deterministic file/data behavior are generated from implementation-independent contracts or IR into generated/python outputs and executed by codegen-owned primitive executors; packages/command-generation/src owns only generic generation, rendering, primitive execution, schema, freshness, and conformance machinery.",
-      "current_state": "codegen-owned-primitive-migration-incomplete",
+      "current_state": "full-generated-cli-complete",
       "allowed_hand_owned_cli_responsibilities": [
         "live workspace inspection",
         "package-specific runtime primitive implementation that cannot yet be represented by codegen-owned primitives",
@@ -135,13 +135,13 @@
         "future package command/interface work changes contracts, IR, generators, and regenerated outputs instead of package-local executable cli.py files",
         "runtime primitive code remains module-owned only when it performs live behavior, mutation orchestration, or package-specific judgment that is explicitly inventoried as not yet portable",
         "generic deterministic operations over files, JSON, TOML, Markdown, schemas, templates, managed payloads, and emitted JSON/text are codegen-owned primitive executor behavior before full completion is claimed",
-        "product-specific executable runtime behavior lives under generated/python target output before full completion is claimed; moving it from modules into command-generation source is not sufficient",
+        "product-specific executable runtime behavior lives under generated/python target output and is rendered by command-generation before full completion is claimed; moving it from modules into command-generation source is not sufficient",
         "root console smoke proof executes at least one generated root command through the installed console path, not only through generated parser/help imports",
         "Full completion proof must distinguish generated-output placement from generated ownership; product-specific runtime files under generated/python must be produced by command-generation or explicitly inventoried as transitional generated-output debt.",
         "Full completion proof must distinguish portable codegen primitive execution from domain runtime primitives wrapped in IR."
       ],
       "completion_gate": {
-        "state": "pending",
+        "state": "satisfied",
         "scope": "python-only",
         "satisfied_by": [
           {
@@ -176,7 +176,7 @@
           },
           {
             "id": "runtime-handlers-thin",
-            "evidence": "Hand-owned cli.py runtime bindings are limited to _run_*_adapter handlers whose operation ids exactly match generated operation ids.",
+            "evidence": "Generated runtime binding modules expose only thin _run_*_adapter handlers whose operation ids exactly match generated operation ids.",
             "proof": "scripts/check/check_generated_command_packages.py::_validate_python_runtime_handler_boundary"
           },
           {
@@ -193,6 +193,11 @@
             "id": "root-console-generated-command-smoke",
             "evidence": "The root console script must execute at least one generated root command through generated dispatch and codegen-owned run_operation_steps, not only through hand-owned live workspace inspection.",
             "proof": "tests/test_workspace_cli_blackbox.py::test_blackbox_root_generated_command_executes_primitive_ir_through_console_script"
+          },
+          {
+            "id": "product-specific-runtime-generated-output-owned",
+            "evidence": "generated/python runtime handler and operation executor modules are produced by command-generation render_outputs, and shipped module source no longer owns parser, dispatch, generated runtime handler maps, fallback dispatch, or operation executor behavior.",
+            "proof": "scripts/check/check_generated_command_packages.py::_validate_full_python_completion_executable_ownership"
           }
         ]
       }

@@ -306,8 +306,8 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
     assert "runtime handoff failures" in " ".join(maturity["weak-agent-safe-adapter"]["promotion_requires"])
     assert "implementation-independent contracts or IR" in python_completion["finish_line"]
     assert "codegen-owned primitive executors" in python_completion["finish_line"]
-    assert python_completion["current_state"] == "codegen-owned-primitive-migration-incomplete"
-    assert python_completion["completion_gate"]["state"] == "pending"
+    assert python_completion["current_state"] == "full-generated-cli-complete"
+    assert python_completion["completion_gate"]["state"] == "satisfied"
     assert python_completion["completion_gate"]["scope"] == "python-only"
     completion_evidence = {item["id"] for item in python_completion["completion_gate"]["satisfied_by"]}
     assert "python-docker-conformance" in completion_evidence
@@ -315,7 +315,7 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
     assert "representative-operation-ir-runtime-consumed" in completion_evidence
     assert "operation-execution-inventory-exhaustive" in completion_evidence
     assert "root-console-generated-command-smoke" in completion_evidence
-    assert "product-specific-runtime-generated-output-owned" not in completion_evidence
+    assert "product-specific-runtime-generated-output-owned" in completion_evidence
     assert any(
         "package-specific runtime primitive implementation" in item for item in python_completion["allowed_hand_owned_cli_responsibilities"]
     )
@@ -807,12 +807,16 @@ def test_python_operation_execution_inventory_tracks_representative_runtime_cons
     assert entries["memory.report.report"]["status"] == "domain-runtime-primitive-via-ir"
     assert "compatibility-runtime-handler" not in {entry["status"] for entry in entries.values()}
     assert "accepted-hand-owned-runtime-primitive" in {entry["status"] for entry in entries.values()}
-    accepted = [entry for entry in entries.values() if entry["status"] == "accepted-hand-owned-runtime-primitive"]
-    assert all(entry.get("runtime_boundary_class") for entry in accepted)
-    assert all(entry.get("runtime_boundary_reason") for entry in accepted)
-    assert all(entry.get("what_would_make_portable_later") for entry in accepted)
-    assert all(entry.get("generic_behavior_audit") for entry in accepted)
-    assert "generic-deterministic-runtime-debt" not in {entry["runtime_boundary_class"] for entry in accepted}
+    audited_runtime = [
+        entry
+        for entry in entries.values()
+        if entry["status"] in {"domain-runtime-primitive-via-ir", "accepted-hand-owned-runtime-primitive"}
+    ]
+    assert all(entry.get("runtime_boundary_class") for entry in audited_runtime)
+    assert all(entry.get("runtime_boundary_reason") for entry in audited_runtime)
+    assert all(entry.get("what_would_make_portable_later") for entry in audited_runtime)
+    assert all(entry.get("generic_behavior_audit") for entry in audited_runtime)
+    assert "generic-deterministic-runtime-debt" not in {entry["runtime_boundary_class"] for entry in audited_runtime}
     generated_operations = {
         operation_id
         for package in contract_tooling.command_package_ir_manifest()["packages"]
