@@ -7206,6 +7206,7 @@
             "memory.list-files.report",
             "memory.list-skills.report",
             "memory.promotion-report.report",
+            "memory.prompt.render",
             "memory.report.report",
             "memory.route.report",
             "memory.route-report.report",
@@ -7320,6 +7321,11 @@
               "name": "current_command",
               "arg": "current_command",
               "default": "show"
+            },
+            {
+              "name": "prompt_command",
+              "arg": "prompt_command",
+              "default": "install"
             }
           ],
           "context_roots": [
@@ -7388,6 +7394,11 @@
               "primitive": "memory.promotion_report.load",
               "handler": "runtime_handler",
               "function": "_load_memory_promotion_report"
+            },
+            {
+              "primitive": "memory.prompt.render",
+              "handler": "runtime_handler",
+              "function": "_load_memory_prompt"
             },
             {
               "primitive": "memory.report.load",
@@ -7925,6 +7936,133 @@
             "runtime_owned": [
               "legacy current-memory inspection policy",
               "module result assembly",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "memory.prompt.cli",
+          "status": "generated",
+          "command": {
+            "name": "prompt",
+            "manifest_ref": "package:memory:cli"
+          },
+          "interface": {
+            "name": "prompt",
+            "help": "Print a canonical agent prompt for install, adopt, populate, upgrade, or uninstall.",
+            "options": [],
+            "subcommand_dest": "prompt_command",
+            "subcommands_required": true,
+            "subcommands": [
+              {
+                "name": "install",
+                "help": "Print the canonical install prompt.",
+                "options": [
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Target repository path. Defaults to ./repo in prompt text."
+                  }
+                ]
+              },
+              {
+                "name": "adopt",
+                "help": "Print the canonical adoption prompt.",
+                "options": [
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Target repository path. Defaults to ./repo in prompt text."
+                  }
+                ]
+              },
+              {
+                "name": "populate",
+                "help": "Print the canonical populate prompt.",
+                "options": [
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Target repository path. Defaults to ./repo in prompt text."
+                  }
+                ]
+              },
+              {
+                "name": "upgrade",
+                "help": "Print the canonical upgrade prompt.",
+                "options": [
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Target repository path. Defaults to ./repo in prompt text."
+                  }
+                ]
+              },
+              {
+                "name": "uninstall",
+                "help": "Print the canonical uninstall prompt.",
+                "options": [
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Target repository path. Defaults to ./repo in prompt text."
+                  }
+                ]
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "memory.prompt.render",
+            "path": "operations/memory.prompt.render.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "memory.prompt.render",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "memory.prompt.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "nested subcommand identity",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "memory prompt wording",
               "output emission"
             ]
           }

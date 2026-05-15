@@ -100,6 +100,12 @@
       "adapter_kind": "process"
     },
     {
+      "id": "memory.prompt.process",
+      "operation_id": "memory.prompt.render",
+      "path": "conformance/memory.prompt.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "memory.report.process",
       "operation_id": "memory.report.report",
       "path": "conformance/memory.report.process.json",

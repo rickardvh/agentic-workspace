@@ -262,6 +262,12 @@
       "summary": "Load package-local memory promotion candidate report state."
     },
     {
+      "id": "memory.prompt.render",
+      "summary": "Render package-local Memory bootstrap prompt guidance.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime"
+    },
+    {
       "id": "memory.report.load",
       "summary": "Load package-local memory report state for a target repository."
     },

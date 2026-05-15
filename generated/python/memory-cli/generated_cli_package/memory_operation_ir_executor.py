@@ -34,6 +34,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
         'memory.list-files.report',
         'memory.list-skills.report',
         'memory.promotion-report.report',
+        'memory.prompt.render',
         'memory.report.report',
         'memory.route-report.report',
         'memory.route-review.report',
@@ -73,6 +74,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'force_new_reason': getattr(args, 'force_new_reason', ''),
                 'query': getattr(args, 'query', ''),
                 'current_command': getattr(args, 'current_command', 'show'),
+                'prompt_command': getattr(args, 'prompt_command', 'install'),
             },
             context=PrimitiveContext(cwd=Path.cwd(), roots={
                 'memory.package-payload': _handle_context_root_memory_package_payload(),
@@ -85,6 +87,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'memory.capture_note.load': _handle_memory_capture_note_load,
                 'memory.current.load': _handle_memory_current_load,
                 'memory.promotion_report.load': _handle_memory_promotion_report_load,
+                'memory.prompt.render': _handle_memory_prompt_render,
                 'memory.report.load': _handle_memory_report_load,
                 'memory.route.load': _handle_memory_route_load,
                 'memory.route_report.load': _handle_memory_route_report_load,
@@ -147,6 +150,12 @@ def _handle_memory_promotion_report_load(values: dict[str, Any], arguments: dict
     from .memory_runtime_cli import _load_memory_promotion_report
 
     return _load_memory_promotion_report(values, arguments, context)
+
+
+def _handle_memory_prompt_render(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
+    from .memory_runtime_cli import _load_memory_prompt
+
+    return _load_memory_prompt(values, arguments, context)
 
 
 def _handle_memory_report_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:

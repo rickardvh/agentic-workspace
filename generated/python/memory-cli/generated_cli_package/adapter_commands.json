@@ -228,6 +228,85 @@
     "operation_path": "operations/memory.current.report.json"
   },
   {
+    "adapter_id": "memory.prompt.cli",
+    "interface": {
+      "help": "Print a canonical agent prompt for install, adopt, populate, upgrade, or uninstall.",
+      "name": "prompt",
+      "options": [],
+      "subcommand_dest": "prompt_command",
+      "subcommands": [
+        {
+          "help": "Print the canonical install prompt.",
+          "name": "install",
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to ./repo in prompt text.",
+              "name": "target"
+            }
+          ]
+        },
+        {
+          "help": "Print the canonical adoption prompt.",
+          "name": "adopt",
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to ./repo in prompt text.",
+              "name": "target"
+            }
+          ]
+        },
+        {
+          "help": "Print the canonical populate prompt.",
+          "name": "populate",
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to ./repo in prompt text.",
+              "name": "target"
+            }
+          ]
+        },
+        {
+          "help": "Print the canonical upgrade prompt.",
+          "name": "upgrade",
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to ./repo in prompt text.",
+              "name": "target"
+            }
+          ]
+        },
+        {
+          "help": "Print the canonical uninstall prompt.",
+          "name": "uninstall",
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to ./repo in prompt text.",
+              "name": "target"
+            }
+          ]
+        }
+      ],
+      "subcommands_required": true
+    },
+    "operation_id": "memory.prompt.render",
+    "operation_path": "operations/memory.prompt.render.json"
+  },
+  {
     "adapter_id": "memory.report.cli",
     "interface": {
       "help": "Read-only report report.",

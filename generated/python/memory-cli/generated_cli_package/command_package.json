@@ -423,6 +423,133 @@
       "status": "generated"
     },
     {
+      "adapter_id": "memory.prompt.cli",
+      "command": {
+        "manifest_ref": "package:memory:cli",
+        "name": "prompt"
+      },
+      "conformance_refs": [
+        "memory.prompt.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "interface": {
+        "help": "Print a canonical agent prompt for install, adopt, populate, upgrade, or uninstall.",
+        "name": "prompt",
+        "options": [],
+        "subcommand_dest": "prompt_command",
+        "subcommands": [
+          {
+            "help": "Print the canonical install prompt.",
+            "name": "install",
+            "options": [
+              {
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to ./repo in prompt text.",
+                "name": "target"
+              }
+            ]
+          },
+          {
+            "help": "Print the canonical adoption prompt.",
+            "name": "adopt",
+            "options": [
+              {
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to ./repo in prompt text.",
+                "name": "target"
+              }
+            ]
+          },
+          {
+            "help": "Print the canonical populate prompt.",
+            "name": "populate",
+            "options": [
+              {
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to ./repo in prompt text.",
+                "name": "target"
+              }
+            ]
+          },
+          {
+            "help": "Print the canonical upgrade prompt.",
+            "name": "upgrade",
+            "options": [
+              {
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to ./repo in prompt text.",
+                "name": "target"
+              }
+            ]
+          },
+          {
+            "help": "Print the canonical uninstall prompt.",
+            "name": "uninstall",
+            "options": [
+              {
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to ./repo in prompt text.",
+                "name": "target"
+              }
+            ]
+          }
+        ],
+        "subcommands_required": true
+      },
+      "operation_ref": {
+        "id": "memory.prompt.render",
+        "path": "operations/memory.prompt.render.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "memory prompt wording",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "nested subcommand identity",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.prompt.render",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    {
       "adapter_id": "memory.report.cli",
       "command": {
         "manifest_ref": "package:memory:cli",
@@ -1346,6 +1473,11 @@
           "primitive": "memory.promotion_report.load"
         },
         {
+          "function": "_load_memory_prompt",
+          "handler": "runtime_handler",
+          "primitive": "memory.prompt.render"
+        },
+        {
           "function": "_load_memory_report",
           "handler": "runtime_handler",
           "primitive": "memory.report.load"
@@ -1541,6 +1673,11 @@
           "arg": "current_command",
           "default": "show",
           "name": "current_command"
+        },
+        {
+          "arg": "prompt_command",
+          "default": "install",
+          "name": "prompt_command"
         }
       ],
       "module_file": "memory_operation_ir_executor",
@@ -1551,6 +1688,7 @@
         "memory.list-files.report",
         "memory.list-skills.report",
         "memory.promotion-report.report",
+        "memory.prompt.render",
         "memory.report.report",
         "memory.route.report",
         "memory.route-report.report",

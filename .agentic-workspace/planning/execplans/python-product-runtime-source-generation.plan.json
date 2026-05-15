@@ -158,9 +158,9 @@
     "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
     "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
     "route chosen": "keep-local",
-    "route skipped reason": "bounded current show/check promotion became a one-operation subcommand slice after the existing registry model rejected separate operation ids under one top-level adapter; local correction was faster than delegation",
+    "route skipped reason": "bounded read-only memory prompt promotion followed current subcommand pattern; local correction/proof was cheaper than delegation for one command",
     "decision command": "agentic-planning delegation-decision",
-    "recorded at": "2026-05-15T13:16:21+00:00"
+    "recorded at": "2026-05-15T13:28:32+00:00"
   },
   "system_intent_alignment": {
     "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
@@ -243,12 +243,12 @@
   },
   "delegation_outcome_feedback": {
     "route chosen": "keep-local",
-    "route skipped reason": "bounded current show/check promotion became a one-operation subcommand slice after the existing registry model rejected separate operation ids under one top-level adapter; local correction was faster than delegation",
-    "expected savings": "low after the generator/checker limitation was identified",
-    "actual friction": "the package currently supports nested generated subcommands best as one top-level operation with subcommand-derived behavior; Docker conformance repeatedly hit known #978 jsonschema native failure before a serial rerun passed",
-    "proof result": "generated package static proof, adapter conformance, Docker proof, serial Docker conformance rerun, contract tooling, structured inventory, generator freshness, memory tests/lint, workspace tests/lint, ruff, and root CLI authority passed",
-    "quality concern": "current show/check now have generated parser/dispatch and one shared operation IR, but memory_runtime_cli.py still contains transitional runtime handler/output glue until rendered or retired",
-    "decomposition adjustment": "continue with mutation/lifecycle memory commands next; consider filing a follow-up if future subcommands require distinct operation ids under one generated adapter"
+    "route skipped reason": "bounded read-only memory prompt promotion followed current subcommand pattern; local correction/proof was cheaper than delegation for one command",
+    "expected savings": "low for this single-command read-only promotion",
+    "actual friction": "prompt required text-output compatibility in transitional memory runtime; generator/checker handled nested subcommands as a single top-level operation",
+    "proof result": "generated package static proof, adapter conformance, Docker proof, Docker conformance, contract tooling, structured inventory, generator freshness, memory tests/lint, workspace tests/lint, ruff, and root CLI authority passed",
+    "quality concern": "memory_runtime_cli.py still contains transitional runtime handler/output glue until remaining lifecycle/mutation commands are promoted and the runtime is rendered or retired",
+    "decomposition adjustment": "continue with create-note/bootstrap-cleanup and lifecycle commands next; keep nested subcommands as one operation unless generator/checker grows per-subcommand operation parity"
   },
   "proof_report": {
     "validation proof": "uv run python scripts/generate/generate_command_packages.py; uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run python scripts/check/check_generated_command_packages.py --docker --require-docker; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker; uv run pytest tests/test_workspace_cli.py tests/test_contract_tooling.py -q; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q; make test-planning; make lint-planning; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check selected files; make test-workspace; make lint-workspace.",
@@ -358,6 +358,7 @@
     "2026-05-15: Recorded delegation decision route=delegate-validation.",
     "2026-05-15: Recorded delegation decision route=delegate-validation.",
     "2026-05-15: Recorded delegation decision route=delegate-exploration.",
+    "2026-05-15: Recorded delegation decision route=keep-local.",
     "2026-05-15: Recorded delegation decision route=keep-local.",
     "2026-05-15: Recorded delegation decision route=keep-local.",
     "2026-05-15: Recorded delegation decision route=keep-local.",

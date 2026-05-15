@@ -107,6 +107,12 @@
       "migration_status": "runtime-consumed"
     },
     {
+      "id": "memory.prompt.render",
+      "path": "operations/memory.prompt.render.json",
+      "command": "prompt",
+      "migration_status": "runtime-consumed"
+    },
+    {
       "id": "memory.report.report",
       "path": "operations/memory.report.report.json",
       "command": "report",

@@ -180,21 +180,22 @@ def build_parser() -> argparse.ArgumentParser:
         list_skills_parser = subparsers.add_parser("list-skills", help="List bundled bootstrap-lifecycle skills.")
         _add_format_argument(list_skills_parser)
 
-    prompt_parser = subparsers.add_parser(
-        "prompt",
-        help="Print a canonical agent prompt for install, adopt, populate, upgrade, or uninstall.",
-    )
-    prompt_subparsers = prompt_parser.add_subparsers(dest="prompt_command", required=True)
-    prompt_install_parser = prompt_subparsers.add_parser("install", help="Print the canonical install prompt.")
-    _add_target_arguments(prompt_install_parser)
-    prompt_adopt_parser = prompt_subparsers.add_parser("adopt", help="Print the canonical adoption prompt.")
-    _add_target_arguments(prompt_adopt_parser)
-    prompt_populate_parser = prompt_subparsers.add_parser("populate", help="Print the canonical populate prompt.")
-    _add_target_arguments(prompt_populate_parser)
-    prompt_upgrade_parser = prompt_subparsers.add_parser("upgrade", help="Print the canonical upgrade prompt.")
-    _add_target_arguments(prompt_upgrade_parser)
-    prompt_uninstall_parser = prompt_subparsers.add_parser("uninstall", help="Print the canonical uninstall prompt.")
-    _add_target_arguments(prompt_uninstall_parser)
+    if "prompt" not in generated_commands:
+        prompt_parser = subparsers.add_parser(
+            "prompt",
+            help="Print a canonical agent prompt for install, adopt, populate, upgrade, or uninstall.",
+        )
+        prompt_subparsers = prompt_parser.add_subparsers(dest="prompt_command", required=True)
+        prompt_install_parser = prompt_subparsers.add_parser("install", help="Print the canonical install prompt.")
+        _add_target_arguments(prompt_install_parser)
+        prompt_adopt_parser = prompt_subparsers.add_parser("adopt", help="Print the canonical adoption prompt.")
+        _add_target_arguments(prompt_adopt_parser)
+        prompt_populate_parser = prompt_subparsers.add_parser("populate", help="Print the canonical populate prompt.")
+        _add_target_arguments(prompt_populate_parser)
+        prompt_upgrade_parser = prompt_subparsers.add_parser("upgrade", help="Print the canonical upgrade prompt.")
+        _add_target_arguments(prompt_upgrade_parser)
+        prompt_uninstall_parser = prompt_subparsers.add_parser("uninstall", help="Print the canonical uninstall prompt.")
+        _add_target_arguments(prompt_uninstall_parser)
 
     if "current" not in generated_commands:
         current_parser = subparsers.add_parser("current", help="Inspect or check legacy current-memory migration residue.")
@@ -972,6 +973,10 @@ def _run_promotion_report_adapter(args: argparse.Namespace) -> int | None:
     return run_operation_ir(generated_cli_package_operation_contract("memory.promotion-report.report"), args)
 
 
+def _run_prompt_render_adapter(args: argparse.Namespace) -> int | None:
+    return run_operation_ir(generated_cli_package_operation_contract("memory.prompt.render"), args)
+
+
 def _run_report_adapter(args: argparse.Namespace) -> int | None:
     return run_operation_ir(generated_cli_package_operation_contract("memory.report.report"), args)
 
@@ -1011,6 +1016,7 @@ _GENERATED_RUNTIME_HANDLERS = {
     "memory.list-files.report": _run_list_files_report_adapter,
     "memory.list-skills.report": _run_list_skills_report_adapter,
     "memory.promotion-report.report": _run_promotion_report_adapter,
+    "memory.prompt.render": _run_prompt_render_adapter,
     "memory.report.report": _run_report_adapter,
     "memory.route.report": _run_route_adapter,
     "memory.route-report.report": _run_route_report_adapter,
@@ -1056,6 +1062,10 @@ def _load_memory_current(values: dict[str, Any], _arguments: dict[str, Any], _co
 
 def _load_memory_promotion_report(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> Any:
     return promotion_report(target=values.get("target"), notes=values.get("notes"), mode=values.get("mode"))
+
+
+def _load_memory_prompt(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> str:
+    return _build_agent_prompt(str(values.get("prompt_command") or "install"), target=values.get("target"))
 
 
 def _load_memory_report(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> dict[str, object]:
@@ -1184,6 +1194,9 @@ def _emit_memory_operation_output(values: dict[str, Any], _arguments: dict[str, 
         return
     if values.get("operation_id") == "memory.current.report" and str(values.get("current_command") or "show") == "show":
         _emit_current_view(result, output_format=output_format)
+        return
+    if values.get("operation_id") == "memory.prompt.render":
+        print(str(result))
         return
     if output_format == "json":
         if isinstance(result, dict):
