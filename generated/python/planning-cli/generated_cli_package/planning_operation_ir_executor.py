@@ -95,15 +95,15 @@ def _handle_planning_report_load(values: dict[str, Any], _arguments: dict[str, A
 
 
 def _handle_planning_summary_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from .planning_runtime_cli import _load_planning_summary_operation
+    from repo_planning_bootstrap.runtime_projection import load_planning_summary_operation
 
-    return _load_planning_summary_operation(values, arguments, context)
+    return load_planning_summary_operation(values, arguments, context)
 
 
 def _handle_planning_reconcile_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from .planning_runtime_cli import _load_planning_reconcile_operation
+    from repo_planning_bootstrap.runtime_projection import load_planning_reconcile_operation
 
-    return _load_planning_reconcile_operation(values, arguments, context)
+    return load_planning_reconcile_operation(values, arguments, context)
 
 
 def _handle_planning_bootstrap_status_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
@@ -125,6 +125,6 @@ def _handle_planning_create_review_apply(values: dict[str, Any], _arguments: dic
 
 
 def _handle_output_emit(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from .planning_runtime_cli import _emit_planning_operation_output
+    from repo_planning_bootstrap.runtime_projection import emit_planning_operation_output
 
-    return _emit_planning_operation_output(values, arguments, context)
+    return emit_planning_operation_output(values, arguments, context)

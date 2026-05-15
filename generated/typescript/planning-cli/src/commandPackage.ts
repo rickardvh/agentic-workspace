@@ -736,13 +736,15 @@ export const generatedCommandPackage = {
           "primitive": "planning.report.load"
         },
         {
-          "function": "_load_planning_summary_operation",
+          "function": "load_planning_summary_operation",
           "handler": "runtime_handler",
+          "import_module": "repo_planning_bootstrap.runtime_projection",
           "primitive": "planning.summary.load"
         },
         {
-          "function": "_load_planning_reconcile_operation",
+          "function": "load_planning_reconcile_operation",
           "handler": "runtime_handler",
+          "import_module": "repo_planning_bootstrap.runtime_projection",
           "primitive": "planning.reconcile.load"
         },
         {
@@ -809,8 +811,9 @@ export const generatedCommandPackage = {
           "primitive": "planning.create-review.apply"
         },
         {
-          "function": "_emit_planning_operation_output",
+          "function": "emit_planning_operation_output",
           "handler": "runtime_handler",
+          "import_module": "repo_planning_bootstrap.runtime_projection",
           "primitive": "output.emit"
         }
       ],

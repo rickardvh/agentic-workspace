@@ -206,6 +206,13 @@ def _render_runtime_emit_handler(function_name: str, handler: dict[str, Any], *,
 
 def _render_runtime_handler(function_name: str, handler: dict[str, Any], *, runtime_module_file: str) -> str:
     runtime_function = str(handler["function"])
+    import_module = str(handler.get("import_module") or "")
+    if import_module:
+        return (
+            f"def {function_name}(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:\n"
+            f"    from {import_module} import {runtime_function}\n\n"
+            f"    return {runtime_function}(values, arguments, context)\n"
+        )
     return (
         f"def {function_name}(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:\n"
         f"    from .{runtime_module_file} import {runtime_function}\n\n"

@@ -4536,12 +4536,14 @@
             {
               "primitive": "planning.summary.load",
               "handler": "runtime_handler",
-              "function": "_load_planning_summary_operation"
+              "function": "load_planning_summary_operation",
+              "import_module": "repo_planning_bootstrap.runtime_projection"
             },
             {
               "primitive": "planning.reconcile.load",
               "handler": "runtime_handler",
-              "function": "_load_planning_reconcile_operation"
+              "function": "load_planning_reconcile_operation",
+              "import_module": "repo_planning_bootstrap.runtime_projection"
             },
             {
               "primitive": "planning.bootstrap.status.load",
@@ -4609,7 +4611,8 @@
             {
               "primitive": "output.emit",
               "handler": "runtime_handler",
-              "function": "_emit_planning_operation_output"
+              "function": "emit_planning_operation_output",
+              "import_module": "repo_planning_bootstrap.runtime_projection"
             }
           ]
         }

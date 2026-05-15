@@ -455,6 +455,10 @@
             "function": {
               "type": "string",
               "minLength": 1
+            },
+            "import_module": {
+              "type": "string",
+              "minLength": 1
             }
           }
         },
