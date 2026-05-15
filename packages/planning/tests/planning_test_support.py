@@ -1,17 +1,21 @@
 from __future__ import annotations
 
+import importlib
+
 # ruff: noqa: F401
 import importlib.util
 import json
 import subprocess
 import tomllib
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from command_generation.generated_package_loader import load_generated_command_module_for_entrypoint
 
 import repo_planning_bootstrap._render as render_module
 import repo_planning_bootstrap.installer as installer_mod
+import repo_planning_bootstrap.runtime_projection as runtime_projection
 from repo_planning_bootstrap._ownership import module_root as planning_module_root
 from repo_planning_bootstrap.installer import (
     OPTIONAL_PAYLOAD_FILES,
@@ -35,7 +39,17 @@ from repo_planning_bootstrap.installer import (
     verify_payload,
 )
 
-planning_cli = load_generated_command_module_for_entrypoint("agentic-planning", "cli.py")
+_generated_planning_cli = load_generated_command_module_for_entrypoint("agentic-planning", "cli.py")
+_generated_planning_commands = importlib.import_module(f"{_generated_planning_cli.__package__}.commands")
+planning_cli = SimpleNamespace(
+    main=_generated_planning_cli.main,
+    build_parser=_generated_planning_cli.build_parser,
+    _GENERATED_RUNTIME_HANDLERS=_generated_planning_commands.GENERATED_COMMAND_HANDLERS,
+    _print_handoff=runtime_projection._print_handoff,
+    _print_reconcile=runtime_projection._print_reconcile,
+    _print_report=runtime_projection._print_report,
+    _print_summary=runtime_projection._print_summary,
+)
 
 
 def _write(path: Path, text: str) -> None:

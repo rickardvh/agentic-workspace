@@ -736,6 +736,22 @@ def test_python_runtime_import_boundary_rejects_legacy_generated_adapter_dispatc
     ]
 
 
+def test_python_runtime_import_boundary_rejects_entrypoint_runtime_export_forwarding() -> None:
+    checker = _load_checker()
+    errors = checker._validate_no_legacy_generated_adapter_runtime_import(
+        relative_path="generated/planning/python/cli.py",
+        text=(
+            "from repo_planning_bootstrap.runtime_projection import _print_summary as _print_summary\n"
+            "_RUNTIME_EXPORT_SOURCES = ()\n"
+            "def _sync_runtime_export_patches(): pass\n"
+        ),
+    )
+
+    assert any("repo_planning_bootstrap.runtime_projection" in error for error in errors)
+    assert any("_RUNTIME_EXPORT_SOURCES" in error for error in errors)
+    assert any("_sync_runtime_export_patches" in error for error in errors)
+
+
 def test_python_parser_retirement_rejects_generated_command_in_handwritten_parser(monkeypatch) -> None:
     checker = _load_checker()
     root_cli = checker._generated_runtime_module_for_package("root-workspace")

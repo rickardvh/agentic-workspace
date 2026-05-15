@@ -47,8 +47,9 @@ from command_generation.generated_package_loader import (
     load_generated_command_module_for_entrypoint,
     load_generated_command_package_for_entrypoint,
 )
+from agentic_workspace import workspace_runtime_primitives as cli
 
-cli = load_generated_command_module_for_entrypoint("agentic-workspace", "cli.py")
+generated_workspace_cli = load_generated_command_module_for_entrypoint("agentic-workspace", "cli.py")
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -1277,7 +1278,7 @@ def _program_generated_command_names(program: str) -> set[str]:
 
 def _program_parser(program: str) -> argparse.ArgumentParser | None:
     if program == "agentic-workspace":
-        return cli.build_parser()
+        return generated_workspace_cli.build_parser()
     if program == "agentic-planning":
         return load_generated_command_module_for_entrypoint("agentic-planning", "cli.py").build_parser()
     if program == "agentic-memory":
@@ -1921,8 +1922,8 @@ def main(argv: list[str] | None = None) -> int:
     if live_registry_payload != module_registry["modules"]:
         checks.append(("module registry parity", ["live module registry drifted from module_registry.json"]))
     parser_manifest = cli_commands_manifest()
-    parser_snapshot = _parser_snapshot(cli.build_parser())
-    generated_root_commands = set(cli.generated_command_names())  # type: ignore[attr-defined]
+    parser_snapshot = _parser_snapshot(generated_workspace_cli.build_parser())
+    generated_root_commands = set(generated_workspace_cli.generated_command_names())  # type: ignore[attr-defined]
     manifest_command_names = {str(spec["name"]) for spec in parser_manifest["commands"]}
     if not generated_root_commands >= manifest_command_names:
         expected_parser_snapshot = [

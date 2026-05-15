@@ -469,14 +469,6 @@ def _python_runtime_handler_module(
         str(handler["operation_id"]): handler for handler in binding.get("runtime_module_handlers", []) if isinstance(handler, dict)
     }
     operation_ids.update(direct_handlers)
-    export_functions: list[str] = []
-    export_sources: list[str] = []
-    for export in binding.get("runtime_module_exports", []):
-        name = str(export["name"])
-        import_module = str(export["import_module"])
-        function = str(export.get("function") or name)
-        export_functions.append(f"from {import_module} import {function} as {name}\n")
-        export_sources.append(f"    ({import_module!r}, {function!r}, {name!r}),")
     handler_functions = []
     handler_items = []
     for operation_id in sorted(operation_ids):
@@ -504,7 +496,6 @@ def _python_runtime_handler_module(
         '"""\n\n'
         "from __future__ import annotations\n\n"
         "import argparse\n"
-        "import importlib\n"
         "import sys\n"
         "from typing import Any\n\n"
         "# DO NOT EDIT DIRECTLY.\n"
@@ -515,19 +506,7 @@ def _python_runtime_handler_module(
         "from . import generated_operation_contract\n"
         "from . import run_generated_command\n"
         "from . import supports_generated_command\n"
-        f"from .{executor_module} import run_operation_ir\n\n\n"
-        + "\n\n".join(export_functions)
-        + ("\n\n" if export_functions else "")
-        + "_RUNTIME_EXPORT_SOURCES = (\n"
-        + "\n".join(export_sources)
-        + "\n)\n\n\n"
-        + "def _sync_runtime_export_patches() -> None:\n"
-        + "    for module_name, source_name, exported_name in _RUNTIME_EXPORT_SOURCES:\n"
-        + "        value = globals().get(exported_name)\n"
-        + "        module = importlib.import_module(module_name)\n"
-        + "        if getattr(module, source_name, None) is not value:\n"
-        + "            setattr(module, source_name, value)\n\n\n"
-        + "def _program_name() -> str:\n"
+        f"from .{executor_module} import run_operation_ir\n\n\n" + "def _program_name() -> str:\n"
         '    invoked = sys.argv[0].replace("\\\\", "/").rsplit("/", 1)[-1]\n'
         f"    if invoked == {package['program']!r}:\n"
         "        return invoked\n"
@@ -549,7 +528,6 @@ def _python_runtime_handler_module(
         "            f\"Generated adapter for {getattr(args, 'command', operation_id)} references unsupported operation {operation_id}.\"\n"
         "        )\n"
         "        raise SystemExit(2)\n"
-        "    _sync_runtime_export_patches()\n"
         "    return handler(args)\n\n\n"
         + "\n\n".join(handler_functions)
         + "\n\n\n_GENERATED_RUNTIME_HANDLERS = {\n"
@@ -570,16 +548,6 @@ def _python_runtime_adapter_module(
     runnable = str(
         target.get("maturity_level_ref") in {"runtime-backed-read-only-adapter", "weak-agent-safe-adapter", "mutation-capable-adapter"}
     )
-    python_runtime_binding = package.get("python_runtime_binding", {})
-    export_functions = []
-    export_sources = []
-    if isinstance(python_runtime_binding, dict):
-        for export in python_runtime_binding.get("runtime_module_exports", []):
-            name = str(export["name"])
-            import_module = str(export["import_module"])
-            function = str(export.get("function") or name)
-            export_functions.append(f"from {import_module} import {function} as {name}\n")
-            export_sources.append(f"    ({import_module!r}, {function!r}, {name!r}),")
     runtime_module_file = _runtime_module_file_for_package(package)
     main_function = ""
     if runtime_module_file:
@@ -592,7 +560,6 @@ def _python_runtime_adapter_module(
             "        build_generated_parser().error(\n"
             "            f\"Generated adapter for {getattr(args, 'command', operation_id)} references unsupported operation {operation_id}.\"\n"
             "        )\n"
-            "    _sync_runtime_export_patches()\n"
             "    return handler(args)\n\n\n"
             "def main(argv: list[str] | None = None) -> int:\n"
             "    import sys\n"
@@ -620,7 +587,6 @@ def _python_runtime_adapter_module(
         "from __future__ import annotations\n\n"
         "import argparse\n"
         "import difflib\n"
-        "import importlib\n"
         "import json\n"
         "from collections.abc import Callable\n"
         "from importlib.resources import files\n"
@@ -630,19 +596,7 @@ def _python_runtime_adapter_module(
         f"# Command/interface changes belong in {source_path}.\n"
         "# Runtime behavior changes belong in hand-written operation/primitive implementation code.\n"
         f"# Regenerate with: {regenerate_command}\n"
-        "\n"
-        + "".join(export_functions)
-        + ("\n" if export_functions else "\n")
-        + "_RUNTIME_EXPORT_SOURCES = (\n"
-        + "\n".join(export_sources)
-        + "\n)\n\n\n"
-        + "def _sync_runtime_export_patches() -> None:\n"
-        + "    for module_name, source_name, exported_name in _RUNTIME_EXPORT_SOURCES:\n"
-        + "        value = globals().get(exported_name)\n"
-        + "        module = importlib.import_module(module_name)\n"
-        + "        if getattr(module, source_name, None) is not value:\n"
-        + "            setattr(module, source_name, value)\n\n\n"
-        + "def _load_generated_json(name: str) -> Any:\n"
+        "\n" + "def _load_generated_json(name: str) -> Any:\n"
         "    parts = tuple(part for part in name.replace('\\\\', '/').split('/') if part)\n"
         "    try:\n"
         '        return json.loads(files(__package__).joinpath(*parts).read_text(encoding="utf-8"))\n'

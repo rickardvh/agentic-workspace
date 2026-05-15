@@ -2556,28 +2556,6 @@ export const generatedCommandPackage = {
       ]
     },
     "render_runtime_module": true,
-    "runtime_module_exports": [
-      {
-        "function": "_print_summary",
-        "import_module": "repo_planning_bootstrap.runtime_projection",
-        "name": "_print_summary"
-      },
-      {
-        "function": "_print_report",
-        "import_module": "repo_planning_bootstrap.runtime_projection",
-        "name": "_print_report"
-      },
-      {
-        "function": "_print_reconcile",
-        "import_module": "repo_planning_bootstrap.runtime_projection",
-        "name": "_print_reconcile"
-      },
-      {
-        "function": "_print_handoff",
-        "import_module": "repo_planning_bootstrap.runtime_projection",
-        "name": "_print_handoff"
-      }
-    ],
     "runtime_module_file": "cli"
   },
   "targets": [

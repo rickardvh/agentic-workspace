@@ -1,0 +1,337 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Python generated entrypoint source import retirement",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "#892",
+    "hard_constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Remove runtime_module_exports from the generated Python entrypoint path, regenerate command packages, and add static proof that generated Python entrypoints do not import package-owned runtime modules for export patch-forwarding.",
+    "proof_expectations": [
+      "uv run python scripts/generate/generate_command_packages.py --check",
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "uv run pytest tests/test_contract_tooling.py tests/test_generated_command_package_proof_runner.py -q",
+      "rg -n \"runtime_module_exports|_RUNTIME_EXPORT_SOURCES|_sync_runtime_export_patches\" packages/command-generation/src/command_generation/generator.py src/agentic_workspace/contracts/command_package_ir.json generated/workspace/python/cli.py generated/planning/python/cli.py generated/memory/python/cli.py generated/typescript"
+    ],
+    "touched_scope": [
+      "packages/command-generation/src/command_generation/generator.py",
+      "src/agentic_workspace/contracts/command_package_ir.json",
+      "generated/workspace/python/cli.py",
+      "generated/planning/python/cli.py",
+      "generated/memory/python/cli.py",
+      "generated/*/python/command_package.json",
+      "generated/typescript/*/src/commandPackage.ts",
+      "scripts/check/check_generated_command_packages.py",
+      "tests/test_contract_tooling.py",
+      "tests/test_generated_command_package_proof_runner.py"
+    ],
+    "completion_criteria": [
+      "Python generated entrypoint source import retirement is implemented, validated, and closed out honestly."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "#892"
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "#892",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "python-generated-entrypoint-source-import-retirement",
+      "status": "completed",
+      "next_step": "Remove runtime_module_exports from the generated Python entrypoint path, regenerate command packages, and add static proof that generated Python entrypoints do not import package-owned runtime modules for export patch-forwarding.",
+      "proof": "uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run pytest tests/test_contract_tooling.py tests/test_generated_command_package_proof_runner.py -q"
+    },
+    "scope": {
+      "touched": [
+        "Fill in the concrete files before implementation starts."
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#892",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+    "activation trigger": "Continue #892 from the next Python generated CLI decomposition slice."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Generated Python entrypoints no longer import package-owned runtime modules just to expose helper aliases.",
+    "intentionally deferred": "Remaining operation handler/runtime primitive migration for the larger #892 epic.",
+    "discovered implications": "Test harnesses must patch runtime owner modules rather than generated CLI helper aliases.",
+    "proof achieved now": "Generation freshness, generated package proof, Python/TypeScript adapter conformance, focused package tests, and root workspace CLI tests passed.",
+    "validation still needed": "Broader #892 completion proof remains required after the remaining decomposition slices.",
+    "next likely slice": "Migrate remaining package-owned operation handler/runtime primitive ownership according to python-generated-cli.decomposition.json."
+  },
+  "intent_interpretation": {
+    "literal request": "Python generated entrypoint source import retirement",
+    "inferred intended outcome": "#892",
+    "chosen concrete what": "Retire runtime export/import patch-forwarding from generated Python entrypoints so generated cli.py no longer imports package-owned runtime modules merely to expose helper functions.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "command-generation generator, command package IR, regenerated generated command package outputs, generated command package proof/check tests, and this execplan/decomposition state.",
+    "max changed files": "Approximately 12-18 files, mostly regenerated JSON/TypeScript/Python outputs.",
+    "required validation commands": "uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run pytest tests/test_contract_tooling.py tests/test_generated_command_package_proof_runner.py -q",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Module installer/runtime behavior, operation executor handler migration, unrelated dogfooding issues, or package-owned runtime primitive implementations."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue from generator runtime_module_exports removal; do not migrate operation handlers in this slice.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "#892",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-15T21:01:02+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "#892",
+      "label": "#892",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "python-generated-entrypoint-source-import-retirement",
+    "status": "completed",
+    "scope": "Remove generated Python entrypoint imports/patch-forwarding for runtime_module_exports without changing command operation handler migration.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Remove runtime_module_exports from the generated Python entrypoint path, regenerate command packages, and add static proof that generated Python entrypoints do not import package-owned runtime modules for export patch-forwarding."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/command-generation/src/command_generation/generator.py",
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    "generated/workspace/python/cli.py",
+    "generated/planning/python/cli.py",
+    "generated/memory/python/cli.py",
+    "generated/*/python/command_package.json",
+    "generated/typescript/*/src/commandPackage.ts",
+    "scripts/check/check_generated_command_packages.py",
+    "tests/test_contract_tooling.py",
+    "tests/test_generated_command_package_proof_runner.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run python scripts/generate/generate_command_packages.py --check",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run pytest tests/test_contract_tooling.py tests/test_generated_command_package_proof_runner.py -q",
+    "rg -n \"runtime_module_exports|_RUNTIME_EXPORT_SOURCES|_sync_runtime_export_patches\" packages/command-generation/src/command_generation/generator.py src/agentic_workspace/contracts/command_package_ir.json generated/workspace/python/cli.py generated/planning/python/cli.py generated/memory/python/cli.py generated/typescript"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Python generated entrypoint source import retirement is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex with read-only delegated exploration",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Delegation decision recorded; execution bounds and validation tightened before implementation.",
+    "scope touched": "none yet",
+    "changed surfaces": "command-generation generator, command package IR, regenerated command package outputs, generated package checks, runtime helper call sites, and test support",
+    "validations run": "uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py --python-conformance --conformance; uv run pytest tests/test_contract_tooling.py tests/test_generated_command_package_proof_runner.py -q; uv run pytest packages/planning/tests/test_summary.py packages/memory/tests/test_prompts.py packages/memory/tests/test_current_memory.py packages/memory/tests/test_routing.py -q; uv run pytest tests/test_workspace_lifecycle_cli.py tests/test_workspace_doctor_status_cli.py tests/test_workspace_modules_cli.py tests/test_workspace_config_cli.py tests/test_workspace_report_cli.py tests/test_workspace_summary_cli.py tests/test_workspace_proof_cli.py tests/test_workspace_ownership_cli.py tests/test_workspace_intent_cli.py tests/test_workspace_defaults_cli.py packages/planning/tests/test_install.py -q; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "result for continuation": "bounded slice complete; continue larger #892 from python-generated-cli.decomposition.json",
+    "next step": "Archive this slice and promote the next #892 decomposition slice."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "satisfied",
+    "intent served": "bounded slice yes; larger #892 remains open",
+    "config compliance": "used uv run agentic-workspace and recorded delegation/recovery through AW",
+    "misinterpretation risk": "medium if this slice is mistaken for full #892 completion",
+    "follow-on decision": "archive-but-keep-lane-open"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "not skipped",
+    "expected savings": "Existing worker can audit runtime-export coupling while orchestrator tightens plan and implements bounded generator changes.",
+    "actual friction": "pending",
+    "proof result": "satisfied",
+    "quality concern": "Read-only exploration only; implementation remains local because generator, IR, and regenerated output changes are tightly coupled.",
+    "decomposition adjustment": "Use this as the first bounded #892 slice: retire generated entrypoint source imports without broadening into operation handler migration."
+  },
+  "proof_report": {
+    "validation proof": "Freshness, generated package proof, conformance, focused package tests, root workspace CLI tests, planning doctor, and diff whitespace checks passed.",
+    "proof achieved now": "bounded slice complete",
+    "evidence for \"proof achieved\" state": "Generated entrypoint runtime export imports are absent, static proof rejects the backslide, and affected tests pass."
+  },
+  "intent_satisfaction": {
+    "original intent": "#892",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "This bounded slice removed runtime_module_exports from generated Python entrypoints, regenerated outputs, and proved entrypoints no longer import package-owned runtime modules.",
+    "unsolved intent passed to": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json remains the owner for the broader #892 epic."
+  },
+  "execution_summary": {
+    "outcome delivered": "Generated Python entrypoint runtime export imports retired.",
+    "validation confirmed": "focused proof and planning doctor passed",
+    "follow-on routed to": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+    "post-work posterity capture": "test harnesses now patch runtime owner modules rather than generated CLI helper aliases",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "none",
+    "proposed durable intent": "none yet",
+    "confidence": "low",
+    "needs review": "True",
+    "owner surface": "none"
+  },
+  "closure_check": {
+    "slice status": "bounded slice complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The slice completion is real, but #892 is larger than entrypoint source import retirement.",
+    "evidence carried forward": "Fresh generation, generated package static/conformance checks, focused contract/tooling tests, package tests, and root workspace CLI tests passed.",
+    "reopen trigger": "Generated Python cli.py reintroduces runtime export forwarding or imports package-owned runtime modules for helper aliases."
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+          "owner": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "none",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-15: Scaffolded by agentic-planning new-plan.",
+    "2026-05-15: Recorded delegation decision route=delegate-exploration.",
+    "2026-05-15: Tightened slice to retire generated Python entrypoint runtime export imports before implementation."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: #892\nIntent satisfied: no\nArchive decision: archive-but-keep-lane-open\nProof: Freshness, generated package proof, conformance, focused package tests, root workspace CLI tests, planning doctor, and diff whitespace checks passed.\nChanged surfaces: command-generation generator, command package IR, regenerated command package outputs, generated package checks, runtime helper call sites, and test support\nDurable residue: none (none)\nMemory learning: none\nFollow-up: .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json remains the owner for the broader #892 epic."
+  }
+}

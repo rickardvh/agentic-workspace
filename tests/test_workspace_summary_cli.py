@@ -5,10 +5,7 @@ import tomllib
 from pathlib import Path
 
 from repo_planning_bootstrap.installer import install_bootstrap
-
-from command_generation.generated_package_loader import load_generated_command_module_for_entrypoint
-
-cli = load_generated_command_module_for_entrypoint("agentic-workspace", "cli.py")
+from tests.workspace_cli_support import cli
 
 
 def _write(path: Path, content: str) -> None:

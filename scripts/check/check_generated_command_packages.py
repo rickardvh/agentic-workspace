@@ -1589,13 +1589,27 @@ def _validate_python_runtime_handler_boundary() -> list[str]:
 
 
 def _validate_no_legacy_generated_adapter_runtime_import(*, relative_path: str, text: str) -> list[str]:
+    errors: list[str] = []
     legacy_import = "generated_command_adapters import GENERATED_COMMAND_ADAPTERS_BY_COMMAND"
     if legacy_import in text:
-        return [
+        errors.append(
             f"{relative_path} must route generated Python commands through generated command modules, "
             "not legacy generated_command_adapters runtime dispatch"
-        ]
-    return []
+        )
+    forbidden_entrypoint_fragments = (
+        "_RUNTIME_EXPORT_SOURCES",
+        "_sync_runtime_export_patches",
+        "from agentic_workspace.workspace_runtime_primitives import",
+        "from repo_planning_bootstrap.runtime_projection import",
+        "from repo_memory_bootstrap.runtime_primitives import",
+    )
+    for fragment in forbidden_entrypoint_fragments:
+        if fragment in text:
+            errors.append(
+                f"{relative_path} must not import package-owned runtime modules or patch-forward runtime exports "
+                f"from generated Python entrypoints; found {fragment!r}"
+            )
+    return errors
 
 
 def _validate_generated_python_commands_absent_from_handwritten_parsers() -> list[str]:

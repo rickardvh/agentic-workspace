@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import argparse
 import difflib
-import importlib
 import json
 from collections.abc import Callable
 from importlib.resources import files
@@ -20,25 +19,6 @@ from typing import Any
 # Command/interface changes belong in src/agentic_workspace/contracts/command_package_ir.json.
 # Runtime behavior changes belong in hand-written operation/primitive implementation code.
 # Regenerate with: uv run python scripts/generate/generate_command_packages.py
-
-from repo_memory_bootstrap.runtime_primitives import _build_agent_prompt as _build_agent_prompt
-from repo_memory_bootstrap.runtime_primitives import _emit_result as _emit_result
-from repo_memory_bootstrap.runtime_primitives import _print_install_summary as _print_install_summary
-
-_RUNTIME_EXPORT_SOURCES = (
-    ('repo_memory_bootstrap.runtime_primitives', '_build_agent_prompt', '_build_agent_prompt'),
-    ('repo_memory_bootstrap.runtime_primitives', '_emit_result', '_emit_result'),
-    ('repo_memory_bootstrap.runtime_primitives', '_print_install_summary', '_print_install_summary'),
-)
-
-
-def _sync_runtime_export_patches() -> None:
-    for module_name, source_name, exported_name in _RUNTIME_EXPORT_SOURCES:
-        value = globals().get(exported_name)
-        module = importlib.import_module(module_name)
-        if getattr(module, source_name, None) is not value:
-            setattr(module, source_name, value)
-
 
 def _load_generated_json(name: str) -> Any:
     parts = tuple(part for part in name.replace('\\', '/').split('/') if part)
@@ -270,7 +250,6 @@ def _run_command_module(operation_id: str, args: argparse.Namespace) -> int:
         build_generated_parser().error(
             f"Generated adapter for {getattr(args, 'command', operation_id)} references unsupported operation {operation_id}."
         )
-    _sync_runtime_export_patches()
     return handler(args)
 
 

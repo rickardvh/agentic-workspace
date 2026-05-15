@@ -16957,10 +16957,8 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
     target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
     _validate_target_root(command_name="summary", target_root=target_root)
     from repo_planning_bootstrap.installer import format_summary_json, planning_summary
+    from repo_planning_bootstrap.runtime_projection import _print_summary
 
-    from command_generation.generated_package_loader import load_generated_command_module_for_entrypoint
-
-    _print_summary = load_generated_command_module_for_entrypoint("agentic-planning", "cli.py")._print_summary
     config = _load_workspace_config(target_root=target_root)
     changed_paths = list(getattr(args, "changed", []) or [])
     if getattr(args, "select", None):
@@ -17155,10 +17153,8 @@ def _run_reconcile_report_adapter(args: argparse.Namespace) -> int:
     target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
     _validate_target_root(command_name="reconcile", target_root=target_root)
     from repo_planning_bootstrap.installer import planning_reconcile
+    from repo_planning_bootstrap.runtime_projection import _print_reconcile
 
-    from command_generation.generated_package_loader import load_generated_command_module_for_entrypoint
-
-    _print_reconcile = load_generated_command_module_for_entrypoint("agentic-planning", "cli.py")._print_reconcile
     _ensure_external_intent_cache_if_available(target_root=target_root)
     payload = planning_reconcile(
         target=target_root, apply_safe_prune=bool(getattr(args, "apply_safe_prune", False)), dry_run=bool(getattr(args, "dry_run", False))

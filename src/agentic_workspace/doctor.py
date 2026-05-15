@@ -12,9 +12,7 @@ from agentic_workspace.contract_tooling import (
 def check_contract_integrity() -> list[str]:
     """Check for drift between code constants and JSON contract schemas."""
     errors: list[str] = []
-    from command_generation.generated_package_loader import load_generated_command_module_for_entrypoint
-
-    cli = load_generated_command_module_for_entrypoint("agentic-workspace", "cli.py")
+    from agentic_workspace import workspace_runtime_primitives as runtime_primitives
 
     try:
         from jsonschema import Draft202012Validator
@@ -27,12 +25,12 @@ def check_contract_integrity() -> list[str]:
         return [error.message for error in validator.iter_errors(instance)]
 
     # Parity checks
-    defaults_payload = cli._defaults_payload()  # type: ignore[attr-defined]
+    defaults_payload = runtime_primitives._defaults_payload()  # type: ignore[attr-defined]
     if defaults_payload["compact_contract_profile"]["answer_shape"] != compact_contract_manifest()["answer_shape"]:
         errors.append("defaults payload answer_shape drifted from compact_contract_profile.json")
     if defaults_payload["proof_surfaces"]["default_routes"] != proof_routes_manifest()["default_routes"]:
         errors.append("defaults payload proof routes drifted from proof_routes.json")
-    if cli._reporting_schema_payload() != report_contract_manifest():  # type: ignore[attr-defined]
+    if runtime_primitives._reporting_schema_payload() != report_contract_manifest():  # type: ignore[attr-defined]
         errors.append("reporting schema payload drifted from report_contract.json")
 
     workspace_config_schema = contract_schema("workspace_config.schema.json")
@@ -75,10 +73,10 @@ def check_contract_integrity() -> list[str]:
         errors.append("delegation_outcomes schema review_burden enums drifted from config constants")
 
     setup_findings_schema = contract_schema("setup_findings.schema.json")
-    if setup_findings_schema["properties"]["kind"]["const"] != cli.SETUP_FINDINGS_KIND:  # type: ignore[attr-defined]
+    if setup_findings_schema["properties"]["kind"]["const"] != runtime_primitives.SETUP_FINDINGS_KIND:  # type: ignore[attr-defined]
         errors.append("setup_findings schema kind drifted from cli constants")
     finding_schema = setup_findings_schema["properties"]["findings"]["items"]
-    if finding_schema["properties"]["class"]["enum"] != list(cli.SUPPORTED_SETUP_FINDING_CLASSES):  # type: ignore[attr-defined]
+    if finding_schema["properties"]["class"]["enum"] != list(runtime_primitives.SUPPORTED_SETUP_FINDING_CLASSES):  # type: ignore[attr-defined]
         errors.append("setup_findings schema classes drifted from cli constants")
 
     return errors

@@ -2852,20 +2852,6 @@ export const generatedCommandPackage = {
       ]
     },
     "render_runtime_module": true,
-    "runtime_module_exports": [
-      {
-        "import_module": "repo_memory_bootstrap.runtime_primitives",
-        "name": "_build_agent_prompt"
-      },
-      {
-        "import_module": "repo_memory_bootstrap.runtime_primitives",
-        "name": "_emit_result"
-      },
-      {
-        "import_module": "repo_memory_bootstrap.runtime_primitives",
-        "name": "_print_install_summary"
-      }
-    ],
     "runtime_module_file": "cli"
   },
   "targets": [

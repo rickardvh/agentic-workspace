@@ -27,8 +27,8 @@
       "title": "Python runtime handler boundary",
       "readiness": "promoted",
       "outcome": "Generated Python dispatch can identify supported operation ids from IR while runtime operation handlers expose an explicit contract boundary that can be implemented or bridged by future targets without relying on package-local cli.py ownership.",
-      "owner_surface": "packages/command-generation/src/command_generation/generator.py and generated/<package>/python/__init__.py",
-      "proof": "Generated package static proof plus Python conformance prove operation dispatch is generated, runtime handlers are behind an explicit operation contract, and any Python-runtime bridge assumption is visible rather than implicit. Root, planning, and memory executable front doors now route through generated_cli_entrypoint modules.",
+      "owner_surface": "packages/command-generation/src/command_generation/generator.py, generated/<package>/python/cli.py, generated/<package>/python/commands/, and generated/<package>/python/primitives/",
+      "proof": "Generated package static proof plus Python conformance prove operation dispatch is generated, runtime handlers are behind an explicit operation contract, and any Python-runtime bridge assumption is visible rather than implicit. The python-generated-entrypoint-source-import-retirement slice removed runtime_module_exports and patch-forwarding from generated Python entrypoints and added a static guard against reintroducing package-owned runtime helper imports there.",
       "depends_on": [
         "json-schema-operation-ir"
       ],

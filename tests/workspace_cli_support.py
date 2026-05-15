@@ -10,11 +10,34 @@ from pathlib import Path
 import pytest
 from jsonschema import Draft202012Validator
 
+from agentic_workspace import workspace_runtime_primitives
 from agentic_workspace.contract_tooling import authority_markers_manifest, cli_commands_manifest
 from agentic_workspace.result_adapter import adapt_action, adapt_module_result
 from command_generation.generated_package_loader import load_generated_command_module_for_entrypoint
 
-cli = load_generated_command_module_for_entrypoint("agentic-workspace", "cli.py")
+_generated_cli = load_generated_command_module_for_entrypoint("agentic-workspace", "cli.py")
+
+
+class _WorkspaceCliTestProxy:
+    def __getattr__(self, name: str):
+        if hasattr(_generated_cli, name):
+            return getattr(_generated_cli, name)
+        return getattr(workspace_runtime_primitives, name)
+
+    def __setattr__(self, name: str, value: object) -> None:
+        if hasattr(_generated_cli, name):
+            setattr(_generated_cli, name, value)
+            return
+        setattr(workspace_runtime_primitives, name, value)
+
+    def __delattr__(self, name: str) -> None:
+        if hasattr(_generated_cli, name):
+            delattr(_generated_cli, name)
+            return
+        delattr(workspace_runtime_primitives, name)
+
+
+cli = _WorkspaceCliTestProxy()
 
 _ORIGINAL_PATH_WRITE_TEXT = Path.write_text
 
