@@ -771,6 +771,48 @@ execplans = [
     assert any("remove active execplan 'plan-alpha' from live planning state after archive" in action.detail for action in result.actions)
 
 
+def test_archive_execplan_retain_archive_uses_unique_path_when_archive_is_stale(tmp_path: Path) -> None:
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[active]
+execplans = [
+  { id = "plan-alpha", title = "Plan Alpha", maturity = "active", status = "active", path = ".agentic-workspace/planning/execplans/plan-alpha.plan.json" },
+]
+""",
+    )
+    live_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    stale_archive_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json"
+    _write_execplan_record(live_path, item_id="plan-alpha", status="completed")
+    _write_execplan_record(stale_archive_path, item_id="plan-alpha", status="completed")
+    stale_archive = json.loads(stale_archive_path.read_text(encoding="utf-8"))
+    stale_archive["proof_report"]["validation proof"] = "stale retained archive"
+    installer_mod._write_execplan_record(record_path=stale_archive_path, record=stale_archive)
+
+    live = json.loads(live_path.read_text(encoding="utf-8"))
+    live["proof_report"]["validation proof"] = "fresh retained archive"
+    installer_mod._write_execplan_record(record_path=live_path, record=live)
+
+    result = archive_execplan("plan-alpha", target=tmp_path, apply_cleanup=True, retain_archive=True)
+    unique_archive_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha-2.plan.json"
+    state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
+    summary = planning_summary(target=tmp_path)
+
+    assert result.warnings == []
+    assert not live_path.exists()
+    assert stale_archive_path.exists()
+    assert unique_archive_path.exists()
+    assert json.loads(stale_archive_path.read_text(encoding="utf-8"))["proof_report"]["validation proof"] == "stale retained archive"
+    assert json.loads(unique_archive_path.read_text(encoding="utf-8"))["proof_report"]["validation proof"] == "fresh retained archive"
+    assert "plan-alpha" not in state_text
+    assert summary["execplans"].get("active_count", 0) == 0
+    assert any(action.kind == "retention" and "unique retained archive path" in action.detail for action in result.actions)
+    assert any(action.kind == "archived" and action.path == unique_archive_path for action in result.actions)
+
+
 def test_archive_execplan_apply_cleanup_updates_completed_todo_and_roadmap(tmp_path: Path) -> None:
     _write(
         tmp_path / ".agentic-workspace/planning/state.toml",

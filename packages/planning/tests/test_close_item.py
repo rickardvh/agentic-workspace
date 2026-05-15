@@ -102,8 +102,48 @@ active_items = [
 
     assert result.warnings == []
     assert not (tmp_path / ".agentic-workspace/planning/execplans/plan-alpha.plan.json").exists()
+    assert (tmp_path / ".agentic-workspace/planning/execplans/archive/plan-alpha.plan.json").exists()
     assert state["todo"]["active_items"] == []
-    assert any(action.kind == "closed" for action in result.actions)
+    assert any(action.kind == "archived" for action in result.actions)
+
+
+def test_close_item_preserves_execplan_when_retained_archive_path_is_stale(tmp_path: Path) -> None:
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "plan-alpha", title = "Plan alpha", status = "completed", path = ".agentic-workspace/planning/execplans/plan-alpha.plan.json" },
+]
+""",
+    )
+    live_path = tmp_path / ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
+    stale_archive_path = tmp_path / ".agentic-workspace/planning/execplans/archive/plan-alpha.plan.json"
+    _write_execplan_record(live_path, status="completed")
+    _write_execplan_record(stale_archive_path, status="completed")
+    live = json.loads(live_path.read_text(encoding="utf-8"))
+    live["proof_report"]["validation proof"] = "fresh close-item proof"
+    installer_mod._write_execplan_record(record_path=live_path, record=live)
+    stale = json.loads(stale_archive_path.read_text(encoding="utf-8"))
+    stale["proof_report"]["validation proof"] = "stale close-item proof"
+    installer_mod._write_execplan_record(record_path=stale_archive_path, record=stale)
+
+    result = close_planning_item("plan-alpha", target=tmp_path)
+    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
+    unique_archive_path = tmp_path / ".agentic-workspace/planning/execplans/archive/plan-alpha-2.plan.json"
+
+    assert result.warnings == []
+    assert not live_path.exists()
+    assert stale_archive_path.exists()
+    assert unique_archive_path.exists()
+    assert json.loads(stale_archive_path.read_text(encoding="utf-8"))["proof_report"]["validation proof"] == "stale close-item proof"
+    assert json.loads(unique_archive_path.read_text(encoding="utf-8"))["proof_report"]["validation proof"] == "fresh close-item proof"
+    assert state["todo"]["active_items"] == []
+    assert any(action.kind == "retention" and "unique retained archive path" in action.detail for action in result.actions)
+    assert any(action.kind == "archived" and action.path == unique_archive_path for action in result.actions)
 
 
 def test_close_item_runtime_cli_outputs_json(tmp_path: Path, capsys) -> None:
