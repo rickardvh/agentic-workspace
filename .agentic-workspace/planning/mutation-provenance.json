@@ -3,14 +3,6 @@
   "entries": [
     {
       "path": ".agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
-      "sha256": "43cf960865a8d2076dd2184d7e6bf97a69a77f147e2328cfb696f147a3d5fc97",
-      "command": "agentic-planning record-recovery",
-      "reason": "record root front-door slice proof and continuation state",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-13T12:32:32+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
       "sha256": "fab8960b3d051c5cb1e08104a11be3f8695338f1cf4946ee0e23c147ec9d0fac",
       "command": "agentic-planning record-recovery",
       "reason": "advance active codegen execplan to planning front-door slice",
@@ -1600,6 +1592,14 @@
       "reason": "record delegation decision route=delegate-exploration",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-15T08:45:01+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
+      "sha256": "b84c4006e4f33991169c1b2d1a88acea8b887110b0ce7d065db3bba66daa6ab3",
+      "command": "agentic-planning record-recovery",
+      "reason": "Updated active execplan closeout notes for #980 dogfooding fix while continuing #892 lane.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-15T08:53:42+00:00"
     }
   ]
 }

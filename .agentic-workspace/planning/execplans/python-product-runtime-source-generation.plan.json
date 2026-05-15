@@ -305,13 +305,12 @@
       "#980 planning handoff treated conceptual IR/contracts prose as a missing file reference"
     ],
     "signals fixed": [
-      "#982 fixed by adding a no-git fallback source-tree scan in check_generated_command_packages.py"
+      "#982 fixed by adding a no-git fallback source-tree scan in check_generated_command_packages.py",
+      "#980 fixed by ignoring conceptual slash phrases with uppercase acronym segments such as IR/contracts in execplan file-reference scanning"
     ],
-    "signals routed": [
-      "#980 remains open for planning handoff file-reference detection"
-    ],
+    "signals routed": [],
     "signals dismissed": [],
-    "next owner": "current #892 lane for implementation; #980 for planning handoff warning refinement"
+    "next owner": "current #892 lane for implementation"
   },
   "closeout_distillation": {
     "buckets": {
@@ -321,7 +320,7 @@
       "config_check": [],
       "docs": [],
       "issue_follow_up": [
-        "#980 planning handoff false-positive file reference warning",
+        "#980 planning handoff false-positive file reference warning fixed in this branch",
         "#982 generated Python Docker proof no-git fallback fixed in this slice"
       ]
     }
@@ -332,6 +331,7 @@
     "2026-05-15: Added schema-backed python_runtime_projection_inventory to distinguish generated/python placement from generated ownership; full completion remains blocked while entries are transitional-generated-output-debt.",
     "2026-05-15: Recorded delegation decision route=delegate-exploration.",
     "2026-05-15: Generated planning_operation_ir_executor.py from command_package_ir operation_executor binding metadata and marked that inventory entry rendered-by-command-generation.",
-    "2026-05-15: Filed #982 for generated Python Docker proof assuming git, then fixed it with a no-git source scan fallback."
+    "2026-05-15: Filed #982 for generated Python Docker proof assuming git, then fixed it with a no-git source scan fallback.",
+    "2026-05-15: Fixed #980 by ignoring conceptual uppercase slash phrases such as IR/contracts in planning handoff file-reference warnings."
   ]
 }

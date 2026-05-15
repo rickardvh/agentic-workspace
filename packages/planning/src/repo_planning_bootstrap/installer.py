@@ -11707,6 +11707,8 @@ def _file_reference_candidates(text: str) -> list[str]:
         normalized = value.replace("\\", "/")
         if normalized.startswith("//"):
             continue
+        if _looks_like_conceptual_slash_phrase(normalized):
+            continue
         suffix = Path(normalized).suffix.lower()
         if suffix in _FILE_REFERENCE_SUFFIXES or "/" in normalized:
             candidates.append(normalized)
@@ -11723,6 +11725,13 @@ def _strip_file_reference_token(raw: str) -> str:
 def _looks_like_markup_tag(token: str) -> bool:
     stripped = token.strip().rstrip(".,;:")
     return bool(re.search(r"</?[A-Za-z][A-Za-z0-9:-]*(?:\s+[^<>]*)?/?>", stripped))
+
+
+def _looks_like_conceptual_slash_phrase(value: str) -> bool:
+    if Path(value).suffix:
+        return False
+    parts = [part for part in value.split("/") if part]
+    return len(parts) > 1 and any(len(part) > 1 and part.isupper() for part in parts)
 
 
 def _execplan_missing_reference_warnings(*, target_root: Path, plan_path: Path, record: dict[str, Any]) -> list[dict[str, str]]:
