@@ -1818,6 +1818,14 @@ export const generatedCommandPackage = {
             ],
             "help": "Output format.",
             "name": "format"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--verbose"
+            ],
+            "help": "Emit full routing detail instead of the compact default.",
+            "name": "verbose"
           }
         ]
       },

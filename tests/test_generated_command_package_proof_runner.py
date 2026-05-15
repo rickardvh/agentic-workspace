@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import importlib.util
 import subprocess
 import sys
@@ -280,6 +281,81 @@ def test_static_generated_package_proof_fails_when_conformance_coverage_drifts(m
     errors = checker._validate_static_surfaces()
 
     assert "static conformance coverage drift: missing contract-backed case" in errors
+
+
+def test_generated_operation_cli_input_proof_accepts_current_interfaces() -> None:
+    checker = _load_checker()
+    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+
+    errors = checker._validate_generated_operation_cli_inputs(ir)
+
+    assert errors == []
+
+
+def test_generated_operation_cli_input_proof_rejects_missing_visible_option() -> None:
+    checker = _load_checker()
+    generated_root = checker.REPO_ROOT / "generated" / "memory" / "python"
+    command_package = checker.json.loads((generated_root / "command_package.json").read_text(encoding="utf-8"))
+    route_command = copy.deepcopy(
+        next(command for command in command_package["commands"] if command["adapter_id"] == "memory.route-report.cli")
+    )
+    route_command["interface"]["options"] = [option for option in route_command["interface"]["options"] if option.get("name") != "verbose"]
+
+    errors = checker._validate_operation_cli_inputs_for_interface(
+        package_id="memory-bootstrap",
+        command_path="route-report",
+        interface=route_command["interface"],
+        inherited_operation_ref=route_command["operation_ref"],
+        inherited_option_names=set(),
+        generated_root=generated_root,
+    )
+
+    assert any(
+        "memory-bootstrap route-report operation memory.route-report.report declares cli-option input 'verbose'" in error
+        for error in errors
+    )
+
+
+def test_generated_operation_cli_input_proof_allows_explicit_runtime_only_input(monkeypatch) -> None:
+    checker = _load_checker()
+    interface = {"name": "example", "options": [{"name": "format"}]}
+    operation_ref = {"id": "example.report", "path": "operations/example.report.json"}
+    operation = {
+        "inputs": [
+            {"name": "format", "source": "cli-option"},
+            {"name": "adapter_only", "source": "cli-option", "command_visibility": "runtime-only"},
+        ]
+    }
+    monkeypatch.setattr(checker, "_load_json", lambda path: operation)
+
+    errors = checker._validate_operation_cli_inputs_for_interface(
+        package_id="example-package",
+        command_path="example",
+        interface=interface,
+        inherited_operation_ref=operation_ref,
+        inherited_option_names=set(),
+    )
+
+    assert errors == []
+
+
+def test_generated_parser_uses_option_name_as_argparse_dest_for_aliases() -> None:
+    checker = _load_checker()
+    generated = checker.load_generated_command_module_for_entrypoint("agentic-planning", "cli.py")
+    parser = generated.build_generated_parser()
+
+    args = parser.parse_args(
+        [
+            "record-recovery",
+            "--path",
+            ".agentic-workspace/planning/state.toml",
+            "--reason",
+            "test",
+        ]
+    )
+
+    assert args.paths == [".agentic-workspace/planning/state.toml"]
+    assert not hasattr(args, "path")
 
 
 def test_command_package_ir_records_deferred_shell_transport_evaluation() -> None:

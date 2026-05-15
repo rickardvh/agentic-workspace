@@ -38,41 +38,57 @@
       "source": "cli-option"
     },
     {
+      "command_visibility": "runtime-only",
+      "description": "Runtime adapter compatibility value shared with lifecycle prompt/template operations; not exposed by doctor.",
       "name": "project_name",
       "required": false,
       "source": "cli-option"
     },
     {
+      "command_visibility": "runtime-only",
+      "description": "Runtime adapter compatibility value shared with lifecycle prompt/template operations; not exposed by doctor.",
       "name": "project_purpose",
       "required": false,
       "source": "cli-option"
     },
     {
+      "command_visibility": "runtime-only",
+      "description": "Runtime adapter compatibility value shared with lifecycle prompt/template operations; not exposed by doctor.",
       "name": "key_repo_docs",
       "required": false,
       "source": "cli-option"
     },
     {
+      "command_visibility": "runtime-only",
+      "description": "Runtime adapter compatibility value shared with lifecycle prompt/template operations; not exposed by doctor.",
       "name": "key_subsystems",
       "required": false,
       "source": "cli-option"
     },
     {
+      "command_visibility": "runtime-only",
+      "description": "Runtime adapter compatibility value shared with lifecycle prompt/template operations; not exposed by doctor.",
       "name": "primary_build_command",
       "required": false,
       "source": "cli-option"
     },
     {
+      "command_visibility": "runtime-only",
+      "description": "Runtime adapter compatibility value shared with lifecycle prompt/template operations; not exposed by doctor.",
       "name": "primary_test_command",
       "required": false,
       "source": "cli-option"
     },
     {
+      "command_visibility": "runtime-only",
+      "description": "Runtime adapter compatibility value shared with lifecycle prompt/template operations; not exposed by doctor.",
       "name": "other_key_commands",
       "required": false,
       "source": "cli-option"
     },
     {
+      "command_visibility": "runtime-only",
+      "description": "Runtime adapter compatibility value shared with lifecycle prompt/template operations; not exposed by doctor.",
       "name": "policy_profile",
       "required": false,
       "source": "cli-option"

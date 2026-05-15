@@ -739,6 +739,9 @@ def _python_runtime_adapter_module(
         '        kwargs["type"] = option_type\n'
         '    if option_spec.get("required") is True:\n'
         '        kwargs["required"] = True\n'
+        '    name = option_spec.get("name")\n'
+        "    if isinstance(name, str) and name:\n"
+        '        kwargs["dest"] = name\n'
         '    help_text = option_spec.get("help")\n'
         "    if isinstance(help_text, str):\n"
         '        kwargs["help"] = help_text\n'

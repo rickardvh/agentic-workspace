@@ -6743,6 +6743,22 @@
                 ],
                 "default": "text",
                 "help": "Output format."
+              },
+              {
+                "name": "apply_safe_prune",
+                "flags": [
+                  "--apply-safe-prune"
+                ],
+                "action": "store_true",
+                "help": "Apply only reconcile cleanup targets that are already marked safe_to_prune."
+              },
+              {
+                "name": "dry_run",
+                "flags": [
+                  "--dry-run"
+                ],
+                "action": "store_true",
+                "help": "Preview --apply-safe-prune without writing files."
               }
             ]
           },
@@ -7019,22 +7035,6 @@
                 ],
                 "default": "text",
                 "help": "Output format."
-              },
-              {
-                "name": "apply_safe_prune",
-                "flags": [
-                  "--apply-safe-prune"
-                ],
-                "action": "store_true",
-                "help": "Apply only reconcile cleanup targets that are already marked safe_to_prune."
-              },
-              {
-                "name": "dry_run",
-                "flags": [
-                  "--dry-run"
-                ],
-                "action": "store_true",
-                "help": "Preview --apply-safe-prune without writing files."
               }
             ]
           },
@@ -9585,6 +9585,14 @@
                 ],
                 "default": "text",
                 "help": "Output format."
+              },
+              {
+                "name": "verbose",
+                "flags": [
+                  "--verbose"
+                ],
+                "action": "store_true",
+                "help": "Emit full routing detail instead of the compact default."
               }
             ]
           },

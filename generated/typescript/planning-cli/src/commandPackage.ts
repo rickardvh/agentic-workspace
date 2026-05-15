@@ -1500,6 +1500,22 @@ export const generatedCommandPackage = {
             ],
             "help": "Output format.",
             "name": "format"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--apply-safe-prune"
+            ],
+            "help": "Apply only reconcile cleanup targets that are already marked safe_to_prune.",
+            "name": "apply_safe_prune"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--dry-run"
+            ],
+            "help": "Preview --apply-safe-prune without writing files.",
+            "name": "dry_run"
           }
         ]
       },
@@ -1776,22 +1792,6 @@ export const generatedCommandPackage = {
             ],
             "help": "Output format.",
             "name": "format"
-          },
-          {
-            "action": "store_true",
-            "flags": [
-              "--apply-safe-prune"
-            ],
-            "help": "Apply only reconcile cleanup targets that are already marked safe_to_prune.",
-            "name": "apply_safe_prune"
-          },
-          {
-            "action": "store_true",
-            "flags": [
-              "--dry-run"
-            ],
-            "help": "Preview --apply-safe-prune without writing files.",
-            "name": "dry_run"
           }
         ]
       },

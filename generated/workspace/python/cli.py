@@ -319,6 +319,9 @@ def _add_option(parser: argparse.ArgumentParser, option_spec: dict[str, Any], *,
         kwargs["type"] = option_type
     if option_spec.get("required") is True:
         kwargs["required"] = True
+    name = option_spec.get("name")
+    if isinstance(name, str) and name:
+        kwargs["dest"] = name
     help_text = option_spec.get("help")
     if isinstance(help_text, str):
         kwargs["help"] = help_text

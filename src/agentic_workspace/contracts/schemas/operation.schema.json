@@ -109,6 +109,15 @@
             ],
             "description": "Origin or authority source for this value."
           },
+          "command_visibility": {
+            "type": "string",
+            "enum": [
+              "command-visible",
+              "runtime-only",
+              "non-command-visible"
+            ],
+            "description": "Whether a cli-option source must be exposed by the generated command parser. Use runtime-only/non-command-visible only for explicit compatibility or runtime adapter values."
+          },
           "required": {
             "type": "boolean",
             "description": "Required true/false policy flag used by this contract."

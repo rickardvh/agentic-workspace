@@ -439,6 +439,13 @@ def _load_json(relative_path: str) -> dict[str, object]:
     )
 
 
+def _load_generated_operation_json(generated_root: Path, relative_path: str) -> dict[str, object]:
+    generated_path = generated_root / relative_path
+    if generated_path.is_file():
+        return json.loads(generated_path.read_text(encoding="utf-8"))
+    return _load_json(relative_path)
+
+
 def _interface_operation_refs(interface: dict[str, object], inherited_operation_ref: dict[str, object]) -> list[dict[str, object]]:
     operation_ref = interface.get("operation_ref", inherited_operation_ref)
     current_operation_ref = operation_ref if isinstance(operation_ref, dict) else inherited_operation_ref
@@ -473,6 +480,142 @@ def _command_conformance_ref_for_operation(command: dict[str, object], operation
         if isinstance(ref, str) and ref.startswith(prefix):
             return ref
     return refs[0] if refs else None
+
+
+def _operation_input_is_command_visible(input_record: dict[str, object]) -> bool:
+    if input_record.get("source") != "cli-option":
+        return False
+    if input_record.get("command_visible") is False:
+        return False
+    visibility = input_record.get("command_visibility") or input_record.get("cli_visibility")
+    return str(visibility or "").strip() not in {"runtime-only", "non-command-visible"}
+
+
+def _interface_parameter_names(interface: dict[str, object]) -> set[str]:
+    names: set[str] = set()
+    for key in ("arguments", "options"):
+        raw_items = interface.get(key, [])
+        if not isinstance(raw_items, list):
+            continue
+        for item in raw_items:
+            if not isinstance(item, dict):
+                continue
+            name = str(item.get("name", "")).strip()
+            if name:
+                names.add(name)
+    return names
+
+
+def _operation_input_matches_interface(input_name: str, parameter_names: set[str]) -> bool:
+    if input_name in parameter_names:
+        return True
+    if input_name.endswith("y") and f"{input_name[:-1]}ies" in parameter_names:
+        return True
+    return f"{input_name}s" in parameter_names
+
+
+def _validate_operation_cli_inputs_for_interface(
+    *,
+    package_id: str,
+    command_path: str,
+    interface: dict[str, object],
+    inherited_operation_ref: dict[str, object],
+    inherited_option_names: set[str],
+    generated_root: Path | None = None,
+) -> list[str]:
+    errors: list[str] = []
+    option_names = set(inherited_option_names) | _interface_parameter_names(interface)
+    operation_ref = interface.get("operation_ref", inherited_operation_ref)
+    current_operation_ref = operation_ref if isinstance(operation_ref, dict) else inherited_operation_ref
+    operation_id = str(current_operation_ref.get("id", "")).strip()
+    operation_path = str(current_operation_ref.get("path", "")).strip()
+    subcommands = interface.get("subcommands", [])
+    has_subcommands = isinstance(subcommands, list) and any(isinstance(subcommand, dict) for subcommand in subcommands)
+    if operation_id and operation_path and (option_names or not has_subcommands):
+        try:
+            operation = (
+                _load_generated_operation_json(generated_root, operation_path)
+                if generated_root is not None
+                else _load_json(operation_path)
+            )
+        except (OSError, json.JSONDecodeError) as exc:
+            errors.append(
+                f"{package_id} {command_path} operation {operation_id} cannot be loaded for CLI input proof: {exc}"
+            )
+        else:
+            inputs = operation.get("inputs", [])
+            if isinstance(inputs, list):
+                for input_record in inputs:
+                    if not isinstance(input_record, dict) or not _operation_input_is_command_visible(input_record):
+                        continue
+                    input_name = str(input_record.get("name", "")).strip()
+                    if input_name and not _operation_input_matches_interface(input_name, option_names):
+                        errors.append(
+                            f"{package_id} {command_path} operation {operation_id} declares cli-option input "
+                            f"{input_name!r} but generated command options are {sorted(option_names)!r}; "
+                            "add the option to the command interface or mark the input command_visibility='runtime-only' "
+                            "or command_visibility='non-command-visible'"
+                        )
+    if isinstance(subcommands, list):
+        for subcommand in subcommands:
+            if not isinstance(subcommand, dict):
+                continue
+            subcommand_name = str(subcommand.get("name", "")).strip() or "<unnamed>"
+            errors.extend(
+                _validate_operation_cli_inputs_for_interface(
+                    package_id=package_id,
+                    command_path=f"{command_path} {subcommand_name}",
+                    interface=subcommand,
+                    inherited_operation_ref=current_operation_ref,
+                    inherited_option_names=option_names,
+                    generated_root=generated_root,
+                )
+            )
+    return errors
+
+
+def _validate_generated_operation_cli_inputs(ir: dict[str, object]) -> list[str]:
+    errors: list[str] = []
+    for package in ir.get("packages", []):
+        if not isinstance(package, dict):
+            continue
+        package_id = str(package.get("id", "")).strip() or "<unknown-package>"
+        python_targets = [
+            target
+            for target in package.get("targets", [])
+            if isinstance(target, dict) and target.get("kind") == "python" and target.get("generated_root")
+        ]
+        for target in python_targets:
+            generated_root = REPO_ROOT / str(target.get("generated_root"))
+            try:
+                command_package = json.loads((generated_root / "command_package.json").read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                errors.append(f"{package_id} generated Python command package cannot be loaded for CLI input proof: {exc}")
+                continue
+            for command in command_package.get("commands", []):
+                if not isinstance(command, dict) or command.get("status") != "generated":
+                    continue
+                interface = command.get("interface", {})
+                operation_ref = command.get("operation_ref", {})
+                if not isinstance(interface, dict) or not isinstance(operation_ref, dict):
+                    continue
+                raw_command = command.get("command", {})
+                command_name = str(
+                    interface.get("name")
+                    or (raw_command.get("name") if isinstance(raw_command, dict) else "")
+                    or "<unnamed>"
+                ).strip()
+                errors.extend(
+                    _validate_operation_cli_inputs_for_interface(
+                        package_id=package_id,
+                        command_path=command_name,
+                        interface=interface,
+                        inherited_operation_ref=operation_ref,
+                        inherited_option_names=set(),
+                        generated_root=generated_root,
+                    )
+                )
+    return errors
 
 
 def _field_value(payload: object, path: list[str]) -> object:
@@ -1759,6 +1902,7 @@ def _validate_static_surfaces() -> list[str]:
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         errors.append(f"command-package IR validation failed: {exc}")
     else:
+        errors.extend(_validate_generated_operation_cli_inputs(ir))
         maturity_policy = ir.get("generation_policy", {}).get("generated_package_maturity", {})
         level_ids = {level.get("id") for level in maturity_policy.get("levels", []) if isinstance(level, dict)}
         missing = expected_levels - level_ids
