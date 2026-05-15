@@ -1206,7 +1206,7 @@ def test_start_blocks_decomposed_epic_without_active_execplan(tmp_path: Path, ca
     assert gate["delegation_decision_required"] is True
     assert payload["workflow_sufficiency"]["decision"] == "active-execplan-required"
     assert payload["immediate_next_allowed_action"]["command"].endswith(
-        "agentic-workspace planning promote-to-plan safety-slice --target . --format json"
+        "agentic-workspace planning promote-to-plan --item-id safety-slice --target . --format json"
     )
 
 

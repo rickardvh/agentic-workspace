@@ -11472,7 +11472,7 @@ def _planning_safety_promotion_command(*, config: WorkspaceConfig, decomposition
             if lane_id:
                 return str(
                     _command_with_cli_invoke(
-                        command=f"agentic-workspace planning promote-to-plan {lane_id} --target . --format json",
+                        command=f"agentic-workspace planning promote-to-plan --item-id {lane_id} --target . --format json",
                         cli_invoke=config.cli_invoke,
                     )
                 )
