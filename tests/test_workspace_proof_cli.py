@@ -347,16 +347,20 @@ def test_proof_changed_uses_subrepo_makefile_for_package_paths(tmp_path: Path, c
     assert project_roots["packages/planning"]["changed_path_matched"] is True
     assert project_roots["packages/planning"]["make"]["targets"] == ["lint", "test"]
     assert "cd packages/planning && make test" in answer["target_proof_capabilities"]["candidate_commands"]
-    assert answer["selected_commands"][0] == {
-        "kind": "proof-command/v1",
-        "command": "cd packages/planning && make test",
-        "cwd": "packages/planning",
-        "run": "make test",
-        "selected_from": "live-adapted-target-capability",
-        "intent_type": "behavior-test",
-        "lane": "planning_package",
-        "required": True,
-    }
+    assert (
+        answer["selected_commands"][0].items()
+        >= {
+            "kind": "proof-command/v1",
+            "command": "cd packages/planning && make test",
+            "cwd": "packages/planning",
+            "run": "make test",
+            "selected_from": "live-adapted-target-capability",
+            "intent_type": "behavior-test",
+            "lane": "planning_package",
+            "required": True,
+        }.items()
+    )
+    assert answer["selected_commands"][0]["execution_mode"] == "parallel-ok"
     assert answer["proof_route_decision"]["selected_command"] == {
         "command": "cd packages/planning && make test",
         "lane": "planning_package",
@@ -923,6 +927,13 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
         "generated_command_packages",
         "cli_authority",
     ]
+    generated_steps = [step for step in answer["validation_plan"]["required"] if step["lane_id"] == "generated_command_packages"]
+    assert {step["execution_mode"] for step in generated_steps} == {"serial"}
+    assert {step["proof_responsibility"] for step in generated_steps} == {"local-serial"}
+    assert all("serially" in step["ci_relationship"] for step in generated_steps)
+    generated_commands = [command for command in answer["selected_commands"] if command["lane"] == "generated_command_packages"]
+    assert {command["execution_mode"] for command in generated_commands} == {"serial"}
+    assert {command["proof_responsibility"] for command in generated_commands} == {"local-serial"}
     assert answer["validation_plan"]["required_count"] == len(answer["required_commands"])
     assert answer["validation_plan"]["optional"][0]["required"] is False
     review = answer["cli_authority_review"]
@@ -960,17 +971,20 @@ def test_proof_changed_selector_routes_python_generated_packages_to_python_docke
     ]
     assert answer["required_commands"] == [
         "uv run python scripts/check/check_generated_command_packages.py",
-        "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
-        "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
-        "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
+        "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+        "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
         "uv run agentic-workspace defaults --section root_cli_authority --format json",
         "uv run pytest tests/test_workspace_cli.py -q",
     ]
     assert (
-        "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker"
+        "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker"
         in answer["required_commands"]
     )
     assert "CI may repeat generated-package proof" in answer["selected_lanes"][0]["ci_relationship"]
+    generated_steps = [step for step in answer["validation_plan"]["required"] if step["lane_id"] == "generated_command_packages"]
+    assert generated_steps
+    assert {step["execution_mode"] for step in generated_steps} == {"serial"}
+    assert all("serially" in step["ci_relationship"] for step in generated_steps)
 
 
 def test_proof_changed_selector_routes_contract_only_changes_to_focused_lane(capsys) -> None:

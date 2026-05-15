@@ -2,54 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/execplans/github-954-python-codegen-boundary.plan.json",
-      "sha256": "b1ec90afddd89b62db90dc5c1e8adea41d2b87d486de791c52f60a376d588380",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=keep-local",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T09:40:41+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/github-954-python-codegen-boundary.plan.json",
-      "sha256": "1b02e0e054e25680bc4f460fd74e945853f12c6e049f1a133dce958ecee2249a",
-      "command": "agentic-planning record-recovery",
-      "reason": "Tightened scaffold after upstream issue intake with normalized #954 scope, proof, and handoff fields.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T09:41:47+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan github-954-python-codegen-boundary",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T09:53:23+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-full-generated-cli-completion.plan.json",
-      "sha256": "93ae8e9d45806b5f5ee06eb9432172590dbd52aa0b6e45094f5756a330b0dc93",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-full-generated-cli-completion",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T10:13:51+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "1b8d904171f0f9a3496a529fe6e4e05d55e202ed01230cc1cb044feceb96b02b",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-full-generated-cli-completion",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T10:13:51+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-full-generated-cli-completion.plan.json",
-      "sha256": "b424a6ebdc9358a63e239a5560a9e70181828093645ff306af1dc2a082e1a57f",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=keep-local",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T10:16:14+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/execplans/python-full-generated-cli-completion.plan.json",
       "sha256": "6b60b1516c0a8ea3b11e6230b4c2d457db974bf27a2db8ec46ec6045dbb1c910",
       "command": "agentic-planning record-recovery",
@@ -1600,6 +1552,54 @@
       "reason": "archive execplan python-source-executable-residue-audit",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-15T18:51:41+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/dogfooding-generated-cli-followups.plan.json",
+      "sha256": "2e271366fddd5c408d08924b4b2da26ae11b43df3205229ae950989ad53c1c18",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold dogfooding-generated-cli-followups",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T19:33:02+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "1b5195af24194027f661704c065d273688c1a460fb07f96742b59c7dcbc5fdcc",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold dogfooding-generated-cli-followups",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T19:33:02+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/dogfooding-generated-cli-followups.plan.json",
+      "sha256": "754a6d723a5d31a6fed946db79b31b01d58864a7f6699b6e8da7bc8e94a94bb0",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=delegate-exploration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T19:33:40+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "1b5195af24194027f661704c065d273688c1a460fb07f96742b59c7dcbc5fdcc",
+      "command": "agentic-planning record-recovery",
+      "reason": "Intentional execplan tightening for dogfooding issue lane after new-plan scaffold lacked #996/#997 specifics.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-15T19:40:04+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "1b5195af24194027f661704c065d273688c1a460fb07f96742b59c7dcbc5fdcc",
+      "command": "agentic-planning record-recovery",
+      "reason": "Intentional execplan scope update to include #996 serial-proof documentation touched during the dogfooding fix.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-15T19:43:26+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "1b5195af24194027f661704c065d273688c1a460fb07f96742b59c7dcbc5fdcc",
+      "command": "agentic-planning record-recovery",
+      "reason": "Final intentional execplan scope update for #996 docs and validation evidence after proof selection was corrected.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-15T19:46:04+00:00"
     }
   ]
 }

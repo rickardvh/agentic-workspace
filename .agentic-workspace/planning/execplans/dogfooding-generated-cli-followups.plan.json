@@ -1,0 +1,312 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Generated CLI dogfooding follow-ups",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Fix dogfooding issues #996 and #997 before continuing the #892 Python generated CLI epic.",
+    "hard_constraints": "Keep this lane limited to generated CLI dogfooding follow-ups: serial proof safety, compatibility naming, static proof, and planning closeout evidence.",
+    "agent_may_decide": "Exact proof metadata shape, compatibility wrappers, source/test renames, static allowlists, and focused validation commands.",
+    "escalate_when": "A fix requires changing #892 architecture direction, removing required compatibility behavior, or broadening into TypeScript/Bash/PowerShell implementation.",
+    "next_action": "Implement #996 first, commit and push, then implement #997.",
+    "proof_expectations": [
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+      "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
+      "uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py tests/test_workspace_start_preflight_cli.py -q",
+      "uv run ruff check scripts/check/check_generated_command_packages.py tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py tests/test_workspace_start_preflight_cli.py"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/contracts/proof_selection_rules.json",
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "scripts/check/check_generated_command_packages.py",
+      "packages/command-generation/src/command_generation",
+      "tests/test_generated_command_package_proof_runner.py",
+      "tests/test_contract_tooling.py",
+      "tests/test_workspace_start_preflight_cli.py",
+      "docs/maintainer/contributor-playbook.md",
+      "docs/maintainer/maintainer-commands.md",
+      ".agentic-workspace/planning/execplans/dogfooding-generated-cli-followups.plan.json"
+    ],
+    "completion_criteria": [
+      "#996 serial proof safety is implemented, validated, committed, pushed, and issue state updated.",
+      "#997 compatibility naming/proof cleanup is implemented, validated, committed, pushed, and issue state updated.",
+      "The active plan records proof, cost assessment, durable residue routing, and honest continuation into #892."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "Fix dogfooding issues #996 and #997 before continuing the #892 Python generated CLI epic."
+  ],
+  "non_goals": [
+    "Do not resume broader #892 architecture work until #996 and #997 have been addressed.",
+    "Do not expand into TypeScript, Bash, PowerShell, or MCP implementation."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Fix dogfooding issues #996 and #997 before continuing the #892 Python generated CLI epic.",
+      "constraints": "Keep scope bounded to generated CLI dogfooding follow-ups: serial proof safety, compatibility naming, static proof, and planning closeout evidence.",
+      "latitude": "Exact proof metadata shape, compatibility wrappers, source/test renames, static allowlists, and focused validation commands.",
+      "escalation": "Escalate when a better-looking fix changes #892 architecture direction, removes required compatibility behavior, or broadens into non-Python targets."
+    },
+    "execution": {
+      "milestone": "dogfooding-generated-cli-followups",
+      "status": "active",
+      "next_step": "Implement #996 first, commit and push, then implement #997.",
+      "proof": "Generated command package proof, focused generated-package tests, contract tooling tests, proof-routing tests, and ruff."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/contracts/proof_selection_rules.json",
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "scripts/check/check_generated_command_packages.py",
+        "packages/command-generation/src/command_generation",
+        "tests/test_generated_command_package_proof_runner.py",
+        "tests/test_contract_tooling.py",
+        "tests/test_workspace_start_preflight_cli.py",
+        "docs/maintainer/contributor-playbook.md",
+        "docs/maintainer/maintainer-commands.md",
+        ".agentic-workspace/planning/execplans/dogfooding-generated-cli-followups.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Keep the #892 Python generated CLI epic honest by fixing dogfooding gaps before further implementation.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Fix dogfooding issues first",
+    "inferred intended outcome": "Fix #996 and #997 before continuing #892.",
+    "chosen concrete what": "Patch serial proof safety first, then compatibility naming/proof cleanup.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Generated CLI proof contracts, generated-package checker, command-generation loader/console helpers, generated CLI compatibility aliases when regenerated, focused tests, and this execplan.",
+    "max changed files": "Approximately 12 files per issue slice; stop and reassess if the change wants a repo-wide rename beyond explicit compatibility surfaces.",
+    "required validation commands": "Generated package proof, focused pytest for generated-package proof/tooling/proof routing, ruff for touched Python, and generator freshness when generated output changes.",
+    "ask-before-refactor threshold": "Ask before changing public command semantics, removing installed bridge compatibility, or widening into non-Python targets.",
+    "stop before touching": "Unrelated backlog, TypeScript/Bash/PowerShell/MCP implementation, or #892 architecture beyond the dogfooding follow-up issues."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Current lane: #996 serial proof safety, then #997 compatibility naming/proof cleanup; commit and push after each slice.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Fix dogfooding issues #996 and #997 before continuing the #892 Python generated CLI epic.",
+    "hard constraints": "Keep scope bounded to generated CLI proof safety and compatibility naming/proof cleanup.",
+    "agent may decide locally": "Exact proof metadata shape, compatibility wrappers, source/test renames, static allowlists, and focused validation commands.",
+    "escalate when": "A better-looking fix changes #892 architecture direction, removes required compatibility behavior, or broadens into non-Python targets."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-15T19:33:40+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "dogfooding-generated-cli-followups",
+    "status": "active",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Implement #996 first, commit and push, then implement #997."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/proof_selection_rules.json",
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "scripts/check/check_generated_command_packages.py",
+    "packages/command-generation/src/command_generation",
+    "tests/test_generated_command_package_proof_runner.py",
+    "tests/test_contract_tooling.py",
+    "tests/test_workspace_start_preflight_cli.py",
+    "docs/maintainer/contributor-playbook.md",
+    "docs/maintainer/maintainer-commands.md",
+    ".agentic-workspace/planning/execplans/dogfooding-generated-cli-followups.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+    "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
+    "uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py tests/test_workspace_start_preflight_cli.py -q",
+    "uv run ruff check scripts/check/check_generated_command_packages.py tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py tests/test_workspace_start_preflight_cli.py"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "#996 serial proof safety is implemented, validated, committed, pushed, and issue state updated.",
+    "#997 compatibility naming/proof cleanup is implemented, validated, committed, pushed, and issue state updated.",
+    "The active plan records proof, cost assessment, durable residue routing, and honest continuation into #892."
+  ],
+  "execution_run": {
+    "run status": "not-run-yet",
+    "executor": "",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "execution has not started",
+    "scope touched": "none yet",
+    "changed surfaces": "none yet; execution has not changed files",
+    "validations run": "pending",
+    "result for continuation": "continue from this scaffolded execplan",
+    "next step": "Implement #996 first, commit and push, then implement #997."
+  },
+  "finished_run_review": {
+    "review status": "pending",
+    "scope respected": "pending",
+    "proof status": "pending",
+    "intent served": "pending",
+    "config compliance": "pending",
+    "misinterpretation risk": "pending",
+    "follow-on decision": "pending"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "not skipped",
+    "expected savings": "Reuse open workers to audit #996 and #997 in parallel while local implementation proceeds from the smallest dogfooding slice.",
+    "actual friction": "pending",
+    "proof result": "pending",
+    "quality concern": "Workers are read-only; local implementation and proof remain authoritative.",
+    "decomposition adjustment": "Keep dogfooding follow-ups as two slices: #996 serial proof safety, then #997 naming/proof cleanup."
+  },
+  "proof_report": {
+    "validation proof": "pending",
+    "proof achieved now": "pending",
+    "evidence for \"proof achieved\" state": ""
+  },
+  "intent_satisfaction": {
+    "original intent": "Fix dogfooding issues #996 and #997 before continuing the #892 Python generated CLI epic.",
+    "was original intent fully satisfied?": "pending",
+    "evidence of intent satisfaction": "",
+    "unsolved intent passed to": "none yet"
+  },
+  "execution_summary": {
+    "outcome delivered": "not completed yet",
+    "validation confirmed": "pending",
+    "follow-on routed to": "none yet",
+    "post-work posterity capture": "pending",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "current milestone"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "pending",
+    "larger-intent status": "pending",
+    "closure decision": "pending",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "",
+    "evidence carried forward": "",
+    "reopen trigger": ""
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-15: Scaffolded by agentic-planning new-plan.",
+    "2026-05-15: Recorded delegation decision route=delegate-exploration."
+  ]
+}

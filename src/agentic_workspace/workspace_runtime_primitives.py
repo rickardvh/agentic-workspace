@@ -17542,8 +17542,25 @@ def _normalize_changed_paths(paths: list[str]) -> list[str]:
     return normalized
 
 
+def _lane_execution_metadata(lane: dict[str, Any]) -> dict[str, Any]:
+    metadata: dict[str, Any] = {
+        "proof_responsibility": lane.get("proof_responsibility", "local-closeout"),
+        "execution_mode": lane.get("execution_mode", "parallel-ok"),
+    }
+    ci_relationship = str(lane.get("ci_relationship", "")).strip()
+    if ci_relationship:
+        metadata["ci_relationship"] = ci_relationship
+    return metadata
+
+
 def _validation_plan_step(
-    *, command: str, index: int, required: bool, lane_id: str | None = None, cli_invoke: str = DEFAULT_CLI_INVOKE
+    *,
+    command: str,
+    index: int,
+    required: bool,
+    lane_id: str | None = None,
+    cli_invoke: str = DEFAULT_CLI_INVOKE,
+    lane_metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     cwd, runnable_command = _split_validation_command(command)
     runnable_command = str(_command_with_cli_invoke(command=runnable_command, cli_invoke=cli_invoke))
@@ -17560,6 +17577,8 @@ def _validation_plan_step(
     }
     if lane_id:
         step["lane_id"] = lane_id
+    if lane_metadata:
+        step.update(lane_metadata)
     return step
 
 
@@ -17607,7 +17626,12 @@ def _validation_plan_for_proof(
             seen_required.add(command_text)
             steps.append(
                 _validation_plan_step(
-                    command=command_text, index=len(steps) + 1, required=True, lane_id=str(lane["id"]), cli_invoke=cli_invoke
+                    command=command_text,
+                    index=len(steps) + 1,
+                    required=True,
+                    lane_id=str(lane["id"]),
+                    cli_invoke=cli_invoke,
+                    lane_metadata=_lane_execution_metadata(lane),
                 )
             )
     optional_steps = [
@@ -18696,7 +18720,15 @@ def _proof_selection_for_changed_paths(
             selected_ids.append(lane_id)
 
     def generated_command_package_scope() -> str | None:
-        has_python = any((path.startswith("generated/python/") for path in changed_paths))
+        has_python = any(
+            (
+                path.startswith("generated/python/")
+                or path.startswith("generated/workspace/python/")
+                or path.startswith("generated/planning/python/")
+                or path.startswith("generated/memory/python/")
+            )
+            for path in changed_paths
+        )
         has_typescript = any((path.startswith("generated/typescript/") for path in changed_paths))
         has_shared_source = any(
             (
@@ -18909,6 +18941,7 @@ def _proof_selection_for_changed_paths(
                     "intent_type": str(intent.get("type", "behavior-test")),
                     "lane": str(lane.get("id", "")),
                     "required": True,
+                    **_lane_execution_metadata(lane),
                 }
             )
     unavailable_commands = [

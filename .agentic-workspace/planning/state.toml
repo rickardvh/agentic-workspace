@@ -12,7 +12,9 @@ work_items = []
 execplans = []
 
 [todo]
-active_items = []
+active_items = [
+  { id = "dogfooding-generated-cli-followups", title = "Generated CLI dogfooding follow-ups", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/dogfooding-generated-cli-followups.plan.json", why_now = "Created by new-plan scaffold.", owner_role = "implementation", handoff_ready = true },
+]
 queued_items = []
 
 [roadmap]

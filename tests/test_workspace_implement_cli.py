@@ -33,9 +33,8 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(capsys)
         "make lint-workspace",
         "uv run agentic-workspace defaults --section root_cli_authority --format json",
         "uv run python scripts/check/check_generated_command_packages.py",
-        "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
-        "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
-        "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
+        "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+        "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
         "uv run pytest tests/test_workspace_cli.py -q",
     ]
     assert payload["proof"]["cli_authority_review"]["classifications"][0]["role"] == "hand-owned-executable"
