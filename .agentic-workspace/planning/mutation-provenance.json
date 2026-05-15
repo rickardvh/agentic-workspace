@@ -2,54 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/execplans/python-cli-remaining-command-migration.plan.json",
-      "sha256": "d84895b598deb6d2b8bec25f013200064d9846bf6dd6288128685436250a4498",
-      "command": "agentic-planning record-recovery",
-      "reason": "Prepared completed closeout fields after archive-plan reported the milestone needed completed status first.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T11:13:44+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-cli-remaining-command-migration.plan.json",
-      "sha256": "9ec997ab0930ecbac0fb39788f63f0b4bb4da0070c29a283104ac98be1ddda3c",
-      "command": "agentic-planning record-recovery",
-      "reason": "Normalized intent satisfaction boolean for archive-plan while keeping larger-intent continuation explicit.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T11:13:59+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-cli-remaining-command-migration",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T11:14:03+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-cli-lifecycle-root-generation.plan.json",
-      "sha256": "e0cb04739587536ef8aa194aebb965c5ee1419c692e1c7548013d7ec66878c10",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-cli-lifecycle-root-generation",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T11:15:14+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "954ee4b1804808e069e953e014ea80315668c2095c0ebeca1c8cda88c255233d",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-cli-lifecycle-root-generation",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T11:15:14+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-cli-lifecycle-root-generation.plan.json",
-      "sha256": "9181b22ce61e11baa69b5a31e35ee8d300c027b9e649db20946f1a8b8c267136",
-      "command": "agentic-planning record-recovery",
-      "reason": "Tightened lifecycle root command generation execplan before implementation.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T11:15:58+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/execplans/python-cli-lifecycle-root-generation.plan.json",
       "sha256": "ec95367a27f727acdb0540186b0033408b0013a8d401d395527e213144e8737d",
       "command": "agentic-planning delegation-decision",
@@ -1600,6 +1552,54 @@
       "reason": "archive execplan dogfooding-backlog-before-892",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-15T20:12:33+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/dogfooding-promote-to-plan-schema-validity.plan.json",
+      "sha256": "5ec942fcc190ed1f3781afeee0f2f8205ae8367eaa7e49559b2f962d827936e5",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold dogfooding-promote-to-plan-schema-validity",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T20:13:44+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "ba7da38173ae3718e76ffdaba02658fc0473c3694d9cd0cc6c8a4e526d9fa0d5",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold dogfooding-promote-to-plan-schema-validity",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T20:13:44+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/dogfooding-promote-to-plan-schema-validity.plan.json",
+      "sha256": "d03af1396957cfac3d7453ba40459f378e24ab9c0f4c936bfd682f03616a9d88",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T20:14:46+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "ba7da38173ae3718e76ffdaba02658fc0473c3694d9cd0cc6c8a4e526d9fa0d5",
+      "command": "agentic-planning record-recovery",
+      "reason": "Manual execplan edits narrowed #967/#979 promote-to-plan dogfooding regression proof after CLI scaffold creation.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-15T20:17:05+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "ba7da38173ae3718e76ffdaba02658fc0473c3694d9cd0cc6c8a4e526d9fa0d5",
+      "command": "agentic-planning record-recovery",
+      "reason": "Manual closeout fields prepared the #967/#979 dogfooding slice for archive after validation.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-15T20:17:51+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan dogfooding-promote-to-plan-schema-validity",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T20:17:55+00:00"
     }
   ]
 }
