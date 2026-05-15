@@ -851,7 +851,11 @@ def test_command_package_generator_renders_planning_runtime_module_from_binding(
     assert "Runtime handler changes belong in src/agentic_workspace/contracts/command_package_ir.json." in planning_runtime
     assert "def _run_planning_status_report_adapter" in planning_runtime
     assert "'planning.status.report': _run_planning_status_report_adapter" in planning_runtime
-    assert "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py" not in rendered
+    assert "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py" in rendered
+    workspace_runtime = rendered["generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py"]
+    assert "Runtime handler changes belong in src/agentic_workspace/contracts/command_package_ir.json." in workspace_runtime
+    assert "def _run_status_report_adapter" in workspace_runtime
+    assert "'status.report': _run_status_report_adapter" in workspace_runtime
     assert "generated/python/memory-cli/generated_cli_package/memory_runtime_cli.py" in rendered
     memory_runtime = rendered["generated/python/memory-cli/generated_cli_package/memory_runtime_cli.py"]
     assert "Runtime handler changes belong in src/agentic_workspace/contracts/command_package_ir.json." in memory_runtime
@@ -1393,6 +1397,7 @@ def test_python_runtime_projection_inventory_tracks_generated_output_debt() -> N
     )
     assert entries["generated/python/memory-cli/generated_cli_package/memory_operation_ir_executor.py"]["blocking_full_completion"] is False
     rendered_entries = {
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
         "generated/python/workspace-cli/generated_cli_package/workspace_operation_ir_executor.py",
         "generated/python/planning-cli/generated_cli_package/planning_runtime_cli.py",
         "generated/python/planning-cli/generated_cli_package/planning_operation_ir_executor.py",
@@ -1400,8 +1405,7 @@ def test_python_runtime_projection_inventory_tracks_generated_output_debt() -> N
         "generated/python/memory-cli/generated_cli_package/memory_operation_ir_executor.py",
     }
     transitional_entries = [entry for entry in entries.values() if entry["path"] not in rendered_entries]
-    assert {entry["provenance_status"] for entry in transitional_entries} == {"transitional-generated-output-debt"}
-    assert all(entry["blocking_full_completion"] is True for entry in transitional_entries)
+    assert transitional_entries == []
 
 
 def test_contract_tooling_check_enforces_root_cli_authority_audit() -> None:

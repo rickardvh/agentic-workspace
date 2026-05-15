@@ -1258,7 +1258,9 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         "_run_config_report_adapter",
         "_run_defaults_report_adapter",
         "_run_delegation_outcome_append_adapter",
-        "_run_prompt_lifecycle_adapter",
+        "_run_prompt_init_adapter",
+        "_run_prompt_uninstall_adapter",
+        "_run_prompt_upgrade_adapter",
         "_run_system_intent_sync_adapter",
     ):
         function_index = workspace_cli_text.find(f"def {function_name}")

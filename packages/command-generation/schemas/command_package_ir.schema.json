@@ -347,6 +347,33 @@
               },
               "description": "Compatibility functions re-exported by a generated runtime handler module for older internal callers while behavior lives in module runtime APIs."
             },
+            "runtime_module_handlers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "operation_id",
+                  "import_module",
+                  "function"
+                ],
+                "properties": {
+                  "operation_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "import_module": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "function": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "description": "Operation handlers rendered into a generated runtime handler map by importing named runtime primitive functions."
+            },
             "operation_executor": {
               "$ref": "#/$defs/python_operation_executor_binding",
               "description": "Optional binding data used to render a generated Python operation IR executor module."

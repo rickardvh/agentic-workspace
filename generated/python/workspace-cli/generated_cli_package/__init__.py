@@ -8,6 +8,7 @@ Regenerate with: uv run python scripts/generate/generate_command_packages.py
 from __future__ import annotations
 
 import argparse
+import difflib
 import json
 from collections.abc import Callable
 from importlib.resources import files
@@ -42,6 +43,28 @@ _GENERATED_WEAK_AGENT_ROUTING = 'allowed-mutation-with-review'
 _GENERATED_RUNNABLE = True
 
 RuntimeHandler = Callable[[str, argparse.Namespace], int]
+
+
+class GeneratedArgumentParser(argparse.ArgumentParser):
+    def error(self, message: str) -> None:
+        if 'invalid choice' in message and 'command' in message:
+            unknown = _extract_unknown_command(message)
+            suggestions = difflib.get_close_matches(unknown, generated_command_names(), n=1, cutoff=0.55)
+            if suggestions:
+                message = f"{message}\nDid you mean: {', '.join(suggestions)}?"
+            if 'start' in _GENERATED_COMMANDS_BY_NAME and 'preflight' in _GENERATED_COMMANDS_BY_NAME:
+                message = (
+                    f"{message}\nStartup tip: run '{self.prog} start --task \"<task>\" --format json' "
+                    f"for normal startup or '{self.prog} preflight --format json' to recover a compact takeover context."
+                )
+        super().error(message)
+
+
+def _extract_unknown_command(message: str) -> str:
+    prefix = "invalid choice: '"
+    if prefix not in message:
+        return ''
+    return message.split(prefix, 1)[1].split("'", 1)[0]
 
 
 def generated_maturity() -> dict[str, object]:
@@ -196,7 +219,7 @@ def build_generated_parser() -> argparse.ArgumentParser:
         f"Weak-agent routing: {_GENERATED_WEAK_AGENT_ROUTING}\n"
         "Recovery: use one of the supported generated commands or route back to the canonical Python CLI."
     )
-    parser = argparse.ArgumentParser(prog="agentic-workspace", description="", epilog=epilog, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = GeneratedArgumentParser(prog="agentic-workspace", description="", epilog=epilog, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--version', action='version', version='%(prog)s 0.0.0-generated')
     subparsers = parser.add_subparsers(dest="command", required=True)
     for command in _GENERATED_ADAPTER_COMMANDS:

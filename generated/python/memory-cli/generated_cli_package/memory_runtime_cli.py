@@ -8,6 +8,7 @@ Regenerate with: uv run python scripts/generate/generate_command_packages.py
 from __future__ import annotations
 
 import argparse
+import importlib
 import sys
 from typing import Any
 
@@ -15,27 +16,35 @@ from typing import Any
 # Runtime handler changes belong in src/agentic_workspace/contracts/command_package_ir.json.
 # Regenerate with: uv run python scripts/generate/generate_command_packages.py
 from . import build_generated_parser as build_generated_cli_package_parser
+from . import generated_command_names as generated_cli_package_command_names
 from . import generated_operation_contract as generated_cli_package_operation_contract
 from . import run_generated_command as run_generated_cli_package_command
+from . import supports_generated_command as supports_generated_cli_package_command
 from .memory_operation_ir_executor import run_operation_ir
 
 
-def _build_agent_prompt(*args: Any, **kwargs: Any) -> Any:
-    from repo_memory_bootstrap.runtime_primitives import _build_agent_prompt
-
-    return _build_agent_prompt(*args, **kwargs)
+from repo_memory_bootstrap.runtime_primitives import _build_agent_prompt as _build_agent_prompt
 
 
-def _emit_result(*args: Any, **kwargs: Any) -> Any:
-    from repo_memory_bootstrap.runtime_primitives import _emit_result
-
-    return _emit_result(*args, **kwargs)
+from repo_memory_bootstrap.runtime_primitives import _emit_result as _emit_result
 
 
-def _print_install_summary(*args: Any, **kwargs: Any) -> Any:
-    from repo_memory_bootstrap.runtime_primitives import _print_install_summary
+from repo_memory_bootstrap.runtime_primitives import _print_install_summary as _print_install_summary
 
-    return _print_install_summary(*args, **kwargs)
+
+_RUNTIME_EXPORT_SOURCES = (
+    ('repo_memory_bootstrap.runtime_primitives', '_build_agent_prompt', '_build_agent_prompt'),
+    ('repo_memory_bootstrap.runtime_primitives', '_emit_result', '_emit_result'),
+    ('repo_memory_bootstrap.runtime_primitives', '_print_install_summary', '_print_install_summary'),
+)
+
+
+def _sync_runtime_export_patches() -> None:
+    for module_name, source_name, exported_name in _RUNTIME_EXPORT_SOURCES:
+        value = globals().get(exported_name)
+        module = importlib.import_module(module_name)
+        if getattr(module, source_name, None) is not value:
+            setattr(module, source_name, value)
 
 
 def _program_name() -> str:
@@ -66,6 +75,7 @@ def _run_generated_cli_operation(operation_id: str, args: argparse.Namespace) ->
             f"Generated adapter for {getattr(args, 'command', operation_id)} references unsupported operation {operation_id}."
         )
         raise SystemExit(2)
+    _sync_runtime_export_patches()
     return handler(args)
 
 

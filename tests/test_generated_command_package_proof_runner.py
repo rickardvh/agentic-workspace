@@ -415,7 +415,19 @@ def test_static_generated_package_proof_rejects_full_completion_when_runtime_out
             "proof": "scripts/check/check_generated_command_packages.py::_validate_full_python_completion_executable_ownership",
         }
     )
+
+    original_render_outputs = checker.render_workspace_command_package_outputs
+
+    def fake_render_outputs(manifest, *, repo_root):
+        return [
+            output
+            for output in original_render_outputs(manifest, repo_root=repo_root)
+            if output.path.relative_to(checker.REPO_ROOT).as_posix()
+            != "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py"
+        ]
+
     monkeypatch.setattr(checker, "load_workspace_command_package_ir", lambda *, repo_root: ir)
+    monkeypatch.setattr(checker, "render_workspace_command_package_outputs", fake_render_outputs)
 
     errors = checker._validate_static_surfaces()
 
@@ -439,8 +451,20 @@ def test_static_generated_package_proof_rejects_missing_runtime_projection_inven
     assert any("missing runtime projection entries" in error for error in errors)
 
 
-def test_static_generated_package_proof_rejects_full_completion_with_transitional_runtime_projection_debt() -> None:
+def test_static_generated_package_proof_rejects_full_completion_with_transitional_runtime_projection_debt(monkeypatch) -> None:
     checker = _load_checker()
+    original_manifest = checker.python_runtime_projection_inventory_manifest
+
+    def fake_manifest() -> dict[str, object]:
+        payload = original_manifest()
+        payload = dict(payload)
+        entries = [dict(entry) for entry in payload["entries"]]
+        entries[0]["provenance_status"] = "transitional-generated-output-debt"
+        entries[0]["blocking_full_completion"] = True
+        payload["entries"] = entries
+        return payload
+
+    monkeypatch.setattr(checker, "python_runtime_projection_inventory_manifest", fake_manifest)
 
     errors = checker._validate_python_runtime_projection_inventory(full_completion=True)
 

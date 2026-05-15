@@ -336,25 +336,37 @@ def _python_runtime_handler_module(
 ) -> str:
     operation_executor = _operation_executor_binding(package)
     executor_module = str(operation_executor["module_file"])
-    operation_ids = sorted(str(operation_id) for operation_id in operation_executor["supported_operation_ids"])
+    operation_ids = {str(operation_id) for operation_id in operation_executor["supported_operation_ids"]}
+    direct_handlers = {
+        str(handler["operation_id"]): handler for handler in binding.get("runtime_module_handlers", []) if isinstance(handler, dict)
+    }
+    operation_ids.update(direct_handlers)
     export_functions: list[str] = []
+    export_sources: list[str] = []
     for export in binding.get("runtime_module_exports", []):
         name = str(export["name"])
         import_module = str(export["import_module"])
         function = str(export.get("function") or name)
-        export_functions.append(
-            f"def {name}(*args: Any, **kwargs: Any) -> Any:\n"
-            f"    from {import_module} import {function}\n\n"
-            f"    return {function}(*args, **kwargs)\n"
-        )
+        export_functions.append(f"from {import_module} import {function} as {name}\n")
+        export_sources.append(f"    ({import_module!r}, {function!r}, {name!r}),")
     handler_functions = []
     handler_items = []
-    for operation_id in operation_ids:
+    for operation_id in sorted(operation_ids):
         function_name = _runtime_adapter_function_name(operation_id)
-        handler_functions.append(
-            f"def {function_name}(args: argparse.Namespace) -> int:\n"
-            f"    return run_operation_ir(generated_cli_package_operation_contract({operation_id!r}), args)\n"
-        )
+        if operation_id in direct_handlers:
+            handler = direct_handlers[operation_id]
+            import_module = str(handler["import_module"])
+            imported_function = str(handler.get("function") or function_name)
+            handler_functions.append(
+                f"def {function_name}(args: argparse.Namespace) -> int:\n"
+                f"    from {import_module} import {imported_function}\n\n"
+                f"    return {imported_function}(args)\n"
+            )
+        else:
+            handler_functions.append(
+                f"def {function_name}(args: argparse.Namespace) -> int:\n"
+                f"    return run_operation_ir(generated_cli_package_operation_contract({operation_id!r}), args)\n"
+            )
         handler_items.append(f"    {operation_id!r}: {function_name},")
     return (
         '"""Generated Python runtime operation handler module.\n\n'
@@ -364,17 +376,29 @@ def _python_runtime_handler_module(
         '"""\n\n'
         "from __future__ import annotations\n\n"
         "import argparse\n"
+        "import importlib\n"
         "import sys\n"
         "from typing import Any\n\n"
         "# DO NOT EDIT DIRECTLY.\n"
         f"# Runtime handler changes belong in {source_path}.\n"
         f"# Regenerate with: {regenerate_command}\n"
         "from . import build_generated_parser as build_generated_cli_package_parser\n"
+        "from . import generated_command_names as generated_cli_package_command_names\n"
         "from . import generated_operation_contract as generated_cli_package_operation_contract\n"
         "from . import run_generated_command as run_generated_cli_package_command\n"
+        "from . import supports_generated_command as supports_generated_cli_package_command\n"
         f"from .{executor_module} import run_operation_ir\n\n\n"
         + "\n\n".join(export_functions)
         + ("\n\n" if export_functions else "")
+        + "_RUNTIME_EXPORT_SOURCES = (\n"
+        + "\n".join(export_sources)
+        + "\n)\n\n\n"
+        + "def _sync_runtime_export_patches() -> None:\n"
+        + "    for module_name, source_name, exported_name in _RUNTIME_EXPORT_SOURCES:\n"
+        + "        value = globals().get(exported_name)\n"
+        + "        module = importlib.import_module(module_name)\n"
+        + "        if getattr(module, source_name, None) is not value:\n"
+        + "            setattr(module, source_name, value)\n\n\n"
         + "def _program_name() -> str:\n"
         '    invoked = sys.argv[0].replace("\\\\", "/").rsplit("/", 1)[-1]\n'
         f"    if invoked == {package['program']!r}:\n"
@@ -397,6 +421,7 @@ def _python_runtime_handler_module(
         "            f\"Generated adapter for {getattr(args, 'command', operation_id)} references unsupported operation {operation_id}.\"\n"
         "        )\n"
         "        raise SystemExit(2)\n"
+        "    _sync_runtime_export_patches()\n"
         "    return handler(args)\n\n\n"
         + "\n\n".join(handler_functions)
         + "\n\n\n_GENERATED_RUNTIME_HANDLERS = {\n"
@@ -455,6 +480,7 @@ def _python_runtime_adapter_module(
         '"""\n\n'
         "from __future__ import annotations\n\n"
         "import argparse\n"
+        "import difflib\n"
         "import json\n"
         "from collections.abc import Callable\n"
         "from importlib.resources import files\n"
@@ -481,6 +507,24 @@ def _python_runtime_adapter_module(
         f"_GENERATED_WEAK_AGENT_ROUTING = {weak_agent_routing!r}\n"
         f"_GENERATED_RUNNABLE = {runnable}\n\n"
         "RuntimeHandler = Callable[[str, argparse.Namespace], int]\n\n\n"
+        "class GeneratedArgumentParser(argparse.ArgumentParser):\n"
+        "    def error(self, message: str) -> None:\n"
+        "        if 'invalid choice' in message and 'command' in message:\n"
+        "            unknown = _extract_unknown_command(message)\n"
+        "            suggestions = difflib.get_close_matches(unknown, generated_command_names(), n=1, cutoff=0.55)\n"
+        "            if suggestions:\n"
+        "                message = f\"{message}\\nDid you mean: {', '.join(suggestions)}?\"\n"
+        "            if 'start' in _GENERATED_COMMANDS_BY_NAME and 'preflight' in _GENERATED_COMMANDS_BY_NAME:\n"
+        "                message = (\n"
+        '                    f"{message}\\nStartup tip: run \'{self.prog} start --task \\"<task>\\" --format json\' "\n'
+        "                    f\"for normal startup or '{self.prog} preflight --format json' to recover a compact takeover context.\"\n"
+        "                )\n"
+        "        super().error(message)\n\n\n"
+        "def _extract_unknown_command(message: str) -> str:\n"
+        '    prefix = "invalid choice: \'"\n'
+        "    if prefix not in message:\n"
+        "        return ''\n"
+        '    return message.split(prefix, 1)[1].split("\'", 1)[0]\n\n\n'
         "def generated_maturity() -> dict[str, object]:\n"
         "    return {\n"
         '        "id": _GENERATED_MATURITY_ID,\n'
@@ -605,7 +649,7 @@ def _python_runtime_adapter_module(
         '        f"Weak-agent routing: {_GENERATED_WEAK_AGENT_ROUTING}\\n"\n'
         '        "Recovery: use one of the supported generated commands or route back to the canonical Python CLI."\n'
         "    )\n"
-        f"    parser = argparse.ArgumentParser(prog={json.dumps(package['program'])}, description={json.dumps(package.get('summary', ''))}, epilog=epilog, formatter_class=argparse.RawDescriptionHelpFormatter)\n"
+        f"    parser = GeneratedArgumentParser(prog={json.dumps(package['program'])}, description={json.dumps(package.get('summary', ''))}, epilog=epilog, formatter_class=argparse.RawDescriptionHelpFormatter)\n"
         f"    parser.add_argument('--version', action='version', version='%(prog)s 0.0.0-generated')\n"
         '    subparsers = parser.add_subparsers(dest="command", required=True)\n'
         "    for command in _GENERATED_ADAPTER_COMMANDS:\n"

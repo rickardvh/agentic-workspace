@@ -1905,13 +1905,17 @@ def main(argv: list[str] | None = None) -> int:
     parser_manifest = cli_commands_manifest()
     parser_snapshot = _parser_snapshot(cli.build_parser())
     generated_root_commands = set(cli.generated_cli_package_command_names())  # type: ignore[attr-defined]
-    expected_parser_snapshot = [
-        _resolved_command_manifest(spec) for spec in parser_manifest["commands"] if str(spec["name"]) not in generated_root_commands
-    ]
-    if parser_snapshot != expected_parser_snapshot:
-        checks.append(("cli command manifest parity", ["argparse command/options/defaults drifted from cli_commands.json or cli_option_groups.json"]))
-    if [item["name"] for item in parser_snapshot] != [item["name"] for item in expected_parser_snapshot]:
-        checks.append(("cli command manifest parity", ["resolved handwritten command ordering drifted from cli_commands.json"]))
+    manifest_command_names = {str(spec["name"]) for spec in parser_manifest["commands"]}
+    if not generated_root_commands >= manifest_command_names:
+        expected_parser_snapshot = [
+            _resolved_command_manifest(spec) for spec in parser_manifest["commands"] if str(spec["name"]) not in generated_root_commands
+        ]
+        if parser_snapshot != expected_parser_snapshot:
+            checks.append(
+                ("cli command manifest parity", ["argparse command/options/defaults drifted from cli_commands.json or cli_option_groups.json"])
+            )
+        if [item["name"] for item in parser_snapshot] != [item["name"] for item in expected_parser_snapshot]:
+            checks.append(("cli command manifest parity", ["resolved handwritten command ordering drifted from cli_commands.json"]))
     if "modules" not in cli._command_suggestions("moduls"):  # type: ignore[attr-defined]
         checks.append(("cli command manifest parity", ["command suggestions no longer derive the expected known commands"]))
     workspace_config_schema = contract_schema("workspace_config.schema.json")
