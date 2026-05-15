@@ -2,22 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
-      "sha256": "7ebe6639ded0b79c9f6a75c9f6abb685a13bf61d14be05d13b0442cee4d73add",
-      "command": "agentic-planning record-recovery",
-      "reason": "Update Python codegen decomposition after root/planning/memory front-door slices.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-13T12:45:53+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
-      "sha256": "91394db4100a4a057957bc3ea9f96959007fbeebd6315217385de8162da3c9fe",
-      "command": "agentic-planning record-recovery",
-      "reason": "Keep decomposition readiness values within schema after status prose update.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-13T12:46:19+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
       "sha256": "724e2837097901f522930880b74b1a2c811c4ed682edc4fdde092b2994f405b8",
       "command": "agentic-planning record-recovery",
@@ -1600,6 +1584,22 @@
       "reason": "Recorded planning runtime debt reduction through generated summary and reconcile operation execution",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-15T09:35:44+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
+      "sha256": "628ea39698bdabc01e8712c0605e74c445dfe96fe1caa3a136154520c8471a46",
+      "command": "agentic-planning record-recovery",
+      "reason": "Recorded #991 legacy steps without ir_plan generated operation guard fix",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-15T09:39:35+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "baf75b7f4f1d40c22b514b354d46ae640c78390d475b38e70fd593cad98fe472",
+      "command": "agentic-planning record-recovery",
+      "reason": "Recorded #991 dogfooding fix in python generated CLI decomposition",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-15T09:39:35+00:00"
     }
   ]
 }

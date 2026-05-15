@@ -225,7 +225,7 @@
     "run status": "partial",
     "executor": "Codex",
     "handoff source": "agentic-planning promote-to-plan decomposition lane",
-    "what happened": "Added python_runtime_projection_inventory as a schema-backed contract, converted planning_operation_ir_executor.py into a command-generation render_outputs artifact, then converted memory_operation_ir_executor.py and workspace_operation_ir_executor.py into generated operation-executor wrappers driven by command_package_ir python_runtime_binding.operation_executor metadata. The latest planning runtime slice moved planning.summary.report and planning.reconcile.report into generated operation files and planning_operation_ir_executor execution. Docker proof also exposed and fixed #982 by adding a no-git fallback for source-retirement scanning, #987 by excluding host Python bytecode caches from Docker build context, and #990 by pinning generated conformance subprocess terminal dimensions.",
+    "what happened": "Added python_runtime_projection_inventory as a schema-backed contract, converted planning_operation_ir_executor.py into a command-generation render_outputs artifact, then converted memory_operation_ir_executor.py and workspace_operation_ir_executor.py into generated operation-executor wrappers driven by command_package_ir python_runtime_binding.operation_executor metadata. The latest planning runtime slice moved planning.summary.report and planning.reconcile.report into generated operation files and planning_operation_ir_executor execution. Docker proof also exposed and fixed #982 by adding a no-git fallback for source-retirement scanning, #987 by excluding host Python bytecode caches from Docker build context, #990 by pinning generated conformance subprocess terminal dimensions, and #991 by rejecting generated operation resources that only have legacy steps without executable ir_plan.",
     "scope touched": "Runtime projection inventory, command_package_ir/schema binding metadata, command-generation renderer, generated workspace/planning/memory operation executor outputs, generated planning operation resources, generated package metadata projections, generated package checker Docker fallback, root Docker ignore, focused tests, and planning state.",
     "changed surfaces": "src/agentic_workspace/contracts/python_runtime_projection_inventory.json; src/agentic_workspace/contracts/command_package_ir.json; src/agentic_workspace/contracts/schemas/command_package_ir.schema.json; packages/command-generation/schemas/command_package_ir.schema.json; packages/command-generation/src/command_generation/generator.py; packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.summary.report.json; packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.reconcile.report.json; packages/planning/payload-surface-classification.json; generated/python/workspace-cli/generated_cli_package/workspace_operation_ir_executor.py; generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py; generated/python/planning-cli/generated_cli_package/planning_operation_ir_executor.py; generated/python/planning-cli/generated_cli_package/planning_runtime_cli.py; generated/python/memory-cli/generated_cli_package/memory_operation_ir_executor.py; generated/python/memory-cli/generated_cli_package/memory_runtime_cli.py; generated/python/*/generated_cli_package/command_package.json; generated/typescript/*/src/commandPackage.ts; scripts/check/check_generated_command_packages.py; tests/test_generated_command_package_proof_runner.py; tests/test_contract_tooling.py; .dockerignore; planning surfaces.",
     "validations run": "uv run python scripts/generate/generate_command_packages.py; uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run python scripts/check/check_generated_command_packages.py --docker --require-docker; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker; uv run pytest tests/test_workspace_cli.py tests/test_contract_tooling.py -q; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q; make test-planning; make lint-planning; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check selected files; make test-workspace; make lint-workspace.",
@@ -304,13 +304,15 @@
       "#982 generated Python Docker proof assumed git was installed",
       "#980 planning handoff treated conceptual IR/contracts prose as a missing file reference",
       "#987 generated CLI Docker conformance copied host Python bytecode caches",
-      "#990 generated CLI conformance depended on ambient terminal size"
+      "#990 generated CLI conformance depended on ambient terminal size",
+      "#991 operation generation allowed legacy steps without executable ir_plan"
     ],
     "signals fixed": [
       "#982 fixed by adding a no-git fallback source-tree scan in check_generated_command_packages.py",
       "#980 fixed by ignoring conceptual slash phrases with uppercase acronym segments such as IR/contracts in execplan file-reference scanning",
       "#987 fixed by adding root Docker ignore rules for __pycache__, .pyc, and local cache/runtime directories",
-      "#990 fixed by setting deterministic COLUMNS and LINES in generated adapter conformance subprocesses"
+      "#990 fixed by setting deterministic COLUMNS and LINES in generated adapter conformance subprocesses",
+      "#991 fixed by adding explicit planning summary/reconcile ir_plan blocks and removing the permissive legacy steps fallback"
     ],
     "signals routed": [],
     "signals dismissed": [],
@@ -327,7 +329,8 @@
         "#980 planning handoff false-positive file reference warning fixed in this branch",
         "#982 generated Python Docker proof no-git fallback fixed in this slice",
         "#987 generated CLI Docker conformance host bytecode cache leak fixed in this slice",
-        "#990 generated CLI conformance ambient terminal size dependency fixed in this slice"
+        "#990 generated CLI conformance ambient terminal size dependency fixed in this slice",
+        "#991 generated operation legacy-steps no-op risk fixed in this slice"
       ]
     }
   },
@@ -343,6 +346,7 @@
     "2026-05-15: Filed #987 for Docker conformance copying host Python bytecode caches, then fixed it with root .dockerignore exclusions.",
     "2026-05-15: Generated workspace_operation_ir_executor.py from command_package_ir operation_executor binding metadata; workspace_runtime_cli.py remains blocking product-runtime debt.",
     "2026-05-15: Filed #990 for generated CLI conformance depending on ambient terminal size, then fixed it by setting deterministic COLUMNS/LINES in conformance subprocesses.",
-    "2026-05-15: Moved planning.summary.report and planning.reconcile.report into generated operation resources and planning_operation_ir_executor execution; planning_runtime_cli.py remains blocking runtime debt."
+    "2026-05-15: Moved planning.summary.report and planning.reconcile.report into generated operation resources and planning_operation_ir_executor execution; planning_runtime_cli.py remains blocking runtime debt.",
+    "2026-05-15: Filed #991 for generated operation resources being emitted from legacy steps without executable ir_plan, then fixed the generator to require ir_plan."
   ]
 }
