@@ -96,6 +96,38 @@
       },
       "status": "generated"
     },
+    "handoff": {
+      "command": {
+        "command_manifest": "package:planning:cli",
+        "name": "handoff",
+        "option_group_manifest": "package:planning:cli",
+        "program": "agentic-planning"
+      },
+      "conformance_refs": [
+        "planning.handoff.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "id": "planning.handoff.cli",
+      "operation_id": "planning.handoff.report",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.handoff.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
     "reconcile": {
       "command": {
         "command_manifest": "package:planning:cli",

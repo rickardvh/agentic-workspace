@@ -323,6 +323,12 @@
       "portability": "domain-runtime"
     },
     {
+      "id": "planning.handoff.load",
+      "summary": "Load package-local planning handoff payload for a target repository.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
+    },
+    {
       "id": "planning.help.build",
       "summary": "Build planning orientation guidance and lifecycle command affordances without mutating planning state."
     },

@@ -450,6 +450,25 @@
       "generic_behavior_audit": "Classified as front-door-dispatch; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
     },
     {
+      "operation_id": "planning.handoff.report",
+      "program": "agentic-planning",
+      "command": "handoff",
+      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/planning.handoff.report.json",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "planning.handoff.load",
+        "module-result text/json compatibility formatting"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "planning.handoff.process",
+      "domain_runtime_primitive_refs": [
+        "planning.handoff.load"
+      ],
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but planning handoff payload assembly still owns package-specific planning judgment."
+    },
+    {
       "operation_id": "planning.reconcile.report",
       "program": "agentic-planning",
       "command": "reconcile",

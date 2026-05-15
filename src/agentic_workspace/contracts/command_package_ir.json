@@ -4416,6 +4416,7 @@
             "planning.close-item.lifecycle",
             "planning.create-review.lifecycle",
             "planning.doctor.report",
+            "planning.handoff.report",
             "planning.reconcile.report",
             "planning.report.report",
             "planning.status.report",
@@ -4550,6 +4551,17 @@
               "handler": "function_call",
               "import_module": "repo_planning_bootstrap.installer",
               "function": "collect_status",
+              "kwargs": {
+                "target": {
+                  "value": "target"
+                }
+              }
+            },
+            {
+              "primitive": "planning.handoff.load",
+              "handler": "function_call",
+              "import_module": "repo_planning_bootstrap.installer",
+              "function": "planning_handoff",
               "kwargs": {
                 "target": {
                   "value": "target"
@@ -5324,6 +5336,83 @@
             "runtime_owned": [
               "planning lifecycle mutation primitive",
               "module result assembly",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "planning.handoff.cli",
+          "status": "generated",
+          "command": {
+            "name": "handoff",
+            "manifest_ref": "package:planning:cli"
+          },
+          "interface": {
+            "name": "handoff",
+            "help": "Emit the compact delegated-worker handoff derived from active planning state.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "planning.handoff.report",
+            "path": "operations/planning.handoff.report.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "planning.handoff.load",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "planning.handoff.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "planning handoff assembly",
               "output emission"
             ]
           }

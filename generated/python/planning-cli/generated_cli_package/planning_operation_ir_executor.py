@@ -31,6 +31,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
         'planning.close-item.lifecycle',
         'planning.create-review.lifecycle',
         'planning.doctor.report',
+        'planning.handoff.report',
         'planning.reconcile.report',
         'planning.report.report',
         'planning.status.report',
@@ -68,6 +69,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'planning.summary.load': _handle_planning_summary_load,
                 'planning.reconcile.load': _handle_planning_reconcile_load,
                 'planning.bootstrap.status.load': _handle_planning_bootstrap_status_load,
+                'planning.handoff.load': _handle_planning_handoff_load,
                 'planning.close-item.apply': _handle_planning_close_item_apply,
                 'planning.create-review.apply': _handle_planning_create_review_apply,
                 'output.emit': _handle_output_emit,
@@ -110,6 +112,12 @@ def _handle_planning_bootstrap_status_load(values: dict[str, Any], _arguments: d
     from repo_planning_bootstrap.installer import collect_status
 
     return collect_status(target=values.get('target'))
+
+
+def _handle_planning_handoff_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_planning_bootstrap.installer import planning_handoff
+
+    return planning_handoff(target=values.get('target'))
 
 
 def _handle_planning_close_item_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:

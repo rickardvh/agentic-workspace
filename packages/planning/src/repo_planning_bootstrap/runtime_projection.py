@@ -41,6 +41,12 @@ def emit_planning_operation_output(values: dict, _arguments: dict, _context) -> 
         else:
             _print_reconcile(result)
         return
+    if operation_id == "planning.handoff.report":
+        if output_format == "json":
+            print(json.dumps(result, indent=2))
+        else:
+            _print_handoff(result)
+        return
     if output_format == "json":
         if isinstance(result, dict):
             print(json.dumps(result, indent=2))

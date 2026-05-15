@@ -187,8 +187,8 @@
     {
       "id": "planning.handoff.report",
       "path": "operations/planning.handoff.report.json",
-      "command": "planning",
-      "migration_status": "draft-contract-only"
+      "command": "handoff",
+      "migration_status": "runtime-consumed"
     },
     {
       "id": "planning.new-plan.lifecycle",

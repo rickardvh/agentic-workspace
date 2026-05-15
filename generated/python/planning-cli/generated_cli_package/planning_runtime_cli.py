@@ -167,9 +167,10 @@ def build_parser() -> argparse.ArgumentParser:
         reconcile_parser.add_argument("--dry-run", action="store_true", help="Preview --apply-safe-prune without writing files.")
         reconcile_parser.add_argument("--format", choices=("text", "json"), default="text")
 
-    handoff_parser = subparsers.add_parser("handoff", help="Emit the compact delegated-worker handoff derived from active planning state.")
-    handoff_parser.add_argument("--target")
-    handoff_parser.add_argument("--format", choices=("text", "json"), default="text")
+    if "handoff" not in generated_commands:
+        handoff_parser = subparsers.add_parser("handoff", help="Emit the compact delegated-worker handoff derived from active planning state.")
+        handoff_parser.add_argument("--target")
+        handoff_parser.add_argument("--format", choices=("text", "json"), default="text")
 
     new_plan_parser = subparsers.add_parser("new-plan", help="Create a schema-valid execplan scaffold and optionally register it.")
     new_plan_parser.add_argument("--id", required=True, help="Stable slug/id for the plan; used as the .plan.json filename.")
@@ -589,6 +590,10 @@ def _run_reconcile_report_adapter(args: argparse.Namespace) -> int:
     return run_operation_ir(generated_cli_package_operation_contract("planning.reconcile.report"), args)
 
 
+def _run_handoff_report_adapter(args: argparse.Namespace) -> int:
+    return run_operation_ir(generated_cli_package_operation_contract("planning.handoff.report"), args)
+
+
 def _run_close_item_lifecycle_adapter(args: argparse.Namespace) -> int:
     return run_operation_ir(generated_cli_package_operation_contract("planning.close-item.lifecycle"), args)
 
@@ -601,6 +606,7 @@ _GENERATED_RUNTIME_HANDLERS = {
     "planning.close-item.lifecycle": _run_close_item_lifecycle_adapter,
     "planning.create-review.lifecycle": _run_create_review_lifecycle_adapter,
     "planning.doctor.report": _run_doctor_report_adapter,
+    "planning.handoff.report": _run_handoff_report_adapter,
     "planning.reconcile.report": _run_reconcile_report_adapter,
     "planning.report.report": _run_report_adapter,
     "planning.status.report": _run_status_report_adapter,

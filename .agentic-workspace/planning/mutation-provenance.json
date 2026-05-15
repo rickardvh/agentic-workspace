@@ -2,14 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
-      "sha256": "aac187e8a09de9c4ee2c5d1e7e7f3f52bca002f2f17ab00eca45fb952875c940",
-      "command": "agentic-planning record-recovery",
-      "reason": "Add rg stale-reference sweep marker required by archive gate.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-13T13:02:55+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/state.toml",
       "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
       "command": "agentic-planning archive-plan",
@@ -1600,6 +1592,14 @@
       "reason": "record delegation decision route=delegate-validation",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-15T09:57:19+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
+      "sha256": "0ea23ed0f6f57f222c2bc3196e54d1ec274a556c93c921bd4966074150e95563",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=delegate-validation",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T10:05:13+00:00"
     }
   ]
 }

@@ -136,6 +136,12 @@
       "adapter_kind": "process"
     },
     {
+      "id": "planning.handoff.process",
+      "operation_id": "planning.handoff.report",
+      "path": "conformance/planning.handoff.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "planning.reconcile.process",
       "operation_id": "planning.reconcile.report",
       "path": "conformance/planning.reconcile.process.json",

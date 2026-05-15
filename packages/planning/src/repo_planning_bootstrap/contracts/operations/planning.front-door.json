@@ -6,7 +6,8 @@
     "format_option": "format",
     "subcommands": [
       "close-item",
-      "create-review"
+      "create-review",
+      "handoff"
     ]
   },
   "summary": "Show Planning help or dispatch Planning subcommands through the workspace front door.",
