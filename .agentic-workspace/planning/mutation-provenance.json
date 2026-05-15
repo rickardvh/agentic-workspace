@@ -2,14 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan .agentic-workspace/planning/execplans/codegen-runtime-binding-data-951.plan.json",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-13T20:20:16+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/execplans/primitive-extension-target-support-951.plan.json",
       "sha256": "c0eedfd1243179538d1849c17901f28b85c485cd6b09bb516086b798f67c3651",
       "command": "agentic-planning new-plan",
@@ -1600,6 +1592,14 @@
       "reason": "record delegation decision route=delegate-exploration",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-15T15:13:24+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-codegen-owned-primitive-executor-migration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T16:08:49+00:00"
     }
   ]
 }
