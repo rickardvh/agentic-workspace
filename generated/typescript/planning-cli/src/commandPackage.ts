@@ -90,7 +90,7 @@ export const generatedCommandPackage = {
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "planning.adopt.apply",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -395,7 +395,7 @@ export const generatedCommandPackage = {
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "planning.close-item.apply",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -518,7 +518,7 @@ export const generatedCommandPackage = {
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "planning.create-review.apply",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -761,7 +761,7 @@ export const generatedCommandPackage = {
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "planning.bootstrap.doctor.load",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -838,7 +838,7 @@ export const generatedCommandPackage = {
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "planning.handoff.load",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -948,7 +948,7 @@ export const generatedCommandPackage = {
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "planning.init.apply",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -1058,7 +1058,7 @@ export const generatedCommandPackage = {
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "planning.install.apply",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -1822,7 +1822,7 @@ export const generatedCommandPackage = {
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "planning.bootstrap.status.load",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -2010,7 +2010,7 @@ export const generatedCommandPackage = {
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "planning.uninstall.apply",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -2104,7 +2104,7 @@ export const generatedCommandPackage = {
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "planning.upgrade.apply",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -2195,17 +2195,6 @@ export const generatedCommandPackage = {
     "operation_executor": {
       "handlers": [
         {
-          "function": "doctor_bootstrap",
-          "handler": "function_call",
-          "import_module": "repo_planning_bootstrap.installer",
-          "kwargs": {
-            "target": {
-              "value": "target"
-            }
-          },
-          "primitive": "planning.bootstrap.doctor.load"
-        },
-        {
           "condition_value": "verbose",
           "handler": "conditional_function_call",
           "if_false": {
@@ -2241,80 +2230,6 @@ export const generatedCommandPackage = {
           "primitive": "planning.reconcile.load"
         },
         {
-          "function": "collect_status",
-          "handler": "function_call",
-          "import_module": "repo_planning_bootstrap.installer",
-          "kwargs": {
-            "target": {
-              "value": "target"
-            }
-          },
-          "primitive": "planning.bootstrap.status.load"
-        },
-        {
-          "function": "planning_handoff",
-          "handler": "function_call",
-          "import_module": "repo_planning_bootstrap.installer",
-          "kwargs": {
-            "target": {
-              "value": "target"
-            }
-          },
-          "primitive": "planning.handoff.load"
-        },
-        {
-          "function": "close_planning_item",
-          "handler": "function_call",
-          "import_module": "repo_planning_bootstrap.installer",
-          "kwargs": {
-            "dry_run": {
-              "value": "dry_run"
-            },
-            "issue": {
-              "value": "issue"
-            },
-            "item": {
-              "value": "item"
-            },
-            "reason": {
-              "value": "reason"
-            },
-            "target": {
-              "value": "target"
-            }
-          },
-          "primitive": "planning.close-item.apply"
-        },
-        {
-          "function": "create_review_record",
-          "handler": "function_call",
-          "import_module": "repo_planning_bootstrap.installer",
-          "kwargs": {
-            "classification": {
-              "value": "classification"
-            },
-            "dry_run": {
-              "value": "dry_run"
-            },
-            "render_markdown": {
-              "value": "render_markdown"
-            },
-            "scope": {
-              "value": "scope"
-            },
-            "slug": {
-              "value": "slug"
-            },
-            "target": {
-              "value": "target"
-            },
-            "title": {
-              "value": "title"
-            }
-          },
-          "primitive": "planning.create-review.apply"
-        },
-        {
           "function": "emit_planning_operation_output",
           "handler": "runtime_handler",
           "import_module": "repo_planning_bootstrap.runtime_projection",
@@ -2331,100 +2246,6 @@ export const generatedCommandPackage = {
           "handler": "runtime_handler",
           "import_module": "repo_planning_bootstrap.runtime_projection",
           "primitive": "planning.prompt.render"
-        },
-        {
-          "function": "install_bootstrap",
-          "handler": "function_call",
-          "import_module": "repo_planning_bootstrap.installer",
-          "kwargs": {
-            "dry_run": {
-              "value": "dry_run"
-            },
-            "force": {
-              "value": "force"
-            },
-            "include_optional": {
-              "value": "include_optional"
-            },
-            "local_only": {
-              "value": "local"
-            },
-            "target": {
-              "value": "target"
-            }
-          },
-          "primitive": "planning.install.apply"
-        },
-        {
-          "function": "install_bootstrap",
-          "handler": "function_call",
-          "import_module": "repo_planning_bootstrap.installer",
-          "kwargs": {
-            "dry_run": {
-              "value": "dry_run"
-            },
-            "force": {
-              "value": "force"
-            },
-            "include_optional": {
-              "value": "include_optional"
-            },
-            "local_only": {
-              "value": "local"
-            },
-            "target": {
-              "value": "target"
-            }
-          },
-          "primitive": "planning.init.apply"
-        },
-        {
-          "function": "adopt_bootstrap",
-          "handler": "function_call",
-          "import_module": "repo_planning_bootstrap.installer",
-          "kwargs": {
-            "dry_run": {
-              "value": "dry_run"
-            },
-            "include_optional": {
-              "value": "include_optional"
-            },
-            "target": {
-              "value": "target"
-            }
-          },
-          "primitive": "planning.adopt.apply"
-        },
-        {
-          "function": "upgrade_bootstrap",
-          "handler": "function_call",
-          "import_module": "repo_planning_bootstrap.installer",
-          "kwargs": {
-            "dry_run": {
-              "value": "dry_run"
-            },
-            "include_optional": {
-              "value": "include_optional"
-            },
-            "target": {
-              "value": "target"
-            }
-          },
-          "primitive": "planning.upgrade.apply"
-        },
-        {
-          "function": "uninstall_bootstrap",
-          "handler": "function_call",
-          "import_module": "repo_planning_bootstrap.installer",
-          "kwargs": {
-            "dry_run": {
-              "value": "dry_run"
-            },
-            "target": {
-              "value": "target"
-            }
-          },
-          "primitive": "planning.uninstall.apply"
         },
         {
           "function": "apply_planning_new_plan_operation",

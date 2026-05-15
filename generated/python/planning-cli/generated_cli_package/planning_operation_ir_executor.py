@@ -112,22 +112,12 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
             },
             context=PrimitiveContext(cwd=Path.cwd(), roots={}),
             handlers={
-                'planning.bootstrap.doctor.load': _handle_planning_bootstrap_doctor_load,
                 'planning.report.load': _handle_planning_report_load,
                 'planning.summary.load': _handle_planning_summary_load,
                 'planning.reconcile.load': _handle_planning_reconcile_load,
-                'planning.bootstrap.status.load': _handle_planning_bootstrap_status_load,
-                'planning.handoff.load': _handle_planning_handoff_load,
-                'planning.close-item.apply': _handle_planning_close_item_apply,
-                'planning.create-review.apply': _handle_planning_create_review_apply,
                 'output.emit': _handle_output_emit,
                 'planning.list-files.load': _handle_planning_list_files_load,
                 'planning.prompt.render': _handle_planning_prompt_render,
-                'planning.install.apply': _handle_planning_install_apply,
-                'planning.init.apply': _handle_planning_init_apply,
-                'planning.adopt.apply': _handle_planning_adopt_apply,
-                'planning.upgrade.apply': _handle_planning_upgrade_apply,
-                'planning.uninstall.apply': _handle_planning_uninstall_apply,
                 'planning.new-plan.apply': _handle_planning_new_plan_apply,
                 'planning.promote-to-plan.apply': _handle_planning_promote_to_plan_apply,
                 'planning.archive-plan.apply': _handle_planning_archive_plan_apply,
@@ -138,12 +128,6 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
     except PrimitiveExecutionError as exc:
         raise OperationIrExecutionError(str(exc)) from exc
     return 0
-
-
-def _handle_planning_bootstrap_doctor_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
-    from repo_planning_bootstrap.installer import doctor_bootstrap
-
-    return doctor_bootstrap(target=values.get('target'))
 
 
 def _handle_planning_report_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
@@ -168,30 +152,6 @@ def _handle_planning_reconcile_load(values: dict[str, Any], arguments: dict[str,
     return load_planning_reconcile_operation(values, arguments, context)
 
 
-def _handle_planning_bootstrap_status_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
-    from repo_planning_bootstrap.installer import collect_status
-
-    return collect_status(target=values.get('target'))
-
-
-def _handle_planning_handoff_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
-    from repo_planning_bootstrap.installer import planning_handoff
-
-    return planning_handoff(target=values.get('target'))
-
-
-def _handle_planning_close_item_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
-    from repo_planning_bootstrap.installer import close_planning_item
-
-    return close_planning_item(dry_run=values.get('dry_run'), issue=values.get('issue'), item=values.get('item'), reason=values.get('reason'), target=values.get('target'))
-
-
-def _handle_planning_create_review_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
-    from repo_planning_bootstrap.installer import create_review_record
-
-    return create_review_record(classification=values.get('classification'), dry_run=values.get('dry_run'), render_markdown=values.get('render_markdown'), scope=values.get('scope'), slug=values.get('slug'), target=values.get('target'), title=values.get('title'))
-
-
 def _handle_output_emit(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
     from repo_planning_bootstrap.runtime_projection import emit_planning_operation_output
 
@@ -208,36 +168,6 @@ def _handle_planning_prompt_render(values: dict[str, Any], arguments: dict[str, 
     from repo_planning_bootstrap.runtime_projection import render_planning_prompt_operation
 
     return render_planning_prompt_operation(values, arguments, context)
-
-
-def _handle_planning_install_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
-    from repo_planning_bootstrap.installer import install_bootstrap
-
-    return install_bootstrap(dry_run=values.get('dry_run'), force=values.get('force'), include_optional=values.get('include_optional'), local_only=values.get('local'), target=values.get('target'))
-
-
-def _handle_planning_init_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
-    from repo_planning_bootstrap.installer import install_bootstrap
-
-    return install_bootstrap(dry_run=values.get('dry_run'), force=values.get('force'), include_optional=values.get('include_optional'), local_only=values.get('local'), target=values.get('target'))
-
-
-def _handle_planning_adopt_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
-    from repo_planning_bootstrap.installer import adopt_bootstrap
-
-    return adopt_bootstrap(dry_run=values.get('dry_run'), include_optional=values.get('include_optional'), target=values.get('target'))
-
-
-def _handle_planning_upgrade_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
-    from repo_planning_bootstrap.installer import upgrade_bootstrap
-
-    return upgrade_bootstrap(dry_run=values.get('dry_run'), include_optional=values.get('include_optional'), target=values.get('target'))
-
-
-def _handle_planning_uninstall_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
-    from repo_planning_bootstrap.installer import uninstall_bootstrap
-
-    return uninstall_bootstrap(dry_run=values.get('dry_run'), target=values.get('target'))
 
 
 def _handle_planning_new_plan_apply(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:

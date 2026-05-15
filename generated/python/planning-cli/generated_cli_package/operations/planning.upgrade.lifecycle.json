@@ -43,14 +43,28 @@
     "status": "representative",
     "steps": [
       {
-        "arguments": {},
+        "arguments": {
+          "function": "upgrade_bootstrap",
+          "import_module": "repo_planning_bootstrap.installer",
+          "kwargs": {
+            "dry_run": {
+              "value": "dry_run"
+            },
+            "include_optional": {
+              "value": "include_optional"
+            },
+            "target": {
+              "value": "target"
+            }
+          }
+        },
         "description": "Refresh package-managed planning helper surfaces.",
         "id": "apply_lifecycle",
         "on_error": "fail",
         "outputs": [
           "result"
         ],
-        "uses": "planning.upgrade.apply"
+        "uses": "python.function.call"
       },
       {
         "arguments": {},
@@ -93,7 +107,7 @@
     {
       "description": "Refresh package-managed planning helper surfaces.",
       "id": "apply_lifecycle",
-      "uses": "planning.upgrade.apply"
+      "uses": "python.function.call"
     },
     {
       "description": "Emit planning lifecycle result in the requested format.",

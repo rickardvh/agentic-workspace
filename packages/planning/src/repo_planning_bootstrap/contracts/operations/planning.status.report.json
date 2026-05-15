@@ -54,7 +54,7 @@
   "steps": [
     {
       "id": "load_status",
-      "uses": "planning.bootstrap.status.load",
+      "uses": "python.function.call",
       "description": "Inspect package-local planning bootstrap state for the target repository."
     },
     {
@@ -77,9 +77,17 @@
     "steps": [
       {
         "id": "load_status",
-        "uses": "planning.bootstrap.status.load",
+        "uses": "python.function.call",
         "description": "Load the planning bootstrap status payload for the requested target.",
-        "arguments": {},
+        "arguments": {
+          "import_module": "repo_planning_bootstrap.installer",
+          "function": "collect_status",
+          "kwargs": {
+            "target": {
+              "value": "target"
+            }
+          }
+        },
         "outputs": [
           "result"
         ],

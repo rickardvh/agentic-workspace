@@ -43,14 +43,28 @@
     "status": "representative",
     "steps": [
       {
-        "arguments": {},
+        "arguments": {
+          "function": "adopt_bootstrap",
+          "import_module": "repo_planning_bootstrap.installer",
+          "kwargs": {
+            "dry_run": {
+              "value": "dry_run"
+            },
+            "include_optional": {
+              "value": "include_optional"
+            },
+            "target": {
+              "value": "target"
+            }
+          }
+        },
         "description": "Conservatively add planning bootstrap files to an existing repository.",
         "id": "apply_lifecycle",
         "on_error": "fail",
         "outputs": [
           "result"
         ],
-        "uses": "planning.adopt.apply"
+        "uses": "python.function.call"
       },
       {
         "arguments": {},
@@ -93,7 +107,7 @@
     {
       "description": "Conservatively add planning bootstrap files to an existing repository.",
       "id": "apply_lifecycle",
-      "uses": "planning.adopt.apply"
+      "uses": "python.function.call"
     },
     {
       "description": "Emit planning lifecycle result in the requested format.",

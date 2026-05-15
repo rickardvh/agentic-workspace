@@ -54,7 +54,7 @@
   "steps": [
     {
       "id": "load_report",
-      "uses": "planning.bootstrap.doctor.load",
+      "uses": "python.function.call",
       "description": "Load package-local report payload."
     },
     {
@@ -77,9 +77,17 @@
     "steps": [
       {
         "id": "load_doctor",
-        "uses": "planning.bootstrap.doctor.load",
+        "uses": "python.function.call",
         "description": "Load the planning bootstrap doctor payload for the requested target.",
-        "arguments": {},
+        "arguments": {
+          "import_module": "repo_planning_bootstrap.installer",
+          "function": "doctor_bootstrap",
+          "kwargs": {
+            "target": {
+              "value": "target"
+            }
+          }
+        },
         "outputs": [
           "result"
         ],
