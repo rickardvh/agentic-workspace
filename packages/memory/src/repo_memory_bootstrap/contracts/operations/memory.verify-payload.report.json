@@ -45,7 +45,7 @@
   "steps": [
     {
       "id": "load_verification",
-      "uses": "memory.verify-payload.load",
+      "uses": "python.function.call",
       "description": "Verify bundled memory payload files and generated operation resources."
     },
     {
@@ -69,9 +69,17 @@
     "steps": [
       {
         "id": "load_verification",
-        "uses": "memory.verify-payload.load",
+        "uses": "python.function.call",
         "description": "Verify bundled memory payload files and generated operation resources.",
-        "arguments": {},
+        "arguments": {
+          "import_module": "repo_memory_bootstrap.installer",
+          "function": "verify_payload",
+          "kwargs": {
+            "target": {
+              "value": "target"
+            }
+          }
+        },
         "outputs": [
           "result"
         ],

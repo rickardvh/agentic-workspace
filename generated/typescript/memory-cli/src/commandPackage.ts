@@ -2280,7 +2280,7 @@ export const generatedCommandPackage = {
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "memory.verify-payload.load",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -2964,17 +2964,6 @@ export const generatedCommandPackage = {
             }
           },
           "primitive": "memory.search.load"
-        },
-        {
-          "function": "verify_payload",
-          "handler": "function_call",
-          "import_module": "repo_memory_bootstrap.installer",
-          "kwargs": {
-            "target": {
-              "value": "target"
-            }
-          },
-          "primitive": "memory.verify-payload.load"
         },
         {
           "function": "sync_memory",

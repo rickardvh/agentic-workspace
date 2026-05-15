@@ -8256,17 +8256,6 @@
               }
             },
             {
-              "primitive": "memory.verify-payload.load",
-              "handler": "function_call",
-              "import_module": "repo_memory_bootstrap.installer",
-              "function": "verify_payload",
-              "kwargs": {
-                "target": {
-                  "value": "target"
-                }
-              }
-            },
-            {
               "primitive": "memory.sync_memory.load",
               "handler": "function_call",
               "import_module": "repo_memory_bootstrap.installer",
@@ -10583,7 +10572,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "memory.verify-payload.load",
+              "python.function.call",
               "output.emit"
             ]
           },

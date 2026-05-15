@@ -2383,7 +2383,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "memory.verify-payload.load",
+          "python.function.call",
           "output.emit"
         ]
       },

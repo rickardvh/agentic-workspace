@@ -125,7 +125,6 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'memory.route_report.load': _handle_memory_route_report_load,
                 'memory.route_review.load': _handle_memory_route_review_load,
                 'memory.search.load': _handle_memory_search_load,
-                'memory.verify-payload.load': _handle_memory_verify_payload_load,
                 'memory.sync_memory.load': _handle_memory_sync_memory_load,
                 'payload.assemble': _handle_payload_assemble,
                 'output.emit': _handle_output_emit,
@@ -266,12 +265,6 @@ def _handle_memory_search_load(values: dict[str, Any], _arguments: dict[str, Any
     from repo_memory_bootstrap.installer import search_memory
 
     return search_memory(query=values.get('query'), target=values.get('target'))
-
-
-def _handle_memory_verify_payload_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
-    from repo_memory_bootstrap.installer import verify_payload
-
-    return verify_payload(target=values.get('target'))
 
 
 def _handle_memory_sync_memory_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
