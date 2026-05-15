@@ -12,7 +12,9 @@ work_items = []
 execplans = []
 
 [todo]
-active_items = []
+active_items = [
+  { id = "python-codegen-owned-primitive-executor-migration", title = "Python codegen-owned primitive executor migration", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/python-codegen-owned-primitive-executor-migration.plan.json", why_now = "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane python-codegen-owned-primitive-executor-migration.", owner_role = "implementation", handoff_ready = true, refs = [".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"] },
+]
 queued_items = []
 
 [roadmap]

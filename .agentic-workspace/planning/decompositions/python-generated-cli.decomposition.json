@@ -118,7 +118,7 @@
     {
       "id": "python-codegen-owned-primitive-executor-migration",
       "title": "Python codegen-owned primitive executor migration",
-      "readiness": "ready",
+      "readiness": "promoted",
       "outcome": "Generic deterministic CLI-visible behavior over files, JSON, TOML, Markdown sections, schemas, templates, managed payloads, and JSON text emission moves from module-local runtime helpers into codegen-owned primitive executors where practical.",
       "owner_surface": ".agentic-workspace/planning/execplans/python-codegen-owned-primitive-executor-migration.plan.json",
       "proof": "Primitive conformance and generated Python black-box conformance prove representative operations execute through codegen-owned primitives without importing module-local CLI/runtime internals except explicitly inventoried package-specific judgment.",
@@ -126,7 +126,8 @@
         "json-schema-operation-ir",
         "python-package-resource-operation-ir"
       ],
-      "parallel_with": []
+      "parallel_with": [],
+      "promoted_execplan": ".agentic-workspace/planning/execplans/python-codegen-owned-primitive-executor-migration.plan.json"
     }
   ],
   "dependency_assumptions": [
