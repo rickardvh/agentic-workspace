@@ -94,9 +94,21 @@
       "adapter_kind": "process"
     },
     {
+      "id": "memory.route.process",
+      "operation_id": "memory.route.report",
+      "path": "conformance/memory.route.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "memory.status.process",
       "operation_id": "memory.status.report",
       "path": "conformance/memory.status.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "memory.sync-memory.process",
+      "operation_id": "memory.sync-memory.report",
+      "path": "conformance/memory.sync-memory.process.json",
       "adapter_kind": "process"
     },
     {

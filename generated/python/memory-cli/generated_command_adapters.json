@@ -164,6 +164,38 @@
       },
       "status": "generated"
     },
+    "route": {
+      "command": {
+        "command_manifest": "package:memory:cli",
+        "name": "route",
+        "option_group_manifest": "package:memory:cli",
+        "program": "agentic-memory"
+      },
+      "conformance_refs": [
+        "memory.route.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "id": "memory.route.cli",
+      "operation_id": "memory.route.report",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.route.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
     "route-report": {
       "command": {
         "command_manifest": "package:memory:cli",
@@ -219,6 +251,38 @@
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
           "memory.bootstrap.status.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    "sync-memory": {
+      "command": {
+        "command_manifest": "package:memory:cli",
+        "name": "sync-memory",
+        "option_group_manifest": "package:memory:cli",
+        "program": "agentic-memory"
+      },
+      "conformance_refs": [
+        "memory.sync-memory.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "id": "memory.sync-memory.cli",
+      "operation_id": "memory.sync-memory.report",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.sync_memory.load",
           "output.emit"
         ]
       },

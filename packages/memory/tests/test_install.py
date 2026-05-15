@@ -705,8 +705,8 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
     prompt_args = parser.parse_args(["prompt", "adopt", "--target", "./repo"])
     prompt_populate_args = parser.parse_args(["prompt", "populate", "--target", "./repo"])
     prompt_uninstall_args = parser.parse_args(["prompt", "uninstall", "--target", "./repo"])
-    route_args = parser.parse_args(["route", "--files", "src/app.py"])
-    sync_args = parser.parse_args(["sync-memory", "--notes", ".agentic-workspace/memory/repo/index.md"])
+    route_args = generated_parser.parse_args(["route", "--files", "src/app.py"])
+    sync_args = generated_parser.parse_args(["sync-memory", "--notes", ".agentic-workspace/memory/repo/index.md"])
     promotion_args = generated_parser.parse_args(
         ["promotion-report", "--notes", ".agentic-workspace/memory/repo/domains/api.md", "--mode", "remediation"]
     )

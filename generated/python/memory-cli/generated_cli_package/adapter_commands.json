@@ -152,6 +152,102 @@
     "operation_path": "operations/memory.route-report.report.json"
   },
   {
+    "adapter_id": "memory.route.cli",
+    "interface": {
+      "help": "Suggest the smallest relevant durable note set for touched files or surfaces so the agent can read less, not more.",
+      "name": "route",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "default": [],
+          "flags": [
+            "--files"
+          ],
+          "help": "Touched file paths to route from.",
+          "name": "files",
+          "nargs": "*"
+        },
+        {
+          "default": [],
+          "flags": [
+            "--surface"
+          ],
+          "help": "Explicit routing surfaces.",
+          "name": "surface",
+          "nargs": "*"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "memory.route.report",
+    "operation_path": "operations/memory.route.report.json"
+  },
+  {
+    "adapter_id": "memory.sync-memory.cli",
+    "interface": {
+      "help": "Suggest memory updates for changed work and surface compact upstream improvement candidates.",
+      "name": "sync-memory",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "default": [],
+          "flags": [
+            "--files"
+          ],
+          "help": "Changed file paths to inspect.",
+          "name": "files",
+          "nargs": "*"
+        },
+        {
+          "default": [],
+          "flags": [
+            "--notes"
+          ],
+          "help": "Explicit memory notes to review.",
+          "name": "notes",
+          "nargs": "*"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "memory.sync-memory.report",
+    "operation_path": "operations/memory.sync-memory.report.json"
+  },
+  {
     "adapter_id": "memory.promotion-report.cli",
     "interface": {
       "help": "Suggest memory notes that should be promoted into canonical docs or considered for elimination through skills, scripts, tests, or refactors.",

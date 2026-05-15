@@ -254,8 +254,20 @@
       "summary": "Load package-local memory report state for a target repository."
     },
     {
+      "id": "memory.route.load",
+      "summary": "Load package-local Memory note routing recommendations.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime"
+    },
+    {
       "id": "memory.route_report.load",
       "summary": "Load package-local memory routing aggregate report state."
+    },
+    {
+      "id": "memory.sync_memory.load",
+      "summary": "Load package-local Memory synchronization suggestions.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime"
     },
     {
       "id": "output.emit",

@@ -157,10 +157,10 @@
     "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
     "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
     "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
-    "route chosen": "delegate-validation",
+    "route chosen": "delegate-exploration",
     "route skipped reason": "",
     "decision command": "agentic-planning delegation-decision",
-    "recorded at": "2026-05-15T11:03:21+00:00"
+    "recorded at": "2026-05-15T11:17:23+00:00"
   },
   "system_intent_alignment": {
     "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
@@ -242,13 +242,13 @@
     "follow-on decision": "continue current active lane; do not archive"
   },
   "delegation_outcome_feedback": {
-    "route chosen": "delegate-validation",
+    "route chosen": "delegate-exploration",
     "route skipped reason": "not skipped",
-    "expected savings": "reused the existing worker for an independent render-output validation while local proof ran",
-    "actual friction": "worker initially observed the stale static proof expectation before the local checker update, but confirmed planning_runtime_cli.py is rendered from command-generation and found no new separation violation in the slice",
-    "proof result": "local proof passed: generate_command_packages --check; check_generated_command_packages.py; --python-conformance; --conformance --require-node; test_contract_tooling; command-generation focused pytest; contract tooling; structured inventory; planning/workspace tests and lint; Docker static proof. Docker conformance still fails in the known Python/jsonschema native SystemError path tracked separately.",
-    "quality concern": "planning_runtime_cli.py is now rendered by command-generation, but workspace_runtime_cli.py and memory_runtime_cli.py remain transitional generated-output debt blocking full #892 completion.",
-    "decomposition adjustment": "next slices must render memory_runtime_cli.py and workspace_runtime_cli.py or keep the completion gate pending until every runtime projection inventory entry is rendered-by-command-generation."
+    "expected savings": "reused worker to inventory remaining hand-owned memory command surfaces while local route/sync migration proceeded",
+    "actual friction": "worker inventory was produced after route and sync-memory were locally promoted, so those two rows became completed scope rather than remaining debt",
+    "proof result": "memory route and sync-memory now have runtime-consumed operation contracts, generated package commands, generated operation artifacts, conformance registry entries, Python operation execution inventory entries, and passing package/static/Python conformance; full adapter conformance passed on rerun after the known intermittent native exit 3221225477",
+    "quality concern": "memory_runtime_cli.py remains transitional generated-output debt and still owns lifecycle, prompt, current, route-review, note, search, verify-payload, and cleanup command behavior",
+    "decomposition adjustment": "next memory slices should promote capture-note if already contracted, then route-review/search/verify read-only surfaces, before lifecycle mutations and runtime module rendering"
   },
   "proof_report": {
     "validation proof": "uv run python scripts/generate/generate_command_packages.py; uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run python scripts/check/check_generated_command_packages.py --docker --require-docker; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker; uv run pytest tests/test_workspace_cli.py tests/test_contract_tooling.py -q; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q; make test-planning; make lint-planning; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check selected files; make test-workspace; make lint-workspace.",
@@ -356,6 +356,7 @@
     "2026-05-15: Recorded delegation decision route=delegate-validation.",
     "2026-05-15: Recorded delegation decision route=delegate-validation.",
     "2026-05-15: Recorded delegation decision route=delegate-validation.",
-    "2026-05-15: Recorded delegation decision route=delegate-validation."
+    "2026-05-15: Recorded delegation decision route=delegate-validation.",
+    "2026-05-15: Recorded delegation decision route=delegate-exploration."
   ]
 }

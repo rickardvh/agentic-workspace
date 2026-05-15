@@ -2,14 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "98f541b8b7d9f3067471ca56d4076c356f81b131c639d45ce026862dc393c59f",
-      "command": "agentic-planning record-recovery",
-      "reason": "Update active #950 planning item with concrete generated ownership slice.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-13T13:34:35+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/execplans/codegen-generated-under-generated-950.plan.json",
       "sha256": "98f5311e53bc7a5188c5d57fc36effe5eff4ea3cd8d2a5914fd306da2fe93765",
       "command": "agentic-planning delegation-decision",
@@ -1600,6 +1592,14 @@
       "reason": "record delegation decision route=delegate-validation",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-15T11:03:21+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
+      "sha256": "0ca36d247ebafe822424363dbcca8671870bc5c29bd53f4eaa41d8c5b0817ab6",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=delegate-exploration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T11:17:23+00:00"
     }
   ]
 }

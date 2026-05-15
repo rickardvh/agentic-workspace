@@ -205,20 +205,21 @@ def build_parser() -> argparse.ArgumentParser:
     _add_target_arguments(current_check_parser)
     _add_format_argument(current_check_parser)
 
-    route_parser = subparsers.add_parser(
-        "route",
-        help="Suggest the smallest relevant durable note set for touched files or surfaces so the agent can read less, not more.",
-    )
-    _add_target_arguments(route_parser)
-    route_parser.add_argument("--files", nargs="*", default=[], help="Touched file paths to route from.")
-    route_parser.add_argument(
-        "--surface",
-        dest="surfaces",
-        nargs="*",
-        default=[],
-        help="Explicit routing surfaces.",
-    )
-    _add_format_argument(route_parser)
+    if "route" not in generated_commands:
+        route_parser = subparsers.add_parser(
+            "route",
+            help="Suggest the smallest relevant durable note set for touched files or surfaces so the agent can read less, not more.",
+        )
+        _add_target_arguments(route_parser)
+        route_parser.add_argument("--files", nargs="*", default=[], help="Touched file paths to route from.")
+        route_parser.add_argument(
+            "--surface",
+            dest="surfaces",
+            nargs="*",
+            default=[],
+            help="Explicit routing surfaces.",
+        )
+        _add_format_argument(route_parser)
 
     route_review_parser = subparsers.add_parser(
         "route-review",
@@ -236,13 +237,14 @@ def build_parser() -> argparse.ArgumentParser:
         route_report_parser.add_argument("--verbose", action="store_true", help="Emit full route-report fixture detail.")
         _add_format_argument(route_report_parser)
 
-    sync_parser = subparsers.add_parser(
-        "sync-memory", help="Suggest memory updates for changed work and surface compact upstream improvement candidates."
-    )
-    _add_target_arguments(sync_parser)
-    sync_parser.add_argument("--files", nargs="*", default=[], help="Changed file paths to inspect.")
-    sync_parser.add_argument("--notes", nargs="*", default=[], help="Explicit memory notes to review.")
-    _add_format_argument(sync_parser)
+    if "sync-memory" not in generated_commands:
+        sync_parser = subparsers.add_parser(
+            "sync-memory", help="Suggest memory updates for changed work and surface compact upstream improvement candidates."
+        )
+        _add_target_arguments(sync_parser)
+        sync_parser.add_argument("--files", nargs="*", default=[], help="Changed file paths to inspect.")
+        sync_parser.add_argument("--notes", nargs="*", default=[], help="Explicit memory notes to review.")
+        _add_format_argument(sync_parser)
 
     if "promotion-report" not in generated_commands:
         promotion_parser = subparsers.add_parser(
@@ -961,6 +963,10 @@ def _run_report_adapter(args: argparse.Namespace) -> int | None:
     return run_operation_ir(generated_cli_package_operation_contract("memory.report.report"), args)
 
 
+def _run_route_adapter(args: argparse.Namespace) -> int | None:
+    return run_operation_ir(generated_cli_package_operation_contract("memory.route.report"), args)
+
+
 def _run_route_report_adapter(args: argparse.Namespace) -> int | None:
     return run_operation_ir(generated_cli_package_operation_contract("memory.route-report.report"), args)
 
@@ -969,14 +975,20 @@ def _run_status_report_adapter(args: argparse.Namespace) -> int | None:
     return run_operation_ir(generated_cli_package_operation_contract("memory.status.report"), args)
 
 
+def _run_sync_memory_adapter(args: argparse.Namespace) -> int | None:
+    return run_operation_ir(generated_cli_package_operation_contract("memory.sync-memory.report"), args)
+
+
 _GENERATED_RUNTIME_HANDLERS = {
     "memory.doctor.report": _run_doctor_report_adapter,
     "memory.list-files.report": _run_list_files_report_adapter,
     "memory.list-skills.report": _run_list_skills_report_adapter,
     "memory.promotion-report.report": _run_promotion_report_adapter,
     "memory.report.report": _run_report_adapter,
+    "memory.route.report": _run_route_adapter,
     "memory.route-report.report": _run_route_report_adapter,
     "memory.status.report": _run_status_report_adapter,
+    "memory.sync-memory.report": _run_sync_memory_adapter,
 }
 
 

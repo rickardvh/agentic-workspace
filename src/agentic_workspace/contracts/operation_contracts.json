@@ -115,8 +115,8 @@
     {
       "id": "memory.route.report",
       "path": "operations/memory.route.report.json",
-      "command": "memory",
-      "migration_status": "draft-contract-only"
+      "command": "route",
+      "migration_status": "runtime-consumed"
     },
     {
       "id": "memory.status.report",
@@ -127,8 +127,8 @@
     {
       "id": "memory.sync-memory.report",
       "path": "operations/memory.sync-memory.report.json",
-      "command": "memory",
-      "migration_status": "draft-contract-only"
+      "command": "sync-memory",
+      "migration_status": "runtime-consumed"
     },
     {
       "id": "modules.report",

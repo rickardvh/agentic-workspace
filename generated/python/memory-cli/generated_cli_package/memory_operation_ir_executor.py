@@ -34,7 +34,9 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
         'memory.promotion-report.report',
         'memory.report.report',
         'memory.route-report.report',
-        'memory.status.report'
+        'memory.route.report',
+        'memory.status.report',
+        'memory.sync-memory.report'
     }:
         raise OperationIrExecutionError(f"unsupported operation IR contract: {operation.get('id')!r}")
     if operation.get("migration_status") != "runtime-consumed":
@@ -57,6 +59,8 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'primary_test_command': getattr(args, 'primary_test_command', None),
                 'other_key_commands': getattr(args, 'other_key_commands', None),
                 'notes': getattr(args, 'notes', None),
+                'files': getattr(args, 'files', []),
+                'surface': getattr(args, 'surface', []),
                 'mode': getattr(args, 'mode', None),
             },
             context=PrimitiveContext(cwd=Path.cwd(), roots={
@@ -69,7 +73,9 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'memory.bootstrap.status.load': _handle_memory_bootstrap_status_load,
                 'memory.promotion_report.load': _handle_memory_promotion_report_load,
                 'memory.report.load': _handle_memory_report_load,
+                'memory.route.load': _handle_memory_route_load,
                 'memory.route_report.load': _handle_memory_route_report_load,
+                'memory.sync_memory.load': _handle_memory_sync_memory_load,
                 'payload.assemble': _handle_payload_assemble,
                 'output.emit': _handle_output_emit,
             },
@@ -121,10 +127,22 @@ def _handle_memory_report_load(values: dict[str, Any], arguments: dict[str, Any]
     return _load_memory_report(values, arguments, context)
 
 
+def _handle_memory_route_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_memory_bootstrap.installer import route_memory
+
+    return route_memory(files=values.get('files'), surfaces=values.get('surface'), target=values.get('target'))
+
+
 def _handle_memory_route_report_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
     from .memory_runtime_cli import _load_memory_route_report
 
     return _load_memory_route_report(values, arguments, context)
+
+
+def _handle_memory_sync_memory_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_memory_bootstrap.installer import sync_memory
+
+    return sync_memory(files=values.get('files'), notes=values.get('notes'), target=values.get('target'))
 
 
 def _handle_payload_assemble(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
