@@ -208,6 +208,8 @@ def _conformance_env(*, runtime: str | None = None) -> dict[str, str]:
     if existing_pythonpath:
         paths.append(existing_pythonpath)
     env["PYTHONPATH"] = os.pathsep.join(paths)
+    env["COLUMNS"] = "80"
+    env["LINES"] = "24"
     if runtime is not None:
         env["AGENTIC_WORKSPACE_RUNTIME"] = runtime
     return env

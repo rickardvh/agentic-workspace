@@ -20,21 +20,6 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, NoReturn, cast
 
-from . import (
-    build_generated_parser as build_generated_cli_package_parser,
-)
-from . import (
-    generated_command_names as generated_cli_package_command_names,
-)
-from . import (
-    generated_operation_contract as generated_cli_package_operation_contract,
-)
-from . import (
-    run_generated_command as run_generated_cli_package_command,
-)
-from . import (
-    supports_generated_command as supports_generated_cli_package_command,
-)
 from agentic_workspace import __version__, doctor
 from agentic_workspace import config as config_lib
 from agentic_workspace._schema import (
@@ -142,6 +127,22 @@ from agentic_workspace.workspace_output import (
     _emit_prompt_text,
     _emit_report_text,
     _emit_setup_text,
+)
+
+from . import (
+    build_generated_parser as build_generated_cli_package_parser,
+)
+from . import (
+    generated_command_names as generated_cli_package_command_names,
+)
+from . import (
+    generated_operation_contract as generated_cli_package_operation_contract,
+)
+from . import (
+    run_generated_command as run_generated_cli_package_command,
+)
+from . import (
+    supports_generated_command as supports_generated_cli_package_command,
 )
 
 _CLI_COMMANDS_MANIFEST = cli_commands_manifest()
@@ -19759,6 +19760,182 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
     )
     _emit_payload(payload=payload, format_name=args.format)
     return 0
+
+
+def _workspace_operation_profile(values: dict[str, Any], *, default: str = "tiny") -> str:
+    return "full" if values.get("verbose") else str(values.get("profile") or default)
+
+
+def _resolve_workspace_operation_target_root(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> Path:
+    target_root = _resolve_target_root(values.get("target")) if values.get("target") else _resolve_target_root(None)
+    _validate_target_root(command_name="config", target_root=target_root)
+    return target_root
+
+
+def _load_workspace_operation_config(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> WorkspaceConfig:
+    descriptors = _module_operations()
+    _validate_descriptor_contract(descriptors)
+    return config_lib.load_workspace_config(
+        target_root=values["target_root"],
+        valid_presets=set(_preset_modules(descriptors)),
+    )
+
+
+def _load_workspace_operation_defaults(_values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> dict[str, Any]:
+    return _defaults_payload()
+
+
+def _select_workspace_operation_defaults(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> dict[str, Any]:
+    payload = values["defaults_payload"]
+    section = values.get("section")
+    if section is not None:
+        payload = _select_defaults_section(payload, section=str(section))
+    elif _workspace_operation_profile(values) == "tiny":
+        payload = _tiny_defaults_payload(payload)
+    select = values.get("select")
+    if select is not None:
+        payload = _select_payload_fields(payload, select=str(select), source_command="defaults")
+    return serialise_value(payload)
+
+
+def _select_workspace_operation_fields(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> dict[str, Any]:
+    payload = _config_payload(config=values["config"])
+    select = values.get("select")
+    profile = _workspace_operation_profile(values)
+    if select:
+        payload = _select_payload_fields(payload, select=str(select), source_command="config")
+    elif profile == "tiny":
+        payload = _tiny_config_payload(payload)
+    elif profile == "compact":
+        payload = _compact_config_payload(payload)
+    return serialise_value(payload)
+
+
+def _resolve_workspace_operation_selection(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> dict[str, Any]:
+    args = argparse.Namespace(
+        target=values.get("target"),
+        module=values.get("module"),
+        preset=values.get("preset"),
+        agent_instructions_file=values.get("agent_instructions_file"),
+    )
+    target_root, descriptors, config, selected_modules, resolved_preset = _selected_runtime_context(args=args, command_name="prompt")
+    return {
+        "target_root": target_root,
+        "descriptors": descriptors,
+        "config": config,
+        "selected_modules": selected_modules,
+        "resolved_preset": resolved_preset,
+    }
+
+
+def _render_workspace_operation_prompt(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> dict[str, Any]:
+    selection = values["selection"]
+    prompt_command = values.get("prompt_command")
+    if prompt_command is None:
+        operation_id = str(values.get("operation_id", ""))
+        prompt_command = operation_id.removeprefix("prompt.") if operation_id.startswith("prompt.") else ""
+    return _run_prompt_command(
+        prompt_command=str(prompt_command),
+        target_root=selection["target_root"],
+        selected_modules=selection["selected_modules"],
+        resolved_preset=selection["resolved_preset"],
+        descriptors=selection["descriptors"],
+        force_adopt=bool(values.get("adopt", False)),
+        non_interactive=bool(values.get("non_interactive", False)),
+        config=selection["config"],
+    )
+
+
+def _append_workspace_operation_delegation_outcome(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> dict[str, Any]:
+    return _record_delegation_outcome(
+        target_root=values["target_root"],
+        delegation_target=str(values.get("delegation_target") or ""),
+        task_class=str(values.get("task_class") or ""),
+        outcome=str(values.get("outcome") or ""),
+        handoff_sufficiency=str(values.get("handoff_sufficiency") or ""),
+        review_burden=str(values.get("review_burden") or ""),
+        escalation_required=bool(values.get("escalation_required", False)),
+    )
+
+
+def _load_workspace_operation_system_intent_config(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> WorkspaceConfig:
+    descriptors = _module_operations()
+    _validate_descriptor_contract(descriptors)
+    return config_lib.load_workspace_config(target_root=values["target_root"], valid_presets=set(_preset_modules(descriptors)))
+
+
+def _refresh_workspace_operation_system_intent_metadata(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> Any:
+    if not values.get("sync"):
+        return None
+    return _system_intent_command_payload(target_root=values["target_root"], config=values["system_intent_config"], sync=True)
+
+
+def _read_or_create_workspace_operation_system_intent_mirror(
+    values: dict[str, Any], _arguments: dict[str, Any], _context: Any
+) -> dict[str, Any]:
+    if values.get("result") is not None:
+        return values["result"]
+    return _system_intent_command_payload(target_root=values["target_root"], config=values["system_intent_config"], sync=False)
+
+
+def _emit_workspace_operation_output(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> None:
+    payload = values["result"]
+    output_format = str(values.get("format") or "text")
+    if isinstance(payload, dict) and payload.get("command") == "prompt":
+        _emit_payload(payload=payload, format_name=output_format)
+        return
+    if isinstance(payload, dict) and payload.get("kind") == "workspace-system-intent/v1":
+        if output_format == "json":
+            print(json.dumps(serialise_value(payload), indent=2))
+        else:
+            _emit_workspace_operation_system_intent_payload_text(payload)
+        return
+    if isinstance(payload, dict) and payload.get("kind") == "agentic-workspace/delegation-outcomes/v1":
+        _emit_payload(payload=payload, format_name=output_format)
+        return
+    if output_format == "json":
+        print(json.dumps(payload, indent=2))
+        return
+    if values.get("section") is not None and isinstance(payload, dict):
+        _emit_compact_answer_text(payload)
+        return
+    if "config" in values:
+        _emit_config(
+            format_name=output_format,
+            config=values["config"],
+            profile=_workspace_operation_profile(values),
+            select=str(values["select"]) if values.get("select") is not None else None,
+        )
+        return
+    _emit_defaults(
+        format_name=output_format,
+        section=None,
+        profile=_workspace_operation_profile(values),
+        select=str(values["select"]) if values.get("select") is not None else None,
+    )
+
+
+def _emit_workspace_operation_system_intent_payload_text(payload: dict[str, Any]) -> None:
+    print(f"Target: {payload['target']}")
+    print(f"Command: {payload['command']}")
+    print(f"Sync requested: {payload['sync_requested']}")
+    print(f"Source declaration surface: {payload['source_declaration_surface']}")
+    print(f"Compiled declaration surface: {payload['mirror_surface']}")
+    print(f"Workflow surface: {payload['workflow_surface']}")
+    declaration = payload["source_declaration"]
+    print(f"Sources: {', '.join(declaration['sources']) or 'none'} ({declaration['sources_source']})")
+    print(f"Preferred source: {declaration['preferred_source'] or 'none'} ({declaration['preferred_source_source']})")
+    mirror = payload["mirror"]
+    print(f"Compiled declaration status: {mirror.get('status', 'unknown')}")
+    if mirror.get("summary"):
+        print(f"Compiled declaration summary: {mirror['summary']}")
+    if payload["actions"]:
+        print("Actions:")
+        for action in payload["actions"]:
+            print(f"- {action['kind']}: {action['path']} ({action['detail']})")
+    print(f"Next action: {payload['next_action']['summary']}")
+    for command in payload["next_action"]["commands"]:
+        print(f"- {command}")
 
 
 _GENERATED_RUNTIME_HANDLERS: dict[str, Callable[[argparse.Namespace], int]] = {

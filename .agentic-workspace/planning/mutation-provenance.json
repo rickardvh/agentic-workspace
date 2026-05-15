@@ -2,22 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
-      "sha256": "7c1877388ba4520bb25f23134b731a67fbae04cb7e63a9e9f8e60014001312de",
-      "command": "agentic-planning record-recovery",
-      "reason": "record planning front-door slice proof and advance to memory front-door slice",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-13T12:38:03+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8c451d9d2396d190b4a2bf9a31edc61822375caf0cafd08e606133abd34936fe",
-      "command": "agentic-planning record-recovery",
-      "reason": "advance active codegen state to memory front-door slice",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-13T12:38:03+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/state.toml",
       "sha256": "2233245699747827143c56ddfb321d4a3668f790255476e67313705b18d59366",
       "command": "agentic-planning record-recovery",
@@ -1600,6 +1584,22 @@
       "reason": "Recorded current #892 lane status after memory operation executor generation and Docker conformance dogfooding fix",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-15T09:08:18+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
+      "sha256": "48e85d8aaa2db02963104139329353dd386a0ed2e506cc8119d5e88a451a1578",
+      "command": "agentic-planning record-recovery",
+      "reason": "Recorded workspace operation executor generation slice and #990 conformance terminal-size fix",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-15T09:21:34+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "7b78584c69ed142517c01c23898ecfd5675687abb1177a046554c4f7fcf4b4c1",
+      "command": "agentic-planning record-recovery",
+      "reason": "Recorded all operation executors rendered and remaining runtime-module debt for #892",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-15T09:21:34+00:00"
     }
   ]
 }

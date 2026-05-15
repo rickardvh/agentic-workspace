@@ -236,7 +236,183 @@
       "package_role": "root-workspace-cli",
       "python_runtime_binding": {
         "entrypoint": "agentic-workspace",
-        "runtime_module_file": "workspace_runtime_cli"
+        "runtime_module_file": "workspace_runtime_cli",
+        "operation_executor": {
+          "module_file": "workspace_operation_ir_executor",
+          "supported_operation_ids": [
+            "config.report",
+            "defaults.report",
+            "delegation-outcome.append",
+            "prompt.init",
+            "prompt.uninstall",
+            "prompt.upgrade",
+            "system-intent.sync"
+          ],
+          "initial_values": [
+            {
+              "name": "format",
+              "arg": "format",
+              "default": "text"
+            },
+            {
+              "name": "verbose",
+              "arg": "verbose",
+              "default": false
+            },
+            {
+              "name": "adopt",
+              "arg": "adopt",
+              "default": false
+            },
+            {
+              "name": "agent_instructions_file",
+              "arg": "agent_instructions_file",
+              "default": null
+            },
+            {
+              "name": "delegation_target",
+              "arg": "delegation_target",
+              "default": null
+            },
+            {
+              "name": "escalation_required",
+              "arg": "escalation_required",
+              "default": false
+            },
+            {
+              "name": "handoff_sufficiency",
+              "arg": "handoff_sufficiency",
+              "default": null
+            },
+            {
+              "name": "module",
+              "arg": "module",
+              "default": null
+            },
+            {
+              "name": "non_interactive",
+              "arg": "non_interactive",
+              "default": false
+            },
+            {
+              "name": "outcome",
+              "arg": "outcome",
+              "default": null
+            },
+            {
+              "name": "prompt_command",
+              "arg": "prompt_command",
+              "default": null
+            },
+            {
+              "name": "preset",
+              "arg": "preset",
+              "default": null
+            },
+            {
+              "name": "review_burden",
+              "arg": "review_burden",
+              "default": null
+            },
+            {
+              "name": "section",
+              "arg": "section",
+              "default": null
+            },
+            {
+              "name": "select",
+              "arg": "select",
+              "default": null
+            },
+            {
+              "name": "sync",
+              "arg": "sync",
+              "default": false
+            },
+            {
+              "name": "target",
+              "arg": "target",
+              "default": null
+            },
+            {
+              "name": "task_class",
+              "arg": "task_class",
+              "default": null
+            }
+          ],
+          "handlers": [
+            {
+              "primitive": "workspace.root.resolve",
+              "handler": "runtime_handler",
+              "function": "_resolve_workspace_operation_target_root"
+            },
+            {
+              "primitive": "workspace.config.load",
+              "handler": "runtime_handler",
+              "function": "_load_workspace_operation_config"
+            },
+            {
+              "primitive": "workspace.defaults.load",
+              "handler": "runtime_handler",
+              "function": "_load_workspace_operation_defaults"
+            },
+            {
+              "primitive": "workspace.defaults.select",
+              "handler": "runtime_handler",
+              "function": "_select_workspace_operation_defaults"
+            },
+            {
+              "primitive": "workspace.selection.resolve",
+              "handler": "runtime_handler",
+              "function": "_resolve_workspace_operation_selection"
+            },
+            {
+              "primitive": "prompt.render",
+              "handler": "runtime_handler",
+              "function": "_render_workspace_operation_prompt"
+            },
+            {
+              "primitive": "delegation.outcome.append",
+              "handler": "runtime_handler",
+              "function": "_append_workspace_operation_delegation_outcome"
+            },
+            {
+              "primitive": "system_intent.config.resolve",
+              "handler": "runtime_handler",
+              "function": "_load_workspace_operation_system_intent_config"
+            },
+            {
+              "primitive": "system_intent.source_metadata.refresh",
+              "handler": "runtime_handler",
+              "function": "_refresh_workspace_operation_system_intent_metadata"
+            },
+            {
+              "primitive": "system_intent.mirror.read_or_create",
+              "handler": "runtime_handler",
+              "function": "_read_or_create_workspace_operation_system_intent_mirror"
+            },
+            {
+              "primitive": "system_intent.result.emit",
+              "handler": "runtime_handler",
+              "function": "_emit_workspace_operation_output"
+            },
+            {
+              "primitive": "output.fields.select",
+              "handler": "runtime_handler",
+              "function": "_select_workspace_operation_fields"
+            },
+            {
+              "primitive": "output.emit",
+              "handler": "runtime_handler",
+              "function": "_emit_workspace_operation_output"
+            },
+            {
+              "primitive": "workspace.config.emit",
+              "handler": "runtime_handler",
+              "function": "_emit_workspace_operation_output"
+            }
+          ]
+        }
       },
       "targets": [
         {

@@ -1305,6 +1305,14 @@ def test_python_runtime_projection_inventory_tracks_generated_output_debt() -> N
         "generated/python/memory-cli/generated_cli_package/memory_operation_ir_executor.py",
     }
     assert (
+        entries["generated/python/workspace-cli/generated_cli_package/workspace_operation_ir_executor.py"]["provenance_status"]
+        == "rendered-by-command-generation"
+    )
+    assert (
+        entries["generated/python/workspace-cli/generated_cli_package/workspace_operation_ir_executor.py"]["blocking_full_completion"]
+        is False
+    )
+    assert (
         entries["generated/python/planning-cli/generated_cli_package/planning_operation_ir_executor.py"]["provenance_status"]
         == "rendered-by-command-generation"
     )
@@ -1318,6 +1326,7 @@ def test_python_runtime_projection_inventory_tracks_generated_output_debt() -> N
     )
     assert entries["generated/python/memory-cli/generated_cli_package/memory_operation_ir_executor.py"]["blocking_full_completion"] is False
     rendered_entries = {
+        "generated/python/workspace-cli/generated_cli_package/workspace_operation_ir_executor.py",
         "generated/python/planning-cli/generated_cli_package/planning_operation_ir_executor.py",
         "generated/python/memory-cli/generated_cli_package/memory_operation_ir_executor.py",
     }
