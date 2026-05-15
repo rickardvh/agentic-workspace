@@ -8731,7 +8731,6 @@ def _promote_decomposition_lane_to_execplan(
     updated_lane = copy.deepcopy(matched_lane)
     updated_lane["readiness"] = "promoted"
     updated_lane["owner_surface"] = record_relative
-    updated_lane["promoted_execplan"] = record_relative
     updated_lanes[matched_index] = updated_lane
     updated_record["candidate_lanes"] = updated_lanes
 

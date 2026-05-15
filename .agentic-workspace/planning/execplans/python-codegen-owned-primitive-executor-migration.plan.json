@@ -34,10 +34,16 @@
     "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
     "next_action": "Generic deterministic CLI-visible behavior over files, JSON, TOML, Markdown sections, schemas, templates, managed payloads, and JSON text emission moves from module-local runtime helpers into codegen-owned primitive executors where practical.",
     "proof_expectations": [
-      "Fill in the narrowest command that proves the promoted work."
+      "uv run pytest tests/test_command_generation_primitive_executor.py -q",
+      "uv run python scripts/check/check_generated_command_packages.py --python-conformance"
     ],
     "touched_scope": [
-      "Fill in the concrete files before implementation starts."
+      "tests/test_command_generation_primitive_executor.py",
+      "packages/command-generation/src/command_generation/primitive_executor.py",
+      "packages/planning/src/repo_planning_bootstrap/installer.py",
+      "packages/planning/tests/test_promote.py",
+      ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      ".agentic-workspace/planning/execplans/python-codegen-owned-primitive-executor-migration.plan.json"
     ],
     "completion_criteria": [
       "Primitive conformance and generated Python black-box conformance prove representative operations execute through codegen-owned primitives without importing module-local CLI/runtime internals except explicitly inventoried package-specific judgment."
@@ -62,11 +68,16 @@
       "milestone": "python-codegen-owned-primitive-executor-migration",
       "status": "active",
       "next_step": "Generic deterministic CLI-visible behavior over files, JSON, TOML, Markdown sections, schemas, templates, managed payloads, and JSON text emission moves from module-local runtime helpers into codegen-owned primitive executors where practical.",
-      "proof": "Fill in the narrowest command that proves the promoted work."
+      "proof": "Primitive conformance tests plus generated Python conformance."
     },
     "scope": {
       "touched": [
-        "Fill in the concrete files before implementation starts."
+        "tests/test_command_generation_primitive_executor.py",
+        "packages/command-generation/src/command_generation/primitive_executor.py",
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_promote.py",
+        ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+        ".agentic-workspace/planning/execplans/python-codegen-owned-primitive-executor-migration.plan.json"
       ],
       "invariants": [
         "Preserve the planning contract and keep the work bounded to this plan."
@@ -84,12 +95,12 @@
     "activation trigger": "none"
   },
   "iterative_follow_through": {
-    "what this slice enabled": "none yet",
-    "intentionally deferred": "none",
-    "discovered implications": "none yet",
-    "proof achieved now": "pending",
-    "validation still needed": "current milestone validation remains pending",
-    "next likely slice": "continue the current milestone until the completion criteria are met"
+    "what this slice enabled": "Focused pytest conformance now covers every current codegen-owned primitive and operation-step dataflow.",
+    "intentionally deferred": "Actual handler migration to codegen-owned primitives is next.",
+    "discovered implications": "promote-to-plan still wrote schema-invalid promoted_execplan into decomposition records; fixed in this slice.",
+    "proof achieved now": "partial",
+    "validation still needed": "Migrate representative module-local handlers to codegen-owned primitives and rerun generated Python/Docker conformance.",
+    "next likely slice": "Migrate planning.verify-payload.report to a generic checked-in python.function.call primitive."
   },
   "intent_interpretation": {
     "literal request": "Python codegen-owned primitive executor migration",
@@ -99,9 +110,9 @@
     "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
   },
   "execution_bounds": {
-    "allowed paths": "Fill in the concrete write scope before implementation starts.",
-    "max changed files": "Fill in an expected upper bound before implementation starts.",
-    "required validation commands": "Fill in the narrowest command that proves the promoted work.",
+    "allowed paths": "Command-generation primitive executor and focused conformance tests; planning promote-to-plan schema-drift fix exposed by this slice; plan metadata for this active lane.",
+    "max changed files": "About 6 files for the primitive conformance baseline and planning schema-drift fix before the next migration slice.",
+    "required validation commands": "uv run pytest tests/test_command_generation_primitive_executor.py packages/planning/tests/test_promote.py -q; uv run python scripts/check/check_generated_command_packages.py --python-conformance; make test-workspace; make lint-planning.",
     "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
     "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
   },
@@ -127,10 +138,14 @@
     "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
   },
   "post_decomposition_delegation": {
-    "status": "pending",
+    "status": "recorded",
     "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
     "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
-    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-15T15:13:24+00:00"
   },
   "system_intent_alignment": {
     "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
@@ -162,13 +177,21 @@
     "None."
   ],
   "touched_paths": [
-    "Fill in the concrete files before implementation starts."
+    "tests/test_command_generation_primitive_executor.py",
+    "packages/command-generation/src/command_generation/primitive_executor.py",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_promote.py",
+    ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+    ".agentic-workspace/planning/execplans/python-codegen-owned-primitive-executor-migration.plan.json"
   ],
   "invariants": [
     "Preserve the planning contract and keep the work bounded to this plan."
   ],
   "validation_commands": [
-    "Fill in the narrowest command that proves the promoted work."
+    "uv run pytest tests/test_command_generation_primitive_executor.py packages/planning/tests/test_promote.py -q",
+    "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+    "make test-workspace",
+    "make lint-planning"
   ],
   "required_tools": [
     "None."
@@ -177,38 +200,38 @@
     "Primitive conformance and generated Python black-box conformance prove representative operations execute through codegen-owned primitives without importing module-local CLI/runtime internals except explicitly inventoried package-specific judgment."
   ],
   "execution_run": {
-    "run status": "not-run-yet",
-    "executor": "",
+    "run status": "partial",
+    "executor": "Codex",
     "handoff source": "agentic-planning promote-to-plan decomposition lane",
-    "what happened": "execution has not started",
-    "scope touched": "none yet",
-    "changed surfaces": "none yet; execution has not changed files",
-    "validations run": "pending",
-    "result for continuation": "continue from this scaffolded execplan",
-    "next step": "Generic deterministic CLI-visible behavior over files, JSON, TOML, Markdown sections, schemas, templates, managed payloads, and JSON text emission moves from module-local runtime helpers into codegen-owned primitive executors where practical."
+    "what happened": "Added focused root pytest conformance for the command-generation primitive executor and fixed promote-to-plan so decomposition lanes remain schema-valid after promotion.",
+    "scope touched": "tests/test_command_generation_primitive_executor.py; packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_promote.py; python-generated-cli decomposition and active execplan metadata.",
+    "changed surfaces": "New primitive executor tests; planning promote-to-plan implementation/test; active planning records.",
+    "validations run": "uv run pytest tests/test_command_generation_primitive_executor.py packages/planning/tests/test_promote.py -q; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python scripts/check/check_generated_command_packages.py --python-conformance; make test-workspace; make test-planning; make lint-workspace; make lint-planning; ruff selected files.",
+    "result for continuation": "Primitive conformance baseline is in place; planning promotion no longer injects schema-invalid promoted_execplan; explorer recommended planning.verify-payload.report as the smallest next handler migration.",
+    "next step": "Migrate planning.verify-payload.report to a generic checked-in python.function.call primitive, then rerun generated package freshness/conformance."
   },
   "finished_run_review": {
-    "review status": "pending",
-    "scope respected": "pending",
-    "proof status": "pending",
-    "intent served": "pending",
-    "config compliance": "pending",
-    "misinterpretation risk": "pending",
-    "follow-on decision": "pending"
+    "review status": "partial",
+    "scope respected": "yes for this baseline slice",
+    "proof status": "passed for baseline slice",
+    "intent served": "partial",
+    "config compliance": "used AW implement and delegation-decision routing; reused an existing worker for next-candidate exploration",
+    "misinterpretation risk": "low for baseline; do not close lane until handler migration proof passes",
+    "follow-on decision": "continue current lane with planning.verify-payload.report migration"
   },
   "delegation_outcome_feedback": {
-    "route chosen": "pending",
-    "route skipped reason": "pending",
-    "expected savings": "pending",
-    "actual friction": "pending",
-    "proof result": "pending",
-    "quality concern": "pending",
-    "decomposition adjustment": "pending"
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "not skipped",
+    "expected savings": "medium: reused existing worker for read-only next-slice selection while local proof ran",
+    "actual friction": "low",
+    "proof result": "baseline tests and planning/schema proof passed",
+    "quality concern": "generic dynamic import primitives must remain checked-in-contract-only, not user-input execution",
+    "decomposition adjustment": "none"
   },
   "proof_report": {
-    "validation proof": "pending",
-    "proof achieved now": "pending",
-    "evidence for \"proof achieved\" state": ""
+    "validation proof": "uv run pytest tests/test_command_generation_primitive_executor.py packages/planning/tests/test_promote.py -q; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python scripts/check/check_generated_command_packages.py --python-conformance; make test-workspace; make test-planning; make lint-workspace; make lint-planning; ruff selected files.",
+    "proof achieved now": "partial",
+    "evidence for \"proof achieved\" state": "Primitive executor conformance passed and generated Python conformance remained clean; workspace/planning suites passed after fixing decomposition schema drift."
   },
   "intent_satisfaction": {
     "original intent": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane python-codegen-owned-primitive-executor-migration.",
@@ -272,6 +295,7 @@
     }
   },
   "drift_log": [
-    "2026-05-15: Scaffolded by agentic-planning promote-to-plan from decomposition lane python-codegen-owned-primitive-executor-migration."
+    "2026-05-15: Scaffolded by agentic-planning promote-to-plan from decomposition lane python-codegen-owned-primitive-executor-migration.",
+    "2026-05-15: Recorded delegation decision route=delegate-exploration."
   ]
 }

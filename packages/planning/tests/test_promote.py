@@ -284,6 +284,7 @@ def test_promote_to_plan_supports_decomposition_lane(tmp_path: Path) -> None:
     lane = decomposition["candidate_lanes"][0]
     assert lane["readiness"] == "promoted"
     assert lane["owner_surface"] == ".agentic-workspace/planning/execplans/safety-slice.plan.json"
+    assert "promoted_execplan" not in lane
 
 
 def test_planning_summary_validates_planning_state_v1_maturity_contract(tmp_path: Path) -> None:

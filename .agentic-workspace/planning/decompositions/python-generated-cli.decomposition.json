@@ -126,8 +126,7 @@
         "json-schema-operation-ir",
         "python-package-resource-operation-ir"
       ],
-      "parallel_with": [],
-      "promoted_execplan": ".agentic-workspace/planning/execplans/python-codegen-owned-primitive-executor-migration.plan.json"
+      "parallel_with": []
     }
   ],
   "dependency_assumptions": [
