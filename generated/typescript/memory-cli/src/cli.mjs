@@ -8,7 +8,7 @@
 import { spawnSync } from 'node:child_process';
 import { writeSync } from 'node:fs';
 
-const supportedCommands = new Set(["capture-note", "doctor", "list-files", "list-skills", "promotion-report", "report", "route", "route-report", "status", "sync-memory"]);
+const supportedCommands = new Set(["capture-note", "doctor", "list-files", "list-skills", "promotion-report", "report", "route", "route-report", "search", "status", "sync-memory"]);
 const argv = process.argv.slice(2);
 const command = argv[0];
 

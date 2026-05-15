@@ -1,0 +1,97 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "memory.search.report",
+  "command_surface": {
+    "program": "agentic-memory",
+    "command": "search",
+    "format_option": "format"
+  },
+  "summary": "Search Memory notes through the memory module CLI.",
+  "classification": "read-only-report",
+  "inputs": [
+    {
+      "name": "query",
+      "source": "cli-option",
+      "required": true
+    },
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "module-result"
+  },
+  "effects": {
+    "read_only": true,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": false,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": "target repository Memory notes",
+      "required": false
+    }
+  ],
+  "writes": [],
+  "steps": [
+    {
+      "id": "load_search",
+      "uses": "memory.search.load",
+      "description": "Load Memory search results."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit Memory search output in the requested format."
+    }
+  ],
+  "guards": [
+    "Keep search read-only.",
+    "Generated code owns parser/help/dispatch shape; memory-owned search policy remains behind the declared primitive."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated memory search process conformance passes"
+  ],
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Memory search executes generated operation IR through codegen-owned primitive dataflow while the memory module owns note search policy.",
+    "steps": [
+      {
+        "id": "load_search",
+        "uses": "memory.search.load",
+        "description": "Load Memory search results.",
+        "arguments": {},
+        "outputs": [
+          "result"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit",
+        "description": "Emit Memory search output in the requested format.",
+        "arguments": {},
+        "outputs": [
+          "emitted"
+        ],
+        "on_error": "emit_usage_error"
+      }
+    ]
+  }
+}

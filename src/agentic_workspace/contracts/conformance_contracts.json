@@ -106,6 +106,12 @@
       "adapter_kind": "process"
     },
     {
+      "id": "memory.search.process",
+      "operation_id": "memory.search.report",
+      "path": "conformance/memory.search.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "memory.status.process",
       "operation_id": "memory.status.report",
       "path": "conformance/memory.status.process.json",

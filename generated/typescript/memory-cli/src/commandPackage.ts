@@ -671,6 +671,90 @@ export const generatedCommandPackage = {
       "status": "generated"
     },
     {
+      "adapter_id": "memory.search.cli",
+      "command": {
+        "manifest_ref": "package:memory:cli",
+        "name": "search"
+      },
+      "conformance_refs": [
+        "memory.search.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "interface": {
+        "arguments": [
+          {
+            "help": "Keyword or pattern to search for.",
+            "name": "query"
+          }
+        ],
+        "help": "Search for keywords across all memory notes.",
+        "name": "search",
+        "options": [
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Target repository path. Defaults to the current directory.",
+            "name": "target"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "memory.search.report",
+        "path": "operations/memory.search.report.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "memory search policy",
+          "module result assembly",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.search.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    {
       "adapter_id": "memory.promotion-report.cli",
       "command": {
         "manifest_ref": "package:memory:cli",
@@ -1020,6 +1104,20 @@ export const generatedCommandPackage = {
           "primitive": "memory.route_report.load"
         },
         {
+          "function": "search_memory",
+          "handler": "function_call",
+          "import_module": "repo_memory_bootstrap.installer",
+          "kwargs": {
+            "query": {
+              "value": "query"
+            },
+            "target": {
+              "value": "target"
+            }
+          },
+          "primitive": "memory.search.load"
+        },
+        {
           "function": "sync_memory",
           "handler": "function_call",
           "import_module": "repo_memory_bootstrap.installer",
@@ -1142,6 +1240,11 @@ export const generatedCommandPackage = {
           "arg": "force_new_reason",
           "default": "",
           "name": "force_new_reason"
+        },
+        {
+          "arg": "query",
+          "default": "",
+          "name": "query"
         }
       ],
       "module_file": "memory_operation_ir_executor",
@@ -1154,6 +1257,7 @@ export const generatedCommandPackage = {
         "memory.report.report",
         "memory.route.report",
         "memory.route-report.report",
+        "memory.search.report",
         "memory.status.report",
         "memory.sync-memory.report"
       ]

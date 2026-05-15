@@ -36,6 +36,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
         'memory.report.report',
         'memory.route-report.report',
         'memory.route.report',
+        'memory.search.report',
         'memory.status.report',
         'memory.sync-memory.report'
     }:
@@ -67,6 +68,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'summary': getattr(args, 'summary', ''),
                 'existing_note': getattr(args, 'existing_note', ''),
                 'force_new_reason': getattr(args, 'force_new_reason', ''),
+                'query': getattr(args, 'query', ''),
             },
             context=PrimitiveContext(cwd=Path.cwd(), roots={
                 'memory.package-payload': _handle_context_root_memory_package_payload(),
@@ -81,6 +83,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'memory.report.load': _handle_memory_report_load,
                 'memory.route.load': _handle_memory_route_load,
                 'memory.route_report.load': _handle_memory_route_report_load,
+                'memory.search.load': _handle_memory_search_load,
                 'memory.sync_memory.load': _handle_memory_sync_memory_load,
                 'payload.assemble': _handle_payload_assemble,
                 'output.emit': _handle_output_emit,
@@ -149,6 +152,12 @@ def _handle_memory_route_report_load(values: dict[str, Any], arguments: dict[str
     from .memory_runtime_cli import _load_memory_route_report
 
     return _load_memory_route_report(values, arguments, context)
+
+
+def _handle_memory_search_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_memory_bootstrap.installer import search_memory
+
+    return search_memory(query=values.get('query'), target=values.get('target'))
 
 
 def _handle_memory_sync_memory_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:

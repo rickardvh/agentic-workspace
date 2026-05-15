@@ -420,6 +420,7 @@ def test_command_package_ir_reuses_generated_adapter_truth() -> None:
         "memory.report.cli",
         "memory.route.cli",
         "memory.route-report.cli",
+        "memory.search.cli",
         "memory.sync-memory.cli",
         "memory.promotion-report.cli",
         "memory.list-files.cli",
@@ -1489,6 +1490,7 @@ def test_contract_tooling_check_reports_generated_adapter_status() -> None:
         "report",
         "route-report",
         "route",
+        "search",
         "sync-memory",
         "status",
     ]
