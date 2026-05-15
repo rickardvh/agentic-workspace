@@ -2,8 +2,8 @@
   "schema_version": "agentic-workspace/operation/v1",
   "id": "planning.close-item.lifecycle",
   "command_surface": {
-    "command": "planning",
-    "subcommand": "close-item",
+    "program": "agentic-planning",
+    "command": "close-item",
     "format_option": "format"
   },
   "summary": "Close completed Planning residue by id through the workspace front door.",
@@ -77,9 +77,14 @@
   ],
   "steps": [
     {
-      "id": "delegate_to_planning_module",
+      "id": "apply_lifecycle_operation",
+      "uses": "planning.close-item.apply",
+      "description": "Close completed planning residue by id through generated operation IR."
+    },
+    {
+      "id": "emit_output",
       "uses": "output.emit",
-      "description": "Route close-item through the root workspace command and emit sanitized output."
+      "description": "Emit the planning lifecycle result in the requested format."
     }
   ],
   "guards": [
@@ -90,5 +95,31 @@
     "operation contract validates against operation.schema.json",
     "root front door translates --item to the planning module positional argument"
   ],
-  "migration_status": "draft-contract-only"
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Close completed planning residue by id through generated operation IR.",
+    "steps": [
+      {
+        "id": "apply_lifecycle_operation",
+        "uses": "planning.close-item.apply",
+        "description": "Call the planning module lifecycle primitive with generated parser inputs.",
+        "arguments": {},
+        "outputs": [
+          "result"
+        ],
+        "on_error": "emit_usage_error"
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit",
+        "description": "Emit the planning lifecycle result in the requested format.",
+        "arguments": {},
+        "outputs": [
+          "emitted"
+        ],
+        "on_error": "emit_usage_error"
+      }
+    ]
+  }
 }

@@ -138,6 +138,16 @@ def _add_interface_options(
     inherited_option_names: frozenset[str] = frozenset(),
 ) -> frozenset[str]:
     option_names: set[str] = set()
+    for argument in interface.get("arguments", []):
+        kwargs: dict[str, Any] = {}
+        if "nargs" in argument:
+            kwargs["nargs"] = argument["nargs"]
+        if "default" in argument:
+            kwargs["default"] = argument["default"]
+        help_text = argument.get("help")
+        if isinstance(help_text, str):
+            kwargs["help"] = help_text
+        parser.add_argument(str(argument["name"]), **kwargs)
     for option in interface.get("options", []):
         option_name = str(option.get("name", ""))
         if option_name:

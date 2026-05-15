@@ -584,7 +584,17 @@ def _run_reconcile_report_adapter(args: argparse.Namespace) -> int:
     return run_operation_ir(generated_cli_package_operation_contract("planning.reconcile.report"), args)
 
 
+def _run_close_item_lifecycle_adapter(args: argparse.Namespace) -> int:
+    return run_operation_ir(generated_cli_package_operation_contract("planning.close-item.lifecycle"), args)
+
+
+def _run_create_review_lifecycle_adapter(args: argparse.Namespace) -> int:
+    return run_operation_ir(generated_cli_package_operation_contract("planning.create-review.lifecycle"), args)
+
+
 _GENERATED_RUNTIME_HANDLERS = {
+    "planning.close-item.lifecycle": _run_close_item_lifecycle_adapter,
+    "planning.create-review.lifecycle": _run_create_review_lifecycle_adapter,
     "planning.doctor.report": _run_doctor_report_adapter,
     "planning.reconcile.report": _run_reconcile_report_adapter,
     "planning.report.report": _run_report_adapter,

@@ -941,6 +941,14 @@
           },
           "description": "Option semantics for this generated command level."
         },
+        "arguments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/argument",
+            "description": "One generated positional argument accepted by this command."
+          },
+          "description": "Positional argument semantics for this generated command level."
+        },
         "subcommand_dest": {
           "type": "string",
           "minLength": 1,
@@ -982,6 +990,32 @@
       },
       "additionalProperties": false,
       "description": "Generated parser-facing interface for migrated command surfaces."
+    },
+    "argument": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Normalized positional argument destination name."
+        },
+        "default": {
+          "description": "Default value applied by the generated parser when the argument is omitted."
+        },
+        "nargs": {
+          "description": "Argparse-style arity marker for optional or list-like positional arguments."
+        },
+        "help": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Argument help text rendered by generated adapters."
+        }
+      },
+      "additionalProperties": false,
+      "description": "One generated parser positional argument."
     },
     "option": {
       "type": "object",

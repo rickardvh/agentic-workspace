@@ -1,0 +1,125 @@
+{
+  "classification": "lifecycle-mutation",
+  "command_surface": {
+    "command": "close-item",
+    "format_option": "format",
+    "program": "agentic-planning"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": false,
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": true
+  },
+  "guards": [
+    "Host-facing guidance must use agentic-workspace planning close-item rather than hand-editing state.toml.",
+    "Ambiguous item ids must return manual review candidates instead of mutating state."
+  ],
+  "id": "planning.close-item.lifecycle",
+  "inputs": [
+    {
+      "name": "item",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "reason",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "issue",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "dry_run",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "arguments": {},
+        "description": "Call the planning module lifecycle primitive with generated parser inputs.",
+        "id": "apply_lifecycle_operation",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "result"
+        ],
+        "uses": "planning.close-item.apply"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the planning lifecycle result in the requested format.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Close completed planning residue by id through generated operation IR."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "module-result"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "root front door translates --item to the planning module positional argument"
+  ],
+  "reads": [
+    {
+      "required": true,
+      "surface": "target repository Planning state"
+    },
+    {
+      "required": false,
+      "surface": "target repository Planning execplans"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Close completed planning residue by id through generated operation IR.",
+      "id": "apply_lifecycle_operation",
+      "uses": "planning.close-item.apply"
+    },
+    {
+      "description": "Emit the planning lifecycle result in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Close completed Planning residue by id through the workspace front door.",
+  "writes": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/state.toml"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/execplans/"
+    }
+  ]
+}

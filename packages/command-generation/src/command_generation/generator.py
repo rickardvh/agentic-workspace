@@ -445,6 +445,16 @@ def _python_runtime_adapter_module(package: dict[str, Any], target: dict[str, An
         "    inherited_option_names: frozenset[str] = frozenset(),\n"
         ") -> frozenset[str]:\n"
         "    option_names: set[str] = set()\n"
+        '    for argument in interface.get("arguments", []):\n'
+        "        kwargs: dict[str, Any] = {}\n"
+        '        if "nargs" in argument:\n'
+        '            kwargs["nargs"] = argument["nargs"]\n'
+        '        if "default" in argument:\n'
+        '            kwargs["default"] = argument["default"]\n'
+        '        help_text = argument.get("help")\n'
+        "        if isinstance(help_text, str):\n"
+        '            kwargs["help"] = help_text\n'
+        '        parser.add_argument(str(argument["name"]), **kwargs)\n'
         '    for option in interface.get("options", []):\n'
         '        option_name = str(option.get("name", ""))\n'
         "        if option_name:\n"

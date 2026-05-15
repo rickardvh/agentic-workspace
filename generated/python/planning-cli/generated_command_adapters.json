@@ -1,5 +1,69 @@
 {
   "adapters_by_command": {
+    "close-item": {
+      "command": {
+        "command_manifest": "package:planning:cli",
+        "name": "close-item",
+        "option_group_manifest": "package:planning:cli",
+        "program": "agentic-planning"
+      },
+      "conformance_refs": [
+        "planning.close-item.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "planning.close-item.cli",
+      "operation_id": "planning.close-item.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.close-item.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    "create-review": {
+      "command": {
+        "command_manifest": "package:planning:cli",
+        "name": "create-review",
+        "option_group_manifest": "package:planning:cli",
+        "program": "agentic-planning"
+      },
+      "conformance_refs": [
+        "planning.create-review.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "planning.create-review.cli",
+      "operation_id": "planning.create-review.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.create-review.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
     "doctor": {
       "command": {
         "command_manifest": "package:planning:cli",

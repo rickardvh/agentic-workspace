@@ -4413,6 +4413,8 @@
         "operation_executor": {
           "module_file": "planning_operation_ir_executor",
           "supported_operation_ids": [
+            "planning.close-item.lifecycle",
+            "planning.create-review.lifecycle",
             "planning.doctor.report",
             "planning.reconcile.report",
             "planning.report.report",
@@ -4453,6 +4455,46 @@
             {
               "name": "dry_run",
               "arg": "dry_run",
+              "default": false
+            },
+            {
+              "name": "item",
+              "arg": "item",
+              "default": ""
+            },
+            {
+              "name": "reason",
+              "arg": "reason",
+              "default": ""
+            },
+            {
+              "name": "issue",
+              "arg": "issue",
+              "default": ""
+            },
+            {
+              "name": "slug",
+              "arg": "slug",
+              "default": ""
+            },
+            {
+              "name": "title",
+              "arg": "title",
+              "default": ""
+            },
+            {
+              "name": "scope",
+              "arg": "scope",
+              "default": null
+            },
+            {
+              "name": "classification",
+              "arg": "classification",
+              "default": "review"
+            },
+            {
+              "name": "render_markdown",
+              "arg": "render_markdown",
               "default": false
             }
           ],
@@ -4509,6 +4551,58 @@
               "kwargs": {
                 "target": {
                   "value": "target"
+                }
+              }
+            },
+            {
+              "primitive": "planning.close-item.apply",
+              "handler": "function_call",
+              "import_module": "repo_planning_bootstrap.installer",
+              "function": "close_planning_item",
+              "kwargs": {
+                "item": {
+                  "value": "item"
+                },
+                "target": {
+                  "value": "target"
+                },
+                "reason": {
+                  "value": "reason"
+                },
+                "issue": {
+                  "value": "issue"
+                },
+                "dry_run": {
+                  "value": "dry_run"
+                }
+              }
+            },
+            {
+              "primitive": "planning.create-review.apply",
+              "handler": "function_call",
+              "import_module": "repo_planning_bootstrap.installer",
+              "function": "create_review_record",
+              "kwargs": {
+                "slug": {
+                  "value": "slug"
+                },
+                "title": {
+                  "value": "title"
+                },
+                "target": {
+                  "value": "target"
+                },
+                "scope": {
+                  "value": "scope"
+                },
+                "classification": {
+                  "value": "classification"
+                },
+                "dry_run": {
+                  "value": "dry_run"
+                },
+                "render_markdown": {
+                  "value": "render_markdown"
                 }
               }
             },
@@ -4996,6 +5090,237 @@
             "runtime_owned": [
               "package-local primitive implementation",
               "payload assembly",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "planning.close-item.cli",
+          "status": "generated",
+          "command": {
+            "name": "close-item",
+            "manifest_ref": "package:planning:cli"
+          },
+          "interface": {
+            "name": "close-item",
+            "help": "Close completed planning residue by id.",
+            "arguments": [
+              {
+                "name": "item",
+                "help": "Planning item id, issue id, or execplan slug to close."
+              }
+            ],
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "reason",
+                "flags": [
+                  "--reason"
+                ],
+                "default": "",
+                "help": "Optional closure reason recorded with the mutation."
+              },
+              {
+                "name": "issue",
+                "flags": [
+                  "--issue"
+                ],
+                "default": "",
+                "help": "Optional issue reference associated with the closure."
+              },
+              {
+                "name": "dry_run",
+                "flags": [
+                  "--dry-run"
+                ],
+                "action": "store_true",
+                "help": "Preview closure without writing files."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "planning.close-item.lifecycle",
+            "path": "operations/planning.close-item.lifecycle.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "planning.close-item.apply",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": false,
+            "writes_repo_state": true,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "planning.close-item.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "planning lifecycle mutation primitive",
+              "module result assembly",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "planning.create-review.cli",
+          "status": "generated",
+          "command": {
+            "name": "create-review",
+            "manifest_ref": "package:planning:cli"
+          },
+          "interface": {
+            "name": "create-review",
+            "help": "Create a schema-valid planning review record skeleton.",
+            "arguments": [
+              {
+                "name": "slug",
+                "help": "Review slug or title used to derive the review filename."
+              }
+            ],
+            "options": [
+              {
+                "name": "title",
+                "flags": [
+                  "--title"
+                ],
+                "required": true,
+                "help": "Human-readable review title."
+              },
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "scope",
+                "flags": [
+                  "--scope"
+                ],
+                "help": "Optional review scope."
+              },
+              {
+                "name": "classification",
+                "flags": [
+                  "--classification"
+                ],
+                "default": "review",
+                "help": "Review classification."
+              },
+              {
+                "name": "render_markdown",
+                "flags": [
+                  "--render-markdown"
+                ],
+                "action": "store_true",
+                "help": "Also render the derived markdown review projection."
+              },
+              {
+                "name": "dry_run",
+                "flags": [
+                  "--dry-run"
+                ],
+                "action": "store_true",
+                "help": "Preview review creation without writing files."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "planning.create-review.lifecycle",
+            "path": "operations/planning.create-review.lifecycle.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "planning.create-review.apply",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": false,
+            "writes_repo_state": true,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "planning.create-review.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "planning lifecycle mutation primitive",
+              "module result assembly",
               "output emission"
             ]
           }

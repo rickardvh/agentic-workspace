@@ -212,5 +212,140 @@
     },
     "operation_id": "planning.reconcile.report",
     "operation_path": "operations/planning.reconcile.report.json"
+  },
+  {
+    "adapter_id": "planning.close-item.cli",
+    "interface": {
+      "arguments": [
+        {
+          "help": "Planning item id, issue id, or execplan slug to close.",
+          "name": "item"
+        }
+      ],
+      "help": "Close completed planning residue by id.",
+      "name": "close-item",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--reason"
+          ],
+          "help": "Optional closure reason recorded with the mutation.",
+          "name": "reason"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--issue"
+          ],
+          "help": "Optional issue reference associated with the closure.",
+          "name": "issue"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--dry-run"
+          ],
+          "help": "Preview closure without writing files.",
+          "name": "dry_run"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "planning.close-item.lifecycle",
+    "operation_path": "operations/planning.close-item.lifecycle.json"
+  },
+  {
+    "adapter_id": "planning.create-review.cli",
+    "interface": {
+      "arguments": [
+        {
+          "help": "Review slug or title used to derive the review filename.",
+          "name": "slug"
+        }
+      ],
+      "help": "Create a schema-valid planning review record skeleton.",
+      "name": "create-review",
+      "options": [
+        {
+          "flags": [
+            "--title"
+          ],
+          "help": "Human-readable review title.",
+          "name": "title",
+          "required": true
+        },
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "flags": [
+            "--scope"
+          ],
+          "help": "Optional review scope.",
+          "name": "scope"
+        },
+        {
+          "default": "review",
+          "flags": [
+            "--classification"
+          ],
+          "help": "Review classification.",
+          "name": "classification"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--render-markdown"
+          ],
+          "help": "Also render the derived markdown review projection.",
+          "name": "render_markdown"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--dry-run"
+          ],
+          "help": "Preview review creation without writing files.",
+          "name": "dry_run"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "planning.create-review.lifecycle",
+    "operation_path": "operations/planning.create-review.lifecycle.json"
   }
 ]

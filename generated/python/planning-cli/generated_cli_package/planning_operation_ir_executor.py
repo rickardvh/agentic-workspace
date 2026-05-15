@@ -28,6 +28,8 @@ class OperationIrExecutionError(RuntimeError):
 
 def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int:
     if operation.get("id") not in {
+        'planning.close-item.lifecycle',
+        'planning.create-review.lifecycle',
         'planning.doctor.report',
         'planning.reconcile.report',
         'planning.report.report',
@@ -50,6 +52,14 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'changed': getattr(args, 'changed', []),
                 'apply_safe_prune': getattr(args, 'apply_safe_prune', False),
                 'dry_run': getattr(args, 'dry_run', False),
+                'item': getattr(args, 'item', ''),
+                'reason': getattr(args, 'reason', ''),
+                'issue': getattr(args, 'issue', ''),
+                'slug': getattr(args, 'slug', ''),
+                'title': getattr(args, 'title', ''),
+                'scope': getattr(args, 'scope', None),
+                'classification': getattr(args, 'classification', 'review'),
+                'render_markdown': getattr(args, 'render_markdown', False),
             },
             context=PrimitiveContext(cwd=Path.cwd(), roots={}),
             handlers={
@@ -58,6 +68,8 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'planning.summary.load': _handle_planning_summary_load,
                 'planning.reconcile.load': _handle_planning_reconcile_load,
                 'planning.bootstrap.status.load': _handle_planning_bootstrap_status_load,
+                'planning.close-item.apply': _handle_planning_close_item_apply,
+                'planning.create-review.apply': _handle_planning_create_review_apply,
                 'output.emit': _handle_output_emit,
             },
         )
@@ -98,6 +110,18 @@ def _handle_planning_bootstrap_status_load(values: dict[str, Any], _arguments: d
     from repo_planning_bootstrap.installer import collect_status
 
     return collect_status(target=values.get('target'))
+
+
+def _handle_planning_close_item_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_planning_bootstrap.installer import close_planning_item
+
+    return close_planning_item(dry_run=values.get('dry_run'), issue=values.get('issue'), item=values.get('item'), reason=values.get('reason'), target=values.get('target'))
+
+
+def _handle_planning_create_review_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_planning_bootstrap.installer import create_review_record
+
+    return create_review_record(classification=values.get('classification'), dry_run=values.get('dry_run'), render_markdown=values.get('render_markdown'), scope=values.get('scope'), slug=values.get('slug'), target=values.get('target'), title=values.get('title'))
 
 
 def _handle_output_emit(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:

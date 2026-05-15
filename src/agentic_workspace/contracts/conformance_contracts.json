@@ -112,6 +112,18 @@
       "adapter_kind": "process"
     },
     {
+      "id": "planning.close-item.process",
+      "operation_id": "planning.close-item.lifecycle",
+      "path": "conformance/planning.close-item.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.create-review.process",
+      "operation_id": "planning.create-review.lifecycle",
+      "path": "conformance/planning.create-review.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "planning.doctor.process",
       "operation_id": "planning.doctor.report",
       "path": "conformance/planning.doctor.process.json",

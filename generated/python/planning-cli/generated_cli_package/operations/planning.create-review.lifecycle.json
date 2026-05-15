@@ -1,0 +1,129 @@
+{
+  "classification": "lifecycle-mutation",
+  "command_surface": {
+    "command": "create-review",
+    "format_option": "format",
+    "program": "agentic-planning"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": false,
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": true
+  },
+  "guards": [
+    "Host-facing guidance must use agentic-workspace planning create-review rather than a direct module CLI."
+  ],
+  "id": "planning.create-review.lifecycle",
+  "inputs": [
+    {
+      "name": "slug",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "title",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "scope",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "classification",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "render_markdown",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "dry_run",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "arguments": {},
+        "description": "Call the planning module lifecycle primitive with generated parser inputs.",
+        "id": "apply_lifecycle_operation",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "result"
+        ],
+        "uses": "planning.create-review.apply"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the planning lifecycle result in the requested format.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Create a schema-valid planning review record skeleton through generated operation IR."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "module-result"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": "target repository Planning reviews"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Create a schema-valid planning review record skeleton through generated operation IR.",
+      "id": "apply_lifecycle_operation",
+      "uses": "planning.create-review.apply"
+    },
+    {
+      "description": "Emit the planning lifecycle result in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Create a schema-valid Planning review record skeleton through the workspace front door.",
+  "writes": [
+    {
+      "required": true,
+      "surface": ".agentic-workspace/planning/reviews/"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/mutation-provenance.json"
+    }
+  ]
+}

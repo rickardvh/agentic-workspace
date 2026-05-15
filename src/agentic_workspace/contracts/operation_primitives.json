@@ -305,6 +305,18 @@
       "summary": "Load package-local planning bootstrap status for a target repository."
     },
     {
+      "id": "planning.close-item.apply",
+      "summary": "Apply package-local planning close-item lifecycle mutation for a target repository.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "planning.create-review.apply",
+      "summary": "Apply package-local planning create-review lifecycle mutation for a target repository.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
+    },
+    {
       "id": "planning.front_door.dispatch",
       "summary": "Dispatch generated workspace planning front-door argv to the Planning module runtime boundary.",
       "kind": "planning-runtime",

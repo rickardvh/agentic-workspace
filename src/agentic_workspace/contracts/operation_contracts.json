@@ -151,14 +151,14 @@
     {
       "id": "planning.close-item.lifecycle",
       "path": "operations/planning.close-item.lifecycle.json",
-      "command": "planning",
-      "migration_status": "draft-contract-only"
+      "command": "close-item",
+      "migration_status": "runtime-consumed"
     },
     {
       "id": "planning.create-review.lifecycle",
       "path": "operations/planning.create-review.lifecycle.json",
-      "command": "planning",
-      "migration_status": "draft-contract-only"
+      "command": "create-review",
+      "migration_status": "runtime-consumed"
     },
     {
       "id": "planning.delegation-decision.lifecycle",

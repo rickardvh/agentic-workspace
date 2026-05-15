@@ -10,237 +10,6 @@
   },
   "entries": [
     {
-      "operation_id": "memory.doctor.report",
-      "program": "agentic-memory",
-      "command": "doctor",
-      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
-      "operation_contract": "operations/memory.doctor.report.json",
-      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
-      "hand_owned_runtime_code": [
-        "memory.bootstrap.doctor.load",
-        "module-result text/json compatibility formatting"
-      ],
-      "status": "domain-runtime-primitive-via-ir",
-      "conformance_ref": "memory.doctor.process",
-      "domain_runtime_primitive_refs": [
-        "memory.bootstrap.doctor.load"
-      ],
-      "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
-    },
-    {
-      "operation_id": "memory.list-files.report",
-      "program": "agentic-memory",
-      "command": "list-files",
-      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
-      "operation_contract": "operations/memory.list-files.report.json",
-      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
-      "hand_owned_runtime_code": [
-        "codegen-owned filesystem glob primitive",
-        "memory package payload metadata enrichment",
-        "target-root resolution",
-        "module-result emission mechanics"
-      ],
-      "status": "portable-codegen-primitive-executed",
-      "conformance_ref": "memory.list-files.process",
-      "portable_primitive_refs": [
-        "path.target_root.resolve",
-        "filesystem.glob",
-        "payload.assemble",
-        "output.emit"
-      ]
-    },
-    {
-      "operation_id": "memory.list-skills.report",
-      "program": "agentic-memory",
-      "command": "list-skills",
-      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
-      "operation_contract": "operations/memory.list-skills.report.json",
-      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
-      "hand_owned_runtime_code": [
-        "codegen-owned filesystem read and JSON parse primitives",
-        "module-result emission mechanics"
-      ],
-      "status": "portable-codegen-primitive-executed",
-      "conformance_ref": "memory.list-skills.process",
-      "portable_primitive_refs": [
-        "filesystem.read",
-        "json.parse",
-        "payload.assemble",
-        "output.emit"
-      ]
-    },
-    {
-      "operation_id": "memory.promotion-report.report",
-      "program": "agentic-memory",
-      "command": "promotion-report",
-      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
-      "operation_contract": "operations/memory.promotion-report.report.json",
-      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
-      "hand_owned_runtime_code": [
-        "memory.promotion_report.load",
-        "module-result text/json compatibility formatting"
-      ],
-      "status": "domain-runtime-primitive-via-ir",
-      "conformance_ref": "memory.promotion-report.process",
-      "domain_runtime_primitive_refs": [
-        "memory.promotion_report.load"
-      ],
-      "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
-    },
-    {
-      "operation_id": "memory.report.report",
-      "program": "agentic-memory",
-      "command": "report",
-      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
-      "operation_contract": "operations/memory.report.report.json",
-      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
-      "hand_owned_runtime_code": [
-        "memory.report.load",
-        "module-result text/json compatibility formatting"
-      ],
-      "status": "domain-runtime-primitive-via-ir",
-      "conformance_ref": "memory.report.process",
-      "domain_runtime_primitive_refs": [
-        "memory.report.load"
-      ],
-      "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
-    },
-    {
-      "operation_id": "memory.route-report.report",
-      "program": "agentic-memory",
-      "command": "route-report",
-      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
-      "operation_contract": "operations/memory.route-report.report.json",
-      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
-      "hand_owned_runtime_code": [
-        "memory.route_report.load",
-        "module-result text/json compatibility formatting"
-      ],
-      "status": "domain-runtime-primitive-via-ir",
-      "conformance_ref": "memory.route-report.process",
-      "domain_runtime_primitive_refs": [
-        "memory.route_report.load"
-      ],
-      "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
-    },
-    {
-      "operation_id": "memory.status.report",
-      "program": "agentic-memory",
-      "command": "status",
-      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
-      "operation_contract": "operations/memory.status.report.json",
-      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
-      "hand_owned_runtime_code": [
-        "memory.bootstrap.status.load",
-        "module-result text/json compatibility formatting"
-      ],
-      "status": "domain-runtime-primitive-via-ir",
-      "conformance_ref": "memory.status.process",
-      "domain_runtime_primitive_refs": [
-        "memory.bootstrap.status.load"
-      ],
-      "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
-    },
-    {
-      "operation_id": "planning.doctor.report",
-      "program": "agentic-planning",
-      "command": "doctor",
-      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
-      "operation_contract": "operations/planning.doctor.report.json",
-      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
-      "hand_owned_runtime_code": [
-        "planning.bootstrap.doctor.load",
-        "module-result text/json compatibility formatting"
-      ],
-      "status": "domain-runtime-primitive-via-ir",
-      "conformance_ref": "planning.doctor.process",
-      "domain_runtime_primitive_refs": [
-        "planning.bootstrap.doctor.load"
-      ],
-      "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
-    },
-    {
-      "operation_id": "planning.reconcile.report",
-      "program": "agentic-planning",
-      "command": "reconcile",
-      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
-      "operation_contract": "operations/planning.reconcile.report.json",
-      "primitive_executor": null,
-      "hand_owned_runtime_code": [
-        "planning.reconcile.load",
-        "planning.reconcile.load",
-        "output emission mechanics"
-      ],
-      "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "planning.reconcile.process",
-      "runtime_boundary_class": "mutation-orchestration",
-      "runtime_boundary_reason": "Planning reconciliation includes safe-prune and recovery judgment over live planning state.",
-      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
-      "generic_behavior_audit": "Classified as mutation-orchestration; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
-    },
-    {
-      "operation_id": "planning.report.report",
-      "program": "agentic-planning",
-      "command": "report",
-      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
-      "operation_contract": "operations/planning.report.report.json",
-      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
-      "hand_owned_runtime_code": [
-        "planning.report.load",
-        "module-result text/json compatibility formatting"
-      ],
-      "status": "domain-runtime-primitive-via-ir",
-      "conformance_ref": "planning.report.process",
-      "domain_runtime_primitive_refs": [
-        "planning.report.load"
-      ],
-      "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
-    },
-    {
-      "operation_id": "planning.status.report",
-      "program": "agentic-planning",
-      "command": "status",
-      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
-      "operation_contract": "operations/planning.status.report.json",
-      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
-      "hand_owned_runtime_code": [
-        "planning.bootstrap.status.load",
-        "module-result text/json compatibility formatting"
-      ],
-      "status": "domain-runtime-primitive-via-ir",
-      "conformance_ref": "planning.status.process",
-      "domain_runtime_primitive_refs": [
-        "planning.bootstrap.status.load"
-      ],
-      "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
-    },
-    {
-      "operation_id": "planning.summary.report",
-      "program": "agentic-planning",
-      "command": "summary",
-      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
-      "operation_contract": "operations/planning.summary.report.json",
-      "primitive_executor": null,
-      "hand_owned_runtime_code": [
-        "planning.summary.load",
-        "output emission mechanics"
-      ],
-      "status": "accepted-hand-owned-runtime-primitive",
-      "conformance_ref": "planning.summary.process",
-      "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Planning summary loading and projection applies package-specific planning view policy.",
-      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
-    },
-    {
       "operation_id": "config.report",
       "program": "agentic-workspace",
       "command": "config",
@@ -411,6 +180,25 @@
       "generic_behavior_audit": "Classified as mutation-orchestration; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
     },
     {
+      "operation_id": "memory.doctor.report",
+      "program": "agentic-memory",
+      "command": "doctor",
+      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/memory.doctor.report.json",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "memory.bootstrap.doctor.load",
+        "module-result text/json compatibility formatting"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "memory.doctor.process",
+      "domain_runtime_primitive_refs": [
+        "memory.bootstrap.doctor.load"
+      ],
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
+    },
+    {
       "operation_id": "memory.front-door",
       "program": "agentic-workspace",
       "command": "memory",
@@ -428,6 +216,124 @@
       "runtime_boundary_reason": "The root command delegates to the module front door, including commands outside this Python generated CLI completion lane.",
       "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
       "generic_behavior_audit": "Classified as front-door-dispatch; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+    },
+    {
+      "operation_id": "memory.list-files.report",
+      "program": "agentic-memory",
+      "command": "list-files",
+      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/memory.list-files.report.json",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "codegen-owned filesystem glob primitive",
+        "memory package payload metadata enrichment",
+        "target-root resolution",
+        "module-result emission mechanics"
+      ],
+      "status": "portable-codegen-primitive-executed",
+      "conformance_ref": "memory.list-files.process",
+      "portable_primitive_refs": [
+        "path.target_root.resolve",
+        "filesystem.glob",
+        "payload.assemble",
+        "output.emit"
+      ]
+    },
+    {
+      "operation_id": "memory.list-skills.report",
+      "program": "agentic-memory",
+      "command": "list-skills",
+      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/memory.list-skills.report.json",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "codegen-owned filesystem read and JSON parse primitives",
+        "module-result emission mechanics"
+      ],
+      "status": "portable-codegen-primitive-executed",
+      "conformance_ref": "memory.list-skills.process",
+      "portable_primitive_refs": [
+        "filesystem.read",
+        "json.parse",
+        "payload.assemble",
+        "output.emit"
+      ]
+    },
+    {
+      "operation_id": "memory.promotion-report.report",
+      "program": "agentic-memory",
+      "command": "promotion-report",
+      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/memory.promotion-report.report.json",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "memory.promotion_report.load",
+        "module-result text/json compatibility formatting"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "memory.promotion-report.process",
+      "domain_runtime_primitive_refs": [
+        "memory.promotion_report.load"
+      ],
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
+    },
+    {
+      "operation_id": "memory.report.report",
+      "program": "agentic-memory",
+      "command": "report",
+      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/memory.report.report.json",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "memory.report.load",
+        "module-result text/json compatibility formatting"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "memory.report.process",
+      "domain_runtime_primitive_refs": [
+        "memory.report.load"
+      ],
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
+    },
+    {
+      "operation_id": "memory.route-report.report",
+      "program": "agentic-memory",
+      "command": "route-report",
+      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/memory.route-report.report.json",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "memory.route_report.load",
+        "module-result text/json compatibility formatting"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "memory.route-report.process",
+      "domain_runtime_primitive_refs": [
+        "memory.route_report.load"
+      ],
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
+    },
+    {
+      "operation_id": "memory.status.report",
+      "program": "agentic-memory",
+      "command": "status",
+      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/memory.status.report.json",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "memory.bootstrap.status.load",
+        "module-result text/json compatibility formatting"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "memory.status.process",
+      "domain_runtime_primitive_refs": [
+        "memory.bootstrap.status.load"
+      ],
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
     },
     {
       "operation_id": "modules.report",
@@ -468,6 +374,63 @@
       "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
     },
     {
+      "operation_id": "planning.close-item.lifecycle",
+      "program": "agentic-planning",
+      "command": "close-item",
+      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/planning.close-item.lifecycle.json",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "planning.close-item.apply",
+        "module-result text/json compatibility formatting"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "planning.close-item.process",
+      "domain_runtime_primitive_refs": [
+        "planning.close-item.apply"
+      ],
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain lifecycle mutation primitives still own product judgment or compatibility behavior."
+    },
+    {
+      "operation_id": "planning.create-review.lifecycle",
+      "program": "agentic-planning",
+      "command": "create-review",
+      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/planning.create-review.lifecycle.json",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "planning.create-review.apply",
+        "module-result text/json compatibility formatting"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "planning.create-review.process",
+      "domain_runtime_primitive_refs": [
+        "planning.create-review.apply"
+      ],
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain lifecycle mutation primitives still own product judgment or compatibility behavior."
+    },
+    {
+      "operation_id": "planning.doctor.report",
+      "program": "agentic-planning",
+      "command": "doctor",
+      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/planning.doctor.report.json",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "planning.bootstrap.doctor.load",
+        "module-result text/json compatibility formatting"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "planning.doctor.process",
+      "domain_runtime_primitive_refs": [
+        "planning.bootstrap.doctor.load"
+      ],
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
+    },
+    {
       "operation_id": "planning.front-door",
       "program": "agentic-workspace",
       "command": "planning",
@@ -485,6 +448,81 @@
       "runtime_boundary_reason": "The root command delegates to the module front door, including commands outside this Python generated CLI completion lane.",
       "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
       "generic_behavior_audit": "Classified as front-door-dispatch; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+    },
+    {
+      "operation_id": "planning.reconcile.report",
+      "program": "agentic-planning",
+      "command": "reconcile",
+      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/planning.reconcile.report.json",
+      "primitive_executor": null,
+      "hand_owned_runtime_code": [
+        "planning.reconcile.load",
+        "planning.reconcile.load",
+        "output emission mechanics"
+      ],
+      "status": "accepted-hand-owned-runtime-primitive",
+      "conformance_ref": "planning.reconcile.process",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Planning reconciliation includes safe-prune and recovery judgment over live planning state.",
+      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
+      "generic_behavior_audit": "Classified as mutation-orchestration; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+    },
+    {
+      "operation_id": "planning.report.report",
+      "program": "agentic-planning",
+      "command": "report",
+      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/planning.report.report.json",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "planning.report.load",
+        "module-result text/json compatibility formatting"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "planning.report.process",
+      "domain_runtime_primitive_refs": [
+        "planning.report.load"
+      ],
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
+    },
+    {
+      "operation_id": "planning.status.report",
+      "program": "agentic-planning",
+      "command": "status",
+      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/planning.status.report.json",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "planning.bootstrap.status.load",
+        "module-result text/json compatibility formatting"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "planning.status.process",
+      "domain_runtime_primitive_refs": [
+        "planning.bootstrap.status.load"
+      ],
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
+    },
+    {
+      "operation_id": "planning.summary.report",
+      "program": "agentic-planning",
+      "command": "summary",
+      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/planning.summary.report.json",
+      "primitive_executor": null,
+      "hand_owned_runtime_code": [
+        "planning.summary.load",
+        "output emission mechanics"
+      ],
+      "status": "accepted-hand-owned-runtime-primitive",
+      "conformance_ref": "planning.summary.process",
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Planning summary loading and projection applies package-specific planning view policy.",
+      "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
+      "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
     },
     {
       "operation_id": "preflight.report",

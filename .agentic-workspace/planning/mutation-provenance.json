@@ -3,14 +3,6 @@
   "entries": [
     {
       "path": ".agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
-      "sha256": "724e2837097901f522930880b74b1a2c811c4ed682edc4fdde092b2994f405b8",
-      "command": "agentic-planning record-recovery",
-      "reason": "Mark Python codegen completion execplan ready for CLI archive after reconciliation proof.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-13T13:01:37+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
       "sha256": "cfd4ef9ee858a30c44d8facf6438110eac07a0ba2aa78815eabcdfad3f763f80",
       "command": "agentic-planning record-recovery",
       "reason": "Add explicit tracked cli.py stale-reference sweep required by archive gate.",
@@ -1600,6 +1592,14 @@
       "reason": "Recorded #991 dogfooding fix in python generated CLI decomposition",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-15T09:39:35+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
+      "sha256": "25951ea6a9d7373e3e302a8cbc27083ae7b26019113c2b89bcc869693a92fc61",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=delegate-validation",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T09:51:29+00:00"
     }
   ]
 }
