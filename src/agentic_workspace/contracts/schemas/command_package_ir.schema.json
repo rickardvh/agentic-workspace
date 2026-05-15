@@ -376,6 +376,13 @@
             "$ref": "#/$defs/python_operation_executor_initial_value"
           }
         },
+        "context_roots": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/python_operation_executor_context_root"
+          },
+          "default": []
+        },
         "handlers": {
           "type": "array",
           "minItems": 1,
@@ -404,8 +411,53 @@
         "default": {}
       }
     },
+    "python_operation_executor_context_root": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "import_module",
+        "function"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "import_module": {
+          "type": "string",
+          "minLength": 1
+        },
+        "function": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
     "python_operation_executor_handler": {
       "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "primitive",
+            "handler",
+            "function"
+          ],
+          "properties": {
+            "primitive": {
+              "type": "string",
+              "minLength": 1
+            },
+            "handler": {
+              "const": "runtime_handler"
+            },
+            "function": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
         {
           "type": "object",
           "additionalProperties": false,

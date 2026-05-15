@@ -1312,11 +1312,16 @@ def test_python_runtime_projection_inventory_tracks_generated_output_debt() -> N
         entries["generated/python/planning-cli/generated_cli_package/planning_operation_ir_executor.py"]["blocking_full_completion"]
         is False
     )
-    transitional_entries = [
-        entry
-        for entry in entries.values()
-        if entry["path"] != "generated/python/planning-cli/generated_cli_package/planning_operation_ir_executor.py"
-    ]
+    assert (
+        entries["generated/python/memory-cli/generated_cli_package/memory_operation_ir_executor.py"]["provenance_status"]
+        == "rendered-by-command-generation"
+    )
+    assert entries["generated/python/memory-cli/generated_cli_package/memory_operation_ir_executor.py"]["blocking_full_completion"] is False
+    rendered_entries = {
+        "generated/python/planning-cli/generated_cli_package/planning_operation_ir_executor.py",
+        "generated/python/memory-cli/generated_cli_package/memory_operation_ir_executor.py",
+    }
+    transitional_entries = [entry for entry in entries.values() if entry["path"] not in rendered_entries]
     assert {entry["provenance_status"] for entry in transitional_entries} == {"transitional-generated-output-debt"}
     assert all(entry["blocking_full_completion"] is True for entry in transitional_entries)
 

@@ -9,6 +9,10 @@ from pathlib import Path
 from typing import Any, cast
 
 from repo_memory_bootstrap import __version__
+from repo_memory_bootstrap._installer_output import _new_result
+from repo_memory_bootstrap._installer_paths import _record_repo_context_warnings, payload_root, skills_root
+from repo_memory_bootstrap._installer_payload import _payload_entries
+from repo_memory_bootstrap._installer_shared import OPTIONAL_APPEND_TARGETS, InstallResult
 from repo_memory_bootstrap.installer import (
     BOOTSTRAP_WORKSPACE_ROOT,
     MANIFEST_PATH,
@@ -974,6 +978,169 @@ _GENERATED_RUNTIME_HANDLERS = {
     "memory.route-report.report": _run_route_report_adapter,
     "memory.status.report": _run_status_report_adapter,
 }
+
+
+def _resolve_memory_target_root(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> Path:
+    return resolve_target_root(values.get("target"))
+
+
+def _load_memory_bootstrap_status(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> Any:
+    if values.get("format") == "json" and not values.get("verbose"):
+        return _tiny_memory_lifecycle_payload(target=values.get("target"), command="status")
+    return collect_status(target=values.get("target"))
+
+
+def _load_memory_bootstrap_doctor(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> Any:
+    if values.get("format") == "json" and not values.get("verbose"):
+        return _tiny_memory_lifecycle_payload(target=values.get("target"), command="doctor")
+    return doctor_bootstrap(
+        target=values.get("target"),
+        strict_doc_ownership=bool(values.get("strict_doc_ownership", False)),
+        project_name=values.get("project_name"),
+        project_purpose=values.get("project_purpose"),
+        key_repo_docs=values.get("key_repo_docs"),
+        key_subsystems=values.get("key_subsystems"),
+        primary_build_command=values.get("primary_build_command"),
+        primary_test_command=values.get("primary_test_command"),
+        other_key_commands=values.get("other_key_commands"),
+    )
+
+
+def _load_memory_promotion_report(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> Any:
+    return promotion_report(target=values.get("target"), notes=values.get("notes"), mode=values.get("mode"))
+
+
+def _load_memory_report(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> dict[str, object]:
+    if values.get("format") == "json" and not values.get("verbose"):
+        return _tiny_memory_report_fast(target=values.get("target"))
+    report = memory_report(target=values.get("target"))
+    if not values.get("verbose"):
+        return _tiny_memory_report(report)
+    return report
+
+
+def _load_memory_route_report(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> Any:
+    if values.get("format") == "json" and not values.get("verbose"):
+        return _tiny_route_report_payload(target=values.get("target"))
+    return report_routes(target=values.get("target"))
+
+
+def _assemble_memory_operation_payload(values: dict[str, Any], arguments: dict[str, Any], _context: Any) -> Any:
+    operation_id = str(values.get("operation_id", ""))
+    if operation_id == "memory.list-files.report":
+        return _assemble_memory_list_files_payload(
+            target_root=values["target_root"],
+            files=values["files"],
+            arguments=arguments,
+        )
+    if operation_id == "memory.list-skills.report":
+        return _assemble_memory_list_skills_payload(registry=values["registry"], arguments=arguments)
+    raise RuntimeError(f"unsupported payload assembly operation: {operation_id!r}")
+
+
+def _assemble_memory_list_files_payload(*, target_root: Path, files: list[dict[str, str]], arguments: dict[str, Any]) -> InstallResult:
+    fields = arguments.get("fields", {})
+    if not isinstance(fields, dict) or fields.get("actions_from") != "files":
+        raise RuntimeError("payload.assemble must declare actions_from='files'")
+
+    result = _new_result(
+        target_root,
+        dry_run=bool(fields.get("dry_run", True)),
+        message=str(fields.get("message", "Packaged bootstrap file preview")),
+    )
+    _record_repo_context_warnings(target_root, result)
+    payload_entries = _memory_payload_entries_by_relative()
+    for file_entry in _enriched_memory_payload_files(files=files, payload_entries=payload_entries):
+        result.add(
+            file_entry["kind"],
+            target_root / file_entry["relative_path"],
+            file_entry["strategy"],
+            role=file_entry["role"],
+            safety="safe",
+            source=file_entry["source"],
+        )
+    return result
+
+
+def _memory_payload_entries_by_relative() -> dict[str, dict[str, str]]:
+    entries = {
+        entry.source_path.relative_to(payload_root()).as_posix(): {
+            "relative_path": entry.relative_path.as_posix(),
+            "role": entry.role,
+            "strategy": entry.strategy,
+            "kind": "managed file",
+            "source": entry.relative_path.as_posix(),
+        }
+        for entry in _payload_entries(payload_root(), target_layout="managed-root")
+    }
+    entries.update(
+        {
+            f"__append_target__/{target_file.as_posix()}": {
+                "relative_path": target_file.as_posix(),
+                "role": "append-target",
+                "strategy": f"optional fragment {fragment_path}",
+                "kind": "append target",
+                "source": fragment_path.as_posix(),
+            }
+            for target_file, fragment_path in OPTIONAL_APPEND_TARGETS.items()
+        }
+    )
+    return entries
+
+
+def _enriched_memory_payload_files(*, files: list[dict[str, str]], payload_entries: dict[str, dict[str, str]]) -> list[dict[str, str]]:
+    entries = []
+    for file_entry in files:
+        relative_path = str(file_entry.get("relative_path", ""))
+        payload_entry = payload_entries.get(relative_path)
+        if payload_entry is not None:
+            entries.append(payload_entry)
+    entries.extend(payload_entry for key, payload_entry in payload_entries.items() if key.startswith("__append_target__/"))
+    return sorted(entries, key=lambda item: (item["kind"], item["relative_path"], item["source"]))
+
+
+def _assemble_memory_list_skills_payload(*, registry: Any, arguments: dict[str, Any]) -> InstallResult:
+    fields = arguments.get("fields", {})
+    if not isinstance(fields, dict) or fields.get("actions_from") != "registry.skills":
+        raise RuntimeError("payload.assemble must declare actions_from='registry.skills'")
+    if not isinstance(registry, dict):
+        raise RuntimeError("memory skill registry must parse to an object")
+
+    skills_dir = skills_root()
+    result = InstallResult(target_root=skills_dir, dry_run=bool(fields.get("dry_run", True)), message=str(fields["message"]))
+    result.mode = str(fields.get("mode", "skills"))
+    result.detected_version = None
+    for skill in registry.get("skills", []):
+        if not isinstance(skill, dict):
+            continue
+        skill_id = str(skill.get("id", "")).strip()
+        relative = Path(str(skill.get("path", "")).strip())
+        if not skill_id or not relative.as_posix():
+            continue
+        result.add(
+            "bundled skill",
+            skills_dir / relative.parent,
+            "registered packaged product skill",
+            role="skill",
+            safety="safe",
+            source=skill_id,
+        )
+    return result
+
+
+def _emit_memory_operation_output(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> None:
+    result = values["result"]
+    output_format = str(values.get("format") or "text")
+    if output_format == "json":
+        if isinstance(result, dict):
+            print(json.dumps(result, indent=2))
+            return
+        print(format_result_json(result))
+        return
+    if isinstance(result, dict):
+        _print_report(result)
+        return
+    _emit_result(result, output_format=output_format)
 
 
 def _emit_result(result, *, output_format: str, include_install_summary: bool = False) -> None:

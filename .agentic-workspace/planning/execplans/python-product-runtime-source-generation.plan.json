@@ -225,12 +225,12 @@
     "run status": "partial",
     "executor": "Codex",
     "handoff source": "agentic-planning promote-to-plan decomposition lane",
-    "what happened": "Added python_runtime_projection_inventory as a schema-backed contract, then converted planning_operation_ir_executor.py into a command-generation render_outputs artifact driven by command_package_ir python_runtime_binding.operation_executor metadata. Docker proof also exposed and fixed #982 by adding a no-git fallback for source-retirement scanning.",
-    "scope touched": "Runtime projection inventory, command_package_ir/schema binding metadata, command-generation renderer, generated planning operation executor output, generated planning package metadata projections, generated package checker Docker fallback, focused tests, and planning state.",
-    "changed surfaces": "src/agentic_workspace/contracts/python_runtime_projection_inventory.json; src/agentic_workspace/contracts/command_package_ir.json; src/agentic_workspace/contracts/schemas/command_package_ir.schema.json; packages/command-generation/schemas/command_package_ir.schema.json; packages/command-generation/src/command_generation/generator.py; generated/python/planning-cli/generated_cli_package/planning_operation_ir_executor.py; generated/python/planning-cli/generated_cli_package/command_package.json; generated/typescript/planning-cli/src/commandPackage.ts; scripts/check/check_generated_command_packages.py; tests/test_generated_command_package_proof_runner.py; tests/test_contract_tooling.py; planning surfaces.",
-    "validations run": "uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check selected files.",
-    "result for continuation": "planning_operation_ir_executor.py is now generated-owned and no longer blocks full completion; runtime modules and the workspace/memory operation executors remain transitional generated-output debt.",
-    "next step": "Continue with the next smallest file-level runtime projection entry, likely memory_operation_ir_executor.py or workspace_operation_ir_executor.py after checking whether handler binding metadata can represent it without copying product runtime code."
+    "what happened": "Added python_runtime_projection_inventory as a schema-backed contract, converted planning_operation_ir_executor.py into a command-generation render_outputs artifact, then converted memory_operation_ir_executor.py into a generated operation-executor wrapper driven by command_package_ir python_runtime_binding.operation_executor metadata. Docker proof also exposed and fixed #982 by adding a no-git fallback for source-retirement scanning, and #987 by excluding host Python bytecode caches from Docker build context.",
+    "scope touched": "Runtime projection inventory, command_package_ir/schema binding metadata, command-generation renderer, generated planning and memory operation executor outputs, generated package metadata projections, generated package checker Docker fallback, root Docker ignore, focused tests, and planning state.",
+    "changed surfaces": "src/agentic_workspace/contracts/python_runtime_projection_inventory.json; src/agentic_workspace/contracts/command_package_ir.json; src/agentic_workspace/contracts/schemas/command_package_ir.schema.json; packages/command-generation/schemas/command_package_ir.schema.json; packages/command-generation/src/command_generation/generator.py; generated/python/planning-cli/generated_cli_package/planning_operation_ir_executor.py; generated/python/memory-cli/generated_cli_package/memory_operation_ir_executor.py; generated/python/memory-cli/generated_cli_package/memory_runtime_cli.py; generated/python/*/generated_cli_package/command_package.json; generated/typescript/*/src/commandPackage.ts; scripts/check/check_generated_command_packages.py; tests/test_generated_command_package_proof_runner.py; tests/test_contract_tooling.py; .dockerignore; planning surfaces.",
+    "validations run": "uv run python scripts/generate/generate_command_packages.py; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run python scripts/check/check_generated_command_packages.py --docker --require-docker; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check selected files.",
+    "result for continuation": "planning_operation_ir_executor.py and memory_operation_ir_executor.py are now generated-owned and no longer block full completion; runtime modules and the workspace operation executor remain transitional generated-output debt.",
+    "next step": "Continue with the next file-level runtime projection entry, likely workspace_operation_ir_executor.py, then migrate workspace/planning/memory runtime modules without moving product-specific behavior into command-generation source."
   },
   "finished_run_review": {
     "review status": "pending",
@@ -245,25 +245,25 @@
     "route chosen": "delegate-exploration",
     "route skipped reason": "not skipped",
     "expected savings": "read-only selection audit can run while local implementation proceeds",
-    "actual friction": "worker returned after local implementation and corroborated planning_operation_ir_executor.py as the smallest next slice; it also flagged runtime output imports as a risk that remains tracked by runtime debt.",
-    "proof result": "passed for planning operation executor generation slice",
-    "quality concern": "Avoid converting generated/python placement into false generated ownership; worker checks smallest next artifact and proof burden.",
+    "actual friction": "worker returned after local implementation and corroborated operation-executor generation as bounded, while warning that moving helper bodies into memory_runtime_cli.py is still product runtime debt rather than completion.",
+    "proof result": "passed for planning and memory operation executor generation slices, plus Docker bytecode-cache proof fix",
+    "quality concern": "Avoid converting generated/python placement or runtime handler wrapping into false generated ownership; generated operation executors are nonblocking, but runtime modules remain blocking debt.",
     "decomposition adjustment": "none"
   },
   "proof_report": {
-    "validation proof": "uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check selected files.",
+    "validation proof": "uv run python scripts/generate/generate_command_packages.py; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run python scripts/check/check_generated_command_packages.py --docker --require-docker; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check selected files.",
     "proof achieved now": "partial",
-    "evidence for \"proof achieved\" state": "planning_operation_ir_executor.py appears in command-generation render_outputs, generate --check is clean, local/Docker generated Python conformance pass, and python_runtime_projection_inventory marks only that executor rendered-by-command-generation."
+    "evidence for \"proof achieved\" state": "planning_operation_ir_executor.py and memory_operation_ir_executor.py appear in command-generation render_outputs, generated package proof is clean, local/Docker generated Python conformance pass, TypeScript Docker conformance remains clean after the Docker ignore fix, and python_runtime_projection_inventory marks only those executors rendered-by-command-generation."
   },
   "intent_satisfaction": {
     "original intent": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane python-product-runtime-source-generation.",
     "was original intent fully satisfied?": "no",
-    "evidence of intent satisfaction": "The slice prevents false completion and converts one operation executor file to generator ownership; it does not yet generate the remaining runtime files or workspace/memory executors.",
+    "evidence of intent satisfaction": "The slice prevents false completion and converts two operation executor files to generator ownership; it does not yet generate the remaining runtime files or workspace executor.",
     "unsolved intent passed to": "current active execplan python-product-runtime-source-generation"
   },
   "execution_summary": {
-    "outcome delivered": "Runtime projection debt is explicit and proof-enforced; planning_operation_ir_executor.py is generated-owned; full lane remains open.",
-    "validation confirmed": "generate --check, static proof, local Python conformance, Node-backed conformance, Python Docker conformance, focused tests, contract tooling, structured inventory, and ruff passed",
+    "outcome delivered": "Runtime projection debt is explicit and proof-enforced; planning_operation_ir_executor.py and memory_operation_ir_executor.py are generated-owned; full lane remains open.",
+    "validation confirmed": "generate, static proof, local Python conformance, Node-backed conformance, Python Docker conformance, TypeScript Docker proof/conformance, focused tests, contract tooling, structured inventory, and ruff passed",
     "follow-on routed to": "current active execplan python-product-runtime-source-generation",
     "post-work posterity capture": "pending",
     "knowledge promoted (Memory/Docs/Config)": "none",
@@ -302,11 +302,13 @@
     "source": "operating_posture",
     "signals found": [
       "#982 generated Python Docker proof assumed git was installed",
-      "#980 planning handoff treated conceptual IR/contracts prose as a missing file reference"
+      "#980 planning handoff treated conceptual IR/contracts prose as a missing file reference",
+      "#987 generated CLI Docker conformance copied host Python bytecode caches"
     ],
     "signals fixed": [
       "#982 fixed by adding a no-git fallback source-tree scan in check_generated_command_packages.py",
-      "#980 fixed by ignoring conceptual slash phrases with uppercase acronym segments such as IR/contracts in execplan file-reference scanning"
+      "#980 fixed by ignoring conceptual slash phrases with uppercase acronym segments such as IR/contracts in execplan file-reference scanning",
+      "#987 fixed by adding root Docker ignore rules for __pycache__, .pyc, and local cache/runtime directories"
     ],
     "signals routed": [],
     "signals dismissed": [],
@@ -321,7 +323,8 @@
       "docs": [],
       "issue_follow_up": [
         "#980 planning handoff false-positive file reference warning fixed in this branch",
-        "#982 generated Python Docker proof no-git fallback fixed in this slice"
+        "#982 generated Python Docker proof no-git fallback fixed in this slice",
+        "#987 generated CLI Docker conformance host bytecode cache leak fixed in this slice"
       ]
     }
   },
@@ -332,6 +335,8 @@
     "2026-05-15: Recorded delegation decision route=delegate-exploration.",
     "2026-05-15: Generated planning_operation_ir_executor.py from command_package_ir operation_executor binding metadata and marked that inventory entry rendered-by-command-generation.",
     "2026-05-15: Filed #982 for generated Python Docker proof assuming git, then fixed it with a no-git source scan fallback.",
-    "2026-05-15: Fixed #980 by ignoring conceptual uppercase slash phrases such as IR/contracts in planning handoff file-reference warnings."
+    "2026-05-15: Fixed #980 by ignoring conceptual uppercase slash phrases such as IR/contracts in planning handoff file-reference warnings.",
+    "2026-05-15: Generated memory_operation_ir_executor.py from command_package_ir operation_executor binding metadata; memory_runtime_cli.py remains blocking product-runtime debt.",
+    "2026-05-15: Filed #987 for Docker conformance copying host Python bytecode caches, then fixed it with root .dockerignore exclusions."
   ]
 }

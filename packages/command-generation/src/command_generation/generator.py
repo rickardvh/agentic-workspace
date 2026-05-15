@@ -204,6 +204,21 @@ def _render_runtime_emit_handler(function_name: str, handler: dict[str, Any], *,
     )
 
 
+def _render_runtime_handler(function_name: str, handler: dict[str, Any], *, runtime_module_file: str) -> str:
+    runtime_function = str(handler["function"])
+    return (
+        f"def {function_name}(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:\n"
+        f"    from .{runtime_module_file} import {runtime_function}\n\n"
+        f"    return {runtime_function}(values, arguments, context)\n"
+    )
+
+
+def _render_context_root_function(root: dict[str, Any]) -> str:
+    function_name = _handler_function_name(f"context.root.{root['name']}")
+    imported_name = str(root["function"])
+    return f"def {function_name}() -> Path:\n    from {root['import_module']} import {imported_name}\n\n    return {imported_name}()\n"
+
+
 def _python_operation_executor_module(
     package: dict[str, Any],
     binding: dict[str, Any],
@@ -218,20 +233,34 @@ def _python_operation_executor_module(
         initial_values.append(f"                {str(item['name'])!r}: getattr(args, {str(item['arg'])!r}, {item.get('default')!r}),")
     handlers: list[str] = []
     handler_items = []
+    needs_json = False
     for handler in binding["handlers"]:
         primitive = str(handler["primitive"])
         function_name = _handler_function_name(primitive)
         handler_items.append(f"                {primitive!r}: {function_name},")
         handler_kind = str(handler["handler"])
-        if handler_kind == "function_call":
+        if handler_kind == "runtime_handler":
+            handlers.append(_render_runtime_handler(function_name, handler, runtime_module_file=runtime_module_file))
+        elif handler_kind == "function_call":
             handlers.append(_render_function_call_handler(function_name, handler))
         elif handler_kind == "conditional_function_call":
             handlers.append(_render_conditional_function_call_handler(function_name, handler))
         elif handler_kind == "runtime_emit":
+            needs_json = True
             handlers.append(_render_runtime_emit_handler(function_name, handler, runtime_module_file=runtime_module_file))
         else:
             raise ValueError(f"unsupported Python operation executor handler: {handler_kind!r}")
     supported_set = ",\n        ".join(repr(operation_id) for operation_id in supported_operation_ids)
+    root_functions = []
+    context_roots = []
+    for root in binding.get("context_roots", []):
+        root_function = _handler_function_name(f"context.root.{root['name']}")
+        root_functions.append(_render_context_root_function(root))
+        context_roots.append(f"                {str(root['name'])!r}: {root_function}(),")
+    roots_block = "\n".join(context_roots)
+    if roots_block:
+        roots_block = "\n" + roots_block + "\n            "
+    json_import = "import json\n" if needs_json else ""
     return (
         '"""Generated Python operation IR executor.\n\n'
         f"Source: {source_path}\n"
@@ -240,7 +269,7 @@ def _python_operation_executor_module(
         '"""\n\n'
         "from __future__ import annotations\n\n"
         "import argparse\n"
-        "import json\n"
+        f"{json_import}"
         "from pathlib import Path\n"
         "from typing import Any\n\n"
         "from command_generation.primitive_executor import (\n"
@@ -264,15 +293,16 @@ def _python_operation_executor_module(
         "    try:\n"
         "        run_operation_steps(\n"
         "            operation,\n"
-        "            initial_values={\n" + "\n".join(initial_values) + "\n"
+        "            initial_values={\n"
+        '                "operation_id": operation.get("id"),\n' + "\n".join(initial_values) + "\n"
         "            },\n"
-        "            context=PrimitiveContext(cwd=Path.cwd(), roots={}),\n"
+        f"            context=PrimitiveContext(cwd=Path.cwd(), roots={{{roots_block}}}),\n"
         "            handlers={\n" + "\n".join(handler_items) + "\n"
         "            },\n"
         "        )\n"
         "    except PrimitiveExecutionError as exc:\n"
         "        raise OperationIrExecutionError(str(exc)) from exc\n"
-        "    return 0\n\n\n" + "\n\n".join(handlers)
+        "    return 0\n\n\n" + "\n\n".join(root_functions + handlers)
     )
 
 

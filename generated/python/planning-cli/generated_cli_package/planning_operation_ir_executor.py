@@ -41,6 +41,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
         run_operation_steps(
             operation,
             initial_values={
+                "operation_id": operation.get("id"),
                 'target': getattr(args, 'target', None),
                 'format': getattr(args, 'format', 'text'),
                 'verbose': getattr(args, 'verbose', False),

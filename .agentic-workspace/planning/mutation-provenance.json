@@ -3,22 +3,6 @@
   "entries": [
     {
       "path": ".agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
-      "sha256": "fab8960b3d051c5cb1e08104a11be3f8695338f1cf4946ee0e23c147ec9d0fac",
-      "command": "agentic-planning record-recovery",
-      "reason": "advance active codegen execplan to planning front-door slice",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-13T12:34:36+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "46ff15b03f6eadc16391d78522705b10d7122ced5cc46fcb13f4ff983821a52c",
-      "command": "agentic-planning record-recovery",
-      "reason": "advance active codegen state to planning front-door slice",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-13T12:34:36+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
       "sha256": "7c1877388ba4520bb25f23134b731a67fbae04cb7e63a9e9f8e60014001312de",
       "command": "agentic-planning record-recovery",
       "reason": "record planning front-door slice proof and advance to memory front-door slice",
@@ -1600,6 +1584,22 @@
       "reason": "Updated active execplan closeout notes for #980 dogfooding fix while continuing #892 lane.",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-15T08:53:42+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
+      "sha256": "cb70f73a354fc7e4efc7c3605b828654431e8352341acf52bb34f9a740175122",
+      "command": "agentic-planning record-recovery",
+      "reason": "Recorded memory operation executor generation slice and Docker conformance bytecode-cache dogfooding fix after implementation/proof",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-15T09:08:03+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "b23bac81f8ad61ba7bbcbc2514c29dda7dde5a7331d921cf3263132903e649b4",
+      "command": "agentic-planning record-recovery",
+      "reason": "Recorded current #892 lane status after memory operation executor generation and Docker conformance dogfooding fix",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-15T09:08:18+00:00"
     }
   ]
 }
