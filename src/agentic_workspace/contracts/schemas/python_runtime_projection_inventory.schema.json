@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentic-workspace.local/schemas/python_runtime_projection_inventory.schema.json",
+  "title": "Python runtime projection inventory",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schema_version",
+    "purpose",
+    "completion_rule",
+    "allowed_provenance_statuses",
+    "entries"
+  ],
+  "properties": {
+    "kind": {
+      "const": "agentic-workspace/python-runtime-projection-inventory/v1"
+    },
+    "schema_version": {
+      "const": "agentic-workspace/python-runtime-projection-inventory/v1"
+    },
+    "purpose": {
+      "type": "string",
+      "minLength": 1
+    },
+    "completion_rule": {
+      "type": "string",
+      "minLength": 1
+    },
+    "allowed_provenance_statuses": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "enum": [
+          "rendered-by-command-generation",
+          "transitional-generated-output-debt"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/entry"
+      }
+    }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "package_id",
+        "program",
+        "artifact_kind",
+        "provenance_status",
+        "current_owner",
+        "source_of_truth",
+        "blocking_full_completion",
+        "why_blocking",
+        "required_resolution"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^generated/python/(workspace-cli|planning-cli|memory-cli)/generated_cli_package/[a-z_]+\\.py$"
+        },
+        "package_id": {
+          "enum": [
+            "root-workspace",
+            "planning-bootstrap",
+            "memory-bootstrap"
+          ]
+        },
+        "program": {
+          "enum": [
+            "agentic-workspace",
+            "agentic-planning",
+            "agentic-memory"
+          ]
+        },
+        "artifact_kind": {
+          "enum": [
+            "runtime-cli",
+            "operation-ir-executor"
+          ]
+        },
+        "provenance_status": {
+          "enum": [
+            "rendered-by-command-generation",
+            "transitional-generated-output-debt"
+          ]
+        },
+        "current_owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_of_truth": {
+          "type": "string",
+          "minLength": 1
+        },
+        "blocking_full_completion": {
+          "type": "boolean"
+        },
+        "why_blocking": {
+          "type": "string",
+          "minLength": 1
+        },
+        "required_resolution": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

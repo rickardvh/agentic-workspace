@@ -35,6 +35,7 @@ from agentic_workspace.contract_tooling import (
     python_contract_consumption_manifest,
     python_extraction_map_manifest,
     python_runtime_boundary_manifest,
+    python_runtime_projection_inventory_manifest,
     repo_friction_policy_manifest,
     report_contract_manifest,
     setup_findings_policy_manifest,
@@ -1666,6 +1667,10 @@ def main(argv: list[str] | None = None) -> int:
             "python runtime boundary",
             _validate(python_runtime_boundary_manifest(), "python_runtime_boundary.schema.json")
             + _validate_python_runtime_boundary_authority(python_runtime_boundary_manifest()),
+        ),
+        (
+            "python runtime projection inventory",
+            _validate(python_runtime_projection_inventory_manifest(), "python_runtime_projection_inventory.schema.json"),
         ),
         (
             "lifecycle generation readiness",

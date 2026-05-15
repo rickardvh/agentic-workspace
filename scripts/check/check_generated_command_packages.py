@@ -32,7 +32,7 @@ from workspace_command_generation import (  # noqa: E402
     render_workspace_command_package_outputs,
 )
 
-from agentic_workspace.contract_tooling import operation_manifest  # noqa: E402
+from agentic_workspace.contract_tooling import operation_manifest, python_runtime_projection_inventory_manifest  # noqa: E402
 from command_generation.generated_package_loader import (  # noqa: E402
     load_generated_cli_module_for_entrypoint,
     load_generated_cli_package_for_entrypoint,
@@ -153,6 +153,38 @@ PYTHON_FULL_COMPLETION_BLOCKING_EXECUTABLE_PATHS = (
     "packages/planning/src/repo_planning_bootstrap/operation_ir_executor.py",
     "packages/memory/src/repo_memory_bootstrap/operation_ir_executor.py",
 )
+PYTHON_REQUIRED_RUNTIME_PROJECTION_OUTPUTS = {
+    "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py": (
+        "root-workspace",
+        "agentic-workspace",
+        "runtime-cli",
+    ),
+    "generated/python/workspace-cli/generated_cli_package/workspace_operation_ir_executor.py": (
+        "root-workspace",
+        "agentic-workspace",
+        "operation-ir-executor",
+    ),
+    "generated/python/planning-cli/generated_cli_package/planning_runtime_cli.py": (
+        "planning-bootstrap",
+        "agentic-planning",
+        "runtime-cli",
+    ),
+    "generated/python/planning-cli/generated_cli_package/planning_operation_ir_executor.py": (
+        "planning-bootstrap",
+        "agentic-planning",
+        "operation-ir-executor",
+    ),
+    "generated/python/memory-cli/generated_cli_package/memory_runtime_cli.py": (
+        "memory-bootstrap",
+        "agentic-memory",
+        "runtime-cli",
+    ),
+    "generated/python/memory-cli/generated_cli_package/memory_operation_ir_executor.py": (
+        "memory-bootstrap",
+        "agentic-memory",
+        "operation-ir-executor",
+    ),
+}
 
 
 def _run(command: list[str]) -> int:
@@ -816,14 +848,7 @@ def _validate_full_python_completion_executable_ownership(ir: dict[str, object])
         output.path.relative_to(REPO_ROOT).as_posix()
         for output in render_workspace_command_package_outputs(ir, repo_root=REPO_ROOT)
     }
-    required_generated_runtime_outputs = {
-        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
-        "generated/python/workspace-cli/generated_cli_package/workspace_operation_ir_executor.py",
-        "generated/python/planning-cli/generated_cli_package/planning_runtime_cli.py",
-        "generated/python/planning-cli/generated_cli_package/planning_operation_ir_executor.py",
-        "generated/python/memory-cli/generated_cli_package/memory_runtime_cli.py",
-        "generated/python/memory-cli/generated_cli_package/memory_operation_ir_executor.py",
-    }
+    required_generated_runtime_outputs = set(PYTHON_REQUIRED_RUNTIME_PROJECTION_OUTPUTS)
     missing_generated_runtime_outputs = sorted(required_generated_runtime_outputs - rendered_outputs)
     if missing_generated_runtime_outputs:
         errors.append(
@@ -845,6 +870,66 @@ def _validate_full_python_completion_executable_ownership(ir: dict[str, object])
             errors.append(
                 "command_package_ir.json cannot claim full Python generated CLI completion while shipped module "
                 f"or product-specific command-generation source {relative_path} owns executable behavior markers: {matched_categories!r}"
+            )
+    return errors
+
+
+def _validate_python_runtime_projection_inventory(*, full_completion: bool) -> list[str]:
+    errors: list[str] = []
+    try:
+        inventory = python_runtime_projection_inventory_manifest()
+    except Exception as exc:  # noqa: BLE001
+        return [f"python_runtime_projection_inventory.json is missing or invalid: {exc}"]
+
+    entries = inventory.get("entries", [])
+    if not isinstance(entries, list):
+        return ["python_runtime_projection_inventory.json entries must be a list"]
+    by_path = {str(entry.get("path")): entry for entry in entries if isinstance(entry, dict)}
+    missing_paths = sorted(set(PYTHON_REQUIRED_RUNTIME_PROJECTION_OUTPUTS) - set(by_path))
+    extra_paths = sorted(set(by_path) - set(PYTHON_REQUIRED_RUNTIME_PROJECTION_OUTPUTS))
+    if missing_paths:
+        errors.append(f"python_runtime_projection_inventory.json missing runtime projection entries: {missing_paths!r}")
+    if extra_paths:
+        errors.append(f"python_runtime_projection_inventory.json contains unexpected runtime projection entries: {extra_paths!r}")
+
+    rendered_outputs = {
+        output.path.relative_to(REPO_ROOT).as_posix()
+        for output in render_workspace_command_package_outputs(load_workspace_command_package_ir(repo_root=REPO_ROOT), repo_root=REPO_ROOT)
+    }
+    for relative_path, expected in sorted(PYTHON_REQUIRED_RUNTIME_PROJECTION_OUTPUTS.items()):
+        entry = by_path.get(relative_path)
+        if not isinstance(entry, dict):
+            continue
+        package_id, program, artifact_kind = expected
+        for field, expected_value in {
+            "package_id": package_id,
+            "program": program,
+            "artifact_kind": artifact_kind,
+        }.items():
+            if entry.get(field) != expected_value:
+                errors.append(
+                    f"python_runtime_projection_inventory.json {relative_path} has wrong {field}: {entry.get(field)!r}"
+                )
+        path = REPO_ROOT / relative_path
+        if not path.is_file():
+            errors.append(f"python_runtime_projection_inventory.json {relative_path} does not exist in generated/python")
+        provenance_status = entry.get("provenance_status")
+        blocking_full_completion = bool(entry.get("blocking_full_completion"))
+        if provenance_status == "rendered-by-command-generation" and relative_path not in rendered_outputs:
+            errors.append(
+                "python_runtime_projection_inventory.json cannot mark "
+                f"{relative_path} rendered-by-command-generation because render_outputs() does not produce it"
+            )
+        if provenance_status == "transitional-generated-output-debt" and not blocking_full_completion:
+            errors.append(
+                "python_runtime_projection_inventory.json transitional runtime projection debt must block full completion: "
+                f"{relative_path}"
+            )
+        if full_completion and (provenance_status != "rendered-by-command-generation" or blocking_full_completion):
+            errors.append(
+                "command_package_ir.json cannot claim full Python generated CLI completion while "
+                f"python_runtime_projection_inventory.json tracks {relative_path} as {provenance_status!r} "
+                f"with blocking_full_completion={blocking_full_completion!r}"
             )
     return errors
 
@@ -1481,6 +1566,11 @@ def _validate_static_surfaces() -> list[str]:
             errors.extend(_validate_python_cli_completion_policy(python_cli_completion))
             errors.extend(_validate_full_python_completion_runtime_ownership(ir))
             errors.extend(_validate_full_python_completion_executable_ownership(ir))
+            errors.extend(
+                _validate_python_runtime_projection_inventory(
+                    full_completion=python_cli_completion.get("current_state") == "full-generated-cli-complete",
+                )
+            )
         errors.extend(_validate_python_operation_execution_inventory(ir))
         shell_policy = str(ir.get("generation_policy", {}).get("shell_adapter_policy", ""))
         if "Issue #909 evaluation selects Bash as the first additional generated command transport candidate" not in shell_policy:

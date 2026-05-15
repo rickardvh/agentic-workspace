@@ -88,7 +88,7 @@
     {
       "id": "python-product-runtime-source-generation",
       "title": "Python product runtime source generation",
-      "readiness": "ready",
+      "readiness": "promoted",
       "outcome": "Workspace, planning, and memory product-specific executable runtime modules are generated target output under generated/python from IR/contracts and codegen-owned primitives; packages/command-generation/src owns only generic generator, renderer, executor, schema, freshness, and conformance machinery.",
       "owner_surface": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
       "proof": "Static proof rejects full Python completion while packages/command-generation/src contains product-specific executable runtime modules such as workspace_runtime_cli.py, planning_runtime_cli.py, or memory_runtime_cli.py; regenerated Python outputs provide the executable projection and black-box/Docker conformance passes.",

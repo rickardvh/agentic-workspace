@@ -408,6 +408,39 @@ def test_static_generated_package_proof_rejects_full_completion_when_runtime_out
     assert any("not produced by command-generation render_outputs()" in error for error in errors)
 
 
+def test_static_generated_package_proof_rejects_missing_runtime_projection_inventory_entry(monkeypatch) -> None:
+    checker = _load_checker()
+    original_manifest = checker.python_runtime_projection_inventory_manifest
+
+    def fake_manifest() -> dict[str, object]:
+        payload = original_manifest()
+        payload = dict(payload)
+        payload["entries"] = list(payload["entries"][:-1])
+        return payload
+
+    monkeypatch.setattr(checker, "python_runtime_projection_inventory_manifest", fake_manifest)
+
+    errors = checker._validate_python_runtime_projection_inventory(full_completion=False)
+
+    assert any("missing runtime projection entries" in error for error in errors)
+
+
+def test_static_generated_package_proof_rejects_full_completion_with_transitional_runtime_projection_debt() -> None:
+    checker = _load_checker()
+
+    errors = checker._validate_python_runtime_projection_inventory(full_completion=True)
+
+    assert any("transitional-generated-output-debt" in error for error in errors)
+
+
+def test_static_generated_package_proof_accepts_current_runtime_projection_inventory_for_partial_completion() -> None:
+    checker = _load_checker()
+
+    errors = checker._validate_python_runtime_projection_inventory(full_completion=False)
+
+    assert errors == []
+
+
 def test_static_generated_package_proof_rejects_shipped_source_cli_backslide(monkeypatch) -> None:
     checker = _load_checker()
     backslid_source = "src/agentic_workspace/cli_backslide.py"

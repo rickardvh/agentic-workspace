@@ -173,5 +173,9 @@ def python_runtime_boundary_manifest() -> dict[str, Any]:
     return load_validated_contract_json("python_runtime_boundary.json", "python_runtime_boundary.schema.json")
 
 
+def python_runtime_projection_inventory_manifest() -> dict[str, Any]:
+    return load_validated_contract_json("python_runtime_projection_inventory.json", "python_runtime_projection_inventory.schema.json")
+
+
 def contract_schema(relative_path: str) -> dict[str, Any]:
     return load_contract_json(f"schemas/{relative_path}")

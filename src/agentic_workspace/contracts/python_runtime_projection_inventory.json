@@ -1,0 +1,84 @@
+{
+  "kind": "agentic-workspace/python-runtime-projection-inventory/v1",
+  "schema_version": "agentic-workspace/python-runtime-projection-inventory/v1",
+  "purpose": "Track generated/python runtime and operation-executor Python files whose location alone could be mistaken for generated ownership.",
+  "completion_rule": "The Python CLI completion gate may reach full-generated-cli-complete only when every entry is rendered-by-command-generation, blocking_full_completion is false for every entry, and command-generation render_outputs produces the same paths.",
+  "allowed_provenance_statuses": [
+    "rendered-by-command-generation",
+    "transitional-generated-output-debt"
+  ],
+  "entries": [
+    {
+      "path": "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
+      "package_id": "root-workspace",
+      "program": "agentic-workspace",
+      "artifact_kind": "runtime-cli",
+      "provenance_status": "transitional-generated-output-debt",
+      "current_owner": "checked-in generated output file with product-specific executable behavior",
+      "source_of_truth": "not yet represented as implementation-independent operation IR plus codegen-owned primitives",
+      "blocking_full_completion": true,
+      "why_blocking": "The file lives under generated/python but is not produced by command-generation render_outputs and still contains product-specific executable runtime behavior.",
+      "required_resolution": "Represent behavior in module-owned IR/contracts plus codegen-owned primitives, then render this file mechanically from command-generation."
+    },
+    {
+      "path": "generated/python/workspace-cli/generated_cli_package/workspace_operation_ir_executor.py",
+      "package_id": "root-workspace",
+      "program": "agentic-workspace",
+      "artifact_kind": "operation-ir-executor",
+      "provenance_status": "transitional-generated-output-debt",
+      "current_owner": "checked-in generated output file with product-specific operation handler bindings",
+      "source_of_truth": "not yet represented as implementation-independent operation IR plus codegen-owned primitive bindings",
+      "blocking_full_completion": true,
+      "why_blocking": "The file lives under generated/python but is not produced by command-generation render_outputs and still binds product-specific runtime behavior.",
+      "required_resolution": "Render the operation executor from operation contracts and primitive binding metadata, with product behavior expressed through IR or explicitly accepted primitive extensions."
+    },
+    {
+      "path": "generated/python/planning-cli/generated_cli_package/planning_runtime_cli.py",
+      "package_id": "planning-bootstrap",
+      "program": "agentic-planning",
+      "artifact_kind": "runtime-cli",
+      "provenance_status": "transitional-generated-output-debt",
+      "current_owner": "checked-in generated output file with product-specific executable behavior",
+      "source_of_truth": "not yet represented as implementation-independent operation IR plus codegen-owned primitives",
+      "blocking_full_completion": true,
+      "why_blocking": "The file lives under generated/python but is not produced by command-generation render_outputs and still contains product-specific executable runtime behavior.",
+      "required_resolution": "Represent behavior in planning-owned IR/contracts plus codegen-owned primitives, then render this file mechanically from command-generation."
+    },
+    {
+      "path": "generated/python/planning-cli/generated_cli_package/planning_operation_ir_executor.py",
+      "package_id": "planning-bootstrap",
+      "program": "agentic-planning",
+      "artifact_kind": "operation-ir-executor",
+      "provenance_status": "transitional-generated-output-debt",
+      "current_owner": "checked-in generated output file with product-specific operation handler bindings",
+      "source_of_truth": "not yet represented as implementation-independent operation IR plus codegen-owned primitive bindings",
+      "blocking_full_completion": true,
+      "why_blocking": "The file lives under generated/python but is not produced by command-generation render_outputs and still binds product-specific runtime behavior.",
+      "required_resolution": "Render the operation executor from operation contracts and primitive binding metadata, with product behavior expressed through IR or explicitly accepted primitive extensions."
+    },
+    {
+      "path": "generated/python/memory-cli/generated_cli_package/memory_runtime_cli.py",
+      "package_id": "memory-bootstrap",
+      "program": "agentic-memory",
+      "artifact_kind": "runtime-cli",
+      "provenance_status": "transitional-generated-output-debt",
+      "current_owner": "checked-in generated output file with product-specific executable behavior",
+      "source_of_truth": "not yet represented as implementation-independent operation IR plus codegen-owned primitives",
+      "blocking_full_completion": true,
+      "why_blocking": "The file lives under generated/python but is not produced by command-generation render_outputs and still contains product-specific executable runtime behavior.",
+      "required_resolution": "Represent behavior in memory-owned IR/contracts plus codegen-owned primitives, then render this file mechanically from command-generation."
+    },
+    {
+      "path": "generated/python/memory-cli/generated_cli_package/memory_operation_ir_executor.py",
+      "package_id": "memory-bootstrap",
+      "program": "agentic-memory",
+      "artifact_kind": "operation-ir-executor",
+      "provenance_status": "transitional-generated-output-debt",
+      "current_owner": "checked-in generated output file with product-specific operation handler bindings",
+      "source_of_truth": "not yet represented as implementation-independent operation IR plus codegen-owned primitive bindings",
+      "blocking_full_completion": true,
+      "why_blocking": "The file lives under generated/python but is not produced by command-generation render_outputs and still binds product-specific runtime behavior.",
+      "required_resolution": "Render the operation executor from operation contracts and primitive binding metadata, with product behavior expressed through IR or explicitly accepted primitive extensions."
+    }
+  ]
+}

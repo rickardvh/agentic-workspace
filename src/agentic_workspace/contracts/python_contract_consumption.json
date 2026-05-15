@@ -159,6 +159,12 @@
       "consumer": "scripts/check/check_contract_tooling_surfaces.py"
     },
     {
+      "contract": "python_runtime_projection_inventory.json",
+      "schema": "python_runtime_projection_inventory.schema.json",
+      "loader": "python_runtime_projection_inventory_manifest",
+      "consumer": "scripts/check/check_generated_command_packages.py"
+    },
+    {
       "contract": "lifecycle_generation_readiness.json",
       "schema": "lifecycle_generation_readiness.schema.json",
       "loader": "lifecycle_generation_readiness_manifest",

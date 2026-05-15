@@ -1292,6 +1292,22 @@ def test_python_runtime_boundary_declares_root_cli_authority_audit() -> None:
     assert audit["direct_cli_edit_routing"]["review_requires"]
 
 
+def test_python_runtime_projection_inventory_tracks_generated_output_debt() -> None:
+    manifest = contract_tooling.python_runtime_projection_inventory_manifest()
+    entries = {entry["path"]: entry for entry in manifest["entries"]}
+
+    assert set(entries) == {
+        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
+        "generated/python/workspace-cli/generated_cli_package/workspace_operation_ir_executor.py",
+        "generated/python/planning-cli/generated_cli_package/planning_runtime_cli.py",
+        "generated/python/planning-cli/generated_cli_package/planning_operation_ir_executor.py",
+        "generated/python/memory-cli/generated_cli_package/memory_runtime_cli.py",
+        "generated/python/memory-cli/generated_cli_package/memory_operation_ir_executor.py",
+    }
+    assert {entry["provenance_status"] for entry in entries.values()} == {"transitional-generated-output-debt"}
+    assert all(entry["blocking_full_completion"] is True for entry in entries.values())
+
+
 def test_contract_tooling_check_enforces_root_cli_authority_audit() -> None:
     script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
     spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)

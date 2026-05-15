@@ -1,0 +1,324 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Python product runtime source generation",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "lane",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "required_continuation",
+      "iterative_follow_through",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane python-product-runtime-source-generation.",
+    "hard_constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Workspace, planning, and memory product-specific executable runtime modules are generated target output under generated/python from IR/contracts and codegen-owned primitives; packages/command-generation/src owns only generic generator, renderer, executor, schema, freshness, and conformance machinery.",
+    "proof_expectations": [
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q",
+      "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+      "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+      "uv run ruff check scripts/check/check_generated_command_packages.py scripts/check/check_contract_tooling_surfaces.py tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py src/agentic_workspace/contract_tooling.py"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/contracts/python_runtime_projection_inventory.json",
+      "src/agentic_workspace/contracts/schemas/python_runtime_projection_inventory.schema.json",
+      "src/agentic_workspace/contracts/python_contract_consumption.json",
+      "src/agentic_workspace/contract_tooling.py",
+      "scripts/check/check_generated_command_packages.py",
+      "scripts/check/check_contract_tooling_surfaces.py",
+      "tests/test_generated_command_package_proof_runner.py",
+      "tests/test_contract_tooling.py",
+      ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
+      ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      ".agentic-workspace/planning/state.toml",
+      ".agentic-workspace/planning/mutation-provenance.json"
+    ],
+    "completion_criteria": [
+      "Static proof rejects full Python completion while packages/command-generation/src contains product-specific executable runtime modules such as workspace_runtime_cli.py, planning_runtime_cli.py, or memory_runtime_cli.py; regenerated Python outputs provide the executable projection and black-box/Docker conformance passes."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane python-product-runtime-source-generation."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane python-product-runtime-source-generation.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "python-product-runtime-source-generation",
+      "status": "active",
+      "next_step": "Workspace, planning, and memory product-specific executable runtime modules are generated target output under generated/python from IR/contracts and codegen-owned primitives; packages/command-generation/src owns only generic generator, renderer, executor, schema, freshness, and conformance machinery.",
+      "proof": "Runtime projection inventory slice is proved by generated command package static proof, focused proof-runner and contract tests, contract tooling, structured inventory, and ruff."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/contracts/python_runtime_projection_inventory.json",
+        "src/agentic_workspace/contracts/schemas/python_runtime_projection_inventory.schema.json",
+        "src/agentic_workspace/contracts/python_contract_consumption.json",
+        "src/agentic_workspace/contract_tooling.py",
+        "scripts/check/check_generated_command_packages.py",
+        "scripts/check/check_contract_tooling_surfaces.py",
+        "tests/test_generated_command_package_proof_runner.py",
+        "tests/test_contract_tooling.py",
+        ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
+        ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/mutation-provenance.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane python-product-runtime-source-generation.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Python product runtime source generation",
+    "inferred intended outcome": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane python-product-runtime-source-generation.",
+    "chosen concrete what": "Workspace, planning, and memory product-specific executable runtime modules are generated target output under generated/python from IR/contracts and codegen-owned primitives; packages/command-generation/src owns only generic generator, renderer, executor, schema, freshness, and conformance machinery.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Runtime projection inventory contract/schema, generated-package proof checks, contract tooling surfaces, focused tests, and planning state for this active lane.",
+    "max changed files": "About 12 files for the runtime projection inventory slice before the next implementation slice.",
+    "required validation commands": "uv run python scripts/check/check_generated_command_packages.py; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check selected files.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Workspace, planning, and memory product-specific executable runtime modules are generated target output under generated/python from IR/contracts and codegen-owned primitives; packages/command-generation/src owns only generic generator, renderer, executor, schema, freshness, and conformance machinery.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane python-product-runtime-source-generation.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "First runtime-provenance slice needs architecture judgment to avoid converting copied hand-owned runtime code into a false generated-ownership claim; delegate mechanical validation after the provenance model is encoded.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-15T08:24:16+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "label": "decomposition lane python-product-runtime-source-generation",
+      "role": "intake",
+      "locator": "candidate_lanes[6]"
+    }
+  ],
+  "active_milestone": {
+    "id": "python-product-runtime-source-generation",
+    "status": "active",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Workspace, planning, and memory product-specific executable runtime modules are generated target output under generated/python from IR/contracts and codegen-owned primitives; packages/command-generation/src owns only generic generator, renderer, executor, schema, freshness, and conformance machinery."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/python_runtime_projection_inventory.json",
+    "src/agentic_workspace/contracts/schemas/python_runtime_projection_inventory.schema.json",
+    "src/agentic_workspace/contracts/python_contract_consumption.json",
+    "src/agentic_workspace/contract_tooling.py",
+    "scripts/check/check_generated_command_packages.py",
+    "scripts/check/check_contract_tooling_surfaces.py",
+    "tests/test_generated_command_package_proof_runner.py",
+    "tests/test_contract_tooling.py",
+    ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
+    ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/mutation-provenance.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run ruff check scripts/check/check_generated_command_packages.py scripts/check/check_contract_tooling_surfaces.py tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py src/agentic_workspace/contract_tooling.py"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Static proof rejects full Python completion while packages/command-generation/src contains product-specific executable runtime modules such as workspace_runtime_cli.py, planning_runtime_cli.py, or memory_runtime_cli.py; regenerated Python outputs provide the executable projection and black-box/Docker conformance passes."
+  ],
+  "execution_run": {
+    "run status": "partial",
+    "executor": "Codex",
+    "handoff source": "agentic-planning promote-to-plan decomposition lane",
+    "what happened": "Added python_runtime_projection_inventory as a schema-backed contract that inventories the six generated/python runtime and operation executor files as transitional generated-output debt, wires it through contract tooling, and teaches generated-package proof to reject full completion while any entry remains blocking or is falsely marked rendered.",
+    "scope touched": "Runtime projection inventory contract/schema, generated package checker, contract tooling loader/surface check, focused tests, and planning recovery for #979 promote-to-plan schema drift.",
+    "changed surfaces": "src/agentic_workspace/contracts/python_runtime_projection_inventory.json; src/agentic_workspace/contracts/schemas/python_runtime_projection_inventory.schema.json; src/agentic_workspace/contracts/python_contract_consumption.json; src/agentic_workspace/contract_tooling.py; scripts/check/check_generated_command_packages.py; scripts/check/check_contract_tooling_surfaces.py; tests/test_generated_command_package_proof_runner.py; tests/test_contract_tooling.py; planning surfaces.",
+    "validations run": "uv run python scripts/check/check_generated_command_packages.py; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check selected files.",
+    "result for continuation": "The runtime projection debt is explicit and blocks false full-completion claims; continue by converting operation executor/runtime behavior from transitional debt into command-generation rendered outputs backed by IR/primitives.",
+    "next step": "Start the first real generation-ownership slice: select the smallest runtime/executor artifact whose behavior can be rendered mechanically without copying hand-maintained product code, then regenerate and prove it."
+  },
+  "finished_run_review": {
+    "review status": "pending",
+    "scope respected": "pending",
+    "proof status": "partial",
+    "intent served": "partial",
+    "config compliance": "pending",
+    "misinterpretation risk": "pending",
+    "follow-on decision": "continue current active lane; do not archive"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "First runtime-provenance slice needs architecture judgment to avoid converting copied hand-owned runtime code into a false generated-ownership claim; delegate mechanical validation after the provenance model is encoded.",
+    "expected savings": "unknown",
+    "actual friction": "pending",
+    "proof result": "partial proof passed",
+    "quality concern": "Generator-produced output must not mask hand-maintained executable runtime files as full #892 completion.",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "uv run python scripts/check/check_generated_command_packages.py; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check selected files.",
+    "proof achieved now": "partial",
+    "evidence for \"proof achieved\" state": "Runtime projection inventory is schema-backed, contract-tooling validated, covered by focused tests, and consumed by generated-package proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane python-product-runtime-source-generation.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "The slice prevents false completion by making product runtime projection debt explicit; it does not yet generate those files from command-generation.",
+    "unsolved intent passed to": "current active execplan python-product-runtime-source-generation"
+  },
+  "execution_summary": {
+    "outcome delivered": "Runtime projection debt is explicit and proof-enforced; full lane remains open.",
+    "validation confirmed": "focused static proof, contract tests, contract tooling, structured inventory, and ruff passed",
+    "follow-on routed to": "current active execplan python-product-runtime-source-generation",
+    "post-work posterity capture": "pending",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "current milestone"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "pending",
+    "larger-intent status": "pending",
+    "closure decision": "pending",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "",
+    "evidence carried forward": "",
+    "reopen trigger": ""
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-15: Scaffolded by agentic-planning promote-to-plan from decomposition lane python-product-runtime-source-generation.",
+    "2026-05-15: Recorded delegation decision route=keep-local.",
+    "2026-05-15: Added schema-backed python_runtime_projection_inventory to distinguish generated/python placement from generated ownership; full completion remains blocked while entries are transitional-generated-output-debt."
+  ]
+}
