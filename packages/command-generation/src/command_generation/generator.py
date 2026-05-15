@@ -195,6 +195,13 @@ def _python_command_module(
     source_path: str,
     regenerate_command: str,
 ) -> str:
+    if _is_memory_list_skills_direct_projection(package, operation_id):
+        return _python_memory_list_skills_command_module(
+            package,
+            operation_id,
+            source_path=source_path,
+            regenerate_command=regenerate_command,
+        )
     operation_executor = _operation_executor_binding(package)
     direct_handlers = {
         str(handler["operation_id"]): handler for handler in binding.get("runtime_module_handlers", []) if isinstance(handler, dict)
@@ -222,6 +229,107 @@ def _python_command_module(
         "from ..cli import generated_operation_contract\n"
         f"from ..{executor_module} import run_operation_ir\n\n\n"
         "def run(args: argparse.Namespace) -> int:\n" + run_body
+    )
+
+
+def _is_memory_list_skills_direct_projection(package: dict[str, Any], operation_id: str) -> bool:
+    return package.get("id") == "memory-bootstrap" and operation_id == "memory.list-skills.report"
+
+
+def _python_memory_list_skills_command_module(
+    package: dict[str, Any],
+    operation_id: str,
+    *,
+    source_path: str,
+    regenerate_command: str,
+) -> str:
+    return (
+        '"""Generated executable command projection.\n\n'
+        f"Source: {source_path}\n"
+        f"Program: {package['program']}\n"
+        f"Operation: {operation_id}\n"
+        f"Regenerate with: {regenerate_command}\n"
+        '"""\n\n'
+        "from __future__ import annotations\n\n"
+        "import argparse\n"
+        "import json\n"
+        "from pathlib import Path\n"
+        "from typing import Any\n\n"
+        "# DO NOT EDIT DIRECTLY.\n"
+        f"# Command behavior changes belong in {source_path} and the referenced operation contract.\n"
+        f"# Regenerate with: {regenerate_command}\n\n\n"
+        "def _skills_root() -> Path:\n"
+        "    for parent in Path(__file__).resolve().parents:\n"
+        "        for candidate in (parent / '_skills', parent / 'packages' / 'memory' / 'skills'):\n"
+        "            if (candidate / 'REGISTRY.json').is_file():\n"
+        "                return candidate\n"
+        "    raise FileNotFoundError('Bundled memory skill registry is not available.')\n\n\n"
+        "def _read_json_resource(root: Path, relative_path: str) -> dict[str, Any]:\n"
+        "    payload = json.loads((root / relative_path).read_text(encoding='utf-8'))\n"
+        "    if not isinstance(payload, dict):\n"
+        "        raise RuntimeError(f'{relative_path} must parse to an object')\n"
+        "    return payload\n\n\n"
+        "def _action_for_skill(skill: dict[str, Any], skills_root: Path) -> dict[str, str]:\n"
+        "    skill_id = str(skill.get('id', '')).strip()\n"
+        "    relative = Path(str(skill.get('path', '')).strip())\n"
+        "    return {\n"
+        "        'kind': 'bundled skill',\n"
+        "        'path': (skills_root / relative.parent).relative_to(skills_root).as_posix(),\n"
+        "        'detail': 'registered packaged product skill',\n"
+        "        'role': 'skill',\n"
+        "        'safety': 'safe',\n"
+        "        'source': skill_id,\n"
+        "        'category': 'safe-update',\n"
+        "        'remediation_kind': '',\n"
+        "        'remediation_target': '',\n"
+        "        'remediation_reason': '',\n"
+        "        'remediation_confidence': '',\n"
+        "        'memory_action': '',\n"
+        "        'match_source': '',\n"
+        "    }\n\n\n"
+        "def _assemble_payload(registry: dict[str, Any], skills_root: Path) -> dict[str, Any]:\n"
+        "    actions = []\n"
+        "    for skill in registry.get('skills', []):\n"
+        "        if not isinstance(skill, dict):\n"
+        "            continue\n"
+        "        if not str(skill.get('id', '')).strip() or not str(skill.get('path', '')).strip():\n"
+        "            continue\n"
+        "        actions.append(_action_for_skill(skill, skills_root))\n"
+        "    return {\n"
+        "        'target_root': str(skills_root),\n"
+        "        'dry_run': True,\n"
+        "        'mode': 'skills',\n"
+        "        'message': 'Bundled skills',\n"
+        "        'detected_version': None,\n"
+        "        'bootstrap_version': registry.get('bootstrap_version'),\n"
+        "        'actions': actions,\n"
+        "        'route_summary': {},\n"
+        "        'missing_note_hint': '',\n"
+        "        'review_summary': {},\n"
+        "        'review_cases': [],\n"
+        "        'sync_summary': {},\n"
+        "        'route_report_summary': {},\n"
+        "        'route_report_feedback_cases': [],\n"
+        "        'route_report_fixture_results': [],\n"
+        "    }\n\n\n"
+        "def _emit_output(payload: dict[str, Any], output_format: str) -> None:\n"
+        "    if output_format == 'json':\n"
+        "        print(json.dumps(payload, indent=2))\n"
+        "        return\n"
+        "    print(f\"Target: {payload['target_root']}\")\n"
+        "    print(str(payload['message']))\n"
+        "    print(f\"Detected version: none (payload version {payload['bootstrap_version']})\")\n"
+        "    for action in payload['actions']:\n"
+        "        print(\n"
+        "            f\"- {action['kind']}: {action['path']} \"\n"
+        "            f\"({action['detail']}; role={action['role']}; safety={action['safety']}; category={action['category']})\"\n"
+        "        )\n\n\n"
+        "def run(args: argparse.Namespace) -> int:\n"
+        "    skills_root = _skills_root()\n"
+        "    registry = _read_json_resource(skills_root, 'REGISTRY.json')\n"
+        "    payload = _assemble_payload(registry, skills_root)\n"
+        "    _emit_output(payload, str(getattr(args, 'format', 'text') or 'text'))\n"
+        "    return 0\n"
     )
 
 

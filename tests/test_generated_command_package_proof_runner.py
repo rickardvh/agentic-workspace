@@ -139,6 +139,14 @@ def test_current_python_completion_state_is_not_full_while_runtime_source_remain
     assert ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] == "pending"
 
 
+def test_memory_list_skills_is_direct_generated_python_projection() -> None:
+    checker = _load_checker()
+
+    errors = checker._validate_direct_generated_python_command_projection()
+
+    assert errors == []
+
+
 def test_generated_python_conformance_classifies_native_crashes(monkeypatch) -> None:
     checker = _load_checker()
     registries, errors = checker._adapter_conformance_cases_by_package()

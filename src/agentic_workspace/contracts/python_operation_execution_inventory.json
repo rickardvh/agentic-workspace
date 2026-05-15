@@ -463,10 +463,9 @@
       "command": "list-skills",
       "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.list-skills.report.json",
-      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "generated/memory/python/commands/memory_list_skills_report.py",
       "hand_owned_runtime_code": [
-        "codegen-owned filesystem read and JSON parse primitives",
-        "module-result emission mechanics"
+        "none; generated command projection composes package-resource JSON read, payload assembly, and output emission directly"
       ],
       "status": "portable-codegen-primitive-executed",
       "conformance_ref": "memory.list-skills.process",

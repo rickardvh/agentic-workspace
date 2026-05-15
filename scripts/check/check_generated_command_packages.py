@@ -1174,6 +1174,43 @@ def _generated_command_module_package_runtime_imports() -> list[str]:
     return findings
 
 
+def _validate_direct_generated_python_command_projection() -> list[str]:
+    errors: list[str] = []
+    direct_commands = {
+        "memory.list-skills.report": REPO_ROOT / "generated" / "memory" / "python" / "commands" / "memory_list_skills_report.py",
+    }
+    forbidden_fragments = (
+        "generated_operation_contract",
+        "run_operation_ir",
+        "command_generation.primitive_executor",
+        "repo_memory_bootstrap.runtime_primitives",
+    )
+    required_fragments = (
+        "def _read_json_resource(",
+        "def _assemble_payload(",
+        "def _emit_output(",
+        "_read_json_resource(skills_root, 'REGISTRY.json')",
+    )
+    for operation_id, path in direct_commands.items():
+        if not path.is_file():
+            errors.append(f"{path.relative_to(REPO_ROOT).as_posix()} is missing for direct generated command {operation_id}")
+            continue
+        text = path.read_text(encoding="utf-8")
+        for fragment in forbidden_fragments:
+            if fragment in text:
+                errors.append(
+                    f"{path.relative_to(REPO_ROOT).as_posix()} direct generated command {operation_id} "
+                    f"must not contain {fragment!r}"
+                )
+        for fragment in required_fragments:
+            if fragment not in text:
+                errors.append(
+                    f"{path.relative_to(REPO_ROOT).as_posix()} direct generated command {operation_id} "
+                    f"must contain concrete primitive fragment {fragment!r}"
+                )
+    return errors
+
+
 def _validate_python_runtime_projection_inventory(*, full_completion: bool) -> list[str]:
     errors: list[str] = []
     try:
@@ -1438,6 +1475,9 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         "system-intent.sync",
     }
     portable_primitive_operations = {"memory.list-files.report", "memory.list-skills.report"}
+    expected_primitive_executors = {
+        "memory.list-skills.report": "generated/memory/python/commands/memory_list_skills_report.py",
+    }
     for operation_id in sorted(ir_consumed_operations):
         entry = by_operation.get(operation_id)
         if not isinstance(entry, dict):
@@ -1451,8 +1491,12 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         )
         if entry.get("status") != expected_status:
             errors.append(f"{operation_id} must be marked {expected_status} in python_operation_execution_inventory.json")
-        if entry.get("primitive_executor") != "packages/command-generation/src/command_generation/primitive_executor.py":
-            errors.append(f"{operation_id} must point at the codegen-owned Python primitive executor")
+        expected_primitive_executor = expected_primitive_executors.get(
+            operation_id,
+            "packages/command-generation/src/command_generation/primitive_executor.py",
+        )
+        if entry.get("primitive_executor") != expected_primitive_executor:
+            errors.append(f"{operation_id} must point at {expected_primitive_executor}")
         if entry.get("operation_contract") != operation_contract:
             errors.append(f"{operation_id} must point at {operation_contract}")
 
@@ -1513,7 +1557,6 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
     for module_name in (
         "memory_doctor_report",
         "memory_list_files_report",
-        "memory_list_skills_report",
         "memory_promotion_report_report",
         "memory_report_report",
         "memory_route_report_report",
@@ -2132,6 +2175,7 @@ def _validate_static_surfaces() -> list[str]:
                 errors.append(f"{relative_path} does not route generated Python adapters through generated command modules")
         errors.extend(_validate_python_shipped_source_executable_retirement())
         errors.extend(_validate_python_runtime_handler_boundary())
+        errors.extend(_validate_direct_generated_python_command_projection())
         errors.extend(_validate_generated_python_commands_absent_from_handwritten_parsers())
         errors.extend(_validate_generated_cli_compatibility_vocabulary())
         forbidden_generated_entrypoints = [

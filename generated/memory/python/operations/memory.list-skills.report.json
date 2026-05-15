@@ -25,10 +25,10 @@
   ],
   "ir_plan": {
     "portability_notes": [
-      "Target executors can implement this representative plan with package-resource file reads, JSON parsing, and payload assembly.",
-      "Generated command adapters consume this operation contract directly for list-skills; remaining report commands stay on compatibility runtime handlers until promoted."
+      "Target executors can implement this complete plan with package-resource file reads, JSON parsing, payload assembly, and output emission.",
+      "The generated Python command projection composes these primitive operations directly; remaining report commands stay on runtime-consumed operation execution until promoted."
     ],
-    "status": "representative",
+    "status": "complete",
     "steps": [
       {
         "arguments": {
@@ -62,6 +62,7 @@
         "arguments": {
           "fields": {
             "actions_from": "registry.skills",
+            "bootstrap_version_from": "registry.bootstrap_version",
             "dry_run": true,
             "message": "Bundled skills",
             "mode": "skills"
@@ -89,7 +90,7 @@
         "uses": "output.emit"
       }
     ],
-    "summary": "Representative target-executor IR for a read-only package-resource command that loads a JSON registry and emits module-result output."
+    "summary": "Complete target-executor IR for a read-only package-resource command that loads a JSON registry and emits module-result output."
   },
   "locality": {
     "network": "forbidden",

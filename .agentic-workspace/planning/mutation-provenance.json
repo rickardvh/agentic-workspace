@@ -2,62 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "9005c47e51a048285f67be2d08c5623a570981c505b03f40bcb8dcdabd5fff91",
-      "command": "agentic-planning record-recovery",
-      "reason": "Removed completed corrective demotion TODO reference so execplan can be archived instead of deleted by close-item.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T16:35:48+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/archive/python-codegen-demote-after-clarification.plan.json",
-      "sha256": "d50911ced46307210ad606eaa1ec542323efc0cce0e4ff520b9bec5d73edb8bd",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-codegen-demote-after-clarification",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T16:35:48+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-codegen-owned-primitive-executor-migration.plan.json",
-      "sha256": "a0b5f21fde026bd013723e868bdd4c6311061a258fb0e1422328af7a3dc835d7",
-      "command": "agentic-planning promote-to-plan",
-      "reason": "promote decomposition lane python-codegen-owned-primitive-executor-migration",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T16:53:15+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "2f2a05c01de0342663ed81fc37efe5a25f9f935dd48872917968f0e673b1f324",
-      "command": "agentic-planning promote-to-plan",
-      "reason": "promote decomposition lane python-codegen-owned-primitive-executor-migration",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T16:53:15+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
-      "sha256": "39215b323c9f39a8250b42e6053d16741b8f43968088388790ad7c70db2811cc",
-      "command": "agentic-planning promote-to-plan",
-      "reason": "promote decomposition lane python-codegen-owned-primitive-executor-migration",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T16:53:15+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
-      "sha256": "b9b63b7ac0bc2a631744dd8c3458aea93aebeb33325e51bb2f9f078780fe5386",
-      "command": "agentic-planning record-recovery",
-      "reason": "Removed promote-to-plan schema drift and avoided slash-like prose path after lane promotion.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T16:54:14+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-codegen-owned-primitive-executor-migration.plan.json",
-      "sha256": "55e188acf2836857e71ccbdd272af17a71ddada916d28384c52674d4c36b14fb",
-      "command": "agentic-planning record-recovery",
-      "reason": "Tightened primitive executor migration execplan with bounded representative slice and validation.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T16:54:14+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/execplans/python-codegen-owned-primitive-executor-migration.plan.json",
       "sha256": "346ff5da7b12b36d0396e0a68612519f3a77e53efdfdc2172e07a54e23818984",
       "command": "agentic-planning record-recovery",
@@ -1600,6 +1544,62 @@
       "reason": "Recorded the #892 honest completion gate demotion and continuation after the completion-gate slice.",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-15T21:56:57+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-memory-list-skills-concrete-command.plan.json",
+      "sha256": "01303dfd1aee046b1675e8903f2f78a995795030069f14907649f609c1fada7b",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-memory-list-skills-concrete-command",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T21:57:33+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8d4a0131ad377b4e01fc28ab7864a71d73d96b14fb6e03740115847ca7420d96",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-memory-list-skills-concrete-command",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T21:57:33+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-memory-list-skills-concrete-command.plan.json",
+      "sha256": "48e45f1a3f2ee619213d0ade89523b8d615726589174522245afc7c6783580a4",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=delegate-exploration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T21:57:39+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-memory-list-skills-concrete-command.plan.json",
+      "sha256": "33c33f590441d1b5a42c93260a8bb5f28e70beb2d980401026ea6b8bd320a1bd",
+      "command": "agentic-planning record-recovery",
+      "reason": "Tightened and closed the #892 memory.list-skills direct generated command projection plan after implementation.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-15T22:06:10+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "ff1fd438a46cc4ddf43e1ced78a0b9614a55dd1f3be9fa55aa773986803d52cc",
+      "command": "agentic-planning record-recovery",
+      "reason": "Recorded memory.list-skills as the first concrete generated Python command projection in the #892 decomposition.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-15T22:06:10+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-memory-list-skills-concrete-command",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T22:06:21+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/python-memory-list-skills-concrete-command.plan.json",
+      "sha256": "9822cb60289dddededc65f08b08962425149953ad68ff30bd3ff832b9b9d0705",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-memory-list-skills-concrete-command",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T22:06:21+00:00"
     }
   ]
 }
