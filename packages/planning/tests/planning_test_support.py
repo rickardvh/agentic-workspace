@@ -35,7 +35,7 @@ from repo_planning_bootstrap.installer import (
     verify_payload,
 )
 
-planning_cli = load_generated_cli_module_for_entrypoint("agentic-planning", "planning_runtime_cli")
+planning_cli = load_generated_cli_module_for_entrypoint("agentic-planning", "cli.py")
 
 
 def _write(path: Path, text: str) -> None:

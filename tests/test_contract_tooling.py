@@ -4,6 +4,7 @@ import argparse
 import copy
 import importlib.util
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -568,6 +569,8 @@ def test_generated_command_package_check_surface_is_current() -> None:
 
 
 def test_generated_command_package_adapter_conformance_check_passes() -> None:
+    if os.environ.get("PYTEST_XDIST_WORKER"):
+        pytest.skip("run generated adapter conformance as an explicit proof command outside the broad xdist suite")
     script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_generated_command_packages.py"
     spec = importlib.util.spec_from_file_location("check_generated_command_packages", script_path)
     assert spec is not None and spec.loader is not None
@@ -873,21 +876,22 @@ def test_command_package_generator_renders_planning_runtime_module_from_binding(
     )
     rendered = {str(output.path.relative_to(repo_root)).replace("\\", "/"): output.content for output in outputs}
 
-    assert "generated/python/planning-cli/generated_cli_package/planning_runtime_cli.py" in rendered
-    planning_runtime = rendered["generated/python/planning-cli/generated_cli_package/planning_runtime_cli.py"]
-    assert "Runtime handler changes belong in src/agentic_workspace/contracts/command_package_ir.json." in planning_runtime
-    assert "def _run_planning_status_report_adapter" in planning_runtime
-    assert "'planning.status.report': _run_planning_status_report_adapter" in planning_runtime
-    assert "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py" in rendered
-    workspace_runtime = rendered["generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py"]
-    assert "Runtime handler changes belong in src/agentic_workspace/contracts/command_package_ir.json." in workspace_runtime
-    assert "def _run_status_report_adapter" in workspace_runtime
-    assert "'status.report': _run_status_report_adapter" in workspace_runtime
-    assert "generated/python/memory-cli/generated_cli_package/memory_runtime_cli.py" in rendered
-    memory_runtime = rendered["generated/python/memory-cli/generated_cli_package/memory_runtime_cli.py"]
-    assert "Runtime handler changes belong in src/agentic_workspace/contracts/command_package_ir.json." in memory_runtime
-    assert "def _run_memory_status_report_adapter" in memory_runtime
-    assert "'memory.status.report': _run_memory_status_report_adapter" in memory_runtime
+    assert "generated/planning/python/cli.py" in rendered
+    assert "generated/planning/python/commands/planning_status_report.py" in rendered
+    planning_command = rendered["generated/planning/python/commands/planning_status_report.py"]
+    assert "Command behavior changes belong in src/agentic_workspace/contracts/command_package_ir.json" in planning_command
+    assert "run_operation_ir(generated_operation_contract('planning.status.report'), args)" in planning_command
+    assert "generated/workspace/python/cli.py" in rendered
+    assert "generated/workspace/python/commands/status_report.py" in rendered
+    workspace_command = rendered["generated/workspace/python/commands/status_report.py"]
+    assert "Command behavior changes belong in src/agentic_workspace/contracts/command_package_ir.json" in workspace_command
+    assert "from agentic_workspace.workspace_runtime_primitives import" in workspace_command
+    assert "return _run_" in workspace_command
+    assert "generated/memory/python/cli.py" in rendered
+    assert "generated/memory/python/commands/memory_status_report.py" in rendered
+    memory_command = rendered["generated/memory/python/commands/memory_status_report.py"]
+    assert "Command behavior changes belong in src/agentic_workspace/contracts/command_package_ir.json" in memory_command
+    assert "run_operation_ir(generated_operation_contract('memory.status.report'), args)" in memory_command
 
 
 def test_generated_python_module_collects_nested_operation_refs(tmp_path: Path) -> None:
@@ -1035,7 +1039,7 @@ def test_generated_python_command_package_metadata_is_current() -> None:
     target_kinds = {target["kind"] for target in GENERATED_COMMAND_PACKAGE["targets"]}
     assert {"python", "typescript", "bash", "powershell"} <= target_kinds
     python_target = next(target for target in GENERATED_COMMAND_PACKAGE["targets"] if target["kind"] == "python")
-    assert python_target["generated_root"] == "generated/python/workspace-cli"
+    assert python_target["generated_root"] == "generated/workspace/python"
     assert python_target["maturity_level_ref"] == "mutation-capable-adapter"
     assert python_target["generation_status"] == "mutation-capable-adapter"
     assert generated_maturity() == {
@@ -1349,7 +1353,7 @@ def test_generated_typescript_package_adapters_are_runnable() -> None:
 
 
 def test_generated_command_adapter_metadata_routes_direct_edits_to_authoritative_sources() -> None:
-    generated_path = Path(__file__).resolve().parents[1] / "generated" / "python" / "workspace-cli" / "generated_command_adapters.json"
+    generated_path = Path(__file__).resolve().parents[1] / "generated" / "workspace" / "python" / "generated_command_adapters.json"
     generated_text = generated_path.read_text(encoding="utf-8")
     generated_payload = json.loads(generated_text)
 
@@ -1370,7 +1374,7 @@ def test_python_runtime_boundary_declares_root_cli_authority_audit() -> None:
     boundaries = {item["id"]: item for item in manifest["boundaries"]}
     assert boundaries["report-router-rendering"]["owner_modules"] == [
         "agentic_workspace.reporting_support",
-        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
+        "generated/workspace/python/cli.py",
     ]
     assert boundaries["report-router-rendering"]["classification"] == "operation-contract-covered"
     statuses = {item["status"] for item in audit["current_audit"]}
@@ -1395,41 +1399,26 @@ def test_python_runtime_projection_inventory_tracks_generated_output_debt() -> N
     entries = {entry["path"]: entry for entry in manifest["entries"]}
 
     assert set(entries) == {
-        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
-        "generated/python/workspace-cli/generated_cli_package/workspace_operation_ir_executor.py",
-        "generated/python/planning-cli/generated_cli_package/planning_runtime_cli.py",
-        "generated/python/planning-cli/generated_cli_package/planning_operation_ir_executor.py",
-        "generated/python/memory-cli/generated_cli_package/memory_runtime_cli.py",
-        "generated/python/memory-cli/generated_cli_package/memory_operation_ir_executor.py",
+        "generated/workspace/python/cli.py",
+        "generated/workspace/python/operation_executor.py",
+        "generated/planning/python/cli.py",
+        "generated/planning/python/operation_executor.py",
+        "generated/memory/python/cli.py",
+        "generated/memory/python/operation_executor.py",
     }
-    assert (
-        entries["generated/python/workspace-cli/generated_cli_package/workspace_operation_ir_executor.py"]["provenance_status"]
-        == "rendered-by-command-generation"
-    )
-    assert (
-        entries["generated/python/workspace-cli/generated_cli_package/workspace_operation_ir_executor.py"]["blocking_full_completion"]
-        is False
-    )
-    assert (
-        entries["generated/python/planning-cli/generated_cli_package/planning_operation_ir_executor.py"]["provenance_status"]
-        == "rendered-by-command-generation"
-    )
-    assert (
-        entries["generated/python/planning-cli/generated_cli_package/planning_operation_ir_executor.py"]["blocking_full_completion"]
-        is False
-    )
-    assert (
-        entries["generated/python/memory-cli/generated_cli_package/memory_operation_ir_executor.py"]["provenance_status"]
-        == "rendered-by-command-generation"
-    )
-    assert entries["generated/python/memory-cli/generated_cli_package/memory_operation_ir_executor.py"]["blocking_full_completion"] is False
+    assert entries["generated/workspace/python/operation_executor.py"]["provenance_status"] == "rendered-by-command-generation"
+    assert entries["generated/workspace/python/operation_executor.py"]["blocking_full_completion"] is False
+    assert entries["generated/planning/python/operation_executor.py"]["provenance_status"] == "rendered-by-command-generation"
+    assert entries["generated/planning/python/operation_executor.py"]["blocking_full_completion"] is False
+    assert entries["generated/memory/python/operation_executor.py"]["provenance_status"] == "rendered-by-command-generation"
+    assert entries["generated/memory/python/operation_executor.py"]["blocking_full_completion"] is False
     rendered_entries = {
-        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
-        "generated/python/workspace-cli/generated_cli_package/workspace_operation_ir_executor.py",
-        "generated/python/planning-cli/generated_cli_package/planning_runtime_cli.py",
-        "generated/python/planning-cli/generated_cli_package/planning_operation_ir_executor.py",
-        "generated/python/memory-cli/generated_cli_package/memory_runtime_cli.py",
-        "generated/python/memory-cli/generated_cli_package/memory_operation_ir_executor.py",
+        "generated/workspace/python/cli.py",
+        "generated/workspace/python/operation_executor.py",
+        "generated/planning/python/cli.py",
+        "generated/planning/python/operation_executor.py",
+        "generated/memory/python/cli.py",
+        "generated/memory/python/operation_executor.py",
     }
     transitional_entries = [entry for entry in entries.values() if entry["path"] not in rendered_entries]
     assert transitional_entries == []

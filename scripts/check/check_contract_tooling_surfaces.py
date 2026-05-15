@@ -45,7 +45,7 @@ from agentic_workspace.contract_tooling import (
 )
 from command_generation.generated_package_loader import load_generated_cli_module_for_entrypoint, load_generated_cli_package_for_entrypoint
 
-cli = load_generated_cli_module_for_entrypoint("agentic-workspace", "workspace_runtime_cli")
+cli = load_generated_cli_module_for_entrypoint("agentic-workspace", "cli.py")
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -207,7 +207,7 @@ def _sample_setup_findings_payload() -> dict[str, object]:
                 "class": "repo_friction_evidence",
                 "summary": "Large shared workspace CLI surface is still a hotspot.",
                 "confidence": 0.91,
-                "path": "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
+                "path": "generated/workspace/python/cli.py",
                 "refs": [".agentic-workspace/docs/reporting-contract.md"],
                 "why": "Would reduce rediscovery during later repo work.",
             },
@@ -254,7 +254,7 @@ def _sample_startup_context_payload() -> dict[str, object]:
         (target / ".git").mkdir(exist_ok=True)
         return cli._start_payload(  # type: ignore[attr-defined]
             target_root=target,
-            changed_paths=["generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py"],
+            changed_paths=["generated/workspace/python/cli.py"],
         )
 
 
@@ -267,7 +267,7 @@ def _sample_implementer_context_payload() -> dict[str, object]:
             target_root=target,
             changed_paths=[
                 "packages/planning/bootstrap/repo_planning_bootstrap/installer.py",
-                "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
+                "generated/workspace/python/cli.py",
             ],
         )
 
@@ -1276,9 +1276,9 @@ def _program_parser(program: str) -> argparse.ArgumentParser | None:
     if program == "agentic-workspace":
         return cli.build_parser()
     if program == "agentic-planning":
-        return load_generated_cli_module_for_entrypoint("agentic-planning", "planning_runtime_cli").build_parser()
+        return load_generated_cli_module_for_entrypoint("agentic-planning", "cli.py").build_parser()
     if program == "agentic-memory":
-        return load_generated_cli_module_for_entrypoint("agentic-memory", "memory_runtime_cli").build_parser()
+        return load_generated_cli_module_for_entrypoint("agentic-memory", "cli.py").build_parser()
     return None
 
 
@@ -2069,3 +2069,6 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+

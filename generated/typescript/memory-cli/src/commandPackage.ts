@@ -2816,7 +2816,7 @@ export const generatedCommandPackage = {
           "name": "prompt_command"
         }
       ],
-      "module_file": "memory_operation_ir_executor",
+      "module_file": "operation_executor",
       "supported_operation_ids": [
         "memory.doctor.report",
         "memory.install.lifecycle",
@@ -2858,14 +2858,14 @@ export const generatedCommandPackage = {
         "name": "_print_install_summary"
       }
     ],
-    "runtime_module_file": "memory_runtime_cli"
+    "runtime_module_file": "cli"
   },
   "targets": [
     {
       "entrypoints": [
         "agentic-memory"
       ],
-      "generated_root": "generated/python/memory-cli",
+      "generated_root": "generated/memory/python",
       "generation_status": "mutation-capable-adapter",
       "kind": "python",
       "maturity_level_ref": "mutation-capable-adapter",

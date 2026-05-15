@@ -100,15 +100,15 @@
   "generated_outputs": [
     {
       "program": "agentic-workspace",
-      "path": "generated/python/workspace-cli/generated_command_adapters.json"
+      "path": "generated/workspace/python/generated_command_adapters.json"
     },
     {
       "program": "agentic-planning",
-      "path": "generated/python/planning-cli/generated_command_adapters.json"
+      "path": "generated/planning/python/generated_command_adapters.json"
     },
     {
       "program": "agentic-memory",
-      "path": "generated/python/memory-cli/generated_command_adapters.json"
+      "path": "generated/memory/python/generated_command_adapters.json"
     }
   ],
   "package_surface_migration": {

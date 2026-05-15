@@ -102,16 +102,17 @@
       "id": "python-generated-cli-completion-promotion",
       "title": "Python generated CLI completion promotion",
       "readiness": "promoted",
-      "outcome": "Promote Python to full generated CLI completion only after the PR #966 review blockers prove generated ownership, not merely generated placement or IR wrapping.",
+      "outcome": "Promote Python to full generated CLI completion only after generated/<package>/python is the visible executable projection and generated_cli_package compatibility layout is gone.",
       "owner_surface": ".agentic-workspace/planning/execplans/python-generated-cli-completion-promotion.plan.json",
-      "proof": "Generated package static proof, Python Docker conformance, root CLI authority, clean package planning summary, and codegen-owned primitive executor conformance agree that original Python generated-CLI intent is satisfied.",
+      "proof": "Generated package static proof, Python Docker conformance, packaging proof, structured-file inventory, and layout audits agree that generated ownership is mechanically reproducible from contracts.",
       "depends_on": [
-        "python-runtime-handler-boundary",
+        "python-codegen-owned-primitive-executor-migration",
+        "python-generated-target-layout",
         "python-handwritten-parser-retirement",
         "python-interface-change-gate",
-        "python-codegen-owned-primitive-executor-migration",
         "python-module-source-executable-retirement",
-        "python-product-runtime-source-generation"
+        "python-product-runtime-source-generation",
+        "python-runtime-handler-boundary"
       ],
       "parallel_with": []
     },
@@ -125,6 +126,18 @@
       "depends_on": [
         "json-schema-operation-ir",
         "python-package-resource-operation-ir"
+      ],
+      "parallel_with": []
+    },
+    {
+      "id": "python-generated-target-layout",
+      "title": "Python generated target layout correction",
+      "readiness": "promoted",
+      "outcome": "Generated Python output uses generated/<package>/python with cli.py, commands/, primitives/, operations/, and resources; generated_cli_package compatibility layout is not the target completion shape.",
+      "owner_surface": ".agentic-workspace/planning/execplans/python-generated-target-layout.plan.json",
+      "proof": "Generated package proof, Docker conformance, packaging tests, and structured-file inventory prove command-generation reproduces the visible target projection and old generated_cli_package outputs are removed.",
+      "depends_on": [
+        "python-product-runtime-source-generation"
       ],
       "parallel_with": []
     }
@@ -146,7 +159,7 @@
     "Closeout must run or inspect closeout_trust before claiming Python completion.",
     "The command-package IR python_cli_completion.current_state may be full-generated-cli-complete only with a schema-backed python-only completion gate, static proof for all prerequisite evidence ids, codegen-owned primitive executor proof for generic deterministic behavior, and source-executable ownership proof that shipped module src no longer owns executable CLI/runtime implementation."
   ],
-  "promotion_rule": "Python lane remains incomplete until PR #966 review blockers are satisfied: generated runtime output provenance is proven, portable primitive execution is distinguished from domain runtime primitives via IR, root primitive execution is covered by console proof, and accepted hand-owned runtime has a reviewable audit.",
+  "promotion_rule": "Python lane remains incomplete until generated/<package>/python is the checked and shipped target projection, command-generation has no package-specific executable source, generated_cli_package compatibility output is removed, and Docker-backed conformance plus staged structured-file inventory pass.",
   "references": [
     {
       "kind": "github-issue",
@@ -179,5 +192,5 @@
       "role": "active package-resource operation IR slice"
     }
   ],
-  "notes": "Created after #921 showed that adapter maturity was incorrectly treated as Python generated-CLI completion. Updated after user clarification that non-Python generated CLI targets are not meant to depend implicitly on Python internals. #930 established the small JSON-Schema-backed operation IR boundary with memory.list-files.report as the representative portable command. #931 promoted memory.list-files to runtime-consumed operation IR and opened #933 for remaining command groups. #933 is closed for the previous migration slice: every generated Python operation id is inventoried as runtime-consumed or accepted-hand-owned-runtime-primitive, with compatibility-runtime-handler rejected. The 2026-05-14 #892 clarification sharpened the finish line: accepted hand-owned runtime primitives are transitional debt, not full generated CLI completion, when they contain generic deterministic file/data/schema/template/output behavior that should belong to codegen-owned primitive executors. Root, planning, and memory executable front doors were moved off package-local cli.py files and through generated_cli_entrypoint modules before the final source-executable retirement lane. #954 closed the root runtime dispatch and completion-contract blocker in the base branch via PR #956; that implementation was necessary progress but not sufficient for #892 completion. The Python-scoped #892 lane was corrected after product-specific runtime was briefly relocated into packages/command-generation/src. The final product-runtime source generation slice moved workspace/planning/memory runtime and operation executor implementations into generated/python package outputs, left command-generation with generic loader compatibility shims only, updated package force-includes, and promoted command_package_ir python_cli_completion to full-generated-cli-complete with completion_gate.state=satisfied after generated package proof, conformance, packaging, py_compile, and planning health checks passed. TypeScript generated-resource completion remains tracked separately by #929 and Bash/PowerShell remain out of scope until re-promoted. PR #966 review on 2026-05-15 demoted the completion claim: generated-output placement is not generated ownership, runtime-consumed is split into portable codegen primitive execution versus domain runtime primitives via IR, and accepted hand-owned runtime requires a compact audit before completion can be promoted again. The reopened product-runtime source-generation lane now has schema-backed runtime projection inventory: workspace_operation_ir_executor.py, planning_operation_ir_executor.py, and memory_operation_ir_executor.py are rendered by command-generation, while the workspace/planning/memory runtime modules remain blocking transitional debt until their behavior is generated from IR/contracts and codegen-owned primitives. Planning summary/reconcile are now generated operation resources and execute through planning_operation_ir_executor, reducing but not clearing planning_runtime_cli.py debt. Dogfooding follow-ups #987, #990, and #991 captured and fixed generated CLI container proof fragility from host Python bytecode caches, ambient terminal sizing, and legacy operation steps without executable ir_plan."
+  "notes": "Created after #921 showed that adapter maturity was incorrectly treated as Python generated-CLI completion. Updated after user clarification that non-Python generated CLI targets are not meant to depend implicitly on Python internals. #930 established the small JSON-Schema-backed operation IR boundary with memory.list-files.report as the representative portable command. #931 promoted memory.list-files to runtime-consumed operation IR and opened #933 for remaining command groups. #933 is closed for the previous migration slice: every generated Python operation id is inventoried as runtime-consumed or accepted-hand-owned-runtime-primitive, with compatibility-runtime-handler rejected. The 2026-05-14 #892 clarification sharpened the finish line: accepted hand-owned runtime primitives are transitional debt, not full generated CLI completion, when they contain generic deterministic file/data/schema/template/output behavior that should belong to codegen-owned primitive executors. Root, planning, and memory executable front doors were moved off package-local cli.py files and through generated_cli_entrypoint modules before the final source-executable retirement lane. #954 closed the root runtime dispatch and completion-contract blocker in the base branch via PR #956; that implementation was necessary progress but not sufficient for #892 completion. The Python-scoped #892 lane was corrected after product-specific runtime was briefly relocated into packages/command-generation/src. The final product-runtime source generation slice moved workspace/planning/memory runtime and operation executor implementations into generated/python package outputs, left command-generation with generic loader compatibility shims only, updated package force-includes, and promoted command_package_ir python_cli_completion to full-generated-cli-complete with completion_gate.state=satisfied after generated package proof, conformance, packaging, py_compile, and planning health checks passed. TypeScript generated-resource completion remains tracked separately by #929 and Bash/PowerShell remain out of scope until re-promoted. PR #966 review on 2026-05-15 demoted the completion claim: generated-output placement is not generated ownership, runtime-consumed is split into portable codegen primitive execution versus domain runtime primitives via IR, and accepted hand-owned runtime requires a compact audit before completion can be promoted again. The reopened product-runtime source-generation lane now has schema-backed runtime projection inventory: workspace_operation_ir_executor.py, planning_operation_ir_executor.py, and memory_operation_ir_executor.py are rendered by command-generation, while the workspace/planning/memory runtime modules remain blocking transitional debt until their behavior is generated from IR/contracts and codegen-owned primitives. Planning summary/reconcile are now generated operation resources and execute through planning_operation_ir_executor, reducing but not clearing planning_runtime_cli.py debt. Dogfooding follow-ups #987, #990, and #991 captured and fixed generated CLI container proof fragility from host Python bytecode caches, ambient terminal sizing, and legacy operation steps without executable ir_plan. On 2026-05-15 the target architecture was corrected again: generated placement under generated/python/*-cli/generated_cli_package was insufficient because the filesystem boundary did not make package truth, command-generation machinery, and disposable target projection obvious. The new promoted lane python-generated-target-layout owns moving Python output to generated/<package>/python with cli.py, commands/, primitives/, operations/, and resource files. The python-generated-target-layout lane completed on 2026-05-15: generated Python projections now live under generated/<package>/python, stale generated_cli_package target files were removed, and #996 captures the serial conformance proof dogfooding follow-up."
 }

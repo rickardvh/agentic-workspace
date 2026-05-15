@@ -343,23 +343,18 @@ def test_static_generated_package_proof_rejects_full_completion_when_generated_m
 
     def fake_read_text(self, *args, **kwargs):
         text = original_read_text(self, *args, **kwargs)
-        if self.as_posix().endswith("generated/python/workspace-cli/generated_cli_package/__init__.py"):
+        if self.as_posix().endswith("generated/workspace/python/cli.py"):
             return text.replace(
-                "    if supports_generated_command(argv_list):\n        return run_generated_command(argv_list, _run_runtime_handler)\n\n"
-                "    # Compatibility fallback for package commands that have not entered command_package_ir yet.\n"
-                "    return runtime_main(argv_list)\n",
-                "    return runtime_main(argv_list)\n",
-            ).replace(
                 "    if supports_generated_command(argv_list):\n"
                 "        try:\n"
-                "            return run_generated_command(argv_list, _run_runtime_handler)\n"
+                "            return run_generated_command(argv_list, _run_command_module)\n"
                 "        except Exception as exc:\n"
                 "            if exc.__class__.__name__.endswith('UsageError') or exc.__class__.__name__ == 'RepoDetectionError':\n"
                 "                build_generated_parser().error(str(exc))\n"
                 "            raise\n\n"
-                "    # Compatibility fallback for package commands that have not entered command_package_ir yet.\n"
-                "    return runtime_main(argv_list)\n",
-                "    return runtime_main(argv_list)\n",
+                "    build_generated_parser().parse_args(argv_list)\n"
+                "    return 0\n",
+                "    return 2\n",
             )
         return text
 
@@ -422,8 +417,7 @@ def test_static_generated_package_proof_rejects_full_completion_when_runtime_out
         return [
             output
             for output in original_render_outputs(manifest, repo_root=repo_root)
-            if output.path.relative_to(checker.REPO_ROOT).as_posix()
-            != "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py"
+            if output.path.relative_to(checker.REPO_ROOT).as_posix() != "generated/workspace/python/cli.py"
         ]
 
     monkeypatch.setattr(checker, "load_workspace_command_package_ir", lambda *, repo_root: ir)
@@ -554,25 +548,26 @@ def test_static_generated_package_proof_rejects_missing_primitive_conformance_ca
 
 def test_python_runtime_handler_boundary_rejects_non_adapter_handlers(monkeypatch) -> None:
     checker = _load_checker()
-    memory_cli = checker._generated_runtime_module_for_package("memory-bootstrap")
-    drifted_handlers = dict(memory_cli._GENERATED_RUNTIME_HANDLERS)
-    drifted_handlers["memory.status.report"] = memory_cli._build_agent_prompt
-    monkeypatch.setattr(memory_cli, "_GENERATED_RUNTIME_HANDLERS", drifted_handlers)
+    memory_generated = checker._generated_package_for_package("memory-bootstrap")
+    commands = checker.importlib.import_module(f"{memory_generated.__name__}.commands")
+    drifted_handlers = dict(commands.GENERATED_COMMAND_HANDLERS)
+    drifted_handlers["memory.status.report"] = memory_generated.build_parser
+    monkeypatch.setattr(commands, "GENERATED_COMMAND_HANDLERS", drifted_handlers)
 
     errors = checker._validate_python_runtime_handler_boundary()
 
-    assert any("memory.status.report" in error and "thin _run_*_adapter binding" in error for error in errors)
+    assert any("memory.status.report" in error and "generated command module run function" in error for error in errors)
 
 
 def test_python_runtime_import_boundary_rejects_legacy_generated_adapter_dispatch() -> None:
     checker = _load_checker()
     errors = checker._validate_no_legacy_generated_adapter_runtime_import(
-        relative_path="generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
+        relative_path="generated/workspace/python/cli.py",
         text="from agentic_workspace.generated_command_adapters import GENERATED_COMMAND_ADAPTERS_BY_COMMAND\n",
     )
 
     assert errors == [
-        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py must route generated Python commands through generated_cli_package, "
+        "generated/workspace/python/cli.py must route generated Python commands through generated_cli_package, "
         "not legacy generated_command_adapters runtime dispatch"
     ]
 

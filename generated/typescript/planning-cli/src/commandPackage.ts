@@ -2530,7 +2530,7 @@ export const generatedCommandPackage = {
           "name": "paths"
         }
       ],
-      "module_file": "planning_operation_ir_executor",
+      "module_file": "operation_executor",
       "supported_operation_ids": [
         "planning.adopt.lifecycle",
         "planning.archive-plan.lifecycle",
@@ -2578,14 +2578,14 @@ export const generatedCommandPackage = {
         "name": "_print_handoff"
       }
     ],
-    "runtime_module_file": "planning_runtime_cli"
+    "runtime_module_file": "cli"
   },
   "targets": [
     {
       "entrypoints": [
         "agentic-planning"
       ],
-      "generated_root": "generated/python/planning-cli",
+      "generated_root": "generated/planning/python",
       "generation_status": "mutation-capable-adapter",
       "kind": "python",
       "maturity_level_ref": "mutation-capable-adapter",

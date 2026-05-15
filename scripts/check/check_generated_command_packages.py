@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import importlib
 import io
 import json
 import os
@@ -154,32 +155,32 @@ PYTHON_FULL_COMPLETION_BLOCKING_EXECUTABLE_PATHS = (
     "packages/memory/src/repo_memory_bootstrap/operation_ir_executor.py",
 )
 PYTHON_REQUIRED_RUNTIME_PROJECTION_OUTPUTS = {
-    "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py": (
+    "generated/workspace/python/cli.py": (
         "root-workspace",
         "agentic-workspace",
-        "runtime-cli",
+        "cli-entrypoint",
     ),
-    "generated/python/workspace-cli/generated_cli_package/workspace_operation_ir_executor.py": (
+    "generated/workspace/python/operation_executor.py": (
         "root-workspace",
         "agentic-workspace",
         "operation-ir-executor",
     ),
-    "generated/python/planning-cli/generated_cli_package/planning_runtime_cli.py": (
+    "generated/planning/python/cli.py": (
         "planning-bootstrap",
         "agentic-planning",
-        "runtime-cli",
+        "cli-entrypoint",
     ),
-    "generated/python/planning-cli/generated_cli_package/planning_operation_ir_executor.py": (
+    "generated/planning/python/operation_executor.py": (
         "planning-bootstrap",
         "agentic-planning",
         "operation-ir-executor",
     ),
-    "generated/python/memory-cli/generated_cli_package/memory_runtime_cli.py": (
+    "generated/memory/python/cli.py": (
         "memory-bootstrap",
         "agentic-memory",
-        "runtime-cli",
+        "cli-entrypoint",
     ),
-    "generated/python/memory-cli/generated_cli_package/memory_operation_ir_executor.py": (
+    "generated/memory/python/operation_executor.py": (
         "memory-bootstrap",
         "agentic-memory",
         "operation-ir-executor",
@@ -225,12 +226,7 @@ def _entrypoint_for_package(package_id: str) -> str:
 
 
 def _runtime_module_file_for_package(package_id: str) -> str:
-    runtime_modules = {
-        "root-workspace": "workspace_runtime_cli",
-        "planning-bootstrap": "planning_runtime_cli",
-        "memory-bootstrap": "memory_runtime_cli",
-    }
-    return runtime_modules[package_id]
+    return "cli.py"
 
 
 def _generated_package_for_package(package_id: str):
@@ -814,21 +810,19 @@ def _validate_full_python_completion_runtime_ownership(ir: dict[str, object]) ->
 
     errors: list[str] = []
     generated_runtime_adapters = {
-        "generated/python/workspace-cli/generated_cli_package/__init__.py": "workspace_runtime_cli",
-        "generated/python/planning-cli/generated_cli_package/__init__.py": "planning_runtime_cli",
-        "generated/python/memory-cli/generated_cli_package/__init__.py": "memory_runtime_cli",
+        "generated/workspace/python/cli.py": "workspace",
+        "generated/planning/python/cli.py": "planning",
+        "generated/memory/python/cli.py": "memory",
     }
-    for relative_path, runtime_module in generated_runtime_adapters.items():
+    for relative_path in generated_runtime_adapters:
         text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
         required_fragments = [
-            "def _run_runtime_handler(",
-            f"from .{runtime_module} import _GENERATED_RUNTIME_HANDLERS",
+            "def _run_command_module(",
+            "from .commands import GENERATED_COMMAND_HANDLERS",
             "if argv_list and argv_list[0] in {'-h', '--help', '--version'}:",
             "build_generated_parser().parse_args(argv_list)",
             "if supports_generated_command(argv_list):",
-            "return run_generated_command(argv_list, _run_runtime_handler)",
-            "from ." + runtime_module + " import main as runtime_main",
-            "return runtime_main(argv_list)",
+            "return run_generated_command(argv_list, _run_command_module)",
         ]
         for fragment in required_fragments:
             if fragment not in text:
@@ -836,12 +830,10 @@ def _validate_full_python_completion_runtime_ownership(ir: dict[str, object]) ->
                     "command_package_ir.json cannot claim full Python generated CLI completion while "
                     f"{relative_path} is missing generated-main boundary fragment {fragment!r}"
                 )
-        generated_route_index = text.find("return run_generated_command(argv_list, _run_runtime_handler)")
-        fallback_index = text.find("return runtime_main(argv_list)")
-        if generated_route_index == -1 or fallback_index == -1 or generated_route_index > fallback_index:
+        if "return runtime_main(argv_list)" in text:
             errors.append(
                 "command_package_ir.json cannot claim full Python generated CLI completion while "
-                f"{relative_path} can reach runtime main before generated command dispatch"
+                f"{relative_path} contains compatibility runtime fallback dispatch"
             )
     return errors
 
@@ -1018,9 +1010,9 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
             continue
         package_id = str(package.get("id", ""))
         generated_transport = {
-            "root-workspace": "generated/python/workspace-cli/generated_cli_package/__init__.py",
-            "planning-bootstrap": "generated/python/planning-cli/generated_cli_package/__init__.py",
-            "memory-bootstrap": "generated/python/memory-cli/generated_cli_package/__init__.py",
+            "root-workspace": "generated/workspace/python/cli.py",
+            "planning-bootstrap": "generated/planning/python/cli.py",
+            "memory-bootstrap": "generated/memory/python/cli.py",
         }.get(package_id)
         for command in package.get("commands", []):
             if not isinstance(command, dict):
@@ -1209,76 +1201,63 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         except (ImportError, KeyError, FileNotFoundError, json.JSONDecodeError) as exc:
             errors.append(f"generated operation contract could not be loaded for {operation_id}: {exc}")
 
-    memory_operation_executor_text = (
-        REPO_ROOT / "generated" / "python" / "memory-cli" / "generated_cli_package" / "memory_operation_ir_executor.py"
-    ).read_text(encoding="utf-8")
+    memory_operation_executor_text = (REPO_ROOT / "generated" / "memory" / "python" / "operation_executor.py").read_text(
+        encoding="utf-8"
+    )
     if "from command_generation.primitive_executor import" not in memory_operation_executor_text:
         errors.append("memory operation IR executor must import the codegen-owned primitive executor")
     if "run_operation_steps(" not in memory_operation_executor_text:
         errors.append("memory operation IR executor must execute operation plans through codegen-owned run_operation_steps")
-    memory_cli_text = (REPO_ROOT / "generated" / "python" / "memory-cli" / "generated_cli_package" / "memory_runtime_cli.py").read_text(
+    for module_name in (
+        "memory_doctor_report",
+        "memory_list_files_report",
+        "memory_list_skills_report",
+        "memory_promotion_report_report",
+        "memory_report_report",
+        "memory_route_report_report",
+        "memory_status_report",
+    ):
+        command_text = (REPO_ROOT / "generated" / "memory" / "python" / "commands" / f"{module_name}.py").read_text(
+            encoding="utf-8"
+        )
+        if "run_operation_ir(" not in command_text:
+            errors.append(f"generated/memory/python/commands/{module_name}.py must execute operation IR through run_operation_ir")
+
+    planning_operation_executor_text = (REPO_ROOT / "generated" / "planning" / "python" / "operation_executor.py").read_text(
         encoding="utf-8"
     )
-    for function_name in (
-        "_run_memory_doctor_report_adapter",
-        "_run_memory_list_files_report_adapter",
-        "_run_memory_list_skills_report_adapter",
-        "_run_memory_promotion_report_report_adapter",
-        "_run_memory_report_report_adapter",
-        "_run_memory_route_report_report_adapter",
-        "_run_memory_status_report_adapter",
-    ):
-        function_index = memory_cli_text.find(f"def {function_name}")
-        next_function_index = memory_cli_text.find("\ndef ", function_index + 1)
-        function_text = memory_cli_text[function_index:next_function_index] if function_index != -1 else ""
-        if "run_operation_ir(" not in function_text:
-            errors.append(f"{function_name} must execute generated operation IR through run_operation_ir")
-
-    planning_operation_executor_text = (
-        REPO_ROOT / "generated" / "python" / "planning-cli" / "generated_cli_package" / "planning_operation_ir_executor.py"
-    ).read_text(encoding="utf-8")
     if "from command_generation.primitive_executor import" not in planning_operation_executor_text:
         errors.append("planning operation IR executor must import the codegen-owned primitive executor")
     if "run_operation_steps(" not in planning_operation_executor_text:
         errors.append("planning operation IR executor must execute operation plans through codegen-owned run_operation_steps")
-    planning_cli_text = (REPO_ROOT / "generated" / "python" / "planning-cli" / "generated_cli_package" / "planning_runtime_cli.py").read_text(
+    for module_name in ("planning_doctor_report", "planning_report_report", "planning_status_report"):
+        command_text = (REPO_ROOT / "generated" / "planning" / "python" / "commands" / f"{module_name}.py").read_text(
+            encoding="utf-8"
+        )
+        if "run_operation_ir(" not in command_text:
+            errors.append(f"generated/planning/python/commands/{module_name}.py must execute operation IR through run_operation_ir")
+
+    workspace_operation_executor_text = (REPO_ROOT / "generated" / "workspace" / "python" / "operation_executor.py").read_text(
         encoding="utf-8"
     )
-    for function_name in (
-        "_run_planning_doctor_report_adapter",
-        "_run_planning_report_report_adapter",
-        "_run_planning_status_report_adapter",
-    ):
-        function_index = planning_cli_text.find(f"def {function_name}")
-        next_function_index = planning_cli_text.find("\ndef ", function_index + 1)
-        function_text = planning_cli_text[function_index:next_function_index] if function_index != -1 else ""
-        if "run_operation_ir(" not in function_text:
-            errors.append(f"{function_name} must execute generated operation IR through run_operation_ir")
-
-    workspace_operation_executor_text = (
-        REPO_ROOT / "generated" / "python" / "workspace-cli" / "generated_cli_package" / "workspace_operation_ir_executor.py"
-    ).read_text(encoding="utf-8")
     if "from command_generation.primitive_executor import" not in workspace_operation_executor_text:
         errors.append("workspace operation IR executor must import the codegen-owned primitive executor")
     if "run_operation_steps(" not in workspace_operation_executor_text:
         errors.append("workspace operation IR executor must execute operation plans through codegen-owned run_operation_steps")
-    workspace_cli_text = (
-        REPO_ROOT / "generated" / "python" / "workspace-cli" / "generated_cli_package" / "workspace_runtime_cli.py"
-    ).read_text(encoding="utf-8")
-    for function_name in (
-        "_run_config_report_adapter",
-        "_run_defaults_report_adapter",
-        "_run_delegation_outcome_append_adapter",
-        "_run_prompt_init_adapter",
-        "_run_prompt_uninstall_adapter",
-        "_run_prompt_upgrade_adapter",
-        "_run_system_intent_sync_adapter",
+    for module_name in (
+        "config_report",
+        "defaults_report",
+        "delegation_outcome_append",
+        "prompt_init",
+        "prompt_uninstall",
+        "prompt_upgrade",
+        "system_intent_sync",
     ):
-        function_index = workspace_cli_text.find(f"def {function_name}")
-        next_function_index = workspace_cli_text.find("\ndef ", function_index + 1)
-        function_text = workspace_cli_text[function_index:next_function_index] if function_index != -1 else ""
-        if "run_operation_ir(" not in function_text:
-            errors.append(f"{function_name} must execute generated operation IR through run_operation_ir")
+        command_text = (REPO_ROOT / "generated" / "workspace" / "python" / "commands" / f"{module_name}.py").read_text(
+            encoding="utf-8"
+        )
+        if "run_operation_ir(" not in command_text:
+            errors.append(f"generated/workspace/python/commands/{module_name}.py must execute operation IR through run_operation_ir")
 
     python_completion = ir.get("generation_policy", {}).get("python_cli_completion", {})
     if isinstance(python_completion, dict) and python_completion.get("current_state") == "full-generated-cli-complete":
@@ -1315,21 +1294,21 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
 def _validate_python_runtime_handler_boundary() -> list[str]:
     errors: list[str] = []
     for package_id in ("root-workspace", "planning-bootstrap", "memory-bootstrap"):
-        runtime_module_name = f"{_entrypoint_for_package(package_id)}:{_runtime_module_file_for_package(package_id)}"
+        runtime_module_name = f"{_entrypoint_for_package(package_id)}:commands"
         try:
             generated_module = _generated_package_for_package(package_id)
-            runtime_module = _generated_runtime_module_for_package(package_id)
+            commands_module = importlib.import_module(f"{generated_module.__name__}.commands")
         except ImportError as exc:
-            errors.append(f"Python runtime handler boundary import failed for {package_id}: {exc}")
+            errors.append(f"Python command module boundary import failed for {package_id}: {exc}")
             continue
         generated_operation_ids = getattr(generated_module, "generated_operation_ids", None)
         if not callable(generated_operation_ids):
             errors.append(f"{package_id} generated package must expose generated_operation_ids() from generated command-package IR")
             continue
         operation_ids = set(generated_operation_ids())
-        handler_map = getattr(runtime_module, "_GENERATED_RUNTIME_HANDLERS", None)
+        handler_map = getattr(commands_module, "GENERATED_COMMAND_HANDLERS", None)
         if not isinstance(handler_map, dict):
-            errors.append(f"{runtime_module_name} must expose _GENERATED_RUNTIME_HANDLERS as a runtime adapter binding map")
+            errors.append(f"{runtime_module_name} must expose GENERATED_COMMAND_HANDLERS as a command module binding map")
             continue
         handler_ids = {str(operation_id) for operation_id in handler_map}
         missing = sorted(operation_ids - handler_ids)
@@ -1343,9 +1322,9 @@ def _validate_python_runtime_handler_boundary() -> list[str]:
             if not callable(handler):
                 errors.append(f"{runtime_module_name} handler for {operation_id!r} is not callable")
                 continue
-            if not (handler_name.startswith("_run_") and handler_name.endswith("_adapter")):
+            if handler_name != "run":
                 errors.append(
-                    f"{runtime_module_name} handler for {operation_id!r} must be a thin _run_*_adapter binding; "
+                    f"{runtime_module_name} handler for {operation_id!r} must be a generated command module run function; "
                     f"got {handler_name!r}"
                 )
     return errors
@@ -1667,9 +1646,9 @@ def _validate_static_surfaces() -> list[str]:
                 if isinstance(command, dict) and command.get("status") == "generated":
                     errors.extend(_validate_generated_command_projection_boundary(package_id=str(package_id), command=command))
         expected_python_promotions = {
-            "root-workspace": ("agentic-workspace", "generated/python/workspace-cli"),
-            "planning-bootstrap": ("agentic-planning", "generated/python/planning-cli"),
-            "memory-bootstrap": ("agentic-memory", "generated/python/memory-cli"),
+            "root-workspace": ("agentic-workspace", "generated/workspace/python"),
+            "planning-bootstrap": ("agentic-planning", "generated/planning/python"),
+            "memory-bootstrap": ("agentic-memory", "generated/memory/python"),
         }
         for package_id, (program, generated_root) in expected_python_promotions.items():
             package = packages.get(package_id)
@@ -1698,34 +1677,36 @@ def _validate_static_surfaces() -> list[str]:
                     f"command_package_ir.json package {package_id!r} Python generated_root drifted from {generated_root!r}; "
                     f"got {python_target.get('generated_root')!r}"
                 )
-            if not (REPO_ROOT / generated_root / "generated_cli_package" / "__init__.py").is_file():
-                errors.append(f"{generated_root}/generated_cli_package/__init__.py is missing")
+            if not (REPO_ROOT / generated_root / "cli.py").is_file():
+                errors.append(f"{generated_root}/cli.py is missing")
             else:
-                generated_text = (REPO_ROOT / generated_root / "generated_cli_package" / "__init__.py").read_text(encoding="utf-8")
+                generated_text = (REPO_ROOT / generated_root / "cli.py").read_text(encoding="utf-8")
                 if "json.loads(\n    r\"\"\"" in generated_text:
-                    errors.append(f"{generated_root}/generated_cli_package/__init__.py embeds generated JSON instead of loading resources")
+                    errors.append(f"{generated_root}/cli.py embeds generated JSON instead of loading resources")
                 if "def generated_maturity()" not in generated_text:
-                    errors.append(f"{generated_root}/generated_cli_package/__init__.py is missing generated_maturity")
+                    errors.append(f"{generated_root}/cli.py is missing generated_maturity")
                 if "def generated_weak_agent_routing()" not in generated_text:
-                    errors.append(f"{generated_root}/generated_cli_package/__init__.py is missing generated_weak_agent_routing")
+                    errors.append(f"{generated_root}/cli.py is missing generated_weak_agent_routing")
                 if "def generated_operation_contract(" not in generated_text:
-                    errors.append(f"{generated_root}/generated_cli_package/__init__.py is missing generated_operation_contract")
+                    errors.append(f"{generated_root}/cli.py is missing generated_operation_contract")
+                if "from .commands import GENERATED_COMMAND_HANDLERS" not in generated_text:
+                    errors.append(f"{generated_root}/cli.py does not route through generated command modules")
                 if "_GENERATED_WEAK_AGENT_ROUTING = 'allowed-mutation-with-review'" not in generated_text:
                     errors.append(
-                        f"{generated_root}/generated_cli_package/__init__.py does not advertise mutation review routing"
+                        f"{generated_root}/cli.py does not advertise mutation review routing"
                     )
             for resource_name in ("command_package.json", "adapter_commands.json"):
-                resource_path = REPO_ROOT / generated_root / "generated_cli_package" / resource_name
+                resource_path = REPO_ROOT / generated_root / resource_name
                 if not resource_path.is_file():
-                    errors.append(f"{generated_root}/generated_cli_package/{resource_name} is missing")
+                    errors.append(f"{generated_root}/{resource_name} is missing")
                     continue
                 try:
                     payload = json.loads(resource_path.read_text(encoding="utf-8"))
                 except json.JSONDecodeError as exc:
-                    errors.append(f"{generated_root}/generated_cli_package/{resource_name} is invalid JSON: {exc}")
+                    errors.append(f"{generated_root}/{resource_name} is invalid JSON: {exc}")
                     continue
                 if resource_name == "command_package.json" and payload != package:
-                    errors.append(f"{generated_root}/generated_cli_package/command_package.json drifted from command_package_ir.json package {package_id!r}")
+                    errors.append(f"{generated_root}/command_package.json drifted from command_package_ir.json package {package_id!r}")
                 if resource_name == "adapter_commands.json":
                     expected_adapter_commands = []
                     for command in package.get("commands", []):
@@ -1747,23 +1728,29 @@ def _validate_static_surfaces() -> list[str]:
                         )
                     if payload != expected_adapter_commands:
                         errors.append(
-                            f"{generated_root}/generated_cli_package/adapter_commands.json drifted from generated adapter projection"
+                            f"{generated_root}/adapter_commands.json drifted from generated adapter projection"
                         )
+            for directory_name in ("commands", "operations", "primitives"):
+                if not (REPO_ROOT / generated_root / directory_name).is_dir():
+                    errors.append(f"{generated_root}/{directory_name} is missing")
+            if not (REPO_ROOT / generated_root / "operation_executor.py").is_file():
+                errors.append(f"{generated_root}/operation_executor.py is missing")
         generated_entrypoints = {
-            "generated/python/workspace-cli/generated_cli_package/__init__.py": "from .workspace_runtime_cli import main as runtime_main",
-            "generated/python/planning-cli/generated_cli_package/__init__.py": "from .planning_runtime_cli import main as runtime_main",
-            "generated/python/memory-cli/generated_cli_package/__init__.py": "from .memory_runtime_cli import main as runtime_main",
+            "generated/workspace/python/cli.py": "from .commands import GENERATED_COMMAND_HANDLERS",
+            "generated/planning/python/cli.py": "from .commands import GENERATED_COMMAND_HANDLERS",
+            "generated/memory/python/cli.py": "from .commands import GENERATED_COMMAND_HANDLERS",
         }
-        for relative_path, runtime_import in generated_entrypoints.items():
+        for relative_path, command_import in generated_entrypoints.items():
             text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
             main_index = text.find("def main(")
-            generated_index = text.find("return run_generated_command(argv_list, _run_runtime_handler)", main_index)
-            fallback_index = text.find("return runtime_main(argv_list)", main_index)
+            generated_index = text.find("return run_generated_command(argv_list, _run_command_module)", main_index)
             errors.extend(_validate_no_legacy_generated_adapter_runtime_import(relative_path=relative_path, text=text))
-            if runtime_import not in text:
-                errors.append(f"{relative_path} does not import its generated Python runtime module")
-            if main_index == -1 or generated_index == -1 or fallback_index == -1 or generated_index > fallback_index:
-                errors.append(f"{relative_path} does not route generated Python adapters before runtime fallback")
+            if command_import not in text:
+                errors.append(f"{relative_path} does not import its generated Python command module registry")
+            if "return runtime_main(argv_list)" in text:
+                errors.append(f"{relative_path} still contains runtime fallback dispatch")
+            if main_index == -1 or generated_index == -1:
+                errors.append(f"{relative_path} does not route generated Python adapters through generated command modules")
         errors.extend(_validate_python_shipped_source_executable_retirement())
         errors.extend(_validate_python_runtime_handler_boundary())
         errors.extend(_validate_generated_python_commands_absent_from_handwritten_parsers())
@@ -2013,3 +2000,4 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

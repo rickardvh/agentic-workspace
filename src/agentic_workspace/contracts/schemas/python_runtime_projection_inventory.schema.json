@@ -73,7 +73,7 @@
       "properties": {
         "path": {
           "type": "string",
-          "pattern": "^generated/python/(workspace-cli|planning-cli|memory-cli)/generated_cli_package/[a-z_]+\\.py$",
+          "pattern": "^generated/(workspace|planning|memory)/python/(cli|operation_executor)\\.py$",
           "description": "Repo-relative generated Python runtime projection path."
         },
         "package_id": {
@@ -94,6 +94,7 @@
         },
         "artifact_kind": {
           "enum": [
+            "cli-entrypoint",
             "runtime-cli",
             "operation-ir-executor"
           ],

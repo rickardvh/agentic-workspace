@@ -48,25 +48,29 @@ members = [
 packages = ["src/agentic_workspace"]
 
 [tool.hatch.build.targets.wheel.force-include]
-"generated/python/workspace-cli/generated_cli_package/__init__.py" = "src/agentic_workspace/_generated_cli_package_impl/__init__.py"
-"generated/python/workspace-cli/generated_cli_package/command_package.json" = "src/agentic_workspace/_generated_cli_package_impl/command_package.json"
-"generated/python/workspace-cli/generated_cli_package/adapter_commands.json" = "src/agentic_workspace/_generated_cli_package_impl/adapter_commands.json"
-"generated/python/workspace-cli/generated_cli_package/operations" = "src/agentic_workspace/_generated_cli_package_impl/operations"
-"generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py" = "src/agentic_workspace/_generated_cli_package_impl/workspace_runtime_cli.py"
-"generated/python/workspace-cli/generated_cli_package/workspace_operation_ir_executor.py" = "src/agentic_workspace/_generated_cli_package_impl/workspace_operation_ir_executor.py"
+"generated/workspace/python/__init__.py" = "src/agentic_workspace/_generated_cli_package_impl/__init__.py"
+"generated/workspace/python/cli.py" = "src/agentic_workspace/_generated_cli_package_impl/cli.py"
+"generated/workspace/python/command_package.json" = "src/agentic_workspace/_generated_cli_package_impl/command_package.json"
+"generated/workspace/python/adapter_commands.json" = "src/agentic_workspace/_generated_cli_package_impl/adapter_commands.json"
+"generated/workspace/python/operations" = "src/agentic_workspace/_generated_cli_package_impl/operations"
+"generated/workspace/python/commands" = "src/agentic_workspace/_generated_cli_package_impl/commands"
+"generated/workspace/python/primitives" = "src/agentic_workspace/_generated_cli_package_impl/primitives"
+"generated/workspace/python/operation_executor.py" = "src/agentic_workspace/_generated_cli_package_impl/operation_executor.py"
 
 [tool.hatch.build.targets.sdist]
 include = [
   "/README.md",
-  "/generated/python/memory-cli/generated_command_adapters.json",
-  "/generated/python/planning-cli/generated_command_adapters.json",
-  "/generated/python/workspace-cli/generated_command_adapters.json",
-  "/generated/python/workspace-cli/generated_cli_package/__init__.py",
-  "/generated/python/workspace-cli/generated_cli_package/command_package.json",
-  "/generated/python/workspace-cli/generated_cli_package/adapter_commands.json",
-  "/generated/python/workspace-cli/generated_cli_package/operations",
-  "/generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
-  "/generated/python/workspace-cli/generated_cli_package/workspace_operation_ir_executor.py",
+  "/generated/memory/python/generated_command_adapters.json",
+  "/generated/planning/python/generated_command_adapters.json",
+  "/generated/workspace/python/generated_command_adapters.json",
+  "/generated/workspace/python/__init__.py",
+  "/generated/workspace/python/cli.py",
+  "/generated/workspace/python/command_package.json",
+  "/generated/workspace/python/adapter_commands.json",
+  "/generated/workspace/python/operations",
+  "/generated/workspace/python/commands",
+  "/generated/workspace/python/primitives",
+  "/generated/workspace/python/operation_executor.py",
   "/src/agentic_workspace",
   "/tests",
 ]

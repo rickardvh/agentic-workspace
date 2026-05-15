@@ -4131,7 +4131,7 @@ export const generatedCommandPackage = {
           "name": "task_class"
         }
       ],
-      "module_file": "workspace_operation_ir_executor",
+      "module_file": "operation_executor",
       "supported_operation_ids": [
         "config.report",
         "defaults.report",
@@ -4457,7 +4457,7 @@ export const generatedCommandPackage = {
         "name": "timezone"
       }
     ],
-    "runtime_module_file": "workspace_runtime_cli",
+    "runtime_module_file": "cli",
     "runtime_module_handlers": [
       {
         "function": "_run_lifecycle_report_adapter",
@@ -4566,7 +4566,7 @@ export const generatedCommandPackage = {
       "entrypoints": [
         "agentic-workspace"
       ],
-      "generated_root": "generated/python/workspace-cli",
+      "generated_root": "generated/workspace/python",
       "generation_status": "mutation-capable-adapter",
       "kind": "python",
       "maturity_level_ref": "mutation-capable-adapter",

@@ -140,9 +140,9 @@ def test_generated_adapters_are_backed_by_black_box_conformance_contracts() -> N
     contracts_by_id = {contract["id"]: contract for contract in registry["contracts"]}
 
     generated_adapters_by_command = {
-        **_generated_adapters_by_command("generated/python/workspace-cli/generated_command_adapters.json"),
-        **_generated_adapters_by_command("generated/python/planning-cli/generated_command_adapters.json"),
-        **_generated_adapters_by_command("generated/python/memory-cli/generated_command_adapters.json"),
+        **_generated_adapters_by_command("generated/workspace/python/generated_command_adapters.json"),
+        **_generated_adapters_by_command("generated/planning/python/generated_command_adapters.json"),
+        **_generated_adapters_by_command("generated/memory/python/generated_command_adapters.json"),
     }
     for command_name, adapter in generated_adapters_by_command.items():
         for conformance_ref in adapter["conformance_refs"]:

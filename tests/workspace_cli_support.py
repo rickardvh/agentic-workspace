@@ -14,7 +14,7 @@ from agentic_workspace.contract_tooling import authority_markers_manifest, cli_c
 from agentic_workspace.result_adapter import adapt_action, adapt_module_result
 from command_generation.generated_package_loader import load_generated_cli_module_for_entrypoint
 
-cli = load_generated_cli_module_for_entrypoint("agentic-workspace", "workspace_runtime_cli")
+cli = load_generated_cli_module_for_entrypoint("agentic-workspace", "cli.py")
 
 _ORIGINAL_PATH_WRITE_TEXT = Path.write_text
 
@@ -71,11 +71,7 @@ def _assert_invoked_cli_identity(payload: dict[str, object], *, target_relation:
     assert identity["source_class"] in {"source-checkout", "installed-package", "unknown"}
     if "confidence" in identity:
         assert identity["confidence"] in {"high", "medium", "low"}
-    assert (
-        str(identity["module_path"])
-        .replace("\\", "/")
-        .endswith("generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py")
-    )
+    assert str(identity["module_path"]).replace("\\", "/").endswith("generated/workspace/python/cli.py")
     if "python_executable" in identity:
         assert identity["python_executable"]
     assert identity["target_relation"] == target_relation

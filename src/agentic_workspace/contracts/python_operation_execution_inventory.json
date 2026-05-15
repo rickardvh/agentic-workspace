@@ -13,7 +13,7 @@
       "operation_id": "config.report",
       "program": "agentic-workspace",
       "command": "config",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/config.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -37,7 +37,7 @@
       "operation_id": "defaults.report",
       "program": "agentic-workspace",
       "command": "defaults",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/defaults.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -59,7 +59,7 @@
       "operation_id": "delegation-outcome.append",
       "program": "agentic-workspace",
       "command": "note-delegation-outcome",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/delegation-outcome.append.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -81,7 +81,7 @@
       "operation_id": "doctor.report",
       "program": "agentic-workspace",
       "command": "doctor",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/doctor.report.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
@@ -102,7 +102,7 @@
       "operation_id": "external-intent.refresh-github",
       "program": "agentic-workspace",
       "command": "external-intent",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/external-intent.refresh-github.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
@@ -124,7 +124,7 @@
       "operation_id": "implement.context",
       "program": "agentic-workspace",
       "command": "implement",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/implement.context.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
@@ -145,7 +145,7 @@
       "operation_id": "init.lifecycle",
       "program": "agentic-workspace",
       "command": "init",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/init.lifecycle.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
@@ -167,7 +167,7 @@
       "operation_id": "install.lifecycle",
       "program": "agentic-workspace",
       "command": "install",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/install.lifecycle.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
@@ -189,7 +189,7 @@
       "operation_id": "memory.doctor.report",
       "program": "agentic-memory",
       "command": "doctor",
-      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.doctor.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -210,7 +210,7 @@
       "operation_id": "memory.capture-note.report",
       "program": "agentic-memory",
       "command": "capture-note",
-      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.capture-note.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -231,7 +231,7 @@
       "operation_id": "memory.install.lifecycle",
       "program": "agentic-memory",
       "command": "install",
-      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.install.lifecycle.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -252,7 +252,7 @@
       "operation_id": "memory.init.lifecycle",
       "program": "agentic-memory",
       "command": "init",
-      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.init.lifecycle.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -273,7 +273,7 @@
       "operation_id": "memory.adopt.lifecycle",
       "program": "agentic-memory",
       "command": "adopt",
-      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.adopt.lifecycle.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -294,7 +294,7 @@
       "operation_id": "memory.upgrade.lifecycle",
       "program": "agentic-memory",
       "command": "upgrade",
-      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.upgrade.lifecycle.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -315,7 +315,7 @@
       "operation_id": "memory.migrate-layout.lifecycle",
       "program": "agentic-memory",
       "command": "migrate-layout",
-      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.migrate-layout.lifecycle.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -336,7 +336,7 @@
       "operation_id": "memory.uninstall.lifecycle",
       "program": "agentic-memory",
       "command": "uninstall",
-      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.uninstall.lifecycle.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -357,7 +357,7 @@
       "operation_id": "memory.bootstrap-cleanup.apply",
       "program": "agentic-memory",
       "command": "bootstrap-cleanup",
-      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.bootstrap-cleanup.apply.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -378,7 +378,7 @@
       "operation_id": "memory.create-note.apply",
       "program": "agentic-memory",
       "command": "create-note",
-      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.create-note.apply.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -399,7 +399,7 @@
       "operation_id": "memory.current.report",
       "program": "agentic-memory",
       "command": "current",
-      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.current.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -420,7 +420,7 @@
       "operation_id": "memory.front-door",
       "program": "agentic-workspace",
       "command": "memory",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/memory.front-door.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
@@ -439,7 +439,7 @@
       "operation_id": "memory.list-files.report",
       "program": "agentic-memory",
       "command": "list-files",
-      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.list-files.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -461,7 +461,7 @@
       "operation_id": "memory.list-skills.report",
       "program": "agentic-memory",
       "command": "list-skills",
-      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.list-skills.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -481,7 +481,7 @@
       "operation_id": "memory.promotion-report.report",
       "program": "agentic-memory",
       "command": "promotion-report",
-      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.promotion-report.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -502,7 +502,7 @@
       "operation_id": "memory.prompt.render",
       "program": "agentic-memory",
       "command": "prompt",
-      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.prompt.render.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -523,7 +523,7 @@
       "operation_id": "memory.report.report",
       "program": "agentic-memory",
       "command": "report",
-      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.report.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -544,7 +544,7 @@
       "operation_id": "memory.route-report.report",
       "program": "agentic-memory",
       "command": "route-report",
-      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.route-report.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -565,7 +565,7 @@
       "operation_id": "memory.route.report",
       "program": "agentic-memory",
       "command": "route",
-      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.route.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -586,7 +586,7 @@
       "operation_id": "memory.route-review.report",
       "program": "agentic-memory",
       "command": "route-review",
-      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.route-review.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -607,7 +607,7 @@
       "operation_id": "memory.search.report",
       "program": "agentic-memory",
       "command": "search",
-      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.search.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -628,7 +628,7 @@
       "operation_id": "memory.verify-payload.report",
       "program": "agentic-memory",
       "command": "verify-payload",
-      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.verify-payload.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -649,7 +649,7 @@
       "operation_id": "memory.status.report",
       "program": "agentic-memory",
       "command": "status",
-      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.status.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -670,7 +670,7 @@
       "operation_id": "memory.sync-memory.report",
       "program": "agentic-memory",
       "command": "sync-memory",
-      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.sync-memory.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -691,7 +691,7 @@
       "operation_id": "modules.report",
       "program": "agentic-workspace",
       "command": "modules",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/modules.report.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
@@ -710,7 +710,7 @@
       "operation_id": "ownership.report",
       "program": "agentic-workspace",
       "command": "ownership",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/ownership.report.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
@@ -729,7 +729,7 @@
       "operation_id": "planning.adopt.lifecycle",
       "program": "agentic-planning",
       "command": "adopt",
-      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.adopt.lifecycle.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -750,7 +750,7 @@
       "operation_id": "planning.archive-plan.lifecycle",
       "program": "agentic-planning",
       "command": "archive-plan",
-      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.archive-plan.lifecycle.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -771,7 +771,7 @@
       "operation_id": "planning.close-item.lifecycle",
       "program": "agentic-planning",
       "command": "close-item",
-      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.close-item.lifecycle.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -792,7 +792,7 @@
       "operation_id": "planning.create-review.lifecycle",
       "program": "agentic-planning",
       "command": "create-review",
-      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.create-review.lifecycle.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -813,7 +813,7 @@
       "operation_id": "planning.delegation-decision.lifecycle",
       "program": "agentic-planning",
       "command": "delegation-decision",
-      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.delegation-decision.lifecycle.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -834,7 +834,7 @@
       "operation_id": "planning.doctor.report",
       "program": "agentic-planning",
       "command": "doctor",
-      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.doctor.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -855,7 +855,7 @@
       "operation_id": "planning.front-door",
       "program": "agentic-workspace",
       "command": "planning",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/planning.front-door.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
@@ -874,7 +874,7 @@
       "operation_id": "planning.handoff.report",
       "program": "agentic-planning",
       "command": "handoff",
-      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.handoff.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -895,7 +895,7 @@
       "operation_id": "planning.init.lifecycle",
       "program": "agentic-planning",
       "command": "init",
-      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.init.lifecycle.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -916,7 +916,7 @@
       "operation_id": "planning.install.lifecycle",
       "program": "agentic-planning",
       "command": "install",
-      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.install.lifecycle.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -937,7 +937,7 @@
       "operation_id": "planning.list-files.report",
       "program": "agentic-planning",
       "command": "list-files",
-      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.list-files.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -958,7 +958,7 @@
       "operation_id": "planning.new-plan.lifecycle",
       "program": "agentic-planning",
       "command": "new-plan",
-      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.new-plan.lifecycle.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -979,7 +979,7 @@
       "operation_id": "planning.promote-to-plan.lifecycle",
       "program": "agentic-planning",
       "command": "promote-to-plan",
-      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.promote-to-plan.lifecycle.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -1000,7 +1000,7 @@
       "operation_id": "planning.prompt.render",
       "program": "agentic-planning",
       "command": "prompt",
-      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.prompt.render.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -1021,7 +1021,7 @@
       "operation_id": "planning.reconcile.report",
       "program": "agentic-planning",
       "command": "reconcile",
-      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.reconcile.report.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
@@ -1040,7 +1040,7 @@
       "operation_id": "planning.record-recovery.lifecycle",
       "program": "agentic-planning",
       "command": "record-recovery",
-      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.record-recovery.lifecycle.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -1061,7 +1061,7 @@
       "operation_id": "planning.report.report",
       "program": "agentic-planning",
       "command": "report",
-      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.report.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -1082,7 +1082,7 @@
       "operation_id": "planning.status.report",
       "program": "agentic-planning",
       "command": "status",
-      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.status.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -1103,7 +1103,7 @@
       "operation_id": "planning.summary.report",
       "program": "agentic-planning",
       "command": "summary",
-      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.summary.report.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
@@ -1121,7 +1121,7 @@
       "operation_id": "planning.uninstall.lifecycle",
       "program": "agentic-planning",
       "command": "uninstall",
-      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.uninstall.lifecycle.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -1142,7 +1142,7 @@
       "operation_id": "planning.upgrade.lifecycle",
       "program": "agentic-planning",
       "command": "upgrade",
-      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.upgrade.lifecycle.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -1163,7 +1163,7 @@
       "operation_id": "planning.verify-payload.report",
       "program": "agentic-planning",
       "command": "verify-payload",
-      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.verify-payload.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -1184,7 +1184,7 @@
       "operation_id": "preflight.report",
       "program": "agentic-workspace",
       "command": "preflight",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/preflight.report.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
@@ -1207,7 +1207,7 @@
       "operation_id": "prompt.init",
       "program": "agentic-workspace",
       "command": "prompt",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/prompt.init.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -1230,7 +1230,7 @@
       "operation_id": "prompt.uninstall",
       "program": "agentic-workspace",
       "command": "prompt",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/prompt.uninstall.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -1253,7 +1253,7 @@
       "operation_id": "prompt.upgrade",
       "program": "agentic-workspace",
       "command": "prompt",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/prompt.upgrade.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -1276,7 +1276,7 @@
       "operation_id": "proof.report",
       "program": "agentic-workspace",
       "command": "proof",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/proof.report.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
@@ -1298,7 +1298,7 @@
       "operation_id": "reconcile.report",
       "program": "agentic-workspace",
       "command": "reconcile",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/reconcile.report.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
@@ -1318,7 +1318,7 @@
       "operation_id": "report.combined",
       "program": "agentic-workspace",
       "command": "report",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/report.combined.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
@@ -1340,7 +1340,7 @@
       "operation_id": "setup.guidance",
       "program": "agentic-workspace",
       "command": "setup",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/setup.guidance.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
@@ -1360,7 +1360,7 @@
       "operation_id": "skills.report",
       "program": "agentic-workspace",
       "command": "skills",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/skills.report.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
@@ -1380,7 +1380,7 @@
       "operation_id": "start.context",
       "program": "agentic-workspace",
       "command": "start",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/start.context.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
@@ -1400,7 +1400,7 @@
       "operation_id": "status.report",
       "program": "agentic-workspace",
       "command": "status",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/status.report.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
@@ -1420,7 +1420,7 @@
       "operation_id": "summary.report",
       "program": "agentic-workspace",
       "command": "summary",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/summary.report.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
@@ -1440,7 +1440,7 @@
       "operation_id": "system-intent.sync",
       "program": "agentic-workspace",
       "command": "system-intent",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/system-intent.sync.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
@@ -1465,7 +1465,7 @@
       "operation_id": "uninstall.lifecycle",
       "program": "agentic-workspace",
       "command": "uninstall",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/uninstall.lifecycle.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
@@ -1487,7 +1487,7 @@
       "operation_id": "upgrade.lifecycle",
       "program": "agentic-workspace",
       "command": "upgrade",
-      "generated_transport": "generated/python/workspace-cli/generated_cli_package/__init__.py",
+      "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/upgrade.lifecycle.json",
       "primitive_executor": null,
       "hand_owned_runtime_code": [
@@ -1508,3 +1508,4 @@
   ],
   "completion_rule": "Python completion can be claimed only when every generated Python operation is inventoried as portable-codegen-primitive-executed, domain-runtime-primitive-via-ir, or accepted-hand-owned-runtime-primitive; domain-runtime-primitive-via-ir and accepted-hand-owned-runtime-primitive entries are transitional unless their audit proves they do not hide generic deterministic runtime debt."
 }
+

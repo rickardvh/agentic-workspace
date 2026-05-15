@@ -9,10 +9,10 @@
   ],
   "entries": [
     {
-      "path": "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
+      "path": "generated/workspace/python/cli.py",
       "package_id": "root-workspace",
       "program": "agentic-workspace",
-      "artifact_kind": "runtime-cli",
+      "artifact_kind": "cli-entrypoint",
       "provenance_status": "rendered-by-command-generation",
       "current_owner": "command-generation render_outputs",
       "source_of_truth": "src/agentic_workspace/contracts/command_package_ir.json python_runtime_binding.render_runtime_module plus workspace operation IR resources and explicit runtime primitive handler bindings",
@@ -21,7 +21,7 @@
       "required_resolution": "Keep generated freshness proof covering this file and continue migrating generic deterministic behavior from workspace runtime primitives into codegen-owned primitives."
     },
     {
-      "path": "generated/python/workspace-cli/generated_cli_package/workspace_operation_ir_executor.py",
+      "path": "generated/workspace/python/operation_executor.py",
       "package_id": "root-workspace",
       "program": "agentic-workspace",
       "artifact_kind": "operation-ir-executor",
@@ -33,10 +33,10 @@
       "required_resolution": "Keep generated freshness proof covering this file."
     },
     {
-      "path": "generated/python/planning-cli/generated_cli_package/planning_runtime_cli.py",
+      "path": "generated/planning/python/cli.py",
       "package_id": "planning-bootstrap",
       "program": "agentic-planning",
-      "artifact_kind": "runtime-cli",
+      "artifact_kind": "cli-entrypoint",
       "provenance_status": "rendered-by-command-generation",
       "current_owner": "command-generation render_outputs",
       "source_of_truth": "src/agentic_workspace/contracts/command_package_ir.json python_runtime_binding.render_runtime_module plus generated planning operation IR resources",
@@ -45,7 +45,7 @@
       "required_resolution": "Keep generated freshness proof covering this file."
     },
     {
-      "path": "generated/python/planning-cli/generated_cli_package/planning_operation_ir_executor.py",
+      "path": "generated/planning/python/operation_executor.py",
       "package_id": "planning-bootstrap",
       "program": "agentic-planning",
       "artifact_kind": "operation-ir-executor",
@@ -57,10 +57,10 @@
       "required_resolution": "Keep generated freshness proof covering this file."
     },
     {
-      "path": "generated/python/memory-cli/generated_cli_package/memory_runtime_cli.py",
+      "path": "generated/memory/python/cli.py",
       "package_id": "memory-bootstrap",
       "program": "agentic-memory",
-      "artifact_kind": "runtime-cli",
+      "artifact_kind": "cli-entrypoint",
       "provenance_status": "rendered-by-command-generation",
       "current_owner": "command-generation render_outputs",
       "source_of_truth": "src/agentic_workspace/contracts/command_package_ir.json python_runtime_binding.render_runtime_module plus generated memory operation IR resources",
@@ -69,7 +69,7 @@
       "required_resolution": "Keep generated freshness proof covering this file."
     },
     {
-      "path": "generated/python/memory-cli/generated_cli_package/memory_operation_ir_executor.py",
+      "path": "generated/memory/python/operation_executor.py",
       "package_id": "memory-bootstrap",
       "program": "agentic-memory",
       "artifact_kind": "operation-ir-executor",

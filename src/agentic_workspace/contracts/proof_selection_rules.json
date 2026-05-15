@@ -38,21 +38,21 @@
       "id": "workspace-codegen-runtime",
       "lane": "workspace_cli",
       "exact": [
-        "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py"
+        "generated/workspace/python/cli.py"
       ]
     },
     {
       "id": "planning-codegen-runtime",
       "lane": "planning_package",
       "exact": [
-        "generated/python/planning-cli/generated_cli_package/planning_runtime_cli.py"
+        "generated/planning/python/cli.py"
       ]
     },
     {
       "id": "memory-codegen-runtime",
       "lane": "memory_package",
       "exact": [
-        "generated/python/memory-cli/generated_cli_package/memory_runtime_cli.py"
+        "generated/memory/python/cli.py"
       ]
     },
     {
@@ -62,7 +62,9 @@
         "src/agentic_workspace/contracts/command_package_ir.json"
       ],
       "prefixes": [
-        "generated/python/",
+        "generated/workspace/python/",
+        "generated/planning/python/",
+        "generated/memory/python/",
         "generated/typescript/",
         "scripts/generate/generate_command_packages.py",
         "scripts/check/check_generated_command_packages.py",
@@ -176,7 +178,7 @@
         "id": "root-workspace-cli-runtime",
         "role": "hand-owned-executable",
         "exact": [
-          "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py"
+          "generated/workspace/python/cli.py"
         ],
         "direct_edit_allowed": true,
         "source_contract": "src/agentic_workspace/contracts/operation_contracts.json + src/agentic_workspace/contracts/cli_commands.json + src/agentic_workspace/contracts/python_runtime_boundary.json",
@@ -188,8 +190,8 @@
         "id": "package-cli-runtime",
         "role": "hand-owned-executable",
         "exact": [
-          "generated/python/planning-cli/generated_cli_package/planning_runtime_cli.py",
-          "generated/python/memory-cli/generated_cli_package/memory_runtime_cli.py"
+          "generated/planning/python/cli.py",
+          "generated/memory/python/cli.py"
         ],
         "direct_edit_allowed": true,
         "source_contract": "package-local CLI source plus package bootstrap payload checks",
@@ -201,7 +203,9 @@
         "id": "generated-command-package-output",
         "role": "projection",
         "prefixes": [
-          "generated/python/",
+          "generated/workspace/python/",
+          "generated/planning/python/",
+          "generated/memory/python/",
           "generated/typescript/"
         ],
         "direct_edit_allowed": false,
@@ -225,3 +229,5 @@
     ]
   }
 }
+
+

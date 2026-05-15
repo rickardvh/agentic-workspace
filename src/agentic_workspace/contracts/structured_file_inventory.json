@@ -829,7 +829,7 @@
       "routed_to": "#539"
     },
     {
-      "pattern": "generated/python/*/generated_cli_package/*.json",
+      "pattern": "generated/*/python/*.json",
       "format": "json",
       "owner": "generated-command-adapters",
       "status": "generated-derived",
@@ -846,7 +846,7 @@
       "routed_to": "#929"
     },
     {
-      "pattern": "generated/python/*/generated_command_adapters.json",
+      "pattern": "generated/*/python/generated_command_adapters.json",
       "format": "json",
       "owner": "generated-command-adapters",
       "status": "generated-derived",
@@ -863,7 +863,7 @@
       "routed_to": "#950"
     },
     {
-      "pattern": "generated/python/*/generated_cli_package/operations/*.json",
+      "pattern": "generated/*/python/operations/*.json",
       "format": "json",
       "owner": "generated-command-adapters",
       "status": "generated-derived",
@@ -992,9 +992,9 @@
       "max_bytes": 20000
     },
     {
-      "pattern": "generated/python/*/generated_cli_package/__init__.py",
+      "pattern": "generated/*/python/cli.py",
       "source_command": "uv run python scripts/generate/generate_command_packages.py",
-      "named_consumer": "package-local generated_cli_package bridges and installed package import proof",
+      "named_consumer": "package-local generated target bridges and installed package import proof",
       "checked_in_justification": "Generated Python package metadata is kept as a peer target projection beside generated TypeScript outputs.",
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
       "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
@@ -1002,9 +1002,9 @@
       "max_bytes": 250000
     },
     {
-      "pattern": "generated/python/*/generated_cli_package/*.json",
+      "pattern": "generated/*/python/*.json",
       "source_command": "uv run python scripts/generate/generate_command_packages.py",
-      "named_consumer": "package-local generated_cli_package JSON resource loaders",
+      "named_consumer": "package-local generated target JSON resource loaders",
       "checked_in_justification": "Generated Python command-package resources are kept as files so executable adapters stay thin and do not embed large JSON blocks.",
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
       "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
@@ -1012,7 +1012,7 @@
       "max_bytes": 250000
     },
     {
-      "pattern": "generated/python/*/generated_cli_package/operations/*.json",
+      "pattern": "generated/*/python/operations/*.json",
       "source_command": "uv run python scripts/generate/generate_command_packages.py",
       "named_consumer": "generated Python operation-contract resource loaders",
       "checked_in_justification": "Generated Python operation-contract resources are kept as files so runtime-consumed operations load from the generated package.",
@@ -1022,7 +1022,7 @@
       "max_bytes": 250000
     },
     {
-      "pattern": "generated/python/*/generated_command_adapters.json",
+      "pattern": "generated/*/python/generated_command_adapters.json",
       "source_command": "uv run python scripts/generate/generate_command_adapters.py",
       "named_consumer": "generated adapter conformance and package proof loaders",
       "checked_in_justification": "Generated command adapter metadata is kept as JSON so proof can load it as data without package-local generated Python modules.",

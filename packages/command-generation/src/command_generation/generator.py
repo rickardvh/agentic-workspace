@@ -142,8 +142,134 @@ def _runtime_consumed_operation_outputs(
             if not isinstance(ir_plan, dict) or ir_plan.get("status") not in {"representative", "complete"}:
                 continue
             emitted.add(operation_path)
-            outputs.append(GeneratedOutput(root / "generated_cli_package" / operation_path, _json_block(operation) + "\n"))
+            outputs.append(GeneratedOutput(root / operation_path, _json_block(operation) + "\n"))
     return outputs
+
+
+def _module_name_for_operation(operation_id: str) -> str:
+    return "".join(character if character.isalnum() else "_" for character in operation_id).strip("_")
+
+
+def _python_commands_package_module(
+    package: dict[str, Any],
+    binding: dict[str, Any],
+    *,
+    source_path: str,
+    regenerate_command: str,
+) -> str:
+    operation_executor = _operation_executor_binding(package)
+    operation_ids = {str(operation_id) for operation_id in operation_executor.get("supported_operation_ids", [])}
+    direct_handlers = {
+        str(handler["operation_id"]): handler for handler in binding.get("runtime_module_handlers", []) if isinstance(handler, dict)
+    }
+    operation_ids.update(direct_handlers)
+    imports = []
+    handler_items = []
+    for operation_id in sorted(operation_ids):
+        module_name = _module_name_for_operation(operation_id)
+        imported_name = f"_command_{module_name}"
+        imports.append(f"from . import {module_name} as {imported_name}")
+        handler_items.append(f"    {operation_id!r}: {imported_name}.run,")
+    return (
+        '"""Generated command module registry.\n\n'
+        f"Source: {source_path}\n"
+        f"Program: {package['program']}\n"
+        f"Regenerate with: {regenerate_command}\n"
+        '"""\n\n'
+        "from __future__ import annotations\n\n"
+        "# DO NOT EDIT DIRECTLY.\n"
+        f"# Command module changes belong in {source_path}.\n"
+        f"# Regenerate with: {regenerate_command}\n\n"
+        + "\n".join(imports)
+        + "\n\n\nGENERATED_COMMAND_HANDLERS = {\n"
+        + "\n".join(handler_items)
+        + "\n}\n"
+    )
+
+
+def _python_command_module(
+    package: dict[str, Any],
+    operation_id: str,
+    binding: dict[str, Any],
+    *,
+    source_path: str,
+    regenerate_command: str,
+) -> str:
+    direct_handlers = {
+        str(handler["operation_id"]): handler for handler in binding.get("runtime_module_handlers", []) if isinstance(handler, dict)
+    }
+    if operation_id in direct_handlers:
+        handler = direct_handlers[operation_id]
+        import_module = str(handler["import_module"])
+        imported_function = str(handler.get("function") or _runtime_adapter_function_name(operation_id))
+        run_body = f"    from {import_module} import {imported_function}\n\n    return {imported_function}(args)\n"
+    else:
+        run_body = f"    return run_operation_ir(generated_operation_contract({operation_id!r}), args)\n"
+    return (
+        '"""Generated executable command projection.\n\n'
+        f"Source: {source_path}\n"
+        f"Program: {package['program']}\n"
+        f"Operation: {operation_id}\n"
+        f"Regenerate with: {regenerate_command}\n"
+        '"""\n\n'
+        "from __future__ import annotations\n\n"
+        "import argparse\n\n"
+        "# DO NOT EDIT DIRECTLY.\n"
+        f"# Command behavior changes belong in {source_path} and the referenced operation contract.\n"
+        f"# Regenerate with: {regenerate_command}\n\n"
+        "from ..cli import generated_operation_contract\n"
+        "from ..operation_executor import run_operation_ir\n\n\n"
+        "def run(args: argparse.Namespace) -> int:\n" + run_body
+    )
+
+
+def _python_command_module_outputs(
+    package: dict[str, Any],
+    binding: dict[str, Any],
+    *,
+    root: Path,
+    source_path: str,
+    regenerate_command: str,
+) -> list[GeneratedOutput]:
+    operation_executor = _operation_executor_binding(package)
+    operation_ids = {str(operation_id) for operation_id in operation_executor.get("supported_operation_ids", [])}
+    operation_ids.update(
+        str(handler["operation_id"]) for handler in binding.get("runtime_module_handlers", []) if isinstance(handler, dict)
+    )
+    outputs = [
+        GeneratedOutput(
+            root / "commands" / "__init__.py",
+            _python_commands_package_module(package, binding, source_path=source_path, regenerate_command=regenerate_command),
+        )
+    ]
+    for operation_id in sorted(operation_ids):
+        outputs.append(
+            GeneratedOutput(
+                root / "commands" / f"{_module_name_for_operation(operation_id)}.py",
+                _python_command_module(package, operation_id, binding, source_path=source_path, regenerate_command=regenerate_command),
+            )
+        )
+    return outputs
+
+
+def _python_primitives_module(*, source_path: str, regenerate_command: str) -> str:
+    return (
+        '"""Generated target-local primitive executor facade.\n\n'
+        f"Source: {source_path}\n"
+        f"Regenerate with: {regenerate_command}\n"
+        '"""\n\n'
+        "from __future__ import annotations\n\n"
+        "# DO NOT EDIT DIRECTLY.\n"
+        "# Primitive implementations belong to command_generation. This module makes the target-local boundary explicit.\n"
+        f"# Regenerate with: {regenerate_command}\n\n"
+        "from command_generation.primitive_executor import PrimitiveContext, PrimitiveExecutionError, execute_primitive, run_operation_steps\n\n"
+        "__all__ = [\n"
+        '    "PrimitiveContext",\n'
+        '    "PrimitiveExecutionError",\n'
+        '    "execute_primitive",\n'
+        '    "run_operation_steps",\n'
+        "]\n"
+    )
 
 
 def _handler_function_name(primitive: str) -> str:
@@ -442,35 +568,46 @@ def _python_runtime_adapter_module(
     runnable = str(
         target.get("maturity_level_ref") in {"runtime-backed-read-only-adapter", "weak-agent-safe-adapter", "mutation-capable-adapter"}
     )
+    python_runtime_binding = package.get("python_runtime_binding", {})
+    export_functions = []
+    export_sources = []
+    if isinstance(python_runtime_binding, dict):
+        for export in python_runtime_binding.get("runtime_module_exports", []):
+            name = str(export["name"])
+            import_module = str(export["import_module"])
+            function = str(export.get("function") or name)
+            export_functions.append(f"from {import_module} import {function} as {name}\n")
+            export_sources.append(f"    ({import_module!r}, {function!r}, {name!r}),")
     runtime_module_file = _runtime_module_file_for_package(package)
     main_function = ""
     if runtime_module_file:
         main_function = (
             "\n\n"
-            "def _run_runtime_handler(operation_id: str, args: argparse.Namespace) -> int:\n"
-            f"    from .{runtime_module_file} import _GENERATED_RUNTIME_HANDLERS\n\n"
-            "    handler = _GENERATED_RUNTIME_HANDLERS.get(operation_id)\n"
+            "def _run_command_module(operation_id: str, args: argparse.Namespace) -> int:\n"
+            "    from .commands import GENERATED_COMMAND_HANDLERS\n\n"
+            "    handler = _GENERATED_RUNTIME_HANDLERS.get(operation_id) or GENERATED_COMMAND_HANDLERS.get(operation_id)\n"
             "    if handler is None:\n"
             "        build_generated_parser().error(\n"
             "            f\"Generated adapter for {getattr(args, 'command', operation_id)} references unsupported operation {operation_id}.\"\n"
             "        )\n"
+            "    _sync_runtime_export_patches()\n"
             "    return handler(args)\n\n\n"
             "def main(argv: list[str] | None = None) -> int:\n"
             "    import sys\n"
-            f"    from .{runtime_module_file} import main as runtime_main\n\n"
+            "\n"
             "    argv_list = list(sys.argv[1:] if argv is None else argv)\n"
             "    if argv_list and argv_list[0] in {'-h', '--help', '--version'}:\n"
             "        build_generated_parser().parse_args(argv_list)\n"
             "        return 0\n"
             "    if supports_generated_command(argv_list):\n"
             "        try:\n"
-            "            return run_generated_command(argv_list, _run_runtime_handler)\n"
+            "            return run_generated_command(argv_list, _run_command_module)\n"
             "        except Exception as exc:\n"
             "            if exc.__class__.__name__.endswith('UsageError') or exc.__class__.__name__ == 'RepoDetectionError':\n"
             "                build_generated_parser().error(str(exc))\n"
             "            raise\n\n"
-            "    # Compatibility fallback for package commands that have not entered command_package_ir yet.\n"
-            "    return runtime_main(argv_list)\n"
+            "    build_generated_parser().parse_args(argv_list)\n"
+            "    return 0\n"
         )
     return (
         '"""Generated runtime-backed Python command adapter.\n\n'
@@ -481,6 +618,7 @@ def _python_runtime_adapter_module(
         "from __future__ import annotations\n\n"
         "import argparse\n"
         "import difflib\n"
+        "import importlib\n"
         "import json\n"
         "from collections.abc import Callable\n"
         "from importlib.resources import files\n"
@@ -490,8 +628,19 @@ def _python_runtime_adapter_module(
         f"# Command/interface changes belong in {source_path}.\n"
         "# Runtime behavior changes belong in hand-written operation/primitive implementation code.\n"
         f"# Regenerate with: {regenerate_command}\n"
-        "\n\n"
-        "def _load_generated_json(name: str) -> Any:\n"
+        "\n"
+        + "".join(export_functions)
+        + ("\n" if export_functions else "\n")
+        + "_RUNTIME_EXPORT_SOURCES = (\n"
+        + "\n".join(export_sources)
+        + "\n)\n\n\n"
+        + "def _sync_runtime_export_patches() -> None:\n"
+        + "    for module_name, source_name, exported_name in _RUNTIME_EXPORT_SOURCES:\n"
+        + "        value = globals().get(exported_name)\n"
+        + "        module = importlib.import_module(module_name)\n"
+        + "        if getattr(module, source_name, None) is not value:\n"
+        + "            setattr(module, source_name, value)\n\n\n"
+        + "def _load_generated_json(name: str) -> Any:\n"
         "    parts = tuple(part for part in name.replace('\\\\', '/').split('/') if part)\n"
         "    try:\n"
         '        return json.loads(files(__package__).joinpath(*parts).read_text(encoding="utf-8"))\n'
@@ -506,7 +655,8 @@ def _python_runtime_adapter_module(
         f"_GENERATED_MATURITY_ID = {target['maturity_level_ref']!r}\n"
         f"_GENERATED_WEAK_AGENT_ROUTING = {weak_agent_routing!r}\n"
         f"_GENERATED_RUNNABLE = {runnable}\n\n"
-        "RuntimeHandler = Callable[[str, argparse.Namespace], int]\n\n\n"
+        "RuntimeHandler = Callable[[str, argparse.Namespace], int]\n"
+        "_GENERATED_RUNTIME_HANDLERS: dict[str, RuntimeHandler] = {}\n\n\n"
         "class GeneratedArgumentParser(argparse.ArgumentParser):\n"
         "    def error(self, message: str) -> None:\n"
         "        if 'invalid choice' in message and 'command' in message:\n"
@@ -535,6 +685,8 @@ def _python_runtime_adapter_module(
         "    return _GENERATED_WEAK_AGENT_ROUTING\n\n\n"
         "def generated_command_names() -> tuple[str, ...]:\n"
         "    return tuple(sorted(_GENERATED_COMMANDS_BY_NAME))\n\n\n"
+        "def generated_cli_package_command_names() -> tuple[str, ...]:\n"
+        "    return generated_command_names()\n\n\n"
         "def _interface_operation_ref(interface: dict[str, Any], inherited_operation_id: str, inherited_operation_path: str) -> tuple[str, str]:\n"
         '    operation_ref = interface.get("operation_ref", {})\n'
         "    if isinstance(operation_ref, dict):\n"
@@ -656,6 +808,10 @@ def _python_runtime_adapter_module(
         '        interface = command["interface"]\n'
         '        _add_interface_command(subparsers, interface, str(command["operation_id"]))\n'
         "    return parser\n\n\n"
+        "def build_parser() -> argparse.ArgumentParser:\n"
+        "    return build_generated_parser()\n\n\n"
+        "def build_generated_cli_package_parser() -> argparse.ArgumentParser:\n"
+        "    return build_generated_parser()\n\n\n"
         "def run_generated_command(argv: list[str] | tuple[str, ...], runtime_handler: RuntimeHandler) -> int:\n"
         "    parser = build_generated_parser()\n"
         "    args = parser.parse_args(list(argv))\n"
@@ -956,15 +1112,16 @@ def render_outputs(
         for target in package["targets"]:
             root = repo_root / str(target["generated_root"])
             if target["kind"] == "python":
-                module_path = root / "generated_cli_package" / "__init__.py"
-                outputs.append(GeneratedOutput(root / "generated_cli_package" / "command_package.json", _json_block(package) + "\n"))
+                module_path = root / "cli.py"
+                outputs.append(GeneratedOutput(root / "__init__.py", "from .cli import *  # noqa: F403\n"))
+                outputs.append(GeneratedOutput(root / "command_package.json", _json_block(package) + "\n"))
                 if _is_runtime_backed_python_target(target):
                     outputs.extend(_runtime_consumed_operation_outputs(package, repo_root=repo_root, root=root))
                     operation_executor = _operation_executor_binding(package)
                     if operation_executor:
                         outputs.append(
                             GeneratedOutput(
-                                root / "generated_cli_package" / f"{operation_executor['module_file']}.py",
+                                root / "operation_executor.py",
                                 _python_operation_executor_module(
                                     package,
                                     operation_executor,
@@ -975,20 +1132,24 @@ def render_outputs(
                         )
                     python_runtime_binding = package.get("python_runtime_binding", {})
                     if python_runtime_binding.get("render_runtime_module") is True and operation_executor:
+                        outputs.extend(
+                            _python_command_module_outputs(
+                                package,
+                                python_runtime_binding,
+                                root=root,
+                                source_path=source_path,
+                                regenerate_command=regenerate_command,
+                            )
+                        )
                         outputs.append(
                             GeneratedOutput(
-                                root / "generated_cli_package" / f"{python_runtime_binding['runtime_module_file']}.py",
-                                _python_runtime_handler_module(
-                                    package,
-                                    python_runtime_binding,
-                                    source_path=source_path,
-                                    regenerate_command=regenerate_command,
-                                ),
+                                root / "primitives" / "__init__.py",
+                                _python_primitives_module(source_path=source_path, regenerate_command=regenerate_command),
                             )
                         )
                     outputs.append(
                         GeneratedOutput(
-                            root / "generated_cli_package" / "adapter_commands.json",
+                            root / "adapter_commands.json",
                             _json_block(_python_adapter_command_payload(package)) + "\n",
                         )
                     )

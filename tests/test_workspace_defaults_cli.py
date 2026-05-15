@@ -145,10 +145,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["prompt_routing"]["rule"] == "Map vague prompt classes to a proof lane and an owner before widening the task."
     assert payload["prompt_routing"]["route_by_class"][0]["class"] == "workspace lifecycle change"
     assert payload["prompt_routing"]["route_by_class"][0]["proof_lane"] == "workspace_cli"
-    assert (
-        payload["prompt_routing"]["route_by_class"][0]["owner_surface"]
-        == "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py"
-    )
+    assert payload["prompt_routing"]["route_by_class"][0]["owner_surface"] == "generated/workspace/python/cli.py"
     assert payload["prompt_routing"]["route_by_class"][2]["proof_lane"] == "memory_payload"
     assert payload["prompt_routing"]["route_by_class"][3]["proof_lane"] == "workspace_cli"
     assert payload["prompt_routing"]["route_by_class"][3]["broaden_with"] == ["planning_surfaces"]
@@ -727,10 +724,7 @@ def test_defaults_section_selector_returns_prompt_routing_answer(capsys) -> None
     assert payload["answer"]["command"] == "agentic-workspace defaults --section prompt_routing --format json"
     assert payload["answer"]["route_by_class"][0]["class"] == "workspace lifecycle change"
     assert payload["answer"]["route_by_class"][0]["proof_lane"] == "workspace_cli"
-    assert (
-        payload["answer"]["route_by_class"][0]["owner_surface"]
-        == "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py"
-    )
+    assert payload["answer"]["route_by_class"][0]["owner_surface"] == "generated/workspace/python/cli.py"
     assert payload["answer"]["route_by_class"][2]["proof_lane"] == "memory_payload"
     assert payload["answer"]["route_by_class"][3]["proof_lane"] == "workspace_cli"
     assert payload["answer"]["route_by_class"][3]["broaden_with"] == ["planning_surfaces"]

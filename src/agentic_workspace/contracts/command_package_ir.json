@@ -241,7 +241,7 @@
       "package_role": "root-workspace-cli",
       "python_runtime_binding": {
         "entrypoint": "agentic-workspace",
-        "runtime_module_file": "workspace_runtime_cli",
+        "runtime_module_file": "cli",
         "render_runtime_module": true,
         "runtime_module_exports": [
           {
@@ -558,7 +558,7 @@
           }
         ],
         "operation_executor": {
-          "module_file": "workspace_operation_ir_executor",
+          "module_file": "operation_executor",
           "supported_operation_ids": [
             "config.report",
             "defaults.report",
@@ -854,7 +854,7 @@
         {
           "kind": "python",
           "package_name": "agentic-workspace",
-          "generated_root": "generated/python/workspace-cli",
+          "generated_root": "generated/workspace/python",
           "entrypoints": [
             "agentic-workspace"
           ],
@@ -4845,7 +4845,7 @@
       "package_role": "planning-module-cli",
       "python_runtime_binding": {
         "entrypoint": "agentic-planning",
-        "runtime_module_file": "planning_runtime_cli",
+        "runtime_module_file": "cli",
         "render_runtime_module": true,
         "runtime_module_exports": [
           {
@@ -4870,7 +4870,7 @@
           }
         ],
         "operation_executor": {
-          "module_file": "planning_operation_ir_executor",
+          "module_file": "operation_executor",
           "supported_operation_ids": [
             "planning.adopt.lifecycle",
             "planning.archive-plan.lifecycle",
@@ -5237,7 +5237,7 @@
         {
           "kind": "python",
           "package_name": "agentic-planning",
-          "generated_root": "generated/python/planning-cli",
+          "generated_root": "generated/planning/python",
           "entrypoints": [
             "agentic-planning"
           ],
@@ -7446,9 +7446,9 @@
       "package_role": "memory-module-cli",
       "python_runtime_binding": {
         "entrypoint": "agentic-memory",
-        "runtime_module_file": "memory_runtime_cli",
+        "runtime_module_file": "cli",
         "operation_executor": {
-          "module_file": "memory_operation_ir_executor",
+          "module_file": "operation_executor",
           "supported_operation_ids": [
             "memory.doctor.report",
             "memory.install.lifecycle",
@@ -7761,7 +7761,7 @@
         {
           "kind": "python",
           "package_name": "agentic-memory",
-          "generated_root": "generated/python/memory-cli",
+          "generated_root": "generated/memory/python",
           "entrypoints": [
             "agentic-memory"
           ],

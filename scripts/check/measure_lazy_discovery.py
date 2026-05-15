@@ -12,8 +12,8 @@ from typing import Any, Callable
 
 from command_generation.generated_package_loader import load_generated_cli_module_for_entrypoint
 
-planning_cli = load_generated_cli_module_for_entrypoint("agentic-planning", "planning_runtime_cli")
-workspace_cli = load_generated_cli_module_for_entrypoint("agentic-workspace", "workspace_runtime_cli")
+planning_cli = load_generated_cli_module_for_entrypoint("agentic-planning", "cli.py")
+workspace_cli = load_generated_cli_module_for_entrypoint("agentic-workspace", "cli.py")
 
 JsonRunner = Callable[[list[str]], int]
 
@@ -318,3 +318,4 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

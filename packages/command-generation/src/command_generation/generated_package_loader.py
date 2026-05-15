@@ -20,7 +20,7 @@ def load_generated_cli_package(
     except (ImportError, ModuleNotFoundError, ValueError):
         pass
 
-    relative_init = Path(generated_root) / "generated_cli_package" / "__init__.py"
+    relative_init = Path(generated_root) / "__init__.py"
     for parent in Path(__file__).resolve().parents:
         candidate = parent / relative_init
         if candidate.is_file():
@@ -31,7 +31,18 @@ def load_generated_cli_package(
             sys.modules[module_name] = module
             spec.loader.exec_module(module)
             return module
-    raise ModuleNotFoundError(f"{generated_root}/generated_cli_package is unavailable")
+    legacy_relative_init = Path(generated_root) / "generated_cli_package" / "__init__.py"
+    for parent in Path(__file__).resolve().parents:
+        candidate = parent / legacy_relative_init
+        if candidate.is_file():
+            spec = importlib.util.spec_from_file_location(module_name, candidate)
+            if spec is None or spec.loader is None:
+                break
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[module_name] = module
+            spec.loader.exec_module(module)
+            return module
+    raise ModuleNotFoundError(f"{generated_root} generated CLI package is unavailable")
 
 
 def load_generated_cli_package_module(
@@ -52,7 +63,7 @@ def load_generated_cli_package_module(
         module_name=module_name.rsplit(".", 1)[0] if "." in module_name else f"{module_name}_package",
     )
     package_name = package.__name__
-    relative_path = Path(generated_root) / "generated_cli_package" / file_name
+    relative_path = Path(generated_root) / file_name
     for parent in Path(__file__).resolve().parents:
         candidate = parent / relative_path
         if candidate.is_file():
@@ -64,7 +75,19 @@ def load_generated_cli_package_module(
             sys.modules[submodule_name] = module
             spec.loader.exec_module(module)
             return module
-    raise ModuleNotFoundError(f"{generated_root}/generated_cli_package/{file_name} is unavailable")
+    legacy_relative_path = Path(generated_root) / "generated_cli_package" / file_name
+    for parent in Path(__file__).resolve().parents:
+        candidate = parent / legacy_relative_path
+        if candidate.is_file():
+            submodule_name = f"{package_name}.{Path(file_name).stem}"
+            spec = importlib.util.spec_from_file_location(submodule_name, candidate)
+            if spec is None or spec.loader is None:
+                break
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[submodule_name] = module
+            spec.loader.exec_module(module)
+            return module
+    raise ModuleNotFoundError(f"{generated_root}/{file_name} is unavailable")
 
 
 def _load_module_from_init(init_path: Path, module_name: str) -> ModuleType | None:
@@ -88,9 +111,10 @@ def _entrypoints_from_package(package_payload: dict[str, Any]) -> set[str]:
 def _candidate_generated_package_dirs() -> list[Path]:
     candidates: list[Path] = []
     for parent in Path(__file__).resolve().parents:
-        generated_root = parent / "generated" / "python"
+        generated_root = parent / "generated"
         if generated_root.is_dir():
-            candidates.extend(sorted(generated_root.glob("*/generated_cli_package")))
+            candidates.extend(sorted(generated_root.glob("*/python")))
+            candidates.extend(sorted((generated_root / "python").glob("*/generated_cli_package")))
     for path_entry in sys.path:
         if not path_entry:
             continue

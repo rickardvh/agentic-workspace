@@ -19,7 +19,7 @@ from repo_memory_bootstrap._installer_shared import (
 )
 from repo_memory_bootstrap._ownership import module_root as memory_module_root
 
-cli = load_generated_cli_module_for_entrypoint("agentic-memory", "memory_runtime_cli")
+cli = load_generated_cli_module_for_entrypoint("agentic-memory", "cli.py")
 
 FIXTURES_ROOT = Path(__file__).resolve().parent / "fixtures" / "routing"
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]

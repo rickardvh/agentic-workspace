@@ -8,7 +8,7 @@ from repo_planning_bootstrap.installer import install_bootstrap
 
 from command_generation.generated_package_loader import load_generated_cli_module_for_entrypoint
 
-cli = load_generated_cli_module_for_entrypoint("agentic-workspace", "workspace_runtime_cli")
+cli = load_generated_cli_module_for_entrypoint("agentic-workspace", "cli.py")
 
 
 def _write(path: Path, content: str) -> None:

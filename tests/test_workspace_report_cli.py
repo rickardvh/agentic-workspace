@@ -868,7 +868,7 @@ def test_operational_compression_classifies_generated_output_footprint(tmp_path:
                     "targets": [
                         {
                             "kind": "python",
-                            "generated_root": "generated/python/workspace-cli",
+                            "generated_root": "generated/workspace/python",
                             "generation_status": "supported-now",
                             "maturity_level_ref": "metadata-proof-fixture",
                             "test_environment": "python-dev",
@@ -891,19 +891,19 @@ def test_operational_compression_classifies_generated_output_footprint(tmp_path:
             "generated_outputs": [
                 {
                     "program": "agentic-workspace",
-                    "path": "generated/python/workspace-cli/generated_command_adapters.json",
+                    "path": "generated/workspace/python/generated_command_adapters.json",
                 }
             ]
         },
     )
     _write(target / "scripts" / "generate" / "generate_command_packages.py", "print('generate')\n")
     _write(target / "scripts" / "check" / "check_generated_command_packages.py", "print('check')\n")
-    _write(target / "generated" / "python" / "workspace-cli" / "generated_cli_package" / "__init__.py", "# generated\n")
+    _write(target / "generated" / "workspace" / "python" / "__init__.py", "# generated\n")
     _write(
         target / "src" / "agentic_workspace" / "generated_cli_package" / "__pycache__" / "__init__.cpython-313.pyc",
         "cache\n",
     )
-    _write(target / "generated" / "python" / "workspace-cli" / "generated_command_adapters.json", "{}\n")
+    _write(target / "generated" / "workspace" / "python" / "generated_command_adapters.json", "{}\n")
     _write(target / "generated" / "typescript" / "workspace-cli" / "package.json", "{}\n")
     _write(target / "generated" / "typescript" / "workspace-cli" / "src" / "cli.mjs", "export {};\n")
     _write(target / "generated" / "typescript" / "Dockerfile", "FROM node:22\n")
@@ -2421,7 +2421,7 @@ def test_report_surfaces_combined_execution_shape_for_planning_backed_slice(tmp_
         "## Blockers\n\n"
         "- None.\n\n"
         "## Touched Paths\n\n"
-        "- generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py\n\n"
+        "- generated/workspace/python/cli.py\n\n"
         "## Invariants\n\n"
         "- Config remains posture rather than scheduler policy.\n\n"
         "## Validation Commands\n\n"
@@ -2598,7 +2598,7 @@ def test_report_routes_root_cli_hotspot_with_owner_decision(tmp_path: Path, caps
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    cli_path = target / "generated" / "python" / "workspace-cli" / "generated_cli_package" / "workspace_runtime_cli.py"
+    cli_path = target / "generated" / "workspace" / "python" / "cli.py"
     cli_path.parent.mkdir(parents=True, exist_ok=True)
     cli_path.write_text("\n".join(f"line_{index}" for index in range(450)) + "\n", encoding="utf-8")
 
@@ -2721,7 +2721,7 @@ def test_report_surfaces_promotable_setup_findings_as_repo_friction_evidence(tmp
                         "class": "repo_friction_evidence",
                         "summary": "Validation repeatedly fails after agents hand-author schema shape.",
                         "confidence": 0.9,
-                        "path": "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
+                        "path": "generated/workspace/python/cli.py",
                         "observed_during": "uv run pytest tests/test_workspace_cli.py",
                         "signal_kind": "validation_friction",
                         "cost": "Agents spend extra repair loops fixing shape that a writer helper could construct.",
@@ -2756,7 +2756,7 @@ def test_report_surfaces_promotable_setup_findings_as_repo_friction_evidence(tmp
     ]
     setup_findings = next(evidence for evidence in payload["repo_friction"]["external_evidence"] if evidence["kind"] == "setup-findings")
     assert setup_findings["path"] == "tools/setup-findings.json"
-    assert setup_findings["items"][0]["path"] == "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py"
+    assert setup_findings["items"][0]["path"] == "generated/workspace/python/cli.py"
     assert setup_findings["items"][0]["validation_failure_class"] == "interface_design_error"
     assert setup_findings["items"][0]["promotion_reason"] == "grounded friction evidence is worth preserving"
     signal = payload["improvement_intake"]["improvement_signal_candidates"][0]

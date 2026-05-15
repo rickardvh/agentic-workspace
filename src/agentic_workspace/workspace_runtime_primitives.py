@@ -1,7 +1,7 @@
 """Workspace runtime primitive implementations for generated CLI handlers.
 
 This module is not a CLI entrypoint. Parser, dispatch, and handler-map ownership belong
-to generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py.
+to generated/workspace/python/cli.py.
 """
 
 from __future__ import annotations
@@ -221,7 +221,7 @@ def _agentic_workspace_package_root() -> Path | None:
 
 
 def _invoked_cli_identity_payload(*, target_root: Path | None = None, compact: bool = False) -> dict[str, Any]:
-    module_path = Path(load_generated_cli_module_for_entrypoint("agentic-workspace", "workspace_runtime_cli").__file__).resolve()
+    module_path = Path(load_generated_cli_module_for_entrypoint("agentic-workspace", "cli.py").__file__).resolve()
     package_root = _agentic_workspace_package_root()
     argv0 = sys.argv[0] if sys.argv else ""
     argv0_path = Path(argv0).resolve() if argv0 else None
@@ -2959,8 +2959,7 @@ def _write_action_kind(*, dry_run: bool, existing: str | None) -> str:
 def _is_retired_generated_llms_adapter(text: str) -> bool:
     lowered = text.lower()
     return (
-        "canonical_source: `generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py:_external_agent_handoff_text`"
-        in lowered
+        "canonical_source: `generated/workspace/python/cli.py:_external_agent_handoff_text`" in lowered
         or "generated compatibility adapter" in lowered
         or "agent entrypoint router" in lowered
     )
@@ -14122,7 +14121,7 @@ def _prompt_routing_contract_payload() -> dict[str, Any]:
             {
                 "class": "workspace lifecycle change",
                 "proof_lane": "workspace_cli",
-                "owner_surface": "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
+                "owner_surface": "generated/workspace/python/cli.py",
             },
             {
                 "class": "planning state or contract change",
@@ -14748,7 +14747,7 @@ def _effective_authority_payload(
                 "concern": "runtime implementation",
                 "authority_class": "procedural-owned",
                 "owner": "workspace",
-                "surface": "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py",
+                "surface": "generated/workspace/python/cli.py",
                 "status": "present",
             },
         ],
@@ -16953,7 +16952,7 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
 
     from command_generation.generated_package_loader import load_generated_cli_module_for_entrypoint
 
-    _print_summary = load_generated_cli_module_for_entrypoint("agentic-planning", "planning_runtime_cli")._print_summary
+    _print_summary = load_generated_cli_module_for_entrypoint("agentic-planning", "cli.py")._print_summary
     config = _load_workspace_config(target_root=target_root)
     changed_paths = list(getattr(args, "changed", []) or [])
     if getattr(args, "select", None):
@@ -17151,7 +17150,7 @@ def _run_reconcile_report_adapter(args: argparse.Namespace) -> int:
 
     from command_generation.generated_package_loader import load_generated_cli_module_for_entrypoint
 
-    _print_reconcile = load_generated_cli_module_for_entrypoint("agentic-planning", "planning_runtime_cli")._print_reconcile
+    _print_reconcile = load_generated_cli_module_for_entrypoint("agentic-planning", "cli.py")._print_reconcile
     _ensure_external_intent_cache_if_available(target_root=target_root)
     payload = planning_reconcile(
         target=target_root, apply_safe_prune=bool(getattr(args, "apply_safe_prune", False)), dry_run=bool(getattr(args, "dry_run", False))
@@ -19244,7 +19243,7 @@ def _direct_cli_edit_review_for_changed_paths(changed_paths: list[str]) -> dict[
     cli_paths = [
         path
         for path in changed_paths
-        if path == "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py"
+        if path == "generated/workspace/python/cli.py"
         or path.endswith("/src/repo_planning_bootstrap/cli.py")
         or path.endswith("/src/repo_memory_bootstrap/cli.py")
     ]
