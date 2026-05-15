@@ -285,27 +285,28 @@ def build_parser() -> argparse.ArgumentParser:
         )
         _add_format_argument(report_parser)
 
-    create_note_parser = subparsers.add_parser(
-        "create-note",
-        help="Create a minimal Memory note and matching manifest entry.",
-    )
-    create_note_parser.add_argument("slug")
-    create_note_parser.add_argument("--title")
-    create_note_parser.add_argument("--folder", default="domains")
-    create_note_parser.add_argument("--note-type", default="domain")
-    create_note_parser.add_argument("--summary", default="")
-    create_note_parser.add_argument("--applies-to", nargs="*", default=[])
-    create_note_parser.add_argument("--use-when", nargs="*", default=[])
-    create_note_parser.add_argument("--routes-from", nargs="*", default=[])
-    create_note_parser.add_argument("--stale-when", nargs="*", default=[])
-    create_note_parser.add_argument("--evidence", nargs="*", default=[])
-    create_note_parser.add_argument("--memory-role", default="")
-    create_note_parser.add_argument("--promotion-target", default="")
-    create_note_parser.add_argument("--promotion-trigger", default="")
-    create_note_parser.add_argument("--retention-after-promotion", default="")
-    create_note_parser.add_argument("--dry-run", action="store_true")
-    _add_target_arguments(create_note_parser)
-    _add_format_argument(create_note_parser)
+    if "create-note" not in generated_commands:
+        create_note_parser = subparsers.add_parser(
+            "create-note",
+            help="Create a minimal Memory note and matching manifest entry.",
+        )
+        create_note_parser.add_argument("slug")
+        create_note_parser.add_argument("--title")
+        create_note_parser.add_argument("--folder", default="domains")
+        create_note_parser.add_argument("--note-type", default="domain")
+        create_note_parser.add_argument("--summary", default="")
+        create_note_parser.add_argument("--applies-to", nargs="*", default=[])
+        create_note_parser.add_argument("--use-when", nargs="*", default=[])
+        create_note_parser.add_argument("--routes-from", nargs="*", default=[])
+        create_note_parser.add_argument("--stale-when", nargs="*", default=[])
+        create_note_parser.add_argument("--evidence", nargs="*", default=[])
+        create_note_parser.add_argument("--memory-role", default="")
+        create_note_parser.add_argument("--promotion-target", default="")
+        create_note_parser.add_argument("--promotion-trigger", default="")
+        create_note_parser.add_argument("--retention-after-promotion", default="")
+        create_note_parser.add_argument("--dry-run", action="store_true")
+        _add_target_arguments(create_note_parser)
+        _add_format_argument(create_note_parser)
 
     if "capture-note" not in generated_commands:
         capture_note_parser = subparsers.add_parser(
@@ -957,6 +958,10 @@ def _run_capture_note_report_adapter(args: argparse.Namespace) -> int | None:
     return run_operation_ir(generated_cli_package_operation_contract("memory.capture-note.report"), args)
 
 
+def _run_create_note_apply_adapter(args: argparse.Namespace) -> int | None:
+    return run_operation_ir(generated_cli_package_operation_contract("memory.create-note.apply"), args)
+
+
 def _run_current_report_adapter(args: argparse.Namespace) -> int | None:
     return run_operation_ir(generated_cli_package_operation_contract("memory.current.report"), args)
 
@@ -1011,6 +1016,7 @@ def _run_sync_memory_adapter(args: argparse.Namespace) -> int | None:
 
 _GENERATED_RUNTIME_HANDLERS = {
     "memory.capture-note.report": _run_capture_note_report_adapter,
+    "memory.create-note.apply": _run_create_note_apply_adapter,
     "memory.current.report": _run_current_report_adapter,
     "memory.doctor.report": _run_doctor_report_adapter,
     "memory.list-files.report": _run_list_files_report_adapter,

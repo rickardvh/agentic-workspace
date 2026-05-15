@@ -29,6 +29,7 @@ class OperationIrExecutionError(RuntimeError):
 def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int:
     if operation.get("id") not in {
         'memory.capture-note.report',
+        'memory.create-note.apply',
         'memory.current.report',
         'memory.doctor.report',
         'memory.list-files.report',
@@ -69,6 +70,19 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'surface': getattr(args, 'surface', []),
                 'mode': getattr(args, 'mode', None),
                 'slug': getattr(args, 'slug', ''),
+                'title': getattr(args, 'title', None),
+                'folder': getattr(args, 'folder', 'domains'),
+                'note_type': getattr(args, 'note_type', 'domain'),
+                'applies_to': getattr(args, 'applies_to', []),
+                'use_when': getattr(args, 'use_when', []),
+                'routes_from': getattr(args, 'routes_from', []),
+                'stale_when': getattr(args, 'stale_when', []),
+                'evidence': getattr(args, 'evidence', []),
+                'memory_role': getattr(args, 'memory_role', ''),
+                'promotion_target': getattr(args, 'promotion_target', ''),
+                'promotion_trigger': getattr(args, 'promotion_trigger', ''),
+                'retention_after_promotion': getattr(args, 'retention_after_promotion', ''),
+                'dry_run': getattr(args, 'dry_run', False),
                 'summary': getattr(args, 'summary', ''),
                 'existing_note': getattr(args, 'existing_note', ''),
                 'force_new_reason': getattr(args, 'force_new_reason', ''),
@@ -85,6 +99,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'memory.bootstrap.doctor.load': _handle_memory_bootstrap_doctor_load,
                 'memory.bootstrap.status.load': _handle_memory_bootstrap_status_load,
                 'memory.capture_note.load': _handle_memory_capture_note_load,
+                'memory.note.create': _handle_memory_note_create,
                 'memory.current.load': _handle_memory_current_load,
                 'memory.promotion_report.load': _handle_memory_promotion_report_load,
                 'memory.prompt.render': _handle_memory_prompt_render,
@@ -138,6 +153,12 @@ def _handle_memory_capture_note_load(values: dict[str, Any], _arguments: dict[st
     from repo_memory_bootstrap.installer import suggest_memory_note_capture
 
     return suggest_memory_note_capture(existing_note=values.get('existing_note'), files=values.get('files'), force_new_reason=values.get('force_new_reason'), slug=values.get('slug'), summary=values.get('summary'), surfaces=values.get('surface'), target=values.get('target'))
+
+
+def _handle_memory_note_create(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_memory_bootstrap.installer import create_memory_note
+
+    return create_memory_note(applies_to=values.get('applies_to'), dry_run=values.get('dry_run'), evidence=values.get('evidence'), folder=values.get('folder'), memory_role=values.get('memory_role'), note_type=values.get('note_type'), promotion_target=values.get('promotion_target'), promotion_trigger=values.get('promotion_trigger'), retention_after_promotion=values.get('retention_after_promotion'), routes_from=values.get('routes_from'), slug=values.get('slug'), stale_when=values.get('stale_when'), summary=values.get('summary'), target=values.get('target'), title=values.get('title'), use_when=values.get('use_when'))
 
 
 def _handle_memory_current_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:

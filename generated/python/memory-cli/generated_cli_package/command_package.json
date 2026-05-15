@@ -309,6 +309,206 @@
       "status": "generated"
     },
     {
+      "adapter_id": "memory.create-note.cli",
+      "command": {
+        "manifest_ref": "package:memory:cli",
+        "name": "create-note"
+      },
+      "conformance_refs": [
+        "memory.create-note.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "interface": {
+        "arguments": [
+          {
+            "help": "Memory note slug to create.",
+            "name": "slug"
+          }
+        ],
+        "help": "Create a minimal Memory note and matching manifest entry.",
+        "name": "create-note",
+        "options": [
+          {
+            "flags": [
+              "--title"
+            ],
+            "help": "Memory note title. Defaults to a title derived from the slug.",
+            "name": "title"
+          },
+          {
+            "default": "domains",
+            "flags": [
+              "--folder"
+            ],
+            "help": "Memory note folder under the repo memory root.",
+            "name": "folder"
+          },
+          {
+            "default": "domain",
+            "flags": [
+              "--note-type"
+            ],
+            "help": "Memory note type recorded in the manifest.",
+            "name": "note_type"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--summary"
+            ],
+            "help": "Short note summary.",
+            "name": "summary"
+          },
+          {
+            "default": [],
+            "flags": [
+              "--applies-to"
+            ],
+            "help": "Repo paths or surfaces this note applies to.",
+            "name": "applies_to",
+            "nargs": "*"
+          },
+          {
+            "default": [],
+            "flags": [
+              "--use-when"
+            ],
+            "help": "Routing hints for when to use this note.",
+            "name": "use_when",
+            "nargs": "*"
+          },
+          {
+            "default": [],
+            "flags": [
+              "--routes-from"
+            ],
+            "help": "Surfaces or files that should route to this note.",
+            "name": "routes_from",
+            "nargs": "*"
+          },
+          {
+            "default": [],
+            "flags": [
+              "--stale-when"
+            ],
+            "help": "Conditions that make this note stale.",
+            "name": "stale_when",
+            "nargs": "*"
+          },
+          {
+            "default": [],
+            "flags": [
+              "--evidence"
+            ],
+            "help": "Evidence references supporting this note.",
+            "name": "evidence",
+            "nargs": "*"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--memory-role"
+            ],
+            "help": "Memory role metadata.",
+            "name": "memory_role"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--promotion-target"
+            ],
+            "help": "Optional durable promotion target.",
+            "name": "promotion_target"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--promotion-trigger"
+            ],
+            "help": "Optional promotion trigger.",
+            "name": "promotion_trigger"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--retention-after-promotion"
+            ],
+            "help": "Retention policy after promotion.",
+            "name": "retention_after_promotion"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--dry-run"
+            ],
+            "help": "Show planned changes without writing files.",
+            "name": "dry_run"
+          },
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Target repository path. Defaults to the current directory.",
+            "name": "target"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "memory.create-note.apply",
+        "path": "operations/memory.create-note.apply.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "memory note creation policy",
+          "module result assembly",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.note.create",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    {
       "adapter_id": "memory.current.cli",
       "command": {
         "manifest_ref": "package:memory:cli",
@@ -1463,6 +1663,62 @@
           "primitive": "memory.capture_note.load"
         },
         {
+          "function": "create_memory_note",
+          "handler": "function_call",
+          "import_module": "repo_memory_bootstrap.installer",
+          "kwargs": {
+            "applies_to": {
+              "value": "applies_to"
+            },
+            "dry_run": {
+              "value": "dry_run"
+            },
+            "evidence": {
+              "value": "evidence"
+            },
+            "folder": {
+              "value": "folder"
+            },
+            "memory_role": {
+              "value": "memory_role"
+            },
+            "note_type": {
+              "value": "note_type"
+            },
+            "promotion_target": {
+              "value": "promotion_target"
+            },
+            "promotion_trigger": {
+              "value": "promotion_trigger"
+            },
+            "retention_after_promotion": {
+              "value": "retention_after_promotion"
+            },
+            "routes_from": {
+              "value": "routes_from"
+            },
+            "slug": {
+              "value": "slug"
+            },
+            "stale_when": {
+              "value": "stale_when"
+            },
+            "summary": {
+              "value": "summary"
+            },
+            "target": {
+              "value": "target"
+            },
+            "title": {
+              "value": "title"
+            },
+            "use_when": {
+              "value": "use_when"
+            }
+          },
+          "primitive": "memory.note.create"
+        },
+        {
           "function": "_load_memory_current",
           "handler": "runtime_handler",
           "primitive": "memory.current.load"
@@ -1650,6 +1906,71 @@
           "name": "slug"
         },
         {
+          "arg": "title",
+          "default": null,
+          "name": "title"
+        },
+        {
+          "arg": "folder",
+          "default": "domains",
+          "name": "folder"
+        },
+        {
+          "arg": "note_type",
+          "default": "domain",
+          "name": "note_type"
+        },
+        {
+          "arg": "applies_to",
+          "default": [],
+          "name": "applies_to"
+        },
+        {
+          "arg": "use_when",
+          "default": [],
+          "name": "use_when"
+        },
+        {
+          "arg": "routes_from",
+          "default": [],
+          "name": "routes_from"
+        },
+        {
+          "arg": "stale_when",
+          "default": [],
+          "name": "stale_when"
+        },
+        {
+          "arg": "evidence",
+          "default": [],
+          "name": "evidence"
+        },
+        {
+          "arg": "memory_role",
+          "default": "",
+          "name": "memory_role"
+        },
+        {
+          "arg": "promotion_target",
+          "default": "",
+          "name": "promotion_target"
+        },
+        {
+          "arg": "promotion_trigger",
+          "default": "",
+          "name": "promotion_trigger"
+        },
+        {
+          "arg": "retention_after_promotion",
+          "default": "",
+          "name": "retention_after_promotion"
+        },
+        {
+          "arg": "dry_run",
+          "default": false,
+          "name": "dry_run"
+        },
+        {
           "arg": "summary",
           "default": "",
           "name": "summary"
@@ -1684,6 +2005,7 @@
       "supported_operation_ids": [
         "memory.doctor.report",
         "memory.capture-note.report",
+        "memory.create-note.apply",
         "memory.current.report",
         "memory.list-files.report",
         "memory.list-skills.report",

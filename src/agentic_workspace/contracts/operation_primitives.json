@@ -258,6 +258,12 @@
       "portability": "domain-runtime"
     },
     {
+      "id": "memory.note.create",
+      "summary": "Create or dry-run a package-local Memory note and manifest entry.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime"
+    },
+    {
       "id": "memory.promotion_report.load",
       "summary": "Load package-local memory promotion candidate report state."
     },

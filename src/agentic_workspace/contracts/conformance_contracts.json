@@ -64,6 +64,12 @@
       "adapter_kind": "process"
     },
     {
+      "id": "memory.create-note.dry-run.process",
+      "operation_id": "memory.create-note.apply",
+      "path": "conformance/memory.create-note.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "memory.current-check.process",
       "operation_id": "memory.current.report",
       "path": "conformance/memory.current-check.process.json",

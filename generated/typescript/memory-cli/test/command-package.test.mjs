@@ -8,7 +8,7 @@ const source = readFileSync(new URL('../src/commandPackage.ts', import.meta.url)
 const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
 test('generated package metadata exposes expected commands', () => {
-  const expected = ["capture-note", "current", "doctor", "list-files", "list-skills", "promotion-report", "prompt", "report", "route", "route-report", "route-review", "search", "status", "sync-memory", "verify-payload"];
+  const expected = ["capture-note", "create-note", "current", "doctor", "list-files", "list-skills", "promotion-report", "prompt", "report", "route", "route-report", "route-review", "search", "status", "sync-memory", "verify-payload"];
   for (const command of expected) {
     assert.match(source, new RegExp(`\"name\": \\"${command}\\"`));
   }

@@ -59,6 +59,12 @@
       "migration_status": "runtime-consumed"
     },
     {
+      "id": "memory.create-note.apply",
+      "path": "operations/memory.create-note.apply.json",
+      "command": "create-note",
+      "migration_status": "runtime-consumed"
+    },
+    {
       "id": "memory.current.report",
       "path": "operations/memory.current.report.json",
       "command": "current",

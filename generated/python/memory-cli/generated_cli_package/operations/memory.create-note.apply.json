@@ -1,0 +1,172 @@
+{
+  "classification": "lifecycle-mutation",
+  "command_surface": {
+    "command": "create-note",
+    "format_option": "format",
+    "program": "agentic-memory"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": false,
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": true
+  },
+  "guards": [
+    "Generated code owns parser/help/dispatch shape; memory-owned note creation policy remains behind the declared primitive.",
+    "Dry-run conformance must prove the generated adapter can exercise this mutation surface without writing repository state."
+  ],
+  "id": "memory.create-note.apply",
+  "inputs": [
+    {
+      "name": "slug",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "title",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "folder",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "note_type",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "summary",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "applies_to",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "use_when",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "routes_from",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "stale_when",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "evidence",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "memory_role",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "promotion_target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "promotion_trigger",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "retention_after_promotion",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "dry_run",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "arguments": {},
+        "description": "Create or dry-run a Memory note and matching manifest entry.",
+        "id": "create_memory_note",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "memory.note.create"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the create-note result in the requested format.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Memory create-note executes generated operation IR through codegen-owned primitive dataflow while the memory module owns note creation policy."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": true
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "text-or-json"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated memory create-note dry-run process conformance passes"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": "target repository Memory manifest"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Create or dry-run a Memory note and matching manifest entry.",
+      "id": "create_memory_note",
+      "uses": "memory.note.create"
+    },
+    {
+      "description": "Emit the create-note result in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Create a Memory note and manifest entry through the memory module CLI.",
+  "writes": [
+    {
+      "required": true,
+      "surface": "target repository Memory note and manifest entry"
+    }
+  ]
+}

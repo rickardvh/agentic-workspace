@@ -218,6 +218,25 @@
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
     },
     {
+      "operation_id": "memory.create-note.apply",
+      "program": "agentic-memory",
+      "command": "create-note",
+      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/memory.create-note.apply.json",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "memory.note.create",
+        "module-result text/json compatibility formatting"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "memory.create-note.dry-run.process",
+      "domain_runtime_primitive_refs": [
+        "memory.note.create"
+      ],
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own Memory note creation policy and mutation safety behavior."
+    },
+    {
       "operation_id": "memory.current.report",
       "program": "agentic-memory",
       "command": "current",

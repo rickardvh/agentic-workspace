@@ -1,0 +1,172 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "memory.create-note.apply",
+  "command_surface": {
+    "program": "agentic-memory",
+    "command": "create-note",
+    "format_option": "format"
+  },
+  "summary": "Create a Memory note and manifest entry through the memory module CLI.",
+  "classification": "lifecycle-mutation",
+  "inputs": [
+    {
+      "name": "slug",
+      "source": "cli-option",
+      "required": true
+    },
+    {
+      "name": "title",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "folder",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "note_type",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "summary",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "applies_to",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "use_when",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "routes_from",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "stale_when",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "evidence",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "memory_role",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "promotion_target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "promotion_trigger",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "retention_after_promotion",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "dry_run",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "text-or-json"
+  },
+  "effects": {
+    "read_only": false,
+    "destructive": false,
+    "idempotent": false,
+    "writes_repo_state": true,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": true,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": "target repository Memory manifest",
+      "required": false
+    }
+  ],
+  "writes": [
+    {
+      "surface": "target repository Memory note and manifest entry",
+      "required": true
+    }
+  ],
+  "steps": [
+    {
+      "id": "create_memory_note",
+      "uses": "memory.note.create",
+      "description": "Create or dry-run a Memory note and matching manifest entry."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit the create-note result in the requested format."
+    }
+  ],
+  "guards": [
+    "Generated code owns parser/help/dispatch shape; memory-owned note creation policy remains behind the declared primitive.",
+    "Dry-run conformance must prove the generated adapter can exercise this mutation surface without writing repository state."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated memory create-note dry-run process conformance passes"
+  ],
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Memory create-note executes generated operation IR through codegen-owned primitive dataflow while the memory module owns note creation policy.",
+    "steps": [
+      {
+        "id": "create_memory_note",
+        "uses": "memory.note.create",
+        "description": "Create or dry-run a Memory note and matching manifest entry.",
+        "arguments": {},
+        "outputs": [
+          "result"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit",
+        "description": "Emit the create-note result in the requested format.",
+        "arguments": {},
+        "outputs": [
+          "emitted"
+        ],
+        "on_error": "emit_usage_error"
+      }
+    ]
+  }
+}
