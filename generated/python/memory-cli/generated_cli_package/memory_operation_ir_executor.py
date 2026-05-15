@@ -29,6 +29,7 @@ class OperationIrExecutionError(RuntimeError):
 def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int:
     if operation.get("id") not in {
         'memory.capture-note.report',
+        'memory.current.report',
         'memory.doctor.report',
         'memory.list-files.report',
         'memory.list-skills.report',
@@ -71,6 +72,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'existing_note': getattr(args, 'existing_note', ''),
                 'force_new_reason': getattr(args, 'force_new_reason', ''),
                 'query': getattr(args, 'query', ''),
+                'current_command': getattr(args, 'current_command', 'show'),
             },
             context=PrimitiveContext(cwd=Path.cwd(), roots={
                 'memory.package-payload': _handle_context_root_memory_package_payload(),
@@ -81,6 +83,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'memory.bootstrap.doctor.load': _handle_memory_bootstrap_doctor_load,
                 'memory.bootstrap.status.load': _handle_memory_bootstrap_status_load,
                 'memory.capture_note.load': _handle_memory_capture_note_load,
+                'memory.current.load': _handle_memory_current_load,
                 'memory.promotion_report.load': _handle_memory_promotion_report_load,
                 'memory.report.load': _handle_memory_report_load,
                 'memory.route.load': _handle_memory_route_load,
@@ -132,6 +135,12 @@ def _handle_memory_capture_note_load(values: dict[str, Any], _arguments: dict[st
     from repo_memory_bootstrap.installer import suggest_memory_note_capture
 
     return suggest_memory_note_capture(existing_note=values.get('existing_note'), files=values.get('files'), force_new_reason=values.get('force_new_reason'), slug=values.get('slug'), summary=values.get('summary'), surfaces=values.get('surface'), target=values.get('target'))
+
+
+def _handle_memory_current_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
+    from .memory_runtime_cli import _load_memory_current
+
+    return _load_memory_current(values, arguments, context)
 
 
 def _handle_memory_promotion_report_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:

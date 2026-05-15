@@ -695,7 +695,7 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
     parser = cli.build_parser()
     generated_parser = cli.build_generated_cli_package_parser()
 
-    current_args = parser.parse_args(["current", "check", "--target", "."])
+    current_args = generated_parser.parse_args(["current", "check", "--target", "."])
     list_skills_args = generated_parser.parse_args(["list-skills", "--format", "json"])
     cleanup_args = parser.parse_args(["bootstrap-cleanup", "--target", ".", "--format", "json"])
     migrate_args = parser.parse_args(["migrate-layout", "--target", ".", "--dry-run", "--format", "json"])

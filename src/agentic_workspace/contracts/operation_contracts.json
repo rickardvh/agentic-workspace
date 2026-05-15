@@ -59,6 +59,12 @@
       "migration_status": "runtime-consumed"
     },
     {
+      "id": "memory.current.report",
+      "path": "operations/memory.current.report.json",
+      "command": "current",
+      "migration_status": "runtime-consumed"
+    },
+    {
       "id": "memory.doctor.report",
       "path": "operations/memory.doctor.report.json",
       "command": "doctor",

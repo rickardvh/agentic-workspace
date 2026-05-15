@@ -64,6 +64,18 @@
       "adapter_kind": "process"
     },
     {
+      "id": "memory.current-check.process",
+      "operation_id": "memory.current.report",
+      "path": "conformance/memory.current-check.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "memory.current-show.process",
+      "operation_id": "memory.current.report",
+      "path": "conformance/memory.current-show.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "memory.front-door.process",
       "path": "conformance/memory.front-door.process.json",
       "operation_id": "memory.front-door",

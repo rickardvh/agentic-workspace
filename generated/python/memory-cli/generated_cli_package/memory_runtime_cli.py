@@ -196,14 +196,15 @@ def build_parser() -> argparse.ArgumentParser:
     prompt_uninstall_parser = prompt_subparsers.add_parser("uninstall", help="Print the canonical uninstall prompt.")
     _add_target_arguments(prompt_uninstall_parser)
 
-    current_parser = subparsers.add_parser("current", help="Inspect or check legacy current-memory migration residue.")
-    current_subparsers = current_parser.add_subparsers(dest="current_command", required=True)
-    current_show_parser = current_subparsers.add_parser("show", help="Show legacy current-memory notes when present.")
-    _add_target_arguments(current_show_parser)
-    _add_format_argument(current_show_parser)
-    current_check_parser = current_subparsers.add_parser("check", help="Check legacy current-memory notes for migration pressure.")
-    _add_target_arguments(current_check_parser)
-    _add_format_argument(current_check_parser)
+    if "current" not in generated_commands:
+        current_parser = subparsers.add_parser("current", help="Inspect or check legacy current-memory migration residue.")
+        current_subparsers = current_parser.add_subparsers(dest="current_command", required=True)
+        current_show_parser = current_subparsers.add_parser("show", help="Show legacy current-memory notes when present.")
+        _add_target_arguments(current_show_parser)
+        _add_format_argument(current_show_parser)
+        current_check_parser = current_subparsers.add_parser("check", help="Check legacy current-memory notes for migration pressure.")
+        _add_target_arguments(current_check_parser)
+        _add_format_argument(current_check_parser)
 
     if "route" not in generated_commands:
         route_parser = subparsers.add_parser(
@@ -955,6 +956,10 @@ def _run_capture_note_report_adapter(args: argparse.Namespace) -> int | None:
     return run_operation_ir(generated_cli_package_operation_contract("memory.capture-note.report"), args)
 
 
+def _run_current_report_adapter(args: argparse.Namespace) -> int | None:
+    return run_operation_ir(generated_cli_package_operation_contract("memory.current.report"), args)
+
+
 def _run_list_files_report_adapter(args: argparse.Namespace) -> int | None:
     return run_operation_ir(generated_cli_package_operation_contract("memory.list-files.report"), args)
 
@@ -1001,6 +1006,7 @@ def _run_sync_memory_adapter(args: argparse.Namespace) -> int | None:
 
 _GENERATED_RUNTIME_HANDLERS = {
     "memory.capture-note.report": _run_capture_note_report_adapter,
+    "memory.current.report": _run_current_report_adapter,
     "memory.doctor.report": _run_doctor_report_adapter,
     "memory.list-files.report": _run_list_files_report_adapter,
     "memory.list-skills.report": _run_list_skills_report_adapter,
@@ -1040,6 +1046,12 @@ def _load_memory_bootstrap_doctor(values: dict[str, Any], _arguments: dict[str, 
         primary_test_command=values.get("primary_test_command"),
         other_key_commands=values.get("other_key_commands"),
     )
+
+
+def _load_memory_current(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> Any:
+    if str(values.get("current_command") or "show") == "check":
+        return check_current_memory(target=values.get("target"))
+    return show_current_memory(target=values.get("target"))
 
 
 def _load_memory_promotion_report(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> Any:
@@ -1169,6 +1181,9 @@ def _emit_memory_operation_output(values: dict[str, Any], _arguments: dict[str, 
     output_format = str(values.get("format") or "text")
     if values.get("operation_id") == "memory.capture-note.report":
         _emit_memory_capture_note_output(result, output_format=output_format)
+        return
+    if values.get("operation_id") == "memory.current.report" and str(values.get("current_command") or "show") == "show":
+        _emit_current_view(result, output_format=output_format)
         return
     if output_format == "json":
         if isinstance(result, dict):

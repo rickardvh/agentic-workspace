@@ -315,6 +315,120 @@ export const generatedCommandPackage = {
       "status": "generated"
     },
     {
+      "adapter_id": "memory.current.cli",
+      "command": {
+        "manifest_ref": "package:memory:cli",
+        "name": "current"
+      },
+      "conformance_refs": [
+        "memory.current-show.process",
+        "memory.current-check.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "interface": {
+        "help": "Inspect or check legacy current-memory migration residue.",
+        "name": "current",
+        "options": [],
+        "subcommand_dest": "current_command",
+        "subcommands": [
+          {
+            "help": "Show legacy current-memory notes when present.",
+            "name": "show",
+            "options": [
+              {
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory.",
+                "name": "target"
+              },
+              {
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "flags": [
+                  "--format"
+                ],
+                "help": "Output format.",
+                "name": "format"
+              }
+            ]
+          },
+          {
+            "help": "Check legacy current-memory notes for migration pressure.",
+            "name": "check",
+            "options": [
+              {
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory.",
+                "name": "target"
+              },
+              {
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "flags": [
+                  "--format"
+                ],
+                "help": "Output format.",
+                "name": "format"
+              }
+            ]
+          }
+        ],
+        "subcommands_required": true
+      },
+      "operation_ref": {
+        "id": "memory.current.report",
+        "path": "operations/memory.current.report.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "legacy current-memory inspection policy",
+          "module result assembly",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "nested subcommand identity",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.current.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    {
       "adapter_id": "memory.report.cli",
       "command": {
         "manifest_ref": "package:memory:cli",
@@ -1228,6 +1342,11 @@ export const generatedCommandPackage = {
           "primitive": "memory.capture_note.load"
         },
         {
+          "function": "_load_memory_current",
+          "handler": "runtime_handler",
+          "primitive": "memory.current.load"
+        },
+        {
           "function": "_load_memory_promotion_report",
           "handler": "runtime_handler",
           "primitive": "memory.promotion_report.load"
@@ -1423,12 +1542,18 @@ export const generatedCommandPackage = {
           "arg": "query",
           "default": "",
           "name": "query"
+        },
+        {
+          "arg": "current_command",
+          "default": "show",
+          "name": "current_command"
         }
       ],
       "module_file": "memory_operation_ir_executor",
       "supported_operation_ids": [
         "memory.doctor.report",
         "memory.capture-note.report",
+        "memory.current.report",
         "memory.list-files.report",
         "memory.list-skills.report",
         "memory.promotion-report.report",

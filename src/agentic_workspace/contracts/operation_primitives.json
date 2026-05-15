@@ -246,6 +246,12 @@
       "portability": "domain-runtime"
     },
     {
+      "id": "memory.current.load",
+      "summary": "Load package-local legacy current-memory show or check result.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime"
+    },
+    {
       "id": "memory.front_door.dispatch",
       "summary": "Dispatch generated workspace memory front-door argv to the Memory module runtime boundary.",
       "kind": "memory-runtime",
