@@ -129,7 +129,11 @@ def _runtime_consumed_operation_outputs(
                 continue
             operation = json.loads(source.read_text(encoding="utf-8"))
             ir_plan = operation.get("ir_plan", {})
-            if not isinstance(ir_plan, dict) or ir_plan.get("status") not in {"representative", "complete"}:
+            has_emittable_ir_plan = isinstance(ir_plan, dict) and ir_plan.get("status") in {"representative", "complete"}
+            has_runtime_consumed_steps = operation.get("migration_status") == "runtime-consumed" and isinstance(
+                operation.get("steps"), list
+            )
+            if not has_emittable_ir_plan and not has_runtime_consumed_steps:
                 continue
             emitted.add(operation_path)
             outputs.append(GeneratedOutput(root / "generated_cli_package" / operation_path, _json_block(operation) + "\n"))

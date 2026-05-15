@@ -65,6 +65,30 @@
       "when": "--apply-safe-prune removes exact safe_to_prune decomposition records"
     }
   ],
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Load planning reconcile payload and emit text or JSON through the generated operation executor.",
+    "steps": [
+      {
+        "id": "load_report",
+        "uses": "planning.reconcile.load",
+        "description": "Load package-local reconcile payload.",
+        "arguments": {},
+        "outputs": [
+          "result"
+        ]
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit",
+        "description": "Emit reconcile in the requested format.",
+        "arguments": {},
+        "outputs": [
+          "emitted"
+        ]
+      }
+    ]
+  },
   "steps": [
     {
       "id": "load_report",

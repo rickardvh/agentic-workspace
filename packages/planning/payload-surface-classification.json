@@ -105,6 +105,20 @@
       "rationale": "Defines build and force-include boundaries; it should reflect classification decisions after payload shrinkage."
     },
     {
+      "source_path": "generated/python/planning-cli/generated_cli_package/operations/planning.reconcile.report.json",
+      "installed_path": null,
+      "classification": "maintainer/development only",
+      "owner": "command-generation renderer and planning operation contracts",
+      "rationale": "Generated Python operation projection is force-included into the package wheel but remains disposable generated output, not target-repo bootstrap payload."
+    },
+    {
+      "source_path": "generated/python/planning-cli/generated_cli_package/operations/planning.summary.report.json",
+      "installed_path": null,
+      "classification": "maintainer/development only",
+      "owner": "command-generation renderer and planning operation contracts",
+      "rationale": "Generated Python operation projection is force-included into the package wheel but remains disposable generated output, not target-repo bootstrap payload."
+    },
+    {
       "source_path": "packages/planning/src/repo_planning_bootstrap/_ownership.toml",
       "installed_path": null,
       "classification": "maintainer/development only",

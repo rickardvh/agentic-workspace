@@ -2,22 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "2233245699747827143c56ddfb321d4a3668f790255476e67313705b18d59366",
-      "command": "agentic-planning record-recovery",
-      "reason": "Update active Python codegen lane next slice after memory front-door proof.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-13T12:44:38+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
-      "sha256": "c7745dc81bb13f9d63a8b49752b46d4f188dc74ac19357cafacc77de658413a4",
-      "command": "agentic-planning record-recovery",
-      "reason": "Record proven memory front-door slice and next Python completion reconciliation gate.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-13T12:44:38+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
       "sha256": "7ebe6639ded0b79c9f6a75c9f6abb685a13bf61d14be05d13b0442cee4d73add",
       "command": "agentic-planning record-recovery",
@@ -1600,6 +1584,22 @@
       "reason": "Recorded all operation executors rendered and remaining runtime-module debt for #892",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-15T09:21:34+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
+      "sha256": "fc655550c39e9600b63ebf72f2828be7e3794392d2cad566e2ad39df4661276c",
+      "command": "agentic-planning record-recovery",
+      "reason": "Recorded planning summary and reconcile generated operation execution slice",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-15T09:35:44+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "47ab9f067263c4ec590eae6e73be6b6b2808d6a36724f1daf03707f421a3149a",
+      "command": "agentic-planning record-recovery",
+      "reason": "Recorded planning runtime debt reduction through generated summary and reconcile operation execution",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-15T09:35:44+00:00"
     }
   ]
 }

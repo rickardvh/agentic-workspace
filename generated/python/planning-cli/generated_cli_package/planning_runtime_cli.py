@@ -548,18 +548,7 @@ def _run_doctor_report_adapter(args: argparse.Namespace) -> int:
 
 
 def _run_summary_report_adapter(args: argparse.Namespace) -> int:
-    summary_profile = "full" if getattr(args, "verbose", False) or args.format != "json" else "tiny"
-    summary = planning_summary(
-        target=args.target,
-        profile=summary_profile,
-        task_text=getattr(args, "task", None),
-        changed_paths=list(getattr(args, "changed", []) or []),
-    )
-    if args.format == "json":
-        print(format_summary_json(summary))
-    else:
-        _print_summary(summary)
-    return 0
+    return run_operation_ir(generated_cli_package_operation_contract("planning.summary.report"), args)
 
 
 def _run_report_adapter(args: argparse.Namespace) -> int:
@@ -592,12 +581,7 @@ def _tiny_report(report: dict) -> dict:
 
 
 def _run_reconcile_report_adapter(args: argparse.Namespace) -> int:
-    reconcile = planning_reconcile(target=args.target)
-    if args.format == "json":
-        print(json.dumps(reconcile, indent=2))
-    else:
-        _print_reconcile(reconcile)
-    return 0
+    return run_operation_ir(generated_cli_package_operation_contract("planning.reconcile.report"), args)
 
 
 _GENERATED_RUNTIME_HANDLERS = {
@@ -607,6 +591,48 @@ _GENERATED_RUNTIME_HANDLERS = {
     "planning.status.report": _run_status_report_adapter,
     "planning.summary.report": _run_summary_report_adapter,
 }
+
+
+def _load_planning_summary_operation(values: dict, _arguments: dict, _context) -> dict:
+    summary_profile = "full" if values.get("verbose") or values.get("format") != "json" else "tiny"
+    return planning_summary(
+        target=values.get("target"),
+        profile=summary_profile,
+        task_text=values.get("task"),
+        changed_paths=list(values.get("changed") or []),
+    )
+
+
+def _load_planning_reconcile_operation(values: dict, _arguments: dict, _context) -> dict:
+    return planning_reconcile(target=values.get("target"))
+
+
+def _emit_planning_operation_output(values: dict, _arguments: dict, _context) -> None:
+    result = values["result"]
+    output_format = str(values.get("format") or "text")
+    operation_id = str(values.get("operation_id") or "")
+    if operation_id == "planning.summary.report":
+        if output_format == "json":
+            print(format_summary_json(result))
+        else:
+            _print_summary(result)
+        return
+    if operation_id == "planning.reconcile.report":
+        if output_format == "json":
+            print(json.dumps(result, indent=2))
+        else:
+            _print_reconcile(result)
+        return
+    if output_format == "json":
+        if isinstance(result, dict):
+            print(json.dumps(result, indent=2))
+        else:
+            print(format_result_json(result))
+        return
+    if isinstance(result, dict):
+        _print_report(result)
+        return
+    _emit(result, output_format)
 
 
 def _emit(result, output_format: str) -> int:

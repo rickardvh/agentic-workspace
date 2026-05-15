@@ -505,6 +505,16 @@ export const generatedCommandPackage = {
           "primitive": "planning.report.load"
         },
         {
+          "function": "_load_planning_summary_operation",
+          "handler": "runtime_handler",
+          "primitive": "planning.summary.load"
+        },
+        {
+          "function": "_load_planning_reconcile_operation",
+          "handler": "runtime_handler",
+          "primitive": "planning.reconcile.load"
+        },
+        {
           "function": "collect_status",
           "handler": "function_call",
           "import_module": "repo_planning_bootstrap.installer",
@@ -516,13 +526,9 @@ export const generatedCommandPackage = {
           "primitive": "planning.bootstrap.status.load"
         },
         {
-          "default_format": "text",
-          "dict_text_function": "_print_report",
-          "format_value": "format",
-          "handler": "runtime_emit",
-          "primitive": "output.emit",
-          "result_value": "result",
-          "runtime_function": "_emit"
+          "function": "_emit_planning_operation_output",
+          "handler": "runtime_handler",
+          "primitive": "output.emit"
         }
       ],
       "initial_values": [
@@ -540,13 +546,35 @@ export const generatedCommandPackage = {
           "arg": "verbose",
           "default": false,
           "name": "verbose"
+        },
+        {
+          "arg": "task",
+          "default": null,
+          "name": "task"
+        },
+        {
+          "arg": "changed",
+          "default": [],
+          "name": "changed"
+        },
+        {
+          "arg": "apply_safe_prune",
+          "default": false,
+          "name": "apply_safe_prune"
+        },
+        {
+          "arg": "dry_run",
+          "default": false,
+          "name": "dry_run"
         }
       ],
       "module_file": "planning_operation_ir_executor",
       "supported_operation_ids": [
         "planning.doctor.report",
+        "planning.reconcile.report",
         "planning.report.report",
-        "planning.status.report"
+        "planning.status.report",
+        "planning.summary.report"
       ]
     },
     "runtime_module_file": "planning_runtime_cli"

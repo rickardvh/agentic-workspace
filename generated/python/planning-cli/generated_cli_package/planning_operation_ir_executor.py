@@ -8,7 +8,6 @@ Regenerate with: uv run python scripts/generate/generate_command_packages.py
 from __future__ import annotations
 
 import argparse
-import json
 from pathlib import Path
 from typing import Any
 
@@ -30,8 +29,10 @@ class OperationIrExecutionError(RuntimeError):
 def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int:
     if operation.get("id") not in {
         'planning.doctor.report',
+        'planning.reconcile.report',
         'planning.report.report',
-        'planning.status.report'
+        'planning.status.report',
+        'planning.summary.report'
     }:
         raise OperationIrExecutionError(f"unsupported operation IR contract: {operation.get('id')!r}")
     if operation.get("migration_status") != "runtime-consumed":
@@ -45,11 +46,17 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'target': getattr(args, 'target', None),
                 'format': getattr(args, 'format', 'text'),
                 'verbose': getattr(args, 'verbose', False),
+                'task': getattr(args, 'task', None),
+                'changed': getattr(args, 'changed', []),
+                'apply_safe_prune': getattr(args, 'apply_safe_prune', False),
+                'dry_run': getattr(args, 'dry_run', False),
             },
             context=PrimitiveContext(cwd=Path.cwd(), roots={}),
             handlers={
                 'planning.bootstrap.doctor.load': _handle_planning_bootstrap_doctor_load,
                 'planning.report.load': _handle_planning_report_load,
+                'planning.summary.load': _handle_planning_summary_load,
+                'planning.reconcile.load': _handle_planning_reconcile_load,
                 'planning.bootstrap.status.load': _handle_planning_bootstrap_status_load,
                 'output.emit': _handle_output_emit,
             },
@@ -75,23 +82,25 @@ def _handle_planning_report_load(values: dict[str, Any], _arguments: dict[str, A
     return planning_report_tiny(target=values.get('target'))
 
 
+def _handle_planning_summary_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
+    from .planning_runtime_cli import _load_planning_summary_operation
+
+    return _load_planning_summary_operation(values, arguments, context)
+
+
+def _handle_planning_reconcile_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
+    from .planning_runtime_cli import _load_planning_reconcile_operation
+
+    return _load_planning_reconcile_operation(values, arguments, context)
+
+
 def _handle_planning_bootstrap_status_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
     from repo_planning_bootstrap.installer import collect_status
 
     return collect_status(target=values.get('target'))
 
 
-def _handle_output_emit(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
-    from .planning_runtime_cli import _emit
+def _handle_output_emit(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
+    from .planning_runtime_cli import _emit_planning_operation_output
 
-    result = values['result']
-    output_format = str(values.get('format') or 'text')
-    if isinstance(result, dict):
-        if output_format == "json":
-            print(json.dumps(result, indent=2))
-            return None
-        from .planning_runtime_cli import _print_report
-
-        _print_report(result)
-        return None
-    return _emit(result, output_format)
+    return _emit_planning_operation_output(values, arguments, context)
