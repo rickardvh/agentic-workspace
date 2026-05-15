@@ -86,7 +86,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "memory.capture_note.load",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -475,7 +475,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "memory.route.load",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -539,7 +539,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "memory.route_review.load",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -571,7 +571,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "memory.search.load",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -635,7 +635,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "memory.sync_memory.load",
+          "python.function.call",
           "output.emit"
         ]
       },

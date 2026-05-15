@@ -75,7 +75,7 @@
   "steps": [
     {
       "id": "load_capture_recommendation",
-      "uses": "memory.capture_note.load",
+      "uses": "python.function.call",
       "description": "Load the Memory capture recommendation."
     },
     {
@@ -99,9 +99,35 @@
     "steps": [
       {
         "id": "load_capture_recommendation",
-        "uses": "memory.capture_note.load",
+        "uses": "python.function.call",
         "description": "Load the Memory capture recommendation.",
-        "arguments": {},
+        "arguments": {
+          "import_module": "repo_memory_bootstrap.installer",
+          "function": "suggest_memory_note_capture",
+          "kwargs": {
+            "slug": {
+              "value": "slug"
+            },
+            "target": {
+              "value": "target"
+            },
+            "summary": {
+              "value": "summary"
+            },
+            "files": {
+              "value": "files"
+            },
+            "surfaces": {
+              "value": "surface"
+            },
+            "existing_note": {
+              "value": "existing_note"
+            },
+            "force_new_reason": {
+              "value": "force_new_reason"
+            }
+          }
+        },
         "outputs": [
           "result"
         ],

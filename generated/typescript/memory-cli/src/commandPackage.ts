@@ -1243,7 +1243,7 @@ export const generatedCommandPackage = {
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "memory.capture_note.load",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -1944,7 +1944,7 @@ export const generatedCommandPackage = {
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "memory.route.load",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -2040,7 +2040,7 @@ export const generatedCommandPackage = {
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "memory.sync_memory.load",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -2118,7 +2118,7 @@ export const generatedCommandPackage = {
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "memory.route_review.load",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -2202,7 +2202,7 @@ export const generatedCommandPackage = {
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "memory.search.load",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -2809,35 +2809,6 @@ export const generatedCommandPackage = {
           "primitive": "memory.bootstrap.cleanup"
         },
         {
-          "function": "suggest_memory_note_capture",
-          "handler": "function_call",
-          "import_module": "repo_memory_bootstrap.installer",
-          "kwargs": {
-            "existing_note": {
-              "value": "existing_note"
-            },
-            "files": {
-              "value": "files"
-            },
-            "force_new_reason": {
-              "value": "force_new_reason"
-            },
-            "slug": {
-              "value": "slug"
-            },
-            "summary": {
-              "value": "summary"
-            },
-            "surfaces": {
-              "value": "surface"
-            },
-            "target": {
-              "value": "target"
-            }
-          },
-          "primitive": "memory.capture_note.load"
-        },
-        {
           "function": "create_memory_note",
           "handler": "function_call",
           "import_module": "repo_memory_bootstrap.installer",
@@ -2918,69 +2889,10 @@ export const generatedCommandPackage = {
           "primitive": "memory.report.load"
         },
         {
-          "function": "route_memory",
-          "handler": "function_call",
-          "import_module": "repo_memory_bootstrap.installer",
-          "kwargs": {
-            "files": {
-              "value": "files"
-            },
-            "surfaces": {
-              "value": "surface"
-            },
-            "target": {
-              "value": "target"
-            }
-          },
-          "primitive": "memory.route.load"
-        },
-        {
           "function": "_load_memory_route_report",
           "handler": "runtime_handler",
           "import_module": "repo_memory_bootstrap.runtime_primitives",
           "primitive": "memory.route_report.load"
-        },
-        {
-          "function": "review_routes",
-          "handler": "function_call",
-          "import_module": "repo_memory_bootstrap.installer",
-          "kwargs": {
-            "target": {
-              "value": "target"
-            }
-          },
-          "primitive": "memory.route_review.load"
-        },
-        {
-          "function": "search_memory",
-          "handler": "function_call",
-          "import_module": "repo_memory_bootstrap.installer",
-          "kwargs": {
-            "query": {
-              "value": "query"
-            },
-            "target": {
-              "value": "target"
-            }
-          },
-          "primitive": "memory.search.load"
-        },
-        {
-          "function": "sync_memory",
-          "handler": "function_call",
-          "import_module": "repo_memory_bootstrap.installer",
-          "kwargs": {
-            "files": {
-              "value": "files"
-            },
-            "notes": {
-              "value": "notes"
-            },
-            "target": {
-              "value": "target"
-            }
-          },
-          "primitive": "memory.sync_memory.load"
         },
         {
           "function": "_assemble_memory_operation_payload",

@@ -7920,35 +7920,6 @@
               }
             },
             {
-              "primitive": "memory.capture_note.load",
-              "handler": "function_call",
-              "import_module": "repo_memory_bootstrap.installer",
-              "function": "suggest_memory_note_capture",
-              "kwargs": {
-                "slug": {
-                  "value": "slug"
-                },
-                "target": {
-                  "value": "target"
-                },
-                "summary": {
-                  "value": "summary"
-                },
-                "files": {
-                  "value": "files"
-                },
-                "surfaces": {
-                  "value": "surface"
-                },
-                "existing_note": {
-                  "value": "existing_note"
-                },
-                "force_new_reason": {
-                  "value": "force_new_reason"
-                }
-              }
-            },
-            {
               "primitive": "memory.note.create",
               "handler": "function_call",
               "import_module": "repo_memory_bootstrap.installer",
@@ -8029,69 +8000,10 @@
               "import_module": "repo_memory_bootstrap.runtime_primitives"
             },
             {
-              "primitive": "memory.route.load",
-              "handler": "function_call",
-              "import_module": "repo_memory_bootstrap.installer",
-              "function": "route_memory",
-              "kwargs": {
-                "target": {
-                  "value": "target"
-                },
-                "files": {
-                  "value": "files"
-                },
-                "surfaces": {
-                  "value": "surface"
-                }
-              }
-            },
-            {
               "primitive": "memory.route_report.load",
               "handler": "runtime_handler",
               "function": "_load_memory_route_report",
               "import_module": "repo_memory_bootstrap.runtime_primitives"
-            },
-            {
-              "primitive": "memory.route_review.load",
-              "handler": "function_call",
-              "import_module": "repo_memory_bootstrap.installer",
-              "function": "review_routes",
-              "kwargs": {
-                "target": {
-                  "value": "target"
-                }
-              }
-            },
-            {
-              "primitive": "memory.search.load",
-              "handler": "function_call",
-              "import_module": "repo_memory_bootstrap.installer",
-              "function": "search_memory",
-              "kwargs": {
-                "target": {
-                  "value": "target"
-                },
-                "query": {
-                  "value": "query"
-                }
-              }
-            },
-            {
-              "primitive": "memory.sync_memory.load",
-              "handler": "function_call",
-              "import_module": "repo_memory_bootstrap.installer",
-              "function": "sync_memory",
-              "kwargs": {
-                "target": {
-                  "value": "target"
-                },
-                "files": {
-                  "value": "files"
-                },
-                "notes": {
-                  "value": "notes"
-                }
-              }
             },
             {
               "primitive": "payload.assemble",
@@ -9356,7 +9268,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "memory.capture_note.load",
+              "python.function.call",
               "output.emit"
             ]
           },
@@ -10057,7 +9969,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "memory.route.load",
+              "python.function.call",
               "output.emit"
             ]
           },
@@ -10153,7 +10065,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "memory.sync_memory.load",
+              "python.function.call",
               "output.emit"
             ]
           },
@@ -10231,7 +10143,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "memory.route_review.load",
+              "python.function.call",
               "output.emit"
             ]
           },
@@ -10315,7 +10227,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "memory.search.load",
+              "python.function.call",
               "output.emit"
             ]
           },

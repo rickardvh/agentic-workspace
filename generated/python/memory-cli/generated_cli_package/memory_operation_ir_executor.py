@@ -115,17 +115,12 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'memory.migrate_layout.apply': _handle_memory_migrate_layout_apply,
                 'memory.uninstall.apply': _handle_memory_uninstall_apply,
                 'memory.bootstrap.cleanup': _handle_memory_bootstrap_cleanup,
-                'memory.capture_note.load': _handle_memory_capture_note_load,
                 'memory.note.create': _handle_memory_note_create,
                 'memory.current.load': _handle_memory_current_load,
                 'memory.promotion_report.load': _handle_memory_promotion_report_load,
                 'memory.prompt.render': _handle_memory_prompt_render,
                 'memory.report.load': _handle_memory_report_load,
-                'memory.route.load': _handle_memory_route_load,
                 'memory.route_report.load': _handle_memory_route_report_load,
-                'memory.route_review.load': _handle_memory_route_review_load,
-                'memory.search.load': _handle_memory_search_load,
-                'memory.sync_memory.load': _handle_memory_sync_memory_load,
                 'payload.assemble': _handle_payload_assemble,
                 'output.emit': _handle_output_emit,
             },
@@ -207,12 +202,6 @@ def _handle_memory_bootstrap_cleanup(values: dict[str, Any], _arguments: dict[st
     return cleanup_bootstrap_workspace(target=values.get('target'))
 
 
-def _handle_memory_capture_note_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
-    from repo_memory_bootstrap.installer import suggest_memory_note_capture
-
-    return suggest_memory_note_capture(existing_note=values.get('existing_note'), files=values.get('files'), force_new_reason=values.get('force_new_reason'), slug=values.get('slug'), summary=values.get('summary'), surfaces=values.get('surface'), target=values.get('target'))
-
-
 def _handle_memory_note_create(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
     from repo_memory_bootstrap.installer import create_memory_note
 
@@ -243,34 +232,10 @@ def _handle_memory_report_load(values: dict[str, Any], arguments: dict[str, Any]
     return _load_memory_report(values, arguments, context)
 
 
-def _handle_memory_route_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
-    from repo_memory_bootstrap.installer import route_memory
-
-    return route_memory(files=values.get('files'), surfaces=values.get('surface'), target=values.get('target'))
-
-
 def _handle_memory_route_report_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
     from repo_memory_bootstrap.runtime_primitives import _load_memory_route_report
 
     return _load_memory_route_report(values, arguments, context)
-
-
-def _handle_memory_route_review_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
-    from repo_memory_bootstrap.installer import review_routes
-
-    return review_routes(target=values.get('target'))
-
-
-def _handle_memory_search_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
-    from repo_memory_bootstrap.installer import search_memory
-
-    return search_memory(query=values.get('query'), target=values.get('target'))
-
-
-def _handle_memory_sync_memory_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
-    from repo_memory_bootstrap.installer import sync_memory
-
-    return sync_memory(files=values.get('files'), notes=values.get('notes'), target=values.get('target'))
 
 
 def _handle_payload_assemble(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:

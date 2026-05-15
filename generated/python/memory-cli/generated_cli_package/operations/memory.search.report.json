@@ -38,14 +38,25 @@
     "status": "representative",
     "steps": [
       {
-        "arguments": {},
+        "arguments": {
+          "function": "search_memory",
+          "import_module": "repo_memory_bootstrap.installer",
+          "kwargs": {
+            "query": {
+              "value": "query"
+            },
+            "target": {
+              "value": "target"
+            }
+          }
+        },
         "description": "Load Memory search results.",
         "id": "load_search",
         "on_error": "fail",
         "outputs": [
           "result"
         ],
-        "uses": "memory.search.load"
+        "uses": "python.function.call"
       },
       {
         "arguments": {},
@@ -84,7 +95,7 @@
     {
       "description": "Load Memory search results.",
       "id": "load_search",
-      "uses": "memory.search.load"
+      "uses": "python.function.call"
     },
     {
       "description": "Emit Memory search output in the requested format.",

@@ -33,14 +33,22 @@
     "status": "representative",
     "steps": [
       {
-        "arguments": {},
+        "arguments": {
+          "function": "review_routes",
+          "import_module": "repo_memory_bootstrap.installer",
+          "kwargs": {
+            "target": {
+              "value": "target"
+            }
+          }
+        },
         "description": "Load Memory route-review results.",
         "id": "load_route_review",
         "on_error": "fail",
         "outputs": [
           "result"
         ],
-        "uses": "memory.route_review.load"
+        "uses": "python.function.call"
       },
       {
         "arguments": {},
@@ -79,7 +87,7 @@
     {
       "description": "Load Memory route-review results.",
       "id": "load_route_review",
-      "uses": "memory.route_review.load"
+      "uses": "python.function.call"
     },
     {
       "description": "Emit Memory route-review output in the requested format.",
