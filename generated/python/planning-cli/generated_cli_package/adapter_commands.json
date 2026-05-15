@@ -1,5 +1,51 @@
 [
   {
+    "adapter_id": "planning.adopt.cli",
+    "interface": {
+      "help": "Conservatively add planning bootstrap files to an existing repository.",
+      "name": "adopt",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--dry-run"
+          ],
+          "help": "Preview changes without writing files.",
+          "name": "dry_run"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--include-optional"
+          ],
+          "help": "Copy optional planning docs for richer review, intake, and recovery workflows.",
+          "name": "include_optional"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "planning.adopt.lifecycle",
+    "operation_path": "operations/planning.adopt.lifecycle.json"
+  },
+  {
     "adapter_id": "planning.close-item.cli",
     "interface": {
       "arguments": [
@@ -201,6 +247,130 @@
     },
     "operation_id": "planning.handoff.report",
     "operation_path": "operations/planning.handoff.report.json"
+  },
+  {
+    "adapter_id": "planning.init.cli",
+    "interface": {
+      "help": "Install bootstrap files into a repository.",
+      "name": "init",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--dry-run"
+          ],
+          "help": "Preview changes without writing files.",
+          "name": "dry_run"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--force"
+          ],
+          "help": "Overwrite managed files when needed.",
+          "name": "force"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--local"
+          ],
+          "help": "Set up the workspace in a local, non-tracked directory.",
+          "name": "local"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--include-optional"
+          ],
+          "help": "Copy optional planning docs for richer review, intake, and recovery workflows.",
+          "name": "include_optional"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "planning.init.lifecycle",
+    "operation_path": "operations/planning.init.lifecycle.json"
+  },
+  {
+    "adapter_id": "planning.install.cli",
+    "interface": {
+      "help": "Install bootstrap files into a repository.",
+      "name": "install",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--dry-run"
+          ],
+          "help": "Preview changes without writing files.",
+          "name": "dry_run"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--force"
+          ],
+          "help": "Overwrite managed files when needed.",
+          "name": "force"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--local"
+          ],
+          "help": "Set up the workspace in a local, non-tracked directory.",
+          "name": "local"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--include-optional"
+          ],
+          "help": "Copy optional planning docs for richer review, intake, and recovery workflows.",
+          "name": "include_optional"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "planning.install.lifecycle",
+    "operation_path": "operations/planning.install.lifecycle.json"
   },
   {
     "adapter_id": "planning.list-files.cli",
@@ -428,6 +598,90 @@
     },
     "operation_id": "planning.summary.report",
     "operation_path": "operations/planning.summary.report.json"
+  },
+  {
+    "adapter_id": "planning.uninstall.cli",
+    "interface": {
+      "help": "Remove managed bootstrap files when they still match package content.",
+      "name": "uninstall",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--dry-run"
+          ],
+          "help": "Preview changes without writing files.",
+          "name": "dry_run"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "planning.uninstall.lifecycle",
+    "operation_path": "operations/planning.uninstall.lifecycle.json"
+  },
+  {
+    "adapter_id": "planning.upgrade.cli",
+    "interface": {
+      "help": "Refresh package-managed helper surfaces without overwriting repo-owned root planning files.",
+      "name": "upgrade",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--dry-run"
+          ],
+          "help": "Preview changes without writing files.",
+          "name": "dry_run"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--include-optional"
+          ],
+          "help": "Copy optional planning docs for richer review, intake, and recovery workflows.",
+          "name": "include_optional"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "planning.upgrade.lifecycle",
+    "operation_path": "operations/planning.upgrade.lifecycle.json"
   },
   {
     "adapter_id": "planning.verify-payload.cli",

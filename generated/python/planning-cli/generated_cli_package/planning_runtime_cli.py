@@ -71,6 +71,8 @@ def build_parser() -> argparse.ArgumentParser:
     generated_commands = set(generated_cli_package_command_names())
 
     for command in ("install", "init"):
+        if command in generated_commands:
+            continue
         command_parser = subparsers.add_parser(command, help="Install bootstrap files into a repository.")
         command_parser.add_argument("--target")
         command_parser.add_argument("--dry-run", action="store_true")
@@ -83,33 +85,36 @@ def build_parser() -> argparse.ArgumentParser:
         )
         command_parser.add_argument("--format", choices=("text", "json"), default="text")
 
-    adopt_parser = subparsers.add_parser("adopt", help="Conservatively add planning bootstrap files to an existing repository.")
-    adopt_parser.add_argument("--target")
-    adopt_parser.add_argument("--dry-run", action="store_true")
-    adopt_parser.add_argument(
-        "--include-optional",
-        action="store_true",
-        help="Copy optional planning docs without overwriting existing repo-owned files.",
-    )
-    adopt_parser.add_argument("--format", choices=("text", "json"), default="text")
+    if "adopt" not in generated_commands:
+        adopt_parser = subparsers.add_parser("adopt", help="Conservatively add planning bootstrap files to an existing repository.")
+        adopt_parser.add_argument("--target")
+        adopt_parser.add_argument("--dry-run", action="store_true")
+        adopt_parser.add_argument(
+            "--include-optional",
+            action="store_true",
+            help="Copy optional planning docs without overwriting existing repo-owned files.",
+        )
+        adopt_parser.add_argument("--format", choices=("text", "json"), default="text")
 
-    upgrade_parser = subparsers.add_parser(
-        "upgrade",
-        help="Refresh package-managed helper surfaces without overwriting repo-owned root planning files.",
-    )
-    upgrade_parser.add_argument("--target")
-    upgrade_parser.add_argument("--dry-run", action="store_true")
-    upgrade_parser.add_argument(
-        "--include-optional",
-        action="store_true",
-        help="Refresh optional planning docs when the repo has enabled richer planning workflows.",
-    )
-    upgrade_parser.add_argument("--format", choices=("text", "json"), default="text")
+    if "upgrade" not in generated_commands:
+        upgrade_parser = subparsers.add_parser(
+            "upgrade",
+            help="Refresh package-managed helper surfaces without overwriting repo-owned root planning files.",
+        )
+        upgrade_parser.add_argument("--target")
+        upgrade_parser.add_argument("--dry-run", action="store_true")
+        upgrade_parser.add_argument(
+            "--include-optional",
+            action="store_true",
+            help="Refresh optional planning docs when the repo has enabled richer planning workflows.",
+        )
+        upgrade_parser.add_argument("--format", choices=("text", "json"), default="text")
 
-    uninstall_parser = subparsers.add_parser("uninstall", help="Remove managed bootstrap files when they still match package content.")
-    uninstall_parser.add_argument("--target")
-    uninstall_parser.add_argument("--dry-run", action="store_true")
-    uninstall_parser.add_argument("--format", choices=("text", "json"), default="text")
+    if "uninstall" not in generated_commands:
+        uninstall_parser = subparsers.add_parser("uninstall", help="Remove managed bootstrap files when they still match package content.")
+        uninstall_parser.add_argument("--target")
+        uninstall_parser.add_argument("--dry-run", action="store_true")
+        uninstall_parser.add_argument("--format", choices=("text", "json"), default="text")
 
     for command in ("doctor", "status"):
         if command in generated_commands:
@@ -585,20 +590,45 @@ def _run_close_item_lifecycle_adapter(args: argparse.Namespace) -> int:
     return run_operation_ir(generated_cli_package_operation_contract("planning.close-item.lifecycle"), args)
 
 
+def _run_install_lifecycle_adapter(args: argparse.Namespace) -> int:
+    return run_operation_ir(generated_cli_package_operation_contract("planning.install.lifecycle"), args)
+
+
+def _run_init_lifecycle_adapter(args: argparse.Namespace) -> int:
+    return run_operation_ir(generated_cli_package_operation_contract("planning.init.lifecycle"), args)
+
+
+def _run_adopt_lifecycle_adapter(args: argparse.Namespace) -> int:
+    return run_operation_ir(generated_cli_package_operation_contract("planning.adopt.lifecycle"), args)
+
+
+def _run_upgrade_lifecycle_adapter(args: argparse.Namespace) -> int:
+    return run_operation_ir(generated_cli_package_operation_contract("planning.upgrade.lifecycle"), args)
+
+
+def _run_uninstall_lifecycle_adapter(args: argparse.Namespace) -> int:
+    return run_operation_ir(generated_cli_package_operation_contract("planning.uninstall.lifecycle"), args)
+
+
 def _run_create_review_lifecycle_adapter(args: argparse.Namespace) -> int:
     return run_operation_ir(generated_cli_package_operation_contract("planning.create-review.lifecycle"), args)
 
 
 _GENERATED_RUNTIME_HANDLERS = {
+    "planning.adopt.lifecycle": _run_adopt_lifecycle_adapter,
     "planning.close-item.lifecycle": _run_close_item_lifecycle_adapter,
     "planning.create-review.lifecycle": _run_create_review_lifecycle_adapter,
     "planning.doctor.report": _run_doctor_report_adapter,
     "planning.handoff.report": _run_handoff_report_adapter,
+    "planning.init.lifecycle": _run_init_lifecycle_adapter,
+    "planning.install.lifecycle": _run_install_lifecycle_adapter,
     "planning.list-files.report": _run_list_files_report_adapter,
     "planning.prompt.render": _run_prompt_render_adapter,
     "planning.reconcile.report": _run_reconcile_report_adapter,
     "planning.report.report": _run_report_adapter,
     "planning.status.report": _run_status_report_adapter,
     "planning.summary.report": _run_summary_report_adapter,
+    "planning.uninstall.lifecycle": _run_uninstall_lifecycle_adapter,
+    "planning.upgrade.lifecycle": _run_upgrade_lifecycle_adapter,
     "planning.verify-payload.report": _run_verify_payload_report_adapter,
 }

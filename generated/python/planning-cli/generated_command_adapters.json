@@ -1,5 +1,37 @@
 {
   "adapters_by_command": {
+    "adopt": {
+      "command": {
+        "command_manifest": "package:planning:cli",
+        "name": "adopt",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-planning"
+      },
+      "conformance_refs": [
+        "planning.adopt.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "planning.adopt.cli",
+      "operation_id": "planning.adopt.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.adopt.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
     "close-item": {
       "command": {
         "command_manifest": "package:planning:cli",
@@ -119,6 +151,70 @@
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
           "planning.handoff.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    "init": {
+      "command": {
+        "command_manifest": "package:planning:cli",
+        "name": "init",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-planning"
+      },
+      "conformance_refs": [
+        "planning.init.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "planning.init.cli",
+      "operation_id": "planning.init.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.init.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    "install": {
+      "command": {
+        "command_manifest": "package:planning:cli",
+        "name": "install",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-planning"
+      },
+      "conformance_refs": [
+        "planning.install.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "planning.install.cli",
+      "operation_id": "planning.install.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.install.apply",
           "output.emit"
         ]
       },
@@ -312,6 +408,70 @@
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
           "planning.summary.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    "uninstall": {
+      "command": {
+        "command_manifest": "package:planning:cli",
+        "name": "uninstall",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-planning"
+      },
+      "conformance_refs": [
+        "planning.uninstall.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": true,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "planning.uninstall.cli",
+      "operation_id": "planning.uninstall.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.uninstall.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    "upgrade": {
+      "command": {
+        "command_manifest": "package:planning:cli",
+        "name": "upgrade",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-planning"
+      },
+      "conformance_refs": [
+        "planning.upgrade.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "planning.upgrade.cli",
+      "operation_id": "planning.upgrade.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.upgrade.apply",
           "output.emit"
         ]
       },

@@ -4413,16 +4413,21 @@
         "operation_executor": {
           "module_file": "planning_operation_ir_executor",
           "supported_operation_ids": [
+            "planning.adopt.lifecycle",
             "planning.close-item.lifecycle",
             "planning.create-review.lifecycle",
             "planning.doctor.report",
             "planning.handoff.report",
+            "planning.init.lifecycle",
+            "planning.install.lifecycle",
             "planning.list-files.report",
             "planning.prompt.render",
             "planning.reconcile.report",
             "planning.report.report",
             "planning.status.report",
             "planning.summary.report",
+            "planning.uninstall.lifecycle",
+            "planning.upgrade.lifecycle",
             "planning.verify-payload.report"
           ],
           "initial_values": [
@@ -4505,6 +4510,21 @@
               "name": "prompt_command",
               "arg": "prompt_command",
               "default": ""
+            },
+            {
+              "name": "force",
+              "arg": "force",
+              "default": false
+            },
+            {
+              "name": "local",
+              "arg": "local",
+              "default": false
+            },
+            {
+              "name": "include_optional",
+              "arg": "include_optional",
+              "default": false
             }
           ],
           "handlers": [
@@ -4652,6 +4672,100 @@
               "handler": "runtime_handler",
               "function": "render_planning_prompt_operation",
               "import_module": "repo_planning_bootstrap.runtime_projection"
+            },
+            {
+              "primitive": "planning.install.apply",
+              "handler": "function_call",
+              "import_module": "repo_planning_bootstrap.installer",
+              "function": "install_bootstrap",
+              "kwargs": {
+                "target": {
+                  "value": "target"
+                },
+                "dry_run": {
+                  "value": "dry_run"
+                },
+                "force": {
+                  "value": "force"
+                },
+                "local_only": {
+                  "value": "local"
+                },
+                "include_optional": {
+                  "value": "include_optional"
+                }
+              }
+            },
+            {
+              "primitive": "planning.init.apply",
+              "handler": "function_call",
+              "import_module": "repo_planning_bootstrap.installer",
+              "function": "install_bootstrap",
+              "kwargs": {
+                "target": {
+                  "value": "target"
+                },
+                "dry_run": {
+                  "value": "dry_run"
+                },
+                "force": {
+                  "value": "force"
+                },
+                "local_only": {
+                  "value": "local"
+                },
+                "include_optional": {
+                  "value": "include_optional"
+                }
+              }
+            },
+            {
+              "primitive": "planning.adopt.apply",
+              "handler": "function_call",
+              "import_module": "repo_planning_bootstrap.installer",
+              "function": "adopt_bootstrap",
+              "kwargs": {
+                "target": {
+                  "value": "target"
+                },
+                "dry_run": {
+                  "value": "dry_run"
+                },
+                "include_optional": {
+                  "value": "include_optional"
+                }
+              }
+            },
+            {
+              "primitive": "planning.upgrade.apply",
+              "handler": "function_call",
+              "import_module": "repo_planning_bootstrap.installer",
+              "function": "upgrade_bootstrap",
+              "kwargs": {
+                "target": {
+                  "value": "target"
+                },
+                "dry_run": {
+                  "value": "dry_run"
+                },
+                "include_optional": {
+                  "value": "include_optional"
+                }
+              }
+            },
+            {
+              "primitive": "planning.uninstall.apply",
+              "handler": "function_call",
+              "import_module": "repo_planning_bootstrap.installer",
+              "function": "uninstall_bootstrap",
+              "kwargs": {
+                "target": {
+                  "value": "target"
+                },
+                "dry_run": {
+                  "value": "dry_run"
+                }
+              }
             }
           ]
         }
@@ -4681,6 +4795,100 @@
         }
       ],
       "commands": [
+        {
+          "adapter_id": "planning.adopt.cli",
+          "status": "generated",
+          "command": {
+            "manifest_ref": "package:planning:cli",
+            "name": "adopt"
+          },
+          "operation_ref": {
+            "id": "planning.adopt.lifecycle",
+            "path": "operations/planning.adopt.lifecycle.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "planning.adopt.apply",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": true,
+            "requires_preflight_gate": false
+          },
+          "interface": {
+            "name": "adopt",
+            "help": "Conservatively add planning bootstrap files to an existing repository.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "dry_run",
+                "flags": [
+                  "--dry-run"
+                ],
+                "action": "store_true",
+                "help": "Preview changes without writing files."
+              },
+              {
+                "name": "include_optional",
+                "flags": [
+                  "--include-optional"
+                ],
+                "action": "store_true",
+                "help": "Copy optional planning docs for richer review, intake, and recovery workflows."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "planning lifecycle policy",
+              "managed planning payload mutation",
+              "module result assembly"
+            ]
+          },
+          "conformance_refs": [
+            "planning.adopt.lifecycle.dry-run.process"
+          ]
+        },
         {
           "adapter_id": "planning.close-item.cli",
           "status": "generated",
@@ -5074,6 +5282,226 @@
               "output emission"
             ]
           }
+        },
+        {
+          "adapter_id": "planning.init.cli",
+          "status": "generated",
+          "command": {
+            "manifest_ref": "package:planning:cli",
+            "name": "init"
+          },
+          "operation_ref": {
+            "id": "planning.init.lifecycle",
+            "path": "operations/planning.init.lifecycle.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "planning.init.apply",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": true,
+            "requires_preflight_gate": false
+          },
+          "interface": {
+            "name": "init",
+            "help": "Install bootstrap files into a repository.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "dry_run",
+                "flags": [
+                  "--dry-run"
+                ],
+                "action": "store_true",
+                "help": "Preview changes without writing files."
+              },
+              {
+                "name": "force",
+                "flags": [
+                  "--force"
+                ],
+                "action": "store_true",
+                "help": "Overwrite managed files when needed."
+              },
+              {
+                "name": "local",
+                "flags": [
+                  "--local"
+                ],
+                "action": "store_true",
+                "help": "Set up the workspace in a local, non-tracked directory."
+              },
+              {
+                "name": "include_optional",
+                "flags": [
+                  "--include-optional"
+                ],
+                "action": "store_true",
+                "help": "Copy optional planning docs for richer review, intake, and recovery workflows."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "planning lifecycle policy",
+              "managed planning payload mutation",
+              "module result assembly"
+            ]
+          },
+          "conformance_refs": [
+            "planning.init.lifecycle.dry-run.process"
+          ]
+        },
+        {
+          "adapter_id": "planning.install.cli",
+          "status": "generated",
+          "command": {
+            "manifest_ref": "package:planning:cli",
+            "name": "install"
+          },
+          "operation_ref": {
+            "id": "planning.install.lifecycle",
+            "path": "operations/planning.install.lifecycle.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "planning.install.apply",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": true,
+            "requires_preflight_gate": false
+          },
+          "interface": {
+            "name": "install",
+            "help": "Install bootstrap files into a repository.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "dry_run",
+                "flags": [
+                  "--dry-run"
+                ],
+                "action": "store_true",
+                "help": "Preview changes without writing files."
+              },
+              {
+                "name": "force",
+                "flags": [
+                  "--force"
+                ],
+                "action": "store_true",
+                "help": "Overwrite managed files when needed."
+              },
+              {
+                "name": "local",
+                "flags": [
+                  "--local"
+                ],
+                "action": "store_true",
+                "help": "Set up the workspace in a local, non-tracked directory."
+              },
+              {
+                "name": "include_optional",
+                "flags": [
+                  "--include-optional"
+                ],
+                "action": "store_true",
+                "help": "Copy optional planning docs for richer review, intake, and recovery workflows."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "planning lifecycle policy",
+              "managed planning payload mutation",
+              "module result assembly"
+            ]
+          },
+          "conformance_refs": [
+            "planning.install.lifecycle.dry-run.process"
+          ]
         },
         {
           "adapter_id": "planning.list-files.cli",
@@ -5588,6 +6016,186 @@
               "output emission"
             ]
           }
+        },
+        {
+          "adapter_id": "planning.uninstall.cli",
+          "status": "generated",
+          "command": {
+            "manifest_ref": "package:planning:cli",
+            "name": "uninstall"
+          },
+          "operation_ref": {
+            "id": "planning.uninstall.lifecycle",
+            "path": "operations/planning.uninstall.lifecycle.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "planning.uninstall.apply",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": true,
+            "idempotent": true,
+            "writes_repo_state": true,
+            "requires_preflight_gate": false
+          },
+          "interface": {
+            "name": "uninstall",
+            "help": "Remove managed bootstrap files when they still match package content.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "dry_run",
+                "flags": [
+                  "--dry-run"
+                ],
+                "action": "store_true",
+                "help": "Preview changes without writing files."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "planning lifecycle policy",
+              "managed planning payload mutation",
+              "module result assembly"
+            ]
+          },
+          "conformance_refs": [
+            "planning.uninstall.lifecycle.dry-run.process"
+          ]
+        },
+        {
+          "adapter_id": "planning.upgrade.cli",
+          "status": "generated",
+          "command": {
+            "manifest_ref": "package:planning:cli",
+            "name": "upgrade"
+          },
+          "operation_ref": {
+            "id": "planning.upgrade.lifecycle",
+            "path": "operations/planning.upgrade.lifecycle.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "planning.upgrade.apply",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": true,
+            "requires_preflight_gate": false
+          },
+          "interface": {
+            "name": "upgrade",
+            "help": "Refresh package-managed helper surfaces without overwriting repo-owned root planning files.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "dry_run",
+                "flags": [
+                  "--dry-run"
+                ],
+                "action": "store_true",
+                "help": "Preview changes without writing files."
+              },
+              {
+                "name": "include_optional",
+                "flags": [
+                  "--include-optional"
+                ],
+                "action": "store_true",
+                "help": "Copy optional planning docs for richer review, intake, and recovery workflows."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "planning lifecycle policy",
+              "managed planning payload mutation",
+              "module result assembly"
+            ]
+          },
+          "conformance_refs": [
+            "planning.upgrade.lifecycle.dry-run.process"
+          ]
         },
         {
           "adapter_id": "planning.verify-payload.cli",

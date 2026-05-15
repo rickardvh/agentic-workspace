@@ -160,7 +160,7 @@
     "route chosen": "delegate-validation",
     "route skipped reason": "",
     "decision command": "agentic-planning delegation-decision",
-    "recorded at": "2026-05-15T10:29:46+00:00"
+    "recorded at": "2026-05-15T10:38:31+00:00"
   },
   "system_intent_alignment": {
     "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
@@ -244,11 +244,11 @@
   "delegation_outcome_feedback": {
     "route chosen": "delegate-validation",
     "route skipped reason": "not skipped",
-    "expected savings": "reused worker to audit list-files/prompt generated-operation migration parity while local implementation proceeded",
-    "actual friction": "worker correctly surfaced required parity surfaces and root front-door consideration; local scope kept this slice to agentic-planning package commands while root planning front-door remains later runtime debt",
-    "proof result": "generated package static proof, Python and TypeScript conformance, Python/TypeScript Docker conformance, planning tests/lint, workspace tests/lint, contract tooling, structured inventory, and list-files/prompt CLI smokes passed",
-    "quality concern": "planning_runtime_cli.py still owns fallback parser/main and lifecycle/recovery commands; root agentic-workspace planning front-door still exposes only selected planning subcommands",
-    "decomposition adjustment": "continue with remaining planning fallback commands, then render or eliminate planning_runtime_cli.py before promoting full-generated-cli-complete"
+    "expected savings": "reused worker to audit planning lifecycle generated-operation migration parity while local implementation proceeded",
+    "actual friction": "worker caught an uninstall include_optional contract mismatch, which was fixed before closeout; root front-door parity remains separate runtime debt",
+    "proof result": "generated package static proof, generated Python conformance, generated adapter conformance, planning lifecycle dry-run smokes, planning tests/lint, workspace tests/lint, contract tooling, structured inventory, and generation freshness checks passed; TypeScript Docker conformance was retried and failed in the known Docker Python/jsonschema native SystemError tracked by #978",
+    "quality concern": "planning_runtime_cli.py still owns fallback parser/main and plan-state mutation commands; lifecycle commands now skip fallback dispatch when generated command support is present",
+    "decomposition adjustment": "continue with remaining planning plan-state mutation commands: new-plan, promote-to-plan, archive-plan, delegation-decision, record-recovery, then eliminate/render planning_runtime_cli.py before completion promotion"
   },
   "proof_report": {
     "validation proof": "uv run python scripts/generate/generate_command_packages.py; uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run python scripts/check/check_generated_command_packages.py --docker --require-docker; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker; uv run pytest tests/test_workspace_cli.py tests/test_contract_tooling.py -q; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q; make test-planning; make lint-planning; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check selected files; make test-workspace; make lint-workspace.",
@@ -348,6 +348,7 @@
     "2026-05-15: Filed #990 for generated CLI conformance depending on ambient terminal size, then fixed it by setting deterministic COLUMNS/LINES in conformance subprocesses.",
     "2026-05-15: Moved planning.summary.report and planning.reconcile.report into generated operation resources and planning_operation_ir_executor execution; planning_runtime_cli.py remains blocking runtime debt.",
     "2026-05-15: Filed #991 for generated operation resources being emitted from legacy steps without executable ir_plan, then fixed the generator to require ir_plan.",
+    "2026-05-15: Recorded delegation decision route=delegate-validation.",
     "2026-05-15: Recorded delegation decision route=delegate-validation.",
     "2026-05-15: Recorded delegation decision route=delegate-validation.",
     "2026-05-15: Recorded delegation decision route=delegate-validation.",

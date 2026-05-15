@@ -28,16 +28,21 @@ class OperationIrExecutionError(RuntimeError):
 
 def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int:
     if operation.get("id") not in {
+        'planning.adopt.lifecycle',
         'planning.close-item.lifecycle',
         'planning.create-review.lifecycle',
         'planning.doctor.report',
         'planning.handoff.report',
+        'planning.init.lifecycle',
+        'planning.install.lifecycle',
         'planning.list-files.report',
         'planning.prompt.render',
         'planning.reconcile.report',
         'planning.report.report',
         'planning.status.report',
         'planning.summary.report',
+        'planning.uninstall.lifecycle',
+        'planning.upgrade.lifecycle',
         'planning.verify-payload.report'
     }:
         raise OperationIrExecutionError(f"unsupported operation IR contract: {operation.get('id')!r}")
@@ -65,6 +70,9 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'classification': getattr(args, 'classification', 'review'),
                 'render_markdown': getattr(args, 'render_markdown', False),
                 'prompt_command': getattr(args, 'prompt_command', ''),
+                'force': getattr(args, 'force', False),
+                'local': getattr(args, 'local', False),
+                'include_optional': getattr(args, 'include_optional', False),
             },
             context=PrimitiveContext(cwd=Path.cwd(), roots={}),
             handlers={
@@ -80,6 +88,11 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'output.emit': _handle_output_emit,
                 'planning.list-files.load': _handle_planning_list_files_load,
                 'planning.prompt.render': _handle_planning_prompt_render,
+                'planning.install.apply': _handle_planning_install_apply,
+                'planning.init.apply': _handle_planning_init_apply,
+                'planning.adopt.apply': _handle_planning_adopt_apply,
+                'planning.upgrade.apply': _handle_planning_upgrade_apply,
+                'planning.uninstall.apply': _handle_planning_uninstall_apply,
             },
         )
     except PrimitiveExecutionError as exc:
@@ -161,3 +174,33 @@ def _handle_planning_prompt_render(values: dict[str, Any], arguments: dict[str, 
     from repo_planning_bootstrap.runtime_projection import render_planning_prompt_operation
 
     return render_planning_prompt_operation(values, arguments, context)
+
+
+def _handle_planning_install_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_planning_bootstrap.installer import install_bootstrap
+
+    return install_bootstrap(dry_run=values.get('dry_run'), force=values.get('force'), include_optional=values.get('include_optional'), local_only=values.get('local'), target=values.get('target'))
+
+
+def _handle_planning_init_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_planning_bootstrap.installer import install_bootstrap
+
+    return install_bootstrap(dry_run=values.get('dry_run'), force=values.get('force'), include_optional=values.get('include_optional'), local_only=values.get('local'), target=values.get('target'))
+
+
+def _handle_planning_adopt_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_planning_bootstrap.installer import adopt_bootstrap
+
+    return adopt_bootstrap(dry_run=values.get('dry_run'), include_optional=values.get('include_optional'), target=values.get('target'))
+
+
+def _handle_planning_upgrade_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_planning_bootstrap.installer import upgrade_bootstrap
+
+    return upgrade_bootstrap(dry_run=values.get('dry_run'), include_optional=values.get('include_optional'), target=values.get('target'))
+
+
+def _handle_planning_uninstall_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_planning_bootstrap.installer import uninstall_bootstrap
+
+    return uninstall_bootstrap(dry_run=values.get('dry_run'), target=values.get('target'))

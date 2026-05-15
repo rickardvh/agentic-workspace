@@ -374,6 +374,25 @@
       "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
     },
     {
+      "operation_id": "planning.adopt.lifecycle",
+      "program": "agentic-planning",
+      "command": "adopt",
+      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/planning.adopt.lifecycle.json",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "planning.adopt.apply",
+        "module-result text/json compatibility formatting"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "planning.adopt.lifecycle.dry-run.process",
+      "domain_runtime_primitive_refs": [
+        "planning.adopt.apply"
+      ],
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but planning lifecycle mutation policy, managed-surface safety, and payload installation remain package-specific runtime behavior."
+    },
+    {
       "operation_id": "planning.close-item.lifecycle",
       "program": "agentic-planning",
       "command": "close-item",
@@ -467,6 +486,44 @@
       ],
       "runtime_boundary_class": "package-specific-judgment",
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but planning handoff payload assembly still owns package-specific planning judgment."
+    },
+    {
+      "operation_id": "planning.init.lifecycle",
+      "program": "agentic-planning",
+      "command": "init",
+      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/planning.init.lifecycle.json",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "planning.init.apply",
+        "module-result text/json compatibility formatting"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "planning.init.lifecycle.dry-run.process",
+      "domain_runtime_primitive_refs": [
+        "planning.init.apply"
+      ],
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but planning lifecycle mutation policy, managed-surface safety, and payload installation remain package-specific runtime behavior."
+    },
+    {
+      "operation_id": "planning.install.lifecycle",
+      "program": "agentic-planning",
+      "command": "install",
+      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/planning.install.lifecycle.json",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "planning.install.apply",
+        "module-result text/json compatibility formatting"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "planning.install.lifecycle.dry-run.process",
+      "domain_runtime_primitive_refs": [
+        "planning.install.apply"
+      ],
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but planning lifecycle mutation policy, managed-surface safety, and payload installation remain package-specific runtime behavior."
     },
     {
       "operation_id": "planning.list-files.report",
@@ -580,6 +637,44 @@
       "runtime_boundary_reason": "Planning summary loading and projection applies package-specific planning view policy.",
       "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
       "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+    },
+    {
+      "operation_id": "planning.uninstall.lifecycle",
+      "program": "agentic-planning",
+      "command": "uninstall",
+      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/planning.uninstall.lifecycle.json",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "planning.uninstall.apply",
+        "module-result text/json compatibility formatting"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "planning.uninstall.lifecycle.dry-run.process",
+      "domain_runtime_primitive_refs": [
+        "planning.uninstall.apply"
+      ],
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but planning lifecycle mutation policy, managed-surface safety, and payload installation remain package-specific runtime behavior."
+    },
+    {
+      "operation_id": "planning.upgrade.lifecycle",
+      "program": "agentic-planning",
+      "command": "upgrade",
+      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/planning.upgrade.lifecycle.json",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "planning.upgrade.apply",
+        "module-result text/json compatibility formatting"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "planning.upgrade.lifecycle.dry-run.process",
+      "domain_runtime_primitive_refs": [
+        "planning.upgrade.apply"
+      ],
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but planning lifecycle mutation policy, managed-surface safety, and payload installation remain package-specific runtime behavior."
     },
     {
       "operation_id": "planning.verify-payload.report",

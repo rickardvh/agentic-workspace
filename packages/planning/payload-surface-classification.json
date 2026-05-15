@@ -112,6 +112,13 @@
       "rationale": "The planning wheel force-includes generated command-package resource data as private runtime import data; the canonical source remains the command-package IR and generator."
     },
     {
+      "source_path": "generated/python/planning-cli/generated_cli_package/operations/planning.adopt.lifecycle.json",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/operations/planning.adopt.lifecycle.json",
+      "classification": "maintainer/development only",
+      "owner": "generated operation projection",
+      "rationale": "The planning wheel force-includes generated operation resource data as private runtime import data; the canonical source remains the operation contract and generator."
+    },
+    {
       "source_path": "generated/python/planning-cli/generated_cli_package/operations/planning.close-item.lifecycle.json",
       "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/operations/planning.close-item.lifecycle.json",
       "classification": "maintainer/development only",
@@ -135,6 +142,20 @@
     {
       "source_path": "generated/python/planning-cli/generated_cli_package/operations/planning.handoff.report.json",
       "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/operations/planning.handoff.report.json",
+      "classification": "maintainer/development only",
+      "owner": "generated operation projection",
+      "rationale": "The planning wheel force-includes generated operation resource data as private runtime import data; the canonical source remains the operation contract and generator."
+    },
+    {
+      "source_path": "generated/python/planning-cli/generated_cli_package/operations/planning.init.lifecycle.json",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/operations/planning.init.lifecycle.json",
+      "classification": "maintainer/development only",
+      "owner": "generated operation projection",
+      "rationale": "The planning wheel force-includes generated operation resource data as private runtime import data; the canonical source remains the operation contract and generator."
+    },
+    {
+      "source_path": "generated/python/planning-cli/generated_cli_package/operations/planning.install.lifecycle.json",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/operations/planning.install.lifecycle.json",
       "classification": "maintainer/development only",
       "owner": "generated operation projection",
       "rationale": "The planning wheel force-includes generated operation resource data as private runtime import data; the canonical source remains the operation contract and generator."
@@ -180,6 +201,20 @@
       "classification": "maintainer/development only",
       "owner": "command-generation renderer and planning operation contracts",
       "rationale": "Generated Python operation projection is force-included into the package wheel but remains disposable generated output, not target-repo bootstrap payload."
+    },
+    {
+      "source_path": "generated/python/planning-cli/generated_cli_package/operations/planning.uninstall.lifecycle.json",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/operations/planning.uninstall.lifecycle.json",
+      "classification": "maintainer/development only",
+      "owner": "generated operation projection",
+      "rationale": "The planning wheel force-includes generated operation resource data as private runtime import data; the canonical source remains the operation contract and generator."
+    },
+    {
+      "source_path": "generated/python/planning-cli/generated_cli_package/operations/planning.upgrade.lifecycle.json",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/operations/planning.upgrade.lifecycle.json",
+      "classification": "maintainer/development only",
+      "owner": "generated operation projection",
+      "rationale": "The planning wheel force-includes generated operation resource data as private runtime import data; the canonical source remains the operation contract and generator."
     },
     {
       "source_path": "generated/python/planning-cli/generated_cli_package/operations/planning.verify-payload.report.json",

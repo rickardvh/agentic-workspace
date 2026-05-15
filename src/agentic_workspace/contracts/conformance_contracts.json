@@ -112,6 +112,12 @@
       "adapter_kind": "process"
     },
     {
+      "id": "planning.adopt.lifecycle.dry-run.process",
+      "operation_id": "planning.adopt.lifecycle",
+      "path": "conformance/planning.adopt.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "planning.close-item.process",
       "operation_id": "planning.close-item.lifecycle",
       "path": "conformance/planning.close-item.process.json",
@@ -139,6 +145,18 @@
       "id": "planning.handoff.process",
       "operation_id": "planning.handoff.report",
       "path": "conformance/planning.handoff.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.init.lifecycle.dry-run.process",
+      "operation_id": "planning.init.lifecycle",
+      "path": "conformance/planning.init.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.install.lifecycle.dry-run.process",
+      "operation_id": "planning.install.lifecycle",
+      "path": "conformance/planning.install.lifecycle.dry-run.process.json",
       "adapter_kind": "process"
     },
     {
@@ -175,6 +193,18 @@
       "id": "planning.summary.process",
       "operation_id": "planning.summary.report",
       "path": "conformance/planning.summary.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.uninstall.lifecycle.dry-run.process",
+      "operation_id": "planning.uninstall.lifecycle",
+      "path": "conformance/planning.uninstall.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.upgrade.lifecycle.dry-run.process",
+      "operation_id": "planning.upgrade.lifecycle",
+      "path": "conformance/planning.upgrade.lifecycle.dry-run.process.json",
       "adapter_kind": "process"
     },
     {

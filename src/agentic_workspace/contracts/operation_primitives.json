@@ -297,6 +297,12 @@
       "output_schema_ref": "schemas/primitives/payload_assemble.output.schema.json"
     },
     {
+      "id": "planning.adopt.apply",
+      "summary": "Conservatively add planning bootstrap files to an existing repository.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
+    },
+    {
       "id": "planning.bootstrap.doctor.load",
       "summary": "Load package-local planning doctor diagnostics for a target repository."
     },
@@ -333,6 +339,18 @@
       "summary": "Build planning orientation guidance and lifecycle command affordances without mutating planning state."
     },
     {
+      "id": "planning.init.apply",
+      "summary": "Initialise planning bootstrap files in a repository.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "planning.install.apply",
+      "summary": "Install planning bootstrap files into a repository.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
+    },
+    {
       "id": "planning.list-files.load",
       "summary": "Load package-local planning payload file inventory.",
       "kind": "planning-runtime",
@@ -355,6 +373,18 @@
     {
       "id": "planning.summary.load",
       "summary": "Load compact active planning summary when the planning module is installed."
+    },
+    {
+      "id": "planning.uninstall.apply",
+      "summary": "Remove managed planning bootstrap files when they still match package content.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "planning.upgrade.apply",
+      "summary": "Refresh package-managed planning helper surfaces.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
     },
     {
       "id": "planning.verify-payload.load",

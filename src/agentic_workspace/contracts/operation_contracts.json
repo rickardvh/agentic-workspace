@@ -143,6 +143,12 @@
       "migration_status": "draft-contract-only"
     },
     {
+      "id": "planning.adopt.lifecycle",
+      "path": "operations/planning.adopt.lifecycle.json",
+      "command": "adopt",
+      "migration_status": "runtime-consumed"
+    },
+    {
       "id": "planning.archive-plan.lifecycle",
       "path": "operations/planning.archive-plan.lifecycle.json",
       "command": "planning",
@@ -188,6 +194,18 @@
       "id": "planning.handoff.report",
       "path": "operations/planning.handoff.report.json",
       "command": "handoff",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "planning.init.lifecycle",
+      "path": "operations/planning.init.lifecycle.json",
+      "command": "init",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "planning.install.lifecycle",
+      "path": "operations/planning.install.lifecycle.json",
+      "command": "install",
       "migration_status": "runtime-consumed"
     },
     {
@@ -242,6 +260,18 @@
       "id": "planning.summary.report",
       "path": "operations/planning.summary.report.json",
       "command": "summary",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "planning.uninstall.lifecycle",
+      "path": "operations/planning.uninstall.lifecycle.json",
+      "command": "uninstall",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "planning.upgrade.lifecycle",
+      "path": "operations/planning.upgrade.lifecycle.json",
+      "command": "upgrade",
       "migration_status": "runtime-consumed"
     },
     {
