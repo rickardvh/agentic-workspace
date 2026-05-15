@@ -280,7 +280,9 @@ def _load_memory_current(values: dict[str, Any], _arguments: dict[str, Any], _co
 
 
 def _load_memory_promotion_report(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> Any:
-    return promotion_report(target=values.get("target"), notes=values.get("notes"), mode=values.get("mode"))
+    notes_value = values.get("notes")
+    notes = [str(note) for note in notes_value] if isinstance(notes_value, list) else None
+    return promotion_report(target=values.get("target"), notes=notes, mode=str(values.get("mode") or "all"))
 
 
 def _load_memory_prompt(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> str:
