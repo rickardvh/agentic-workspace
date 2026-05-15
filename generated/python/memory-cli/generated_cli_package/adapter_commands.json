@@ -328,6 +328,36 @@
     "operation_path": "operations/memory.sync-memory.report.json"
   },
   {
+    "adapter_id": "memory.route-review.cli",
+    "interface": {
+      "help": "Review checked-in routing feedback cases against the current routing result.",
+      "name": "route-review",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "memory.route-review.report",
+    "operation_path": "operations/memory.route-review.report.json"
+  },
+  {
     "adapter_id": "memory.search.cli",
     "interface": {
       "arguments": [

@@ -270,6 +270,12 @@
       "summary": "Load package-local memory routing aggregate report state."
     },
     {
+      "id": "memory.route_review.load",
+      "summary": "Load package-local Memory routing feedback review results.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime"
+    },
+    {
       "id": "memory.search.load",
       "summary": "Load package-local Memory note search results.",
       "kind": "memory-runtime",

@@ -35,6 +35,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
         'memory.promotion-report.report',
         'memory.report.report',
         'memory.route-report.report',
+        'memory.route-review.report',
         'memory.route.report',
         'memory.search.report',
         'memory.status.report',
@@ -84,6 +85,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'memory.report.load': _handle_memory_report_load,
                 'memory.route.load': _handle_memory_route_load,
                 'memory.route_report.load': _handle_memory_route_report_load,
+                'memory.route_review.load': _handle_memory_route_review_load,
                 'memory.search.load': _handle_memory_search_load,
                 'memory.verify-payload.load': _handle_memory_verify_payload_load,
                 'memory.sync_memory.load': _handle_memory_sync_memory_load,
@@ -154,6 +156,12 @@ def _handle_memory_route_report_load(values: dict[str, Any], arguments: dict[str
     from .memory_runtime_cli import _load_memory_route_report
 
     return _load_memory_route_report(values, arguments, context)
+
+
+def _handle_memory_route_review_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_memory_bootstrap.installer import review_routes
+
+    return review_routes(target=values.get('target'))
 
 
 def _handle_memory_search_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:

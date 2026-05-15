@@ -221,12 +221,13 @@ def build_parser() -> argparse.ArgumentParser:
         )
         _add_format_argument(route_parser)
 
-    route_review_parser = subparsers.add_parser(
-        "route-review",
-        help="Review checked-in routing feedback cases against the current routing result.",
-    )
-    _add_target_arguments(route_review_parser)
-    _add_format_argument(route_review_parser)
+    if "route-review" not in generated_commands:
+        route_review_parser = subparsers.add_parser(
+            "route-review",
+            help="Review checked-in routing feedback cases against the current routing result.",
+        )
+        _add_target_arguments(route_review_parser)
+        _add_format_argument(route_review_parser)
 
     if "route-report" not in generated_commands:
         route_report_parser = subparsers.add_parser(
@@ -978,6 +979,10 @@ def _run_route_report_adapter(args: argparse.Namespace) -> int | None:
     return run_operation_ir(generated_cli_package_operation_contract("memory.route-report.report"), args)
 
 
+def _run_route_review_report_adapter(args: argparse.Namespace) -> int | None:
+    return run_operation_ir(generated_cli_package_operation_contract("memory.route-review.report"), args)
+
+
 def _run_search_report_adapter(args: argparse.Namespace) -> int | None:
     return run_operation_ir(generated_cli_package_operation_contract("memory.search.report"), args)
 
@@ -1003,6 +1008,7 @@ _GENERATED_RUNTIME_HANDLERS = {
     "memory.report.report": _run_report_adapter,
     "memory.route.report": _run_route_adapter,
     "memory.route-report.report": _run_route_report_adapter,
+    "memory.route-review.report": _run_route_review_report_adapter,
     "memory.search.report": _run_search_report_adapter,
     "memory.verify-payload.report": _run_verify_payload_report_adapter,
     "memory.status.report": _run_status_report_adapter,

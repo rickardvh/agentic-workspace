@@ -355,6 +355,25 @@
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
     },
     {
+      "operation_id": "memory.route-review.report",
+      "program": "agentic-memory",
+      "command": "route-review",
+      "generated_transport": "generated/python/memory-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/memory.route-review.report.json",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "memory.route_review.load",
+        "module-result text/json compatibility formatting"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "memory.route-review.process",
+      "domain_runtime_primitive_refs": [
+        "memory.route_review.load"
+      ],
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior."
+    },
+    {
       "operation_id": "memory.search.report",
       "program": "agentic-memory",
       "command": "search",

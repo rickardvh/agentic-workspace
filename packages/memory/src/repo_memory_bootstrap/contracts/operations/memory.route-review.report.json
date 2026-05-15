@@ -1,0 +1,92 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "memory.route-review.report",
+  "command_surface": {
+    "program": "agentic-memory",
+    "command": "route-review",
+    "format_option": "format"
+  },
+  "summary": "Review checked-in Memory routing feedback cases through the memory module CLI.",
+  "classification": "read-only-report",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "module-result"
+  },
+  "effects": {
+    "read_only": true,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": false,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": "target repository Memory routing feedback note",
+      "required": false
+    }
+  ],
+  "writes": [],
+  "steps": [
+    {
+      "id": "load_route_review",
+      "uses": "memory.route_review.load",
+      "description": "Load Memory route-review results."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit Memory route-review output in the requested format."
+    }
+  ],
+  "guards": [
+    "Keep route-review read-only.",
+    "Generated code owns parser/help/dispatch shape; memory-owned route review policy remains behind the declared primitive."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated memory route-review process conformance passes"
+  ],
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Memory route-review executes generated operation IR through codegen-owned primitive dataflow while the memory module owns routing review policy.",
+    "steps": [
+      {
+        "id": "load_route_review",
+        "uses": "memory.route_review.load",
+        "description": "Load Memory route-review results.",
+        "arguments": {},
+        "outputs": [
+          "result"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit",
+        "description": "Emit Memory route-review output in the requested format.",
+        "arguments": {},
+        "outputs": [
+          "emitted"
+        ],
+        "on_error": "emit_usage_error"
+      }
+    ]
+  }
+}

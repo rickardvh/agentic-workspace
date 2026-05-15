@@ -7208,6 +7208,7 @@
             "memory.report.report",
             "memory.route.report",
             "memory.route-report.report",
+            "memory.route-review.report",
             "memory.search.report",
             "memory.verify-payload.report",
             "memory.status.report",
@@ -7403,6 +7404,17 @@
               "primitive": "memory.route_report.load",
               "handler": "runtime_handler",
               "function": "_load_memory_route_report"
+            },
+            {
+              "primitive": "memory.route_review.load",
+              "handler": "function_call",
+              "import_module": "repo_memory_bootstrap.installer",
+              "function": "review_routes",
+              "kwargs": {
+                "target": {
+                  "value": "target"
+                }
+              }
             },
             {
               "primitive": "memory.search.load",
@@ -8143,6 +8155,84 @@
             ],
             "runtime_owned": [
               "memory sync suggestion policy",
+              "module result assembly",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "memory.route-review.cli",
+          "status": "generated",
+          "command": {
+            "name": "route-review",
+            "manifest_ref": "package:memory:cli"
+          },
+          "interface": {
+            "name": "route-review",
+            "help": "Review checked-in routing feedback cases against the current routing result.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "memory.route-review.report",
+            "path": "operations/memory.route-review.report.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "memory.route_review.load",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "memory.route-review.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "memory routing review policy",
               "module result assembly",
               "output emission"
             ]

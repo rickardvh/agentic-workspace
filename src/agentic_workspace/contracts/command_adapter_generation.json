@@ -1466,6 +1466,79 @@
       ]
     },
     {
+      "id": "memory.route-review.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-memory",
+        "name": "route-review",
+        "command_manifest": "package:memory:cli",
+        "option_group_manifest": "package:memory:cli"
+      },
+      "operation_ref": {
+        "id": "memory.route-review.report",
+        "registry": "operation_contracts.json",
+        "path": "operations/memory.route-review.report.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.route_review.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "memory route-review policy",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "memory.route-review.process"
+      ]
+    },
+    {
       "id": "memory.search.cli",
       "status": "generated",
       "command": {

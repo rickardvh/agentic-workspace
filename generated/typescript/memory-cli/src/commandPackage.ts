@@ -671,6 +671,84 @@ export const generatedCommandPackage = {
       "status": "generated"
     },
     {
+      "adapter_id": "memory.route-review.cli",
+      "command": {
+        "manifest_ref": "package:memory:cli",
+        "name": "route-review"
+      },
+      "conformance_refs": [
+        "memory.route-review.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "interface": {
+        "help": "Review checked-in routing feedback cases against the current routing result.",
+        "name": "route-review",
+        "options": [
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Target repository path. Defaults to the current directory.",
+            "name": "target"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "memory.route-review.report",
+        "path": "operations/memory.route-review.report.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "memory routing review policy",
+          "module result assembly",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.route_review.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    {
       "adapter_id": "memory.search.cli",
       "command": {
         "manifest_ref": "package:memory:cli",
@@ -1182,6 +1260,17 @@ export const generatedCommandPackage = {
           "primitive": "memory.route_report.load"
         },
         {
+          "function": "review_routes",
+          "handler": "function_call",
+          "import_module": "repo_memory_bootstrap.installer",
+          "kwargs": {
+            "target": {
+              "value": "target"
+            }
+          },
+          "primitive": "memory.route_review.load"
+        },
+        {
           "function": "search_memory",
           "handler": "function_call",
           "import_module": "repo_memory_bootstrap.installer",
@@ -1346,6 +1435,7 @@ export const generatedCommandPackage = {
         "memory.report.report",
         "memory.route.report",
         "memory.route-report.report",
+        "memory.route-review.report",
         "memory.search.report",
         "memory.verify-payload.report",
         "memory.status.report",

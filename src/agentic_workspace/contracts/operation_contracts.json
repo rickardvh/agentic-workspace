@@ -119,6 +119,12 @@
       "migration_status": "runtime-consumed"
     },
     {
+      "id": "memory.route-review.report",
+      "path": "operations/memory.route-review.report.json",
+      "command": "route-review",
+      "migration_status": "runtime-consumed"
+    },
+    {
       "id": "memory.search.report",
       "path": "operations/memory.search.report.json",
       "command": "search",

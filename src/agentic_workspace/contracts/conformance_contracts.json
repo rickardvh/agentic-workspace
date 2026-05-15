@@ -106,6 +106,12 @@
       "adapter_kind": "process"
     },
     {
+      "id": "memory.route-review.process",
+      "operation_id": "memory.route-review.report",
+      "path": "conformance/memory.route-review.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "memory.search.process",
       "operation_id": "memory.search.report",
       "path": "conformance/memory.search.process.json",

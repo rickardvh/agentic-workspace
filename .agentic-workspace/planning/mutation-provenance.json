@@ -2,14 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/execplans/codegen-primitive-docker-proof-952.plan.json",
-      "sha256": "45d6ff6ea4f83ec27793b3a47ba5a8431e6cd5f7e641c1d576668eb496ff851d",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold codegen-primitive-docker-proof-952",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-13T19:46:10+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/state.toml",
       "sha256": "29e50302f89eea470043057b8dacbdc0fbfefd3c74f5dd694927804858135543",
       "command": "agentic-planning new-plan",
@@ -1600,6 +1592,14 @@
       "reason": "record delegation decision route=keep-local",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-15T12:14:12+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
+      "sha256": "80dc647d0b6b8bdc56012cf8841b76c3b6693d0c3bed246bc9572c74d17de7c6",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T12:21:38+00:00"
     }
   ]
 }
