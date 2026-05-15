@@ -101,7 +101,7 @@
   "steps": [
     {
       "id": "apply_memory_lifecycle",
-      "uses": "memory.install.apply",
+      "uses": "python.function.call",
       "description": "Install Memory bootstrap files into a repository."
     },
     {
@@ -125,9 +125,47 @@
     "steps": [
       {
         "id": "apply_memory_lifecycle",
-        "uses": "memory.install.apply",
+        "uses": "python.function.call",
         "description": "Install Memory bootstrap files into a repository.",
-        "arguments": {},
+        "arguments": {
+          "import_module": "repo_memory_bootstrap.installer",
+          "function": "install_bootstrap",
+          "kwargs": {
+            "target": {
+              "value": "target"
+            },
+            "dry_run": {
+              "value": "dry_run"
+            },
+            "force": {
+              "value": "force"
+            },
+            "project_name": {
+              "value": "project_name"
+            },
+            "project_purpose": {
+              "value": "project_purpose"
+            },
+            "key_repo_docs": {
+              "value": "key_repo_docs"
+            },
+            "key_subsystems": {
+              "value": "key_subsystems"
+            },
+            "primary_build_command": {
+              "value": "primary_build_command"
+            },
+            "primary_test_command": {
+              "value": "primary_test_command"
+            },
+            "other_key_commands": {
+              "value": "other_key_commands"
+            },
+            "policy_profile": {
+              "value": "policy_profile"
+            }
+          }
+        },
         "outputs": [
           "result"
         ],

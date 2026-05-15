@@ -7693,233 +7693,6 @@
               "import_module": "repo_memory_bootstrap.runtime_primitives"
             },
             {
-              "primitive": "memory.install.apply",
-              "handler": "function_call",
-              "import_module": "repo_memory_bootstrap.installer",
-              "function": "install_bootstrap",
-              "kwargs": {
-                "target": {
-                  "value": "target"
-                },
-                "dry_run": {
-                  "value": "dry_run"
-                },
-                "force": {
-                  "value": "force"
-                },
-                "project_name": {
-                  "value": "project_name"
-                },
-                "project_purpose": {
-                  "value": "project_purpose"
-                },
-                "key_repo_docs": {
-                  "value": "key_repo_docs"
-                },
-                "key_subsystems": {
-                  "value": "key_subsystems"
-                },
-                "primary_build_command": {
-                  "value": "primary_build_command"
-                },
-                "primary_test_command": {
-                  "value": "primary_test_command"
-                },
-                "other_key_commands": {
-                  "value": "other_key_commands"
-                },
-                "policy_profile": {
-                  "value": "policy_profile"
-                }
-              }
-            },
-            {
-              "primitive": "memory.init.apply",
-              "handler": "function_call",
-              "import_module": "repo_memory_bootstrap.installer",
-              "function": "install_bootstrap",
-              "kwargs": {
-                "target": {
-                  "value": "target"
-                },
-                "dry_run": {
-                  "value": "dry_run"
-                },
-                "force": {
-                  "value": "force"
-                },
-                "project_name": {
-                  "value": "project_name"
-                },
-                "project_purpose": {
-                  "value": "project_purpose"
-                },
-                "key_repo_docs": {
-                  "value": "key_repo_docs"
-                },
-                "key_subsystems": {
-                  "value": "key_subsystems"
-                },
-                "primary_build_command": {
-                  "value": "primary_build_command"
-                },
-                "primary_test_command": {
-                  "value": "primary_test_command"
-                },
-                "other_key_commands": {
-                  "value": "other_key_commands"
-                },
-                "policy_profile": {
-                  "value": "policy_profile"
-                }
-              }
-            },
-            {
-              "primitive": "memory.adopt.apply",
-              "handler": "function_call",
-              "import_module": "repo_memory_bootstrap.installer",
-              "function": "adopt_bootstrap",
-              "kwargs": {
-                "target": {
-                  "value": "target"
-                },
-                "dry_run": {
-                  "value": "dry_run"
-                },
-                "apply_local_entrypoint": {
-                  "value": "apply_local_entrypoint"
-                },
-                "project_name": {
-                  "value": "project_name"
-                },
-                "project_purpose": {
-                  "value": "project_purpose"
-                },
-                "key_repo_docs": {
-                  "value": "key_repo_docs"
-                },
-                "key_subsystems": {
-                  "value": "key_subsystems"
-                },
-                "primary_build_command": {
-                  "value": "primary_build_command"
-                },
-                "primary_test_command": {
-                  "value": "primary_test_command"
-                },
-                "other_key_commands": {
-                  "value": "other_key_commands"
-                },
-                "policy_profile": {
-                  "value": "policy_profile"
-                }
-              }
-            },
-            {
-              "primitive": "memory.upgrade.apply",
-              "handler": "function_call",
-              "import_module": "repo_memory_bootstrap.installer",
-              "function": "upgrade_bootstrap",
-              "kwargs": {
-                "target": {
-                  "value": "target"
-                },
-                "dry_run": {
-                  "value": "dry_run"
-                },
-                "force": {
-                  "value": "force"
-                },
-                "apply_local_entrypoint": {
-                  "value": "apply_local_entrypoint"
-                },
-                "project_name": {
-                  "value": "project_name"
-                },
-                "project_purpose": {
-                  "value": "project_purpose"
-                },
-                "key_repo_docs": {
-                  "value": "key_repo_docs"
-                },
-                "key_subsystems": {
-                  "value": "key_subsystems"
-                },
-                "primary_build_command": {
-                  "value": "primary_build_command"
-                },
-                "primary_test_command": {
-                  "value": "primary_test_command"
-                },
-                "other_key_commands": {
-                  "value": "other_key_commands"
-                },
-                "policy_profile": {
-                  "value": "policy_profile"
-                }
-              }
-            },
-            {
-              "primitive": "memory.migrate_layout.apply",
-              "handler": "function_call",
-              "import_module": "repo_memory_bootstrap.installer",
-              "function": "migrate_layout",
-              "kwargs": {
-                "target": {
-                  "value": "target"
-                },
-                "dry_run": {
-                  "value": "dry_run"
-                }
-              }
-            },
-            {
-              "primitive": "memory.uninstall.apply",
-              "handler": "function_call",
-              "import_module": "repo_memory_bootstrap.installer",
-              "function": "uninstall_bootstrap",
-              "kwargs": {
-                "target": {
-                  "value": "target"
-                },
-                "dry_run": {
-                  "value": "dry_run"
-                },
-                "project_name": {
-                  "value": "project_name"
-                },
-                "project_purpose": {
-                  "value": "project_purpose"
-                },
-                "key_repo_docs": {
-                  "value": "key_repo_docs"
-                },
-                "key_subsystems": {
-                  "value": "key_subsystems"
-                },
-                "primary_build_command": {
-                  "value": "primary_build_command"
-                },
-                "primary_test_command": {
-                  "value": "primary_test_command"
-                },
-                "other_key_commands": {
-                  "value": "other_key_commands"
-                }
-              }
-            },
-            {
-              "primitive": "memory.bootstrap.cleanup",
-              "handler": "function_call",
-              "import_module": "repo_memory_bootstrap.installer",
-              "function": "cleanup_bootstrap_workspace",
-              "kwargs": {
-                "target": {
-                  "value": "target"
-                }
-              }
-            },
-            {
               "primitive": "memory.current.load",
               "handler": "runtime_handler",
               "function": "_load_memory_current",
@@ -8300,7 +8073,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "memory.install.apply",
+              "python.function.call",
               "output.emit"
             ]
           },
@@ -8455,7 +8228,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "memory.init.apply",
+              "python.function.call",
               "output.emit"
             ]
           },
@@ -8610,7 +8383,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "memory.adopt.apply",
+              "python.function.call",
               "output.emit"
             ]
           },
@@ -8773,7 +8546,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "memory.upgrade.apply",
+              "python.function.call",
               "output.emit"
             ]
           },
@@ -8859,7 +8632,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "memory.migrate_layout.apply",
+              "python.function.call",
               "output.emit"
             ]
           },
@@ -9006,7 +8779,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "memory.uninstall.apply",
+              "python.function.call",
               "output.emit"
             ]
           },
@@ -9084,7 +8857,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "memory.bootstrap.cleanup",
+              "python.function.call",
               "output.emit"
             ]
           },

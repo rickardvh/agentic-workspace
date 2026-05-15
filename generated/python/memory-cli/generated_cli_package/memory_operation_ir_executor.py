@@ -108,13 +108,6 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'path.target_root.resolve': _handle_path_target_root_resolve,
                 'memory.bootstrap.doctor.load': _handle_memory_bootstrap_doctor_load,
                 'memory.bootstrap.status.load': _handle_memory_bootstrap_status_load,
-                'memory.install.apply': _handle_memory_install_apply,
-                'memory.init.apply': _handle_memory_init_apply,
-                'memory.adopt.apply': _handle_memory_adopt_apply,
-                'memory.upgrade.apply': _handle_memory_upgrade_apply,
-                'memory.migrate_layout.apply': _handle_memory_migrate_layout_apply,
-                'memory.uninstall.apply': _handle_memory_uninstall_apply,
-                'memory.bootstrap.cleanup': _handle_memory_bootstrap_cleanup,
                 'memory.current.load': _handle_memory_current_load,
                 'memory.promotion_report.load': _handle_memory_promotion_report_load,
                 'memory.prompt.render': _handle_memory_prompt_render,
@@ -157,48 +150,6 @@ def _handle_memory_bootstrap_status_load(values: dict[str, Any], arguments: dict
     from repo_memory_bootstrap.runtime_primitives import _load_memory_bootstrap_status
 
     return _load_memory_bootstrap_status(values, arguments, context)
-
-
-def _handle_memory_install_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
-    from repo_memory_bootstrap.installer import install_bootstrap
-
-    return install_bootstrap(dry_run=values.get('dry_run'), force=values.get('force'), key_repo_docs=values.get('key_repo_docs'), key_subsystems=values.get('key_subsystems'), other_key_commands=values.get('other_key_commands'), policy_profile=values.get('policy_profile'), primary_build_command=values.get('primary_build_command'), primary_test_command=values.get('primary_test_command'), project_name=values.get('project_name'), project_purpose=values.get('project_purpose'), target=values.get('target'))
-
-
-def _handle_memory_init_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
-    from repo_memory_bootstrap.installer import install_bootstrap
-
-    return install_bootstrap(dry_run=values.get('dry_run'), force=values.get('force'), key_repo_docs=values.get('key_repo_docs'), key_subsystems=values.get('key_subsystems'), other_key_commands=values.get('other_key_commands'), policy_profile=values.get('policy_profile'), primary_build_command=values.get('primary_build_command'), primary_test_command=values.get('primary_test_command'), project_name=values.get('project_name'), project_purpose=values.get('project_purpose'), target=values.get('target'))
-
-
-def _handle_memory_adopt_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
-    from repo_memory_bootstrap.installer import adopt_bootstrap
-
-    return adopt_bootstrap(apply_local_entrypoint=values.get('apply_local_entrypoint'), dry_run=values.get('dry_run'), key_repo_docs=values.get('key_repo_docs'), key_subsystems=values.get('key_subsystems'), other_key_commands=values.get('other_key_commands'), policy_profile=values.get('policy_profile'), primary_build_command=values.get('primary_build_command'), primary_test_command=values.get('primary_test_command'), project_name=values.get('project_name'), project_purpose=values.get('project_purpose'), target=values.get('target'))
-
-
-def _handle_memory_upgrade_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
-    from repo_memory_bootstrap.installer import upgrade_bootstrap
-
-    return upgrade_bootstrap(apply_local_entrypoint=values.get('apply_local_entrypoint'), dry_run=values.get('dry_run'), force=values.get('force'), key_repo_docs=values.get('key_repo_docs'), key_subsystems=values.get('key_subsystems'), other_key_commands=values.get('other_key_commands'), policy_profile=values.get('policy_profile'), primary_build_command=values.get('primary_build_command'), primary_test_command=values.get('primary_test_command'), project_name=values.get('project_name'), project_purpose=values.get('project_purpose'), target=values.get('target'))
-
-
-def _handle_memory_migrate_layout_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
-    from repo_memory_bootstrap.installer import migrate_layout
-
-    return migrate_layout(dry_run=values.get('dry_run'), target=values.get('target'))
-
-
-def _handle_memory_uninstall_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
-    from repo_memory_bootstrap.installer import uninstall_bootstrap
-
-    return uninstall_bootstrap(dry_run=values.get('dry_run'), key_repo_docs=values.get('key_repo_docs'), key_subsystems=values.get('key_subsystems'), other_key_commands=values.get('other_key_commands'), primary_build_command=values.get('primary_build_command'), primary_test_command=values.get('primary_test_command'), project_name=values.get('project_name'), project_purpose=values.get('project_purpose'), target=values.get('target'))
-
-
-def _handle_memory_bootstrap_cleanup(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
-    from repo_memory_bootstrap.installer import cleanup_bootstrap_workspace
-
-    return cleanup_bootstrap_workspace(target=values.get('target'))
 
 
 def _handle_memory_current_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:

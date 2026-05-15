@@ -878,7 +878,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "memory.install.apply",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -953,7 +953,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "memory.init.apply",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -1028,7 +1028,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "memory.adopt.apply",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -1103,7 +1103,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "memory.upgrade.apply",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -1178,7 +1178,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "memory.migrate_layout.apply",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -1253,7 +1253,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "memory.uninstall.apply",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -1328,7 +1328,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "memory.bootstrap.cleanup",
+          "python.function.call",
           "output.emit"
         ]
       },
