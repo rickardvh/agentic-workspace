@@ -451,6 +451,29 @@ def test_command_package_ir_reuses_generated_adapter_truth() -> None:
     assert "parser library" in defaults_command["projection_boundary"]["target_specific"]
 
 
+def test_command_package_ir_rejects_generated_direct_function_call_handlers() -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
+    spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    manifest = copy.deepcopy(contract_tooling.command_package_ir_manifest())
+    handlers = manifest["packages"][0]["python_runtime_binding"]["operation_executor"]["handlers"]
+    handlers.append(
+        {
+            "primitive": "example.direct.load",
+            "handler": "function_call",
+            "import_module": "example",
+            "function": "load",
+            "kwargs": {},
+        }
+    )
+
+    errors = module._validate_command_package_ir(manifest)
+
+    assert any("declare python.function.call in operation IR instead" in error for error in errors)
+
+
 def test_python_contract_consumption_declares_validated_loader_bindings() -> None:
     manifest = contract_tooling.python_contract_consumption_manifest()
     entries = manifest["validated_at_consumption"]

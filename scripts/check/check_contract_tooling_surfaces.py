@@ -743,6 +743,21 @@ def _validate_command_package_ir(payload: dict[str, object]) -> list[str]:
             errors.append(f"command_package_ir package {program} must declare a python target")
         if "typescript" not in target_kinds:
             errors.append(f"command_package_ir package {program} must declare a typescript target")
+        python_binding = package.get("python_runtime_binding", {})
+        if isinstance(python_binding, dict):
+            operation_executor = python_binding.get("operation_executor", {})
+            if isinstance(operation_executor, dict):
+                handlers = operation_executor.get("handlers", [])
+                if isinstance(handlers, list):
+                    for handler in handlers:
+                        if not isinstance(handler, dict):
+                            continue
+                        if handler.get("handler") == "function_call":
+                            primitive = str(handler.get("primitive", ""))
+                            errors.append(
+                                f"command_package_ir package {program} primitive {primitive} uses direct function_call; "
+                                "declare python.function.call in operation IR instead"
+                            )
         for command in commands:
             if not isinstance(command, dict):
                 errors.append(f"command_package_ir package {program} command entry must be an object")
