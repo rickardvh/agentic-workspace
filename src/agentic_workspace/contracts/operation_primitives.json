@@ -240,6 +240,12 @@
       "summary": "Load package-local memory bootstrap status for a target repository."
     },
     {
+      "id": "memory.capture_note.load",
+      "summary": "Load package-local Memory capture recommendations.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime"
+    },
+    {
       "id": "memory.front_door.dispatch",
       "summary": "Dispatch generated workspace memory front-door argv to the Memory module runtime boundary.",
       "kind": "memory-runtime",

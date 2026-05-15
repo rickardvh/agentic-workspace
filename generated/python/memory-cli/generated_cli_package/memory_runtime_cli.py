@@ -304,18 +304,19 @@ def build_parser() -> argparse.ArgumentParser:
     _add_target_arguments(create_note_parser)
     _add_format_argument(create_note_parser)
 
-    capture_note_parser = subparsers.add_parser(
-        "capture-note",
-        help="Recommend whether durable learning should update an existing Memory note or create a new one.",
-    )
-    capture_note_parser.add_argument("slug", nargs="?", default="")
-    capture_note_parser.add_argument("--summary", default="")
-    capture_note_parser.add_argument("--files", nargs="*", default=[])
-    capture_note_parser.add_argument("--surface", dest="surfaces", nargs="*", default=[])
-    capture_note_parser.add_argument("--existing-note", default="")
-    capture_note_parser.add_argument("--force-new-reason", default="")
-    _add_target_arguments(capture_note_parser)
-    _add_format_argument(capture_note_parser)
+    if "capture-note" not in generated_commands:
+        capture_note_parser = subparsers.add_parser(
+            "capture-note",
+            help="Recommend whether durable learning should update an existing Memory note or create a new one.",
+        )
+        capture_note_parser.add_argument("slug", nargs="?", default="")
+        capture_note_parser.add_argument("--summary", default="")
+        capture_note_parser.add_argument("--files", nargs="*", default=[])
+        capture_note_parser.add_argument("--surface", dest="surfaces", nargs="*", default=[])
+        capture_note_parser.add_argument("--existing-note", default="")
+        capture_note_parser.add_argument("--force-new-reason", default="")
+        _add_target_arguments(capture_note_parser)
+        _add_format_argument(capture_note_parser)
 
     search_parser = subparsers.add_parser(
         "search",
@@ -947,6 +948,10 @@ def _run_doctor_report_adapter(args: argparse.Namespace) -> int | None:
     return run_operation_ir(generated_cli_package_operation_contract("memory.doctor.report"), args)
 
 
+def _run_capture_note_report_adapter(args: argparse.Namespace) -> int | None:
+    return run_operation_ir(generated_cli_package_operation_contract("memory.capture-note.report"), args)
+
+
 def _run_list_files_report_adapter(args: argparse.Namespace) -> int | None:
     return run_operation_ir(generated_cli_package_operation_contract("memory.list-files.report"), args)
 
@@ -980,6 +985,7 @@ def _run_sync_memory_adapter(args: argparse.Namespace) -> int | None:
 
 
 _GENERATED_RUNTIME_HANDLERS = {
+    "memory.capture-note.report": _run_capture_note_report_adapter,
     "memory.doctor.report": _run_doctor_report_adapter,
     "memory.list-files.report": _run_list_files_report_adapter,
     "memory.list-skills.report": _run_list_skills_report_adapter,
@@ -1143,6 +1149,9 @@ def _assemble_memory_list_skills_payload(*, registry: Any, arguments: dict[str, 
 def _emit_memory_operation_output(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> None:
     result = values["result"]
     output_format = str(values.get("format") or "text")
+    if values.get("operation_id") == "memory.capture-note.report":
+        _emit_memory_capture_note_output(result, output_format=output_format)
+        return
     if output_format == "json":
         if isinstance(result, dict):
             print(json.dumps(result, indent=2))
@@ -1153,6 +1162,20 @@ def _emit_memory_operation_output(values: dict[str, Any], _arguments: dict[str, 
         _print_report(result)
         return
     _emit_result(result, output_format=output_format)
+
+
+def _emit_memory_capture_note_output(payload: Any, *, output_format: str) -> None:
+    if output_format == "json":
+        print(json.dumps(payload, indent=2))
+        return
+    if not isinstance(payload, dict):
+        print(str(payload))
+        return
+    print(f"Recommended action: {payload.get('recommended_action', 'unknown')}")
+    print(f"Reason: {payload.get('reason', '')}")
+    commands = payload.get("commands", [])
+    for command in commands if isinstance(commands, list) else []:
+        print(f"Command: {command}")
 
 
 def _emit_result(result, *, output_format: str, include_install_summary: bool = False) -> None:

@@ -28,6 +28,7 @@ class OperationIrExecutionError(RuntimeError):
 
 def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int:
     if operation.get("id") not in {
+        'memory.capture-note.report',
         'memory.doctor.report',
         'memory.list-files.report',
         'memory.list-skills.report',
@@ -62,6 +63,10 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'files': getattr(args, 'files', []),
                 'surface': getattr(args, 'surface', []),
                 'mode': getattr(args, 'mode', None),
+                'slug': getattr(args, 'slug', ''),
+                'summary': getattr(args, 'summary', ''),
+                'existing_note': getattr(args, 'existing_note', ''),
+                'force_new_reason': getattr(args, 'force_new_reason', ''),
             },
             context=PrimitiveContext(cwd=Path.cwd(), roots={
                 'memory.package-payload': _handle_context_root_memory_package_payload(),
@@ -71,6 +76,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'path.target_root.resolve': _handle_path_target_root_resolve,
                 'memory.bootstrap.doctor.load': _handle_memory_bootstrap_doctor_load,
                 'memory.bootstrap.status.load': _handle_memory_bootstrap_status_load,
+                'memory.capture_note.load': _handle_memory_capture_note_load,
                 'memory.promotion_report.load': _handle_memory_promotion_report_load,
                 'memory.report.load': _handle_memory_report_load,
                 'memory.route.load': _handle_memory_route_load,
@@ -113,6 +119,12 @@ def _handle_memory_bootstrap_status_load(values: dict[str, Any], arguments: dict
     from .memory_runtime_cli import _load_memory_bootstrap_status
 
     return _load_memory_bootstrap_status(values, arguments, context)
+
+
+def _handle_memory_capture_note_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_memory_bootstrap.installer import suggest_memory_note_capture
+
+    return suggest_memory_note_capture(existing_note=values.get('existing_note'), files=values.get('files'), force_new_reason=values.get('force_new_reason'), slug=values.get('slug'), summary=values.get('summary'), surfaces=values.get('surface'), target=values.get('target'))
 
 
 def _handle_memory_promotion_report_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:

@@ -7201,6 +7201,7 @@
           "module_file": "memory_operation_ir_executor",
           "supported_operation_ids": [
             "memory.doctor.report",
+            "memory.capture-note.report",
             "memory.list-files.report",
             "memory.list-skills.report",
             "memory.promotion-report.report",
@@ -7285,6 +7286,26 @@
               "name": "mode",
               "arg": "mode",
               "default": null
+            },
+            {
+              "name": "slug",
+              "arg": "slug",
+              "default": ""
+            },
+            {
+              "name": "summary",
+              "arg": "summary",
+              "default": ""
+            },
+            {
+              "name": "existing_note",
+              "arg": "existing_note",
+              "default": ""
+            },
+            {
+              "name": "force_new_reason",
+              "arg": "force_new_reason",
+              "default": ""
             }
           ],
           "context_roots": [
@@ -7314,6 +7335,35 @@
               "primitive": "memory.bootstrap.status.load",
               "handler": "runtime_handler",
               "function": "_load_memory_bootstrap_status"
+            },
+            {
+              "primitive": "memory.capture_note.load",
+              "handler": "function_call",
+              "import_module": "repo_memory_bootstrap.installer",
+              "function": "suggest_memory_note_capture",
+              "kwargs": {
+                "slug": {
+                  "value": "slug"
+                },
+                "target": {
+                  "value": "target"
+                },
+                "summary": {
+                  "value": "summary"
+                },
+                "files": {
+                  "value": "files"
+                },
+                "surfaces": {
+                  "value": "surface"
+                },
+                "existing_note": {
+                  "value": "existing_note"
+                },
+                "force_new_reason": {
+                  "value": "force_new_reason"
+                }
+              }
             },
             {
               "primitive": "memory.promotion_report.load",
@@ -7578,6 +7628,134 @@
             "runtime_owned": [
               "package-local primitive implementation",
               "payload assembly",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "memory.capture-note.cli",
+          "status": "generated",
+          "command": {
+            "name": "capture-note",
+            "manifest_ref": "package:memory:cli"
+          },
+          "interface": {
+            "name": "capture-note",
+            "help": "Recommend whether durable learning should update an existing Memory note or create a new one.",
+            "arguments": [
+              {
+                "name": "slug",
+                "nargs": "?",
+                "default": "",
+                "help": "Optional note slug to create when a new note is recommended."
+              }
+            ],
+            "options": [
+              {
+                "name": "summary",
+                "flags": [
+                  "--summary"
+                ],
+                "default": "",
+                "help": "Short summary of the learning to preserve."
+              },
+              {
+                "name": "files",
+                "flags": [
+                  "--files"
+                ],
+                "nargs": "*",
+                "default": [],
+                "help": "Changed files that should influence routing."
+              },
+              {
+                "name": "surface",
+                "flags": [
+                  "--surface"
+                ],
+                "nargs": "*",
+                "default": [],
+                "help": "Explicit routing surfaces."
+              },
+              {
+                "name": "existing_note",
+                "flags": [
+                  "--existing-note"
+                ],
+                "default": "",
+                "help": "Existing note path to force-review first."
+              },
+              {
+                "name": "force_new_reason",
+                "flags": [
+                  "--force-new-reason"
+                ],
+                "default": "",
+                "help": "Reason a new note is preferred even when related notes exist."
+              },
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "memory.capture-note.report",
+            "path": "operations/memory.capture-note.report.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "memory.capture_note.load",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "memory.capture-note.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "memory capture recommendation policy",
+              "module result assembly",
               "output emission"
             ]
           }

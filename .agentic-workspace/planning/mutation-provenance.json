@@ -3,14 +3,6 @@
   "entries": [
     {
       "path": ".agentic-workspace/planning/execplans/codegen-generated-under-generated-950.plan.json",
-      "sha256": "98f5311e53bc7a5188c5d57fc36effe5eff4ea3cd8d2a5914fd306da2fe93765",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=keep-local",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-13T13:39:35+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/codegen-generated-under-generated-950.plan.json",
       "sha256": "f049f7730a42fffea93b79c85fd93d250d28335a6a5445ce3ba837bfe84c57a8",
       "command": "agentic-planning record-recovery",
       "reason": "Record proven #950 generated executable wrapper boundary slice and #951 follow-up.",
@@ -1600,6 +1592,14 @@
       "reason": "record delegation decision route=delegate-exploration",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-15T11:17:23+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
+      "sha256": "796cbbf41e9bcf057a484d4b46b828c962efaae113def108765ef58c986469de",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T11:51:55+00:00"
     }
   ]
 }

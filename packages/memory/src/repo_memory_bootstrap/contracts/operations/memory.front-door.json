@@ -6,7 +6,8 @@
     "format_option": "format",
     "subcommands": [
       "route",
-      "sync-memory"
+      "sync-memory",
+      "capture-note"
     ]
   },
   "summary": "Show Memory help or dispatch Memory subcommands through the workspace front door.",

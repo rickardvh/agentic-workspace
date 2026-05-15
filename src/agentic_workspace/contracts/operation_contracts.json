@@ -55,8 +55,8 @@
     {
       "id": "memory.capture-note.report",
       "path": "operations/memory.capture-note.report.json",
-      "command": "memory",
-      "migration_status": "draft-contract-only"
+      "command": "capture-note",
+      "migration_status": "runtime-consumed"
     },
     {
       "id": "memory.doctor.report",

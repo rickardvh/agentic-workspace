@@ -58,6 +58,12 @@
       "adapter_kind": "process"
     },
     {
+      "id": "memory.capture-note.process",
+      "operation_id": "memory.capture-note.report",
+      "path": "conformance/memory.capture-note.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "memory.front-door.process",
       "path": "conformance/memory.front-door.process.json",
       "operation_id": "memory.front-door",

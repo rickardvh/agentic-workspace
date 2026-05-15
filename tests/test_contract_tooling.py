@@ -416,6 +416,7 @@ def test_command_package_ir_reuses_generated_adapter_truth() -> None:
         "planning.reconcile.cli",
         "memory.status.cli",
         "memory.doctor.cli",
+        "memory.capture-note.cli",
         "memory.report.cli",
         "memory.route.cli",
         "memory.route-report.cli",
@@ -1481,6 +1482,7 @@ def test_contract_tooling_check_reports_generated_adapter_status() -> None:
     ]
     assert commands_by_program["agentic-memory"] == [
         "doctor",
+        "capture-note",
         "list-files",
         "list-skills",
         "promotion-report",

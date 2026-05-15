@@ -84,6 +84,86 @@
     "operation_path": "operations/memory.doctor.report.json"
   },
   {
+    "adapter_id": "memory.capture-note.cli",
+    "interface": {
+      "arguments": [
+        {
+          "default": "",
+          "help": "Optional note slug to create when a new note is recommended.",
+          "name": "slug",
+          "nargs": "?"
+        }
+      ],
+      "help": "Recommend whether durable learning should update an existing Memory note or create a new one.",
+      "name": "capture-note",
+      "options": [
+        {
+          "default": "",
+          "flags": [
+            "--summary"
+          ],
+          "help": "Short summary of the learning to preserve.",
+          "name": "summary"
+        },
+        {
+          "default": [],
+          "flags": [
+            "--files"
+          ],
+          "help": "Changed files that should influence routing.",
+          "name": "files",
+          "nargs": "*"
+        },
+        {
+          "default": [],
+          "flags": [
+            "--surface"
+          ],
+          "help": "Explicit routing surfaces.",
+          "name": "surface",
+          "nargs": "*"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--existing-note"
+          ],
+          "help": "Existing note path to force-review first.",
+          "name": "existing_note"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--force-new-reason"
+          ],
+          "help": "Reason a new note is preferred even when related notes exist.",
+          "name": "force_new_reason"
+        },
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "memory.capture-note.report",
+    "operation_path": "operations/memory.capture-note.report.json"
+  },
+  {
     "adapter_id": "memory.report.cli",
     "interface": {
       "help": "Read-only report report.",

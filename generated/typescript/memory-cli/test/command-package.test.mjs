@@ -8,7 +8,7 @@ const source = readFileSync(new URL('../src/commandPackage.ts', import.meta.url)
 const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
 test('generated package metadata exposes expected commands', () => {
-  const expected = ["doctor", "list-files", "list-skills", "promotion-report", "report", "route", "route-report", "status", "sync-memory"];
+  const expected = ["capture-note", "doctor", "list-files", "list-skills", "promotion-report", "report", "route", "route-report", "status", "sync-memory"];
   for (const command of expected) {
     assert.match(source, new RegExp(`\"name\": \\"${command}\\"`));
   }
@@ -32,27 +32,27 @@ test('generated runnable adapter delegates supported command to runtime process'
   const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
   const mockRuntime = fileURLToPath(new URL('./mock-runtime.mjs', import.meta.url));
   const runtime = `"${process.execPath}" "${mockRuntime}"`;
-  const result = spawnSync(process.execPath, [cli, 'doctor', '--format', 'json'], {
+  const result = spawnSync(process.execPath, [cli, 'capture-note', '--format', 'json'], {
     encoding: 'utf8',
     env: { ...process.env, AGENTIC_WORKSPACE_RUNTIME: runtime },
   });
   assert.equal(result.status, 0);
   const payload = JSON.parse(result.stdout);
-  assert.equal(payload.command, 'doctor');
-  assert.deepEqual(payload.args, ['doctor', '--format', 'json']);
+  assert.equal(payload.command, 'capture-note');
+  assert.deepEqual(payload.args, ['capture-note', '--format', 'json']);
 });
 
 test('generated runnable adapter preserves spaced argv values during runtime handoff', () => {
   const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
   const mockRuntime = fileURLToPath(new URL('./mock-runtime.mjs', import.meta.url));
   const runtime = `"${process.execPath}" "${mockRuntime}"`;
-  const result = spawnSync(process.execPath, [cli, 'doctor', '--task', 'value with spaces'], {
+  const result = spawnSync(process.execPath, [cli, 'capture-note', '--task', 'value with spaces'], {
     encoding: 'utf8',
     env: { ...process.env, AGENTIC_WORKSPACE_RUNTIME: runtime },
   });
   assert.equal(result.status, 0);
   const payload = JSON.parse(result.stdout);
-  assert.deepEqual(payload.args, ['doctor', '--task', 'value with spaces']);
+  assert.deepEqual(payload.args, ['capture-note', '--task', 'value with spaces']);
 });
 
 test('generated runnable adapter exposes routing status and recovery guidance', () => {
@@ -75,7 +75,7 @@ test('generated runnable adapter rejects unsupported commands with recovery guid
 
 test('generated runnable adapter maps runtime handoff failure with recovery guidance', () => {
   const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
-  const result = spawnSync(process.execPath, [cli, 'doctor'], {
+  const result = spawnSync(process.execPath, [cli, 'capture-note'], {
     encoding: 'utf8',
     env: { ...process.env, AGENTIC_WORKSPACE_RUNTIME: '' },
   });

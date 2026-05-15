@@ -1,0 +1,74 @@
+{
+  "schema_version": "agentic-workspace/conformance/v1",
+  "id": "memory.capture-note.process",
+  "operation_id": "memory.capture-note.report",
+  "adapter": {
+    "kind": "process",
+    "command_template": [
+      "{agentic_memory_cli}",
+      "capture-note",
+      "app-learning",
+      "--target",
+      ".",
+      "--summary",
+      "App learning.",
+      "--files",
+      "src/app.py",
+      "--format",
+      "json"
+    ],
+    "cwd": "fixture_root"
+  },
+  "fixtures": [
+    {
+      "id": "memory-capture-note-process",
+      "files": {
+        ".git/.keep": "",
+        "README.md": "# Fixture\n",
+        "src/app.py": "print('hello')\n"
+      }
+    }
+  ],
+  "expectations": {
+    "exit": {
+      "code": 0
+    },
+    "stdout": {
+      "format": "json",
+      "field_assertions": [
+        {
+          "path": [
+            "kind"
+          ],
+          "equals": "agentic-memory/capture-recommendation/v1"
+        },
+        {
+          "path": [
+            "status"
+          ],
+          "equals": "unavailable"
+        }
+      ]
+    },
+    "stderr": {
+      "allow_non_empty": false
+    },
+    "filesystem": {
+      "allowed_write_paths": [],
+      "required_paths": [
+        ".git/.keep",
+        "README.md",
+        "src/app.py"
+      ],
+      "forbidden_paths": [
+        ".agentic-workspace"
+      ]
+    },
+    "idempotency": {
+      "run_twice": true
+    },
+    "safety": {
+      "no_writes_outside_repo_root": true
+    }
+  }
+}

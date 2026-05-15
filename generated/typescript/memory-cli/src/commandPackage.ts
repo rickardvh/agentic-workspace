@@ -187,6 +187,134 @@ export const generatedCommandPackage = {
       "status": "generated"
     },
     {
+      "adapter_id": "memory.capture-note.cli",
+      "command": {
+        "manifest_ref": "package:memory:cli",
+        "name": "capture-note"
+      },
+      "conformance_refs": [
+        "memory.capture-note.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "interface": {
+        "arguments": [
+          {
+            "default": "",
+            "help": "Optional note slug to create when a new note is recommended.",
+            "name": "slug",
+            "nargs": "?"
+          }
+        ],
+        "help": "Recommend whether durable learning should update an existing Memory note or create a new one.",
+        "name": "capture-note",
+        "options": [
+          {
+            "default": "",
+            "flags": [
+              "--summary"
+            ],
+            "help": "Short summary of the learning to preserve.",
+            "name": "summary"
+          },
+          {
+            "default": [],
+            "flags": [
+              "--files"
+            ],
+            "help": "Changed files that should influence routing.",
+            "name": "files",
+            "nargs": "*"
+          },
+          {
+            "default": [],
+            "flags": [
+              "--surface"
+            ],
+            "help": "Explicit routing surfaces.",
+            "name": "surface",
+            "nargs": "*"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--existing-note"
+            ],
+            "help": "Existing note path to force-review first.",
+            "name": "existing_note"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--force-new-reason"
+            ],
+            "help": "Reason a new note is preferred even when related notes exist.",
+            "name": "force_new_reason"
+          },
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Target repository path. Defaults to the current directory.",
+            "name": "target"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "memory.capture-note.report",
+        "path": "operations/memory.capture-note.report.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "memory capture recommendation policy",
+          "module result assembly",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.capture_note.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    {
       "adapter_id": "memory.report.cli",
       "command": {
         "manifest_ref": "package:memory:cli",
@@ -831,6 +959,35 @@ export const generatedCommandPackage = {
           "primitive": "memory.bootstrap.status.load"
         },
         {
+          "function": "suggest_memory_note_capture",
+          "handler": "function_call",
+          "import_module": "repo_memory_bootstrap.installer",
+          "kwargs": {
+            "existing_note": {
+              "value": "existing_note"
+            },
+            "files": {
+              "value": "files"
+            },
+            "force_new_reason": {
+              "value": "force_new_reason"
+            },
+            "slug": {
+              "value": "slug"
+            },
+            "summary": {
+              "value": "summary"
+            },
+            "surfaces": {
+              "value": "surface"
+            },
+            "target": {
+              "value": "target"
+            }
+          },
+          "primitive": "memory.capture_note.load"
+        },
+        {
           "function": "_load_memory_promotion_report",
           "handler": "runtime_handler",
           "primitive": "memory.promotion_report.load"
@@ -965,11 +1122,32 @@ export const generatedCommandPackage = {
           "arg": "mode",
           "default": null,
           "name": "mode"
+        },
+        {
+          "arg": "slug",
+          "default": "",
+          "name": "slug"
+        },
+        {
+          "arg": "summary",
+          "default": "",
+          "name": "summary"
+        },
+        {
+          "arg": "existing_note",
+          "default": "",
+          "name": "existing_note"
+        },
+        {
+          "arg": "force_new_reason",
+          "default": "",
+          "name": "force_new_reason"
         }
       ],
       "module_file": "memory_operation_ir_executor",
       "supported_operation_ids": [
         "memory.doctor.report",
+        "memory.capture-note.report",
         "memory.list-files.report",
         "memory.list-skills.report",
         "memory.promotion-report.report",
