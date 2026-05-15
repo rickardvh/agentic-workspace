@@ -12,12 +12,12 @@
   ],
   "generation_policy": {
     "authority_rule": "Command/interface truth belongs in contracts and this package IR; generated target files are derived outputs.",
-    "runtime_boundary": "Runtime primitives and live workspace inspection stay hand-owned and are referenced, not generated.",
+    "runtime_boundary": "Runtime primitives and live workspace inspection stay hand-owned only as explicit transitional debt; full Python generated CLI completion requires executable behavior to be generated from implementation-independent contracts or IR into generated/python outputs, with only separately inventoried package-unique primitive implementations allowed.",
     "ordinary_development_environment": "Python development remains sufficient for ordinary repo work.",
     "test_environment": "Generated non-Python package tests run in Docker-selected proof lanes.",
     "custom_codegen_boundary": "Custom generation code should stay small: validated IR loading, target rendering, freshness checks, and no-direct-edit sentinels.",
     "shell_adapter_policy": "Issue #909 evaluation selects Bash as the first additional generated command transport candidate and keeps it deferred. Promotion may start only with parser/help projection from canonical command artifacts, then black-box conformance for runtime handoff; PowerShell remains deferred until the Bash boundary and proof route are proven. Shell-family targets are downstream projections for thin wrappers, help, argument validation, completion metadata, and runtime handoff only; they must not own runtime primitive behavior.",
-    "direct_cli_edit_policy": "Interface shape, generated package metadata, and adapter wiring should move through contracts, IR, and generators; direct cli.py edits are for runtime primitives, migration exceptions, and uncovered urgent fixes. Future command/interface package work must change contracts, IR, generators, and regenerated outputs instead of package-local executable cli.py files.",
+    "direct_cli_edit_policy": "Interface shape, generated package metadata, adapter wiring, and shipped CLI behavior must move through contracts, IR, generators, and regenerated outputs instead of package-local executable cli.py files; direct cli.py edits or other direct edits to package-local executable Python are transitional debt unless they are explicitly classified package-unique primitive implementations outside the generated CLI behavior surface.",
     "generated_package_maturity": {
       "routing_rule": "Weak agents may use only generated targets whose maturity level explicitly allows weak-agent routing; proof fixtures and parser/help proofs are inspection artifacts, not usable CLI surfaces.",
       "levels": [
@@ -111,20 +111,21 @@
     },
     "python_cli_completion": {
       "finish_line": "Python CLI completion means parser, dispatch, command/interface behavior, adapter metadata, conformance expectations, product-specific runtime binding, and generic deterministic file/data behavior are generated from implementation-independent contracts or IR into generated/python outputs and executed by codegen-owned primitive executors; packages/command-generation/src owns only generic generation, rendering, primitive execution, schema, freshness, and conformance machinery.",
-      "current_state": "full-generated-cli-complete",
+      "current_state": "product-runtime-source-generation-incomplete",
       "allowed_hand_owned_cli_responsibilities": [
         "live workspace inspection",
         "package-specific runtime primitive implementation that cannot yet be represented by codegen-owned primitives",
         "mutation orchestration and safety checks",
         "output emission mechanics",
-        "thin operation handler adapters that call runtime primitives"
+        "thin operation handler adapters that call runtime primitives until their behavior is generated"
       ],
       "must_move_behind_contracts_or_generation": [
         "command parser shape",
         "option and help interface semantics",
         "generated command dispatch selection",
         "generic file, JSON, TOML, Markdown, schema, template, managed payload, and JSON/text emission behavior",
-        "product-specific executable runtime modules currently living in command-generation source",
+        "product-specific executable runtime modules currently living in shipped module source or command-generation source",
+        "generated command modules that import package-owned runtime helpers directly",
         "package CLI command/interface additions",
         "weak-agent routing and maturity claims for generated command surfaces",
         "black-box conformance fixture selection"
@@ -138,10 +139,11 @@
         "product-specific executable runtime behavior lives under generated/python target output and is rendered by command-generation before full completion is claimed; moving it from modules into command-generation source is not sufficient",
         "root console smoke proof executes at least one generated root command through the installed console path, not only through generated parser/help imports",
         "Full completion proof must distinguish generated-output placement from generated ownership; product-specific runtime files under generated/python must be produced by command-generation or explicitly inventoried as transitional generated-output debt.",
-        "Full completion proof must distinguish portable codegen primitive execution from domain runtime primitives wrapped in IR."
+        "Full completion proof must distinguish portable codegen primitive execution from domain runtime primitives wrapped in IR.",
+        "Full completion proof must fail while shipped module source contains runtime primitive/projection modules that own generated CLI behavior."
       ],
       "completion_gate": {
-        "state": "satisfied",
+        "state": "pending",
         "scope": "python-only",
         "satisfied_by": [
           {

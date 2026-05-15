@@ -119,6 +119,26 @@ def test_generated_python_conformance_uses_contract_artifacts() -> None:
     assert memory_skills.expected_fields == {"mode": "skills"}
 
 
+def test_full_python_completion_rejects_runtime_source_and_command_runtime_imports() -> None:
+    checker = _load_checker()
+    ir = copy.deepcopy(checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT))
+    ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
+    ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
+
+    errors = checker._validate_full_python_completion_executable_ownership(ir)
+
+    assert any("still owns generated CLI runtime/lifecycle behavior" in error for error in errors)
+    assert any("generated command modules import package-owned runtime helpers directly" in error for error in errors)
+
+
+def test_current_python_completion_state_is_not_full_while_runtime_source_remains() -> None:
+    checker = _load_checker()
+    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+
+    assert ir["generation_policy"]["python_cli_completion"]["current_state"] == "product-runtime-source-generation-incomplete"
+    assert ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] == "pending"
+
+
 def test_generated_python_conformance_classifies_native_crashes(monkeypatch) -> None:
     checker = _load_checker()
     registries, errors = checker._adapter_conformance_cases_by_package()

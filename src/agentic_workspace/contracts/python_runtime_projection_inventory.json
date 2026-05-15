@@ -2,7 +2,7 @@
   "kind": "agentic-workspace/python-runtime-projection-inventory/v1",
   "schema_version": "agentic-workspace/python-runtime-projection-inventory/v1",
   "purpose": "Track generated/python runtime and operation-executor Python files whose location alone could be mistaken for generated ownership.",
-  "completion_rule": "The Python CLI completion gate may reach full-generated-cli-complete only when every entry is rendered-by-command-generation, blocking_full_completion is false for every entry, and command-generation render_outputs produces the same paths.",
+  "completion_rule": "The Python CLI completion gate may reach full-generated-cli-complete only when every generated projection entry is rendered-by-command-generation, blocking_full_completion is false for every entry, command-generation render_outputs produces the same paths, shipped module source no longer owns generated CLI runtime/lifecycle behavior, and generated command modules do not import package-owned runtime helpers directly.",
   "allowed_provenance_statuses": [
     "rendered-by-command-generation",
     "transitional-generated-output-debt"

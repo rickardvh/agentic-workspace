@@ -2,62 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/execplans/python-codegen-demote-after-clarification.plan.json",
-      "sha256": "85afa77c99f8132e9caff54b448e29c0096b205c07076c034abf483ad1341238",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=keep-local",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T16:29:05+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-codegen-demote-after-clarification.plan.json",
-      "sha256": "85afa77c99f8132e9caff54b448e29c0096b205c07076c034abf483ad1341238",
-      "command": "agentic-planning record-recovery",
-      "reason": "Tightened corrective execplan for demoting #892 Python completion after clarified codegen-owned primitive executor finish line.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T16:32:02+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/finished-work-evidence.json",
-      "sha256": "7bd8292e39f017c5d703e935b45cc7122f065e5ca7560e002f9fd1f9b6d357db",
-      "command": "agentic-planning record-recovery",
-      "reason": "Updated finished-work evidence so #892 remains open after clarified codegen-owned primitive executor finish line.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T16:32:02+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
-      "sha256": "aef73b62e0026dc6a80dc8d3e7af445f99e7ad2aa49f2187fa6b9cb67d0bcef0",
-      "command": "agentic-planning record-recovery",
-      "reason": "Demoted Python generated CLI decomposition from closed to partially-promoted after clarified #892 finish line.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T16:32:03+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-codegen-demote-after-clarification.plan.json",
-      "sha256": "1b05ad4f8c24c64e956019a8439d6d2f8d13dd30c9da84b240f75bad1d3b6b08",
-      "command": "agentic-planning record-recovery",
-      "reason": "Aligned corrective execplan compatibility projections with canonical core after health warning.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T16:32:46+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-codegen-demote-after-clarification.plan.json",
-      "sha256": "8a2dd5da04881c3492b322a97b7c3c8894048510d5db3e586cd89e9b7ae82d3d",
-      "command": "agentic-planning record-recovery",
-      "reason": "Closed corrective demotion slice while leaving #892 open for codegen-owned primitive executor continuation.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T16:34:37+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-codegen-demote-after-clarification.plan.json",
-      "sha256": "716d66bd9a8ea40c063cd78347323c1537a4c10ff3754dd36ad53d5d1c6b155d",
-      "command": "agentic-planning record-recovery",
-      "reason": "Added explicit #892 resume cue before archiving corrective demotion slice.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T16:35:02+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/state.toml",
       "sha256": "9005c47e51a048285f67be2d08c5623a570981c505b03f40bcb8dcdabd5fff91",
       "command": "agentic-planning record-recovery",
@@ -1600,6 +1544,62 @@
       "reason": "Recorded the completed runtime export retirement slice in the epic decomposition before committing the #892 slice.",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-15T21:27:50+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-generated-cli-honest-completion-gate.plan.json",
+      "sha256": "65dc867fc044390c1bf1c651795f2312c079c81ceb74bbef163ac5994d089f7f",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-generated-cli-honest-completion-gate",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T21:44:13+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "01e0e68928b5863b0591ae1cf2573644dd44ef9b19212e1622619a58c5b851f0",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-generated-cli-honest-completion-gate",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T21:44:13+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-generated-cli-honest-completion-gate.plan.json",
+      "sha256": "f4799a760544a68a8c9072712e8b02e7a74a173d4325631f6710bc85cd28c7e7",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=delegate-exploration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T21:44:28+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-generated-cli-honest-completion-gate.plan.json",
+      "sha256": "ddedf19fe3f7efbe4b07e2ce555a93f6136ba0bb935411cffd8a176a98e87003",
+      "command": "agentic-planning record-recovery",
+      "reason": "Tightened the #892 honest completion gate execplan after scaffold creation, then implemented the bounded proof-gate slice.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-15T21:55:03+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-generated-cli-honest-completion-gate",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T21:56:45+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/python-generated-cli-honest-completion-gate.plan.json",
+      "sha256": "1f58d7e808a7e265e246646949ba5387d538327847eca3bb76ae17d6bba48747",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-generated-cli-honest-completion-gate",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T21:56:45+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "61188adffa2a474d8333eca10b7ddb1deb35bd8d999031bd2c1ad625fed85c30",
+      "command": "agentic-planning record-recovery",
+      "reason": "Recorded the #892 honest completion gate demotion and continuation after the completion-gate slice.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-15T21:56:57+00:00"
     }
   ]
 }

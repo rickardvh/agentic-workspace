@@ -70,6 +70,7 @@ CONFORMANCE_PLACEHOLDER_BY_PACKAGE = {
 PYTHON_COMPLETION_STATES = {
     "adapter-layer-proven-not-full-generated-cli",
     "codegen-owned-primitive-migration-incomplete",
+    "product-runtime-source-generation-incomplete",
     "full-generated-cli-complete",
 }
 PYTHON_COMPLETION_REQUIRED_EVIDENCE_IDS = {
@@ -153,6 +154,14 @@ PYTHON_FULL_COMPLETION_BLOCKING_EXECUTABLE_PATHS = (
     "src/agentic_workspace/operation_ir_executor.py",
     "packages/planning/src/repo_planning_bootstrap/operation_ir_executor.py",
     "packages/memory/src/repo_memory_bootstrap/operation_ir_executor.py",
+)
+PYTHON_FULL_COMPLETION_BLOCKING_RUNTIME_SOURCE_PATHS = (
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "src/agentic_workspace/doctor.py",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/src/repo_planning_bootstrap/runtime_projection.py",
+    "packages/memory/src/repo_memory_bootstrap/installer.py",
+    "packages/memory/src/repo_memory_bootstrap/runtime_primitives.py",
 )
 GENERATED_CLI_COMPATIBILITY_VOCABULARY = (
     "generated_cli_package",
@@ -1123,7 +1132,46 @@ def _validate_full_python_completion_executable_ownership(ir: dict[str, object])
                 "command_package_ir.json cannot claim full Python generated CLI completion while shipped module "
                 f"or product-specific command-generation source {relative_path} owns executable behavior markers: {matched_categories!r}"
             )
+    existing_runtime_source = sorted(
+        relative_path
+        for relative_path in PYTHON_FULL_COMPLETION_BLOCKING_RUNTIME_SOURCE_PATHS
+        if (REPO_ROOT / relative_path).is_file()
+    )
+    if existing_runtime_source:
+        errors.append(
+            "command_package_ir.json cannot claim full Python generated CLI completion while shipped module source "
+            f"still owns generated CLI runtime/lifecycle behavior: {existing_runtime_source!r}"
+        )
+    runtime_imports = _generated_command_module_package_runtime_imports()
+    if runtime_imports:
+        errors.append(
+            "command_package_ir.json cannot claim full Python generated CLI completion while generated command modules "
+            f"import package-owned runtime helpers directly: {runtime_imports!r}"
+        )
     return errors
+
+
+def _generated_command_module_package_runtime_imports() -> list[str]:
+    forbidden_imports = (
+        "from agentic_workspace.workspace_runtime_primitives import",
+        "from repo_planning_bootstrap.runtime_projection import",
+        "from repo_memory_bootstrap.runtime_primitives import",
+        "from repo_planning_bootstrap.installer import",
+        "from repo_memory_bootstrap.installer import",
+    )
+    findings: list[str] = []
+    for commands_dir in (
+        REPO_ROOT / "generated" / "workspace" / "python" / "commands",
+        REPO_ROOT / "generated" / "planning" / "python" / "commands",
+        REPO_ROOT / "generated" / "memory" / "python" / "commands",
+    ):
+        if not commands_dir.is_dir():
+            continue
+        for path in sorted(commands_dir.glob("*.py")):
+            text = path.read_text(encoding="utf-8")
+            if any(import_text in text for import_text in forbidden_imports):
+                findings.append(path.relative_to(REPO_ROOT).as_posix())
+    return findings
 
 
 def _validate_python_runtime_projection_inventory(*, full_completion: bool) -> list[str]:
@@ -2367,5 +2415,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
-
