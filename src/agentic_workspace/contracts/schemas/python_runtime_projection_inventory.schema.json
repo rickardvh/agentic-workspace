@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://agentic-workspace.local/schemas/python_runtime_projection_inventory.schema.json",
   "title": "Python runtime projection inventory",
+  "description": "Inventory proving whether generated Python runtime projection files are rendered by command-generation or remain transitional generated-output debt.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -14,18 +15,22 @@
   ],
   "properties": {
     "kind": {
-      "const": "agentic-workspace/python-runtime-projection-inventory/v1"
+      "const": "agentic-workspace/python-runtime-projection-inventory/v1",
+      "description": "Stable document kind for the Python runtime projection inventory."
     },
     "schema_version": {
-      "const": "agentic-workspace/python-runtime-projection-inventory/v1"
+      "const": "agentic-workspace/python-runtime-projection-inventory/v1",
+      "description": "Schema version for this inventory document."
     },
     "purpose": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "description": "Human-readable purpose for tracking generated Python runtime projection provenance."
     },
     "completion_rule": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "description": "Rule that determines whether runtime projection provenance can support full Python generated CLI completion."
     },
     "allowed_provenance_statuses": {
       "type": "array",
@@ -36,19 +41,22 @@
           "transitional-generated-output-debt"
         ]
       },
-      "uniqueItems": true
+      "uniqueItems": true,
+      "description": "Allowed provenance status values for runtime projection entries."
     },
     "entries": {
       "type": "array",
       "minItems": 1,
       "items": {
         "$ref": "#/$defs/entry"
-      }
+      },
+      "description": "Runtime projection files that must be accounted for before Python generated CLI completion can be claimed."
     }
   },
   "$defs": {
     "entry": {
       "type": "object",
+      "description": "One generated Python runtime projection file and its provenance classification.",
       "additionalProperties": false,
       "required": [
         "path",
@@ -65,54 +73,65 @@
       "properties": {
         "path": {
           "type": "string",
-          "pattern": "^generated/python/(workspace-cli|planning-cli|memory-cli)/generated_cli_package/[a-z_]+\\.py$"
+          "pattern": "^generated/python/(workspace-cli|planning-cli|memory-cli)/generated_cli_package/[a-z_]+\\.py$",
+          "description": "Repo-relative generated Python runtime projection path."
         },
         "package_id": {
           "enum": [
             "root-workspace",
             "planning-bootstrap",
             "memory-bootstrap"
-          ]
+          ],
+          "description": "Command package that owns this generated projection."
         },
         "program": {
           "enum": [
             "agentic-workspace",
             "agentic-planning",
             "agentic-memory"
-          ]
+          ],
+          "description": "CLI program exposed by this generated projection."
         },
         "artifact_kind": {
           "enum": [
             "runtime-cli",
             "operation-ir-executor"
-          ]
+          ],
+          "description": "Kind of generated Python runtime projection artifact."
         },
         "provenance_status": {
           "enum": [
             "rendered-by-command-generation",
             "transitional-generated-output-debt"
-          ]
+          ],
+          "description": "Whether command-generation renders this file or the file remains transitional generated-output debt."
         },
         "current_owner": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Current owner or mechanism responsible for producing this projection."
         },
         "source_of_truth": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Contract, IR, or generator surface that acts as the source of truth for this projection."
         },
         "blocking_full_completion": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Whether this entry blocks full Python generated CLI completion."
         },
         "why_blocking": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Explanation of why the entry blocks or does not block full completion."
         },
         "required_resolution": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Resolution required if the entry blocks completion or maintenance action required if it does not."
         }
       }
     }
-  }
+  },
+  "x-agentic-workspace-doc-role": "contract-reference"
 }
