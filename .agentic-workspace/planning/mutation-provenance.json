@@ -2,14 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/execplans/codegen-generated-under-generated-950.plan.json",
-      "sha256": "5a29d1cbe4adfe7eb891e59dd8fe9a7e1280648e898e669a5ef9b2a4001dd14c",
-      "command": "agentic-planning record-recovery",
-      "reason": "Tighten #950 generated ownership boundary execplan before implementation.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-13T13:34:35+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/state.toml",
       "sha256": "98f541b8b7d9f3067471ca56d4076c356f81b131c639d45ce026862dc393c59f",
       "command": "agentic-planning record-recovery",
@@ -1600,6 +1592,14 @@
       "reason": "record delegation decision route=delegate-validation",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-15T10:51:29+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
+      "sha256": "1837af529168d60da1a3fba92f5952a9d5d33e409b2d00f767179ad46082e7e2",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=delegate-validation",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T11:03:21+00:00"
     }
   ]
 }

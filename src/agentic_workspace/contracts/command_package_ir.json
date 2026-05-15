@@ -4410,6 +4410,29 @@
       "python_runtime_binding": {
         "entrypoint": "agentic-planning",
         "runtime_module_file": "planning_runtime_cli",
+        "render_runtime_module": true,
+        "runtime_module_exports": [
+          {
+            "name": "_print_summary",
+            "import_module": "repo_planning_bootstrap.runtime_projection",
+            "function": "_print_summary"
+          },
+          {
+            "name": "_print_report",
+            "import_module": "repo_planning_bootstrap.runtime_projection",
+            "function": "_print_report"
+          },
+          {
+            "name": "_print_reconcile",
+            "import_module": "repo_planning_bootstrap.runtime_projection",
+            "function": "_print_reconcile"
+          },
+          {
+            "name": "_print_handoff",
+            "import_module": "repo_planning_bootstrap.runtime_projection",
+            "function": "_print_handoff"
+          }
+        ],
         "operation_executor": {
           "module_file": "planning_operation_ir_executor",
           "supported_operation_ids": [

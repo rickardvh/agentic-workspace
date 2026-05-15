@@ -813,6 +813,32 @@ def test_command_package_generator_normalizes_line_endings() -> None:
     assert "line-ending drift" in wrapper.read_text(encoding="utf-8")
 
 
+def test_command_package_generator_renders_planning_runtime_module_from_binding() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    generator_path = repo_root / "packages" / "command-generation" / "src" / "command_generation" / "generator.py"
+    spec = importlib.util.spec_from_file_location("command_generation_generator_render_outputs", generator_path)
+    assert spec is not None and spec.loader is not None
+    generator = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = generator
+    spec.loader.exec_module(generator)
+
+    outputs = generator.render_outputs(
+        contract_tooling.command_package_ir_manifest(),
+        repo_root=repo_root,
+        source_path="src/agentic_workspace/contracts/command_package_ir.json",
+        regenerate_command="uv run python scripts/generate/generate_command_packages.py",
+    )
+    rendered = {str(output.path.relative_to(repo_root)).replace("\\", "/"): output.content for output in outputs}
+
+    assert "generated/python/planning-cli/generated_cli_package/planning_runtime_cli.py" in rendered
+    planning_runtime = rendered["generated/python/planning-cli/generated_cli_package/planning_runtime_cli.py"]
+    assert "Runtime handler changes belong in src/agentic_workspace/contracts/command_package_ir.json." in planning_runtime
+    assert "def _run_planning_status_report_adapter" in planning_runtime
+    assert "'planning.status.report': _run_planning_status_report_adapter" in planning_runtime
+    assert "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py" not in rendered
+    assert "generated/python/memory-cli/generated_cli_package/memory_runtime_cli.py" not in rendered
+
+
 def test_generated_python_module_collects_nested_operation_refs(tmp_path: Path) -> None:
     generator_path = Path(__file__).resolve().parents[1] / "packages" / "command-generation" / "src" / "command_generation" / "generator.py"
     spec = importlib.util.spec_from_file_location("command_generation_generator", generator_path)
@@ -1343,6 +1369,7 @@ def test_python_runtime_projection_inventory_tracks_generated_output_debt() -> N
     assert entries["generated/python/memory-cli/generated_cli_package/memory_operation_ir_executor.py"]["blocking_full_completion"] is False
     rendered_entries = {
         "generated/python/workspace-cli/generated_cli_package/workspace_operation_ir_executor.py",
+        "generated/python/planning-cli/generated_cli_package/planning_runtime_cli.py",
         "generated/python/planning-cli/generated_cli_package/planning_operation_ir_executor.py",
         "generated/python/memory-cli/generated_cli_package/memory_operation_ir_executor.py",
     }

@@ -1227,7 +1227,11 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
     planning_cli_text = (REPO_ROOT / "generated" / "python" / "planning-cli" / "generated_cli_package" / "planning_runtime_cli.py").read_text(
         encoding="utf-8"
     )
-    for function_name in ("_run_doctor_report_adapter", "_run_report_adapter", "_run_status_report_adapter"):
+    for function_name in (
+        "_run_planning_doctor_report_adapter",
+        "_run_planning_report_report_adapter",
+        "_run_planning_status_report_adapter",
+    ):
         function_index = planning_cli_text.find(f"def {function_name}")
         next_function_index = planning_cli_text.find("\ndef ", function_index + 1)
         function_text = planning_cli_text[function_index:next_function_index] if function_index != -1 else ""

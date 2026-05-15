@@ -317,6 +317,36 @@
               "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
               "description": "Generated sibling runtime module file imported by generated Python package bridge code."
             },
+            "render_runtime_module": {
+              "type": "boolean",
+              "description": "Whether command-generation should render the runtime handler module instead of treating it as a hand-owned compatibility file."
+            },
+            "runtime_module_exports": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "import_module"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+                  },
+                  "import_module": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "function": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "description": "Compatibility functions re-exported by a generated runtime handler module for older internal callers while behavior lives in module runtime APIs."
+            },
             "operation_executor": {
               "$ref": "#/$defs/python_operation_executor_binding",
               "description": "Optional binding data used to render a generated Python operation IR executor module."
