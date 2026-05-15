@@ -29,7 +29,7 @@ def resolve_target_root(target: str | Path | None) -> Path:
         raise RepoDetectionError("Could not find a repository root from the current directory. Pass --target explicitly.")
     if len(candidates) > 1:
         roots = ", ".join(str(path) for path in candidates)
-        raise RepoDetectionError(f"Ambiguous repository root detected ({roots}). Pass --target explicitly.")
+        raise RepoDetectionError(f"Ambiguous repository root detected ({roots}). Pass --target explicitly. Retry with --target .")
     return candidates[0]
 
 

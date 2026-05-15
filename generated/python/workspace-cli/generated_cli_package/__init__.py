@@ -37,8 +37,8 @@ _GENERATED_COMMANDS_BY_NAME: dict[str, dict[str, Any]] = {
 
 _GENERATED_OPERATION_PATHS_BY_ID: dict[str, str] = {}
 
-_GENERATED_MATURITY_ID = 'weak-agent-safe-adapter'
-_GENERATED_WEAK_AGENT_ROUTING = 'allowed-read-only'
+_GENERATED_MATURITY_ID = 'mutation-capable-adapter'
+_GENERATED_WEAK_AGENT_ROUTING = 'allowed-mutation-with-review'
 _GENERATED_RUNNABLE = True
 
 RuntimeHandler = Callable[[str, argparse.Namespace], int]
@@ -197,6 +197,7 @@ def build_generated_parser() -> argparse.ArgumentParser:
         "Recovery: use one of the supported generated commands or route back to the canonical Python CLI."
     )
     parser = argparse.ArgumentParser(prog="agentic-workspace", description="", epilog=epilog, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('--version', action='version', version='%(prog)s 0.0.0-generated')
     subparsers = parser.add_subparsers(dest="command", required=True)
     for command in _GENERATED_ADAPTER_COMMANDS:
         interface = command["interface"]
@@ -227,7 +228,7 @@ def main(argv: list[str] | None = None) -> int:
     from .workspace_runtime_cli import main as runtime_main
 
     argv_list = list(sys.argv[1:] if argv is None else argv)
-    if argv_list and argv_list[0] in {'-h', '--help'}:
+    if argv_list and argv_list[0] in {'-h', '--help', '--version'}:
         build_generated_parser().parse_args(argv_list)
         return 0
     if supports_generated_command(argv_list):

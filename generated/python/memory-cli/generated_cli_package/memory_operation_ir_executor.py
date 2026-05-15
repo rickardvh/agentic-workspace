@@ -149,19 +149,19 @@ def _handle_context_root_memory_package_skills() -> Path:
 
 
 def _handle_path_target_root_resolve(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from .memory_runtime_cli import _resolve_memory_target_root
+    from repo_memory_bootstrap.runtime_primitives import _resolve_memory_target_root
 
     return _resolve_memory_target_root(values, arguments, context)
 
 
 def _handle_memory_bootstrap_doctor_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from .memory_runtime_cli import _load_memory_bootstrap_doctor
+    from repo_memory_bootstrap.runtime_primitives import _load_memory_bootstrap_doctor
 
     return _load_memory_bootstrap_doctor(values, arguments, context)
 
 
 def _handle_memory_bootstrap_status_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from .memory_runtime_cli import _load_memory_bootstrap_status
+    from repo_memory_bootstrap.runtime_primitives import _load_memory_bootstrap_status
 
     return _load_memory_bootstrap_status(values, arguments, context)
 
@@ -221,25 +221,25 @@ def _handle_memory_note_create(values: dict[str, Any], _arguments: dict[str, Any
 
 
 def _handle_memory_current_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from .memory_runtime_cli import _load_memory_current
+    from repo_memory_bootstrap.runtime_primitives import _load_memory_current
 
     return _load_memory_current(values, arguments, context)
 
 
 def _handle_memory_promotion_report_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from .memory_runtime_cli import _load_memory_promotion_report
+    from repo_memory_bootstrap.runtime_primitives import _load_memory_promotion_report
 
     return _load_memory_promotion_report(values, arguments, context)
 
 
 def _handle_memory_prompt_render(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from .memory_runtime_cli import _load_memory_prompt
+    from repo_memory_bootstrap.runtime_primitives import _load_memory_prompt
 
     return _load_memory_prompt(values, arguments, context)
 
 
 def _handle_memory_report_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from .memory_runtime_cli import _load_memory_report
+    from repo_memory_bootstrap.runtime_primitives import _load_memory_report
 
     return _load_memory_report(values, arguments, context)
 
@@ -251,7 +251,7 @@ def _handle_memory_route_load(values: dict[str, Any], _arguments: dict[str, Any]
 
 
 def _handle_memory_route_report_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from .memory_runtime_cli import _load_memory_route_report
+    from repo_memory_bootstrap.runtime_primitives import _load_memory_route_report
 
     return _load_memory_route_report(values, arguments, context)
 
@@ -281,12 +281,12 @@ def _handle_memory_sync_memory_load(values: dict[str, Any], _arguments: dict[str
 
 
 def _handle_payload_assemble(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from .memory_runtime_cli import _assemble_memory_operation_payload
+    from repo_memory_bootstrap.runtime_primitives import _assemble_memory_operation_payload
 
     return _assemble_memory_operation_payload(values, arguments, context)
 
 
 def _handle_output_emit(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from .memory_runtime_cli import _emit_memory_operation_output
+    from repo_memory_bootstrap.runtime_primitives import _emit_memory_operation_output
 
     return _emit_memory_operation_output(values, arguments, context)

@@ -6,20 +6,18 @@
     "effectiveRuntimeCommand": "python -c \"import sys; from command_generation.console import main_for_entrypoint; raise SystemExit(main_for_entrypoint('agentic-workspace', sys.argv[1:]))\"",
     "fixtureOnly": false,
     "generated": true,
-    "generationStatus": "weak-agent-safe-adapter",
+    "generationStatus": "mutation-capable-adapter",
     "maturity": {
-      "id": "weak-agent-safe-adapter",
+      "id": "mutation-capable-adapter",
       "promotion_requires": [
-        "help output identifies supported generated commands and the weak-agent routing status",
-        "unsupported command errors give a compact recovery path instead of leaving agents to infer next steps",
-        "runtime handoff failures are classified as adapter runtime handoff failures with recovery guidance",
-        "black-box conformance covers normal read-only behavior, unsupported command recovery, and runtime handoff failure mapping",
-        "generated-package proof advertises the target as weak-agent-safe only after these checks pass"
+        "dry-run and apply behavior are separately covered",
+        "preflight and destructive-refusal guards have black-box conformance",
+        "human review requirements are surfaced before unsafe mutation"
       ],
       "runnable": true,
       "runtime_backed": true,
-      "summary": "Generated target is safe to route to weaker agents for supported read-only commands.",
-      "weak_agent_routing": "allowed-read-only"
+      "summary": "Generated target can invoke mutation-capable behavior through guarded runtime primitives.",
+      "weak_agent_routing": "allowed-mutation-with-review"
     },
     "program": "agentic-workspace",
     "runtimeBinding": {

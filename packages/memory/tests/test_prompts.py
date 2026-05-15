@@ -7,12 +7,13 @@ from pathlib import Path as _Path
 
 _sys.path.insert(0, str(_Path(__file__).resolve().parent))
 from memory_test_support import *
+from repo_memory_bootstrap import runtime_primitives
 
 
 def test_build_install_prompt_mentions_local_bootstrap_skills_and_target(
     monkeypatch,
 ) -> None:
-    monkeypatch.setattr(cli.shutil, "which", lambda name: f"./tools/{name}")
+    monkeypatch.setattr(runtime_primitives.shutil, "which", lambda name: f"./tools/{name}")
     prompt = cli._build_agent_prompt("install", target="./repo")
 
     assert prompt.startswith("Do not ask the user to install or clone anything locally first.")
@@ -26,7 +27,7 @@ def test_build_install_prompt_mentions_local_bootstrap_skills_and_target(
 def test_build_adopt_prompt_mentions_local_bootstrap_skills_and_target(
     monkeypatch,
 ) -> None:
-    monkeypatch.setattr(cli.shutil, "which", lambda name: f"./tools/{name}")
+    monkeypatch.setattr(runtime_primitives.shutil, "which", lambda name: f"./tools/{name}")
     prompt = cli._build_agent_prompt("adopt", target="./repo")
 
     assert prompt.startswith("Do not ask the user to install or clone anything locally first.")
@@ -40,7 +41,7 @@ def test_build_adopt_prompt_mentions_local_bootstrap_skills_and_target(
 
 
 def test_build_populate_prompt_mentions_task_context_heuristic(monkeypatch) -> None:
-    monkeypatch.setattr(cli.shutil, "which", lambda name: f"./tools/{name}")
+    monkeypatch.setattr(runtime_primitives.shutil, "which", lambda name: f"./tools/{name}")
     prompt = cli._build_agent_prompt("populate", target="./repo")
 
     assert f"uvx --from {MEMORY_GIT_SOURCE_REF} agentic-memory current show --target ./repo" in prompt
@@ -50,7 +51,7 @@ def test_build_populate_prompt_mentions_task_context_heuristic(monkeypatch) -> N
 
 
 def test_build_upgrade_prompt_mentions_local_bootstrap_skills(monkeypatch) -> None:
-    monkeypatch.setattr(cli.shutil, "which", lambda name: f"./tools/{name}")
+    monkeypatch.setattr(runtime_primitives.shutil, "which", lambda name: f"./tools/{name}")
     prompt = cli._build_agent_prompt("upgrade", target="./repo")
 
     assert prompt.startswith("Do not ask the user to install or clone anything locally first.")
@@ -66,7 +67,7 @@ def test_build_upgrade_prompt_mentions_local_bootstrap_skills(monkeypatch) -> No
 
 
 def test_build_upgrade_prompt_uses_local_source_when_recorded(monkeypatch, tmp_path: Path) -> None:
-    monkeypatch.setattr(cli.shutil, "which", lambda name: f"./tools/{name}")
+    monkeypatch.setattr(runtime_primitives.shutil, "which", lambda name: f"./tools/{name}")
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True, exist_ok=True)
     installer.install_bootstrap(target=target)
@@ -86,7 +87,7 @@ def test_build_upgrade_prompt_uses_local_source_when_recorded(monkeypatch, tmp_p
 
 
 def test_build_uninstall_prompt_mentions_bundled_skill(monkeypatch) -> None:
-    monkeypatch.setattr(cli.shutil, "which", lambda name: f"./tools/{name}")
+    monkeypatch.setattr(runtime_primitives.shutil, "which", lambda name: f"./tools/{name}")
     prompt = cli._build_agent_prompt("uninstall", target="./repo")
 
     assert f"uvx --from {MEMORY_GIT_SOURCE_REF} agentic-memory uninstall --target ./repo" in prompt
@@ -94,7 +95,7 @@ def test_build_uninstall_prompt_mentions_bundled_skill(monkeypatch) -> None:
 
 
 def test_build_prompt_falls_back_to_pipx_when_uvx_is_missing(monkeypatch) -> None:
-    monkeypatch.setattr(cli.shutil, "which", lambda name: None if name == "uvx" else "./tools/pipx")
+    monkeypatch.setattr(runtime_primitives.shutil, "which", lambda name: None if name == "uvx" else "./tools/pipx")
 
     prompt = cli._build_agent_prompt("upgrade", target="./repo")
 

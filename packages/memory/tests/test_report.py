@@ -7,6 +7,7 @@ from pathlib import Path as _Path
 
 _sys.path.insert(0, str(_Path(__file__).resolve().parent))
 from memory_test_support import *
+from repo_memory_bootstrap import runtime_primitives
 
 
 def test_memory_report_defaults_to_tiny_profile(tmp_path: Path, capsys) -> None:
@@ -30,7 +31,7 @@ def test_memory_report_tiny_does_not_build_full_report(tmp_path: Path, monkeypat
     def fail_full_report(*, target=None):
         raise AssertionError("tiny memory report should not build the full report")
 
-    monkeypatch.setattr(cli, "memory_report", fail_full_report)
+    monkeypatch.setattr(runtime_primitives, "memory_report", fail_full_report)
 
     assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
 
@@ -60,7 +61,7 @@ def test_memory_lifecycle_tiny_does_not_collect_full_status(tmp_path: Path, monk
     def fail_collect_status(*, target=None):
         raise AssertionError("tiny status should not collect full lifecycle status")
 
-    monkeypatch.setattr(cli, "collect_status", fail_collect_status)
+    monkeypatch.setattr(runtime_primitives, "collect_status", fail_collect_status)
 
     assert cli.main(["status", "--target", str(target), "--format", "json"]) == 0
 
@@ -77,7 +78,7 @@ def test_memory_route_report_tiny_does_not_evaluate_fixtures(tmp_path: Path, mon
     def fail_report_routes(*, target=None):
         raise AssertionError("tiny route-report should not evaluate route fixtures")
 
-    monkeypatch.setattr(cli, "report_routes", fail_report_routes)
+    monkeypatch.setattr(runtime_primitives, "report_routes", fail_report_routes)
 
     assert cli.main(["route-report", "--target", str(target), "--format", "json"]) == 0
 

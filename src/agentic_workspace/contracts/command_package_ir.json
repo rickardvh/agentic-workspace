@@ -423,8 +423,8 @@
             "agentic-workspace"
           ],
           "test_environment": "python-dev",
-          "maturity_level_ref": "weak-agent-safe-adapter",
-          "generation_status": "weak-agent-safe-adapter"
+          "maturity_level_ref": "mutation-capable-adapter",
+          "generation_status": "mutation-capable-adapter"
         },
         {
           "kind": "typescript",
@@ -434,8 +434,8 @@
             "agentic-workspace"
           ],
           "test_environment": "docker",
-          "maturity_level_ref": "weak-agent-safe-adapter",
-          "generation_status": "weak-agent-safe-adapter"
+          "maturity_level_ref": "mutation-capable-adapter",
+          "generation_status": "mutation-capable-adapter"
         },
         {
           "kind": "bash",
@@ -4992,8 +4992,8 @@
             "agentic-planning"
           ],
           "test_environment": "python-dev",
-          "maturity_level_ref": "weak-agent-safe-adapter",
-          "generation_status": "weak-agent-safe-adapter"
+          "maturity_level_ref": "mutation-capable-adapter",
+          "generation_status": "mutation-capable-adapter"
         },
         {
           "kind": "typescript",
@@ -5003,8 +5003,8 @@
             "agentic-planning"
           ],
           "test_environment": "docker",
-          "maturity_level_ref": "weak-agent-safe-adapter",
-          "generation_status": "weak-agent-safe-adapter"
+          "maturity_level_ref": "mutation-capable-adapter",
+          "generation_status": "mutation-capable-adapter"
         }
       ],
       "commands": [
@@ -7432,17 +7432,20 @@
             {
               "primitive": "path.target_root.resolve",
               "handler": "runtime_handler",
-              "function": "_resolve_memory_target_root"
+              "function": "_resolve_memory_target_root",
+              "import_module": "repo_memory_bootstrap.runtime_primitives"
             },
             {
               "primitive": "memory.bootstrap.doctor.load",
               "handler": "runtime_handler",
-              "function": "_load_memory_bootstrap_doctor"
+              "function": "_load_memory_bootstrap_doctor",
+              "import_module": "repo_memory_bootstrap.runtime_primitives"
             },
             {
               "primitive": "memory.bootstrap.status.load",
               "handler": "runtime_handler",
-              "function": "_load_memory_bootstrap_status"
+              "function": "_load_memory_bootstrap_status",
+              "import_module": "repo_memory_bootstrap.runtime_primitives"
             },
             {
               "primitive": "memory.install.apply",
@@ -7759,22 +7762,26 @@
             {
               "primitive": "memory.current.load",
               "handler": "runtime_handler",
-              "function": "_load_memory_current"
+              "function": "_load_memory_current",
+              "import_module": "repo_memory_bootstrap.runtime_primitives"
             },
             {
               "primitive": "memory.promotion_report.load",
               "handler": "runtime_handler",
-              "function": "_load_memory_promotion_report"
+              "function": "_load_memory_promotion_report",
+              "import_module": "repo_memory_bootstrap.runtime_primitives"
             },
             {
               "primitive": "memory.prompt.render",
               "handler": "runtime_handler",
-              "function": "_load_memory_prompt"
+              "function": "_load_memory_prompt",
+              "import_module": "repo_memory_bootstrap.runtime_primitives"
             },
             {
               "primitive": "memory.report.load",
               "handler": "runtime_handler",
-              "function": "_load_memory_report"
+              "function": "_load_memory_report",
+              "import_module": "repo_memory_bootstrap.runtime_primitives"
             },
             {
               "primitive": "memory.route.load",
@@ -7796,7 +7803,8 @@
             {
               "primitive": "memory.route_report.load",
               "handler": "runtime_handler",
-              "function": "_load_memory_route_report"
+              "function": "_load_memory_route_report",
+              "import_module": "repo_memory_bootstrap.runtime_primitives"
             },
             {
               "primitive": "memory.route_review.load",
@@ -7854,15 +7862,32 @@
             {
               "primitive": "payload.assemble",
               "handler": "runtime_handler",
-              "function": "_assemble_memory_operation_payload"
+              "function": "_assemble_memory_operation_payload",
+              "import_module": "repo_memory_bootstrap.runtime_primitives"
             },
             {
               "primitive": "output.emit",
               "handler": "runtime_handler",
-              "function": "_emit_memory_operation_output"
+              "function": "_emit_memory_operation_output",
+              "import_module": "repo_memory_bootstrap.runtime_primitives"
             }
           ]
-        }
+        },
+        "render_runtime_module": true,
+        "runtime_module_exports": [
+          {
+            "name": "_build_agent_prompt",
+            "import_module": "repo_memory_bootstrap.runtime_primitives"
+          },
+          {
+            "name": "_emit_result",
+            "import_module": "repo_memory_bootstrap.runtime_primitives"
+          },
+          {
+            "name": "_print_install_summary",
+            "import_module": "repo_memory_bootstrap.runtime_primitives"
+          }
+        ]
       },
       "targets": [
         {
@@ -7873,8 +7898,8 @@
             "agentic-memory"
           ],
           "test_environment": "python-dev",
-          "maturity_level_ref": "weak-agent-safe-adapter",
-          "generation_status": "weak-agent-safe-adapter"
+          "maturity_level_ref": "mutation-capable-adapter",
+          "generation_status": "mutation-capable-adapter"
         },
         {
           "kind": "typescript",
@@ -7884,8 +7909,8 @@
             "agentic-memory"
           ],
           "test_environment": "docker",
-          "maturity_level_ref": "weak-agent-safe-adapter",
-          "generation_status": "weak-agent-safe-adapter"
+          "maturity_level_ref": "mutation-capable-adapter",
+          "generation_status": "mutation-capable-adapter"
         }
       ],
       "commands": [

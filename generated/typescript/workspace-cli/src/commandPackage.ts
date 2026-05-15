@@ -4136,9 +4136,9 @@ export const generatedCommandPackage = {
         "agentic-workspace"
       ],
       "generated_root": "generated/python/workspace-cli",
-      "generation_status": "weak-agent-safe-adapter",
+      "generation_status": "mutation-capable-adapter",
       "kind": "python",
-      "maturity_level_ref": "weak-agent-safe-adapter",
+      "maturity_level_ref": "mutation-capable-adapter",
       "package_name": "agentic-workspace",
       "test_environment": "python-dev"
     },
@@ -4147,9 +4147,9 @@ export const generatedCommandPackage = {
         "agentic-workspace"
       ],
       "generated_root": "generated/typescript/workspace-cli",
-      "generation_status": "weak-agent-safe-adapter",
+      "generation_status": "mutation-capable-adapter",
       "kind": "typescript",
-      "maturity_level_ref": "weak-agent-safe-adapter",
+      "maturity_level_ref": "mutation-capable-adapter",
       "package_name": "@agentic-workspace/workspace-cli",
       "test_environment": "docker"
     },

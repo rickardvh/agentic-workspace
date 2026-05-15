@@ -57,7 +57,12 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     argv_list = list(sys.argv[1:] if argv is None else argv)
-    return run_generated_cli_package_command(argv_list, _run_generated_cli_operation)
+    try:
+        return run_generated_cli_package_command(argv_list, _run_generated_cli_operation)
+    except Exception as exc:
+        if exc.__class__.__name__.endswith('UsageError') or exc.__class__.__name__ == 'RepoDetectionError':
+            build_generated_cli_package_parser().error(str(exc))
+        raise
 
 
 def _run_generated_cli_operation(operation_id: str, args: argparse.Namespace) -> int:

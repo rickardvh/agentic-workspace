@@ -53,20 +53,20 @@
       "current_owner": "command-generation render_outputs",
       "source_of_truth": "src/agentic_workspace/contracts/command_package_ir.json python_runtime_binding.operation_executor plus generated planning operation IR resources",
       "blocking_full_completion": false,
-      "why_blocking": "not blocking; this operation executor is mechanically rendered from command-package binding metadata while the planning runtime module remains separately tracked as transitional generated-output debt",
-      "required_resolution": "Keep generated freshness proof covering this file and migrate the remaining planning runtime behavior behind IR/primitives before promoting full completion."
+      "why_blocking": "not blocking; this operation executor is mechanically rendered from command-package binding metadata",
+      "required_resolution": "Keep generated freshness proof covering this file."
     },
     {
       "path": "generated/python/memory-cli/generated_cli_package/memory_runtime_cli.py",
       "package_id": "memory-bootstrap",
       "program": "agentic-memory",
       "artifact_kind": "runtime-cli",
-      "provenance_status": "transitional-generated-output-debt",
-      "current_owner": "checked-in generated output file with product-specific executable behavior",
-      "source_of_truth": "not yet represented as implementation-independent operation IR plus codegen-owned primitives",
-      "blocking_full_completion": true,
-      "why_blocking": "The file lives under generated/python but is not produced by command-generation render_outputs and still contains product-specific executable runtime behavior.",
-      "required_resolution": "Represent behavior in memory-owned IR/contracts plus codegen-owned primitives, then render this file mechanically from command-generation."
+      "provenance_status": "rendered-by-command-generation",
+      "current_owner": "command-generation render_outputs",
+      "source_of_truth": "src/agentic_workspace/contracts/command_package_ir.json python_runtime_binding.render_runtime_module plus generated memory operation IR resources",
+      "blocking_full_completion": false,
+      "why_blocking": "not blocking; this runtime handler map is mechanically rendered from command-package binding metadata while workspace runtime remains separately tracked as transitional generated-output debt",
+      "required_resolution": "Keep generated freshness proof covering this file and migrate the remaining workspace runtime behavior behind IR/primitives before promoting full completion."
     },
     {
       "path": "generated/python/memory-cli/generated_cli_package/memory_operation_ir_executor.py",
@@ -77,8 +77,8 @@
       "current_owner": "command-generation render_outputs",
       "source_of_truth": "src/agentic_workspace/contracts/command_package_ir.json python_runtime_binding.operation_executor plus generated memory operation IR resources",
       "blocking_full_completion": false,
-      "why_blocking": "not blocking; this operation executor is mechanically rendered from command-package binding metadata while the memory runtime module remains separately tracked as transitional generated-output debt",
-      "required_resolution": "Keep generated freshness proof covering this file and migrate the remaining memory runtime behavior behind IR/primitives before promoting full completion."
+      "why_blocking": "not blocking; this operation executor is mechanically rendered from command-package binding metadata",
+      "required_resolution": "Keep generated freshness proof covering this file."
     }
   ]
 }

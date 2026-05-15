@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Generated runnable read-only adapter.
+// Generated runnable adapter.
 // Source: src/agentic_workspace/contracts/command_package_ir.json
 // Program: agentic-memory
 // Regenerate with: uv run python scripts/generate/generate_command_packages.py
@@ -15,7 +15,7 @@ const command = argv[0];
 if (!command || command === '--help' || command === '-h') {
   console.log(`Usage: agentic-memory <command> [options]`);
   console.log(`Supported generated commands: ${Array.from(supportedCommands).join(', ')}`);
-  console.log('Weak-agent routing: allowed-read-only');
+  console.log('Weak-agent routing: allowed-mutation-with-review');
   console.log('Recovery: use a supported generated command or route back to the canonical Python CLI.');
   process.exit(0);
 }

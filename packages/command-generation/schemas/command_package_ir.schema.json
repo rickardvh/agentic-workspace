@@ -693,6 +693,7 @@
             "runnable-read-only-adapter",
             "runtime-backed-read-only-adapter",
             "weak-agent-safe-adapter",
+            "mutation-capable-adapter",
             "deferred"
           ],
           "description": "Allowed generation status value for routing or validation."

@@ -22,7 +22,11 @@ def _maturity_levels(manifest: dict[str, Any]) -> dict[str, dict[str, Any]]:
 
 
 def _is_runnable_typescript_target(target: dict[str, Any]) -> bool:
-    return target.get("maturity_level_ref") in {"runnable-read-only-adapter", "weak-agent-safe-adapter"}
+    return target.get("maturity_level_ref") in {
+        "runnable-read-only-adapter",
+        "weak-agent-safe-adapter",
+        "mutation-capable-adapter",
+    }
 
 
 def _is_weak_agent_safe_typescript_target(target: dict[str, Any]) -> bool:
@@ -37,7 +41,13 @@ def _is_runtime_backed_python_target(target: dict[str, Any]) -> bool:
     return target.get("kind") == "python" and target.get("maturity_level_ref") in {
         "runtime-backed-read-only-adapter",
         "weak-agent-safe-adapter",
+        "mutation-capable-adapter",
     }
+
+
+def _weak_agent_routing_for_target(target: dict[str, Any], maturity_levels: dict[str, dict[str, Any]]) -> str:
+    maturity = maturity_levels[str(target["maturity_level_ref"])]
+    return str(maturity["weak_agent_routing"])
 
 
 def _runtime_command_for_package(package: dict[str, Any], runtime_binding: dict[str, Any]) -> str:
@@ -374,7 +384,12 @@ def _python_runtime_handler_module(
         "    return build_generated_cli_package_parser()\n\n\n"
         "def main(argv: list[str] | None = None) -> int:\n"
         "    argv_list = list(sys.argv[1:] if argv is None else argv)\n"
-        "    return run_generated_cli_package_command(argv_list, _run_generated_cli_operation)\n\n\n"
+        "    try:\n"
+        "        return run_generated_cli_package_command(argv_list, _run_generated_cli_operation)\n"
+        "    except Exception as exc:\n"
+        "        if exc.__class__.__name__.endswith('UsageError') or exc.__class__.__name__ == 'RepoDetectionError':\n"
+        "            build_generated_cli_package_parser().error(str(exc))\n"
+        "        raise\n\n\n"
         "def _run_generated_cli_operation(operation_id: str, args: argparse.Namespace) -> int:\n"
         "    handler = _GENERATED_RUNTIME_HANDLERS.get(operation_id)\n"
         "    if handler is None:\n"
@@ -390,9 +405,18 @@ def _python_runtime_handler_module(
     )
 
 
-def _python_runtime_adapter_module(package: dict[str, Any], target: dict[str, Any], *, source_path: str, regenerate_command: str) -> str:
-    weak_agent_routing = "allowed-read-only" if _is_weak_agent_safe_python_target(target) else "review-required"
-    runnable = str(target.get("maturity_level_ref") in {"runtime-backed-read-only-adapter", "weak-agent-safe-adapter"})
+def _python_runtime_adapter_module(
+    package: dict[str, Any],
+    target: dict[str, Any],
+    maturity_levels: dict[str, dict[str, Any]],
+    *,
+    source_path: str,
+    regenerate_command: str,
+) -> str:
+    weak_agent_routing = _weak_agent_routing_for_target(target, maturity_levels)
+    runnable = str(
+        target.get("maturity_level_ref") in {"runtime-backed-read-only-adapter", "weak-agent-safe-adapter", "mutation-capable-adapter"}
+    )
     runtime_module_file = _runtime_module_file_for_package(package)
     main_function = ""
     if runtime_module_file:
@@ -410,7 +434,7 @@ def _python_runtime_adapter_module(package: dict[str, Any], target: dict[str, An
             "    import sys\n"
             f"    from .{runtime_module_file} import main as runtime_main\n\n"
             "    argv_list = list(sys.argv[1:] if argv is None else argv)\n"
-            "    if argv_list and argv_list[0] in {'-h', '--help'}:\n"
+            "    if argv_list and argv_list[0] in {'-h', '--help', '--version'}:\n"
             "        build_generated_parser().parse_args(argv_list)\n"
             "        return 0\n"
             "    if supports_generated_command(argv_list):\n"
@@ -582,6 +606,7 @@ def _python_runtime_adapter_module(package: dict[str, Any], target: dict[str, An
         '        "Recovery: use one of the supported generated commands or route back to the canonical Python CLI."\n'
         "    )\n"
         f"    parser = argparse.ArgumentParser(prog={json.dumps(package['program'])}, description={json.dumps(package.get('summary', ''))}, epilog=epilog, formatter_class=argparse.RawDescriptionHelpFormatter)\n"
+        f"    parser.add_argument('--version', action='version', version='%(prog)s 0.0.0-generated')\n"
         '    subparsers = parser.add_subparsers(dest="command", required=True)\n'
         "    for command in _GENERATED_ADAPTER_COMMANDS:\n"
         '        interface = command["interface"]\n'
@@ -672,6 +697,7 @@ def _typescript_module(package: dict[str, Any], *, source_path: str, regenerate_
 def _typescript_cli_module(
     package: dict[str, Any],
     target: dict[str, Any],
+    maturity_levels: dict[str, dict[str, Any]],
     runtime_binding: dict[str, Any],
     *,
     source_path: str,
@@ -680,12 +706,11 @@ def _typescript_cli_module(
     command_names = sorted(command["command"]["name"] for command in package["commands"])
     rendered_commands = json.dumps(command_names)
     default_runtime_command = json.dumps(_runtime_command_for_package(package, runtime_binding))
-    weak_agent_safe = _is_weak_agent_safe_typescript_target(target)
-    weak_agent_status = "allowed-read-only" if weak_agent_safe else "review-required"
+    weak_agent_status = _weak_agent_routing_for_target(target, maturity_levels)
     recovery_command = f"{target['entrypoints'][0]} --help"
     return (
         "#!/usr/bin/env node\n"
-        "// Generated runnable read-only adapter.\n"
+        "// Generated runnable adapter.\n"
         f"// Source: {source_path}\n"
         f"// Program: {package['program']}\n"
         f"// Regenerate with: {regenerate_command}\n"
@@ -763,10 +788,14 @@ def _typescript_test(package: dict[str, Any], target: dict[str, Any]) -> str:
     rendered_expected = json.dumps(expected_commands)
     sample_command = expected_commands[0]
     runnable = _is_runnable_typescript_target(target)
-    weak_agent_safe = _is_weak_agent_safe_typescript_target(target)
     expected_maturity = target["maturity_level_ref"]
     expected_generation_status = target["generation_status"]
-    expected_weak_agent_routing = "allowed-read-only" if weak_agent_safe else "review-required"
+    if target.get("maturity_level_ref") == "weak-agent-safe-adapter":
+        expected_weak_agent_routing = "allowed-read-only"
+    elif target.get("maturity_level_ref") == "mutation-capable-adapter":
+        expected_weak_agent_routing = "allowed-mutation-with-review"
+    else:
+        expected_weak_agent_routing = "review-required"
     imports = "import assert from 'node:assert/strict';\nimport test from 'node:test';\n"
     if runnable:
         imports += "import { spawnSync } from 'node:child_process';\nimport { fileURLToPath } from 'node:url';\n"
@@ -922,7 +951,13 @@ def render_outputs(
                     outputs.append(
                         GeneratedOutput(
                             module_path,
-                            _python_runtime_adapter_module(package, target, source_path=source_path, regenerate_command=regenerate_command),
+                            _python_runtime_adapter_module(
+                                package,
+                                target,
+                                maturity_levels,
+                                source_path=source_path,
+                                regenerate_command=regenerate_command,
+                            ),
                         )
                     )
                     continue
@@ -952,6 +987,7 @@ def render_outputs(
                             _typescript_cli_module(
                                 package,
                                 target,
+                                maturity_levels,
                                 runtime_binding,
                                 source_path=source_path,
                                 regenerate_command=regenerate_command,

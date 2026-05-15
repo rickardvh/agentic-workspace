@@ -2566,16 +2566,19 @@ export const generatedCommandPackage = {
         {
           "function": "_resolve_memory_target_root",
           "handler": "runtime_handler",
+          "import_module": "repo_memory_bootstrap.runtime_primitives",
           "primitive": "path.target_root.resolve"
         },
         {
           "function": "_load_memory_bootstrap_doctor",
           "handler": "runtime_handler",
+          "import_module": "repo_memory_bootstrap.runtime_primitives",
           "primitive": "memory.bootstrap.doctor.load"
         },
         {
           "function": "_load_memory_bootstrap_status",
           "handler": "runtime_handler",
+          "import_module": "repo_memory_bootstrap.runtime_primitives",
           "primitive": "memory.bootstrap.status.load"
         },
         {
@@ -2893,21 +2896,25 @@ export const generatedCommandPackage = {
         {
           "function": "_load_memory_current",
           "handler": "runtime_handler",
+          "import_module": "repo_memory_bootstrap.runtime_primitives",
           "primitive": "memory.current.load"
         },
         {
           "function": "_load_memory_promotion_report",
           "handler": "runtime_handler",
+          "import_module": "repo_memory_bootstrap.runtime_primitives",
           "primitive": "memory.promotion_report.load"
         },
         {
           "function": "_load_memory_prompt",
           "handler": "runtime_handler",
+          "import_module": "repo_memory_bootstrap.runtime_primitives",
           "primitive": "memory.prompt.render"
         },
         {
           "function": "_load_memory_report",
           "handler": "runtime_handler",
+          "import_module": "repo_memory_bootstrap.runtime_primitives",
           "primitive": "memory.report.load"
         },
         {
@@ -2930,6 +2937,7 @@ export const generatedCommandPackage = {
         {
           "function": "_load_memory_route_report",
           "handler": "runtime_handler",
+          "import_module": "repo_memory_bootstrap.runtime_primitives",
           "primitive": "memory.route_report.load"
         },
         {
@@ -2988,11 +2996,13 @@ export const generatedCommandPackage = {
         {
           "function": "_assemble_memory_operation_payload",
           "handler": "runtime_handler",
+          "import_module": "repo_memory_bootstrap.runtime_primitives",
           "primitive": "payload.assemble"
         },
         {
           "function": "_emit_memory_operation_output",
           "handler": "runtime_handler",
+          "import_module": "repo_memory_bootstrap.runtime_primitives",
           "primitive": "output.emit"
         }
       ],
@@ -3215,6 +3225,21 @@ export const generatedCommandPackage = {
         "memory.sync-memory.report"
       ]
     },
+    "render_runtime_module": true,
+    "runtime_module_exports": [
+      {
+        "import_module": "repo_memory_bootstrap.runtime_primitives",
+        "name": "_build_agent_prompt"
+      },
+      {
+        "import_module": "repo_memory_bootstrap.runtime_primitives",
+        "name": "_emit_result"
+      },
+      {
+        "import_module": "repo_memory_bootstrap.runtime_primitives",
+        "name": "_print_install_summary"
+      }
+    ],
     "runtime_module_file": "memory_runtime_cli"
   },
   "targets": [
@@ -3223,9 +3248,9 @@ export const generatedCommandPackage = {
         "agentic-memory"
       ],
       "generated_root": "generated/python/memory-cli",
-      "generation_status": "weak-agent-safe-adapter",
+      "generation_status": "mutation-capable-adapter",
       "kind": "python",
-      "maturity_level_ref": "weak-agent-safe-adapter",
+      "maturity_level_ref": "mutation-capable-adapter",
       "package_name": "agentic-memory",
       "test_environment": "python-dev"
     },
@@ -3234,9 +3259,9 @@ export const generatedCommandPackage = {
         "agentic-memory"
       ],
       "generated_root": "generated/typescript/memory-cli",
-      "generation_status": "weak-agent-safe-adapter",
+      "generation_status": "mutation-capable-adapter",
       "kind": "typescript",
-      "maturity_level_ref": "weak-agent-safe-adapter",
+      "maturity_level_ref": "mutation-capable-adapter",
       "package_name": "@agentic-workspace/memory-cli",
       "test_environment": "docker"
     }

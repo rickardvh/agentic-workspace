@@ -57,7 +57,7 @@ class RunnableTypescriptConformanceCase(NamedTuple):
     package_id: str
     program: str
     cli: Path
-    weak_agent_safe: bool
+    weak_agent_routing: str
     case: AdapterConformanceCase
 
 
@@ -618,6 +618,11 @@ def _runnable_typescript_conformance_cases() -> tuple[list[RunnableTypescriptCon
         ir = load_workspace_command_package_ir(repo_root=REPO_ROOT)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         return [], [f"adapter conformance failed before execution: command-package IR validation failed: {exc}"]
+    maturity_levels = {
+        str(level["id"]): level
+        for level in ir.get("generation_policy", {}).get("generated_package_maturity", {}).get("levels", [])
+        if isinstance(level, dict) and "id" in level
+    }
 
     registries, registry_errors = _adapter_conformance_cases_by_package()
     if registry_errors:
@@ -634,7 +639,8 @@ def _runnable_typescript_conformance_cases() -> tuple[list[RunnableTypescriptCon
             for target in package.get("targets", [])
             if isinstance(target, dict)
             and target.get("kind") == "typescript"
-            and target.get("maturity_level_ref") in {"runnable-read-only-adapter", "weak-agent-safe-adapter"}
+            and target.get("maturity_level_ref")
+            in {"runnable-read-only-adapter", "weak-agent-safe-adapter", "mutation-capable-adapter"}
         ]
         if not runnable_typescript_targets:
             continue
@@ -660,7 +666,7 @@ def _runnable_typescript_conformance_cases() -> tuple[list[RunnableTypescriptCon
                         package_id=package_id,
                         program=str(package.get("program", "")),
                         cli=cli,
-                        weak_agent_safe=target.get("maturity_level_ref") == "weak-agent-safe-adapter",
+                        weak_agent_routing=str(maturity_levels[str(target.get("maturity_level_ref"))]["weak_agent_routing"]),
                         case=case,
                     )
                 )
@@ -1203,13 +1209,13 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         encoding="utf-8"
     )
     for function_name in (
-        "_run_doctor_report_adapter",
-        "_run_list_files_report_adapter",
-        "_run_list_skills_report_adapter",
-        "_run_promotion_report_adapter",
-        "_run_report_adapter",
-        "_run_route_report_adapter",
-        "_run_status_report_adapter",
+        "_run_memory_doctor_report_adapter",
+        "_run_memory_list_files_report_adapter",
+        "_run_memory_list_skills_report_adapter",
+        "_run_memory_promotion_report_report_adapter",
+        "_run_memory_report_report_adapter",
+        "_run_memory_route_report_report_adapter",
+        "_run_memory_status_report_adapter",
     ):
         function_index = memory_cli_text.find(f"def {function_name}")
         next_function_index = memory_cli_text.find("\ndef ", function_index + 1)
@@ -1519,7 +1525,7 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
                 cwd=fixture_root,
                 env=_conformance_env(runtime=runtime_for_package(runnable_case.package_id)),
             )
-            expected_routing = "allowed-read-only" if runnable_case.weak_agent_safe else "review-required"
+            expected_routing = runnable_case.weak_agent_routing
             if (
                 help_result.returncode != 0
                 or "Supported generated commands:" not in help_result.stdout
@@ -1545,7 +1551,7 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
                     f"adapter failure: {runnable_case.package_id} unsupported command refusal drifted; "
                     f"exit={unsupported.returncode}, stdout={unsupported.stdout!r}, stderr={unsupported.stderr!r}"
                 )
-            if runnable_case.weak_agent_safe:
+            if runnable_case.weak_agent_routing in {"allowed-read-only", "allowed-mutation-with-review"}:
                 handoff_failure = _capture(
                     [node, str(runnable_case.cli), *runnable_case.case.success_args],
                     cwd=fixture_root,
@@ -1625,6 +1631,25 @@ def _validate_static_surfaces() -> list[str]:
             if not powershell_targets or powershell_targets[0].get("maturity_level_ref") != "deferred":
                 errors.append("command_package_ir.json root PowerShell transport candidate must remain explicit and deferred")
         for package_id, package in packages.items():
+            has_mutating_generated_command = any(
+                isinstance(command, dict)
+                and command.get("status") == "generated"
+                and isinstance(command.get("effect_hints"), dict)
+                and (
+                    command["effect_hints"].get("writes_repo_state") is True
+                    or command["effect_hints"].get("destructive") is True
+                    or command["effect_hints"].get("requires_preflight_gate") is True
+                )
+                for command in package.get("commands", [])
+            )
+            for target in package.get("targets", []):
+                if not isinstance(target, dict) or target.get("kind") not in {"python", "typescript"}:
+                    continue
+                if has_mutating_generated_command and target.get("maturity_level_ref") == "weak-agent-safe-adapter":
+                    errors.append(
+                        f"command_package_ir.json package {package_id!r} {target.get('kind')} target advertises "
+                        "weak-agent-safe-adapter while generated commands include mutation-capable effects"
+                    )
             for command in package.get("commands", []):
                 if isinstance(command, dict) and command.get("status") == "generated":
                     errors.extend(_validate_generated_command_projection_boundary(package_id=str(package_id), command=command))
@@ -1643,14 +1668,14 @@ def _validate_static_surfaces() -> list[str]:
                 errors.append(f"command_package_ir.json package {package_id!r} is missing a Python generated target")
                 continue
             python_target = python_targets[0]
-            if python_target.get("maturity_level_ref") != "weak-agent-safe-adapter":
+            if python_target.get("maturity_level_ref") != "mutation-capable-adapter":
                 errors.append(
-                    f"command_package_ir.json package {package_id!r} Python target is not weak-agent-safe; "
+                    f"command_package_ir.json package {package_id!r} Python target is not mutation-capable; "
                     f"got {python_target.get('maturity_level_ref')!r}"
                 )
-            if python_target.get("generation_status") != "weak-agent-safe-adapter":
+            if python_target.get("generation_status") != "mutation-capable-adapter":
                 errors.append(
-                    f"command_package_ir.json package {package_id!r} Python generation_status is not weak-agent-safe; "
+                    f"command_package_ir.json package {package_id!r} Python generation_status is not mutation-capable; "
                     f"got {python_target.get('generation_status')!r}"
                 )
             if package.get("program") != program:
@@ -1672,8 +1697,10 @@ def _validate_static_surfaces() -> list[str]:
                     errors.append(f"{generated_root}/generated_cli_package/__init__.py is missing generated_weak_agent_routing")
                 if "def generated_operation_contract(" not in generated_text:
                     errors.append(f"{generated_root}/generated_cli_package/__init__.py is missing generated_operation_contract")
-                if "_GENERATED_WEAK_AGENT_ROUTING = 'allowed-read-only'" not in generated_text:
-                    errors.append(f"{generated_root}/generated_cli_package/__init__.py does not advertise allowed-read-only routing")
+                if "_GENERATED_WEAK_AGENT_ROUTING = 'allowed-mutation-with-review'" not in generated_text:
+                    errors.append(
+                        f"{generated_root}/generated_cli_package/__init__.py does not advertise mutation review routing"
+                    )
             for resource_name in ("command_package.json", "adapter_commands.json"):
                 resource_path = REPO_ROOT / generated_root / "generated_cli_package" / resource_name
                 if not resource_path.is_file():
@@ -1775,8 +1802,13 @@ def _validate_static_surfaces() -> list[str]:
             payload = json.loads(package_json_path.read_text(encoding="utf-8"))
             metadata = payload.get("agenticWorkspace", {})
             maturity = metadata.get("maturity", {})
-            is_runnable = maturity.get("id") in {"runnable-read-only-adapter", "weak-agent-safe-adapter"}
+            is_runnable = maturity.get("id") in {
+                "runnable-read-only-adapter",
+                "weak-agent-safe-adapter",
+                "mutation-capable-adapter",
+            }
             is_weak_agent_safe = maturity.get("id") == "weak-agent-safe-adapter"
+            is_mutation_capable = maturity.get("id") == "mutation-capable-adapter"
             if not maturity.get("summary") or not maturity.get("promotion_requires"):
                 errors.append(f"generated/typescript/{package}/package.json maturity is missing summary or promotion criteria")
             if is_runnable and not (package_root / "src" / "cli.mjs").is_file():
@@ -1789,7 +1821,16 @@ def _validate_static_surfaces() -> list[str]:
                 errors.extend(_validate_typescript_runtime_handoff_thinness(package=package, cli_text=cli_text))
             if is_weak_agent_safe and maturity.get("weak_agent_routing") != "allowed-read-only":
                 errors.append(f"generated/typescript/{package}/package.json weak-agent-safe target is missing allowed-read-only routing")
-            if is_runnable and not is_weak_agent_safe and maturity.get("weak_agent_routing") != "review-required":
+            if is_mutation_capable and maturity.get("weak_agent_routing") != "allowed-mutation-with-review":
+                errors.append(
+                    f"generated/typescript/{package}/package.json mutation-capable target is missing mutation review routing"
+                )
+            if (
+                is_runnable
+                and not is_weak_agent_safe
+                and not is_mutation_capable
+                and maturity.get("weak_agent_routing") != "review-required"
+            ):
                 errors.append(f"generated/typescript/{package}/package.json runnable target is missing review-required weak-agent routing")
             if not is_runnable and (maturity.get("weak_agent_routing") != "forbidden" or maturity.get("runnable") is not False):
                 errors.append(f"generated/typescript/{package}/package.json maturity does not mark proof fixture as non-runnable")

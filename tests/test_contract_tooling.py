@@ -341,24 +341,24 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
 
     assert root_package["program"] == "agentic-workspace"
     assert targets["python"]["test_environment"] == "python-dev"
-    assert targets["python"]["maturity_level_ref"] == "weak-agent-safe-adapter"
-    assert targets["python"]["generation_status"] == "weak-agent-safe-adapter"
+    assert targets["python"]["maturity_level_ref"] == "mutation-capable-adapter"
+    assert targets["python"]["generation_status"] == "mutation-capable-adapter"
     assert targets["typescript"]["test_environment"] == "docker"
-    assert targets["typescript"]["maturity_level_ref"] == "weak-agent-safe-adapter"
-    assert targets["typescript"]["generation_status"] == "weak-agent-safe-adapter"
+    assert targets["typescript"]["maturity_level_ref"] == "mutation-capable-adapter"
+    assert targets["typescript"]["generation_status"] == "mutation-capable-adapter"
     assert targets["bash"]["generation_status"] == "deferred"
     assert targets["bash"]["maturity_level_ref"] == "deferred"
     assert targets["powershell"]["generation_status"] == "deferred"
 
     planning_targets = {target["kind"]: target for target in packages["planning-bootstrap"]["targets"]}
     assert planning_targets["typescript"]["test_environment"] == "docker"
-    assert planning_targets["typescript"]["maturity_level_ref"] == "weak-agent-safe-adapter"
-    assert planning_targets["typescript"]["generation_status"] == "weak-agent-safe-adapter"
+    assert planning_targets["typescript"]["maturity_level_ref"] == "mutation-capable-adapter"
+    assert planning_targets["typescript"]["generation_status"] == "mutation-capable-adapter"
 
     memory_targets = {target["kind"]: target for target in packages["memory-bootstrap"]["targets"]}
     assert memory_targets["typescript"]["test_environment"] == "docker"
-    assert memory_targets["typescript"]["maturity_level_ref"] == "weak-agent-safe-adapter"
-    assert memory_targets["typescript"]["generation_status"] == "weak-agent-safe-adapter"
+    assert memory_targets["typescript"]["maturity_level_ref"] == "mutation-capable-adapter"
+    assert memory_targets["typescript"]["generation_status"] == "mutation-capable-adapter"
 
 
 def test_command_package_ir_reuses_generated_adapter_truth() -> None:
@@ -852,7 +852,11 @@ def test_command_package_generator_renders_planning_runtime_module_from_binding(
     assert "def _run_planning_status_report_adapter" in planning_runtime
     assert "'planning.status.report': _run_planning_status_report_adapter" in planning_runtime
     assert "generated/python/workspace-cli/generated_cli_package/workspace_runtime_cli.py" not in rendered
-    assert "generated/python/memory-cli/generated_cli_package/memory_runtime_cli.py" not in rendered
+    assert "generated/python/memory-cli/generated_cli_package/memory_runtime_cli.py" in rendered
+    memory_runtime = rendered["generated/python/memory-cli/generated_cli_package/memory_runtime_cli.py"]
+    assert "Runtime handler changes belong in src/agentic_workspace/contracts/command_package_ir.json." in memory_runtime
+    assert "def _run_memory_status_report_adapter" in memory_runtime
+    assert "'memory.status.report': _run_memory_status_report_adapter" in memory_runtime
 
 
 def test_generated_python_module_collects_nested_operation_refs(tmp_path: Path) -> None:
@@ -910,6 +914,11 @@ def test_generated_python_module_collects_nested_operation_refs(tmp_path: Path) 
     module_text = generator._python_runtime_adapter_module(
         package,
         target,
+        {
+            "weak-agent-safe-adapter": {
+                "weak_agent_routing": "allowed-read-only",
+            },
+        },
         source_path="src/agentic_workspace/contracts/command_package_ir.json",
         regenerate_command="uv run python scripts/generate/generate_command_packages.py",
     )
@@ -996,14 +1005,14 @@ def test_generated_python_command_package_metadata_is_current() -> None:
     assert {"python", "typescript", "bash", "powershell"} <= target_kinds
     python_target = next(target for target in GENERATED_COMMAND_PACKAGE["targets"] if target["kind"] == "python")
     assert python_target["generated_root"] == "generated/python/workspace-cli"
-    assert python_target["maturity_level_ref"] == "weak-agent-safe-adapter"
-    assert python_target["generation_status"] == "weak-agent-safe-adapter"
+    assert python_target["maturity_level_ref"] == "mutation-capable-adapter"
+    assert python_target["generation_status"] == "mutation-capable-adapter"
     assert generated_maturity() == {
-        "id": "weak-agent-safe-adapter",
+        "id": "mutation-capable-adapter",
         "runnable": True,
-        "weak_agent_routing": "allowed-read-only",
+        "weak_agent_routing": "allowed-mutation-with-review",
     }
-    assert generated_weak_agent_routing() == "allowed-read-only"
+    assert generated_weak_agent_routing() == "allowed-mutation-with-review"
     assert generated_command_names() == (
         "config",
         "defaults",
@@ -1099,7 +1108,7 @@ def test_generated_python_command_package_parses_and_dispatches_runtime_operatio
         return 0
 
     help_text = build_generated_parser().format_help()
-    assert "Weak-agent routing: allowed-read-only" in help_text
+    assert "Weak-agent routing: allowed-mutation-with-review" in help_text
     assert "Recovery: use one of the supported generated commands" in help_text
     assert run_generated_command(["defaults", "--section", "startup", "--format", "json"], runtime_handler) == 0
     assert run_generated_command(["config", "--target", ".", "--format", "json"], runtime_handler) == 0
@@ -1199,8 +1208,8 @@ def test_package_generated_python_command_packages_parse_status_runtime_operatio
     assert run_memory_generated_command(["status", "--target", ".", "--format", "json"], runtime_handler) == 0
     assert run_memory_generated_command(["doctor", "--target", ".", "--format", "json"], runtime_handler) == 0
     assert run_memory_generated_command(["report", "--target", ".", "--format", "json"], runtime_handler) == 0
-    assert planning_generated_maturity()["weak_agent_routing"] == "allowed-read-only"
-    assert memory_generated_maturity()["weak_agent_routing"] == "allowed-read-only"
+    assert planning_generated_maturity()["weak_agent_routing"] == "allowed-mutation-with-review"
+    assert memory_generated_maturity()["weak_agent_routing"] == "allowed-mutation-with-review"
     assert calls == [
         ("planning.status.report", ".", "json"),
         ("planning.doctor.report", ".", "json"),
@@ -1224,9 +1233,9 @@ def test_generated_typescript_command_package_fixture_is_current() -> None:
     assert package_json["bin"] == {"agentic-workspace": "./src/cli.mjs"}
     assert package_json["agenticWorkspace"]["generated"] is True
     assert package_json["agenticWorkspace"]["fixtureOnly"] is False
-    assert package_json["agenticWorkspace"]["generationStatus"] == "weak-agent-safe-adapter"
-    assert package_json["agenticWorkspace"]["maturity"]["id"] == "weak-agent-safe-adapter"
-    assert package_json["agenticWorkspace"]["maturity"]["weak_agent_routing"] == "allowed-read-only"
+    assert package_json["agenticWorkspace"]["generationStatus"] == "mutation-capable-adapter"
+    assert package_json["agenticWorkspace"]["maturity"]["id"] == "mutation-capable-adapter"
+    assert package_json["agenticWorkspace"]["maturity"]["weak_agent_routing"] == "allowed-mutation-with-review"
     assert package_json["agenticWorkspace"]["maturity"]["runnable"] is True
     assert package_json["agenticWorkspace"]["maturity"]["promotion_requires"]
     assert (
@@ -1256,7 +1265,7 @@ def test_generated_typescript_command_package_fixture_is_current() -> None:
     assert "shell: true" not in cli_text
     assert "writeSync(1, result.stdout)" in cli_text
     assert "writeSync(2, result.stderr)" in cli_text
-    assert "Weak-agent routing: allowed-read-only" in cli_text
+    assert "Weak-agent routing: allowed-mutation-with-review" in cli_text
     assert "Unsupported generated command" in cli_text
     assert "Adapter runtime handoff failed" in cli_text
     assert "generated package metadata exposes expected commands" in test_text
@@ -1272,15 +1281,15 @@ def test_generated_typescript_package_adapters_are_runnable() -> None:
             "@agentic-workspace/planning-cli",
             "agentic-planning",
             "agentic-planning",
-            "weak-agent-safe-adapter",
-            "allowed-read-only",
+            "mutation-capable-adapter",
+            "allowed-mutation-with-review",
         ),
         "memory-cli": (
             "@agentic-workspace/memory-cli",
             "agentic-memory",
             "agentic-memory",
-            "weak-agent-safe-adapter",
-            "allowed-read-only",
+            "mutation-capable-adapter",
+            "allowed-mutation-with-review",
         ),
     }
     for package, (package_name, entrypoint, runtime_command, maturity, weak_agent_routing) in packages.items():
@@ -1387,6 +1396,7 @@ def test_python_runtime_projection_inventory_tracks_generated_output_debt() -> N
         "generated/python/workspace-cli/generated_cli_package/workspace_operation_ir_executor.py",
         "generated/python/planning-cli/generated_cli_package/planning_runtime_cli.py",
         "generated/python/planning-cli/generated_cli_package/planning_operation_ir_executor.py",
+        "generated/python/memory-cli/generated_cli_package/memory_runtime_cli.py",
         "generated/python/memory-cli/generated_cli_package/memory_operation_ir_executor.py",
     }
     transitional_entries = [entry for entry in entries.values() if entry["path"] not in rendered_entries]

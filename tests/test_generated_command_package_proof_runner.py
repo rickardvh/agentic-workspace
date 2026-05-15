@@ -207,6 +207,20 @@ def test_command_package_ir_records_deferred_shell_transport_evaluation() -> Non
     assert root_targets["powershell"]["maturity_level_ref"] == "deferred"
 
 
+def test_static_generated_package_proof_rejects_read_only_routing_for_mutating_targets(monkeypatch) -> None:
+    checker = _load_checker()
+    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+    memory_package = next(package for package in ir["packages"] if package["id"] == "memory-bootstrap")
+    python_target = next(target for target in memory_package["targets"] if target["kind"] == "python")
+    python_target["maturity_level_ref"] = "weak-agent-safe-adapter"
+    python_target["generation_status"] = "weak-agent-safe-adapter"
+    monkeypatch.setattr(checker, "load_workspace_command_package_ir", lambda *, repo_root: ir)
+
+    errors = checker._validate_static_surfaces()
+
+    assert any("weak-agent-safe-adapter while generated commands include mutation-capable effects" in error for error in errors)
+
+
 def test_static_generated_package_proof_requires_python_completion_gate_evidence(monkeypatch) -> None:
     checker = _load_checker()
     ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
@@ -518,7 +532,7 @@ def test_python_runtime_handler_boundary_rejects_non_adapter_handlers(monkeypatc
     checker = _load_checker()
     memory_cli = checker._generated_runtime_module_for_package("memory-bootstrap")
     drifted_handlers = dict(memory_cli._GENERATED_RUNTIME_HANDLERS)
-    drifted_handlers["memory.status.report"] = memory_cli._handle_status
+    drifted_handlers["memory.status.report"] = memory_cli._build_agent_prompt
     monkeypatch.setattr(memory_cli, "_GENERATED_RUNTIME_HANDLERS", drifted_handlers)
 
     errors = checker._validate_python_runtime_handler_boundary()
