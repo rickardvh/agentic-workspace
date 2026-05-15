@@ -935,6 +935,8 @@ def _validate_python_runtime_projection_inventory(*, full_completion: bool) -> l
 
 
 def _tracked_python_source_files() -> list[str]:
+    if shutil.which("git") is None:
+        return _source_tree_python_files()
     result = subprocess.run(
         ["git", "ls-files", "*.py"],
         cwd=REPO_ROOT,
@@ -943,8 +945,23 @@ def _tracked_python_source_files() -> list[str]:
         capture_output=True,
     )
     if result.returncode:
-        return []
+        return _source_tree_python_files()
     return [line.strip().replace("\\", "/") for line in result.stdout.splitlines() if line.strip()]
+
+
+def _source_tree_python_files() -> list[str]:
+    roots = [
+        REPO_ROOT / "src" / "agentic_workspace",
+        REPO_ROOT / "packages" / "planning" / "src" / "repo_planning_bootstrap",
+        REPO_ROOT / "packages" / "memory" / "src" / "repo_memory_bootstrap",
+        REPO_ROOT / "packages" / "command-generation" / "src" / "command_generation",
+    ]
+    paths = []
+    for root in roots:
+        if not root.is_dir():
+            continue
+        paths.extend(path.relative_to(REPO_ROOT).as_posix() for path in root.rglob("*.py") if path.is_file())
+    return sorted(paths)
 
 
 def _validate_python_shipped_source_executable_retirement() -> list[str]:

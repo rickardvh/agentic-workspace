@@ -316,6 +316,10 @@
               "type": "string",
               "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
               "description": "Generated sibling runtime module file imported by generated Python package bridge code."
+            },
+            "operation_executor": {
+              "$ref": "#/$defs/python_operation_executor_binding",
+              "description": "Optional binding data used to render a generated Python operation IR executor module."
             }
           },
           "additionalProperties": false,
@@ -342,6 +346,207 @@
       },
       "additionalProperties": false,
       "description": "Package details used by this contract."
+    },
+    "python_operation_executor_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "module_file",
+        "supported_operation_ids",
+        "initial_values",
+        "handlers"
+      ],
+      "properties": {
+        "module_file": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+        },
+        "supported_operation_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "initial_values": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/python_operation_executor_initial_value"
+          }
+        },
+        "handlers": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/python_operation_executor_handler"
+          }
+        }
+      }
+    },
+    "python_operation_executor_initial_value": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "arg"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "arg": {
+          "type": "string",
+          "minLength": 1
+        },
+        "default": {}
+      }
+    },
+    "python_operation_executor_handler": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "primitive",
+            "handler",
+            "import_module",
+            "function",
+            "kwargs"
+          ],
+          "properties": {
+            "primitive": {
+              "type": "string",
+              "minLength": 1
+            },
+            "handler": {
+              "const": "function_call"
+            },
+            "import_module": {
+              "type": "string",
+              "minLength": 1
+            },
+            "function": {
+              "type": "string",
+              "minLength": 1
+            },
+            "kwargs": {
+              "$ref": "#/$defs/python_operation_executor_kwargs"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "primitive",
+            "handler",
+            "condition_value",
+            "if_true",
+            "if_false"
+          ],
+          "properties": {
+            "primitive": {
+              "type": "string",
+              "minLength": 1
+            },
+            "handler": {
+              "const": "conditional_function_call"
+            },
+            "condition_value": {
+              "type": "string",
+              "minLength": 1
+            },
+            "if_true": {
+              "$ref": "#/$defs/python_operation_executor_call"
+            },
+            "if_false": {
+              "$ref": "#/$defs/python_operation_executor_call"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "primitive",
+            "handler",
+            "runtime_function",
+            "result_value",
+            "format_value",
+            "default_format"
+          ],
+          "properties": {
+            "primitive": {
+              "type": "string",
+              "minLength": 1
+            },
+            "handler": {
+              "const": "runtime_emit"
+            },
+            "runtime_function": {
+              "type": "string",
+              "minLength": 1
+            },
+            "result_value": {
+              "type": "string",
+              "minLength": 1
+            },
+            "format_value": {
+              "type": "string",
+              "minLength": 1
+            },
+            "default_format": {
+              "type": "string",
+              "minLength": 1
+            },
+            "dict_text_function": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      ]
+    },
+    "python_operation_executor_call": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "import_module",
+        "function",
+        "kwargs"
+      ],
+      "properties": {
+        "import_module": {
+          "type": "string",
+          "minLength": 1
+        },
+        "function": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kwargs": {
+          "$ref": "#/$defs/python_operation_executor_kwargs"
+        }
+      }
+    },
+    "python_operation_executor_kwargs": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "value"
+        ],
+        "properties": {
+          "value": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
     },
     "target": {
       "type": "object",

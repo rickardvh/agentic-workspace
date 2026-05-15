@@ -49,12 +49,12 @@
       "package_id": "planning-bootstrap",
       "program": "agentic-planning",
       "artifact_kind": "operation-ir-executor",
-      "provenance_status": "transitional-generated-output-debt",
-      "current_owner": "checked-in generated output file with product-specific operation handler bindings",
-      "source_of_truth": "not yet represented as implementation-independent operation IR plus codegen-owned primitive bindings",
-      "blocking_full_completion": true,
-      "why_blocking": "The file lives under generated/python but is not produced by command-generation render_outputs and still binds product-specific runtime behavior.",
-      "required_resolution": "Render the operation executor from operation contracts and primitive binding metadata, with product behavior expressed through IR or explicitly accepted primitive extensions."
+      "provenance_status": "rendered-by-command-generation",
+      "current_owner": "command-generation render_outputs",
+      "source_of_truth": "src/agentic_workspace/contracts/command_package_ir.json python_runtime_binding.operation_executor plus generated planning operation IR resources",
+      "blocking_full_completion": false,
+      "why_blocking": "not blocking; this operation executor is mechanically rendered from command-package binding metadata while the planning runtime module remains separately tracked as transitional generated-output debt",
+      "required_resolution": "Keep generated freshness proof covering this file and migrate the remaining planning runtime behavior behind IR/primitives before promoting full completion."
     },
     {
       "path": "generated/python/memory-cli/generated_cli_package/memory_runtime_cli.py",

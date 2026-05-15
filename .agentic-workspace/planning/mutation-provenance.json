@@ -2,14 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "4ed214b46426e6674f77f6694a77d4fc6957d5cd289d3cc68d4ebff83f5d8cee",
-      "command": "agentic-planning record-recovery",
-      "reason": "align active codegen state suggested slice after root front-door execplan narrowing",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-13T12:31:10+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/execplans/python-codegen-completion.plan.json",
       "sha256": "43cf960865a8d2076dd2184d7e6bf97a69a77f147e2328cfb696f147a3d5fc97",
       "command": "agentic-planning record-recovery",
@@ -1600,6 +1592,14 @@
       "reason": "Removed promote-to-plan promoted_execplan field rejected by planning-decomposition.schema.json while continuing python-product-runtime-source-generation; tracked by #979.",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-15T08:33:02+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
+      "sha256": "58b785b4450c7c57e7f595131e9474ac03a13f446780d9b0194a43344404ca47",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=delegate-exploration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T08:45:01+00:00"
     }
   ]
 }

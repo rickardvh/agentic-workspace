@@ -4233,7 +4233,88 @@
       "package_role": "planning-module-cli",
       "python_runtime_binding": {
         "entrypoint": "agentic-planning",
-        "runtime_module_file": "planning_runtime_cli"
+        "runtime_module_file": "planning_runtime_cli",
+        "operation_executor": {
+          "module_file": "planning_operation_ir_executor",
+          "supported_operation_ids": [
+            "planning.doctor.report",
+            "planning.report.report",
+            "planning.status.report"
+          ],
+          "initial_values": [
+            {
+              "name": "target",
+              "arg": "target",
+              "default": null
+            },
+            {
+              "name": "format",
+              "arg": "format",
+              "default": "text"
+            },
+            {
+              "name": "verbose",
+              "arg": "verbose",
+              "default": false
+            }
+          ],
+          "handlers": [
+            {
+              "primitive": "planning.bootstrap.doctor.load",
+              "handler": "function_call",
+              "import_module": "repo_planning_bootstrap.installer",
+              "function": "doctor_bootstrap",
+              "kwargs": {
+                "target": {
+                  "value": "target"
+                }
+              }
+            },
+            {
+              "primitive": "planning.report.load",
+              "handler": "conditional_function_call",
+              "condition_value": "verbose",
+              "if_true": {
+                "import_module": "repo_planning_bootstrap.installer",
+                "function": "planning_report",
+                "kwargs": {
+                  "target": {
+                    "value": "target"
+                  }
+                }
+              },
+              "if_false": {
+                "import_module": "repo_planning_bootstrap.installer",
+                "function": "planning_report_tiny",
+                "kwargs": {
+                  "target": {
+                    "value": "target"
+                  }
+                }
+              }
+            },
+            {
+              "primitive": "planning.bootstrap.status.load",
+              "handler": "function_call",
+              "import_module": "repo_planning_bootstrap.installer",
+              "function": "collect_status",
+              "kwargs": {
+                "target": {
+                  "value": "target"
+                }
+              }
+            },
+            {
+              "primitive": "output.emit",
+              "handler": "runtime_emit",
+              "runtime_function": "_emit",
+              "result_value": "result",
+              "format_value": "format",
+              "default_format": "text",
+              "dict_text_function": "_print_report"
+            }
+          ]
+        }
       },
       "targets": [
         {

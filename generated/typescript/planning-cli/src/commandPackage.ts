@@ -468,6 +468,87 @@ export const generatedCommandPackage = {
   "program": "agentic-planning",
   "python_runtime_binding": {
     "entrypoint": "agentic-planning",
+    "operation_executor": {
+      "handlers": [
+        {
+          "function": "doctor_bootstrap",
+          "handler": "function_call",
+          "import_module": "repo_planning_bootstrap.installer",
+          "kwargs": {
+            "target": {
+              "value": "target"
+            }
+          },
+          "primitive": "planning.bootstrap.doctor.load"
+        },
+        {
+          "condition_value": "verbose",
+          "handler": "conditional_function_call",
+          "if_false": {
+            "function": "planning_report_tiny",
+            "import_module": "repo_planning_bootstrap.installer",
+            "kwargs": {
+              "target": {
+                "value": "target"
+              }
+            }
+          },
+          "if_true": {
+            "function": "planning_report",
+            "import_module": "repo_planning_bootstrap.installer",
+            "kwargs": {
+              "target": {
+                "value": "target"
+              }
+            }
+          },
+          "primitive": "planning.report.load"
+        },
+        {
+          "function": "collect_status",
+          "handler": "function_call",
+          "import_module": "repo_planning_bootstrap.installer",
+          "kwargs": {
+            "target": {
+              "value": "target"
+            }
+          },
+          "primitive": "planning.bootstrap.status.load"
+        },
+        {
+          "default_format": "text",
+          "dict_text_function": "_print_report",
+          "format_value": "format",
+          "handler": "runtime_emit",
+          "primitive": "output.emit",
+          "result_value": "result",
+          "runtime_function": "_emit"
+        }
+      ],
+      "initial_values": [
+        {
+          "arg": "target",
+          "default": null,
+          "name": "target"
+        },
+        {
+          "arg": "format",
+          "default": "text",
+          "name": "format"
+        },
+        {
+          "arg": "verbose",
+          "default": false,
+          "name": "verbose"
+        }
+      ],
+      "module_file": "planning_operation_ir_executor",
+      "supported_operation_ids": [
+        "planning.doctor.report",
+        "planning.report.report",
+        "planning.status.report"
+      ]
+    },
     "runtime_module_file": "planning_runtime_cli"
   },
   "targets": [

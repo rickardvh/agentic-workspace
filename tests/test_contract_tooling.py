@@ -1304,8 +1304,21 @@ def test_python_runtime_projection_inventory_tracks_generated_output_debt() -> N
         "generated/python/memory-cli/generated_cli_package/memory_runtime_cli.py",
         "generated/python/memory-cli/generated_cli_package/memory_operation_ir_executor.py",
     }
-    assert {entry["provenance_status"] for entry in entries.values()} == {"transitional-generated-output-debt"}
-    assert all(entry["blocking_full_completion"] is True for entry in entries.values())
+    assert (
+        entries["generated/python/planning-cli/generated_cli_package/planning_operation_ir_executor.py"]["provenance_status"]
+        == "rendered-by-command-generation"
+    )
+    assert (
+        entries["generated/python/planning-cli/generated_cli_package/planning_operation_ir_executor.py"]["blocking_full_completion"]
+        is False
+    )
+    transitional_entries = [
+        entry
+        for entry in entries.values()
+        if entry["path"] != "generated/python/planning-cli/generated_cli_package/planning_operation_ir_executor.py"
+    ]
+    assert {entry["provenance_status"] for entry in transitional_entries} == {"transitional-generated-output-debt"}
+    assert all(entry["blocking_full_completion"] is True for entry in transitional_entries)
 
 
 def test_contract_tooling_check_enforces_root_cli_authority_audit() -> None:

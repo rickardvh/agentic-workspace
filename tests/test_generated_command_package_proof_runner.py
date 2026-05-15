@@ -474,6 +474,17 @@ def test_static_generated_package_proof_accepts_current_shipped_source_retiremen
     assert errors == []
 
 
+def test_tracked_python_source_files_falls_back_without_git(monkeypatch) -> None:
+    checker = _load_checker()
+
+    monkeypatch.setattr(checker.shutil, "which", lambda command: None if command == "git" else checker.shutil.which(command))
+
+    sources = checker._tracked_python_source_files()
+
+    assert "src/agentic_workspace/contract_tooling.py" in sources
+    assert "packages/command-generation/src/command_generation/generator.py" in sources
+
+
 def test_static_generated_package_proof_rejects_satisfied_gate_for_non_full_state(monkeypatch) -> None:
     checker = _load_checker()
     ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)

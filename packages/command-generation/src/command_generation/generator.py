@@ -60,6 +60,14 @@ def _runtime_module_file_for_package(package: dict[str, Any]) -> str:
     return configured.removesuffix(".py")
 
 
+def _operation_executor_binding(package: dict[str, Any]) -> dict[str, Any]:
+    binding = package.get("python_runtime_binding", {})
+    if not isinstance(binding, dict):
+        return {}
+    operation_executor = binding.get("operation_executor", {})
+    return operation_executor if isinstance(operation_executor, dict) else {}
+
+
 def _python_adapter_commands(package: dict[str, Any]) -> list[dict[str, Any]]:
     return [
         command for command in package["commands"] if command.get("status") == "generated" and isinstance(command.get("interface"), dict)
@@ -126,6 +134,146 @@ def _runtime_consumed_operation_outputs(
             emitted.add(operation_path)
             outputs.append(GeneratedOutput(root / "generated_cli_package" / operation_path, _json_block(operation) + "\n"))
     return outputs
+
+
+def _handler_function_name(primitive: str) -> str:
+    return "_handle_" + "".join(character if character.isalnum() else "_" for character in primitive)
+
+
+def _render_value_kwargs(kwargs: dict[str, Any]) -> str:
+    rendered = []
+    for name, source in sorted(kwargs.items()):
+        if not isinstance(source, dict):
+            continue
+        rendered.append(f"{name}=values.get({str(source.get('value', ''))!r})")
+    return ", ".join(rendered)
+
+
+def _render_function_call_handler(function_name: str, handler: dict[str, Any]) -> str:
+    imported_name = str(handler["function"])
+    kwargs = _render_value_kwargs(handler.get("kwargs", {}))
+    return (
+        f"def {function_name}(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:\n"
+        f"    from {handler['import_module']} import {imported_name}\n\n"
+        f"    return {imported_name}({kwargs})\n"
+    )
+
+
+def _render_conditional_function_call_handler(function_name: str, handler: dict[str, Any]) -> str:
+    condition_value = str(handler["condition_value"])
+    true_handler = handler["if_true"]
+    false_handler = handler["if_false"]
+    true_name = str(true_handler["function"])
+    false_name = str(false_handler["function"])
+    true_kwargs = _render_value_kwargs(true_handler.get("kwargs", {}))
+    false_kwargs = _render_value_kwargs(false_handler.get("kwargs", {}))
+    return (
+        f"def {function_name}(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:\n"
+        f"    if values.get({condition_value!r}):\n"
+        f"        from {true_handler['import_module']} import {true_name}\n\n"
+        f"        return {true_name}({true_kwargs})\n"
+        f"    from {false_handler['import_module']} import {false_name}\n\n"
+        f"    return {false_name}({false_kwargs})\n"
+    )
+
+
+def _render_runtime_emit_handler(function_name: str, handler: dict[str, Any], *, runtime_module_file: str) -> str:
+    runtime_function = str(handler["runtime_function"])
+    result_value = str(handler["result_value"])
+    format_value = str(handler["format_value"])
+    default_format = str(handler["default_format"])
+    dict_text_function = str(handler.get("dict_text_function") or "")
+    dict_branch = ""
+    if dict_text_function:
+        dict_branch = (
+            f"    if isinstance(result, dict):\n"
+            f'        if output_format == "json":\n'
+            f"            print(json.dumps(result, indent=2))\n"
+            f"            return None\n"
+            f"        from .{runtime_module_file} import {dict_text_function}\n\n"
+            f"        {dict_text_function}(result)\n"
+            f"        return None\n"
+        )
+    return (
+        f"def {function_name}(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:\n"
+        f"    from .{runtime_module_file} import {runtime_function}\n\n"
+        f"    result = values[{result_value!r}]\n"
+        f"    output_format = str(values.get({format_value!r}) or {default_format!r})\n"
+        f"{dict_branch}"
+        f"    return {runtime_function}(result, output_format)\n"
+    )
+
+
+def _python_operation_executor_module(
+    package: dict[str, Any],
+    binding: dict[str, Any],
+    *,
+    source_path: str,
+    regenerate_command: str,
+) -> str:
+    runtime_module_file = _runtime_module_file_for_package(package)
+    supported_operation_ids = sorted(str(operation_id) for operation_id in binding["supported_operation_ids"])
+    initial_values = []
+    for item in binding["initial_values"]:
+        initial_values.append(f"                {str(item['name'])!r}: getattr(args, {str(item['arg'])!r}, {item.get('default')!r}),")
+    handlers: list[str] = []
+    handler_items = []
+    for handler in binding["handlers"]:
+        primitive = str(handler["primitive"])
+        function_name = _handler_function_name(primitive)
+        handler_items.append(f"                {primitive!r}: {function_name},")
+        handler_kind = str(handler["handler"])
+        if handler_kind == "function_call":
+            handlers.append(_render_function_call_handler(function_name, handler))
+        elif handler_kind == "conditional_function_call":
+            handlers.append(_render_conditional_function_call_handler(function_name, handler))
+        elif handler_kind == "runtime_emit":
+            handlers.append(_render_runtime_emit_handler(function_name, handler, runtime_module_file=runtime_module_file))
+        else:
+            raise ValueError(f"unsupported Python operation executor handler: {handler_kind!r}")
+    supported_set = ",\n        ".join(repr(operation_id) for operation_id in supported_operation_ids)
+    return (
+        '"""Generated Python operation IR executor.\n\n'
+        f"Source: {source_path}\n"
+        f"Program: {package['program']}\n"
+        f"Regenerate with: {regenerate_command}\n"
+        '"""\n\n'
+        "from __future__ import annotations\n\n"
+        "import argparse\n"
+        "import json\n"
+        "from pathlib import Path\n"
+        "from typing import Any\n\n"
+        "from command_generation.primitive_executor import (\n"
+        "    PrimitiveContext,\n"
+        "    PrimitiveExecutionError,\n"
+        "    run_operation_steps,\n"
+        ")\n\n"
+        "# DO NOT EDIT DIRECTLY.\n"
+        f"# Operation executor binding changes belong in {source_path}.\n"
+        f"# Regenerate with: {regenerate_command}\n"
+        "\n\n"
+        "class OperationIrExecutionError(RuntimeError):\n"
+        "    pass\n\n\n"
+        "def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int:\n"
+        '    if operation.get("id") not in {\n'
+        f"        {supported_set}\n"
+        "    }:\n"
+        "        raise OperationIrExecutionError(f\"unsupported operation IR contract: {operation.get('id')!r}\")\n"
+        '    if operation.get("migration_status") != "runtime-consumed":\n'
+        "        raise OperationIrExecutionError(f\"operation is not marked runtime-consumed: {operation.get('id')!r}\")\n\n"
+        "    try:\n"
+        "        run_operation_steps(\n"
+        "            operation,\n"
+        "            initial_values={\n" + "\n".join(initial_values) + "\n"
+        "            },\n"
+        "            context=PrimitiveContext(cwd=Path.cwd(), roots={}),\n"
+        "            handlers={\n" + "\n".join(handler_items) + "\n"
+        "            },\n"
+        "        )\n"
+        "    except PrimitiveExecutionError as exc:\n"
+        "        raise OperationIrExecutionError(str(exc)) from exc\n"
+        "    return 0\n\n\n" + "\n\n".join(handlers)
+    )
 
 
 def _python_runtime_adapter_module(package: dict[str, Any], target: dict[str, Any], *, source_path: str, regenerate_command: str) -> str:
@@ -613,6 +761,19 @@ def render_outputs(
                 outputs.append(GeneratedOutput(root / "generated_cli_package" / "command_package.json", _json_block(package) + "\n"))
                 if _is_runtime_backed_python_target(target):
                     outputs.extend(_runtime_consumed_operation_outputs(package, repo_root=repo_root, root=root))
+                    operation_executor = _operation_executor_binding(package)
+                    if operation_executor:
+                        outputs.append(
+                            GeneratedOutput(
+                                root / "generated_cli_package" / f"{operation_executor['module_file']}.py",
+                                _python_operation_executor_module(
+                                    package,
+                                    operation_executor,
+                                    source_path=source_path,
+                                    regenerate_command=regenerate_command,
+                                ),
+                            )
+                        )
                     outputs.append(
                         GeneratedOutput(
                             root / "generated_cli_package" / "adapter_commands.json",

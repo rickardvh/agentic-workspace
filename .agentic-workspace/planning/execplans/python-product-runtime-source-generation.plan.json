@@ -157,10 +157,10 @@
     "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
     "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
     "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
-    "route chosen": "keep-local",
-    "route skipped reason": "First runtime-provenance slice needs architecture judgment to avoid converting copied hand-owned runtime code into a false generated-ownership claim; delegate mechanical validation after the provenance model is encoded.",
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "",
     "decision command": "agentic-planning delegation-decision",
-    "recorded at": "2026-05-15T08:24:16+00:00"
+    "recorded at": "2026-05-15T08:45:01+00:00"
   },
   "system_intent_alignment": {
     "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
@@ -225,12 +225,12 @@
     "run status": "partial",
     "executor": "Codex",
     "handoff source": "agentic-planning promote-to-plan decomposition lane",
-    "what happened": "Added python_runtime_projection_inventory as a schema-backed contract that inventories the six generated/python runtime and operation executor files as transitional generated-output debt, wires it through contract tooling, and teaches generated-package proof to reject full completion while any entry remains blocking or is falsely marked rendered.",
-    "scope touched": "Runtime projection inventory contract/schema, generated package checker, contract tooling loader/surface check, focused tests, and planning recovery for #979 promote-to-plan schema drift.",
-    "changed surfaces": "src/agentic_workspace/contracts/python_runtime_projection_inventory.json; src/agentic_workspace/contracts/schemas/python_runtime_projection_inventory.schema.json; src/agentic_workspace/contracts/python_contract_consumption.json; src/agentic_workspace/contract_tooling.py; scripts/check/check_generated_command_packages.py; scripts/check/check_contract_tooling_surfaces.py; tests/test_generated_command_package_proof_runner.py; tests/test_contract_tooling.py; planning surfaces.",
-    "validations run": "uv run python scripts/check/check_generated_command_packages.py; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check selected files.",
-    "result for continuation": "The runtime projection debt is explicit and blocks false full-completion claims; continue by converting operation executor/runtime behavior from transitional debt into command-generation rendered outputs backed by IR/primitives.",
-    "next step": "Start the first real generation-ownership slice: select the smallest runtime/executor artifact whose behavior can be rendered mechanically without copying hand-maintained product code, then regenerate and prove it."
+    "what happened": "Added python_runtime_projection_inventory as a schema-backed contract, then converted planning_operation_ir_executor.py into a command-generation render_outputs artifact driven by command_package_ir python_runtime_binding.operation_executor metadata. Docker proof also exposed and fixed #982 by adding a no-git fallback for source-retirement scanning.",
+    "scope touched": "Runtime projection inventory, command_package_ir/schema binding metadata, command-generation renderer, generated planning operation executor output, generated planning package metadata projections, generated package checker Docker fallback, focused tests, and planning state.",
+    "changed surfaces": "src/agentic_workspace/contracts/python_runtime_projection_inventory.json; src/agentic_workspace/contracts/command_package_ir.json; src/agentic_workspace/contracts/schemas/command_package_ir.schema.json; packages/command-generation/schemas/command_package_ir.schema.json; packages/command-generation/src/command_generation/generator.py; generated/python/planning-cli/generated_cli_package/planning_operation_ir_executor.py; generated/python/planning-cli/generated_cli_package/command_package.json; generated/typescript/planning-cli/src/commandPackage.ts; scripts/check/check_generated_command_packages.py; tests/test_generated_command_package_proof_runner.py; tests/test_contract_tooling.py; planning surfaces.",
+    "validations run": "uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check selected files.",
+    "result for continuation": "planning_operation_ir_executor.py is now generated-owned and no longer blocks full completion; runtime modules and the workspace/memory operation executors remain transitional generated-output debt.",
+    "next step": "Continue with the next smallest file-level runtime projection entry, likely memory_operation_ir_executor.py or workspace_operation_ir_executor.py after checking whether handler binding metadata can represent it without copying product runtime code."
   },
   "finished_run_review": {
     "review status": "pending",
@@ -242,28 +242,28 @@
     "follow-on decision": "continue current active lane; do not archive"
   },
   "delegation_outcome_feedback": {
-    "route chosen": "keep-local",
-    "route skipped reason": "First runtime-provenance slice needs architecture judgment to avoid converting copied hand-owned runtime code into a false generated-ownership claim; delegate mechanical validation after the provenance model is encoded.",
-    "expected savings": "unknown",
-    "actual friction": "pending",
-    "proof result": "partial proof passed",
-    "quality concern": "Generator-produced output must not mask hand-maintained executable runtime files as full #892 completion.",
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "not skipped",
+    "expected savings": "read-only selection audit can run while local implementation proceeds",
+    "actual friction": "worker returned after local implementation and corroborated planning_operation_ir_executor.py as the smallest next slice; it also flagged runtime output imports as a risk that remains tracked by runtime debt.",
+    "proof result": "passed for planning operation executor generation slice",
+    "quality concern": "Avoid converting generated/python placement into false generated ownership; worker checks smallest next artifact and proof burden.",
     "decomposition adjustment": "none"
   },
   "proof_report": {
-    "validation proof": "uv run python scripts/check/check_generated_command_packages.py; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check selected files.",
+    "validation proof": "uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check selected files.",
     "proof achieved now": "partial",
-    "evidence for \"proof achieved\" state": "Runtime projection inventory is schema-backed, contract-tooling validated, covered by focused tests, and consumed by generated-package proof."
+    "evidence for \"proof achieved\" state": "planning_operation_ir_executor.py appears in command-generation render_outputs, generate --check is clean, local/Docker generated Python conformance pass, and python_runtime_projection_inventory marks only that executor rendered-by-command-generation."
   },
   "intent_satisfaction": {
     "original intent": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane python-product-runtime-source-generation.",
     "was original intent fully satisfied?": "no",
-    "evidence of intent satisfaction": "The slice prevents false completion by making product runtime projection debt explicit; it does not yet generate those files from command-generation.",
+    "evidence of intent satisfaction": "The slice prevents false completion and converts one operation executor file to generator ownership; it does not yet generate the remaining runtime files or workspace/memory executors.",
     "unsolved intent passed to": "current active execplan python-product-runtime-source-generation"
   },
   "execution_summary": {
-    "outcome delivered": "Runtime projection debt is explicit and proof-enforced; full lane remains open.",
-    "validation confirmed": "focused static proof, contract tests, contract tooling, structured inventory, and ruff passed",
+    "outcome delivered": "Runtime projection debt is explicit and proof-enforced; planning_operation_ir_executor.py is generated-owned; full lane remains open.",
+    "validation confirmed": "generate --check, static proof, local Python conformance, Node-backed conformance, Python Docker conformance, focused tests, contract tooling, structured inventory, and ruff passed",
     "follow-on routed to": "current active execplan python-product-runtime-source-generation",
     "post-work posterity capture": "pending",
     "knowledge promoted (Memory/Docs/Config)": "none",
@@ -297,14 +297,21 @@
     "reopen trigger": ""
   },
   "improvement_signal_review": {
-    "status": "pending",
+    "status": "present",
     "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
     "source": "operating_posture",
-    "signals found": [],
-    "signals fixed": [],
-    "signals routed": [],
+    "signals found": [
+      "#982 generated Python Docker proof assumed git was installed",
+      "#980 planning handoff treated conceptual IR/contracts prose as a missing file reference"
+    ],
+    "signals fixed": [
+      "#982 fixed by adding a no-git fallback source-tree scan in check_generated_command_packages.py"
+    ],
+    "signals routed": [
+      "#980 remains open for planning handoff file-reference detection"
+    ],
     "signals dismissed": [],
-    "next owner": ""
+    "next owner": "current #892 lane for implementation; #980 for planning handoff warning refinement"
   },
   "closeout_distillation": {
     "buckets": {
@@ -313,12 +320,18 @@
       "memory": [],
       "config_check": [],
       "docs": [],
-      "issue_follow_up": []
+      "issue_follow_up": [
+        "#980 planning handoff false-positive file reference warning",
+        "#982 generated Python Docker proof no-git fallback fixed in this slice"
+      ]
     }
   },
   "drift_log": [
     "2026-05-15: Scaffolded by agentic-planning promote-to-plan from decomposition lane python-product-runtime-source-generation.",
     "2026-05-15: Recorded delegation decision route=keep-local.",
-    "2026-05-15: Added schema-backed python_runtime_projection_inventory to distinguish generated/python placement from generated ownership; full completion remains blocked while entries are transitional-generated-output-debt."
+    "2026-05-15: Added schema-backed python_runtime_projection_inventory to distinguish generated/python placement from generated ownership; full completion remains blocked while entries are transitional-generated-output-debt.",
+    "2026-05-15: Recorded delegation decision route=delegate-exploration.",
+    "2026-05-15: Generated planning_operation_ir_executor.py from command_package_ir operation_executor binding metadata and marked that inventory entry rendered-by-command-generation.",
+    "2026-05-15: Filed #982 for generated Python Docker proof assuming git, then fixed it with a no-git source scan fallback."
   ]
 }
