@@ -900,7 +900,7 @@ def test_operational_compression_classifies_generated_output_footprint(tmp_path:
     _write(target / "scripts" / "check" / "check_generated_command_packages.py", "print('check')\n")
     _write(target / "generated" / "workspace" / "python" / "__init__.py", "# generated\n")
     _write(
-        target / "src" / "agentic_workspace" / "generated_cli_package" / "__pycache__" / "__init__.cpython-313.pyc",
+        target / "src" / "agentic_workspace" / "obsolete_generated_command_cache" / "__pycache__" / "__init__.cpython-313.pyc",
         "cache\n",
     )
     _write(target / "generated" / "workspace" / "python" / "generated_command_adapters.json", "{}\n")

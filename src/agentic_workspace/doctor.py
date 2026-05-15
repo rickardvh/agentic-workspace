@@ -12,9 +12,9 @@ from agentic_workspace.contract_tooling import (
 def check_contract_integrity() -> list[str]:
     """Check for drift between code constants and JSON contract schemas."""
     errors: list[str] = []
-    from command_generation.generated_package_loader import load_generated_cli_module_for_entrypoint
+    from command_generation.generated_package_loader import load_generated_command_module_for_entrypoint
 
-    cli = load_generated_cli_module_for_entrypoint("agentic-workspace", "cli.py")
+    cli = load_generated_command_module_for_entrypoint("agentic-workspace", "cli.py")
 
     try:
         from jsonschema import Draft202012Validator

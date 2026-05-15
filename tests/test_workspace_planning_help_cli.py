@@ -4,9 +4,9 @@ import json
 
 import pytest
 
-from command_generation.generated_package_loader import load_generated_cli_module_for_entrypoint
+from command_generation.generated_package_loader import load_generated_command_module_for_entrypoint
 
-cli = load_generated_cli_module_for_entrypoint("agentic-workspace", "cli.py")
+cli = load_generated_command_module_for_entrypoint("agentic-workspace", "cli.py")
 
 
 def test_invalid_command_shows_preflight_fallback_hint(capsys) -> None:

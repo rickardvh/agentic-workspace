@@ -9,7 +9,7 @@ from types import ModuleType
 from typing import Any
 
 
-def load_generated_cli_package(
+def load_generated_command_package(
     *,
     bundled_module: str,
     generated_root: str,
@@ -42,10 +42,10 @@ def load_generated_cli_package(
             sys.modules[module_name] = module
             spec.loader.exec_module(module)
             return module
-    raise ModuleNotFoundError(f"{generated_root} generated CLI package is unavailable")
+    raise ModuleNotFoundError(f"{generated_root} generated command package is unavailable")
 
 
-def load_generated_cli_package_module(
+def load_generated_command_package_module(
     *,
     bundled_module: str,
     generated_root: str,
@@ -57,7 +57,7 @@ def load_generated_cli_package_module(
     except (ImportError, ModuleNotFoundError, ValueError):
         pass
 
-    package = load_generated_cli_package(
+    package = load_generated_command_package(
         bundled_module="",
         generated_root=generated_root,
         module_name=module_name.rsplit(".", 1)[0] if "." in module_name else f"{module_name}_package",
@@ -88,6 +88,36 @@ def load_generated_cli_package_module(
             spec.loader.exec_module(module)
             return module
     raise ModuleNotFoundError(f"{generated_root}/{file_name} is unavailable")
+
+
+def load_generated_cli_package(
+    *,
+    bundled_module: str,
+    generated_root: str,
+    module_name: str,
+) -> ModuleType:
+    """Compatibility wrapper for callers that still use the old CLI-package name."""
+    return load_generated_command_package(
+        bundled_module=bundled_module,
+        generated_root=generated_root,
+        module_name=module_name,
+    )
+
+
+def load_generated_cli_package_module(
+    *,
+    bundled_module: str,
+    generated_root: str,
+    file_name: str,
+    module_name: str,
+) -> ModuleType:
+    """Compatibility wrapper for callers that still use the old CLI-package name."""
+    return load_generated_command_package_module(
+        bundled_module=bundled_module,
+        generated_root=generated_root,
+        file_name=file_name,
+        module_name=module_name,
+    )
 
 
 def _load_module_from_init(init_path: Path, module_name: str) -> ModuleType | None:
@@ -133,7 +163,7 @@ def _candidate_generated_package_dirs() -> list[Path]:
     return unique
 
 
-def load_generated_cli_package_for_entrypoint(entrypoint: str) -> ModuleType:
+def load_generated_command_package_for_entrypoint(entrypoint: str) -> ModuleType:
     normalized_entrypoint = Path(entrypoint.replace("\\", "/")).name
     for package_dir in _candidate_generated_package_dirs():
         command_package_path = package_dir / "command_package.json"
@@ -150,10 +180,20 @@ def load_generated_cli_package_for_entrypoint(entrypoint: str) -> ModuleType:
         module = _load_module_from_init(init_path, module_name)
         if module is not None:
             return module
-    raise ModuleNotFoundError(f"generated CLI package for entrypoint {normalized_entrypoint!r} is unavailable")
+    raise ModuleNotFoundError(f"generated command package for entrypoint {normalized_entrypoint!r} is unavailable")
+
+
+def load_generated_command_module_for_entrypoint(entrypoint: str, module_file: str) -> ModuleType:
+    package = load_generated_command_package_for_entrypoint(entrypoint)
+    module_stem = Path(module_file).stem
+    return import_module(f"{package.__name__}.{module_stem}")
+
+
+def load_generated_cli_package_for_entrypoint(entrypoint: str) -> ModuleType:
+    """Compatibility wrapper for callers that still use the old CLI-package name."""
+    return load_generated_command_package_for_entrypoint(entrypoint)
 
 
 def load_generated_cli_module_for_entrypoint(entrypoint: str, module_file: str) -> ModuleType:
-    package = load_generated_cli_package_for_entrypoint(entrypoint)
-    module_stem = Path(module_file).stem
-    return import_module(f"{package.__name__}.{module_stem}")
+    """Compatibility wrapper for callers that still use the old CLI-package name."""
+    return load_generated_command_module_for_entrypoint(entrypoint, module_file)

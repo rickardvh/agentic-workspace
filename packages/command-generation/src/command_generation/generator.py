@@ -493,7 +493,7 @@ def _python_runtime_handler_module(
         else:
             handler_functions.append(
                 f"def {function_name}(args: argparse.Namespace) -> int:\n"
-                f"    return run_operation_ir(generated_cli_package_operation_contract({operation_id!r}), args)\n"
+                f"    return run_operation_ir(generated_operation_contract({operation_id!r}), args)\n"
             )
         handler_items.append(f"    {operation_id!r}: {function_name},")
     return (
@@ -510,11 +510,11 @@ def _python_runtime_handler_module(
         "# DO NOT EDIT DIRECTLY.\n"
         f"# Runtime handler changes belong in {source_path}.\n"
         f"# Regenerate with: {regenerate_command}\n"
-        "from . import build_generated_parser as build_generated_cli_package_parser\n"
-        "from . import generated_command_names as generated_cli_package_command_names\n"
-        "from . import generated_operation_contract as generated_cli_package_operation_contract\n"
-        "from . import run_generated_command as run_generated_cli_package_command\n"
-        "from . import supports_generated_command as supports_generated_cli_package_command\n"
+        "from . import build_generated_parser\n"
+        "from . import generated_command_names\n"
+        "from . import generated_operation_contract\n"
+        "from . import run_generated_command\n"
+        "from . import supports_generated_command\n"
         f"from .{executor_module} import run_operation_ir\n\n\n"
         + "\n\n".join(export_functions)
         + ("\n\n" if export_functions else "")
@@ -533,19 +533,19 @@ def _python_runtime_handler_module(
         "        return invoked\n"
         f"    return {package['program']!r}\n\n\n"
         "def build_parser() -> argparse.ArgumentParser:\n"
-        "    return build_generated_cli_package_parser()\n\n\n"
+        "    return build_generated_parser()\n\n\n"
         "def main(argv: list[str] | None = None) -> int:\n"
         "    argv_list = list(sys.argv[1:] if argv is None else argv)\n"
         "    try:\n"
-        "        return run_generated_cli_package_command(argv_list, _run_generated_cli_operation)\n"
+        "        return run_generated_command(argv_list, _run_generated_operation)\n"
         "    except Exception as exc:\n"
         "        if exc.__class__.__name__.endswith('UsageError') or exc.__class__.__name__ == 'RepoDetectionError':\n"
-        "            build_generated_cli_package_parser().error(str(exc))\n"
+        "            build_generated_parser().error(str(exc))\n"
         "        raise\n\n\n"
-        "def _run_generated_cli_operation(operation_id: str, args: argparse.Namespace) -> int:\n"
+        "def _run_generated_operation(operation_id: str, args: argparse.Namespace) -> int:\n"
         "    handler = _GENERATED_RUNTIME_HANDLERS.get(operation_id)\n"
         "    if handler is None:\n"
-        "        build_generated_cli_package_parser().error(\n"
+        "        build_generated_parser().error(\n"
         "            f\"Generated adapter for {getattr(args, 'command', operation_id)} references unsupported operation {operation_id}.\"\n"
         "        )\n"
         "        raise SystemExit(2)\n"
@@ -687,8 +687,6 @@ def _python_runtime_adapter_module(
         "    return _GENERATED_WEAK_AGENT_ROUTING\n\n\n"
         "def generated_command_names() -> tuple[str, ...]:\n"
         "    return tuple(sorted(_GENERATED_COMMANDS_BY_NAME))\n\n\n"
-        "def generated_cli_package_command_names() -> tuple[str, ...]:\n"
-        "    return generated_command_names()\n\n\n"
         "def _interface_operation_ref(interface: dict[str, Any], inherited_operation_id: str, inherited_operation_path: str) -> tuple[str, str]:\n"
         '    operation_ref = interface.get("operation_ref", {})\n'
         "    if isinstance(operation_ref, dict):\n"
@@ -811,8 +809,6 @@ def _python_runtime_adapter_module(
         '        _add_interface_command(subparsers, interface, str(command["operation_id"]))\n'
         "    return parser\n\n\n"
         "def build_parser() -> argparse.ArgumentParser:\n"
-        "    return build_generated_parser()\n\n\n"
-        "def build_generated_cli_package_parser() -> argparse.ArgumentParser:\n"
         "    return build_generated_parser()\n\n\n"
         "def run_generated_command(argv: list[str] | tuple[str, ...], runtime_handler: RuntimeHandler) -> int:\n"
         "    parser = build_generated_parser()\n"

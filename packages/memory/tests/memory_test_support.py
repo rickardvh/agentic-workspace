@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 import pytest
-from command_generation.generated_package_loader import load_generated_cli_module_for_entrypoint
+from command_generation.generated_package_loader import load_generated_command_module_for_entrypoint
 
 from repo_memory_bootstrap import installer
 from repo_memory_bootstrap._installer_output import _infer_action_category
@@ -19,7 +19,7 @@ from repo_memory_bootstrap._installer_shared import (
 )
 from repo_memory_bootstrap._ownership import module_root as memory_module_root
 
-cli = load_generated_cli_module_for_entrypoint("agentic-memory", "cli.py")
+cli = load_generated_command_module_for_entrypoint("agentic-memory", "cli.py")
 
 FIXTURES_ROOT = Path(__file__).resolve().parent / "fixtures" / "routing"
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]

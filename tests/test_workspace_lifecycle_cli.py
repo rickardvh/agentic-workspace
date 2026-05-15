@@ -347,7 +347,7 @@ def test_init_can_write_prompt_file(monkeypatch, tmp_path: Path, capsys) -> None
 
 
 def test_selection_commands_accept_non_interactive_flag() -> None:
-    generated_parser = cli.build_generated_cli_package_parser()
+    generated_parser = cli.build_generated_parser()
 
     install_args = generated_parser.parse_args(["install", "--target", ".", "--local-only", "--non-interactive"])
     init_args = generated_parser.parse_args(["init", "--target", ".", "--non-interactive"])

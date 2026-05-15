@@ -43,9 +43,12 @@ from agentic_workspace.contract_tooling import (
     workflow_definition_format_manifest,
     workspace_surfaces_manifest,
 )
-from command_generation.generated_package_loader import load_generated_cli_module_for_entrypoint, load_generated_cli_package_for_entrypoint
+from command_generation.generated_package_loader import (
+    load_generated_command_module_for_entrypoint,
+    load_generated_command_package_for_entrypoint,
+)
 
-cli = load_generated_cli_module_for_entrypoint("agentic-workspace", "cli.py")
+cli = load_generated_command_module_for_entrypoint("agentic-workspace", "cli.py")
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -1262,13 +1265,13 @@ def _known_command_names_for_program(program: str) -> set[str]:
 
 def _program_generated_parser(program: str) -> argparse.ArgumentParser | None:
     if program in {"agentic-workspace", "agentic-planning", "agentic-memory"}:
-        return load_generated_cli_package_for_entrypoint(program).build_generated_parser()
+        return load_generated_command_package_for_entrypoint(program).build_generated_parser()
     return None
 
 
 def _program_generated_command_names(program: str) -> set[str]:
     if program in {"agentic-workspace", "agentic-planning", "agentic-memory"}:
-        return set(load_generated_cli_package_for_entrypoint(program).generated_command_names())
+        return set(load_generated_command_package_for_entrypoint(program).generated_command_names())
     return set()
 
 
@@ -1276,9 +1279,9 @@ def _program_parser(program: str) -> argparse.ArgumentParser | None:
     if program == "agentic-workspace":
         return cli.build_parser()
     if program == "agentic-planning":
-        return load_generated_cli_module_for_entrypoint("agentic-planning", "cli.py").build_parser()
+        return load_generated_command_module_for_entrypoint("agentic-planning", "cli.py").build_parser()
     if program == "agentic-memory":
-        return load_generated_cli_module_for_entrypoint("agentic-memory", "cli.py").build_parser()
+        return load_generated_command_module_for_entrypoint("agentic-memory", "cli.py").build_parser()
     return None
 
 
@@ -1919,7 +1922,7 @@ def main(argv: list[str] | None = None) -> int:
         checks.append(("module registry parity", ["live module registry drifted from module_registry.json"]))
     parser_manifest = cli_commands_manifest()
     parser_snapshot = _parser_snapshot(cli.build_parser())
-    generated_root_commands = set(cli.generated_cli_package_command_names())  # type: ignore[attr-defined]
+    generated_root_commands = set(cli.generated_command_names())  # type: ignore[attr-defined]
     manifest_command_names = {str(spec["name"]) for spec in parser_manifest["commands"]}
     if not generated_root_commands >= manifest_command_names:
         expected_parser_snapshot = [

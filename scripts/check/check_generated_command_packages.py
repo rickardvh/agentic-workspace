@@ -35,8 +35,8 @@ from workspace_command_generation import (  # noqa: E402
 
 from agentic_workspace.contract_tooling import operation_manifest, python_runtime_projection_inventory_manifest  # noqa: E402
 from command_generation.generated_package_loader import (  # noqa: E402
-    load_generated_cli_module_for_entrypoint,
-    load_generated_cli_package_for_entrypoint,
+    load_generated_command_module_for_entrypoint,
+    load_generated_command_package_for_entrypoint,
 )
 
 SelectedFields = Callable[[str], dict[str, object]]
@@ -154,6 +154,31 @@ PYTHON_FULL_COMPLETION_BLOCKING_EXECUTABLE_PATHS = (
     "packages/planning/src/repo_planning_bootstrap/operation_ir_executor.py",
     "packages/memory/src/repo_memory_bootstrap/operation_ir_executor.py",
 )
+GENERATED_CLI_COMPATIBILITY_VOCABULARY = (
+    "generated_cli_package",
+    "load_generated_cli_",
+    "build_generated_cli_package_parser",
+    "generated_cli_package_command_names",
+)
+GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST = {
+    "pyproject.toml": "installed private bridge compatibility",
+    "packages/planning/pyproject.toml": "installed private bridge compatibility",
+    "packages/memory/pyproject.toml": "installed private bridge compatibility",
+    "packages/planning/payload-surface-classification.json": "installed private bridge compatibility inventory",
+    ".agentic-workspace/planning/mutation-provenance.json": "historical planning mutation provenance",
+    "packages/command-generation/src/command_generation/generated_package_loader.py": "legacy loader compatibility wrappers and legacy layout fallback",
+    "src/agentic_workspace/workspace_runtime_primitives.py": "legacy parser helper compatibility wrapper",
+    "scripts/check/check_generated_command_packages.py": "static compatibility allowlist and obsolete-layout guards",
+    "tests/test_command_generation_artifacts.py": "obsolete target-specific runtime guard",
+    "tests/test_contract_tooling.py": "legacy-layout fixture and obsolete source guard",
+    "tests/test_workspace_packaging.py": "installed private bridge compatibility proof",
+    "packages/planning/tests/test_packaging.py": "installed private bridge compatibility proof",
+    "packages/memory/tests/test_packaging.py": "installed private bridge compatibility proof",
+}
+GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST_PREFIXES = {
+    ".agentic-workspace/planning/execplans/archive/": "historical planning evidence",
+    "docs/reviews/": "historical review evidence",
+}
 PYTHON_REQUIRED_RUNTIME_PROJECTION_OUTPUTS = {
     "generated/workspace/python/cli.py": (
         "root-workspace",
@@ -230,11 +255,11 @@ def _runtime_module_file_for_package(package_id: str) -> str:
 
 
 def _generated_package_for_package(package_id: str):
-    return load_generated_cli_package_for_entrypoint(_entrypoint_for_package(package_id))
+    return load_generated_command_package_for_entrypoint(_entrypoint_for_package(package_id))
 
 
 def _generated_runtime_module_for_package(package_id: str):
-    return load_generated_cli_module_for_entrypoint(_entrypoint_for_package(package_id), _runtime_module_file_for_package(package_id))
+    return load_generated_command_module_for_entrypoint(_entrypoint_for_package(package_id), _runtime_module_file_for_package(package_id))
 
 
 def _python_command_for_package(package_id: str) -> list[str]:
@@ -1340,7 +1365,7 @@ def _validate_no_legacy_generated_adapter_runtime_import(*, relative_path: str, 
     legacy_import = "generated_command_adapters import GENERATED_COMMAND_ADAPTERS_BY_COMMAND"
     if legacy_import in text:
         return [
-            f"{relative_path} must route generated Python commands through generated_cli_package, "
+            f"{relative_path} must route generated Python commands through generated command modules, "
             "not legacy generated_command_adapters runtime dispatch"
         ]
     return []
@@ -1370,8 +1395,66 @@ def _validate_generated_python_commands_absent_from_handwritten_parsers() -> lis
                 else:
                     errors.append(
                         f"{runtime_module_name} handwritten parser still accepts generated command {command_name!r}; "
-                        "generated_cli_package must own parser shape"
+                        "generated command package metadata must own parser shape"
                     )
+    return errors
+
+
+def _generated_cli_compatibility_allowlist_reason(relative_path: str) -> str | None:
+    if relative_path in GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST:
+        return GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST[relative_path]
+    for prefix, reason in GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST_PREFIXES.items():
+        if relative_path.startswith(prefix):
+            return reason
+    return None
+
+
+def _validate_generated_cli_compatibility_vocabulary() -> list[str]:
+    errors: list[str] = []
+    if shutil.which("git"):
+        completed = subprocess.run(
+            ["git", "ls-files"],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if completed.returncode != 0:
+            return [f"cannot validate generated CLI compatibility vocabulary: git ls-files failed: {completed.stderr.strip()}"]
+        candidate_paths = [path.strip().replace("\\", "/") for path in completed.stdout.splitlines() if path.strip()]
+    else:
+        roots = (
+            ".agentic-workspace",
+            "docs",
+            "generated",
+            "packages",
+            "scripts",
+            "src",
+            "tests",
+            "pyproject.toml",
+        )
+        candidate_paths = []
+        for root in roots:
+            root_path = REPO_ROOT / root
+            if root_path.is_file():
+                candidate_paths.append(root)
+            elif root_path.is_dir():
+                candidate_paths.extend(path.relative_to(REPO_ROOT).as_posix() for path in root_path.rglob("*") if path.is_file())
+    for relative_path in sorted(candidate_paths):
+        if not relative_path.endswith((".py", ".json", ".toml", ".md")):
+            continue
+        path = REPO_ROOT / relative_path
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        if not any(token in text for token in GENERATED_CLI_COMPATIBILITY_VOCABULARY):
+            continue
+        reason = _generated_cli_compatibility_allowlist_reason(relative_path)
+        if reason is None:
+            errors.append(
+                f"{relative_path} contains generated_cli_package compatibility vocabulary without an explicit allowlist reason"
+            )
     return errors
 
 
@@ -1760,6 +1843,7 @@ def _validate_static_surfaces() -> list[str]:
         errors.extend(_validate_python_shipped_source_executable_retirement())
         errors.extend(_validate_python_runtime_handler_boundary())
         errors.extend(_validate_generated_python_commands_absent_from_handwritten_parsers())
+        errors.extend(_validate_generated_cli_compatibility_vocabulary())
         forbidden_generated_entrypoints = [
             "src/agentic_workspace/generated_cli_package.py",
             "src/agentic_workspace/generated_cli_entrypoint.py",

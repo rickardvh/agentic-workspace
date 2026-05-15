@@ -567,7 +567,7 @@ def test_python_runtime_import_boundary_rejects_legacy_generated_adapter_dispatc
     )
 
     assert errors == [
-        "generated/workspace/python/cli.py must route generated Python commands through generated_cli_package, "
+        "generated/workspace/python/cli.py must route generated Python commands through generated command modules, "
         "not legacy generated_command_adapters runtime dispatch"
     ]
 

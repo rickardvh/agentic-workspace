@@ -253,10 +253,6 @@ def generated_command_names() -> tuple[str, ...]:
     return tuple(sorted(_GENERATED_COMMANDS_BY_NAME))
 
 
-def generated_cli_package_command_names() -> tuple[str, ...]:
-    return generated_command_names()
-
-
 def _interface_operation_ref(interface: dict[str, Any], inherited_operation_id: str, inherited_operation_path: str) -> tuple[str, str]:
     operation_ref = interface.get("operation_ref", {})
     if isinstance(operation_ref, dict):
@@ -403,10 +399,6 @@ def build_generated_parser() -> argparse.ArgumentParser:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    return build_generated_parser()
-
-
-def build_generated_cli_package_parser() -> argparse.ArgumentParser:
     return build_generated_parser()
 
 

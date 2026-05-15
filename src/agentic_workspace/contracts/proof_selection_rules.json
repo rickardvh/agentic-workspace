@@ -197,7 +197,7 @@
         "source_contract": "package-local CLI source plus package bootstrap payload checks",
         "generator_contract": null,
         "regeneration_path": null,
-        "edit_policy": "Direct edits are package-source work and may require package payload and install-surface proof before closeout. Any package cli.py edit must also select generated command package proof so command/interface drift cannot bypass command_package_ir and generated_cli_package checks."
+        "edit_policy": "Direct edits are package-source work and may require package payload and install-surface proof before closeout. Any package cli.py edit must also select generated command package proof so command/interface drift cannot bypass command_package_ir and generated command package checks."
       },
       {
         "id": "generated-command-package-output",

@@ -8,7 +8,7 @@ import tomllib
 from pathlib import Path
 
 import pytest
-from command_generation.generated_package_loader import load_generated_cli_module_for_entrypoint
+from command_generation.generated_package_loader import load_generated_command_module_for_entrypoint
 
 import repo_planning_bootstrap._render as render_module
 import repo_planning_bootstrap.installer as installer_mod
@@ -35,7 +35,7 @@ from repo_planning_bootstrap.installer import (
     verify_payload,
 )
 
-planning_cli = load_generated_cli_module_for_entrypoint("agentic-planning", "cli.py")
+planning_cli = load_generated_command_module_for_entrypoint("agentic-planning", "cli.py")
 
 
 def _write(path: Path, text: str) -> None:

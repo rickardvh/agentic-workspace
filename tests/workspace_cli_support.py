@@ -12,9 +12,9 @@ from jsonschema import Draft202012Validator
 
 from agentic_workspace.contract_tooling import authority_markers_manifest, cli_commands_manifest
 from agentic_workspace.result_adapter import adapt_action, adapt_module_result
-from command_generation.generated_package_loader import load_generated_cli_module_for_entrypoint
+from command_generation.generated_package_loader import load_generated_command_module_for_entrypoint
 
-cli = load_generated_cli_module_for_entrypoint("agentic-workspace", "cli.py")
+cli = load_generated_command_module_for_entrypoint("agentic-workspace", "cli.py")
 
 _ORIGINAL_PATH_WRITE_TEXT = Path.write_text
 

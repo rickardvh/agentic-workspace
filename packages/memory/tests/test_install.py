@@ -692,7 +692,7 @@ def test_migrate_layout_moves_legacy_managed_files_into_agentic_memory_root(tmp_
 
 
 def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
-    generated_parser = cli.build_generated_cli_package_parser()
+    generated_parser = cli.build_generated_parser()
 
     current_args = generated_parser.parse_args(["current", "check", "--target", "."])
     list_skills_args = generated_parser.parse_args(["list-skills", "--format", "json"])

@@ -3,11 +3,11 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from command_generation.generated_package_loader import load_generated_cli_package_for_entrypoint
+from command_generation.generated_package_loader import load_generated_command_package_for_entrypoint
 
 
 def main_for_entrypoint(entrypoint: str, argv: list[str] | None = None) -> int:
-    generated = load_generated_cli_package_for_entrypoint(entrypoint)
+    generated = load_generated_command_package_for_entrypoint(entrypoint)
     return int(generated.main(sys.argv[1:] if argv is None else argv))
 
 

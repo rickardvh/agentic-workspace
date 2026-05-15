@@ -129,11 +129,19 @@ from agentic_workspace.workspace_output import (
     _emit_report_text,
     _emit_setup_text,
 )
-from command_generation.generated_package_loader import load_generated_cli_module_for_entrypoint, load_generated_cli_package_for_entrypoint
+from command_generation.generated_package_loader import (
+    load_generated_command_module_for_entrypoint,
+    load_generated_command_package_for_entrypoint,
+)
+
+
+def build_generated_parser() -> Any:
+    return load_generated_command_package_for_entrypoint("agentic-workspace").build_generated_parser()
 
 
 def build_generated_cli_package_parser() -> Any:
-    return load_generated_cli_package_for_entrypoint("agentic-workspace").build_generated_parser()
+    """Compatibility wrapper for older tests or consumers using the old helper name."""
+    return build_generated_parser()
 
 
 _CLI_COMMANDS_MANIFEST = cli_commands_manifest()
@@ -221,7 +229,7 @@ def _agentic_workspace_package_root() -> Path | None:
 
 
 def _invoked_cli_identity_payload(*, target_root: Path | None = None, compact: bool = False) -> dict[str, Any]:
-    module_path = Path(load_generated_cli_module_for_entrypoint("agentic-workspace", "cli.py").__file__).resolve()
+    module_path = Path(load_generated_command_module_for_entrypoint("agentic-workspace", "cli.py").__file__).resolve()
     package_root = _agentic_workspace_package_root()
     argv0 = sys.argv[0] if sys.argv else ""
     argv0_path = Path(argv0).resolve() if argv0 else None
@@ -1418,9 +1426,9 @@ def _memory_module_argv(args: argparse.Namespace) -> list[str]:
 
 
 def _run_planning_front_door(args: argparse.Namespace) -> int:
-    from command_generation.generated_package_loader import load_generated_cli_package_for_entrypoint
+    from command_generation.generated_package_loader import load_generated_command_package_for_entrypoint
 
-    planning_main = load_generated_cli_package_for_entrypoint("agentic-planning").main
+    planning_main = load_generated_command_package_for_entrypoint("agentic-planning").main
     buffer = io.StringIO()
     with contextlib.redirect_stdout(buffer):
         result = planning_main(_planning_module_argv(args))
@@ -1429,9 +1437,9 @@ def _run_planning_front_door(args: argparse.Namespace) -> int:
 
 
 def _run_memory_front_door(args: argparse.Namespace) -> int:
-    from command_generation.generated_package_loader import load_generated_cli_package_for_entrypoint
+    from command_generation.generated_package_loader import load_generated_command_package_for_entrypoint
 
-    memory_main = load_generated_cli_package_for_entrypoint("agentic-memory").main
+    memory_main = load_generated_command_package_for_entrypoint("agentic-memory").main
     buffer = io.StringIO()
     with contextlib.redirect_stdout(buffer):
         result = memory_main(_memory_module_argv(args))
@@ -1450,7 +1458,7 @@ def _run_planning_front_door_adapter(args: argparse.Namespace) -> int:
     try:
         return _run_planning_front_door(args)
     except ImportError:
-        build_generated_cli_package_parser().error("The planning module must be installed to use planning subcommands.")
+        build_generated_parser().error("The planning module must be installed to use planning subcommands.")
 
 
 def _run_memory_front_door_adapter(args: argparse.Namespace) -> int:
@@ -1464,7 +1472,7 @@ def _run_memory_front_door_adapter(args: argparse.Namespace) -> int:
     try:
         return _run_memory_front_door(args)
     except ImportError:
-        build_generated_cli_package_parser().error("The memory module must be installed to use memory subcommands.")
+        build_generated_parser().error("The memory module must be installed to use memory subcommands.")
 
 
 def _print_planning_help(payload: dict[str, Any]) -> None:
@@ -16950,9 +16958,9 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
     _validate_target_root(command_name="summary", target_root=target_root)
     from repo_planning_bootstrap.installer import format_summary_json, planning_summary
 
-    from command_generation.generated_package_loader import load_generated_cli_module_for_entrypoint
+    from command_generation.generated_package_loader import load_generated_command_module_for_entrypoint
 
-    _print_summary = load_generated_cli_module_for_entrypoint("agentic-planning", "cli.py")._print_summary
+    _print_summary = load_generated_command_module_for_entrypoint("agentic-planning", "cli.py")._print_summary
     config = _load_workspace_config(target_root=target_root)
     changed_paths = list(getattr(args, "changed", []) or [])
     if getattr(args, "select", None):
@@ -17148,9 +17156,9 @@ def _run_reconcile_report_adapter(args: argparse.Namespace) -> int:
     _validate_target_root(command_name="reconcile", target_root=target_root)
     from repo_planning_bootstrap.installer import planning_reconcile
 
-    from command_generation.generated_package_loader import load_generated_cli_module_for_entrypoint
+    from command_generation.generated_package_loader import load_generated_command_module_for_entrypoint
 
-    _print_reconcile = load_generated_cli_module_for_entrypoint("agentic-planning", "cli.py")._print_reconcile
+    _print_reconcile = load_generated_command_module_for_entrypoint("agentic-planning", "cli.py")._print_reconcile
     _ensure_external_intent_cache_if_available(target_root=target_root)
     payload = planning_reconcile(
         target=target_root, apply_safe_prune=bool(getattr(args, "apply_safe_prune", False)), dry_run=bool(getattr(args, "dry_run", False))
@@ -17200,7 +17208,7 @@ def _run_lifecycle_report_adapter(args: argparse.Namespace) -> int:
 def _load_lifecycle_mutation_context(
     args: argparse.Namespace, *, command_name: str
 ) -> tuple[Path, Path | None, list[str], str | None, dict[str, ModuleDescriptor], WorkspaceConfig]:
-    parser = build_generated_cli_package_parser()
+    parser = build_generated_parser()
     local_only_repo_root: Path | None = None
     try:
         descriptors = _module_operations()

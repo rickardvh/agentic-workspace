@@ -12,7 +12,7 @@ import pytest
 from jsonschema import Draft202012Validator
 
 from agentic_workspace import contract_tooling
-from command_generation.generated_package_loader import load_generated_cli_package_for_entrypoint
+from command_generation.generated_package_loader import load_generated_command_package_for_entrypoint
 
 
 def _command_operation_ids(command: dict[str, object]) -> set[str]:
@@ -1000,7 +1000,7 @@ def test_command_generation_readme_defines_lift_out_criteria() -> None:
 
 
 def test_generated_python_command_package_metadata_is_current() -> None:
-    generated = load_generated_cli_package_for_entrypoint("agentic-workspace")
+    generated = load_generated_command_package_for_entrypoint("agentic-workspace")
     GENERATED_COMMAND_PACKAGE = generated.GENERATED_COMMAND_PACKAGE
     generated_command_names = generated.generated_command_names
     generated_maturity = generated.generated_maturity
@@ -1132,7 +1132,7 @@ def test_generated_python_command_package_metadata_is_current() -> None:
 
 
 def test_generated_python_command_package_parses_and_dispatches_runtime_operations() -> None:
-    generated = load_generated_cli_package_for_entrypoint("agentic-workspace")
+    generated = load_generated_command_package_for_entrypoint("agentic-workspace")
     build_generated_parser = generated.build_generated_parser
     run_generated_command = generated.run_generated_command
 
@@ -1209,7 +1209,7 @@ def test_generated_python_command_package_parses_and_dispatches_runtime_operatio
 
 
 def test_generated_python_command_package_parses_doctor_select() -> None:
-    run_generated_command = load_generated_cli_package_for_entrypoint("agentic-workspace").run_generated_command
+    run_generated_command = load_generated_command_package_for_entrypoint("agentic-workspace").run_generated_command
 
     calls: list[tuple[str, str | None]] = []
 
@@ -1222,8 +1222,8 @@ def test_generated_python_command_package_parses_doctor_select() -> None:
 
 
 def test_package_generated_python_command_packages_parse_status_runtime_operations() -> None:
-    memory_generated = load_generated_cli_package_for_entrypoint("agentic-memory")
-    planning_generated = load_generated_cli_package_for_entrypoint("agentic-planning")
+    memory_generated = load_generated_command_package_for_entrypoint("agentic-memory")
+    planning_generated = load_generated_command_package_for_entrypoint("agentic-planning")
     memory_generated_maturity = memory_generated.generated_maturity
     run_memory_generated_command = memory_generated.run_generated_command
     planning_generated_maturity = planning_generated.generated_maturity

@@ -2,22 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/execplans/python-full-generated-cli-completion.plan.json",
-      "sha256": "6b60b1516c0a8ea3b11e6230b4c2d457db974bf27a2db8ec46ec6045dbb1c910",
-      "command": "agentic-planning record-recovery",
-      "reason": "Tightened active execplan after user corrected #954 scope: lane must truly reach full-generated-cli-complete by implementing generated-main parser and dispatch ownership instead of demoting the completion claim.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T10:23:40+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-full-generated-cli-completion.plan.json",
-      "sha256": "84757657af859e9e32bf01423df619a26cb4f790dae69f66691bf4107dd55ddc",
-      "command": "agentic-planning record-recovery",
-      "reason": "Recorded completed execution, proof, intent satisfaction, and closeout fields for the true Python full-generated-cli-complete lane before archiving.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T10:27:12+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/state.toml",
       "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
       "command": "agentic-planning archive-plan",
@@ -1600,6 +1584,22 @@
       "reason": "Final intentional execplan scope update for #996 docs and validation evidence after proof selection was corrected.",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-15T19:46:04+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "1b5195af24194027f661704c065d273688c1a460fb07f96742b59c7dcbc5fdcc",
+      "command": "agentic-planning record-recovery",
+      "reason": "Intentional #997 cleanup of stale generated_cli_package layout vocabulary in the active Python generated CLI decomposition.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-15T19:52:50+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "1b5195af24194027f661704c065d273688c1a460fb07f96742b59c7dcbc5fdcc",
+      "command": "agentic-planning record-recovery",
+      "reason": "Final #997 decomposition wording cleanup after static compatibility-vocabulary proof and maintainer-surface rendering.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-15T19:58:13+00:00"
     }
   ]
 }
