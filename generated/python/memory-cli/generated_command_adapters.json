@@ -355,6 +355,38 @@
         "output": []
       },
       "status": "generated"
+    },
+    "verify-payload": {
+      "command": {
+        "command_manifest": "package:memory:cli",
+        "name": "verify-payload",
+        "option_group_manifest": "package:memory:cli",
+        "program": "agentic-memory"
+      },
+      "conformance_refs": [
+        "memory.verify-payload.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "id": "memory.verify-payload.cli",
+      "operation_id": "memory.verify-payload.report",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.verify-payload.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
     }
   },
   "program": "agentic-memory",

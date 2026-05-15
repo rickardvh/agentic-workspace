@@ -125,6 +125,12 @@
       "migration_status": "runtime-consumed"
     },
     {
+      "id": "memory.verify-payload.report",
+      "path": "operations/memory.verify-payload.report.json",
+      "command": "verify-payload",
+      "migration_status": "runtime-consumed"
+    },
+    {
       "id": "memory.status.report",
       "path": "operations/memory.status.report.json",
       "command": "status",

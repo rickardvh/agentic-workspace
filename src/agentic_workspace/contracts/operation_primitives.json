@@ -276,6 +276,12 @@
       "portability": "domain-runtime"
     },
     {
+      "id": "memory.verify-payload.load",
+      "summary": "Load package-local Memory payload verification results.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime"
+    },
+    {
       "id": "memory.sync_memory.load",
       "summary": "Load package-local Memory synchronization suggestions.",
       "kind": "memory-runtime",

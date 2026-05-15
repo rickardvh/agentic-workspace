@@ -1,0 +1,92 @@
+{
+  "classification": "read-only-report",
+  "command_surface": {
+    "command": "verify-payload",
+    "format_option": "format",
+    "program": "agentic-memory"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": true,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
+  },
+  "guards": [
+    "Verification must remain read-only.",
+    "Generated code owns parser/help/dispatch shape; memory-owned payload verification remains behind the declared primitive."
+  ],
+  "id": "memory.verify-payload.report",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "arguments": {},
+        "description": "Verify bundled memory payload files and generated operation resources.",
+        "id": "load_verification",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "memory.verify-payload.load"
+      },
+      {
+        "arguments": {},
+        "description": "Emit memory payload verification result in the requested format.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Memory verify-payload executes generated operation IR through codegen-owned primitive dataflow while the memory module supplies package payload verification."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "module-result"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated memory verify-payload process conformance passes"
+  ],
+  "reads": [
+    {
+      "required": true,
+      "surface": "memory package payload files"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Verify bundled memory payload files and generated operation resources.",
+      "id": "load_verification",
+      "uses": "memory.verify-payload.load"
+    },
+    {
+      "description": "Emit memory payload verification result in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Verify bundled memory payload and generated operation resources.",
+  "writes": []
+}

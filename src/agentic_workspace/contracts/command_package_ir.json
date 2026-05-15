@@ -7209,6 +7209,7 @@
             "memory.route.report",
             "memory.route-report.report",
             "memory.search.report",
+            "memory.verify-payload.report",
             "memory.status.report",
             "memory.sync-memory.report"
           ],
@@ -7414,6 +7415,17 @@
                 },
                 "query": {
                   "value": "query"
+                }
+              }
+            },
+            {
+              "primitive": "memory.verify-payload.load",
+              "handler": "function_call",
+              "import_module": "repo_memory_bootstrap.installer",
+              "function": "verify_payload",
+              "kwargs": {
+                "target": {
+                  "value": "target"
                 }
               }
             },
@@ -8215,6 +8227,84 @@
             ],
             "runtime_owned": [
               "memory search policy",
+              "module result assembly",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "memory.verify-payload.cli",
+          "status": "generated",
+          "command": {
+            "name": "verify-payload",
+            "manifest_ref": "package:memory:cli"
+          },
+          "interface": {
+            "name": "verify-payload",
+            "help": "Verify the packaged bootstrap payload contract.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "memory.verify-payload.report",
+            "path": "operations/memory.verify-payload.report.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "memory.verify-payload.load",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "memory.verify-payload.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "memory payload verification policy",
               "module result assembly",
               "output emission"
             ]

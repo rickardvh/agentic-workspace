@@ -1,0 +1,92 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "memory.verify-payload.report",
+  "command_surface": {
+    "program": "agentic-memory",
+    "command": "verify-payload",
+    "format_option": "format"
+  },
+  "summary": "Verify bundled memory payload and generated operation resources.",
+  "classification": "read-only-report",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "module-result"
+  },
+  "effects": {
+    "read_only": true,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": false,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": "memory package payload files",
+      "required": true
+    }
+  ],
+  "writes": [],
+  "steps": [
+    {
+      "id": "load_verification",
+      "uses": "memory.verify-payload.load",
+      "description": "Verify bundled memory payload files and generated operation resources."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit memory payload verification result in the requested format."
+    }
+  ],
+  "guards": [
+    "Verification must remain read-only.",
+    "Generated code owns parser/help/dispatch shape; memory-owned payload verification remains behind the declared primitive."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated memory verify-payload process conformance passes"
+  ],
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Memory verify-payload executes generated operation IR through codegen-owned primitive dataflow while the memory module supplies package payload verification.",
+    "steps": [
+      {
+        "id": "load_verification",
+        "uses": "memory.verify-payload.load",
+        "description": "Verify bundled memory payload files and generated operation resources.",
+        "arguments": {},
+        "outputs": [
+          "result"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit",
+        "description": "Emit memory payload verification result in the requested format.",
+        "arguments": {},
+        "outputs": [
+          "emitted"
+        ],
+        "on_error": "emit_usage_error"
+      }
+    ]
+  }
+}

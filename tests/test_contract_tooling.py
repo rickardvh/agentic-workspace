@@ -421,6 +421,7 @@ def test_command_package_ir_reuses_generated_adapter_truth() -> None:
         "memory.route.cli",
         "memory.route-report.cli",
         "memory.search.cli",
+        "memory.verify-payload.cli",
         "memory.sync-memory.cli",
         "memory.promotion-report.cli",
         "memory.list-files.cli",
@@ -1491,6 +1492,7 @@ def test_contract_tooling_check_reports_generated_adapter_status() -> None:
         "route-report",
         "route",
         "search",
+        "verify-payload",
         "sync-memory",
         "status",
     ]

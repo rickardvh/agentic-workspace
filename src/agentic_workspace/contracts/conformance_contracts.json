@@ -112,6 +112,12 @@
       "adapter_kind": "process"
     },
     {
+      "id": "memory.verify-payload.process",
+      "operation_id": "memory.verify-payload.report",
+      "path": "conformance/memory.verify-payload.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "memory.status.process",
       "operation_id": "memory.status.report",
       "path": "conformance/memory.status.process.json",

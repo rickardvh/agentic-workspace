@@ -158,9 +158,9 @@
     "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
     "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
     "route chosen": "keep-local",
-    "route skipped reason": "bounded mechanical memory search promotion followed the established route/sync/capture pattern; previous reusable worker was unavailable and local proof covered the changed surface",
+    "route skipped reason": "bounded mechanical memory verify-payload promotion matched the already-proven planning verify-payload and memory search patterns; local implementation was cheaper than spinning up a new worker for one command",
     "decision command": "agentic-planning delegation-decision",
-    "recorded at": "2026-05-15T12:03:55+00:00"
+    "recorded at": "2026-05-15T12:14:12+00:00"
   },
   "system_intent_alignment": {
     "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
@@ -243,12 +243,12 @@
   },
   "delegation_outcome_feedback": {
     "route chosen": "keep-local",
-    "route skipped reason": "bounded mechanical memory search promotion followed the established route/sync/capture pattern; previous reusable worker was unavailable and local proof covered the changed surface",
-    "expected savings": "low after the read-only memory promotion pattern was established",
-    "actual friction": "none beyond transitional memory_runtime_cli.py handler-map patching, which remains explicit generated-output debt",
-    "proof result": "generated package static proof, adapter conformance, Docker proof, Docker conformance, contract tooling, structured inventory, generator freshness, memory tests/lint, workspace tests/lint, and ruff all passed",
-    "quality concern": "memory_runtime_cli.py still contains transitional runtime handler-map glue until the remaining memory commands are promoted and the file is rendered or retired",
-    "decomposition adjustment": "continue memory promotions with verify-payload, route-review, current show/check, then lifecycle/prompt/create-note before rendering memory_runtime_cli.py"
+    "route skipped reason": "bounded mechanical memory verify-payload promotion matched the already-proven planning verify-payload and memory search patterns; local implementation was cheaper than spinning up a new worker for one command",
+    "expected savings": "low for this single-command read-only promotion",
+    "actual friction": "conformance fixture needed explicit --target to avoid ambiguous-root detection; memory parser tests needed to assert generated parser ownership; parallel Docker proof exposed intermittent bytecode/import proof-environment failure tracked on #978",
+    "proof result": "generated package static proof, adapter conformance, Docker proof, serial Docker conformance, contract tooling, structured inventory, generator freshness, memory tests/lint, workspace tests/lint, ruff, and root CLI authority check passed",
+    "quality concern": "memory_runtime_cli.py remains transitional generated-output glue; verify-payload parser/dispatch is generated but handler-map glue remains until memory runtime rendering/retirement",
+    "decomposition adjustment": "continue with route-review and current show/check before lifecycle/prompt/create-note; avoid running Docker static and Docker conformance in parallel until #978 is resolved"
   },
   "proof_report": {
     "validation proof": "uv run python scripts/generate/generate_command_packages.py; uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run python scripts/check/check_generated_command_packages.py --docker --require-docker; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker; uv run pytest tests/test_workspace_cli.py tests/test_contract_tooling.py -q; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q; make test-planning; make lint-planning; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check selected files; make test-workspace; make lint-workspace.",
@@ -358,6 +358,7 @@
     "2026-05-15: Recorded delegation decision route=delegate-validation.",
     "2026-05-15: Recorded delegation decision route=delegate-validation.",
     "2026-05-15: Recorded delegation decision route=delegate-exploration.",
+    "2026-05-15: Recorded delegation decision route=keep-local.",
     "2026-05-15: Recorded delegation decision route=keep-local.",
     "2026-05-15: Recorded delegation decision route=keep-local."
   ]

@@ -327,9 +327,10 @@ def build_parser() -> argparse.ArgumentParser:
         search_parser.add_argument("query", help="Keyword or pattern to search for.")
         _add_format_argument(search_parser)
 
-    verify_parser = subparsers.add_parser("verify-payload", help="Verify the packaged bootstrap payload contract.")
-    _add_target_arguments(verify_parser)
-    _add_format_argument(verify_parser)
+    if "verify-payload" not in generated_commands:
+        verify_parser = subparsers.add_parser("verify-payload", help="Verify the packaged bootstrap payload contract.")
+        _add_target_arguments(verify_parser)
+        _add_format_argument(verify_parser)
 
     cleanup_parser = subparsers.add_parser("bootstrap-cleanup", help="Remove the temporary bootstrap workspace.")
     _add_target_arguments(cleanup_parser)
@@ -981,6 +982,10 @@ def _run_search_report_adapter(args: argparse.Namespace) -> int | None:
     return run_operation_ir(generated_cli_package_operation_contract("memory.search.report"), args)
 
 
+def _run_verify_payload_report_adapter(args: argparse.Namespace) -> int | None:
+    return run_operation_ir(generated_cli_package_operation_contract("memory.verify-payload.report"), args)
+
+
 def _run_status_report_adapter(args: argparse.Namespace) -> int | None:
     return run_operation_ir(generated_cli_package_operation_contract("memory.status.report"), args)
 
@@ -999,6 +1004,7 @@ _GENERATED_RUNTIME_HANDLERS = {
     "memory.route.report": _run_route_adapter,
     "memory.route-report.report": _run_route_report_adapter,
     "memory.search.report": _run_search_report_adapter,
+    "memory.verify-payload.report": _run_verify_payload_report_adapter,
     "memory.status.report": _run_status_report_adapter,
     "memory.sync-memory.report": _run_sync_memory_adapter,
 }

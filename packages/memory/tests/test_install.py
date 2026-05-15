@@ -711,7 +711,7 @@ def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
         ["promotion-report", "--notes", ".agentic-workspace/memory/repo/domains/api.md", "--mode", "remediation"]
     )
     report_args = generated_parser.parse_args(["report", "--target", ".", "--format", "json"])
-    verify_args = parser.parse_args(["verify-payload", "--format", "json"])
+    verify_args = generated_parser.parse_args(["verify-payload", "--format", "json"])
     install_args = parser.parse_args(
         [
             "install",
