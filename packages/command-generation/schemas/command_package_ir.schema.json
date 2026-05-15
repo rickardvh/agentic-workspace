@@ -416,7 +416,7 @@
       "properties": {
         "module_file": {
           "type": "string",
-          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$"
         },
         "supported_operation_ids": {
           "type": "array",

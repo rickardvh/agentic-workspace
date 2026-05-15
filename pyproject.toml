@@ -55,7 +55,7 @@ packages = ["src/agentic_workspace"]
 "generated/workspace/python/operations" = "src/agentic_workspace/_generated_cli_package_impl/operations"
 "generated/workspace/python/commands" = "src/agentic_workspace/_generated_cli_package_impl/commands"
 "generated/workspace/python/primitives" = "src/agentic_workspace/_generated_cli_package_impl/primitives"
-"generated/workspace/python/operation_executor.py" = "src/agentic_workspace/_generated_cli_package_impl/operation_executor.py"
+"generated/workspace/python/primitives/operation_executor.py" = "src/agentic_workspace/_generated_cli_package_impl/primitives/operation_executor.py"
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -70,7 +70,7 @@ include = [
   "/generated/workspace/python/operations",
   "/generated/workspace/python/commands",
   "/generated/workspace/python/primitives",
-  "/generated/workspace/python/operation_executor.py",
+  "/generated/workspace/python/primitives/operation_executor.py",
   "/src/agentic_workspace",
   "/tests",
 ]
@@ -94,3 +94,4 @@ source = ["agentic_workspace"]
 [tool.coverage.report]
 show_missing = true
 skip_covered = true
+

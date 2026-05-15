@@ -4131,7 +4131,7 @@ export const generatedCommandPackage = {
           "name": "task_class"
         }
       ],
-      "module_file": "operation_executor",
+      "module_file": "primitives.operation_executor",
       "supported_operation_ids": [
         "config.report",
         "defaults.report",

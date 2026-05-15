@@ -1400,25 +1400,25 @@ def test_python_runtime_projection_inventory_tracks_generated_output_debt() -> N
 
     assert set(entries) == {
         "generated/workspace/python/cli.py",
-        "generated/workspace/python/operation_executor.py",
+        "generated/workspace/python/primitives/operation_executor.py",
         "generated/planning/python/cli.py",
-        "generated/planning/python/operation_executor.py",
+        "generated/planning/python/primitives/operation_executor.py",
         "generated/memory/python/cli.py",
-        "generated/memory/python/operation_executor.py",
+        "generated/memory/python/primitives/operation_executor.py",
     }
-    assert entries["generated/workspace/python/operation_executor.py"]["provenance_status"] == "rendered-by-command-generation"
-    assert entries["generated/workspace/python/operation_executor.py"]["blocking_full_completion"] is False
-    assert entries["generated/planning/python/operation_executor.py"]["provenance_status"] == "rendered-by-command-generation"
-    assert entries["generated/planning/python/operation_executor.py"]["blocking_full_completion"] is False
-    assert entries["generated/memory/python/operation_executor.py"]["provenance_status"] == "rendered-by-command-generation"
-    assert entries["generated/memory/python/operation_executor.py"]["blocking_full_completion"] is False
+    assert entries["generated/workspace/python/primitives/operation_executor.py"]["provenance_status"] == "rendered-by-command-generation"
+    assert entries["generated/workspace/python/primitives/operation_executor.py"]["blocking_full_completion"] is False
+    assert entries["generated/planning/python/primitives/operation_executor.py"]["provenance_status"] == "rendered-by-command-generation"
+    assert entries["generated/planning/python/primitives/operation_executor.py"]["blocking_full_completion"] is False
+    assert entries["generated/memory/python/primitives/operation_executor.py"]["provenance_status"] == "rendered-by-command-generation"
+    assert entries["generated/memory/python/primitives/operation_executor.py"]["blocking_full_completion"] is False
     rendered_entries = {
         "generated/workspace/python/cli.py",
-        "generated/workspace/python/operation_executor.py",
+        "generated/workspace/python/primitives/operation_executor.py",
         "generated/planning/python/cli.py",
-        "generated/planning/python/operation_executor.py",
+        "generated/planning/python/primitives/operation_executor.py",
         "generated/memory/python/cli.py",
-        "generated/memory/python/operation_executor.py",
+        "generated/memory/python/primitives/operation_executor.py",
     }
     transitional_entries = [entry for entry in entries.values() if entry["path"] not in rendered_entries]
     assert transitional_entries == []

@@ -49,7 +49,7 @@ packages = ["src/repo_memory_bootstrap"]
 "../../generated/memory/python/operations" = "src/repo_memory_bootstrap/_generated_cli_package_impl/operations"
 "../../generated/memory/python/commands" = "src/repo_memory_bootstrap/_generated_cli_package_impl/commands"
 "../../generated/memory/python/primitives" = "src/repo_memory_bootstrap/_generated_cli_package_impl/primitives"
-"../../generated/memory/python/operation_executor.py" = "src/repo_memory_bootstrap/_generated_cli_package_impl/operation_executor.py"
+"../../generated/memory/python/primitives/operation_executor.py" = "src/repo_memory_bootstrap/_generated_cli_package_impl/primitives/operation_executor.py"
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -67,7 +67,7 @@ include = [
 "../../generated/memory/python/operations" = "src/repo_memory_bootstrap/_generated_cli_package_impl/operations"
 "../../generated/memory/python/commands" = "src/repo_memory_bootstrap/_generated_cli_package_impl/commands"
 "../../generated/memory/python/primitives" = "src/repo_memory_bootstrap/_generated_cli_package_impl/primitives"
-"../../generated/memory/python/operation_executor.py" = "src/repo_memory_bootstrap/_generated_cli_package_impl/operation_executor.py"
+"../../generated/memory/python/primitives/operation_executor.py" = "src/repo_memory_bootstrap/_generated_cli_package_impl/primitives/operation_executor.py"
 
 [tool.pytest.ini_options]
 addopts = [
@@ -92,3 +92,4 @@ source = ["repo_memory_bootstrap"]
 [tool.coverage.report]
 show_missing = true
 skip_covered = true
+

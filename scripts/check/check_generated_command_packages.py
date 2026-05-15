@@ -160,7 +160,7 @@ PYTHON_REQUIRED_RUNTIME_PROJECTION_OUTPUTS = {
         "agentic-workspace",
         "cli-entrypoint",
     ),
-    "generated/workspace/python/operation_executor.py": (
+    "generated/workspace/python/primitives/operation_executor.py": (
         "root-workspace",
         "agentic-workspace",
         "operation-ir-executor",
@@ -170,7 +170,7 @@ PYTHON_REQUIRED_RUNTIME_PROJECTION_OUTPUTS = {
         "agentic-planning",
         "cli-entrypoint",
     ),
-    "generated/planning/python/operation_executor.py": (
+    "generated/planning/python/primitives/operation_executor.py": (
         "planning-bootstrap",
         "agentic-planning",
         "operation-ir-executor",
@@ -180,7 +180,7 @@ PYTHON_REQUIRED_RUNTIME_PROJECTION_OUTPUTS = {
         "agentic-memory",
         "cli-entrypoint",
     ),
-    "generated/memory/python/operation_executor.py": (
+    "generated/memory/python/primitives/operation_executor.py": (
         "memory-bootstrap",
         "agentic-memory",
         "operation-ir-executor",
@@ -1201,7 +1201,9 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         except (ImportError, KeyError, FileNotFoundError, json.JSONDecodeError) as exc:
             errors.append(f"generated operation contract could not be loaded for {operation_id}: {exc}")
 
-    memory_operation_executor_text = (REPO_ROOT / "generated" / "memory" / "python" / "operation_executor.py").read_text(
+    memory_operation_executor_text = (
+        REPO_ROOT / "generated" / "memory" / "python" / "primitives" / "operation_executor.py"
+    ).read_text(
         encoding="utf-8"
     )
     if "from command_generation.primitive_executor import" not in memory_operation_executor_text:
@@ -1223,7 +1225,9 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         if "run_operation_ir(" not in command_text:
             errors.append(f"generated/memory/python/commands/{module_name}.py must execute operation IR through run_operation_ir")
 
-    planning_operation_executor_text = (REPO_ROOT / "generated" / "planning" / "python" / "operation_executor.py").read_text(
+    planning_operation_executor_text = (
+        REPO_ROOT / "generated" / "planning" / "python" / "primitives" / "operation_executor.py"
+    ).read_text(
         encoding="utf-8"
     )
     if "from command_generation.primitive_executor import" not in planning_operation_executor_text:
@@ -1237,7 +1241,9 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         if "run_operation_ir(" not in command_text:
             errors.append(f"generated/planning/python/commands/{module_name}.py must execute operation IR through run_operation_ir")
 
-    workspace_operation_executor_text = (REPO_ROOT / "generated" / "workspace" / "python" / "operation_executor.py").read_text(
+    workspace_operation_executor_text = (
+        REPO_ROOT / "generated" / "workspace" / "python" / "primitives" / "operation_executor.py"
+    ).read_text(
         encoding="utf-8"
     )
     if "from command_generation.primitive_executor import" not in workspace_operation_executor_text:
@@ -1733,8 +1739,8 @@ def _validate_static_surfaces() -> list[str]:
             for directory_name in ("commands", "operations", "primitives"):
                 if not (REPO_ROOT / generated_root / directory_name).is_dir():
                     errors.append(f"{generated_root}/{directory_name} is missing")
-            if not (REPO_ROOT / generated_root / "operation_executor.py").is_file():
-                errors.append(f"{generated_root}/operation_executor.py is missing")
+            if not (REPO_ROOT / generated_root / "primitives" / "operation_executor.py").is_file():
+                errors.append(f"{generated_root}/primitives/operation_executor.py is missing")
         generated_entrypoints = {
             "generated/workspace/python/cli.py": "from .commands import GENERATED_COMMAND_HANDLERS",
             "generated/planning/python/cli.py": "from .commands import GENERATED_COMMAND_HANDLERS",
@@ -2000,4 +2006,5 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
 

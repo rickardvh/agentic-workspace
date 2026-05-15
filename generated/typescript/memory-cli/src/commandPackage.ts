@@ -2816,7 +2816,7 @@ export const generatedCommandPackage = {
           "name": "prompt_command"
         }
       ],
-      "module_file": "operation_executor",
+      "module_file": "primitives.operation_executor",
       "supported_operation_ids": [
         "memory.doctor.report",
         "memory.install.lifecycle",

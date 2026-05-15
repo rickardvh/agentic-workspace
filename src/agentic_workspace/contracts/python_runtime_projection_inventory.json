@@ -21,7 +21,7 @@
       "required_resolution": "Keep generated freshness proof covering this file and continue migrating generic deterministic behavior from workspace runtime primitives into codegen-owned primitives."
     },
     {
-      "path": "generated/workspace/python/operation_executor.py",
+      "path": "generated/workspace/python/primitives/operation_executor.py",
       "package_id": "root-workspace",
       "program": "agentic-workspace",
       "artifact_kind": "operation-ir-executor",
@@ -45,7 +45,7 @@
       "required_resolution": "Keep generated freshness proof covering this file."
     },
     {
-      "path": "generated/planning/python/operation_executor.py",
+      "path": "generated/planning/python/primitives/operation_executor.py",
       "package_id": "planning-bootstrap",
       "program": "agentic-planning",
       "artifact_kind": "operation-ir-executor",
@@ -69,7 +69,7 @@
       "required_resolution": "Keep generated freshness proof covering this file."
     },
     {
-      "path": "generated/memory/python/operation_executor.py",
+      "path": "generated/memory/python/primitives/operation_executor.py",
       "package_id": "memory-bootstrap",
       "program": "agentic-memory",
       "artifact_kind": "operation-ir-executor",
@@ -82,3 +82,4 @@
     }
   ]
 }
+

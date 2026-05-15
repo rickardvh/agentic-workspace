@@ -2530,7 +2530,7 @@ export const generatedCommandPackage = {
           "name": "paths"
         }
       ],
-      "module_file": "operation_executor",
+      "module_file": "primitives.operation_executor",
       "supported_operation_ids": [
         "planning.adopt.lifecycle",
         "planning.archive-plan.lifecycle",

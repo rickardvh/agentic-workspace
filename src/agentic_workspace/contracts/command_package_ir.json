@@ -558,7 +558,7 @@
           }
         ],
         "operation_executor": {
-          "module_file": "operation_executor",
+          "module_file": "primitives.operation_executor",
           "supported_operation_ids": [
             "config.report",
             "defaults.report",
@@ -4870,7 +4870,7 @@
           }
         ],
         "operation_executor": {
-          "module_file": "operation_executor",
+          "module_file": "primitives.operation_executor",
           "supported_operation_ids": [
             "planning.adopt.lifecycle",
             "planning.archive-plan.lifecycle",
@@ -7448,7 +7448,7 @@
         "entrypoint": "agentic-memory",
         "runtime_module_file": "cli",
         "operation_executor": {
-          "module_file": "operation_executor",
+          "module_file": "primitives.operation_executor",
           "supported_operation_ids": [
             "memory.doctor.report",
             "memory.install.lifecycle",

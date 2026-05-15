@@ -15,7 +15,7 @@ import argparse
 # Regenerate with: uv run python scripts/generate/generate_command_packages.py
 
 from ..cli import generated_operation_contract
-from ..operation_executor import run_operation_ir
+from ..primitives.operation_executor import run_operation_ir
 
 
 def run(args: argparse.Namespace) -> int:

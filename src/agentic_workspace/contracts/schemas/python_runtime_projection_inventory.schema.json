@@ -73,7 +73,7 @@
       "properties": {
         "path": {
           "type": "string",
-          "pattern": "^generated/(workspace|planning|memory)/python/(cli|operation_executor)\\.py$",
+          "pattern": "^generated/(workspace|planning|memory)/python/(cli|primitives/operation_executor)\\.py$",
           "description": "Repo-relative generated Python runtime projection path."
         },
         "package_id": {
@@ -136,3 +136,4 @@
   },
   "x-agentic-workspace-doc-role": "contract-reference"
 }
+

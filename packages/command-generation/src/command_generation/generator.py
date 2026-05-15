@@ -195,6 +195,7 @@ def _python_command_module(
     source_path: str,
     regenerate_command: str,
 ) -> str:
+    operation_executor = _operation_executor_binding(package)
     direct_handlers = {
         str(handler["operation_id"]): handler for handler in binding.get("runtime_module_handlers", []) if isinstance(handler, dict)
     }
@@ -205,6 +206,7 @@ def _python_command_module(
         run_body = f"    from {import_module} import {imported_function}\n\n    return {imported_function}(args)\n"
     else:
         run_body = f"    return run_operation_ir(generated_operation_contract({operation_id!r}), args)\n"
+    executor_module = str(operation_executor.get("module_file", "operation_executor"))
     return (
         '"""Generated executable command projection.\n\n'
         f"Source: {source_path}\n"
@@ -218,7 +220,7 @@ def _python_command_module(
         f"# Command behavior changes belong in {source_path} and the referenced operation contract.\n"
         f"# Regenerate with: {regenerate_command}\n\n"
         "from ..cli import generated_operation_contract\n"
-        "from ..operation_executor import run_operation_ir\n\n\n"
+        f"from ..{executor_module} import run_operation_ir\n\n\n"
         "def run(args: argparse.Namespace) -> int:\n" + run_body
     )
 
@@ -1119,9 +1121,10 @@ def render_outputs(
                     outputs.extend(_runtime_consumed_operation_outputs(package, repo_root=repo_root, root=root))
                     operation_executor = _operation_executor_binding(package)
                     if operation_executor:
+                        executor_module_path = Path(str(operation_executor.get("module_file", "operation_executor")).replace(".", "/"))
                         outputs.append(
                             GeneratedOutput(
-                                root / "operation_executor.py",
+                                root / executor_module_path.with_suffix(".py"),
                                 _python_operation_executor_module(
                                     package,
                                     operation_executor,

@@ -57,7 +57,7 @@ packages = ["src/repo_planning_bootstrap"]
 "../../generated/planning/python/operations" = "src/repo_planning_bootstrap/_generated_cli_package_impl/operations"
 "../../generated/planning/python/commands" = "src/repo_planning_bootstrap/_generated_cli_package_impl/commands"
 "../../generated/planning/python/primitives" = "src/repo_planning_bootstrap/_generated_cli_package_impl/primitives"
-"../../generated/planning/python/operation_executor.py" = "src/repo_planning_bootstrap/_generated_cli_package_impl/operation_executor.py"
+"../../generated/planning/python/primitives/operation_executor.py" = "src/repo_planning_bootstrap/_generated_cli_package_impl/primitives/operation_executor.py"
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -76,7 +76,7 @@ include = [
 "../../generated/planning/python/operations" = "src/repo_planning_bootstrap/_generated_cli_package_impl/operations"
 "../../generated/planning/python/commands" = "src/repo_planning_bootstrap/_generated_cli_package_impl/commands"
 "../../generated/planning/python/primitives" = "src/repo_planning_bootstrap/_generated_cli_package_impl/primitives"
-"../../generated/planning/python/operation_executor.py" = "src/repo_planning_bootstrap/_generated_cli_package_impl/operation_executor.py"
+"../../generated/planning/python/primitives/operation_executor.py" = "src/repo_planning_bootstrap/_generated_cli_package_impl/primitives/operation_executor.py"
 
 [tool.pytest.ini_options]
 addopts = [
@@ -97,3 +97,4 @@ select = ["E", "F", "I"]
 
 [tool.coverage.run]
 source = ["repo_planning_bootstrap"]
+
