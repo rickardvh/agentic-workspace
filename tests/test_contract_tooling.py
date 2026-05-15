@@ -635,7 +635,11 @@ def test_generated_command_package_docker_skip_message_uses_proof_label(monkeypa
     )
 
     assert status == 0
-    assert "cannot run generated Python package Docker conformance proof" in capsys.readouterr().out
+    output = capsys.readouterr().out
+    assert "classification=proof-environment/setup-failure" in output
+    assert "proof_surface=generated Python package Docker conformance proof" in output
+    assert "phase=docker-cli" in output
+    assert "stderr_tail='docker is not available'" in output
 
 
 def test_generated_command_package_docker_conformance_surface_exists() -> None:

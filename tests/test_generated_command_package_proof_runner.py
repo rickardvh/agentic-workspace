@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import subprocess
 import sys
 from pathlib import Path
 
@@ -182,6 +183,93 @@ def test_generated_python_conformance_reports_crash_retry_recovery(monkeypatch) 
     assert "proof_surface=generated-python-docker-conformance" in message
     assert "conformance_ref=doctor.report.process" in message
     assert "first_exit=-11" in message
+
+
+def test_docker_proof_environment_failure_preserves_context() -> None:
+    checker = _load_checker()
+
+    message = checker._format_docker_proof_environment_failure(
+        proof_label="generated Python package Docker conformance proof",
+        phase="docker-run",
+        tag="generated-python-test",
+        dockerfile="generated/python/Dockerfile.conformance",
+        command=["docker", "run", "--rm", "generated-python-test"],
+        returncode=1,
+        stdout="loading jsonschema\nSystemError: attempting to create PyCFunction with class but no METH_METHOD flag\n",
+        stderr="",
+    )
+
+    assert "classification=proof-environment/setup-failure" in message
+    assert "proof_surface=generated Python package Docker conformance proof" in message
+    assert "phase=docker-run" in message
+    assert "image=generated-python-test" in message
+    assert "dockerfile=generated/python/Dockerfile.conformance" in message
+    assert "command=['docker', 'run', '--rm', 'generated-python-test']" in message
+    assert "attempting to create PyCFunction" in message
+    assert "retry the Docker proof" in message
+
+
+def test_run_docker_classifies_build_failures_before_adapter_execution(monkeypatch, capsys) -> None:
+    checker = _load_checker()
+    calls: list[list[str]] = []
+
+    def fake_run(command, **kwargs):
+        calls.append(command)
+        if command == ["docker", "info"]:
+            return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+        if command[:2] == ["docker", "build"]:
+            return subprocess.CompletedProcess(command, 1, stdout="", stderr="jsonschema setup failed")
+        raise AssertionError(f"unexpected command: {command!r}")
+
+    monkeypatch.setattr(checker.shutil, "which", lambda name: "docker" if name == "docker" else None)
+    monkeypatch.setattr(checker.subprocess, "run", fake_run)
+
+    status = checker._run_docker(
+        "generated-python-test",
+        dockerfile="generated/python/Dockerfile.conformance",
+        proof_label="generated Python package Docker conformance proof",
+        require_docker=True,
+    )
+
+    captured = capsys.readouterr()
+    assert status == 1
+    assert ["docker", "run", "--rm", "generated-python-test"] not in calls
+    assert "classification=proof-environment/setup-failure" in captured.out
+    assert "phase=docker-build" in captured.out
+    assert "jsonschema setup failed" in captured.err
+
+
+def test_run_docker_does_not_reclassify_explicit_adapter_failures(monkeypatch, capsys) -> None:
+    checker = _load_checker()
+
+    def fake_run(command, **kwargs):
+        if command == ["docker", "info"]:
+            return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+        if command[:2] == ["docker", "build"]:
+            return subprocess.CompletedProcess(command, 0, stdout="build ok\n", stderr="")
+        if command[:2] == ["docker", "run"]:
+            return subprocess.CompletedProcess(
+                command,
+                1,
+                stdout="generated python adapter failure: classification=adapter-contract-failure; package=root-workspace\n",
+                stderr="",
+            )
+        raise AssertionError(f"unexpected command: {command!r}")
+
+    monkeypatch.setattr(checker.shutil, "which", lambda name: "docker" if name == "docker" else None)
+    monkeypatch.setattr(checker.subprocess, "run", fake_run)
+
+    status = checker._run_docker(
+        "generated-python-test",
+        dockerfile="generated/python/Dockerfile.conformance",
+        proof_label="generated Python package Docker conformance proof",
+        require_docker=True,
+    )
+
+    captured = capsys.readouterr()
+    assert status == 1
+    assert "classification=adapter-contract-failure" in captured.out
+    assert "classification=proof-environment/setup-failure" not in captured.out
 
 
 def test_static_generated_package_proof_fails_when_conformance_coverage_drifts(monkeypatch) -> None:

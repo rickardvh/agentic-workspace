@@ -218,6 +218,90 @@ def _run(command: list[str]) -> int:
     return int(completed.returncode)
 
 
+def _tail_text(text: str | None, *, max_lines: int = 20) -> str:
+    if not text:
+        return "<empty>"
+    lines = text.splitlines()
+    tail = lines[-max_lines:]
+    return "\\n".join(tail) if tail else "<empty>"
+
+
+def _docker_output_contains_adapter_failure(output: str) -> bool:
+    adapter_markers = (
+        "classification=adapter-contract-failure",
+        "generated python adapter failure:",
+        "generated typescript adapter failure:",
+        "adapter failure:",
+        "selected fields drifted",
+        "exit code drifted",
+        "unexpected stderr",
+    )
+    return any(marker in output for marker in adapter_markers)
+
+
+def _docker_failure_guidance(output: str) -> str:
+    lowered = output.lower()
+    transient_markers = (
+        "file has already been closed",
+        "dockerdesktoplinuxengine",
+        "attempting to create pycfunction",
+        "systemerror",
+        "segmentation fault",
+        "signal 11",
+        "exit code 139",
+        "connection reset by peer",
+    )
+    if any(marker in lowered for marker in transient_markers):
+        return "retry the Docker proof and inspect host/container runtime health before treating this as deterministic generated-code drift"
+    return "inspect Docker setup/build/runtime output before treating this as adapter contract drift"
+
+
+def _format_docker_proof_environment_failure(
+    *,
+    proof_label: str,
+    phase: str,
+    tag: str,
+    dockerfile: str,
+    command: list[str],
+    returncode: int,
+    stdout: str | None,
+    stderr: str | None,
+) -> str:
+    output = "\n".join(part for part in (stdout or "", stderr or "") if part)
+    return (
+        "generated Docker conformance failure: "
+        "classification=proof-environment/setup-failure; "
+        f"proof_surface={proof_label}; phase={phase}; image={tag}; dockerfile={dockerfile}; "
+        f"command={command!r}; exit={returncode}; guidance={_docker_failure_guidance(output)}; "
+        f"stdout_tail={_tail_text(stdout)!r}; stderr_tail={_tail_text(stderr)!r}"
+    )
+
+
+def _run_docker_step(command: list[str], *, proof_label: str, phase: str, tag: str, dockerfile: str) -> int:
+    completed = subprocess.run(command, cwd=REPO_ROOT, check=False, text=True, capture_output=True)
+    if completed.stdout:
+        print(completed.stdout, end="")
+    if completed.stderr:
+        print(completed.stderr, end="", file=sys.stderr)
+    returncode = int(completed.returncode)
+    if returncode:
+        combined_output = "\n".join(part for part in (completed.stdout or "", completed.stderr or "") if part)
+        if phase != "docker-run" or not _docker_output_contains_adapter_failure(combined_output):
+            print(
+                _format_docker_proof_environment_failure(
+                    proof_label=proof_label,
+                    phase=phase,
+                    tag=tag,
+                    dockerfile=dockerfile,
+                    command=command,
+                    returncode=returncode,
+                    stdout=completed.stdout,
+                    stderr=completed.stderr,
+                )
+            )
+    return returncode
+
+
 def _python_executable() -> str:
     return sys.executable or "python"
 
@@ -1931,18 +2015,53 @@ def _validate_static_surfaces() -> list[str]:
 
 def _run_docker(tag: str, *, dockerfile: str, proof_label: str, require_docker: bool) -> int:
     if shutil.which("docker") is None:
-        print(f"docker is not available; cannot run {proof_label}")
+        print(
+            _format_docker_proof_environment_failure(
+                proof_label=proof_label,
+                phase="docker-cli",
+                tag=tag,
+                dockerfile=dockerfile,
+                command=["docker"],
+                returncode=127,
+                stdout="",
+                stderr="docker is not available",
+            )
+        )
         return 1 if require_docker else 0
     info = subprocess.run(["docker", "info"], cwd=REPO_ROOT, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
     if info.returncode:
         detail = info.stderr.strip().splitlines()
         suffix = f": {detail[0]}" if detail else ""
         print(f"docker daemon is not available; skipped {proof_label}{suffix}")
+        print(
+            _format_docker_proof_environment_failure(
+                proof_label=proof_label,
+                phase="docker-daemon",
+                tag=tag,
+                dockerfile=dockerfile,
+                command=["docker", "info"],
+                returncode=int(info.returncode),
+                stdout="",
+                stderr=info.stderr,
+            )
+        )
         return 1 if require_docker else 0
-    build = _run(["docker", "build", "-f", dockerfile, "-t", tag, "."])
+    build = _run_docker_step(
+        ["docker", "build", "-f", dockerfile, "-t", tag, "."],
+        proof_label=proof_label,
+        phase="docker-build",
+        tag=tag,
+        dockerfile=dockerfile,
+    )
     if build:
         return build
-    return _run(["docker", "run", "--rm", tag])
+    return _run_docker_step(
+        ["docker", "run", "--rm", tag],
+        proof_label=proof_label,
+        phase="docker-run",
+        tag=tag,
+        dockerfile=dockerfile,
+    )
 
 
 def _run_primitive_conformance() -> int:
