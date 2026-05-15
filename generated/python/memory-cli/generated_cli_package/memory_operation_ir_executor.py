@@ -115,7 +115,6 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'memory.migrate_layout.apply': _handle_memory_migrate_layout_apply,
                 'memory.uninstall.apply': _handle_memory_uninstall_apply,
                 'memory.bootstrap.cleanup': _handle_memory_bootstrap_cleanup,
-                'memory.note.create': _handle_memory_note_create,
                 'memory.current.load': _handle_memory_current_load,
                 'memory.promotion_report.load': _handle_memory_promotion_report_load,
                 'memory.prompt.render': _handle_memory_prompt_render,
@@ -200,12 +199,6 @@ def _handle_memory_bootstrap_cleanup(values: dict[str, Any], _arguments: dict[st
     from repo_memory_bootstrap.installer import cleanup_bootstrap_workspace
 
     return cleanup_bootstrap_workspace(target=values.get('target'))
-
-
-def _handle_memory_note_create(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
-    from repo_memory_bootstrap.installer import create_memory_note
-
-    return create_memory_note(applies_to=values.get('applies_to'), dry_run=values.get('dry_run'), evidence=values.get('evidence'), folder=values.get('folder'), memory_role=values.get('memory_role'), note_type=values.get('note_type'), promotion_target=values.get('promotion_target'), promotion_trigger=values.get('promotion_trigger'), retention_after_promotion=values.get('retention_after_promotion'), routes_from=values.get('routes_from'), slug=values.get('slug'), stale_when=values.get('stale_when'), summary=values.get('summary'), target=values.get('target'), title=values.get('title'), use_when=values.get('use_when'))
 
 
 def _handle_memory_current_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:

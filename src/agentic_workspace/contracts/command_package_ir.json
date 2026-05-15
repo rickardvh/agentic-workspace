@@ -7920,62 +7920,6 @@
               }
             },
             {
-              "primitive": "memory.note.create",
-              "handler": "function_call",
-              "import_module": "repo_memory_bootstrap.installer",
-              "function": "create_memory_note",
-              "kwargs": {
-                "slug": {
-                  "value": "slug"
-                },
-                "title": {
-                  "value": "title"
-                },
-                "target": {
-                  "value": "target"
-                },
-                "folder": {
-                  "value": "folder"
-                },
-                "note_type": {
-                  "value": "note_type"
-                },
-                "summary": {
-                  "value": "summary"
-                },
-                "applies_to": {
-                  "value": "applies_to"
-                },
-                "use_when": {
-                  "value": "use_when"
-                },
-                "routes_from": {
-                  "value": "routes_from"
-                },
-                "stale_when": {
-                  "value": "stale_when"
-                },
-                "evidence": {
-                  "value": "evidence"
-                },
-                "memory_role": {
-                  "value": "memory_role"
-                },
-                "promotion_target": {
-                  "value": "promotion_target"
-                },
-                "promotion_trigger": {
-                  "value": "promotion_trigger"
-                },
-                "retention_after_promotion": {
-                  "value": "retention_after_promotion"
-                },
-                "dry_run": {
-                  "value": "dry_run"
-                }
-              }
-            },
-            {
               "primitive": "memory.current.load",
               "handler": "runtime_handler",
               "function": "_load_memory_current",
@@ -9468,7 +9412,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "memory.note.create",
+              "python.function.call",
               "output.emit"
             ]
           },

@@ -1476,7 +1476,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "memory.note.create",
+          "python.function.call",
           "output.emit"
         ]
       },

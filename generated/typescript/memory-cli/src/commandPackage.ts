@@ -1443,7 +1443,7 @@ export const generatedCommandPackage = {
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "memory.note.create",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -2807,62 +2807,6 @@ export const generatedCommandPackage = {
             }
           },
           "primitive": "memory.bootstrap.cleanup"
-        },
-        {
-          "function": "create_memory_note",
-          "handler": "function_call",
-          "import_module": "repo_memory_bootstrap.installer",
-          "kwargs": {
-            "applies_to": {
-              "value": "applies_to"
-            },
-            "dry_run": {
-              "value": "dry_run"
-            },
-            "evidence": {
-              "value": "evidence"
-            },
-            "folder": {
-              "value": "folder"
-            },
-            "memory_role": {
-              "value": "memory_role"
-            },
-            "note_type": {
-              "value": "note_type"
-            },
-            "promotion_target": {
-              "value": "promotion_target"
-            },
-            "promotion_trigger": {
-              "value": "promotion_trigger"
-            },
-            "retention_after_promotion": {
-              "value": "retention_after_promotion"
-            },
-            "routes_from": {
-              "value": "routes_from"
-            },
-            "slug": {
-              "value": "slug"
-            },
-            "stale_when": {
-              "value": "stale_when"
-            },
-            "summary": {
-              "value": "summary"
-            },
-            "target": {
-              "value": "target"
-            },
-            "title": {
-              "value": "title"
-            },
-            "use_when": {
-              "value": "use_when"
-            }
-          },
-          "primitive": "memory.note.create"
         },
         {
           "function": "_load_memory_current",
