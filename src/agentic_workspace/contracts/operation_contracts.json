@@ -151,8 +151,8 @@
     {
       "id": "planning.archive-plan.lifecycle",
       "path": "operations/planning.archive-plan.lifecycle.json",
-      "command": "planning",
-      "migration_status": "draft-contract-only"
+      "command": "archive-plan",
+      "migration_status": "runtime-consumed"
     },
     {
       "id": "planning.close-item.lifecycle",
@@ -169,8 +169,8 @@
     {
       "id": "planning.delegation-decision.lifecycle",
       "path": "operations/planning.delegation-decision.lifecycle.json",
-      "command": "planning",
-      "migration_status": "draft-contract-only"
+      "command": "delegation-decision",
+      "migration_status": "runtime-consumed"
     },
     {
       "id": "planning.doctor.report",
@@ -217,14 +217,14 @@
     {
       "id": "planning.new-plan.lifecycle",
       "path": "operations/planning.new-plan.lifecycle.json",
-      "command": "planning",
-      "migration_status": "draft-contract-only"
+      "command": "new-plan",
+      "migration_status": "runtime-consumed"
     },
     {
       "id": "planning.promote-to-plan.lifecycle",
       "path": "operations/planning.promote-to-plan.lifecycle.json",
-      "command": "planning",
-      "migration_status": "draft-contract-only"
+      "command": "promote-to-plan",
+      "migration_status": "runtime-consumed"
     },
     {
       "id": "planning.prompt.render",
@@ -241,8 +241,8 @@
     {
       "id": "planning.record-recovery.lifecycle",
       "path": "operations/planning.record-recovery.lifecycle.json",
-      "command": "planning",
-      "migration_status": "draft-contract-only"
+      "command": "record-recovery",
+      "migration_status": "runtime-consumed"
     },
     {
       "id": "planning.report.report",

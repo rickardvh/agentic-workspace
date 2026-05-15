@@ -119,6 +119,13 @@
       "rationale": "The planning wheel force-includes generated operation resource data as private runtime import data; the canonical source remains the operation contract and generator."
     },
     {
+      "source_path": "generated/python/planning-cli/generated_cli_package/operations/planning.archive-plan.lifecycle.json",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/operations/planning.archive-plan.lifecycle.json",
+      "classification": "maintainer/development only",
+      "owner": "generated operation projection",
+      "rationale": "The planning wheel force-includes generated operation resource data as private runtime import data; the canonical source remains the operation contract and generator."
+    },
+    {
       "source_path": "generated/python/planning-cli/generated_cli_package/operations/planning.close-item.lifecycle.json",
       "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/operations/planning.close-item.lifecycle.json",
       "classification": "maintainer/development only",
@@ -128,6 +135,13 @@
     {
       "source_path": "generated/python/planning-cli/generated_cli_package/operations/planning.create-review.lifecycle.json",
       "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/operations/planning.create-review.lifecycle.json",
+      "classification": "maintainer/development only",
+      "owner": "generated operation projection",
+      "rationale": "The planning wheel force-includes generated operation resource data as private runtime import data; the canonical source remains the operation contract and generator."
+    },
+    {
+      "source_path": "generated/python/planning-cli/generated_cli_package/operations/planning.delegation-decision.lifecycle.json",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/operations/planning.delegation-decision.lifecycle.json",
       "classification": "maintainer/development only",
       "owner": "generated operation projection",
       "rationale": "The planning wheel force-includes generated operation resource data as private runtime import data; the canonical source remains the operation contract and generator."
@@ -168,6 +182,20 @@
       "rationale": "The planning wheel force-includes generated operation resource data as private runtime import data; the canonical source remains the operation contract and generator."
     },
     {
+      "source_path": "generated/python/planning-cli/generated_cli_package/operations/planning.new-plan.lifecycle.json",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/operations/planning.new-plan.lifecycle.json",
+      "classification": "maintainer/development only",
+      "owner": "generated operation projection",
+      "rationale": "The planning wheel force-includes generated operation resource data as private runtime import data; the canonical source remains the operation contract and generator."
+    },
+    {
+      "source_path": "generated/python/planning-cli/generated_cli_package/operations/planning.promote-to-plan.lifecycle.json",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/operations/planning.promote-to-plan.lifecycle.json",
+      "classification": "maintainer/development only",
+      "owner": "generated operation projection",
+      "rationale": "The planning wheel force-includes generated operation resource data as private runtime import data; the canonical source remains the operation contract and generator."
+    },
+    {
       "source_path": "generated/python/planning-cli/generated_cli_package/operations/planning.prompt.render.json",
       "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/operations/planning.prompt.render.json",
       "classification": "maintainer/development only",
@@ -180,6 +208,13 @@
       "classification": "maintainer/development only",
       "owner": "command-generation renderer and planning operation contracts",
       "rationale": "Generated Python operation projection is force-included into the package wheel but remains disposable generated output, not target-repo bootstrap payload."
+    },
+    {
+      "source_path": "generated/python/planning-cli/generated_cli_package/operations/planning.record-recovery.lifecycle.json",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/operations/planning.record-recovery.lifecycle.json",
+      "classification": "maintainer/development only",
+      "owner": "generated operation projection",
+      "rationale": "The planning wheel force-includes generated operation resource data as private runtime import data; the canonical source remains the operation contract and generator."
     },
     {
       "source_path": "generated/python/planning-cli/generated_cli_package/operations/planning.report.report.json",

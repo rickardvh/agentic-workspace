@@ -1,1 +1,143 @@
-{"schema_version":"agentic-workspace/operation/v1","id":"planning.new-plan.lifecycle","command_surface":{"command":"planning","subcommand":"new-plan","format_option":"format"},"summary":"Create a schema-valid Planning execplan scaffold through the workspace front door.","classification":"lifecycle-mutation","inputs":[{"name":"id","source":"cli-option","required":true},{"name":"title","source":"cli-option","required":true},{"name":"target","source":"cli-option","required":false},{"name":"activate","source":"cli-option","required":false},{"name":"queue","source":"cli-option","required":false},{"name":"prep_only","source":"cli-option","required":false},{"name":"dry_run","source":"cli-option","required":false},{"name":"format","source":"cli-option","required":false}],"output":{"kind":"module-result"},"effects":{"read_only":false,"destructive":false,"idempotent":false,"writes_repo_state":true,"requires_preflight_gate":false},"locality":{"requires_repo":false,"network":"forbidden","outside_repo_writes":"forbidden"},"reads":[{"surface":"target repository Planning state","required":false}],"writes":[{"surface":".agentic-workspace/planning/state.toml","required":false},{"surface":".agentic-workspace/planning/execplans/","required":false}],"steps":[{"id":"delegate_to_planning_module","uses":"output.emit","description":"Route the Planning new-plan operation through the root workspace command and emit sanitized output."}],"guards":["Host-facing guidance must use agentic-workspace planning new-plan rather than a direct module CLI."],"proof":["planning front-door tests cover new-plan dispatch","operation contract validates against operation.schema.json"],"migration_status":"draft-contract-only"}
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "planning.new-plan.lifecycle",
+  "command_surface": {
+    "program": "agentic-planning",
+    "command": "new-plan",
+    "format_option": "format"
+  },
+  "summary": "Create a schema-valid execplan scaffold and optionally register it.",
+  "classification": "lifecycle-mutation",
+  "inputs": [
+    {
+      "name": "id",
+      "source": "cli-option",
+      "required": true
+    },
+    {
+      "name": "title",
+      "source": "cli-option",
+      "required": true
+    },
+    {
+      "name": "source",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "activate",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "queue",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "switch_active",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "prep_only",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "overwrite",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "dry_run",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "module-result"
+  },
+  "effects": {
+    "read_only": false,
+    "destructive": false,
+    "idempotent": false,
+    "writes_repo_state": true,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": "target repository Planning state",
+      "required": false
+    }
+  ],
+  "writes": [
+    {
+      "surface": ".agentic-workspace/planning/",
+      "required": false,
+      "when": "not a dry run"
+    }
+  ],
+  "steps": [
+    {
+      "id": "apply_lifecycle_operation",
+      "uses": "planning.new-plan.apply",
+      "description": "Create a schema-valid execplan scaffold and optionally register it."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit planning lifecycle result in the requested format."
+    }
+  ],
+  "guards": [
+    "Respect dry-run mode by avoiding writes.",
+    "Route planning state edits through package lifecycle functions instead of hand-editing state files."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated new-plan dry-run process conformance passes"
+  ],
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Planning new-plan executes generated operation IR through codegen-owned primitive dataflow while the planning module owns state mutation policy.",
+    "steps": [
+      {
+        "id": "apply_lifecycle_operation",
+        "uses": "planning.new-plan.apply",
+        "description": "Create a schema-valid execplan scaffold and optionally register it.",
+        "arguments": {},
+        "outputs": [
+          "result"
+        ],
+        "on_error": "emit_usage_error"
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit",
+        "description": "Emit planning lifecycle result in the requested format.",
+        "arguments": {},
+        "outputs": [
+          "emitted"
+        ],
+        "on_error": "emit_usage_error"
+      }
+    ]
+  }
+}

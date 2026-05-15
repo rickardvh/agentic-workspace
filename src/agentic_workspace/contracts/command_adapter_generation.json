@@ -1629,6 +1629,84 @@
       ]
     },
     {
+      "id": "planning.archive-plan.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-planning",
+        "name": "archive-plan",
+        "command_manifest": "package:planning:cli",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "planning.archive-plan.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.archive-plan.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.archive-plan.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "command.arguments",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "planning state mutation policy",
+          "planning provenance updates",
+          "module result assembly"
+        ]
+      },
+      "conformance_refs": [
+        "planning.archive-plan.lifecycle.dry-run.process"
+      ]
+    },
+    {
       "id": "planning.close-item.cli",
       "status": "generated",
       "command": {
@@ -1772,6 +1850,84 @@
       },
       "conformance_refs": [
         "planning.create-review.process"
+      ]
+    },
+    {
+      "id": "planning.delegation-decision.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-planning",
+        "name": "delegation-decision",
+        "command_manifest": "package:planning:cli",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "planning.delegation-decision.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.delegation-decision.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.delegation-decision.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "command.arguments",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "planning state mutation policy",
+          "planning provenance updates",
+          "module result assembly"
+        ]
+      },
+      "conformance_refs": [
+        "planning.delegation-decision.lifecycle.dry-run.process"
       ]
     },
     {
@@ -2236,6 +2392,162 @@
       ]
     },
     {
+      "id": "planning.new-plan.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-planning",
+        "name": "new-plan",
+        "command_manifest": "package:planning:cli",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "planning.new-plan.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.new-plan.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.new-plan.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "command.arguments",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "planning state mutation policy",
+          "planning provenance updates",
+          "module result assembly"
+        ]
+      },
+      "conformance_refs": [
+        "planning.new-plan.lifecycle.dry-run.process"
+      ]
+    },
+    {
+      "id": "planning.promote-to-plan.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-planning",
+        "name": "promote-to-plan",
+        "command_manifest": "package:planning:cli",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "planning.promote-to-plan.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.promote-to-plan.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.promote-to-plan.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "command.arguments",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "planning state mutation policy",
+          "planning provenance updates",
+          "module result assembly"
+        ]
+      },
+      "conformance_refs": [
+        "planning.promote-to-plan.lifecycle.dry-run.process"
+      ]
+    },
+    {
       "id": "planning.prompt.cli",
       "status": "generated",
       "command": {
@@ -2385,6 +2697,84 @@
       },
       "conformance_refs": [
         "planning.reconcile.process"
+      ]
+    },
+    {
+      "id": "planning.record-recovery.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-planning",
+        "name": "record-recovery",
+        "command_manifest": "package:planning:cli",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "planning.record-recovery.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.record-recovery.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.record-recovery.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "command.arguments",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "planning state mutation policy",
+          "planning provenance updates",
+          "module result assembly"
+        ]
+      },
+      "conformance_refs": [
+        "planning.record-recovery.lifecycle.dry-run.process"
       ]
     },
     {

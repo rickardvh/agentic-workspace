@@ -5,9 +5,14 @@
     "command": "planning",
     "format_option": "format",
     "subcommands": [
+      "archive-plan",
       "close-item",
       "create-review",
-      "handoff"
+      "delegation-decision",
+      "handoff",
+      "new-plan",
+      "promote-to-plan",
+      "record-recovery"
     ]
   },
   "summary": "Show Planning help or dispatch Planning subcommands through the workspace front door.",

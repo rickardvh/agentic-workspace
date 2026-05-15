@@ -101,6 +101,203 @@ export const generatedCommandPackage = {
       "status": "generated"
     },
     {
+      "adapter_id": "planning.archive-plan.cli",
+      "command": {
+        "manifest_ref": "package:planning:cli",
+        "name": "archive-plan"
+      },
+      "conformance_refs": [
+        "planning.archive-plan.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "interface": {
+        "arguments": [
+          {
+            "help": "Execplan path, slug, or id to archive.",
+            "name": "plan",
+            "nargs": "?"
+          }
+        ],
+        "help": "Close a completed execplan or parent lane after distillation.",
+        "name": "archive-plan",
+        "options": [
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Target repository path. Defaults to the current directory.",
+            "name": "target"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--dry-run"
+            ],
+            "help": "Preview changes without writing files.",
+            "name": "dry_run"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--apply-cleanup"
+            ],
+            "help": "Apply narrow cleanup tied to the archived plan.",
+            "name": "apply_cleanup"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--prepare-closeout"
+            ],
+            "help": "Write package-normalized closeout fields before archive validation runs.",
+            "name": "prepare_closeout"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--retain-archive"
+            ],
+            "help": "Keep a completed execplan record under execplans/archive.",
+            "name": "retain_archive"
+          },
+          {
+            "flags": [
+              "--parent-lane-closeout"
+            ],
+            "help": "Close a parent lane from structured planning state.",
+            "name": "parent_lane_closeout"
+          },
+          {
+            "choices": [
+              "archive-and-close",
+              "archive-but-keep-lane-open"
+            ],
+            "flags": [
+              "--closure-decision"
+            ],
+            "help": "Closeout decision to write.",
+            "name": "closure_decision"
+          },
+          {
+            "choices": [
+              "yes",
+              "no",
+              "true",
+              "false"
+            ],
+            "flags": [
+              "--intent-satisfied"
+            ],
+            "help": "Whether the larger original intent is fully satisfied.",
+            "name": "intent_satisfied"
+          },
+          {
+            "flags": [
+              "--unsolved-intent"
+            ],
+            "help": "Continuation owner for unsolved larger intent.",
+            "name": "unsolved_intent"
+          },
+          {
+            "flags": [
+              "--intent-evidence"
+            ],
+            "help": "Evidence of intent satisfaction.",
+            "name": "intent_evidence"
+          },
+          {
+            "flags": [
+              "--closure-reason"
+            ],
+            "help": "Why the prepared closure decision is honest.",
+            "name": "closure_reason"
+          },
+          {
+            "flags": [
+              "--closure-evidence"
+            ],
+            "help": "Evidence carried forward by the prepared closure.",
+            "name": "closure_evidence"
+          },
+          {
+            "flags": [
+              "--reopen-trigger"
+            ],
+            "help": "Reopen trigger for prepared closure.",
+            "name": "reopen_trigger"
+          },
+          {
+            "flags": [
+              "--discard-summary"
+            ],
+            "help": "Closeout distillation discard bucket summary.",
+            "name": "discard_summary"
+          },
+          {
+            "flags": [
+              "--continuation-summary"
+            ],
+            "help": "Closeout distillation continuation bucket summary.",
+            "name": "continuation_summary"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "planning.archive-plan.lifecycle",
+        "path": "operations/planning.archive-plan.lifecycle.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "planning state mutation policy",
+          "planning provenance updates",
+          "module result assembly"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.archive-plan.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    {
       "adapter_id": "planning.close-item.cli",
       "command": {
         "manifest_ref": "package:planning:cli",
@@ -322,6 +519,163 @@ export const generatedCommandPackage = {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
           "planning.create-review.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    {
+      "adapter_id": "planning.delegation-decision.cli",
+      "command": {
+        "manifest_ref": "package:planning:cli",
+        "name": "delegation-decision"
+      },
+      "conformance_refs": [
+        "planning.delegation-decision.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "interface": {
+        "help": "Record the delegation route chosen for the active execplan.",
+        "name": "delegation-decision",
+        "options": [
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Target repository path. Defaults to the current directory.",
+            "name": "target"
+          },
+          {
+            "flags": [
+              "--plan"
+            ],
+            "help": "Plan path, slug, or id; defaults to the active execplan.",
+            "name": "plan"
+          },
+          {
+            "choices": [
+              "keep-local",
+              "delegate-exploration",
+              "delegate-implementation",
+              "delegate-validation",
+              "escalate-review",
+              "no-safe-route"
+            ],
+            "flags": [
+              "--route"
+            ],
+            "help": "Delegation route selected for the plan.",
+            "name": "route",
+            "required": true
+          },
+          {
+            "default": "",
+            "flags": [
+              "--skipped-reason"
+            ],
+            "help": "Reason delegation was skipped.",
+            "name": "skipped_reason"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--expected-savings"
+            ],
+            "help": "Expected savings from delegation.",
+            "name": "expected_savings"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--actual-friction"
+            ],
+            "help": "Actual delegation friction observed.",
+            "name": "actual_friction"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--proof-result"
+            ],
+            "help": "Proof result from the delegated or local route.",
+            "name": "proof_result"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--quality-concern"
+            ],
+            "help": "Quality concern discovered during delegation.",
+            "name": "quality_concern"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--decomposition-adjustment"
+            ],
+            "help": "Planning decomposition adjustment to record.",
+            "name": "decomposition_adjustment"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--dry-run"
+            ],
+            "help": "Preview changes without writing files.",
+            "name": "dry_run"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "planning.delegation-decision.lifecycle",
+        "path": "operations/planning.delegation-decision.lifecycle.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "planning state mutation policy",
+          "planning provenance updates",
+          "module result assembly"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.delegation-decision.apply",
           "output.emit"
         ]
       },
@@ -785,6 +1139,255 @@ export const generatedCommandPackage = {
       "status": "generated"
     },
     {
+      "adapter_id": "planning.new-plan.cli",
+      "command": {
+        "manifest_ref": "package:planning:cli",
+        "name": "new-plan"
+      },
+      "conformance_refs": [
+        "planning.new-plan.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "interface": {
+        "help": "Create a schema-valid execplan scaffold and optionally register it.",
+        "name": "new-plan",
+        "options": [
+          {
+            "flags": [
+              "--id"
+            ],
+            "help": "Stable slug/id for the plan; used as the .plan.json filename.",
+            "name": "id",
+            "required": true
+          },
+          {
+            "flags": [
+              "--title"
+            ],
+            "help": "Human-readable plan title.",
+            "name": "title",
+            "required": true
+          },
+          {
+            "default": "",
+            "flags": [
+              "--source"
+            ],
+            "help": "Optional source reference such as an issue URL or chat-intake summary.",
+            "name": "source"
+          },
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Target repository path. Defaults to the current directory.",
+            "name": "target"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--activate"
+            ],
+            "help": "Register the new plan in todo.active_items.",
+            "name": "activate"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--queue"
+            ],
+            "help": "Register the new plan in todo.queued_items.",
+            "name": "queue"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--switch-active"
+            ],
+            "help": "When used with --activate, demote existing active items into the queue before registering the new active plan.",
+            "name": "switch_active"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--prep-only"
+            ],
+            "help": "Mark this scaffold as a planning-only handoff slice.",
+            "name": "prep_only"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--overwrite"
+            ],
+            "help": "Replace an existing scaffold with the same id.",
+            "name": "overwrite"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--dry-run"
+            ],
+            "help": "Preview changes without writing files.",
+            "name": "dry_run"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "planning.new-plan.lifecycle",
+        "path": "operations/planning.new-plan.lifecycle.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "planning state mutation policy",
+          "planning provenance updates",
+          "module result assembly"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.new-plan.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    {
+      "adapter_id": "planning.promote-to-plan.cli",
+      "command": {
+        "manifest_ref": "package:planning:cli",
+        "name": "promote-to-plan"
+      },
+      "conformance_refs": [
+        "planning.promote-to-plan.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "interface": {
+        "arguments": [
+          {
+            "help": "TODO item id or decomposition lane id to promote.",
+            "name": "item_id"
+          }
+        ],
+        "help": "Promote a direct TODO item into an execplan scaffold.",
+        "name": "promote-to-plan",
+        "options": [
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Target repository path. Defaults to the current directory.",
+            "name": "target"
+          },
+          {
+            "flags": [
+              "--plan-slug"
+            ],
+            "help": "Optional plan slug for the created execplan.",
+            "name": "plan_slug"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--dry-run"
+            ],
+            "help": "Preview changes without writing files.",
+            "name": "dry_run"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "planning.promote-to-plan.lifecycle",
+        "path": "operations/planning.promote-to-plan.lifecycle.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "planning state mutation policy",
+          "planning provenance updates",
+          "module result assembly"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.promote-to-plan.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    {
       "adapter_id": "planning.prompt.cli",
       "command": {
         "manifest_ref": "package:planning:cli",
@@ -929,6 +1532,109 @@ export const generatedCommandPackage = {
         "primitive_refs": [
           "planning.reconcile.load",
           "planning.reconcile.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    {
+      "adapter_id": "planning.record-recovery.cli",
+      "command": {
+        "manifest_ref": "package:planning:cli",
+        "name": "record-recovery"
+      },
+      "conformance_refs": [
+        "planning.record-recovery.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "interface": {
+        "help": "Bless an emergency manual repair to managed planning surfaces with explicit provenance.",
+        "name": "record-recovery",
+        "options": [
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Target repository path. Defaults to the current directory.",
+            "name": "target"
+          },
+          {
+            "action": "append",
+            "flags": [
+              "--path"
+            ],
+            "help": "Managed planning path repaired manually.",
+            "name": "paths",
+            "required": true
+          },
+          {
+            "flags": [
+              "--reason"
+            ],
+            "help": "Reason the recovery was needed.",
+            "name": "reason",
+            "required": true
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--dry-run"
+            ],
+            "help": "Preview changes without writing files.",
+            "name": "dry_run"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "planning.record-recovery.lifecycle",
+        "path": "operations/planning.record-recovery.lifecycle.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "planning state mutation policy",
+          "planning provenance updates",
+          "module result assembly"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.record-recovery.apply",
           "output.emit"
         ]
       },
@@ -1726,6 +2432,36 @@ export const generatedCommandPackage = {
             }
           },
           "primitive": "planning.uninstall.apply"
+        },
+        {
+          "function": "apply_planning_new_plan_operation",
+          "handler": "runtime_handler",
+          "import_module": "repo_planning_bootstrap.runtime_projection",
+          "primitive": "planning.new-plan.apply"
+        },
+        {
+          "function": "apply_planning_promote_to_plan_operation",
+          "handler": "runtime_handler",
+          "import_module": "repo_planning_bootstrap.runtime_projection",
+          "primitive": "planning.promote-to-plan.apply"
+        },
+        {
+          "function": "apply_planning_archive_plan_operation",
+          "handler": "runtime_handler",
+          "import_module": "repo_planning_bootstrap.runtime_projection",
+          "primitive": "planning.archive-plan.apply"
+        },
+        {
+          "function": "apply_planning_delegation_decision_operation",
+          "handler": "runtime_handler",
+          "import_module": "repo_planning_bootstrap.runtime_projection",
+          "primitive": "planning.delegation-decision.apply"
+        },
+        {
+          "function": "apply_planning_record_recovery_operation",
+          "handler": "runtime_handler",
+          "import_module": "repo_planning_bootstrap.runtime_projection",
+          "primitive": "planning.record-recovery.apply"
         }
       ],
       "initial_values": [
@@ -1823,20 +2559,180 @@ export const generatedCommandPackage = {
           "arg": "include_optional",
           "default": false,
           "name": "include_optional"
+        },
+        {
+          "arg": "id",
+          "default": "",
+          "name": "id"
+        },
+        {
+          "arg": "source",
+          "default": "",
+          "name": "source"
+        },
+        {
+          "arg": "activate",
+          "default": false,
+          "name": "activate"
+        },
+        {
+          "arg": "queue",
+          "default": false,
+          "name": "queue"
+        },
+        {
+          "arg": "switch_active",
+          "default": false,
+          "name": "switch_active"
+        },
+        {
+          "arg": "prep_only",
+          "default": false,
+          "name": "prep_only"
+        },
+        {
+          "arg": "overwrite",
+          "default": false,
+          "name": "overwrite"
+        },
+        {
+          "arg": "item_id",
+          "default": "",
+          "name": "item_id"
+        },
+        {
+          "arg": "plan_slug",
+          "default": null,
+          "name": "plan_slug"
+        },
+        {
+          "arg": "plan",
+          "default": null,
+          "name": "plan"
+        },
+        {
+          "arg": "apply_cleanup",
+          "default": false,
+          "name": "apply_cleanup"
+        },
+        {
+          "arg": "prepare_closeout",
+          "default": false,
+          "name": "prepare_closeout"
+        },
+        {
+          "arg": "retain_archive",
+          "default": false,
+          "name": "retain_archive"
+        },
+        {
+          "arg": "parent_lane_closeout",
+          "default": null,
+          "name": "parent_lane_closeout"
+        },
+        {
+          "arg": "closure_decision",
+          "default": null,
+          "name": "closure_decision"
+        },
+        {
+          "arg": "intent_satisfied",
+          "default": null,
+          "name": "intent_satisfied"
+        },
+        {
+          "arg": "unsolved_intent",
+          "default": null,
+          "name": "unsolved_intent"
+        },
+        {
+          "arg": "intent_evidence",
+          "default": null,
+          "name": "intent_evidence"
+        },
+        {
+          "arg": "closure_reason",
+          "default": null,
+          "name": "closure_reason"
+        },
+        {
+          "arg": "closure_evidence",
+          "default": null,
+          "name": "closure_evidence"
+        },
+        {
+          "arg": "reopen_trigger",
+          "default": null,
+          "name": "reopen_trigger"
+        },
+        {
+          "arg": "discard_summary",
+          "default": null,
+          "name": "discard_summary"
+        },
+        {
+          "arg": "continuation_summary",
+          "default": null,
+          "name": "continuation_summary"
+        },
+        {
+          "arg": "route",
+          "default": "",
+          "name": "route"
+        },
+        {
+          "arg": "skipped_reason",
+          "default": "",
+          "name": "skipped_reason"
+        },
+        {
+          "arg": "expected_savings",
+          "default": "",
+          "name": "expected_savings"
+        },
+        {
+          "arg": "actual_friction",
+          "default": "",
+          "name": "actual_friction"
+        },
+        {
+          "arg": "proof_result",
+          "default": "",
+          "name": "proof_result"
+        },
+        {
+          "arg": "quality_concern",
+          "default": "",
+          "name": "quality_concern"
+        },
+        {
+          "arg": "decomposition_adjustment",
+          "default": "",
+          "name": "decomposition_adjustment"
+        },
+        {
+          "arg": "paths",
+          "default": [],
+          "name": "paths"
         }
       ],
       "module_file": "planning_operation_ir_executor",
       "supported_operation_ids": [
         "planning.adopt.lifecycle",
+        "planning.archive-plan.lifecycle",
         "planning.close-item.lifecycle",
         "planning.create-review.lifecycle",
+        "planning.delegation-decision.lifecycle",
         "planning.doctor.report",
         "planning.handoff.report",
         "planning.init.lifecycle",
         "planning.install.lifecycle",
         "planning.list-files.report",
+        "planning.new-plan.lifecycle",
+        "planning.promote-to-plan.lifecycle",
         "planning.prompt.render",
         "planning.reconcile.report",
+        "planning.record-recovery.lifecycle",
         "planning.report.report",
         "planning.status.report",
         "planning.summary.report",

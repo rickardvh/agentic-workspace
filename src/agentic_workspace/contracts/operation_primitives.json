@@ -303,6 +303,12 @@
       "portability": "domain-runtime"
     },
     {
+      "id": "planning.archive-plan.apply",
+      "summary": "Close a completed execplan or parent lane after distillation.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
+    },
+    {
       "id": "planning.bootstrap.doctor.load",
       "summary": "Load package-local planning doctor diagnostics for a target repository."
     },
@@ -319,6 +325,12 @@
     {
       "id": "planning.create-review.apply",
       "summary": "Apply package-local planning create-review lifecycle mutation for a target repository.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "planning.delegation-decision.apply",
+      "summary": "Record the delegation route chosen for the active execplan.",
       "kind": "planning-runtime",
       "portability": "domain-runtime"
     },
@@ -357,6 +369,18 @@
       "portability": "domain-runtime"
     },
     {
+      "id": "planning.new-plan.apply",
+      "summary": "Create a schema-valid execplan scaffold and optionally register it.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "planning.promote-to-plan.apply",
+      "summary": "Promote a direct TODO item into an execplan scaffold.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
+    },
+    {
       "id": "planning.prompt.render",
       "summary": "Render package-local planning prompt guidance for a selected bootstrap command.",
       "kind": "planning-runtime",
@@ -365,6 +389,12 @@
     {
       "id": "planning.reconcile.load",
       "summary": "Load provider-agnostic planning reconciliation state when the planning module is installed."
+    },
+    {
+      "id": "planning.record-recovery.apply",
+      "summary": "Bless an emergency manual repair to managed planning surfaces with explicit provenance.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
     },
     {
       "id": "planning.report.load",

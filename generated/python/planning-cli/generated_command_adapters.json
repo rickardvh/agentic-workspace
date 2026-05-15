@@ -32,6 +32,38 @@
       },
       "status": "generated"
     },
+    "archive-plan": {
+      "command": {
+        "command_manifest": "package:planning:cli",
+        "name": "archive-plan",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-planning"
+      },
+      "conformance_refs": [
+        "planning.archive-plan.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "planning.archive-plan.cli",
+      "operation_id": "planning.archive-plan.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.archive-plan.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
     "close-item": {
       "command": {
         "command_manifest": "package:planning:cli",
@@ -87,6 +119,38 @@
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
           "planning.create-review.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    "delegation-decision": {
+      "command": {
+        "command_manifest": "package:planning:cli",
+        "name": "delegation-decision",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-planning"
+      },
+      "conformance_refs": [
+        "planning.delegation-decision.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "planning.delegation-decision.cli",
+      "operation_id": "planning.delegation-decision.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.delegation-decision.apply",
           "output.emit"
         ]
       },
@@ -256,6 +320,70 @@
       },
       "status": "generated"
     },
+    "new-plan": {
+      "command": {
+        "command_manifest": "package:planning:cli",
+        "name": "new-plan",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-planning"
+      },
+      "conformance_refs": [
+        "planning.new-plan.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "planning.new-plan.cli",
+      "operation_id": "planning.new-plan.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.new-plan.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    "promote-to-plan": {
+      "command": {
+        "command_manifest": "package:planning:cli",
+        "name": "promote-to-plan",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-planning"
+      },
+      "conformance_refs": [
+        "planning.promote-to-plan.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "planning.promote-to-plan.cli",
+      "operation_id": "planning.promote-to-plan.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.promote-to-plan.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
     "prompt": {
       "command": {
         "command_manifest": "package:planning:cli",
@@ -312,6 +440,38 @@
         "primitive_refs": [
           "planning.reconcile.load",
           "planning.reconcile.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    "record-recovery": {
+      "command": {
+        "command_manifest": "package:planning:cli",
+        "name": "record-recovery",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-planning"
+      },
+      "conformance_refs": [
+        "planning.record-recovery.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "planning.record-recovery.cli",
+      "operation_id": "planning.record-recovery.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.record-recovery.apply",
           "output.emit"
         ]
       },

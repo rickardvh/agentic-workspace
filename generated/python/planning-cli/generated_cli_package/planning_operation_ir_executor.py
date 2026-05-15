@@ -29,15 +29,20 @@ class OperationIrExecutionError(RuntimeError):
 def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int:
     if operation.get("id") not in {
         'planning.adopt.lifecycle',
+        'planning.archive-plan.lifecycle',
         'planning.close-item.lifecycle',
         'planning.create-review.lifecycle',
+        'planning.delegation-decision.lifecycle',
         'planning.doctor.report',
         'planning.handoff.report',
         'planning.init.lifecycle',
         'planning.install.lifecycle',
         'planning.list-files.report',
+        'planning.new-plan.lifecycle',
+        'planning.promote-to-plan.lifecycle',
         'planning.prompt.render',
         'planning.reconcile.report',
+        'planning.record-recovery.lifecycle',
         'planning.report.report',
         'planning.status.report',
         'planning.summary.report',
@@ -73,6 +78,37 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'force': getattr(args, 'force', False),
                 'local': getattr(args, 'local', False),
                 'include_optional': getattr(args, 'include_optional', False),
+                'id': getattr(args, 'id', ''),
+                'source': getattr(args, 'source', ''),
+                'activate': getattr(args, 'activate', False),
+                'queue': getattr(args, 'queue', False),
+                'switch_active': getattr(args, 'switch_active', False),
+                'prep_only': getattr(args, 'prep_only', False),
+                'overwrite': getattr(args, 'overwrite', False),
+                'item_id': getattr(args, 'item_id', ''),
+                'plan_slug': getattr(args, 'plan_slug', None),
+                'plan': getattr(args, 'plan', None),
+                'apply_cleanup': getattr(args, 'apply_cleanup', False),
+                'prepare_closeout': getattr(args, 'prepare_closeout', False),
+                'retain_archive': getattr(args, 'retain_archive', False),
+                'parent_lane_closeout': getattr(args, 'parent_lane_closeout', None),
+                'closure_decision': getattr(args, 'closure_decision', None),
+                'intent_satisfied': getattr(args, 'intent_satisfied', None),
+                'unsolved_intent': getattr(args, 'unsolved_intent', None),
+                'intent_evidence': getattr(args, 'intent_evidence', None),
+                'closure_reason': getattr(args, 'closure_reason', None),
+                'closure_evidence': getattr(args, 'closure_evidence', None),
+                'reopen_trigger': getattr(args, 'reopen_trigger', None),
+                'discard_summary': getattr(args, 'discard_summary', None),
+                'continuation_summary': getattr(args, 'continuation_summary', None),
+                'route': getattr(args, 'route', ''),
+                'skipped_reason': getattr(args, 'skipped_reason', ''),
+                'expected_savings': getattr(args, 'expected_savings', ''),
+                'actual_friction': getattr(args, 'actual_friction', ''),
+                'proof_result': getattr(args, 'proof_result', ''),
+                'quality_concern': getattr(args, 'quality_concern', ''),
+                'decomposition_adjustment': getattr(args, 'decomposition_adjustment', ''),
+                'paths': getattr(args, 'paths', []),
             },
             context=PrimitiveContext(cwd=Path.cwd(), roots={}),
             handlers={
@@ -93,6 +129,11 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'planning.adopt.apply': _handle_planning_adopt_apply,
                 'planning.upgrade.apply': _handle_planning_upgrade_apply,
                 'planning.uninstall.apply': _handle_planning_uninstall_apply,
+                'planning.new-plan.apply': _handle_planning_new_plan_apply,
+                'planning.promote-to-plan.apply': _handle_planning_promote_to_plan_apply,
+                'planning.archive-plan.apply': _handle_planning_archive_plan_apply,
+                'planning.delegation-decision.apply': _handle_planning_delegation_decision_apply,
+                'planning.record-recovery.apply': _handle_planning_record_recovery_apply,
             },
         )
     except PrimitiveExecutionError as exc:
@@ -204,3 +245,33 @@ def _handle_planning_uninstall_apply(values: dict[str, Any], _arguments: dict[st
     from repo_planning_bootstrap.installer import uninstall_bootstrap
 
     return uninstall_bootstrap(dry_run=values.get('dry_run'), target=values.get('target'))
+
+
+def _handle_planning_new_plan_apply(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
+    from repo_planning_bootstrap.runtime_projection import apply_planning_new_plan_operation
+
+    return apply_planning_new_plan_operation(values, arguments, context)
+
+
+def _handle_planning_promote_to_plan_apply(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
+    from repo_planning_bootstrap.runtime_projection import apply_planning_promote_to_plan_operation
+
+    return apply_planning_promote_to_plan_operation(values, arguments, context)
+
+
+def _handle_planning_archive_plan_apply(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
+    from repo_planning_bootstrap.runtime_projection import apply_planning_archive_plan_operation
+
+    return apply_planning_archive_plan_operation(values, arguments, context)
+
+
+def _handle_planning_delegation_decision_apply(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
+    from repo_planning_bootstrap.runtime_projection import apply_planning_delegation_decision_operation
+
+    return apply_planning_delegation_decision_operation(values, arguments, context)
+
+
+def _handle_planning_record_recovery_apply(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
+    from repo_planning_bootstrap.runtime_projection import apply_planning_record_recovery_operation
+
+    return apply_planning_record_recovery_operation(values, arguments, context)

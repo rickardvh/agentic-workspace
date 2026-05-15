@@ -5,6 +5,9 @@ import shutil
 
 from repo_planning_bootstrap._source import UpgradeSource, resolve_upgrade_source
 from repo_planning_bootstrap.installer import (
+    archive_execplan,
+    archive_parent_lane_closeout,
+    create_execplan_scaffold,
     format_actions,
     format_result_json,
     format_summary_json,
@@ -14,6 +17,9 @@ from repo_planning_bootstrap.installer import (
     list_payload_files,
     planning_reconcile,
     planning_summary,
+    promote_todo_item_to_execplan,
+    record_delegation_decision,
+    record_planning_recovery,
 )
 
 
@@ -47,6 +53,87 @@ def load_planning_list_files_operation(_values: dict, _arguments: dict, _context
 
 def render_planning_prompt_operation(values: dict, _arguments: dict, _context) -> str:
     return _build_prompt(str(values.get("prompt_command") or ""), values.get("target"))
+
+
+def apply_planning_new_plan_operation(values: dict, _arguments: dict, _context):
+    return create_execplan_scaffold(
+        plan_id=str(values.get("id") or ""),
+        title=str(values.get("title") or ""),
+        source=str(values.get("source") or ""),
+        target=values.get("target"),
+        activate=bool(values.get("activate")),
+        queue=bool(values.get("queue")),
+        switch_active=bool(values.get("switch_active")),
+        prep_only=bool(values.get("prep_only")),
+        overwrite=bool(values.get("overwrite")),
+        dry_run=bool(values.get("dry_run")),
+    )
+
+
+def apply_planning_promote_to_plan_operation(values: dict, _arguments: dict, _context):
+    return promote_todo_item_to_execplan(
+        str(values.get("item_id") or ""),
+        target=values.get("target"),
+        plan_slug=values.get("plan_slug"),
+        dry_run=bool(values.get("dry_run")),
+    )
+
+
+def apply_planning_archive_plan_operation(values: dict, _arguments: dict, _context):
+    if values.get("parent_lane_closeout"):
+        return archive_parent_lane_closeout(
+            str(values.get("parent_lane_closeout")),
+            target=values.get("target"),
+            dry_run=bool(values.get("dry_run")),
+            intent_satisfied=values.get("intent_satisfied"),
+            intent_evidence=values.get("intent_evidence"),
+            closure_reason=values.get("closure_reason"),
+            closure_evidence=values.get("closure_evidence"),
+            reopen_trigger=values.get("reopen_trigger"),
+            discard_summary=values.get("discard_summary"),
+            continuation_summary=values.get("continuation_summary"),
+        )
+    return archive_execplan(
+        str(values.get("plan") or ""),
+        target=values.get("target"),
+        dry_run=bool(values.get("dry_run")),
+        apply_cleanup=bool(values.get("apply_cleanup")),
+        prepare_closeout=bool(values.get("prepare_closeout")),
+        closure_decision=values.get("closure_decision"),
+        intent_satisfied=values.get("intent_satisfied"),
+        unsolved_intent=values.get("unsolved_intent"),
+        intent_evidence=values.get("intent_evidence"),
+        closure_reason=values.get("closure_reason"),
+        closure_evidence=values.get("closure_evidence"),
+        reopen_trigger=values.get("reopen_trigger"),
+        discard_summary=values.get("discard_summary"),
+        continuation_summary=values.get("continuation_summary"),
+        retain_archive=bool(values.get("retain_archive")),
+    )
+
+
+def apply_planning_delegation_decision_operation(values: dict, _arguments: dict, _context):
+    return record_delegation_decision(
+        target=values.get("target"),
+        plan=values.get("plan"),
+        route=str(values.get("route") or ""),
+        skipped_reason=str(values.get("skipped_reason") or ""),
+        expected_savings=str(values.get("expected_savings") or ""),
+        actual_friction=str(values.get("actual_friction") or ""),
+        proof_result=str(values.get("proof_result") or ""),
+        quality_concern=str(values.get("quality_concern") or ""),
+        decomposition_adjustment=str(values.get("decomposition_adjustment") or ""),
+        dry_run=bool(values.get("dry_run")),
+    )
+
+
+def apply_planning_record_recovery_operation(values: dict, _arguments: dict, _context):
+    return record_planning_recovery(
+        target=values.get("target"),
+        paths=list(values.get("paths") or []),
+        reason=str(values.get("reason") or ""),
+        dry_run=bool(values.get("dry_run")),
+    )
 
 
 def emit_planning_operation_output(values: dict, _arguments: dict, _context) -> None:

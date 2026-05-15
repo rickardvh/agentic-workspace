@@ -118,6 +118,12 @@
       "adapter_kind": "process"
     },
     {
+      "id": "planning.archive-plan.lifecycle.dry-run.process",
+      "operation_id": "planning.archive-plan.lifecycle",
+      "path": "conformance/planning.archive-plan.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "planning.close-item.process",
       "operation_id": "planning.close-item.lifecycle",
       "path": "conformance/planning.close-item.process.json",
@@ -127,6 +133,12 @@
       "id": "planning.create-review.process",
       "operation_id": "planning.create-review.lifecycle",
       "path": "conformance/planning.create-review.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.delegation-decision.lifecycle.dry-run.process",
+      "operation_id": "planning.delegation-decision.lifecycle",
+      "path": "conformance/planning.delegation-decision.lifecycle.dry-run.process.json",
       "adapter_kind": "process"
     },
     {
@@ -166,6 +178,18 @@
       "adapter_kind": "process"
     },
     {
+      "id": "planning.new-plan.lifecycle.dry-run.process",
+      "operation_id": "planning.new-plan.lifecycle",
+      "path": "conformance/planning.new-plan.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.promote-to-plan.lifecycle.dry-run.process",
+      "operation_id": "planning.promote-to-plan.lifecycle",
+      "path": "conformance/planning.promote-to-plan.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "planning.prompt.process",
       "operation_id": "planning.prompt.render",
       "path": "conformance/planning.prompt.process.json",
@@ -175,6 +199,12 @@
       "id": "planning.reconcile.process",
       "operation_id": "planning.reconcile.report",
       "path": "conformance/planning.reconcile.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.record-recovery.lifecycle.dry-run.process",
+      "operation_id": "planning.record-recovery.lifecycle",
+      "path": "conformance/planning.record-recovery.lifecycle.dry-run.process.json",
       "adapter_kind": "process"
     },
     {

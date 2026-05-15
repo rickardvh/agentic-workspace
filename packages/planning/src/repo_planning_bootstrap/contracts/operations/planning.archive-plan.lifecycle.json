@@ -1,1 +1,173 @@
-{"schema_version":"agentic-workspace/operation/v1","id":"planning.archive-plan.lifecycle","command_surface":{"command":"planning","subcommand":"archive-plan","format_option":"format"},"summary":"Archive or close out a completed Planning record through the workspace front door.","classification":"lifecycle-mutation","inputs":[{"name":"plan","source":"cli-option","required":false},{"name":"target","source":"cli-option","required":false},{"name":"dry_run","source":"cli-option","required":false},{"name":"apply_cleanup","source":"cli-option","required":false},{"name":"prepare_closeout","source":"cli-option","required":false},{"name":"format","source":"cli-option","required":false}],"output":{"kind":"module-result"},"effects":{"read_only":false,"destructive":false,"idempotent":false,"writes_repo_state":true,"requires_preflight_gate":false},"locality":{"requires_repo":false,"network":"forbidden","outside_repo_writes":"forbidden"},"reads":[{"surface":"target repository Planning state","required":true}],"writes":[{"surface":".agentic-workspace/planning/state.toml","required":false},{"surface":".agentic-workspace/planning/execplans/","required":false}],"steps":[{"id":"delegate_to_planning_module","uses":"output.emit","description":"Route archive-plan through the root workspace command and emit sanitized output."}],"guards":["Host-facing guidance must use agentic-workspace planning archive-plan rather than a direct module CLI."],"proof":["operation contract validates against operation.schema.json"],"migration_status":"draft-contract-only"}
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "planning.archive-plan.lifecycle",
+  "command_surface": {
+    "program": "agentic-planning",
+    "command": "archive-plan",
+    "format_option": "format"
+  },
+  "summary": "Close a completed execplan or parent lane after distillation.",
+  "classification": "lifecycle-mutation",
+  "inputs": [
+    {
+      "name": "plan",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "dry_run",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "apply_cleanup",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "prepare_closeout",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "retain_archive",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "parent_lane_closeout",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "closure_decision",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "intent_satisfied",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "unsolved_intent",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "intent_evidence",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "closure_reason",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "closure_evidence",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "reopen_trigger",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "discard_summary",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "continuation_summary",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "module-result"
+  },
+  "effects": {
+    "read_only": false,
+    "destructive": false,
+    "idempotent": false,
+    "writes_repo_state": true,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": "target repository Planning state",
+      "required": false
+    }
+  ],
+  "writes": [
+    {
+      "surface": ".agentic-workspace/planning/",
+      "required": false,
+      "when": "not a dry run"
+    }
+  ],
+  "steps": [
+    {
+      "id": "apply_lifecycle_operation",
+      "uses": "planning.archive-plan.apply",
+      "description": "Close a completed execplan or parent lane after distillation."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit planning lifecycle result in the requested format."
+    }
+  ],
+  "guards": [
+    "Respect dry-run mode by avoiding writes.",
+    "Route planning state edits through package lifecycle functions instead of hand-editing state files."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated archive-plan dry-run process conformance passes"
+  ],
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Planning archive-plan executes generated operation IR through codegen-owned primitive dataflow while the planning module owns state mutation policy.",
+    "steps": [
+      {
+        "id": "apply_lifecycle_operation",
+        "uses": "planning.archive-plan.apply",
+        "description": "Close a completed execplan or parent lane after distillation.",
+        "arguments": {},
+        "outputs": [
+          "result"
+        ],
+        "on_error": "emit_usage_error"
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit",
+        "description": "Emit planning lifecycle result in the requested format.",
+        "arguments": {},
+        "outputs": [
+          "emitted"
+        ],
+        "on_error": "emit_usage_error"
+      }
+    ]
+  }
+}
