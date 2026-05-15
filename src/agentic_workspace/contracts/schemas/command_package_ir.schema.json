@@ -1012,6 +1012,16 @@
         "nargs": {
           "description": "Argparse-style arity marker for optional or list-like positional arguments."
         },
+        "choices": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": "One accepted positional argument value."
+          },
+          "description": "Allowed positional argument values."
+        },
         "help": {
           "type": "string",
           "minLength": 1,

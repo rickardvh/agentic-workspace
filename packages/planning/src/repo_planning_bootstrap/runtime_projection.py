@@ -1,11 +1,17 @@
 from __future__ import annotations
 
 import json
+import shutil
 
+from repo_planning_bootstrap._source import UpgradeSource, resolve_upgrade_source
 from repo_planning_bootstrap.installer import (
     format_actions,
     format_result_json,
     format_summary_json,
+    list_bundled_skill_files,
+    list_default_payload_files,
+    list_optional_payload_files,
+    list_payload_files,
     planning_reconcile,
     planning_summary,
 )
@@ -25,10 +31,38 @@ def load_planning_reconcile_operation(values: dict, _arguments: dict, _context) 
     return planning_reconcile(target=values.get("target"))
 
 
+def load_planning_list_files_operation(_values: dict, _arguments: dict, _context) -> dict:
+    return {
+        "files": list_payload_files(),
+        "default_files": list_default_payload_files(),
+        "optional_files": list_optional_payload_files(),
+        "bundled_skill_files": list_bundled_skill_files(),
+        "optional_enable_commands": [
+            "agentic-planning install --include-optional",
+            "agentic-planning adopt --include-optional",
+            "agentic-planning upgrade --include-optional",
+        ],
+    }
+
+
+def render_planning_prompt_operation(values: dict, _arguments: dict, _context) -> str:
+    return _build_prompt(str(values.get("prompt_command") or ""), values.get("target"))
+
+
 def emit_planning_operation_output(values: dict, _arguments: dict, _context) -> None:
     result = values["result"]
     output_format = str(values.get("format") or "text")
     operation_id = str(values.get("operation_id") or "")
+    if operation_id == "planning.list-files.report":
+        if output_format == "json":
+            print(json.dumps(result, indent=2))
+        else:
+            for path in result.get("files", []):
+                print(path)
+        return
+    if operation_id == "planning.prompt.render":
+        print(str(result))
+        return
     if operation_id == "planning.summary.report":
         if output_format == "json":
             print(format_summary_json(result))
@@ -548,3 +582,81 @@ def _print_handoff(handoff: dict) -> None:
     if isinstance(return_with, dict):
         print(f"- Return with execution-run fields: {', '.join(return_with.get('execution_run_fields', []))}")
         print(f"- Return with execution-summary fields: {', '.join(return_with.get('execution_summary_fields', []))}")
+
+
+def _build_prompt(command: str, target: str | None) -> str:
+    source = resolve_upgrade_source(target)
+    runner = _preferred_runner(source)
+    target_args = f" --target {target}" if target else ""
+    non_interactive_args = " --non-interactive"
+    if command == "install":
+        if runner is None:
+            return (
+                "No pinned remote runner is published for this bootstrap version yet. "
+                "Use an installed `agentic-planning` command if it is already available locally, "
+                "or publish a tagged release before relying on remote `prompt install` workflows."
+            )
+        return (
+            f"Run `{runner} install{target_args}{non_interactive_args}`. "
+            "Then customise `AGENTS.md`, prune starter placeholders, and run "
+            "`agentic-workspace doctor --target ./repo --modules planning --format json` inside the target repo."
+        )
+    if command == "adopt":
+        if runner is None:
+            return (
+                "No pinned remote runner is published for this bootstrap version yet. "
+                "Use an installed `agentic-planning` command if it is already available locally, "
+                "or publish a tagged release before relying on remote `prompt adopt` workflows."
+            )
+        return (
+            f"Run `{runner} adopt{target_args}{non_interactive_args}` conservatively. "
+            "Do not overwrite repo-owned planning files unless the user asks for it. "
+            "Afterwards run `agentic-workspace doctor --target ./repo --modules planning --format json` inside the target repo."
+        )
+    if command == "upgrade":
+        upgrade_guidance = (
+            f"Use the checked-in `bootstrap-upgrade` skill under `{_managed_skills_path(target)}/`. "
+            "It should use the repo's `.agentic-workspace/planning/UPGRADE-SOURCE.toml`, prefer an installed "
+            "`agentic-planning` command with `--non-interactive` when available, and rerun render/check validation. "
+            "If `doctor` still flags older active execplans, reconcile those plans to the current contract by "
+            "adding or refreshing `Intent Continuity`, `Required Continuation`, `Delegated Judgment`, "
+            "`Active Milestone`, and `Execution Summary` instead of treating the upgrade as broken."
+        )
+        if runner is None:
+            return upgrade_guidance
+        return upgrade_guidance + f" If a local install is unavailable, fall back to `{runner} upgrade --target <repo> --non-interactive`."
+    if runner is None:
+        return (
+            "No pinned remote runner is published for this bootstrap version yet. "
+            "Use an installed `agentic-planning` command if it is already available locally."
+        )
+    return (
+        f"Run `{runner} adopt{target_args}{non_interactive_args}` conservatively. "
+        "Do not overwrite repo-owned planning files unless the user asks for it. "
+        "Afterwards run `agentic-workspace doctor --target ./repo --modules planning --format json` inside the target repo."
+    )
+
+
+def _preferred_runner(source: UpgradeSource) -> str | None:
+    if source.source_type == "none" or not source.source_ref:
+        return None
+    if source.source_type == "local":
+        return _runner_command_for_local_source(source.source_ref)
+    if shutil.which("uvx"):
+        return f"uvx --from {source.source_ref} agentic-planning"
+    if shutil.which("pipx"):
+        return f"pipx run --spec {source.source_ref} agentic-planning"
+    return f"uvx --from {source.source_ref} agentic-planning"
+
+
+def _runner_command_for_local_source(source_ref: str) -> str:
+    if shutil.which("uvx"):
+        return f"uvx --from {source_ref} agentic-planning"
+    if shutil.which("pipx"):
+        return f"pipx run --spec {source_ref} agentic-planning"
+    return f"uvx --from {source_ref} agentic-planning"
+
+
+def _managed_skills_path(target: str | None) -> str:
+    target_root = target or "./repo"
+    return f"{target_root}/skills"

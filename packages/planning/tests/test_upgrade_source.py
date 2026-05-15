@@ -2,12 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from command_generation.generated_package_loader import load_generated_cli_module_for_entrypoint
-
+from repo_planning_bootstrap import runtime_projection
 from repo_planning_bootstrap._source import UPGRADE_SOURCE_PATH, default_upgrade_source, resolve_upgrade_source
 from repo_planning_bootstrap.installer import doctor_bootstrap
-
-cli = load_generated_cli_module_for_entrypoint("agentic-planning", "planning_runtime_cli")
 
 
 def _write(path: Path, text: str) -> None:
@@ -57,10 +54,10 @@ recommended_upgrade_after_days = 30
 
 
 def test_build_prompt_upgrade_mentions_old_execplan_contract_shape(monkeypatch, tmp_path: Path) -> None:
-    monkeypatch.setattr(cli, "resolve_upgrade_source", lambda target: default_upgrade_source())
-    monkeypatch.setattr(cli, "_preferred_runner", lambda source: None)
+    monkeypatch.setattr(runtime_projection, "resolve_upgrade_source", lambda target: default_upgrade_source())
+    monkeypatch.setattr(runtime_projection, "_preferred_runner", lambda source: None)
 
-    prompt = cli._build_prompt("upgrade", str(tmp_path))
+    prompt = runtime_projection._build_prompt("upgrade", str(tmp_path))
 
     assert "older active execplans" in prompt
     assert "Intent Continuity" in prompt

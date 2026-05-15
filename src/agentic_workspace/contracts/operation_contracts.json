@@ -191,6 +191,12 @@
       "migration_status": "runtime-consumed"
     },
     {
+      "id": "planning.list-files.report",
+      "path": "operations/planning.list-files.report.json",
+      "command": "list-files",
+      "migration_status": "runtime-consumed"
+    },
+    {
       "id": "planning.new-plan.lifecycle",
       "path": "operations/planning.new-plan.lifecycle.json",
       "command": "planning",
@@ -201,6 +207,12 @@
       "path": "operations/planning.promote-to-plan.lifecycle.json",
       "command": "planning",
       "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "planning.prompt.render",
+      "path": "operations/planning.prompt.render.json",
+      "command": "prompt",
+      "migration_status": "runtime-consumed"
     },
     {
       "id": "planning.reconcile.report",

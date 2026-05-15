@@ -2,14 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/execplans/archive/python-codegen-completion.plan.json",
-      "sha256": "50733d9c801fba980c4719c92c46d5a49f00e36ca44af46d7eecfd76848ae021",
-      "command": "agentic-planning record-recovery",
-      "reason": "Correct archived Python lane distillation after final reconciliation and active-state fix.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-13T13:03:46+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/execplans/codegen-generated-under-generated-950.plan.json",
       "sha256": "1f682d4fee512748625e452a25a0550e807b4d1b918c0b787bacfbfdf4f52392",
       "command": "agentic-planning new-plan",
@@ -1600,6 +1592,14 @@
       "reason": "record delegation decision route=delegate-validation",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-15T10:12:41+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
+      "sha256": "b60a551b434fb38d89acc164fff8dc111e73f2be028c486e06c97351076c7642",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=delegate-validation",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T10:29:46+00:00"
     }
   ]
 }

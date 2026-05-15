@@ -128,6 +128,70 @@
       },
       "status": "generated"
     },
+    "list-files": {
+      "command": {
+        "command_manifest": "package:planning:cli",
+        "name": "list-files",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-planning"
+      },
+      "conformance_refs": [
+        "planning.list-files.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "id": "planning.list-files.cli",
+      "operation_id": "planning.list-files.report",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.list-files.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    "prompt": {
+      "command": {
+        "command_manifest": "package:planning:cli",
+        "name": "prompt",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-planning"
+      },
+      "conformance_refs": [
+        "planning.prompt.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "id": "planning.prompt.cli",
+      "operation_id": "planning.prompt.render",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.prompt.render",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
     "reconcile": {
       "command": {
         "command_manifest": "package:planning:cli",

@@ -333,6 +333,18 @@
       "summary": "Build planning orientation guidance and lifecycle command affordances without mutating planning state."
     },
     {
+      "id": "planning.list-files.load",
+      "summary": "Load package-local planning payload file inventory.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "planning.prompt.render",
+      "summary": "Render package-local planning prompt guidance for a selected bootstrap command.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
+    },
+    {
       "id": "planning.reconcile.load",
       "summary": "Load provider-agnostic planning reconciliation state when the planning module is installed."
     },

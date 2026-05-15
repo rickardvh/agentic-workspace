@@ -458,6 +458,8 @@ def _python_runtime_adapter_module(package: dict[str, Any], target: dict[str, An
         '            kwargs["nargs"] = argument["nargs"]\n'
         '        if "default" in argument:\n'
         '            kwargs["default"] = argument["default"]\n'
+        '        if "choices" in argument:\n'
+        '            kwargs["choices"] = tuple(argument["choices"])\n'
         '        help_text = argument.get("help")\n'
         "        if isinstance(help_text, str):\n"
         '            kwargs["help"] = help_text\n'

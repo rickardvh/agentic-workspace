@@ -469,6 +469,44 @@
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but planning handoff payload assembly still owns package-specific planning judgment."
     },
     {
+      "operation_id": "planning.list-files.report",
+      "program": "agentic-planning",
+      "command": "list-files",
+      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/planning.list-files.report.json",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "planning.list-files.load",
+        "module-result text/json compatibility formatting"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "planning.list-files.process",
+      "domain_runtime_primitive_refs": [
+        "planning.list-files.load"
+      ],
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but planning payload inventory still owns package-specific payload grouping and optional enablement guidance."
+    },
+    {
+      "operation_id": "planning.prompt.render",
+      "program": "agentic-planning",
+      "command": "prompt",
+      "generated_transport": "generated/python/planning-cli/generated_cli_package/__init__.py",
+      "operation_contract": "operations/planning.prompt.render.json",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "planning.prompt.render",
+        "text output emission"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "planning.prompt.process",
+      "domain_runtime_primitive_refs": [
+        "planning.prompt.render"
+      ],
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but planning prompt wording and upgrade-source selection remain package-specific guidance."
+    },
+    {
       "operation_id": "planning.reconcile.report",
       "program": "agentic-planning",
       "command": "reconcile",

@@ -2,11 +2,9 @@ from __future__ import annotations
 
 import argparse
 import json
-import shutil
 import sys
 
 from repo_planning_bootstrap import __version__
-from repo_planning_bootstrap._source import UpgradeSource, resolve_upgrade_source
 from repo_planning_bootstrap.installer import (
     adopt_bootstrap,
     archive_execplan,
@@ -18,10 +16,6 @@ from repo_planning_bootstrap.installer import (
     doctor_bootstrap,
     format_summary_json,
     install_bootstrap,
-    list_bundled_skill_files,
-    list_default_payload_files,
-    list_optional_payload_files,
-    list_payload_files,
     planning_handoff,
     planning_reconcile,
     planning_report,
@@ -304,16 +298,18 @@ def build_parser() -> argparse.ArgumentParser:
     recovery_parser.add_argument("--dry-run", action="store_true")
     recovery_parser.add_argument("--format", choices=("text", "json"), default="text")
 
-    list_files_parser = subparsers.add_parser("list-files")
-    list_files_parser.add_argument("--format", choices=("text", "json"), default="text")
+    if "list-files" not in generated_commands:
+        list_files_parser = subparsers.add_parser("list-files")
+        list_files_parser.add_argument("--format", choices=("text", "json"), default="text")
 
     if "verify-payload" not in generated_commands:
         verify_parser = subparsers.add_parser("verify-payload")
         verify_parser.add_argument("--format", choices=("text", "json"), default="text")
 
-    prompt_parser = subparsers.add_parser("prompt")
-    prompt_parser.add_argument("prompt_command", choices=("install", "adopt"))
-    prompt_parser.add_argument("--target")
+    if "prompt" not in generated_commands:
+        prompt_parser = subparsers.add_parser("prompt")
+        prompt_parser.add_argument("prompt_command", choices=("install", "adopt"))
+        prompt_parser.add_argument("--target")
     return parser
 
 
@@ -501,33 +497,11 @@ def main(argv: list[str] | None = None) -> int:
             args.format,
         )
     if args.command == "list-files":
-        files = list_payload_files()
-        if args.format == "json":
-            print(
-                json.dumps(
-                    {
-                        "files": files,
-                        "default_files": list_default_payload_files(),
-                        "optional_files": list_optional_payload_files(),
-                        "bundled_skill_files": list_bundled_skill_files(),
-                        "optional_enable_commands": [
-                            "agentic-planning install --include-optional",
-                            "agentic-planning adopt --include-optional",
-                            "agentic-planning upgrade --include-optional",
-                        ],
-                    },
-                    indent=2,
-                )
-            )
-        else:
-            for path in files:
-                print(path)
-        return 0
+        parser.error("list-files is generated and should not reach the compatibility fallback")
     if args.command == "verify-payload":
         return _emit(verify_payload(), args.format)
     if args.command == "prompt":
-        print(_build_prompt(args.prompt_command, args.target))
-        return 0
+        parser.error("prompt is generated and should not reach the compatibility fallback")
     parser.error(f"Unknown command: {args.command}")
     return 2
 
@@ -599,6 +573,14 @@ def _run_verify_payload_report_adapter(args: argparse.Namespace) -> int:
     return run_operation_ir(generated_cli_package_operation_contract("planning.verify-payload.report"), args)
 
 
+def _run_list_files_report_adapter(args: argparse.Namespace) -> int:
+    return run_operation_ir(generated_cli_package_operation_contract("planning.list-files.report"), args)
+
+
+def _run_prompt_render_adapter(args: argparse.Namespace) -> int:
+    return run_operation_ir(generated_cli_package_operation_contract("planning.prompt.render"), args)
+
+
 def _run_close_item_lifecycle_adapter(args: argparse.Namespace) -> int:
     return run_operation_ir(generated_cli_package_operation_contract("planning.close-item.lifecycle"), args)
 
@@ -612,87 +594,11 @@ _GENERATED_RUNTIME_HANDLERS = {
     "planning.create-review.lifecycle": _run_create_review_lifecycle_adapter,
     "planning.doctor.report": _run_doctor_report_adapter,
     "planning.handoff.report": _run_handoff_report_adapter,
+    "planning.list-files.report": _run_list_files_report_adapter,
+    "planning.prompt.render": _run_prompt_render_adapter,
     "planning.reconcile.report": _run_reconcile_report_adapter,
     "planning.report.report": _run_report_adapter,
     "planning.status.report": _run_status_report_adapter,
     "planning.summary.report": _run_summary_report_adapter,
     "planning.verify-payload.report": _run_verify_payload_report_adapter,
 }
-
-
-def _build_prompt(command: str, target: str | None) -> str:
-    source = resolve_upgrade_source(target)
-    runner = _preferred_runner(source)
-    target_args = f" --target {target}" if target else ""
-    non_interactive_args = " --non-interactive"
-    if command == "install":
-        if runner is None:
-            return (
-                "No pinned remote runner is published for this bootstrap version yet. "
-                "Use an installed `agentic-planning` command if it is already available locally, "
-                "or publish a tagged release before relying on remote `prompt install` workflows."
-            )
-        return (
-            f"Run `{runner} install{target_args}{non_interactive_args}`. "
-            "Then customise `AGENTS.md`, prune starter placeholders, and run "
-            "`agentic-workspace doctor --target ./repo --modules planning --format json` inside the target repo."
-        )
-    if command == "adopt":
-        if runner is None:
-            return (
-                "No pinned remote runner is published for this bootstrap version yet. "
-                "Use an installed `agentic-planning` command if it is already available locally, "
-                "or publish a tagged release before relying on remote `prompt adopt` workflows."
-            )
-        return (
-            f"Run `{runner} adopt{target_args}{non_interactive_args}` conservatively. "
-            "Do not overwrite repo-owned planning files unless the user asks for it. "
-            "Afterwards run `agentic-workspace doctor --target ./repo --modules planning --format json` inside the target repo."
-        )
-    if command == "upgrade":
-        upgrade_guidance = (
-            f"Use the checked-in `bootstrap-upgrade` skill under `{_managed_skills_path(target)}/`. "
-            "It should use the repo's `.agentic-workspace/planning/UPGRADE-SOURCE.toml`, prefer an installed "
-            "`agentic-planning` command with `--non-interactive` when available, and rerun render/check validation. "
-            "If `doctor` still flags older active execplans, reconcile those plans to the current contract by "
-            "adding or refreshing `Intent Continuity`, `Required Continuation`, `Delegated Judgment`, "
-            "`Active Milestone`, and `Execution Summary` instead of treating the upgrade as broken."
-        )
-        if runner is None:
-            return upgrade_guidance
-        return upgrade_guidance + f" If a local install is unavailable, fall back to `{runner} upgrade --target <repo> --non-interactive`."
-    if runner is None:
-        return (
-            "No pinned remote runner is published for this bootstrap version yet. "
-            "Use an installed `agentic-planning` command if it is already available locally."
-        )
-    return (
-        f"Run `{runner} adopt{target_args}{non_interactive_args}` conservatively. "
-        "Do not overwrite repo-owned planning files unless the user asks for it. "
-        "Afterwards run `agentic-workspace doctor --target ./repo --modules planning --format json` inside the target repo."
-    )
-
-
-def _preferred_runner(source: UpgradeSource) -> str | None:
-    if source.source_type == "none" or not source.source_ref:
-        return None
-    if source.source_type == "local":
-        return _runner_command_for_local_source(source.source_ref)
-    if shutil.which("uvx"):
-        return f"uvx --from {source.source_ref} agentic-planning"
-    if shutil.which("pipx"):
-        return f"pipx run --spec {source.source_ref} agentic-planning"
-    return f"uvx --from {source.source_ref} agentic-planning"
-
-
-def _managed_skills_path(target: str | None) -> str:
-    target_root = target or "./repo"
-    return f"{target_root}/skills"
-
-
-def _runner_command_for_local_source(source_ref: str) -> str:
-    if shutil.which("uvx"):
-        return f"uvx --from {source_ref} agentic-planning"
-    if shutil.which("pipx"):
-        return f"pipx run --spec {source_ref} agentic-planning"
-    return f"uvx --from {source_ref} agentic-planning"

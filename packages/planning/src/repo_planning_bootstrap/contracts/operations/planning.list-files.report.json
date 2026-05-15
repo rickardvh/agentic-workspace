@@ -1,0 +1,86 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "planning.list-files.report",
+  "command_surface": {
+    "program": "agentic-planning",
+    "command": "list-files",
+    "format_option": "format"
+  },
+  "summary": "List bundled planning payload files and optional payload enablement commands.",
+  "classification": "read-only-report",
+  "inputs": [
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "text-or-json"
+  },
+  "effects": {
+    "read_only": true,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": false,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": "planning package payload manifest",
+      "required": true
+    }
+  ],
+  "writes": [],
+  "steps": [
+    {
+      "id": "load_payload_files",
+      "uses": "planning.list-files.load",
+      "description": "Load bundled planning payload file lists and optional enablement guidance."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit the planning payload file list in the requested format."
+    }
+  ],
+  "guards": [
+    "Listing bundled files must remain read-only."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated list-files process conformance passes"
+  ],
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Planning list-files executes generated operation IR through codegen-owned primitive dataflow while the planning module supplies payload inventory data.",
+    "steps": [
+      {
+        "id": "load_payload_files",
+        "uses": "planning.list-files.load",
+        "description": "Load bundled planning payload file lists and optional enablement guidance.",
+        "arguments": {},
+        "outputs": [
+          "result"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit",
+        "description": "Emit the planning payload file list in the requested format.",
+        "arguments": {},
+        "outputs": [
+          "emitted"
+        ],
+        "on_error": "emit_usage_error"
+      }
+    ]
+  }
+}

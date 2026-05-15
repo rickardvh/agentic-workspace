@@ -32,6 +32,8 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
         'planning.create-review.lifecycle',
         'planning.doctor.report',
         'planning.handoff.report',
+        'planning.list-files.report',
+        'planning.prompt.render',
         'planning.reconcile.report',
         'planning.report.report',
         'planning.status.report',
@@ -62,6 +64,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'scope': getattr(args, 'scope', None),
                 'classification': getattr(args, 'classification', 'review'),
                 'render_markdown': getattr(args, 'render_markdown', False),
+                'prompt_command': getattr(args, 'prompt_command', ''),
             },
             context=PrimitiveContext(cwd=Path.cwd(), roots={}),
             handlers={
@@ -75,6 +78,8 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'planning.close-item.apply': _handle_planning_close_item_apply,
                 'planning.create-review.apply': _handle_planning_create_review_apply,
                 'output.emit': _handle_output_emit,
+                'planning.list-files.load': _handle_planning_list_files_load,
+                'planning.prompt.render': _handle_planning_prompt_render,
             },
         )
     except PrimitiveExecutionError as exc:
@@ -144,3 +149,15 @@ def _handle_output_emit(values: dict[str, Any], arguments: dict[str, Any], conte
     from repo_planning_bootstrap.runtime_projection import emit_planning_operation_output
 
     return emit_planning_operation_output(values, arguments, context)
+
+
+def _handle_planning_list_files_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
+    from repo_planning_bootstrap.runtime_projection import load_planning_list_files_operation
+
+    return load_planning_list_files_operation(values, arguments, context)
+
+
+def _handle_planning_prompt_render(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
+    from repo_planning_bootstrap.runtime_projection import render_planning_prompt_operation
+
+    return render_planning_prompt_operation(values, arguments, context)

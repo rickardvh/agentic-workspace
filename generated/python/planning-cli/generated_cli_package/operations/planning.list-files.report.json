@@ -1,0 +1,86 @@
+{
+  "classification": "read-only-report",
+  "command_surface": {
+    "command": "list-files",
+    "format_option": "format",
+    "program": "agentic-planning"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": true,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
+  },
+  "guards": [
+    "Listing bundled files must remain read-only."
+  ],
+  "id": "planning.list-files.report",
+  "inputs": [
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "arguments": {},
+        "description": "Load bundled planning payload file lists and optional enablement guidance.",
+        "id": "load_payload_files",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "planning.list-files.load"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the planning payload file list in the requested format.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Planning list-files executes generated operation IR through codegen-owned primitive dataflow while the planning module supplies payload inventory data."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "text-or-json"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated list-files process conformance passes"
+  ],
+  "reads": [
+    {
+      "required": true,
+      "surface": "planning package payload manifest"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Load bundled planning payload file lists and optional enablement guidance.",
+      "id": "load_payload_files",
+      "uses": "planning.list-files.load"
+    },
+    {
+      "description": "Emit the planning payload file list in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "List bundled planning payload files and optional payload enablement commands.",
+  "writes": []
+}

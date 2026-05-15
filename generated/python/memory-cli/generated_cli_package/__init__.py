@@ -144,6 +144,8 @@ def _add_interface_options(
             kwargs["nargs"] = argument["nargs"]
         if "default" in argument:
             kwargs["default"] = argument["default"]
+        if "choices" in argument:
+            kwargs["choices"] = tuple(argument["choices"])
         help_text = argument.get("help")
         if isinstance(help_text, str):
             kwargs["help"] = help_text

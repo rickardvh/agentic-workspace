@@ -1,219 +1,5 @@
 [
   {
-    "adapter_id": "planning.status.cli",
-    "interface": {
-      "help": "Report whether planning bootstrap files are present.",
-      "name": "status",
-      "options": [
-        {
-          "flags": [
-            "--target"
-          ],
-          "help": "Target repository path. Defaults to the current directory.",
-          "name": "target"
-        },
-        {
-          "action": "store_true",
-          "flags": [
-            "--verbose"
-          ],
-          "help": "Emit broad diagnostic output for debugging or audit detail.",
-          "name": "verbose"
-        },
-        {
-          "choices": [
-            "text",
-            "json"
-          ],
-          "default": "text",
-          "flags": [
-            "--format"
-          ],
-          "help": "Output format.",
-          "name": "format"
-        },
-        {
-          "action": "store_true",
-          "flags": [
-            "--apply-safe-prune"
-          ],
-          "help": "Apply only reconcile cleanup targets that are already marked safe_to_prune.",
-          "name": "apply_safe_prune"
-        },
-        {
-          "action": "store_true",
-          "flags": [
-            "--dry-run"
-          ],
-          "help": "Preview --apply-safe-prune without writing files.",
-          "name": "dry_run"
-        }
-      ]
-    },
-    "operation_id": "planning.status.report",
-    "operation_path": "operations/planning.status.report.json"
-  },
-  {
-    "adapter_id": "planning.doctor.cli",
-    "interface": {
-      "help": "Read-only doctor report.",
-      "name": "doctor",
-      "options": [
-        {
-          "flags": [
-            "--target"
-          ],
-          "help": "Target repository path. Defaults to the current directory.",
-          "name": "target"
-        },
-        {
-          "action": "store_true",
-          "flags": [
-            "--verbose"
-          ],
-          "help": "Emit broad diagnostic output for debugging or audit detail.",
-          "name": "verbose"
-        },
-        {
-          "choices": [
-            "text",
-            "json"
-          ],
-          "default": "text",
-          "flags": [
-            "--format"
-          ],
-          "help": "Output format.",
-          "name": "format"
-        }
-      ]
-    },
-    "operation_id": "planning.doctor.report",
-    "operation_path": "operations/planning.doctor.report.json"
-  },
-  {
-    "adapter_id": "planning.summary.cli",
-    "interface": {
-      "help": "Read-only summary report.",
-      "name": "summary",
-      "options": [
-        {
-          "flags": [
-            "--target"
-          ],
-          "help": "Target repository path. Defaults to the current directory.",
-          "name": "target"
-        },
-        {
-          "flags": [
-            "--task"
-          ],
-          "help": "Optional task text used to return a task-scoped compact summary.",
-          "name": "task"
-        },
-        {
-          "default": [],
-          "flags": [
-            "--changed"
-          ],
-          "help": "Optional changed paths used to scope compact summary output.",
-          "name": "changed",
-          "nargs": "*"
-        },
-        {
-          "action": "store_true",
-          "flags": [
-            "--verbose"
-          ],
-          "help": "Emit broad diagnostic output for debugging or audit detail.",
-          "name": "verbose"
-        },
-        {
-          "choices": [
-            "text",
-            "json"
-          ],
-          "default": "text",
-          "flags": [
-            "--format"
-          ],
-          "help": "Output format.",
-          "name": "format"
-        }
-      ]
-    },
-    "operation_id": "planning.summary.report",
-    "operation_path": "operations/planning.summary.report.json"
-  },
-  {
-    "adapter_id": "planning.report.cli",
-    "interface": {
-      "help": "Read-only report report.",
-      "name": "report",
-      "options": [
-        {
-          "flags": [
-            "--target"
-          ],
-          "help": "Target repository path. Defaults to the current directory.",
-          "name": "target"
-        },
-        {
-          "action": "store_true",
-          "flags": [
-            "--verbose"
-          ],
-          "help": "Emit broad diagnostic output for debugging or audit detail.",
-          "name": "verbose"
-        },
-        {
-          "choices": [
-            "text",
-            "json"
-          ],
-          "default": "text",
-          "flags": [
-            "--format"
-          ],
-          "help": "Output format.",
-          "name": "format"
-        }
-      ]
-    },
-    "operation_id": "planning.report.report",
-    "operation_path": "operations/planning.report.report.json"
-  },
-  {
-    "adapter_id": "planning.reconcile.cli",
-    "interface": {
-      "help": "Read-only reconcile report.",
-      "name": "reconcile",
-      "options": [
-        {
-          "flags": [
-            "--target"
-          ],
-          "help": "Target repository path. Defaults to the current directory.",
-          "name": "target"
-        },
-        {
-          "choices": [
-            "text",
-            "json"
-          ],
-          "default": "text",
-          "flags": [
-            "--format"
-          ],
-          "help": "Output format.",
-          "name": "format"
-        }
-      ]
-    },
-    "operation_id": "planning.reconcile.report",
-    "operation_path": "operations/planning.reconcile.report.json"
-  },
-  {
     "adapter_id": "planning.close-item.cli",
     "interface": {
       "arguments": [
@@ -349,6 +135,44 @@
     "operation_path": "operations/planning.create-review.lifecycle.json"
   },
   {
+    "adapter_id": "planning.doctor.cli",
+    "interface": {
+      "help": "Read-only doctor report.",
+      "name": "doctor",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--verbose"
+          ],
+          "help": "Emit broad diagnostic output for debugging or audit detail.",
+          "name": "verbose"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "planning.doctor.report",
+    "operation_path": "operations/planning.doctor.report.json"
+  },
+  {
     "adapter_id": "planning.handoff.cli",
     "interface": {
       "help": "Emit the compact delegated-worker handoff derived from active planning state.",
@@ -377,6 +201,233 @@
     },
     "operation_id": "planning.handoff.report",
     "operation_path": "operations/planning.handoff.report.json"
+  },
+  {
+    "adapter_id": "planning.list-files.cli",
+    "interface": {
+      "help": "List bundled planning payload files.",
+      "name": "list-files",
+      "options": [
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "planning.list-files.report",
+    "operation_path": "operations/planning.list-files.report.json"
+  },
+  {
+    "adapter_id": "planning.prompt.cli",
+    "interface": {
+      "arguments": [
+        {
+          "choices": [
+            "install",
+            "adopt"
+          ],
+          "help": "Prompt guidance to render.",
+          "name": "prompt_command"
+        }
+      ],
+      "help": "Render planning bootstrap prompt guidance.",
+      "name": "prompt",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to ./repo in prompt text.",
+          "name": "target"
+        }
+      ]
+    },
+    "operation_id": "planning.prompt.render",
+    "operation_path": "operations/planning.prompt.render.json"
+  },
+  {
+    "adapter_id": "planning.reconcile.cli",
+    "interface": {
+      "help": "Read-only reconcile report.",
+      "name": "reconcile",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "planning.reconcile.report",
+    "operation_path": "operations/planning.reconcile.report.json"
+  },
+  {
+    "adapter_id": "planning.report.cli",
+    "interface": {
+      "help": "Read-only report report.",
+      "name": "report",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--verbose"
+          ],
+          "help": "Emit broad diagnostic output for debugging or audit detail.",
+          "name": "verbose"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "planning.report.report",
+    "operation_path": "operations/planning.report.report.json"
+  },
+  {
+    "adapter_id": "planning.status.cli",
+    "interface": {
+      "help": "Report whether planning bootstrap files are present.",
+      "name": "status",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--verbose"
+          ],
+          "help": "Emit broad diagnostic output for debugging or audit detail.",
+          "name": "verbose"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--apply-safe-prune"
+          ],
+          "help": "Apply only reconcile cleanup targets that are already marked safe_to_prune.",
+          "name": "apply_safe_prune"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--dry-run"
+          ],
+          "help": "Preview --apply-safe-prune without writing files.",
+          "name": "dry_run"
+        }
+      ]
+    },
+    "operation_id": "planning.status.report",
+    "operation_path": "operations/planning.status.report.json"
+  },
+  {
+    "adapter_id": "planning.summary.cli",
+    "interface": {
+      "help": "Read-only summary report.",
+      "name": "summary",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "flags": [
+            "--task"
+          ],
+          "help": "Optional task text used to return a task-scoped compact summary.",
+          "name": "task"
+        },
+        {
+          "default": [],
+          "flags": [
+            "--changed"
+          ],
+          "help": "Optional changed paths used to scope compact summary output.",
+          "name": "changed",
+          "nargs": "*"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--verbose"
+          ],
+          "help": "Emit broad diagnostic output for debugging or audit detail.",
+          "name": "verbose"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "planning.summary.report",
+    "operation_path": "operations/planning.summary.report.json"
   },
   {
     "adapter_id": "planning.verify-payload.cli",
