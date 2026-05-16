@@ -1,0 +1,294 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Implement #1014 structured SkillSpec gates and slots",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement GitHub #1014 by encoding transition gates and module slots as structured SkillSpec-compatible data.",
+    "hard_constraints": "Do not implement generated adapters, plugin definitions, or a runtime workflow engine in this slice.",
+    "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Extend the SkillSpec schema/manifest with five transition gates and five module slots, regenerate reference docs, and add contract tests.",
+    "proof_expectations": [
+      "uv run pytest tests/test_contract_tooling.py::test_skill_specs_contract_models_startup_and_planning_behavior -q",
+      "uv run python scripts/generate/generate_schema_reference.py --schema src/agentic_workspace/contracts/schemas/skill_spec.schema.json --check --check-annotations",
+      "make lint-workspace"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/contracts/schemas/skill_spec.schema.json",
+      "src/agentic_workspace/contracts/skill_specs.json",
+      "docs/reference/skill-spec.md",
+      "tests/test_contract_tooling.py"
+    ],
+    "completion_criteria": [
+      "SkillSpec manifest contains structured transition-gate entries for startup-to-work, work-to-planning, work-to-proof, work-to-memory-residue, and proof-to-closeout.",
+      "SkillSpec manifest contains structured module-slot entries for workspace, planning, planning.closeout, workspace.proof, and memory.",
+      "Tests fail when gate or slot entries omit required CLI, fallback, allowed/forbidden actions, interpreted fields, proof/closeout obligations, or preservation requirements."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "Create a bounded plan for Implement #1014 structured SkillSpec gates and slots."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Implement GitHub #1014 by encoding transition gates and module slots as structured SkillSpec-compatible data.",
+      "constraints": "Do not implement generated adapters, plugin definitions, or a runtime workflow engine in this slice.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "github-1014-structured-skillspec-gates",
+      "status": "completed",
+      "next_step": "Archive this completed execplan and continue with #1015.",
+      "proof": "Focused SkillSpec contract tests, schema reference check, contract tooling, structured inventory, ruff, maintainer surfaces, and workspace lint passed."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/contracts/schemas/skill_spec.schema.json",
+        "src/agentic_workspace/contracts/skill_specs.json",
+        "docs/reference/skill-spec.md",
+        "tests/test_contract_tooling.py"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Create a bounded plan for Implement #1014 structured SkillSpec gates and slots.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes",
+    "validation still needed": "rerun make test-workspace after closing active planning state",
+    "next likely slice": "continue with #1015"
+  },
+  "intent_interpretation": {
+    "literal request": "Implement #1014 structured SkillSpec gates and slots",
+    "inferred intended outcome": "Create a bounded plan for Implement #1014 structured SkillSpec gates and slots.",
+    "chosen concrete what": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "SkillSpec schema, SkillSpec manifest, generated SkillSpec reference docs, focused contract tests, and planning closeout state for this slice.",
+    "max changed files": "about four implementation/doc/test files plus planning state",
+    "required validation commands": "Focused SkillSpec contract test, schema reference check, make test-workspace, and make lint-workspace.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Add structured SkillSpec transition gates and module slots without generated adapter work.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Create a bounded plan for Implement #1014 structured SkillSpec gates and slots.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "Bounded #1014 contract/schema/test slice; local implementation preserves ownership and avoids coordination overhead.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-16T21:36:43+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "github-1014-structured-skillspec-gates",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Add structured SkillSpec transition gates and module slots, then validate contract/schema/docs alignment."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/schemas/skill_spec.schema.json",
+    "src/agentic_workspace/contracts/skill_specs.json",
+    "docs/reference/skill-spec.md",
+    "tests/test_contract_tooling.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_contract_tooling.py::test_skill_specs_contract_models_startup_and_planning_behavior -q",
+    "uv run python scripts/generate/generate_schema_reference.py --schema src/agentic_workspace/contracts/schemas/skill_spec.schema.json --check --check-annotations",
+    "make test-workspace",
+    "make lint-workspace"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Structured transition gates cover startup-to-work, work-to-planning, work-to-proof, work-to-memory-residue, and proof-to-closeout.",
+    "Structured module slots cover workspace, planning, planning.closeout, workspace.proof, and memory.",
+    "Tests prove required gate/slot semantics are present without parsing SKILL.md prose."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Added structured SkillSpec-compatible transition gates and module slots, extended the SkillSpec schema, regenerated reference docs, and added contract assertions.",
+    "scope touched": "SkillSpec schema, manifest, generated reference docs, focused contract tests, and planning closeout state.",
+    "changed surfaces": "src/agentic_workspace/contracts/schemas/skill_spec.schema.json; src/agentic_workspace/contracts/skill_specs.json; docs/reference/skill-spec.md; tests/test_contract_tooling.py",
+    "validations run": "Focused SkillSpec tests, schema reference check, contract tooling, structured inventory, ruff, maintainer surfaces, and workspace lint passed; make test-workspace will be rerun after closing active planning state.",
+    "result for continuation": "Proceed to #1015 as a separate slice.",
+    "next step": "Archive this completed execplan and rerun full workspace validation."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "continue with #1015"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "Bounded #1014 contract/schema/test slice; local implementation preserves ownership and avoids coordination overhead.",
+    "expected savings": "unknown",
+    "actual friction": "pending",
+    "proof result": "pending",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_contract_tooling.py::test_skill_specs_contract_models_startup_and_planning_behavior tests/test_schema_reference_docs.py::test_schema_reference_default_targets_cover_all_contract_schemas -q; uv run python scripts/generate/generate_schema_reference.py --schema src/agentic_workspace/contracts/schemas/skill_spec.schema.json --check --check-annotations; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py tests/test_contract_tooling.py; make maintainer-surfaces; make lint-workspace",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Focused tests, schema reference check, contract tooling, structured inventory, ruff, maintainer surfaces, and workspace lint passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Implement #1014 structured SkillSpec gates and slots.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "SkillSpec manifest now contains schema-backed structured transition gates and module slots with tests proving required semantics.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Structured SkillSpec transition gates and module slots implemented.",
+    "validation confirmed": "focused tests, schema checks, maintainer surfaces, and workspace lint passed",
+    "follow-on routed to": "#1015",
+    "post-work posterity capture": "SkillSpec contract, docs, tests, and planning closeout",
+    "knowledge promoted (Memory/Docs/Config)": "src/agentic_workspace/contracts/skill_specs.json and docs/reference/skill-spec.md",
+    "resume from": "#1015; #1014 is complete"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "The bounded #1014 contract-hardening slice is implemented and validated; generated adapter work remains explicitly out of scope.",
+    "evidence carried forward": "SkillSpec schema/manifest/docs/tests changed in the listed touched paths.",
+    "reopen trigger": "CI finds SkillSpec schema, docs, or required gate/slot semantic coverage regression."
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        "Scaffold placeholders and transient validation chronology."
+      ],
+      "continuation": [
+        "Continue with #1015 as a separate enforcement coverage slice."
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-16: Scaffolded by agentic-planning new-plan.",
+    "2026-05-16: Recorded delegation decision route=keep-local."
+  ]
+}

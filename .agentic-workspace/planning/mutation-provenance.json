@@ -3,46 +3,6 @@
   "entries": [
     {
       "path": ".agentic-workspace/planning/execplans/python-memory-generated-resources.plan.json",
-      "sha256": "9dd17df88c3b951ed3a7a3ae22eda43c05fc92a58982e530e1890767eb6c8da4",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-memory-generated-resources",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T11:06:08+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "04a07da35f0d15bc8bb5fa48cf1f39e133c0b1458cf12221c0a5b9d5d0f83d49",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-memory-generated-resources",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T11:06:08+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-memory-generated-resources.plan.json",
-      "sha256": "302c890e64947a7af5ad554b836ebbfd251d6a105e22f602ee0dbc4ed863bdfd",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=keep-local",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T11:06:08+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-memory-generated-resources.plan.json",
-      "sha256": "302c890e64947a7af5ad554b836ebbfd251d6a105e22f602ee0dbc4ed863bdfd",
-      "command": "agentic-planning record-recovery",
-      "reason": "Completed #1004 slice: memory generated Python package now carries target-local _payload and _skills resource copies, and generated memory operation context roots resolve those resources without repo_memory_bootstrap._installer_paths. Proof: generation check, static generated package proof, python conformance, docker python conformance, planning doctor, contract/tooling/packaging tests.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T11:11:41+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-memory-generated-resources.plan.json",
-      "sha256": "48471e88b67dfa4a492622c3f393d78ecdb512622aae26e98ff5e6bb56fe945e",
-      "command": "agentic-planning record-recovery",
-      "reason": "Minimal closeout field repair: archive-plan/close-item requires active_milestone.status completed before CLI archive can run; no exposed planning command marks a scaffold milestone complete independently.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T11:12:38+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-memory-generated-resources.plan.json",
       "sha256": "1754468d6be904e8a932bd3013496de08cf8dc3001170dc13672aac202bc4b6b",
       "command": "agentic-planning record-recovery",
       "reason": "Added explicit execution_summary resume cue required by archive-plan validation.",
@@ -1600,6 +1560,46 @@
       "reason": "archive execplan github-1013-typed-next-safe-action",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-16T21:31:37+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-1014-structured-skillspec-gates.plan.json",
+      "sha256": "3f05eb9f97438bac875c32b4ea559412a0bac7088ae692e43661779b6eace6a4",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold github-1014-structured-skillspec-gates",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T21:33:25+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "e8d364fc83039e46d648c2d506228d7515e6384d246aa544f2df5149b6794bce",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold github-1014-structured-skillspec-gates",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T21:33:25+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-1014-structured-skillspec-gates.plan.json",
+      "sha256": "abbb39472b702f719d7b526961704cf4318bff89f557885571fda7e578617804",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T21:36:43+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "2825a103bb66f149fb0a5df4c54a27542a980a4b8f789ea801637c26cd080901",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan github-1014-structured-skillspec-gates",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T21:37:41+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/github-1014-structured-skillspec-gates.plan.json",
+      "sha256": "2626d10d14423d4b05d7f093c6d198d5fb685e6b5d40323a7ba0296c6a3280fa",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan github-1014-structured-skillspec-gates",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T21:37:41+00:00"
     }
   ]
 }

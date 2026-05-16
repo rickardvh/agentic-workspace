@@ -119,6 +119,51 @@ def test_skill_specs_contract_models_startup_and_planning_behavior() -> None:
 
     specs = {entry["id"]: entry for entry in manifest["specs"]}
     assert {"startup-router", "planning-autopilot"} <= specs.keys()
+    transition_gates = {entry["id"]: entry for entry in manifest["transition_gates"]}
+    module_slots = {entry["id"]: entry for entry in manifest["module_slots"]}
+    assert {
+        "startup-to-work",
+        "work-to-planning",
+        "work-to-proof",
+        "work-to-memory-residue",
+        "proof-to-closeout",
+    } == transition_gates.keys()
+    assert {"workspace", "planning", "planning.closeout", "workspace.proof", "memory"} == module_slots.keys()
+
+    required_gate_fields = {
+        "trigger",
+        "preferred_cli_or_report",
+        "interpreted_fields",
+        "allowed_actions",
+        "forbidden_actions",
+        "proof_obligations",
+        "closeout_obligations",
+        "fallback_when_cli_unavailable",
+        "generated_target_requirements",
+    }
+    for gate in transition_gates.values():
+        assert required_gate_fields <= gate.keys()
+        assert gate["preferred_cli_or_report"]
+        assert gate["fallback_when_cli_unavailable"]
+        assert gate["allowed_actions"]
+        assert gate["forbidden_actions"]
+        assert gate["interpreted_fields"]
+        assert gate["generated_target_requirements"]["must_preserve"]
+
+    required_slot_fields = {"owns", *(required_gate_fields - {"trigger"})}
+    for slot in module_slots.values():
+        assert required_slot_fields <= slot.keys()
+        assert slot["preferred_cli_or_report"]
+        assert slot["fallback_when_cli_unavailable"]
+        assert slot["allowed_actions"]
+        assert slot["forbidden_actions"]
+        assert slot["interpreted_fields"]
+        assert slot["generated_target_requirements"]["must_preserve"]
+
+    assert "next_safe_action" in " ".join(module_slots["workspace"]["interpreted_fields"])
+    assert "state.toml" in " ".join(module_slots["planning"]["forbidden_actions"])
+    assert "completion_claim_allowed" in transition_gates["proof-to-closeout"]["interpreted_fields"]
+    assert "durable_residue_decision" in transition_gates["work-to-memory-residue"]["interpreted_fields"]
 
     startup = specs["startup-router"]
     startup_command = startup["preferred_cli_commands"][0]

@@ -1,6 +1,483 @@
 {
   "schema_version": "agentic-workspace/skill-spec/v1",
   "rule": "Skills steer agent behavior and proportionality; the CLI is preferred for robust state inspection, mutation, validation, and reporting when it is available.",
+  "transition_gates": [
+    {
+      "id": "startup-to-work",
+      "title": "Startup To Work",
+      "trigger": [
+        "first contact, takeover, or uncertain task shape"
+      ],
+      "module_slot": "workspace",
+      "preferred_cli_or_report": [
+        "uv run agentic-workspace start --task \"<task>\" --format json"
+      ],
+      "interpreted_fields": [
+        "immediate_next_allowed_action",
+        "workflow_sufficiency",
+        "next_safe_action",
+        "skill_routing"
+      ],
+      "allowed_actions": [
+        "follow next_safe_action.preferred_cli",
+        "request a selector",
+        "continue direct work when the packet says enough"
+      ],
+      "forbidden_actions": [
+        "open broad raw planning files before compact routing when the packet forbids it"
+      ],
+      "proof_obligations": [
+        "preserve next_safe_action proof_required before claiming completion"
+      ],
+      "closeout_obligations": [
+        "do not claim completion when completion_claim_allowed is false"
+      ],
+      "fallback_when_cli_unavailable": [
+        "read .agentic-workspace/WORKFLOW.md and preserve forbidden actions"
+      ],
+      "generated_target_requirements": {
+        "status": "contract-only",
+        "must_preserve": [
+          "startup-to-work trigger",
+          "preferred startup CLI",
+          "interpreted startup fields",
+          "allowed and forbidden action lists",
+          "no-CLI fallback"
+        ],
+        "deferred_until": "Generated adapter work is selected explicitly."
+      }
+    },
+    {
+      "id": "work-to-planning",
+      "title": "Work To Planning",
+      "trigger": [
+        "lane or epic shape",
+        "active planning pressure",
+        "durable sequencing",
+        "issue-linked execution"
+      ],
+      "module_slot": "planning",
+      "preferred_cli_or_report": [
+        "uv run agentic-workspace summary --format json",
+        "uv run agentic-workspace planning <command> --target . --format json"
+      ],
+      "interpreted_fields": [
+        "todo.active_items",
+        "execplans.active_execplans",
+        "continuation_owner",
+        "stop_conditions"
+      ],
+      "allowed_actions": [
+        "create or continue the active planning artifact through package commands"
+      ],
+      "forbidden_actions": [
+        "hand-edit planning state when a CLI mutation command is available",
+        "claim parent or lane completion from a local slice"
+      ],
+      "proof_obligations": [
+        "run proof selected by implement or proof routing before closeout"
+      ],
+      "closeout_obligations": [
+        "archive or close only the planning item actually completed"
+      ],
+      "fallback_when_cli_unavailable": [
+        "read the active execplan only after compact summary points there"
+      ],
+      "generated_target_requirements": {
+        "status": "contract-only",
+        "must_preserve": [
+          "planning CLI mutation ownership",
+          "active item and execplan interpreted fields",
+          "forbidden hand-edit and over-claim actions",
+          "compact-summary-first fallback"
+        ],
+        "deferred_until": "Generated adapter work is selected explicitly."
+      }
+    },
+    {
+      "id": "work-to-proof",
+      "title": "Work To Proof",
+      "trigger": [
+        "changed paths are known",
+        "a completion claim is near"
+      ],
+      "module_slot": "workspace.proof",
+      "preferred_cli_or_report": [
+        "uv run agentic-workspace implement --changed <paths> --format json",
+        "uv run agentic-workspace proof --changed <paths> --format json"
+      ],
+      "interpreted_fields": [
+        "required_commands",
+        "proof_burden",
+        "acceptance",
+        "completion_claim_boundary"
+      ],
+      "allowed_actions": [
+        "run the selected narrow proof",
+        "classify proof gaps"
+      ],
+      "forbidden_actions": [
+        "substitute passing commands for intent satisfaction"
+      ],
+      "proof_obligations": [
+        "prove the changed surface with the selected narrow command or inspection"
+      ],
+      "closeout_obligations": [
+        "report proof separately from intent satisfaction"
+      ],
+      "fallback_when_cli_unavailable": [
+        "choose the narrowest existing test, lint, contract, or inspection route for the changed surface"
+      ],
+      "generated_target_requirements": {
+        "status": "contract-only",
+        "must_preserve": [
+          "changed-path proof routing",
+          "proof burden and acceptance fields",
+          "proof is not completion permission",
+          "narrow fallback proof selection"
+        ],
+        "deferred_until": "Generated adapter work is selected explicitly."
+      }
+    },
+    {
+      "id": "work-to-memory-residue",
+      "title": "Work To Memory Residue",
+      "trigger": [
+        "repeated correction",
+        "durable lesson",
+        "closeout residue",
+        "improvement signal"
+      ],
+      "module_slot": "memory",
+      "preferred_cli_or_report": [
+        "uv run agentic-workspace memory route --files <paths...> --format json",
+        "uv run agentic-workspace memory promotion-report --mode remediation --format json"
+      ],
+      "interpreted_fields": [
+        "memory_consultation_status",
+        "durable_residue_decision",
+        "improvement_signal_status"
+      ],
+      "allowed_actions": [
+        "capture durable anti-rediscovery knowledge",
+        "route residue to the owning surface"
+      ],
+      "forbidden_actions": [
+        "write task logs, plan history, or one-off chat residue to Memory"
+      ],
+      "proof_obligations": [
+        "show why the residue is durable or why it belongs elsewhere"
+      ],
+      "closeout_obligations": [
+        "make capture, route, dismiss, or none-found status visible"
+      ],
+      "fallback_when_cli_unavailable": [
+        "inspect the Memory index and only already-routed notes"
+      ],
+      "generated_target_requirements": {
+        "status": "contract-only",
+        "must_preserve": [
+          "memory consultation status",
+          "durable residue decision",
+          "non-Memory routing options",
+          "no task-log fallback"
+        ],
+        "deferred_until": "Generated adapter work is selected explicitly."
+      }
+    },
+    {
+      "id": "proof-to-closeout",
+      "title": "Proof To Closeout",
+      "trigger": [
+        "validation has run",
+        "the agent is about to say work is complete"
+      ],
+      "module_slot": "planning.closeout",
+      "preferred_cli_or_report": [
+        "uv run agentic-workspace planning archive-plan --prepare-closeout --target . --format json",
+        "final acceptance reconciliation when no planning artifact owns the work"
+      ],
+      "interpreted_fields": [
+        "proof_result",
+        "intent_satisfaction",
+        "issue_linkage",
+        "durable_residue_decision",
+        "completion_claim_allowed"
+      ],
+      "allowed_actions": [
+        "close only the claim level actually proven"
+      ],
+      "forbidden_actions": [
+        "close parent, lane, or epic issues from slice-only proof"
+      ],
+      "proof_obligations": [
+        "name validation result and any intent gaps separately"
+      ],
+      "closeout_obligations": [
+        "state proof, intent, gaps, residue decision, and next owner"
+      ],
+      "fallback_when_cli_unavailable": [
+        "state proof, intent, gaps, and next owner without mutating managed state by hand"
+      ],
+      "generated_target_requirements": {
+        "status": "contract-only",
+        "must_preserve": [
+          "proof-to-claim reconciliation",
+          "intent satisfaction fields",
+          "residue decision visibility",
+          "no over-closing from slice proof"
+        ],
+        "deferred_until": "Generated adapter work is selected explicitly."
+      }
+    }
+  ],
+  "module_slots": [
+    {
+      "id": "workspace",
+      "title": "Workspace Module Slot",
+      "owns": [
+        "startup",
+        "config",
+        "ownership",
+        "lifecycle",
+        "module map",
+        "skill routing",
+        "proof routing",
+        "package composition"
+      ],
+      "preferred_cli_or_report": [
+        "uv run agentic-workspace start --task \"<task>\" --format json",
+        "uv run agentic-workspace implement --changed <paths> --format json",
+        "uv run agentic-workspace proof --changed <paths> --format json",
+        "uv run agentic-workspace skills --task \"<task>\" --format json",
+        "uv run agentic-workspace report --format json",
+        "uv run agentic-workspace doctor --format json",
+        "uv run agentic-workspace status --format json"
+      ],
+      "interpreted_fields": [
+        "next_safe_action.module_slot",
+        "next_safe_action.preferred_cli",
+        "next_safe_action.forbidden_actions",
+        "next_safe_action.proof_required",
+        "next_safe_action.completion_claim_allowed"
+      ],
+      "allowed_actions": [
+        "run compact workspace routing before broad raw reads",
+        "continue direct no-artifact work when routing permits it"
+      ],
+      "forbidden_actions": [
+        "absorb planning, memory, or closeout ownership without the packet routing there"
+      ],
+      "proof_obligations": [
+        "preserve proof_required and selected proof route"
+      ],
+      "closeout_obligations": [
+        "reconcile proof, intent, residue, and issue closure separately"
+      ],
+      "fallback_when_cli_unavailable": [
+        "read .agentic-workspace/WORKFLOW.md, .agentic-workspace/docs/module-map.md, then only the named surface"
+      ],
+      "generated_target_requirements": {
+        "status": "contract-only",
+        "must_preserve": [
+          "workspace module ownership",
+          "next_safe_action fields",
+          "direct answer no-artifact rule",
+          "module-map fallback"
+        ],
+        "deferred_until": "Generated adapter work is selected explicitly."
+      }
+    },
+    {
+      "id": "planning",
+      "title": "Planning Module Slot",
+      "owns": [
+        "active execution state",
+        "todo promotion",
+        "execplans",
+        "decomposition",
+        "issue linkage",
+        "continuation"
+      ],
+      "preferred_cli_or_report": [
+        "uv run agentic-workspace summary --format json",
+        "uv run agentic-workspace planning <command> --target . --format json"
+      ],
+      "interpreted_fields": [
+        "todo.active_items",
+        "execplans.active_execplans",
+        "planning_surface_health",
+        "execution_readiness"
+      ],
+      "allowed_actions": [
+        "mutate planning state through planning CLI commands",
+        "open active execplan only when routed there"
+      ],
+      "forbidden_actions": [
+        "hand-edit state.toml when package commands are available",
+        "put durable repo facts only in plan closeout"
+      ],
+      "proof_obligations": [
+        "verify planning surface health before closeout"
+      ],
+      "closeout_obligations": [
+        "archive or close only the owned planning item"
+      ],
+      "fallback_when_cli_unavailable": [
+        "read compact summary first when possible; open the active execplan only when routed there"
+      ],
+      "generated_target_requirements": {
+        "status": "contract-only",
+        "must_preserve": [
+          "planning mutation ownership",
+          "active item and execplan routing",
+          "planning surface health",
+          "state.toml no hand-edit rule"
+        ],
+        "deferred_until": "Generated adapter work is selected explicitly."
+      }
+    },
+    {
+      "id": "planning.closeout",
+      "title": "Planning Closeout Module Slot",
+      "owns": [
+        "intent satisfaction",
+        "proof-to-claim reconciliation",
+        "archive and close decisions",
+        "continuation owner",
+        "completion honesty"
+      ],
+      "preferred_cli_or_report": [
+        "uv run agentic-workspace planning archive-plan --prepare-closeout --target . --format json",
+        "uv run agentic-workspace planning close-item --target . --format json"
+      ],
+      "interpreted_fields": [
+        "proof_report",
+        "intent_satisfaction",
+        "closure_check",
+        "closeout_distillation",
+        "generated_closeout"
+      ],
+      "allowed_actions": [
+        "close only after proof, intent, residue, and continuation are reconciled"
+      ],
+      "forbidden_actions": [
+        "mutate managed closeout state by hand when planning CLI can do it",
+        "treat proof selection as completion permission"
+      ],
+      "proof_obligations": [
+        "record validation proof and evidence for achieved proof state"
+      ],
+      "closeout_obligations": [
+        "name any unsolved intent and continuation owner"
+      ],
+      "fallback_when_cli_unavailable": [
+        "do not mutate managed state by hand; state proof, intent, gaps, and owner"
+      ],
+      "generated_target_requirements": {
+        "status": "contract-only",
+        "must_preserve": [
+          "proof-to-claim reconciliation",
+          "continuation owner requirement",
+          "managed-state no-hand-edit fallback",
+          "closeout distillation buckets"
+        ],
+        "deferred_until": "Generated adapter work is selected explicitly."
+      }
+    },
+    {
+      "id": "workspace.proof",
+      "title": "Workspace Proof Module Slot",
+      "owns": [
+        "proof selection",
+        "proof result interpretation",
+        "changed-path validation routing"
+      ],
+      "preferred_cli_or_report": [
+        "uv run agentic-workspace proof --changed <paths> --format json",
+        "uv run agentic-workspace implement --changed <paths> --format json"
+      ],
+      "interpreted_fields": [
+        "required_commands",
+        "proof_burden",
+        "acceptance",
+        "completion_claim_boundary"
+      ],
+      "allowed_actions": [
+        "select and run the narrowest proof for the changed surface"
+      ],
+      "forbidden_actions": [
+        "decide broader intent satisfaction from proof success alone"
+      ],
+      "proof_obligations": [
+        "report command or inspection evidence for the changed surface"
+      ],
+      "closeout_obligations": [
+        "hand intent satisfaction and residue decisions to the owning slots"
+      ],
+      "fallback_when_cli_unavailable": [
+        "select the narrowest existing test, lint, contract, or inspection route"
+      ],
+      "generated_target_requirements": {
+        "status": "contract-only",
+        "must_preserve": [
+          "changed-path proof routing",
+          "proof result interpretation boundary",
+          "narrow fallback validation",
+          "no proof-equals-intent shortcut"
+        ],
+        "deferred_until": "Generated adapter work is selected explicitly."
+      }
+    },
+    {
+      "id": "memory",
+      "title": "Memory Module Slot",
+      "owns": [
+        "durable anti-rediscovery knowledge",
+        "consultation status",
+        "durable residue",
+        "improvement-signal routing"
+      ],
+      "preferred_cli_or_report": [
+        "uv run agentic-workspace memory route --files <paths...> --format json",
+        "uv run agentic-workspace memory capture-note <slug> --summary <text> --files <paths...> --format json",
+        "uv run agentic-workspace memory promotion-report --mode remediation --format json"
+      ],
+      "interpreted_fields": [
+        "memory_consultation_status",
+        "durable_residue_decision",
+        "improvement_signal_status",
+        "memory_consult"
+      ],
+      "allowed_actions": [
+        "capture durable anti-rediscovery knowledge",
+        "route residue to Planning, docs, tests, contracts, review, issues, or explicit dismissal"
+      ],
+      "forbidden_actions": [
+        "put active sequencing in Memory",
+        "write one-off execution logs as durable knowledge"
+      ],
+      "proof_obligations": [
+        "distinguish Memory checked-none from Memory not checked"
+      ],
+      "closeout_obligations": [
+        "make capture, route, dismiss, or none-found state visible"
+      ],
+      "fallback_when_cli_unavailable": [
+        "read the Memory index and already-routed notes only"
+      ],
+      "generated_target_requirements": {
+        "status": "contract-only",
+        "must_preserve": [
+          "Memory checked-none versus not-checked distinction",
+          "durable residue routing",
+          "non-Memory owner options",
+          "no active sequencing in Memory"
+        ],
+        "deferred_until": "Generated adapter work is selected explicitly."
+      }
+    }
+  ],
   "specs": [
     {
       "id": "startup-router",
