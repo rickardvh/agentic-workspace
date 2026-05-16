@@ -16590,6 +16590,18 @@ def _emit_defaults(*, format_name: str, section: str | None = None, profile: str
         print(f"- {item}")
 
 
+def _emit_tiny_defaults_text(payload: dict[str, Any]) -> None:
+    print(str(payload["summary"]))
+    print("Common sections:")
+    for section in payload.get("common_sections", []):
+        print(f"- {section}")
+    print("Detail commands:")
+    detail_commands = payload.get("detail_commands", {})
+    if isinstance(detail_commands, dict):
+        for name, command in detail_commands.items():
+            print(f"- {name}: {command}")
+
+
 def _setup_orientation_surfaces(*, target_root: Path) -> tuple[Path, ...]:
     return (
         target_root / "AGENTS.md",
@@ -17423,6 +17435,9 @@ def _emit_workspace_operation_output(values: dict[str, Any], _arguments: dict[st
         return
     if output_format == "json":
         print(json.dumps(payload, indent=2))
+        return
+    if isinstance(payload, dict) and payload.get("kind") == "agentic-workspace/defaults-router/v1":
+        _emit_tiny_defaults_text(payload)
         return
     if values.get("section") is not None and isinstance(payload, dict):
         _emit_compact_answer_text(payload)

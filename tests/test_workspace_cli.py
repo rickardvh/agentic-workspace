@@ -44,6 +44,16 @@ def test_verbose_aliases_full_diagnostic_output_for_major_workspace_commands(tmp
         assert assertion(payload), argv
 
 
+def test_defaults_text_uses_tiny_router_payload(capsys) -> None:
+    assert cli.main(["defaults"]) == 0
+
+    output = capsys.readouterr().out
+    assert "Default-route contract sections are available on demand" in output
+    assert "Common sections:" in output
+    assert "- startup" in output
+    assert "agentic-workspace defaults --verbose --format json" in output
+
+
 def test_summary_and_config_support_exact_field_selectors(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
