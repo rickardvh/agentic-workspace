@@ -4575,7 +4575,13 @@
           },
           {
             "source_import_module": "repo_planning_bootstrap.runtime_projection",
-            "module_file": "primitives.planning_runtime"
+            "module_file": "primitives.planning_runtime",
+            "generated_function_overrides": [
+              {
+                "function": "emit_planning_operation_output",
+                "implementation": "json_output_with_source_fallback"
+              }
+            ]
           }
         ],
         "operation_executor": {

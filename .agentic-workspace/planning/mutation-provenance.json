@@ -2,62 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
-      "sha256": "3c8c41bbefc9990560e6fa3f66c135b175df7281f306ac8767c379d7c2d1e9e6",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=delegate-exploration",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T13:56:08+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
-      "sha256": "e198e0c7abef242bdb2ec3650877e50c4f4c8105964144665b17897c6514183a",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=delegate-validation",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T14:26:10+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-product-runtime-source-generation",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T15:09:01+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-codegen-owned-primitive-executor-migration.plan.json",
-      "sha256": "a892f600e8bafb3167a7f3947b6e45fdd0e1196d2bcbd3bf9e5775a0b8f6cdc5",
-      "command": "agentic-planning promote-to-plan",
-      "reason": "promote decomposition lane python-codegen-owned-primitive-executor-migration",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T15:10:28+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "2f2a05c01de0342663ed81fc37efe5a25f9f935dd48872917968f0e673b1f324",
-      "command": "agentic-planning promote-to-plan",
-      "reason": "promote decomposition lane python-codegen-owned-primitive-executor-migration",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T15:10:28+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
-      "sha256": "c1a0ab34a17893c728e353999f7bc0b85a964a0d7e42e7ab365779b9c71e98f2",
-      "command": "agentic-planning promote-to-plan",
-      "reason": "promote decomposition lane python-codegen-owned-primitive-executor-migration",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T15:10:28+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-codegen-owned-primitive-executor-migration.plan.json",
-      "sha256": "2fa21b66658162e3575df46ef21fd99e5d0f55478c1f602b6dc82b1f541aa3c9",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=delegate-exploration",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T15:13:24+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/state.toml",
       "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
       "command": "agentic-planning archive-plan",
@@ -1600,6 +1544,62 @@
       "reason": "archive execplan python-memory-json-output-primitive",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-16T12:28:31+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-planning-json-output-primitive.plan.json",
+      "sha256": "1e39aa89facd36868038de7bbe6c0f86f8ca1550e048ac8929fe9cea83a3f6db",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-planning-json-output-primitive",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T12:29:08+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "02228b696697acdb4e1765fb246f7f618675835d1dc2bc780ca1f6159113c37c",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-planning-json-output-primitive",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T12:29:08+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-planning-json-output-primitive.plan.json",
+      "sha256": "7fbd1f8f6f897cadab8a517d360348b805f476a3834f8a090dee860b66a85155",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T12:29:12+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-planning-json-output-primitive.plan.json",
+      "sha256": "f9b676e05b093b41301887780eacf48136dea33aec1120540465f2250ca2401f",
+      "command": "agentic-planning record-recovery",
+      "reason": "Filled bounded execplan and proof fields for #892 planning generated JSON output primitive slice.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T12:30:42+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-planning-json-output-primitive.plan.json",
+      "sha256": "cdce7e4afc12e6573bc21e36491629a97105229105eec465bb464975853554c9",
+      "command": "agentic-planning record-recovery",
+      "reason": "Filled closeout fields after #892 planning generated JSON output primitive proof passed.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T12:31:24+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-planning-json-output-primitive",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T12:31:53+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/python-planning-json-output-primitive.plan.json",
+      "sha256": "5010567d171ef626de612d1ed7dbdd0f1e15bb8314b2c8c0c77e790f52d6bcb5",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-planning-json-output-primitive",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T12:31:53+00:00"
     }
   ]
 }

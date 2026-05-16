@@ -2200,6 +2200,12 @@ export const generatedCommandPackage = {
         "source_import_module": "repo_planning_bootstrap.installer"
       },
       {
+        "generated_function_overrides": [
+          {
+            "function": "emit_planning_operation_output",
+            "implementation": "json_output_with_source_fallback"
+          }
+        ],
         "module_file": "primitives.planning_runtime",
         "source_import_module": "repo_planning_bootstrap.runtime_projection"
       }

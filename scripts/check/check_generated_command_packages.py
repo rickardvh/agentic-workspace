@@ -1677,6 +1677,8 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
     )
     if "load_planning_list_files_operation" in planning_runtime_text:
         errors.append("planning runtime facade must not keep the dead planning.list-files source delegate")
+    if "def emit_planning_operation_output" not in planning_runtime_text or "isinstance(result, dict)" not in planning_runtime_text:
+        errors.append("generated planning runtime facade must emit dict JSON through generated-local code before source fallback")
     for module_name in ("planning_doctor_report", "planning_report_report", "planning_status_report"):
         command_text = (REPO_ROOT / "generated" / "planning" / "python" / "commands" / f"{module_name}.py").read_text(
             encoding="utf-8"
