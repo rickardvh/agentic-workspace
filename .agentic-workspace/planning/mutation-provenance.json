@@ -2,14 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/execplans/python-workspace-defaults-primitive-migration.plan.json",
-      "sha256": "fc95b4af75d7772105f80cb0f0cba634fe3c76a05f8abbdba3999bf0ffe11df8",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-workspace-defaults-primitive-migration",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T10:48:46+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/state.toml",
       "sha256": "17d076de9bc0ddf8f3919b91ae3634dc1a772d92372c3f8ece230b47218c8c71",
       "command": "agentic-planning new-plan",
@@ -1600,6 +1592,14 @@
       "reason": "Updated active P2 execplan after completing #983 memory-consultation-and-residue skill slice.",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-16T18:56:45+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-planning-workflow-observability-p2.plan.json",
+      "sha256": "dfd2984d0ad352a5a0e86fbcded26aff0f472feae3912c247002ababf16cd271",
+      "command": "agentic-planning record-recovery",
+      "reason": "Updated active P2 execplan after completing #984 workspace-proof-selection skill slice.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T19:03:01+00:00"
     }
   ]
 }

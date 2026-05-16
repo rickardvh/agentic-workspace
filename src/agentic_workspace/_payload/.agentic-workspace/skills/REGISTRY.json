@@ -79,6 +79,39 @@
       }
     },
     {
+      "id": "workspace-proof-selection",
+      "path": "workspace-proof-selection/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "select and interpret proof for task, slice, lane, or epic completion claims",
+      "activation_hints": {
+        "verbs": ["prove", "validate", "verify", "classify", "select"],
+        "nouns": [
+          "proof selection",
+          "completion claim",
+          "validation evidence",
+          "negative proof",
+          "skipped tests",
+          "proof gap",
+          "claim level"
+        ],
+        "phrases": [
+          "proof selection",
+          "completion claim allowed",
+          "negative proof",
+          "passed with warning",
+          "proof gap",
+          "claim level",
+          "proof before completion"
+        ],
+        "when": [
+          "proof must match task, slice, lane, or epic scope",
+          "validation passed but completion may not be justified",
+          "skips, retries, warnings, crashes, or negative evidence need interpretation"
+        ]
+      }
+    },
+    {
       "id": "workspace-setup-jumpstart",
       "path": "workspace-setup-jumpstart/SKILL.md",
       "scope": "bundled",
