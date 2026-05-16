@@ -2572,10 +2572,14 @@ export const generatedCommandPackage = {
       ],
       "handlers": [
         {
-          "function": "_resolve_memory_target_root",
-          "handler": "runtime_handler",
-          "import_module": "repo_memory_bootstrap.runtime_primitives",
-          "primitive": "path.target_root.resolve"
+          "handler": "generated_target_root_resolve",
+          "primitive": "path.target_root.resolve",
+          "project_markers": [
+            "pyproject.toml",
+            "package.json",
+            "Cargo.toml",
+            ".hg"
+          ]
         },
         {
           "function": "_load_memory_bootstrap_doctor",

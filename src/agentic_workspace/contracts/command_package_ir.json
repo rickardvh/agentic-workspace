@@ -7394,9 +7394,13 @@
           "handlers": [
             {
               "primitive": "path.target_root.resolve",
-              "handler": "runtime_handler",
-              "function": "_resolve_memory_target_root",
-              "import_module": "repo_memory_bootstrap.runtime_primitives"
+              "handler": "generated_target_root_resolve",
+              "project_markers": [
+                "pyproject.toml",
+                "package.json",
+                "Cargo.toml",
+                ".hg"
+              ]
             },
             {
               "primitive": "memory.bootstrap.doctor.load",

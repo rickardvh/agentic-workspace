@@ -894,6 +894,15 @@ def _render_conditional_function_call_handler(function_name: str, handler: dict[
     )
 
 
+def _render_generated_target_root_handler(function_name: str, handler: dict[str, Any]) -> str:
+    project_markers = tuple(str(marker) for marker in handler["project_markers"])
+    return (
+        f"def {function_name}(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:\n"
+        "    from .resources import resolve_repo_target_root\n\n"
+        f"    return resolve_repo_target_root(values.get('target'), {project_markers!r})\n"
+    )
+
+
 def _render_runtime_emit_handler(function_name: str, handler: dict[str, Any], *, runtime_module_file: str) -> str:
     runtime_function = str(handler["runtime_function"])
     result_value = str(handler["result_value"])
@@ -1188,6 +1197,8 @@ def _python_operation_executor_module(
             handlers.append(_render_function_call_handler(function_name, handler))
         elif handler_kind == "conditional_function_call":
             handlers.append(_render_conditional_function_call_handler(function_name, handler))
+        elif handler_kind == "generated_target_root_resolve":
+            handlers.append(_render_generated_target_root_handler(function_name, handler))
         elif handler_kind == "runtime_emit":
             needs_json = True
             handlers.append(_render_runtime_emit_handler(function_name, handler, runtime_module_file=runtime_module_file))

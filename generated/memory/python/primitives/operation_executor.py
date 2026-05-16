@@ -134,10 +134,10 @@ def _handle_context_root_memory_package_skills() -> Path:
     return find_resource_root(__file__, [('_skills', 'REGISTRY.json')])
 
 
-def _handle_path_target_root_resolve(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from repo_memory_bootstrap.runtime_primitives import _resolve_memory_target_root
+def _handle_path_target_root_resolve(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from .resources import resolve_repo_target_root
 
-    return _resolve_memory_target_root(values, arguments, context)
+    return resolve_repo_target_root(values.get('target'), ('pyproject.toml', 'package.json', 'Cargo.toml', '.hg'))
 
 
 def _handle_memory_bootstrap_doctor_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:

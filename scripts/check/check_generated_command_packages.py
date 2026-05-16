@@ -1612,6 +1612,10 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         errors.append("memory operation IR executor must execute operation plans through codegen-owned run_operation_steps")
     if "repo_memory_bootstrap._installer_paths" in memory_operation_executor_text:
         errors.append("memory operation IR executor must resolve package resources from generated target-local copies")
+    if "_resolve_memory_target_root" in memory_operation_executor_text:
+        errors.append("memory operation IR executor must use the generated target-root primitive instead of memory runtime")
+    if "resolve_repo_target_root(values.get('target')" not in memory_operation_executor_text:
+        errors.append("memory operation IR executor must render target-root resolution through target-local resource primitives")
     for marker in (
         "generated/memory/python/_payload/AGENTS.template.md",
         "generated/memory/python/_skills/REGISTRY.json",
