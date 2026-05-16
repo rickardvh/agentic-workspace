@@ -1,0 +1,352 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Github Planning Workflow Observability P2",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "lane",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "required_continuation",
+      "iterative_follow_through",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Medium-priority planning workflow issues are accepted but should remain behind immediate trust and recoverability failures; when promoted, success should be measured by fewer raw-file reads and fewer human corrections, not by adding more workflow prose.",
+    "hard_constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Archive this lane and create a PR linked to #974, #976, #981, #983, #984, #985, #986, and #988.",
+    "proof_expectations": [
+      "make test-workspace",
+      "make test-memory",
+      "make test-planning",
+      "make lint-workspace",
+      "make lint-memory",
+      "make lint-planning"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
+      "src/agentic_workspace/contracts/workspace_surfaces.json",
+      ".agentic-workspace/skills/REGISTRY.json",
+      "src/agentic_workspace/_payload/.agentic-workspace/skills/REGISTRY.json",
+      "packages/planning/skills/REGISTRY.json",
+      "packages/memory/bootstrap/.agentic-workspace/memory/skills/REGISTRY.json",
+      "packages/memory/src/repo_memory_bootstrap/_installer_shared.py",
+      "packages/planning/payload-surface-classification.json",
+      "tests/test_workspace_start_preflight_cli.py",
+      "tests/test_workspace_skills_cli.py",
+      "tests/test_workspace_doctor_status_cli.py",
+      "packages/planning/tests/test_skills_catalog.py",
+      "packages/memory/tests/test_install.py"
+    ],
+    "completion_criteria": [
+      "Intent verification, Memory consultation, proof selection, SkillSpec gates, operating-loop slots, and next-safe-action packets reduce live context by answering what to read, what to skip, what proof is required, and whether an artifact is warranted."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Medium-priority planning workflow issues are accepted but should remain behind immediate trust and recoverability failures; when promoted, success should be measured by fewer raw-file reads and fewer human corrections, not by adding more workflow prose."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Medium-priority planning workflow issues are accepted but should remain behind immediate trust and recoverability failures; when promoted, success should be measured by fewer raw-file reads and fewer human corrections, not by adding more workflow prose.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "github-planning-workflow-observability-p2",
+      "status": "complete",
+      "next_step": "Archive this lane and create a PR linked to #974, #976, #981, #983, #984, #985, #986, and #988.",
+      "proof": "make test-workspace; make test-memory; make test-planning; make lint-workspace; make lint-memory; make lint-planning"
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
+        "src/agentic_workspace/contracts/workspace_surfaces.json",
+        ".agentic-workspace/skills/REGISTRY.json",
+        "src/agentic_workspace/_payload/.agentic-workspace/skills/REGISTRY.json",
+        "packages/planning/skills/REGISTRY.json",
+        "packages/memory/bootstrap/.agentic-workspace/memory/skills/REGISTRY.json",
+        "packages/memory/src/repo_memory_bootstrap/_installer_shared.py",
+        "packages/planning/payload-surface-classification.json",
+        "tests/test_workspace_start_preflight_cli.py",
+        "tests/test_workspace_skills_cli.py",
+        "tests/test_workspace_doctor_status_cli.py",
+        "packages/planning/tests/test_skills_catalog.py",
+        "packages/memory/tests/test_install.py"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Medium-priority planning workflow issues are accepted but should remain behind immediate trust and recoverability failures; when promoted, success should be measured by fewer raw-file reads and fewer human corrections, not by adding more workflow prose.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Github Planning Workflow Observability P2",
+    "inferred intended outcome": "Medium-priority planning workflow issues are accepted but should remain behind immediate trust and recoverability failures; when promoted, success should be measured by fewer raw-file reads and fewer human corrections, not by adding more workflow prose.",
+    "chosen concrete what": "Implemented #988 next_safe_action packet and #981 planning-intent-verification skill.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Fill in the concrete write scope before implementation starts.",
+    "max changed files": "Fill in an expected upper bound before implementation starts.",
+    "required validation commands": "Fill in the narrowest command that proves the promoted work.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "#988 and #981 are complete; continue with Memory/proof skills and transition/operating-loop follow-ons.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Medium-priority planning workflow issues are accepted but should remain behind immediate trust and recoverability failures; when promoted, success should be measured by fewer raw-file reads and fewer human corrections, not by adding more workflow prose.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "#988 is a narrow packet-shape slice with local runtime/tests; delegation would add coordination overhead.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-16T18:43:17+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "github-planning-workflow-observability-p2",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this lane and create a PR linked to #974, #976, #981, #983, #984, #985, #986, and #988."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
+    "src/agentic_workspace/contracts/workspace_surfaces.json",
+    ".agentic-workspace/skills/REGISTRY.json",
+    "src/agentic_workspace/_payload/.agentic-workspace/skills/REGISTRY.json",
+    "packages/planning/skills/REGISTRY.json",
+    "packages/memory/bootstrap/.agentic-workspace/memory/skills/REGISTRY.json",
+    "packages/memory/src/repo_memory_bootstrap/_installer_shared.py",
+    "packages/planning/payload-surface-classification.json",
+    "tests/test_workspace_start_preflight_cli.py",
+    "tests/test_workspace_skills_cli.py",
+    "tests/test_workspace_doctor_status_cli.py",
+    "packages/planning/tests/test_skills_catalog.py",
+    "packages/memory/tests/test_install.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "make test-workspace",
+    "make test-memory",
+    "make test-planning",
+    "make lint-workspace",
+    "make lint-memory",
+    "make lint-planning"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Intent verification, Memory consultation, proof selection, SkillSpec gates, operating-loop slots, and next-safe-action packets reduce live context by answering what to read, what to skip, what proof is required, and whether an artifact is warranted."
+  ],
+  "execution_run": {
+    "run status": "not-run-yet",
+    "executor": "",
+    "handoff source": "agentic-planning promote-to-plan",
+    "what happened": "Completed P2: #988 next_safe_action packet, #981 planning intent-verification skill, #983 memory consultation/residue skill, #984 workspace proof-selection skill, and #985/#986 transition gate plus operating-loop/module-slot skills.",
+    "scope touched": "workspace runtime/contracts/skills; planning skills/classification; memory skills/payload contract; focused tests",
+    "changed surfaces": "compact startup packet, package-managed skills, skill registries, generated memory payload, workspace manifests, and tests",
+    "validations run": "make test-workspace; make test-memory; make test-planning; make lint-workspace; make lint-memory; make lint-planning",
+    "result for continuation": "P2 implementation complete; archive lane and open PR",
+    "next step": "Archive this lane and create a PR linked to #974, #976, #981, #983, #984, #985, #986, and #988."
+  },
+  "finished_run_review": {
+    "review status": "slice reviewed",
+    "scope respected": "yes; #988 touched startup packet projection and focused tests",
+    "proof status": "passed for #988 and #981 focused coverage",
+    "intent served": "#988 now gives agents one compact packet for next action, CLI, module slot, forbidden actions, proof/completion boundaries, Memory status, and fallback; #981 adds a package-owned skill for intent extraction, parent/larger intent, negative invariants, and completion-claim boundaries",
+    "config compliance": "used AW start/implement context and recorded keep-local delegation decision",
+    "misinterpretation risk": "low for #988; broader P2 remains open",
+    "follow-on decision": "pending"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "#988 is a narrow packet-shape slice with local runtime/tests; delegation would add coordination overhead.",
+    "expected savings": "unknown",
+    "actual friction": "pending",
+    "proof result": "passed for #988 and #981",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "make test-workspace; make test-memory; make test-planning; make lint-workspace; make lint-memory; make lint-planning",
+    "proof achieved now": "P2 final lane validation passed across workspace, memory, and planning tests/lints",
+    "evidence for \"proof achieved\" state": "All final lane commands passed: workspace, memory, planning tests and lints."
+  },
+  "intent_satisfaction": {
+    "original intent": "Medium-priority planning workflow issues are accepted but should remain behind immediate trust and recoverability failures; when promoted, success should be measured by fewer raw-file reads and fewer human corrections, not by adding more workflow prose.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "P2 implementation landed in pushed commits through 1306177c: #988 next_safe_action packet, #981 intent verification skill, #983 memory consultation/residue skill, #984 proof selection skill, and #985/#986 transition gate plus operating-loop/module-slot skills.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "P2 lane delivered compact next-safe-action, intent, memory residue, proof, transition gate, and module-slot skill/runtime support.",
+    "validation confirmed": "workspace, memory, and planning tests/lints all passed",
+    "follow-on routed to": "PR linked to #974, #976, #981, #983, #984, #985, #986, and #988",
+    "post-work posterity capture": "updated execplan and mutation provenance",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "No P2 continuation after PR merge; P3 remains deferred for broader dogfooding and generated SkillSpec follow-ons."
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "P2 skills now encode the context-reduction rules instead of relying on review artifacts or raw planning prose.",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "workspace, planning, and memory package-managed skill surfaces",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "workspace, planning, and memory package-managed skill surfaces",
+    "proposed durable intent": "none yet",
+    "confidence": "low",
+    "needs review": "True",
+    "owner surface": "workspace, planning, and memory package-managed skill surfaces"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "complete",
+    "larger-intent status": "complete",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "P2 lane complete; linked parent and child issues are ready to close on PR merge.",
+    "evidence carried forward": "Final validation passed: make test-workspace, make test-memory, make test-planning, make lint-workspace, make lint-memory, make lint-planning.",
+    "reopen trigger": "Reopen if agents still need broad raw planning or memory reads to answer next action, proof, module owner, durable residue, or artifact necessity for ordinary P2 workflow transitions."
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "PR linked to #974, #976, #981, #983, #984, #985, #986, and #988",
+          "owner": "none",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-16: Promoted from TODO direct-task shape into an execplan.",
+    "2026-05-16: Recorded delegation decision route=keep-local.",
+    "2026-05-16: Completed #988 next-safe-action packet slice and carried remaining P2 work forward.",
+    "2026-05-16: Completed #981 planning-intent-verification skill slice and carried remaining P2 work forward."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Medium-priority planning workflow issues are accepted but should remain behind immediate trust and recoverability failures; when promoted, success should be measured by fewer raw-file reads and fewer human corrections, not by adding more workflow prose.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: make test-workspace; make test-memory; make test-planning; make lint-workspace; make lint-memory; make lint-planning\nChanged surfaces: compact startup packet, package-managed skills, skill registries, generated memory payload, workspace manifests, and tests\nDurable residue: none (workspace, planning, and memory package-managed skill surfaces)\nMemory learning: none\nFollow-up: PR linked to #974, #976, #981, #983, #984, #985, #986, and #988"
+  }
+}

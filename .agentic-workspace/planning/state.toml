@@ -9,9 +9,7 @@ schema_version = "planning-state/v1"
 work_items = []
 
 [active]
-execplans = [
-  { id = "github-planning-workflow-observability-p2", maturity = "active", status = "active", priority = "P2", refs = "GitHub #974, #976, #981, #983, #984, #985, #986, #988", title = "Improve planning workflow observability and skill support", outcome = "Intent verification, Memory consultation, proof selection, SkillSpec gates, operating-loop slots, and next-safe-action packets reduce live context by answering what to read, what to skip, what proof is required, and whether an artifact is warranted.", reason = "Medium-priority planning workflow issues are accepted but should remain behind immediate trust and recoverability failures; when promoted, success should be measured by fewer raw-file reads and fewer human corrections, not by adding more workflow prose.", suggested_first_slice = "Define the smallest next-safe-action or intent-verification packet that can say answer-directly/no-artifact, use state.toml, or create an execplan, with tests for routine triage and durable intake.", path = ".agentic-workspace/planning/execplans/github-planning-workflow-observability-p2.plan.json" },
-]
+execplans = []
 
 [todo]
 active_items = []
