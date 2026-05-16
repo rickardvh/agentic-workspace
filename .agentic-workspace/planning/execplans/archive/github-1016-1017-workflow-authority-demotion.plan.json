@@ -1,0 +1,276 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Implement #1016/#1017 workflow authority demotion",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Create a bounded plan for Implement #1016/#1017 workflow authority demotion.",
+    "hard_constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "proof_expectations": [
+      "Fill in the narrowest command that proves the promoted work."
+    ],
+    "touched_scope": [
+      "Fill in the concrete files before implementation starts."
+    ],
+    "completion_criteria": [
+      "Implement #1016/#1017 workflow authority demotion is implemented, validated, and closed out honestly."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "Create a bounded plan for Implement #1016/#1017 workflow authority demotion."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Create a bounded plan for Implement #1016/#1017 workflow authority demotion.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "github-1016-1017-workflow-authority-demotion",
+      "status": "completed",
+      "next_step": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+      "proof": "Fill in the narrowest command that proves the promoted work."
+    },
+    "scope": {
+      "touched": [
+        "Fill in the concrete files before implementation starts."
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Create a bounded plan for Implement #1016/#1017 workflow authority demotion.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Implement #1016/#1017 workflow authority demotion",
+    "inferred intended outcome": "Create a bounded plan for Implement #1016/#1017 workflow authority demotion.",
+    "chosen concrete what": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Fill in the concrete write scope before implementation starts.",
+    "max changed files": "Fill in an expected upper bound before implementation starts.",
+    "required validation commands": "Fill in the narrowest command that proves the promoted work.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Create a bounded plan for Implement #1016/#1017 workflow authority demotion.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "Bounded #1016/#1017 authority-demotion slice; local docs/payload/test edits are tightly scoped.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-16T21:47:03+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "github-1016-1017-workflow-authority-demotion",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Fill in execution bounds, touched paths, and validation before implementation starts."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "Fill in the concrete files before implementation starts."
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "Fill in the narrowest command that proves the promoted work."
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Implement #1016/#1017 workflow authority demotion is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Demoted WORKFLOW.md to an explicit fallback/projection, added an authority map, mirrored the package payload copy, and added a maintainer-surface regression test.",
+    "scope touched": "workflow fallback docs, package payload workflow copy, and maintainer-surface test.",
+    "changed surfaces": ".agentic-workspace/WORKFLOW.md; src/agentic_workspace/_payload/.agentic-workspace/WORKFLOW.md; tests/test_maintainer_surfaces.py",
+    "validations run": "Focused maintainer-surface test, ruff, and maintainer-surface checker passed.",
+    "result for continuation": "Continue with #1018.",
+    "next step": "Archive this completed execplan and rerun slice validation without active planning state."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "continue with #1018"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "Bounded #1016/#1017 authority-demotion slice; local docs/payload/test edits are tightly scoped.",
+    "expected savings": "unknown",
+    "actual friction": "pending",
+    "proof result": "pending",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_maintainer_surfaces.py::test_workspace_workflow_is_projection_not_primary_authority -q; uv run ruff check tests/test_maintainer_surfaces.py; uv run python scripts/check/check_maintainer_surfaces.py",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Focused test passed; ruff passed; maintainer surface checker reported no drift."
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Implement #1016/#1017 workflow authority demotion.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "WORKFLOW.md now explicitly identifies as fallback/projection with canonical owners for repeated workflow concepts.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "WORKFLOW authority demoted to fallback/projection.",
+    "validation confirmed": "focused test, ruff, and maintainer-surface checker passed",
+    "follow-on routed to": "#1018",
+    "post-work posterity capture": "workflow docs, package payload, tests, and planning closeout",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "#1018; #1016/#1017 slice is complete"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "The concrete #1017 child cleanup satisfies the #1016 parent lane's first redundant-authority demotion without deleting fallback behavior.",
+    "evidence carried forward": "WORKFLOW.md authority map and projection test.",
+    "reopen trigger": "WORKFLOW.md again claims primary workflow authority or drifts from the payload copy."
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        "Scaffold placeholders and transient validation chronology."
+      ],
+      "continuation": [
+        "Continue with #1018 as the next authority-boundary slice."
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-16: Scaffolded by agentic-planning new-plan.",
+    "2026-05-16: Recorded delegation decision route=keep-local."
+  ]
+}

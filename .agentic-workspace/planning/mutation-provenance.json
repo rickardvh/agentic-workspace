@@ -3,46 +3,6 @@
   "entries": [
     {
       "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "200eb33eb9caacd2242f17724b806ac3015545cc1522448e0504e17129a6b53c",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-memory-target-root-primitive",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T11:14:31+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-memory-target-root-primitive.plan.json",
-      "sha256": "ac79e2948dcfbe2ad22fe2db10f47c1d4c524e8ae1204e7d34d5e46aac0335fa",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=keep-local",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T11:14:36+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-memory-target-root-primitive.plan.json",
-      "sha256": "266b48438de35cb01defc37955c9689b636df78b148ca26d2a20ffccde5df671",
-      "command": "agentic-planning record-recovery",
-      "reason": "Completed #892 memory target-root primitive slice and filled closeout fields before CLI close-item archive.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T11:18:27+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-memory-target-root-primitive.plan.json",
-      "sha256": "773bc3eff33d868b37ff1348f229f9b17f560505ff60346eac2336ae0a7c14a8",
-      "command": "agentic-planning record-recovery",
-      "reason": "Normalized bounded-slice intent satisfaction field to accepted yes/no vocabulary for close-item archive validation.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T11:18:47+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-memory-target-root-primitive.plan.json",
-      "sha256": "95f7bee3e28f65c7db4b77db23adf7fdab3f598e8d1ab161f5421c77e68d672e",
-      "command": "agentic-planning record-recovery",
-      "reason": "Added explicit stale-reference sweep command to validation_commands for target-root runtime delegate retirement.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T11:19:08+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
       "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
       "command": "agentic-planning archive-plan",
       "reason": "archive execplan python-memory-target-root-primitive",
@@ -1600,6 +1560,46 @@
       "reason": "archive execplan github-1015-intent-memory-observability",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-16T21:43:29+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-1016-1017-workflow-authority-demotion.plan.json",
+      "sha256": "58766db91b0ed1d7fbebc5adcaa7f86a36684ee1e068d0082410ab0b24a17d0b",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold github-1016-1017-workflow-authority-demotion",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T21:45:38+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "964b27c476329e7ef0fb92aa1f386b48b8fd5c47f1fba54e7e966d4cd9e3e053",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold github-1016-1017-workflow-authority-demotion",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T21:45:38+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-1016-1017-workflow-authority-demotion.plan.json",
+      "sha256": "c29145394e4512fc95e0ea4d7dace17b900c0808e55693c243442b6fc85f1b70",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T21:47:03+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "2825a103bb66f149fb0a5df4c54a27542a980a4b8f789ea801637c26cd080901",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan github-1016-1017-workflow-authority-demotion",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T21:47:33+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/github-1016-1017-workflow-authority-demotion.plan.json",
+      "sha256": "0cdde76486bc538d4b6001018cc1a613eef8397485800d456ea2e189bf6e6655",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan github-1016-1017-workflow-authority-demotion",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T21:47:33+00:00"
     }
   ]
 }
