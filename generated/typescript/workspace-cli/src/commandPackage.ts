@@ -3952,6 +3952,12 @@ export const generatedCommandPackage = {
   "program": "agentic-workspace",
   "python_runtime_binding": {
     "entrypoint": "agentic-workspace",
+    "local_runtime_bindings": [
+      {
+        "module_file": "primitives.workspace_runtime",
+        "source_import_module": "agentic_workspace.workspace_runtime_primitives"
+      }
+    ],
     "operation_executor": {
       "handlers": [
         {

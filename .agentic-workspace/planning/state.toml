@@ -12,9 +12,7 @@ work_items = []
 execplans = []
 
 [todo]
-active_items = [
-  { id = "python-workspace-runtime-relocation", title = "Python workspace generated-runtime relocation", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/python-workspace-runtime-relocation.plan.json", why_now = "#892 workspace source runtime blocker", owner_role = "implementation", handoff_ready = true, refs = ["#892 workspace source runtime blocker"] },
-]
+active_items = []
 queued_items = []
 
 [roadmap]

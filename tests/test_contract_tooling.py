@@ -890,8 +890,11 @@ def test_command_package_generator_renders_planning_runtime_module_from_binding(
     assert "generated/workspace/python/commands/status_report.py" in rendered
     workspace_command = rendered["generated/workspace/python/commands/status_report.py"]
     assert "Command behavior changes belong in src/agentic_workspace/contracts/command_package_ir.json" in workspace_command
-    assert "from agentic_workspace.workspace_runtime_primitives import" in workspace_command
+    assert "from ..primitives.workspace_runtime import" in workspace_command
     assert "return _run_" in workspace_command
+    assert "generated/workspace/python/primitives/workspace_runtime.py" in rendered
+    workspace_runtime = rendered["generated/workspace/python/primitives/workspace_runtime.py"]
+    assert "from agentic_workspace.workspace_runtime_primitives import" in workspace_runtime
     assert "generated/memory/python/cli.py" in rendered
     assert "generated/memory/python/commands/memory_status_report.py" in rendered
     memory_command = rendered["generated/memory/python/commands/memory_status_report.py"]

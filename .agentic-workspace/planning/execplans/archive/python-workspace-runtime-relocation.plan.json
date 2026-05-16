@@ -1,0 +1,313 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Python workspace generated-runtime relocation",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Advance #892 by moving generated workspace outputs off direct imports from agentic_workspace.workspace_runtime_primitives and onto generated-local runtime bindings.",
+    "hard_constraints": "Do not delete source runtime files until generated outputs, package entrypoints, tests, and packaging prove replacement ownership; generated outputs must be reproducible from command-generation; installed console behavior must remain green.",
+    "agent_may_decide": "Generated-local module names, import seams, and whether this slice relocates operation-executor handlers, command adapter handlers, or both.",
+    "escalate_when": "A safe fix requires copying the entire workspace runtime module as opaque generated code, changing public command behavior, or broadening into memory/planning package runtime relocation.",
+    "next_action": "Render generated-local workspace runtime binding modules and update generated workspace command and operation executor imports to use those generated-local modules.",
+    "proof_expectations": [
+      "uv run python scripts/generate/generate_command_packages.py --check",
+      "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+      "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
+      "uv run pytest tests/test_workspace_cli.py tests/test_workspace_cli_blackbox.py tests/test_generated_command_package_proof_runner.py",
+      "uv run ruff check affected generator/check/generated files"
+    ],
+    "touched_scope": [
+      "packages/command-generation/src/command_generation/generator.py",
+      "src/agentic_workspace/contracts/command_package_ir.json",
+      "generated/workspace/python/commands/*",
+      "generated/workspace/python/primitives/*",
+      "scripts/check/check_generated_command_packages.py",
+      ".agentic-workspace/planning/execplans/python-workspace-runtime-relocation.plan.json"
+    ],
+    "completion_criteria": [
+      "Generated workspace command modules and operation executor no longer import agentic_workspace.workspace_runtime_primitives directly.",
+      "The new generated-local runtime binding is produced by command-generation and packaged with generated/workspace/python.",
+      "Static proof is updated to recognize the generated-local workspace runtime seam without claiming full #892 completion.",
+      "Python conformance, Docker conformance, workspace CLI tests, and generated freshness pass."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "#892 workspace source runtime blocker"
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Advance #892 by moving generated workspace outputs off direct imports from agentic_workspace.workspace_runtime_primitives and onto generated-local runtime bindings.",
+      "constraints": "Do not delete source runtime files until generated outputs, package entrypoints, tests, and packaging prove replacement ownership; generated outputs must be reproducible from command-generation; installed console behavior must remain green.",
+      "latitude": "Generated-local module names, import seams, and whether this slice relocates operation-executor handlers, command adapter handlers, or both.",
+      "escalation": "A safe fix requires copying the entire workspace runtime module as opaque generated code, changing public command behavior, or broadening into memory/planning package runtime relocation."
+    },
+    "execution": {
+      "milestone": "python-workspace-runtime-relocation",
+      "status": "active",
+      "next_step": "Render generated-local workspace runtime binding modules and update generated workspace command and operation executor imports to use those generated-local modules.",
+      "proof": "Run generated freshness, generated package proof, Python conformance, Docker conformance, workspace CLI tests, and ruff."
+    },
+    "scope": {
+      "touched": [
+        "packages/command-generation/src/command_generation/generator.py",
+        "src/agentic_workspace/contracts/command_package_ir.json",
+        "generated/workspace/python/commands/*",
+        "generated/workspace/python/primitives/*",
+        "scripts/check/check_generated_command_packages.py",
+        ".agentic-workspace/planning/execplans/python-workspace-runtime-relocation.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#892 workspace source runtime blocker",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+    "activation trigger": "After workspace runtime imports are generated-local, continue memory and planning package runtime relocation."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Python workspace generated-runtime relocation",
+    "inferred intended outcome": "#892 workspace source runtime blocker",
+    "chosen concrete what": "Move generated workspace operation and command modules from direct source-runtime imports to generated-local runtime binding imports.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "command-generation generator; command_package_ir binding metadata; generated/workspace/python commands and primitives; static proof; this execplan and planning provenance.",
+    "max changed files": "Fill in an expected upper bound before implementation starts.",
+    "required validation commands": "Run generated freshness, generated package proof, Python conformance, Docker conformance, workspace CLI tests, and ruff.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Relocate generated workspace imports from source runtime module to generated-local binding modules.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "#892 workspace source runtime blocker",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "Workspace runtime relocation is high-blast-radius and must preserve generated console behavior; delegate only after the import/binding seam is proven.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-16T10:02:51+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "#892 workspace source runtime blocker",
+      "label": "#892 workspace source runtime blocker",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "python-workspace-runtime-relocation",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Render generated-local workspace runtime binding modules and update generated workspace command and operation executor imports to use those generated-local modules."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/command-generation/src/command_generation/generator.py",
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    "generated/workspace/python/commands/*",
+    "generated/workspace/python/primitives/*",
+    "scripts/check/check_generated_command_packages.py",
+    ".agentic-workspace/planning/execplans/python-workspace-runtime-relocation.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run python scripts/generate/generate_command_packages.py --check",
+    "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+    "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
+    "uv run pytest tests/test_workspace_cli.py tests/test_workspace_cli_blackbox.py tests/test_generated_command_package_proof_runner.py",
+    "uv run ruff check affected generator/check/generated files"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Generated workspace command modules and operation executor no longer import agentic_workspace.workspace_runtime_primitives directly.",
+    "The new generated-local runtime binding is produced by command-generation and packaged with generated/workspace/python.",
+    "Static proof is updated to recognize the generated-local workspace runtime seam without claiming full #892 completion.",
+    "Python conformance, Docker conformance, workspace CLI tests, and generated freshness pass."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Rendered contract-driven generated-local workspace runtime binding modules and updated generated workspace command modules plus operation executor handlers to import through those generated-local facades instead of importing agentic_workspace.workspace_runtime_primitives directly.",
+    "scope touched": "workspace generated Python command projection, command-generation renderer, command package IR/schema, static proof, and proof tests",
+    "changed surfaces": "packages/command-generation/src/command_generation/generator.py; packages/command-generation/schemas/command_package_ir.schema.json; src/agentic_workspace/contracts/command_package_ir.json; src/agentic_workspace/contracts/schemas/command_package_ir.schema.json; generated/workspace/python/commands/*; generated/workspace/python/primitives/*; scripts/check/check_generated_command_packages.py; tests/test_contract_tooling.py; tests/test_generated_command_package_proof_runner.py",
+    "validations run": "uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; make test-workspace; make lint-workspace; uv run pytest tests/test_workspace_cli.py tests/test_workspace_cli_blackbox.py tests/test_generated_command_package_proof_runner.py -q; uv run ruff check affected generator/check/generated/test files",
+    "result for continuation": "direct source-runtime imports are removed from generated workspace commands and operation executor, but generated/workspace/python/primitives/workspace_runtime.py still re-exports source runtime and remains a #892 blocker",
+    "next step": "Replace generated workspace facade source-runtime re-exports with generated/codegen-owned primitive implementations or an explicitly generated product runtime projection, then continue memory and planning runtime blockers."
+  },
+  "finished_run_review": {
+    "review status": "bounded slice complete",
+    "scope respected": "yes",
+    "proof status": "passed with dogfooding residue",
+    "intent served": "partially: generated workspace direct imports were relocated, but #892 remains open",
+    "config compliance": "used uv run agentic-workspace and contract/generation paths; did not use bare CLI",
+    "misinterpretation risk": "medium if this slice is mistaken for full #892 completion; static proof still rejects that",
+    "follow-on decision": "continue #892 on the next runtime blocker"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "Workspace runtime relocation is high-blast-radius and must preserve generated console behavior; delegate only after the import/binding seam is proven.",
+    "expected savings": "none for first relocation seam",
+    "actual friction": "workspace test caught an unacceptable package-specific import literal in command-generation; fixed by moving local runtime binding metadata into command_package_ir instead of hard-coding workspace names in the generator",
+    "proof result": "passed after correcting the package-specific generator violation",
+    "quality concern": "Avoid moving source code without generated ownership proof; generated outputs must be reproducible and installed entrypoints must still work.",
+    "decomposition adjustment": "Start with workspace runtime import/binding relocation before memory and planning package runtime blockers."
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "Generated workspace command modules and operation executor no longer import agentic_workspace.workspace_runtime_primitives directly; generated-local runtime facade is rendered from command_package_ir local_runtime_bindings; static proof still rejects full completion while facade source-runtime re-exports remain.",
+    "evidence for \"proof achieved\" state": "uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker passed after one unchanged rerun; make test-workspace; make lint-workspace; uv run pytest tests/test_workspace_cli.py tests/test_workspace_cli_blackbox.py tests/test_generated_command_package_proof_runner.py -q. #1002 tracks the failed-run-then-green Docker proof behavior."
+  },
+  "intent_satisfaction": {
+    "original intent": "#892 workspace source runtime blocker",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "The direct-import relocation sub-slice is satisfied, but the generated facade still re-exports source runtime, so the workspace source runtime blocker is not fully eliminated.",
+    "unsolved intent passed to": "continue #892: replace generated workspace facade source-runtime re-exports, then continue memory and planning blockers"
+  },
+  "execution_summary": {
+    "outcome delivered": "Generated workspace commands and operation executor now route source-runtime references through a generated-local facade described by contract-owned local_runtime_bindings instead of generator hard-coding or direct imports.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "#892 continuation",
+    "post-work posterity capture": "#1002 filed for Docker conformance failed-run-then-green proof behavior",
+    "knowledge promoted (Memory/Docs/Config)": "command_package_ir schema now owns local_runtime_bindings metadata",
+    "resume from": "next #892 runtime blocker: workspace facade source-runtime elimination"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "bounded slice complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "The bounded direct-import relocation slice is complete, but #892 is not complete because generated workspace facade source-runtime re-exports and memory/planning runtime blockers remain.",
+    "evidence carried forward": "Static proof, Python conformance, Docker conformance, workspace tests, and ruff passed; #1002 records transient Docker proof instability observed during closeout.",
+    "reopen trigger": "Generated workspace commands or operation executor again import source runtime directly, or full #892 completion is claimed while facade source-runtime re-exports remain."
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [
+        "Continue #892 with workspace facade source-runtime elimination, then memory runtime relocation, then planning runtime relocation."
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        "#1002 Dogfooding: Docker conformance can fail once and pass unchanged on rerun"
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-05-16: Scaffolded by agentic-planning new-plan.",
+    "2026-05-16: Recorded delegation decision route=keep-local."
+  ]
+}

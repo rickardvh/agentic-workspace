@@ -14,11 +14,9 @@ import argparse
 # Command behavior changes belong in src/agentic_workspace/contracts/command_package_ir.json and the referenced operation contract.
 # Regenerate with: uv run python scripts/generate/generate_command_packages.py
 
-from ..cli import generated_operation_contract
-from ..primitives.operation_executor import run_operation_ir
 
 
 def run(args: argparse.Namespace) -> int:
-    from agentic_workspace.workspace_runtime_primitives import _run_init_lifecycle_adapter
+    from ..primitives.workspace_runtime import _run_init_lifecycle_adapter
 
     return _run_init_lifecycle_adapter(args)

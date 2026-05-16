@@ -1148,7 +1148,36 @@ def _validate_full_python_completion_executable_ownership(ir: dict[str, object])
             "command_package_ir.json cannot claim full Python generated CLI completion while generated command modules "
             f"import package-owned runtime helpers directly: {runtime_imports!r}"
         )
+    generated_runtime_facade_imports = _generated_runtime_facade_package_runtime_imports()
+    if generated_runtime_facade_imports:
+        errors.append(
+            "command_package_ir.json cannot claim full Python generated CLI completion while generated runtime facades "
+            f"still re-export package-owned runtime helpers: {generated_runtime_facade_imports!r}"
+        )
     return errors
+
+
+def _generated_runtime_facade_package_runtime_imports() -> list[str]:
+    forbidden_imports = (
+        "from agentic_workspace.workspace_runtime_primitives import",
+        "from repo_planning_bootstrap.runtime_projection import",
+        "from repo_memory_bootstrap.runtime_primitives import",
+        "from repo_planning_bootstrap.installer import",
+        "from repo_memory_bootstrap.installer import",
+    )
+    findings: list[str] = []
+    for primitives_dir in (
+        REPO_ROOT / "generated" / "workspace" / "python" / "primitives",
+        REPO_ROOT / "generated" / "planning" / "python" / "primitives",
+        REPO_ROOT / "generated" / "memory" / "python" / "primitives",
+    ):
+        if not primitives_dir.is_dir():
+            continue
+        for path in sorted(primitives_dir.glob("*.py")):
+            text = path.read_text(encoding="utf-8")
+            if any(import_text in text for import_text in forbidden_imports):
+                findings.append(path.relative_to(REPO_ROOT).as_posix())
+    return findings
 
 
 def _generated_command_module_package_runtime_imports() -> list[str]:

@@ -2,30 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "7785acbc297c8e7ed5f34a2ba6ae26fcf082b8197dddd56884413d43723196bc",
-      "command": "agentic-planning promote-to-plan",
-      "reason": "promote decomposition lane python-product-runtime-source-generation",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T20:40:48+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
-      "sha256": "47406ea71a36e42b3b28d50d7630532b187958c435404118ed1398747fa77f79",
-      "command": "agentic-planning promote-to-plan",
-      "reason": "promote decomposition lane python-product-runtime-source-generation",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T20:40:48+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
-      "sha256": "cf485cdbc45ff63cf65d130c6f365328555d10786effa5c3f197e5e7c7c8db74",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=delegate-exploration",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T20:40:58+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
       "sha256": "2cd322339edf675a06e407fa7a31b66186b199bce0dd88cbede619adc9593289",
       "command": "agentic-planning record-recovery",
@@ -1600,6 +1576,30 @@
       "reason": "record delegation decision route=keep-local",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-16T10:02:51+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-workspace-runtime-relocation.plan.json",
+      "sha256": "67a152ee944a8b45a19777f439f8573f42d310a294fdff1a11ea750573b67963",
+      "command": "agentic-planning record-recovery",
+      "reason": "Tightened active #892 workspace runtime relocation plan after resuming autopilot work.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T10:29:03+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-workspace-runtime-relocation",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T10:42:42+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/python-workspace-runtime-relocation.plan.json",
+      "sha256": "b95a2a84fe6af4991c21adc12f5284dc4a15f5ae35c203fecc25d0e050928739",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-workspace-runtime-relocation",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T10:42:42+00:00"
     }
   ]
 }

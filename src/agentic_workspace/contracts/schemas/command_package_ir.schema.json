@@ -374,6 +374,28 @@
               },
               "description": "Operation handlers rendered into a generated runtime handler map by importing named runtime primitive functions."
             },
+            "local_runtime_bindings": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "source_import_module",
+                  "module_file"
+                ],
+                "properties": {
+                  "source_import_module": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "module_file": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "description": "Package-owned runtime modules that should be projected behind generated-local facade modules instead of imported directly by generated commands or operation executors."
+            },
             "operation_executor": {
               "$ref": "#/$defs/python_operation_executor_binding",
               "description": "Optional binding data used to render a generated Python operation IR executor module."

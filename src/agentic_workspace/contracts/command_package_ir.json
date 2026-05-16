@@ -536,6 +536,12 @@
             "import_module": "agentic_workspace.workspace_runtime_primitives",
             "function": "_run_lifecycle_mutation_adapter"
           }
+        ],
+        "local_runtime_bindings": [
+          {
+            "source_import_module": "agentic_workspace.workspace_runtime_primitives",
+            "module_file": "primitives.workspace_runtime"
+          }
         ]
       },
       "targets": [

@@ -78,6 +78,31 @@ def _operation_executor_binding(package: dict[str, Any]) -> dict[str, Any]:
     return operation_executor if isinstance(operation_executor, dict) else {}
 
 
+def _local_runtime_bindings(package: dict[str, Any]) -> list[dict[str, Any]]:
+    binding = package.get("python_runtime_binding", {})
+    if not isinstance(binding, dict):
+        return []
+    return [item for item in binding.get("local_runtime_bindings", []) if isinstance(item, dict)]
+
+
+def _local_runtime_binding_for_import(package: dict[str, Any], import_module: str) -> dict[str, Any] | None:
+    for binding in _local_runtime_bindings(package):
+        if str(binding.get("source_import_module") or "") == import_module:
+            return binding
+    return None
+
+
+def _command_module_import_for_binding(binding: dict[str, Any]) -> str:
+    return f"..{str(binding['module_file'])}"
+
+
+def _operation_executor_import_for_binding(binding: dict[str, Any]) -> str:
+    module_file = str(binding["module_file"])
+    if module_file.startswith("primitives."):
+        return f".{module_file.removeprefix('primitives.')}"
+    return f"..{module_file}"
+
+
 def _python_adapter_commands(package: dict[str, Any]) -> list[dict[str, Any]]:
     return [
         command for command in package["commands"] if command.get("status") == "generated" and isinstance(command.get("interface"), dict)
@@ -224,10 +249,17 @@ def _python_command_module(
         handler = direct_handlers[operation_id]
         import_module = str(handler["import_module"])
         imported_function = str(handler.get("function") or _runtime_adapter_function_name(operation_id))
-        run_body = f"    from {import_module} import {imported_function}\n\n    return {imported_function}(args)\n"
+        local_binding = _local_runtime_binding_for_import(package, import_module)
+        if local_binding is not None:
+            local_import = _command_module_import_for_binding(local_binding)
+            run_body = f"    from {local_import} import {imported_function}\n\n    return {imported_function}(args)\n"
+        else:
+            run_body = f"    from {import_module} import {imported_function}\n\n    return {imported_function}(args)\n"
+        support_imports = ""
     else:
         run_body = f"    return run_operation_ir(generated_operation_contract({operation_id!r}), args)\n"
-    executor_module = str(operation_executor.get("module_file", "operation_executor"))
+        executor_module = str(operation_executor.get("module_file", "operation_executor"))
+        support_imports = f"from ..cli import generated_operation_contract\nfrom ..{executor_module} import run_operation_ir\n"
     return (
         '"""Generated executable command projection.\n\n'
         f"Source: {source_path}\n"
@@ -240,8 +272,7 @@ def _python_command_module(
         "# DO NOT EDIT DIRECTLY.\n"
         f"# Command behavior changes belong in {source_path} and the referenced operation contract.\n"
         f"# Regenerate with: {regenerate_command}\n\n"
-        "from ..cli import generated_operation_contract\n"
-        f"from ..{executor_module} import run_operation_ir\n\n\n"
+        f"{support_imports}\n\n"
         "def run(args: argparse.Namespace) -> int:\n" + run_body
     )
 
@@ -864,10 +895,24 @@ def _render_runtime_emit_handler(function_name: str, handler: dict[str, Any], *,
     )
 
 
-def _render_runtime_handler(function_name: str, handler: dict[str, Any], *, runtime_module_file: str) -> str:
+def _render_runtime_handler(
+    package: dict[str, Any],
+    function_name: str,
+    handler: dict[str, Any],
+    *,
+    runtime_module_file: str,
+) -> str:
     runtime_function = str(handler["function"])
     import_module = str(handler.get("import_module") or "")
     if import_module:
+        local_binding = _local_runtime_binding_for_import(package, import_module)
+        if local_binding is not None:
+            local_import = _operation_executor_import_for_binding(local_binding)
+            return (
+                f"def {function_name}(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:\n"
+                f"    from {local_import} import {runtime_function}\n\n"
+                f"    return {runtime_function}(values, arguments, context)\n"
+            )
         return (
             f"def {function_name}(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:\n"
             f"    from {import_module} import {runtime_function}\n\n"
@@ -877,6 +922,52 @@ def _render_runtime_handler(function_name: str, handler: dict[str, Any], *, runt
         f"def {function_name}(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:\n"
         f"    from .{runtime_module_file} import {runtime_function}\n\n"
         f"    return {runtime_function}(values, arguments, context)\n"
+    )
+
+
+def _local_runtime_binding_functions(package: dict[str, Any], binding: dict[str, Any]) -> list[str]:
+    source_import_module = str(binding["source_import_module"])
+    functions: set[str] = set()
+    operation_executor = _operation_executor_binding(package)
+    for handler in operation_executor.get("handlers", []):
+        if isinstance(handler, dict) and handler.get("import_module") == source_import_module:
+            functions.add(str(handler["function"]))
+    python_runtime_binding = package.get("python_runtime_binding", {})
+    if isinstance(python_runtime_binding, dict):
+        for handler in python_runtime_binding.get("runtime_module_handlers", []):
+            if isinstance(handler, dict) and handler.get("import_module") == source_import_module:
+                functions.add(str(handler.get("function") or _runtime_adapter_function_name(str(handler["operation_id"]))))
+    return sorted(functions)
+
+
+def _python_local_runtime_binding_module(
+    package: dict[str, Any],
+    binding: dict[str, Any],
+    *,
+    source_path: str,
+    regenerate_command: str,
+) -> str:
+    functions = _local_runtime_binding_functions(package, binding)
+    source_import_module = str(binding["source_import_module"])
+    imports = ",\n    ".join(functions)
+    exported = ",\n    ".join(repr(function) for function in functions)
+    return (
+        '"""Generated runtime binding facade.\n\n'
+        f"Source: {source_path}\n"
+        f"Program: {package['program']}\n"
+        f"Regenerate with: {regenerate_command}\n"
+        '"""\n\n'
+        "from __future__ import annotations\n\n"
+        f"from {source_import_module} import (\n"
+        f"    {imports},\n"
+        ")\n\n"
+        "# DO NOT EDIT DIRECTLY.\n"
+        "# This generated-local seam lets generated workspace outputs avoid direct source-runtime imports.\n"
+        "# Replace individual bindings here with generated/codegen-owned primitives as those operations migrate.\n"
+        f"# Regenerate with: {regenerate_command}\n\n"
+        "__all__ = [\n"
+        f"    {exported},\n"
+        "]\n"
     )
 
 
@@ -907,7 +998,7 @@ def _python_operation_executor_module(
         handler_items.append(f"                {primitive!r}: {function_name},")
         handler_kind = str(handler["handler"])
         if handler_kind == "runtime_handler":
-            handlers.append(_render_runtime_handler(function_name, handler, runtime_module_file=runtime_module_file))
+            handlers.append(_render_runtime_handler(package, function_name, handler, runtime_module_file=runtime_module_file))
         elif handler_kind == "function_call":
             handlers.append(_render_function_call_handler(function_name, handler))
         elif handler_kind == "conditional_function_call":
@@ -1634,6 +1725,21 @@ def render_outputs(
                                 ),
                             )
                         )
+                        for local_runtime_binding in _local_runtime_bindings(package):
+                            if not _local_runtime_binding_functions(package, local_runtime_binding):
+                                continue
+                            local_runtime_module_path = Path(str(local_runtime_binding["module_file"]).replace(".", "/"))
+                            outputs.append(
+                                GeneratedOutput(
+                                    root / local_runtime_module_path.with_suffix(".py"),
+                                    _python_local_runtime_binding_module(
+                                        package,
+                                        local_runtime_binding,
+                                        source_path=source_path,
+                                        regenerate_command=regenerate_command,
+                                    ),
+                                )
+                            )
                     outputs.append(
                         GeneratedOutput(
                             root / "adapter_commands.json",

@@ -88,84 +88,84 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
 
 
 def _handle_workspace_root_resolve(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from agentic_workspace.workspace_runtime_primitives import _resolve_workspace_operation_target_root
+    from .workspace_runtime import _resolve_workspace_operation_target_root
 
     return _resolve_workspace_operation_target_root(values, arguments, context)
 
 
 def _handle_workspace_config_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from agentic_workspace.workspace_runtime_primitives import _load_workspace_operation_config
+    from .workspace_runtime import _load_workspace_operation_config
 
     return _load_workspace_operation_config(values, arguments, context)
 
 
 def _handle_workspace_defaults_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from agentic_workspace.workspace_runtime_primitives import _load_workspace_operation_defaults
+    from .workspace_runtime import _load_workspace_operation_defaults
 
     return _load_workspace_operation_defaults(values, arguments, context)
 
 
 def _handle_workspace_defaults_select(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from agentic_workspace.workspace_runtime_primitives import _select_workspace_operation_defaults
+    from .workspace_runtime import _select_workspace_operation_defaults
 
     return _select_workspace_operation_defaults(values, arguments, context)
 
 
 def _handle_workspace_selection_resolve(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from agentic_workspace.workspace_runtime_primitives import _resolve_workspace_operation_selection
+    from .workspace_runtime import _resolve_workspace_operation_selection
 
     return _resolve_workspace_operation_selection(values, arguments, context)
 
 
 def _handle_prompt_render(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from agentic_workspace.workspace_runtime_primitives import _render_workspace_operation_prompt
+    from .workspace_runtime import _render_workspace_operation_prompt
 
     return _render_workspace_operation_prompt(values, arguments, context)
 
 
 def _handle_delegation_outcome_append(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from agentic_workspace.workspace_runtime_primitives import _append_workspace_operation_delegation_outcome
+    from .workspace_runtime import _append_workspace_operation_delegation_outcome
 
     return _append_workspace_operation_delegation_outcome(values, arguments, context)
 
 
 def _handle_system_intent_config_resolve(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from agentic_workspace.workspace_runtime_primitives import _load_workspace_operation_system_intent_config
+    from .workspace_runtime import _load_workspace_operation_system_intent_config
 
     return _load_workspace_operation_system_intent_config(values, arguments, context)
 
 
 def _handle_system_intent_source_metadata_refresh(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from agentic_workspace.workspace_runtime_primitives import _refresh_workspace_operation_system_intent_metadata
+    from .workspace_runtime import _refresh_workspace_operation_system_intent_metadata
 
     return _refresh_workspace_operation_system_intent_metadata(values, arguments, context)
 
 
 def _handle_system_intent_mirror_read_or_create(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from agentic_workspace.workspace_runtime_primitives import _read_or_create_workspace_operation_system_intent_mirror
+    from .workspace_runtime import _read_or_create_workspace_operation_system_intent_mirror
 
     return _read_or_create_workspace_operation_system_intent_mirror(values, arguments, context)
 
 
 def _handle_system_intent_result_emit(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from agentic_workspace.workspace_runtime_primitives import _emit_workspace_operation_output
+    from .workspace_runtime import _emit_workspace_operation_output
 
     return _emit_workspace_operation_output(values, arguments, context)
 
 
 def _handle_output_fields_select(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from agentic_workspace.workspace_runtime_primitives import _select_workspace_operation_fields
+    from .workspace_runtime import _select_workspace_operation_fields
 
     return _select_workspace_operation_fields(values, arguments, context)
 
 
 def _handle_output_emit(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from agentic_workspace.workspace_runtime_primitives import _emit_workspace_operation_output
+    from .workspace_runtime import _emit_workspace_operation_output
 
     return _emit_workspace_operation_output(values, arguments, context)
 
 
 def _handle_workspace_config_emit(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from agentic_workspace.workspace_runtime_primitives import _emit_workspace_operation_output
+    from .workspace_runtime import _emit_workspace_operation_output
 
     return _emit_workspace_operation_output(values, arguments, context)
