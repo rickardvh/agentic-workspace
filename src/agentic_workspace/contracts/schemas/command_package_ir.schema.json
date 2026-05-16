@@ -390,6 +390,45 @@
                   "module_file": {
                     "type": "string",
                     "pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$"
+                  },
+                  "generated_function_overrides": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "function",
+                        "implementation"
+                      ],
+                      "properties": {
+                        "function": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+                        },
+                        "implementation": {
+                          "type": "string",
+                          "enum": [
+                            "sectioned_payload_select",
+                            "json_output_with_source_fallback"
+                          ]
+                        },
+                        "payload_value": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+                        },
+                        "source_command": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "common_sections": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        }
+                      },
+                      "additionalProperties": false
+                    }
                   }
                 },
                 "additionalProperties": false

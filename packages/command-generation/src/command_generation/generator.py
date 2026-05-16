@@ -940,6 +940,132 @@ def _local_runtime_binding_functions(package: dict[str, Any], binding: dict[str,
     return sorted(functions)
 
 
+def _local_runtime_generated_overrides(binding: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    overrides = binding.get("generated_function_overrides", [])
+    if not isinstance(overrides, list):
+        return {}
+    return {str(item["function"]): item for item in overrides if isinstance(item, dict) and item.get("function")}
+
+
+def _python_local_runtime_helper_block() -> str:
+    return (
+        "def _serialise_value(value: Any) -> Any:\n"
+        "    if isinstance(value, Path):\n"
+        "        return value.as_posix()\n"
+        "    if isinstance(value, dict):\n"
+        "        return {key: _serialise_value(inner) for key, inner in value.items()}\n"
+        "    if isinstance(value, list):\n"
+        "        return [_serialise_value(item) for item in value]\n"
+        "    return value\n\n\n"
+        "def _field_by_path(payload: Any, path: str) -> tuple[bool, Any]:\n"
+        "    current = payload\n"
+        "    for part in path.split('.'):\n"
+        "        if isinstance(current, dict) and part in current:\n"
+        "            current = current[part]\n"
+        "            continue\n"
+        "        if isinstance(current, list):\n"
+        "            try:\n"
+        "                current = current[int(part)]\n"
+        "                continue\n"
+        "            except (ValueError, IndexError):\n"
+        "                return (False, None)\n"
+        "        return (False, None)\n"
+        "    return (True, copy.deepcopy(current))\n\n\n"
+        "def _selector_tokens(select: str | None) -> list[str]:\n"
+        "    return [token.strip() for token in str(select or '').split(',') if token.strip()]\n\n\n"
+        "def _available_selectors_for_payload(payload: Any, prefix: str = '') -> list[str]:\n"
+        "    selectors: list[str] = []\n"
+        "    if isinstance(payload, dict):\n"
+        "        for key in sorted(str(item) for item in payload):\n"
+        "            path = f'{prefix}.{key}' if prefix else key\n"
+        "            selectors.append(path)\n"
+        "            selectors.extend(_available_selectors_for_payload(payload.get(key), path))\n"
+        "    elif isinstance(payload, list):\n"
+        "        for index, item in enumerate(payload[:10]):\n"
+        "            path = f'{prefix}.{index}' if prefix else str(index)\n"
+        "            selectors.append(path)\n"
+        "            selectors.extend(_available_selectors_for_payload(item, path))\n"
+        "    return selectors\n\n\n"
+        "def _select_payload_fields(payload: dict[str, Any], *, select: str | None, source_command: str) -> dict[str, Any]:\n"
+        "    values: dict[str, Any] = {}\n"
+        "    missing: list[str] = []\n"
+        "    for selector in _selector_tokens(select):\n"
+        "        found, value = _field_by_path(payload, selector)\n"
+        "        if found:\n"
+        "            values[selector] = value\n"
+        "        else:\n"
+        "            missing.append(selector)\n"
+        "    selected: dict[str, Any] = {'kind': 'agentic-workspace/selected-output/v1', 'source_command': source_command, 'values': values}\n"
+        "    if missing:\n"
+        "        selected['missing'] = missing\n"
+        "        selected['selector_rule'] = 'Comma-separated dot paths select exact JSON fields; unknown fields are reported in missing.'\n"
+        "        selected['available_selectors'] = _available_selectors_for_payload(payload)\n"
+        "    return selected\n\n\n"
+        "def _selector_refs(*, command: str, answer: Any) -> list[str]:\n"
+        "    refs = ['.agentic-workspace/docs/compact-contract-profile.md', command]\n"
+        "    if isinstance(answer, dict):\n"
+        "        for key in ('canonical_doc', 'command', 'path', 'surface', 'ledger_path'):\n"
+        "            value = answer.get(key)\n"
+        "            if isinstance(value, str) and value not in refs:\n"
+        "                refs.append(value)\n"
+        "    return refs\n\n\n"
+        "def _compact_contract_answer(*, surface: str, selector: dict[str, Any], answer: Any, refs: list[str]) -> dict[str, Any]:\n"
+        "    return {'profile': 'compact-contract-answer/v1', 'surface': surface, 'selector': selector, 'matched': True, 'answer': answer, 'refs': refs}\n\n\n"
+        "def _select_section(payload: dict[str, Any], *, section: str, source_command: str) -> dict[str, Any]:\n"
+        "    normalized = section.strip()\n"
+        "    if normalized not in payload:\n"
+        "        supported = ', '.join(sorted(str(key) for key in payload))\n"
+        "        raise ValueError(f'{source_command} --section must match one of: {supported}.')\n"
+        "    answer = payload[normalized]\n"
+        "    return _compact_contract_answer(surface=source_command, selector={'section': normalized}, answer=answer, refs=_selector_refs(command=f'agentic-workspace {source_command} --format json', answer=answer))\n\n\n"
+        "def _tiny_sectioned_payload(payload: dict[str, Any], *, common_sections: list[str]) -> dict[str, Any]:\n"
+        "    return {\n"
+        "        'kind': 'agentic-workspace/defaults-router/v1',\n"
+        "        'profile': 'tiny',\n"
+        "        'summary': 'Default-route contract sections are available on demand; request one section or full detail instead of loading the whole contract.',\n"
+        "        'available_sections': sorted(str(key) for key in payload),\n"
+        "        'common_sections': list(common_sections),\n"
+        "        'detail_commands': {'section': 'agentic-workspace defaults --section <section> --format json', 'full': 'agentic-workspace defaults --verbose --format json'},\n"
+        "    }\n"
+    )
+
+
+def _python_local_runtime_generated_function(
+    function: str,
+    override: dict[str, Any],
+    *,
+    source_import_module: str,
+) -> str:
+    implementation = str(override["implementation"])
+    if implementation == "sectioned_payload_select":
+        payload_value = str(override.get("payload_value") or "payload")
+        source_command = str(override.get("source_command") or "command")
+        common_sections = [str(section) for section in override.get("common_sections", [])]
+        return (
+            f"def {function}(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> dict[str, Any]:\n"
+            f"    payload = values[{payload_value!r}]\n"
+            "    section = values.get('section')\n"
+            "    if section is not None:\n"
+            f"        payload = _select_section(payload, section=str(section), source_command={source_command!r})\n"
+            "    elif ('full' if values.get('verbose') else str(values.get('profile') or 'tiny')) == 'tiny':\n"
+            f"        payload = _tiny_sectioned_payload(payload, common_sections={common_sections!r})\n"
+            "    select = values.get('select')\n"
+            "    if select is not None:\n"
+            f"        payload = _select_payload_fields(payload, select=str(select), source_command={source_command!r})\n"
+            "    return _serialise_value(payload)\n"
+        )
+    if implementation == "json_output_with_source_fallback":
+        return (
+            f"def {function}(values: dict[str, Any], arguments: dict[str, Any], context: Any) -> Any:\n"
+            "    if str(values.get('format') or 'text') == 'json':\n"
+            "        print(json.dumps(_serialise_value(values['result']), indent=2))\n"
+            "        return None\n"
+            f"    from {source_import_module} import {function} as source_function\n\n"
+            "    return source_function(values, arguments, context)\n"
+        )
+    raise ValueError(f"unsupported generated local runtime implementation: {implementation!r}")
+
+
 def _python_local_runtime_binding_module(
     package: dict[str, Any],
     binding: dict[str, Any],
@@ -950,13 +1076,20 @@ def _python_local_runtime_binding_module(
     functions = _local_runtime_binding_functions(package, binding)
     source_import_module = str(binding["source_import_module"])
     exported = ",\n    ".join(repr(function) for function in functions)
+    overrides = _local_runtime_generated_overrides(binding)
     function_blocks = []
     for function in functions:
-        function_blocks.append(
-            f"def {function}(*args: Any, **kwargs: Any) -> Any:\n"
-            f"    from {source_import_module} import {function} as source_function\n\n"
-            "    return source_function(*args, **kwargs)\n"
-        )
+        if function in overrides:
+            function_blocks.append(
+                _python_local_runtime_generated_function(function, overrides[function], source_import_module=source_import_module)
+            )
+        else:
+            function_blocks.append(
+                f"def {function}(*args: Any, **kwargs: Any) -> Any:\n"
+                f"    from {source_import_module} import {function} as source_function\n\n"
+                "    return source_function(*args, **kwargs)\n"
+            )
+    helper_block = _python_local_runtime_helper_block() + "\n\n" if overrides else ""
     return (
         '"""Generated runtime binding facade.\n\n'
         f"Source: {source_path}\n"
@@ -964,11 +1097,14 @@ def _python_local_runtime_binding_module(
         f"Regenerate with: {regenerate_command}\n"
         '"""\n\n'
         "from __future__ import annotations\n\n"
+        "import copy\n"
+        "import json\n"
+        "from pathlib import Path\n"
         "from typing import Any\n\n"
         "# DO NOT EDIT DIRECTLY.\n"
         "# This generated-local seam makes remaining source-runtime delegates explicit per function.\n"
         "# Replace individual bindings here with generated/codegen-owned primitives as those operations migrate.\n"
-        f"# Regenerate with: {regenerate_command}\n\n" + "\n\n".join(function_blocks) + "\n\n"
+        f"# Regenerate with: {regenerate_command}\n\n" + helper_block + "\n\n".join(function_blocks) + "\n\n"
         "__all__ = [\n"
         f"    {exported},\n"
         "]\n"

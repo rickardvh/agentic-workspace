@@ -2,62 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-product-runtime-source-generation",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T21:02:04+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/command-generation-rename-and-shim-removal.plan.json",
-      "sha256": "1096d296e30f343052a0ef111ec62932daa133e20e723de4927b056d55c7813a",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold command-generation-rename-and-shim-removal",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T21:27:40+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "e244c0ad75b54d23a0b725d25e98baa3dd30e478904159f432767fbfd2bcd1cf",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold command-generation-rename-and-shim-removal",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T21:27:40+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/command-generation-rename-and-shim-removal.plan.json",
-      "sha256": "e93c5d97e1bdc02a9c7fadef81af798dbd83ce48ec75446b4b72acd95a60c926",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=delegate-exploration",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T21:27:43+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan command-generation-rename-and-shim-removal",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T21:50:09+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/module-owned-operation-contracts.plan.json",
-      "sha256": "74bda5d9cdbdb93f12064e43038072e5f28414b80c0d1771cc7e4eeed4abc939",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold module-owned-operation-contracts",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T21:52:51+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "39f60615456361e37b02d4d4d666401cc8cd9671a67f52864263557ce1146b25",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold module-owned-operation-contracts",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T21:52:51+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/execplans/module-owned-operation-contracts.plan.json",
       "sha256": "738c90d02846d893413c192d75538926af9e9ef1e24a7c5f5a4a7f40885a7b9b",
       "command": "agentic-planning delegation-decision",
@@ -1600,6 +1544,62 @@
       "reason": "archive execplan python-workspace-facade-source-runtime-elimination",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-16T10:48:14+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-workspace-defaults-primitive-migration.plan.json",
+      "sha256": "fc95b4af75d7772105f80cb0f0cba634fe3c76a05f8abbdba3999bf0ffe11df8",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-workspace-defaults-primitive-migration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T10:48:46+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "17d076de9bc0ddf8f3919b91ae3634dc1a772d92372c3f8ece230b47218c8c71",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-workspace-defaults-primitive-migration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T10:48:46+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-workspace-defaults-primitive-migration.plan.json",
+      "sha256": "2663b4cd1e60b7deb4782a955114359104d0480b95f8696cc4e4fee19d9c1471",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T10:53:51+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-workspace-defaults-primitive-migration.plan.json",
+      "sha256": "d0cd7b2ee9d44b187eb2e06d898c4b30d1233c1aa48eef9733ca4518735acde9",
+      "command": "agentic-planning record-recovery",
+      "reason": "Manual execplan tightening after scaffold for #892 defaults primitive migration; synchronized projections and validation fields before closeout.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T10:57:56+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-workspace-defaults-primitive-migration.plan.json",
+      "sha256": "1a9cbccfd5e76480202ea6146817311f1ab1c47220e8fbe8da5223d0cf098e9c",
+      "command": "agentic-planning record-recovery",
+      "reason": "Manual closeout field update after validated #892 defaults primitive migration slice.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T10:58:38+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-workspace-defaults-primitive-migration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T10:58:38+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/python-workspace-defaults-primitive-migration.plan.json",
+      "sha256": "1a9cbccfd5e76480202ea6146817311f1ab1c47220e8fbe8da5223d0cf098e9c",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-workspace-defaults-primitive-migration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T10:58:38+00:00"
     }
   ]
 }

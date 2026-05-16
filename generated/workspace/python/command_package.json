@@ -3948,6 +3948,29 @@
     "entrypoint": "agentic-workspace",
     "local_runtime_bindings": [
       {
+        "generated_function_overrides": [
+          {
+            "common_sections": [
+              "startup",
+              "proof_surfaces",
+              "memory_routing",
+              "capability_routing",
+              "closeout_trust",
+              "compact_contract_profile",
+              "workflow_sufficiency",
+              "authority_hierarchy",
+              "compliance_economics"
+            ],
+            "function": "_select_workspace_operation_defaults",
+            "implementation": "sectioned_payload_select",
+            "payload_value": "defaults_payload",
+            "source_command": "defaults"
+          },
+          {
+            "function": "_emit_workspace_operation_output",
+            "implementation": "json_output_with_source_fallback"
+          }
+        ],
         "module_file": "primitives.workspace_runtime",
         "source_import_module": "agentic_workspace.workspace_runtime_primitives"
       }
