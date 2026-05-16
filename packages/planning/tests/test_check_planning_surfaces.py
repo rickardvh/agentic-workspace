@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
@@ -1600,3 +1601,46 @@ def test_record_recovery_suppresses_managed_mutation_warning(tmp_path: Path) -> 
     assert any(action.kind == "updated" and action.path.name == "mutation-provenance.json" for action in result.actions)
     warnings = mod.gather_planning_warnings(repo_root=tmp_path)
     assert "planning_manual_mutation_unstamped" not in {warning.warning_class for warning in warnings}
+
+
+def test_parallel_record_recovery_preserves_prior_and_both_new_entries(tmp_path: Path) -> None:
+    from repo_planning_bootstrap.installer import record_planning_recovery
+
+    state_path, plan_path, decomposition_path = _write_mutation_provenance_fixture_surfaces(tmp_path)
+    provenance_path = tmp_path / ".agentic-workspace/planning/mutation-provenance.json"
+    provenance_path.parent.mkdir(parents=True, exist_ok=True)
+    provenance_path.write_text(
+        json.dumps(
+            {
+                "kind": "planning-mutation-provenance/v1",
+                "entries": [
+                    {
+                        "path": state_path.relative_to(tmp_path).as_posix(),
+                        "sha256": "prior-state-hash",
+                        "command": "agentic-planning record-recovery",
+                        "reason": "prior entry",
+                        "mode": "manual-recovery",
+                        "recorded_at": "2026-05-16T00:00:00+00:00",
+                    }
+                ],
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    def recover(path: str) -> None:
+        result = record_planning_recovery(target=tmp_path, paths=[path], reason=f"repair {path}")
+        assert not any(action.kind == "manual review" for action in result.actions)
+
+    plan_rel = plan_path.relative_to(tmp_path).as_posix()
+    decomposition_rel = decomposition_path.relative_to(tmp_path).as_posix()
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        list(executor.map(recover, [plan_rel, decomposition_rel]))
+
+    payload = json.loads(provenance_path.read_text(encoding="utf-8"))
+    entries = payload["entries"]
+    assert any(entry["sha256"] == "prior-state-hash" for entry in entries)
+    assert any(entry["path"] == plan_rel for entry in entries)
+    assert any(entry["path"] == decomposition_rel for entry in entries)

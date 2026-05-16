@@ -630,6 +630,82 @@ candidates = []
     assert "compact-cli" not in state_text
 
 
+def test_archive_prepare_closeout_allows_direct_slice_scope(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "direct-slice.plan.json"
+    _write_execplan_record(record_path, item_id="direct-slice", status="completed")
+
+    result = archive_execplan(
+        "direct-slice",
+        target=tmp_path,
+        prepare_closeout=True,
+        dry_run=True,
+        closure_decision="archive-and-close",
+        intent_satisfied="yes",
+    )
+
+    assert not any(action.kind == "manual review" for action in result.actions)
+    assert any(action.kind == "would update" and '"closeout scope": "slice"' in action.detail for action in result.actions)
+
+
+def test_archive_prepare_closeout_blocks_lane_proxy_archive_and_close(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "generated-cli-proxy.plan.json"
+    _write_execplan_record(record_path, item_id="generated-cli-proxy", status="completed")
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    record["intent_continuity"] = {
+        "larger intended outcome": "Complete implementation-independent generated CLI behavior.",
+        "this slice completes the larger intended outcome": "no",
+        "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane generated-cli-runtime",
+    }
+    record["required_continuation"] = {
+        "required follow-on for the larger intended outcome": "yes",
+        "owner surface": ".agentic-workspace/planning/state.toml roadmap lane generated-cli-runtime",
+        "activation trigger": "continue generic runtime ownership after proxy validation",
+    }
+    installer_mod._write_execplan_record(record_path=record_path, record=record)
+
+    result = archive_execplan(
+        "generated-cli-proxy",
+        target=tmp_path,
+        prepare_closeout=True,
+        dry_run=True,
+        closure_decision="archive-and-close",
+        intent_satisfied="yes",
+    )
+
+    assert any(warning["warning_class"] == "archive_larger_intent_proxy_closeout_blocked" for warning in result.warnings)
+    assert any(action.kind == "manual review" for action in result.actions)
+
+
+def test_archive_blocks_prefilled_lane_proxy_archive_and_close(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "generated-cli-proxy.plan.json"
+    _write_execplan_record(record_path, item_id="generated-cli-proxy", status="completed")
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    record["intent_continuity"] = {
+        "larger intended outcome": "Complete implementation-independent generated CLI behavior.",
+        "this slice completes the larger intended outcome": "no",
+        "continuation surface": ".agentic-workspace/planning/state.toml roadmap lane generated-cli-runtime",
+    }
+    record["required_continuation"] = {
+        "required follow-on for the larger intended outcome": "yes",
+        "owner surface": ".agentic-workspace/planning/state.toml roadmap lane generated-cli-runtime",
+        "activation trigger": "continue generic runtime ownership after proxy validation",
+    }
+    record["closure_check"]["closeout scope"] = "lane"
+    record["closure_check"]["larger-intent status"] = "closed"
+    record["closure_check"]["closure decision"] = "archive-and-close"
+    record["intent_satisfaction"]["was original intent fully satisfied?"] = "yes"
+    record["intent_satisfaction"]["unsolved intent passed to"] = "none"
+    installer_mod._write_execplan_record(record_path=record_path, record=record)
+
+    result = archive_execplan("generated-cli-proxy", target=tmp_path, dry_run=True)
+
+    assert any(warning["warning_class"] == "archive_larger_intent_proxy_closeout_blocked" for warning in result.warnings)
+    assert any(action.kind == "manual review" for action in result.actions)
+
+
 def test_planning_cli_new_plan_creates_valid_active_scaffold(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
 

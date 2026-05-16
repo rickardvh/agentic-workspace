@@ -2,78 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/execplans/python-memory-list-files-primitives.plan.json",
-      "sha256": "6197e6290b5eef9e78c63860abcf9111cf517f2d102fd549c43a57ce2a4e53af",
-      "command": "agentic-planning record-recovery",
-      "reason": "Tightened active #892 memory.list-files primitive decomposition execplan after CLI scaffold.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T09:52:19+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-memory-list-files-primitives.plan.json",
-      "sha256": "9e4c3e5ffd1327b06a1e8845c8af0b9aa37c23c771fb43d4f8ffcaeee8a2de80",
-      "command": "agentic-planning record-recovery",
-      "reason": "Corrected projection drift and path-like wording in active memory.list-files primitive decomposition plan.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T09:56:15+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
-      "sha256": "2774fbf36748c605ae08c042badec506bd9759a7363c1a8e84b1196c528c7935",
-      "command": "agentic-planning record-recovery",
-      "reason": "Updated #892 decomposition notes after memory.list-files primitive decomposition slice.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T09:58:03+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-memory-list-files-primitives.plan.json",
-      "sha256": "ed4dbfb6b2dcf2a6a4a211d028b3174e955f7d07f9cb003298ca5d46e1082ddf",
-      "command": "agentic-planning record-recovery",
-      "reason": "Recorded proof, intent satisfaction, continuation, and closeout for completed memory.list-files primitive decomposition slice.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T09:58:56+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-memory-list-files-primitives",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T09:59:00+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/archive/python-memory-list-files-primitives.plan.json",
-      "sha256": "ed4dbfb6b2dcf2a6a4a211d028b3174e955f7d07f9cb003298ca5d46e1082ddf",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-memory-list-files-primitives",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T09:59:00+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-runtime-source-blocker-audit.plan.json",
-      "sha256": "876a98337c88f62a3c7f630ece6befc9f505ba35e605478d7f2d439295a42b60",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-runtime-source-blocker-audit",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T10:00:00+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "66ac1e276a8e21d565497a643c9900dc025d1cbe5357d144f02db91fa5a79a65",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-runtime-source-blocker-audit",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T10:00:00+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-runtime-source-blocker-audit.plan.json",
-      "sha256": "578e51aa92704adfe74fe29d456a171e44c3a7e285a8f00b19f2c7803464fed8",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=keep-local",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T10:00:05+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/execplans/python-runtime-source-blocker-audit.plan.json",
       "sha256": "23e25dab3c2d79533bd958286a3fe2f820366bb9837d86b5f9a628573bab1d81",
       "command": "agentic-planning record-recovery",
@@ -1600,6 +1528,78 @@
       "reason": "archive execplan python-memory-status-text-runtime-reduction",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-16T15:40:26+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "491bcb314152c3cd0c6970703ccd5398d464ed91e270de33dc3095821554e267",
+      "command": "agentic-planning record-recovery",
+      "reason": "Restored GitHub issue intake into roadmap candidates per maintainer clarification; codegen issues grouped as deferred lowest priority.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T16:53:49+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "0eb73fb1eb3ab0d02a433743babc05074f5feac7825da8f0a3d867bf466b05c8",
+      "command": "agentic-planning record-recovery",
+      "reason": "Sharpened P2/P3 roadmap candidates with context-reduction, proportionality, and no-artifact-by-default success signals.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T17:00:26+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-planning-trust-recoverability-p0.plan.json",
+      "sha256": "7315a8e75799a222bff23b48e930f293cf18745412282dec5637858aafa01c97",
+      "command": "agentic-planning promote-to-plan",
+      "reason": "promote planning item github-planning-trust-recoverability-p0",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T17:02:08+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "f5ac3438d31deccd35a95cd9805caec2a56ef2b187dbd77fdbef30884dbe8ecc",
+      "command": "agentic-planning promote-to-plan",
+      "reason": "promote planning item github-planning-trust-recoverability-p0",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T17:02:08+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-planning-trust-recoverability-p0.plan.json",
+      "sha256": "481742d9230ba4f3d851e13e2ed77a10449664756a98388e6241ae803d3e435c",
+      "command": "agentic-planning record-recovery",
+      "reason": "Updated active P0 execplan after completing #1006 provenance concurrency slice; #973 remains as continuation.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T17:06:01+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-planning-trust-recoverability-p0.plan.json",
+      "sha256": "49c0fe9f29c3ea03ae8b6f561bffeb7b747f8484c07edaff7a15700780310e90",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T17:06:25+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-planning-trust-recoverability-p0.plan.json",
+      "sha256": "659cb0cb1601c5993576774f2afbda4bec4caee8633ee4656873d94cad361198",
+      "command": "agentic-planning record-recovery",
+      "reason": "Aligned active P0 execplan compatibility projections to canonical_core after summary reported projection drift.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T17:08:49+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-planning-trust-recoverability-p0.plan.json",
+      "sha256": "e49a1fe059dec06e058a2c72cebf319734c21adf8b04136359fe0bdb13fd9953",
+      "command": "agentic-planning record-recovery",
+      "reason": "Updated active P0 execplan closeout after completing #1006 and #973 slices.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T17:14:18+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "adb06bf24f4b6e065c21b5f7040598bfdfd08ddfd00e9b24ea390520724c0669",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan github-planning-trust-recoverability-p0",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T17:14:40+00:00"
     }
   ]
 }
