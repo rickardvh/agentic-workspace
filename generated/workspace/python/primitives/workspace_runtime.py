@@ -170,10 +170,14 @@ def _resolve_workspace_operation_selection(*args: Any, **kwargs: Any) -> Any:
     return source_function(*args, **kwargs)
 
 
-def _resolve_workspace_operation_target_root(*args: Any, **kwargs: Any) -> Any:
-    from agentic_workspace.workspace_runtime_primitives import _resolve_workspace_operation_target_root as source_function
-
-    return source_function(*args, **kwargs)
+def _resolve_workspace_operation_target_root(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> Path:
+    target_value = values.get('target')
+    target_root = Path(str(target_value)).resolve() if target_value else Path.cwd().resolve()
+    if not target_root.exists():
+        raise ValueError(f'Target path does not exist: {target_root}')
+    if not target_root.is_dir():
+        raise ValueError(f'Target path is not a directory: {target_root}')
+    return target_root
 
 
 def _run_external_intent_refresh_github_adapter(*args: Any, **kwargs: Any) -> Any:

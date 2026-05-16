@@ -407,6 +407,7 @@
                         "implementation": {
                           "type": "string",
                           "enum": [
+                            "target_root_resolve",
                             "sectioned_payload_select",
                             "json_output_with_source_fallback"
                           ]

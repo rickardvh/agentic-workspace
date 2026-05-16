@@ -3956,6 +3956,10 @@ export const generatedCommandPackage = {
       {
         "generated_function_overrides": [
           {
+            "function": "_resolve_workspace_operation_target_root",
+            "implementation": "target_root_resolve"
+          },
+          {
             "common_sections": [
               "startup",
               "proof_surfaces",

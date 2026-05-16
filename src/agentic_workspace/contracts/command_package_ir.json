@@ -543,6 +543,10 @@
             "module_file": "primitives.workspace_runtime",
             "generated_function_overrides": [
               {
+                "function": "_resolve_workspace_operation_target_root",
+                "implementation": "target_root_resolve"
+              },
+              {
                 "function": "_select_workspace_operation_defaults",
                 "implementation": "sectioned_payload_select",
                 "payload_value": "defaults_payload",

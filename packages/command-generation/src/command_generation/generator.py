@@ -1037,6 +1037,17 @@ def _python_local_runtime_generated_function(
     source_import_module: str,
 ) -> str:
     implementation = str(override["implementation"])
+    if implementation == "target_root_resolve":
+        return (
+            f"def {function}(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> Path:\n"
+            "    target_value = values.get('target')\n"
+            "    target_root = Path(str(target_value)).resolve() if target_value else Path.cwd().resolve()\n"
+            "    if not target_root.exists():\n"
+            "        raise ValueError(f'Target path does not exist: {target_root}')\n"
+            "    if not target_root.is_dir():\n"
+            "        raise ValueError(f'Target path is not a directory: {target_root}')\n"
+            "    return target_root\n"
+        )
     if implementation == "sectioned_payload_select":
         payload_value = str(override.get("payload_value") or "payload")
         source_command = str(override.get("source_command") or "command")
