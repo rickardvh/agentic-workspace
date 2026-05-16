@@ -1,0 +1,278 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Python memory current runtime delegate reduction",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Audit whether memory.current.report has a safe bounded generated-runtime reduction available without copying current-memory domain policy into generated code.",
+    "hard_constraints": "Do not move current-memory migration judgment, planning contradiction checks, or text guidance into generated code by copying source mechanics; if no small common primitive slice exists, close this as no-safe-route and continue #892 elsewhere.",
+    "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Close this slice as no-safe-route: memory.current remains explicit package-domain runtime debt until current-memory policy is represented by portable IR primitives.",
+    "proof_expectations": [
+      "rg -n \"def show_current_memory|def check_current_memory|_current_memory_planning_contradiction|_emit_current_view\" packages/memory/src/repo_memory_bootstrap"
+    ],
+    "touched_scope": [
+      ".agentic-workspace/planning/execplans/python-memory-current-runtime-reduction.plan.json",
+      ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+    ],
+    "completion_criteria": [
+      "No generated-code reduction is implemented for memory.current.report.",
+      "The closeout records why current-memory behavior is package-domain policy rather than a small deterministic fast path.",
+      "The #892 decomposition remains open for the next implementation-safe runtime delegate reduction."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-but-keep-lane-open"
+  },
+  "goal": [
+    "Create a bounded plan for Python memory current runtime delegate reduction."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Audit whether memory.current.report has a safe bounded generated-runtime reduction available without copying current-memory domain policy into generated code.",
+      "constraints": "Do not move current-memory migration judgment, planning contradiction checks, or text guidance into generated code by copying source mechanics; if no small common primitive slice exists, close this as no-safe-route and continue #892 elsewhere.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "python-memory-current-runtime-reduction",
+      "status": "completed",
+      "next_step": "Continue #892 with another implementation-safe runtime delegate reduction.",
+      "proof": "Source inspection shows memory.current behavior depends on current-memory migration policy, planning contradiction checks, and current-note text emission."
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/execplans/python-memory-current-runtime-reduction.plan.json",
+        ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Complete #892's Python generated CLI lane by moving generic deterministic shipped CLI behavior into implementation-independent IR/contracts plus codegen-owned primitives and generated Python projections.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+    "activation trigger": "Continue with the next implementation-safe runtime delegate reduction."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Python memory current runtime delegate reduction",
+    "inferred intended outcome": "Decide whether memory.current has a small generated-runtime reduction comparable to the JSON fast-path slices.",
+    "chosen concrete what": "Do not implement a generated projection because memory.current show/check owns current-memory migration policy and planning-state contradiction logic.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "planning closeout/decomposition surfaces only; no generated or package code edits.",
+    "max changed files": "About 3 planning files.",
+    "required validation commands": "rg inspection of memory.current source policy markers; planning summary/doctor after closeout.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "memory.current was audited and deliberately not reduced because current-memory policy is not a small deterministic fast path.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Audit whether memory.current.report has a safe bounded generated-runtime reduction available without copying current-memory domain policy into generated code.",
+    "hard constraints": "Do not move current-memory migration judgment, planning contradiction checks, or text guidance into generated code by copying source mechanics; if no small common primitive slice exists, close this as no-safe-route and continue #892 elsewhere.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "pending",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "python-memory-current-runtime-reduction",
+    "status": "completed",
+    "scope": "Close this execution thread as no-safe-route for memory.current generated-runtime reduction.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Close this slice as no-safe-route: memory.current remains explicit package-domain runtime debt until current-memory policy is represented by portable IR primitives."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/execplans/python-memory-current-runtime-reduction.plan.json",
+    ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "rg -n \"def show_current_memory|def check_current_memory|_current_memory_planning_contradiction|_emit_current_view\" packages/memory/src/repo_memory_bootstrap"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "No generated-code reduction is implemented for memory.current.report.",
+    "The closeout records why current-memory behavior is package-domain policy rather than a small deterministic fast path.",
+    "The #892 decomposition remains open for the next implementation-safe runtime delegate reduction."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Inspected memory.current show/check and found it is current-memory migration policy and planning-state contradiction logic, not a small deterministic generated-runtime fast path.",
+    "scope touched": "planning closeout and decomposition surfaces only",
+    "changed surfaces": "no generated or package code changed",
+    "validations run": "rg inspection of memory.current policy/source markers",
+    "result for continuation": "no-safe-route for this slice; continue #892 with another implementation-safe runtime delegate reduction",
+    "next step": "Close this planning item and continue from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; no source or generated code was edited",
+    "proof status": "passed for no-safe-route decision",
+    "intent served": "yes for the audit decision; no implementation reduction was safe",
+    "config compliance": "used uv run agentic-workspace startup/summary and recorded planning state",
+    "misinterpretation risk": "controlled by closing this as no-safe-route rather than copying package-domain current-memory policy into generated code",
+    "follow-on decision": "archive this slice but keep the #892 lane open"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "bounded inspection was cheaper than delegation after current source markers were found locally",
+    "expected savings": "avoid wasted implementation work by recognizing no-safe-route early",
+    "actual friction": "none",
+    "proof result": "passed for no-safe-route decision",
+    "quality concern": "memory.current remains package-domain debt and must not be counted as generated primitive completion",
+    "decomposition adjustment": "record memory.current as explicitly deferred domain-runtime debt."
+  },
+  "proof_report": {
+    "validation proof": "rg inspection found show_current_memory, check_current_memory, _current_memory_planning_contradiction, and _emit_current_view source policy markers.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "memory.current behavior includes current-memory migration review, planning contradiction checks, and custom text emission, so this was not a safe fast-path generated-runtime slice."
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Python memory current runtime delegate reduction.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The bounded slice determined that memory.current should not be reduced by copying source policy into generated code. The larger #892 epic remains open.",
+    "unsolved intent passed to": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+  },
+  "execution_summary": {
+    "outcome delivered": "no-safe-route audit for memory.current generated-runtime reduction",
+    "validation confirmed": "yes",
+    "follow-on routed to": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+    "post-work posterity capture": "decomposition note updated",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "next #892 runtime delegate reduction lane"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "No generated-code reduction was implemented because memory.current is policy-heavy package-domain behavior, not a small deterministic fast path.",
+    "evidence carried forward": "current-memory migration and planning contradiction logic remain explicit source-runtime debt in the inventory.",
+    "reopen trigger": "A future IR primitive set can represent current-memory policy without copying package source mechanics."
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [
+      "Not every source runtime delegate is a good reduction target; some must stay explicit domain-runtime debt until policy is modeled."
+    ],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [
+        "Continue #892 with the next implementation-safe runtime delegate reduction; do not count memory.current as reduced."
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-16: Scaffolded by agentic-planning new-plan."
+  ]
+}
