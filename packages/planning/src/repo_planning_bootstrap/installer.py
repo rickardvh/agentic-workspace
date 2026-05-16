@@ -9749,7 +9749,7 @@ def _closeout_larger_intent_is_unresolved(
     return (
         normalized_completion == "no"
         or normalized_follow_on == "yes"
-        or (normalized_owner and normalized_owner not in {"none", "n/a", "none yet", "no further action"})
+        or (normalized_owner != "" and normalized_owner not in {"none", "n/a", "none yet", "no further action"})
     )
 
 
