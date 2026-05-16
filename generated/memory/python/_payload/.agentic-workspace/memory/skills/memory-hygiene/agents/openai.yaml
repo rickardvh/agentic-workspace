@@ -1,0 +1,4 @@
+interface:
+  display_name: "Memory Hygiene"
+  short_description: "Clean and verify checked-in memory."
+  default_prompt: "Use $memory-hygiene to review checked-in memory, run the freshness audit, and prune or refresh stale notes."

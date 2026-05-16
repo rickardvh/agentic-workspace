@@ -1,0 +1,85 @@
+{
+  "kind": "agentic-workspace/python-runtime-projection-inventory/v1",
+  "schema_version": "agentic-workspace/python-runtime-projection-inventory/v1",
+  "purpose": "Track generated/python runtime and operation-executor Python files whose location alone could be mistaken for generated ownership.",
+  "completion_rule": "The Python CLI completion gate may reach full-generated-cli-complete only when every generated projection entry is rendered-by-command-generation, blocking_full_completion is false for every entry, command-generation render_outputs produces the same paths, shipped module source no longer owns generated CLI runtime/lifecycle behavior, and generated command modules do not import package-owned runtime helpers directly.",
+  "allowed_provenance_statuses": [
+    "rendered-by-command-generation",
+    "transitional-generated-output-debt"
+  ],
+  "entries": [
+    {
+      "path": "generated/workspace/python/cli.py",
+      "package_id": "root-workspace",
+      "program": "agentic-workspace",
+      "artifact_kind": "cli-entrypoint",
+      "provenance_status": "rendered-by-command-generation",
+      "current_owner": "command-generation render_outputs",
+      "source_of_truth": "src/agentic_workspace/contracts/command_package_ir.json python_runtime_binding.render_runtime_module plus workspace operation IR resources and explicit runtime primitive handler bindings",
+      "blocking_full_completion": false,
+      "why_blocking": "not blocking; this runtime handler map is mechanically rendered from command-package binding metadata while product-specific live workspace behavior is behind explicit runtime primitive bindings",
+      "required_resolution": "Keep generated freshness proof covering this file and continue migrating generic deterministic behavior from workspace runtime primitives into codegen-owned primitives."
+    },
+    {
+      "path": "generated/workspace/python/primitives/operation_executor.py",
+      "package_id": "root-workspace",
+      "program": "agentic-workspace",
+      "artifact_kind": "operation-ir-executor",
+      "provenance_status": "rendered-by-command-generation",
+      "current_owner": "command-generation render_outputs",
+      "source_of_truth": "src/agentic_workspace/contracts/command_package_ir.json python_runtime_binding.operation_executor plus generated workspace operation IR resources",
+      "blocking_full_completion": false,
+      "why_blocking": "not blocking; this operation executor is mechanically rendered from command-package binding metadata",
+      "required_resolution": "Keep generated freshness proof covering this file."
+    },
+    {
+      "path": "generated/planning/python/cli.py",
+      "package_id": "planning-bootstrap",
+      "program": "agentic-planning",
+      "artifact_kind": "cli-entrypoint",
+      "provenance_status": "rendered-by-command-generation",
+      "current_owner": "command-generation render_outputs",
+      "source_of_truth": "src/agentic_workspace/contracts/command_package_ir.json python_runtime_binding.render_runtime_module plus generated planning operation IR resources",
+      "blocking_full_completion": false,
+      "why_blocking": "not blocking; this runtime handler map is mechanically rendered from command-package binding metadata",
+      "required_resolution": "Keep generated freshness proof covering this file."
+    },
+    {
+      "path": "generated/planning/python/primitives/operation_executor.py",
+      "package_id": "planning-bootstrap",
+      "program": "agentic-planning",
+      "artifact_kind": "operation-ir-executor",
+      "provenance_status": "rendered-by-command-generation",
+      "current_owner": "command-generation render_outputs",
+      "source_of_truth": "src/agentic_workspace/contracts/command_package_ir.json python_runtime_binding.operation_executor plus generated planning operation IR resources",
+      "blocking_full_completion": false,
+      "why_blocking": "not blocking; this operation executor is mechanically rendered from command-package binding metadata",
+      "required_resolution": "Keep generated freshness proof covering this file."
+    },
+    {
+      "path": "generated/memory/python/cli.py",
+      "package_id": "memory-bootstrap",
+      "program": "agentic-memory",
+      "artifact_kind": "cli-entrypoint",
+      "provenance_status": "rendered-by-command-generation",
+      "current_owner": "command-generation render_outputs",
+      "source_of_truth": "src/agentic_workspace/contracts/command_package_ir.json python_runtime_binding.render_runtime_module plus generated memory operation IR resources",
+      "blocking_full_completion": false,
+      "why_blocking": "not blocking; this runtime handler map is mechanically rendered from command-package binding metadata",
+      "required_resolution": "Keep generated freshness proof covering this file."
+    },
+    {
+      "path": "generated/memory/python/primitives/operation_executor.py",
+      "package_id": "memory-bootstrap",
+      "program": "agentic-memory",
+      "artifact_kind": "operation-ir-executor",
+      "provenance_status": "rendered-by-command-generation",
+      "current_owner": "command-generation render_outputs",
+      "source_of_truth": "src/agentic_workspace/contracts/command_package_ir.json python_runtime_binding.operation_executor plus generated memory operation IR resources",
+      "blocking_full_completion": false,
+      "why_blocking": "not blocking; this operation executor is mechanically rendered from command-package binding metadata",
+      "required_resolution": "Keep generated freshness proof covering this file."
+    }
+  ]
+}
+

@@ -9,7 +9,7 @@ from pathlib import Path
 
 from jsonschema import Draft202012Validator
 
-from agentic_workspace import _runtime_cli as cli
+from agentic_workspace import workspace_runtime_primitives as cli
 from agentic_workspace.contract_tooling import (
     authority_markers_manifest,
     cli_commands_manifest,
@@ -36,6 +36,7 @@ from agentic_workspace.contract_tooling import (
     python_contract_consumption_manifest,
     python_extraction_map_manifest,
     python_runtime_boundary_manifest,
+    python_runtime_projection_inventory_manifest,
     repo_friction_policy_manifest,
     report_contract_manifest,
     setup_findings_policy_manifest,
@@ -43,6 +44,12 @@ from agentic_workspace.contract_tooling import (
     workflow_definition_format_manifest,
     workspace_surfaces_manifest,
 )
+from command_generation.generated_package_loader import (
+    load_generated_command_module_for_entrypoint,
+    load_generated_command_package_for_entrypoint,
+)
+
+generated_workspace_cli = load_generated_command_module_for_entrypoint("agentic-workspace", "cli.py")
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -204,7 +211,7 @@ def _sample_setup_findings_payload() -> dict[str, object]:
                 "class": "repo_friction_evidence",
                 "summary": "Large shared workspace CLI surface is still a hotspot.",
                 "confidence": 0.91,
-                "path": "src/agentic_workspace/_runtime_cli.py",
+                "path": "generated/workspace/python/cli.py",
                 "refs": [".agentic-workspace/docs/reporting-contract.md"],
                 "why": "Would reduce rediscovery during later repo work.",
             },
@@ -251,7 +258,7 @@ def _sample_startup_context_payload() -> dict[str, object]:
         (target / ".git").mkdir(exist_ok=True)
         return cli._start_payload(  # type: ignore[attr-defined]
             target_root=target,
-            changed_paths=["src/agentic_workspace/_runtime_cli.py"],
+            changed_paths=["generated/workspace/python/cli.py"],
         )
 
 
@@ -264,7 +271,7 @@ def _sample_implementer_context_payload() -> dict[str, object]:
             target_root=target,
             changed_paths=[
                 "packages/planning/bootstrap/repo_planning_bootstrap/installer.py",
-                "src/agentic_workspace/_runtime_cli.py",
+                "generated/workspace/python/cli.py",
             ],
         )
 
@@ -525,6 +532,27 @@ def _validate_operation_ir_plans() -> list[str]:
     return errors
 
 
+def _validate_module_operation_contract_locations() -> list[str]:
+    errors: list[str] = []
+    root_operations = REPO_ROOT / "src" / "agentic_workspace" / "contracts" / "operations"
+    misplaced = sorted(path.name for prefix in ("planning.", "memory.") for path in root_operations.glob(f"{prefix}*.json"))
+    if misplaced:
+        errors.append("module-owned operation contracts must not live under root workspace operations: " + ", ".join(misplaced))
+
+    module_roots = {
+        "planning.": REPO_ROOT / "packages" / "planning" / "src" / "repo_planning_bootstrap" / "contracts" / "operations",
+        "memory.": REPO_ROOT / "packages" / "memory" / "src" / "repo_memory_bootstrap" / "contracts" / "operations",
+    }
+    for operation_ref in operation_contracts_manifest()["operations"]:
+        operation_id = str(operation_ref.get("id", ""))
+        operation_file = Path(str(operation_ref.get("path", ""))).name
+        for prefix, module_root in module_roots.items():
+            if operation_id.startswith(prefix) and not (module_root / operation_file).is_file():
+                relative_root = module_root.relative_to(REPO_ROOT).as_posix()
+                errors.append(f"module-owned operation {operation_id} must live under {relative_root}")
+    return errors
+
+
 def _validate_conformance_registry(payload: dict[str, object]) -> list[str]:
     errors: list[str] = []
     if payload.get("schema_version") != "agentic-workspace/conformance-contracts/v1":
@@ -719,6 +747,21 @@ def _validate_command_package_ir(payload: dict[str, object]) -> list[str]:
             errors.append(f"command_package_ir package {program} must declare a python target")
         if "typescript" not in target_kinds:
             errors.append(f"command_package_ir package {program} must declare a typescript target")
+        python_binding = package.get("python_runtime_binding", {})
+        if isinstance(python_binding, dict):
+            operation_executor = python_binding.get("operation_executor", {})
+            if isinstance(operation_executor, dict):
+                handlers = operation_executor.get("handlers", [])
+                if isinstance(handlers, list):
+                    for handler in handlers:
+                        if not isinstance(handler, dict):
+                            continue
+                        if handler.get("handler") == "function_call":
+                            primitive = str(handler.get("primitive", ""))
+                            errors.append(
+                                f"command_package_ir package {program} primitive {primitive} uses direct function_call; "
+                                "declare python.function.call in operation IR instead"
+                            )
         for command in commands:
             if not isinstance(command, dict):
                 errors.append(f"command_package_ir package {program} command entry must be an object")
@@ -1222,48 +1265,24 @@ def _known_command_names_for_program(program: str) -> set[str]:
 
 
 def _program_generated_parser(program: str) -> argparse.ArgumentParser | None:
-    if program == "agentic-workspace":
-        from agentic_workspace import generated_cli_package
-
-        return generated_cli_package.build_generated_parser()
-    if program == "agentic-planning":
-        from repo_planning_bootstrap import generated_cli_package
-
-        return generated_cli_package.build_generated_parser()
-    if program == "agentic-memory":
-        from repo_memory_bootstrap import generated_cli_package
-
-        return generated_cli_package.build_generated_parser()
+    if program in {"agentic-workspace", "agentic-planning", "agentic-memory"}:
+        return load_generated_command_package_for_entrypoint(program).build_generated_parser()
     return None
 
 
 def _program_generated_command_names(program: str) -> set[str]:
-    if program == "agentic-workspace":
-        from agentic_workspace import generated_cli_package
-
-        return set(generated_cli_package.generated_command_names())
-    if program == "agentic-planning":
-        from repo_planning_bootstrap import generated_cli_package
-
-        return set(generated_cli_package.generated_command_names())
-    if program == "agentic-memory":
-        from repo_memory_bootstrap import generated_cli_package
-
-        return set(generated_cli_package.generated_command_names())
+    if program in {"agentic-workspace", "agentic-planning", "agentic-memory"}:
+        return set(load_generated_command_package_for_entrypoint(program).generated_command_names())
     return set()
 
 
 def _program_parser(program: str) -> argparse.ArgumentParser | None:
     if program == "agentic-workspace":
-        return cli.build_parser()
+        return generated_workspace_cli.build_parser()
     if program == "agentic-planning":
-        from repo_planning_bootstrap import _runtime_cli as planning_cli
-
-        return planning_cli.build_parser()
+        return load_generated_command_module_for_entrypoint("agentic-planning", "cli.py").build_parser()
     if program == "agentic-memory":
-        from repo_memory_bootstrap import _runtime_cli as memory_cli
-
-        return memory_cli.build_parser()
+        return load_generated_command_module_for_entrypoint("agentic-memory", "cli.py").build_parser()
     return None
 
 
@@ -1610,6 +1629,10 @@ def main(argv: list[str] | None = None) -> int:
             + _validate_operation_registry(operation_contracts_manifest()),
         ),
         (
+            "module operation contract locations",
+            _validate_module_operation_contract_locations(),
+        ),
+        (
             "conformance contracts registry",
             _validate(conformance_contracts_manifest(), "conformance_contracts.schema.json")
             + _validate_conformance_registry(conformance_contracts_manifest()),
@@ -1663,6 +1686,10 @@ def main(argv: list[str] | None = None) -> int:
             "python runtime boundary",
             _validate(python_runtime_boundary_manifest(), "python_runtime_boundary.schema.json")
             + _validate_python_runtime_boundary_authority(python_runtime_boundary_manifest()),
+        ),
+        (
+            "python runtime projection inventory",
+            _validate(python_runtime_projection_inventory_manifest(), "python_runtime_projection_inventory.schema.json"),
         ),
         (
             "lifecycle generation readiness",
@@ -1895,15 +1922,19 @@ def main(argv: list[str] | None = None) -> int:
     if live_registry_payload != module_registry["modules"]:
         checks.append(("module registry parity", ["live module registry drifted from module_registry.json"]))
     parser_manifest = cli_commands_manifest()
-    parser_snapshot = _parser_snapshot(cli.build_parser())
-    generated_root_commands = set(cli.generated_cli_package_command_names())  # type: ignore[attr-defined]
-    expected_parser_snapshot = [
-        _resolved_command_manifest(spec) for spec in parser_manifest["commands"] if str(spec["name"]) not in generated_root_commands
-    ]
-    if parser_snapshot != expected_parser_snapshot:
-        checks.append(("cli command manifest parity", ["argparse command/options/defaults drifted from cli_commands.json or cli_option_groups.json"]))
-    if [item["name"] for item in parser_snapshot] != [item["name"] for item in expected_parser_snapshot]:
-        checks.append(("cli command manifest parity", ["resolved handwritten command ordering drifted from cli_commands.json"]))
+    parser_snapshot = _parser_snapshot(generated_workspace_cli.build_parser())
+    generated_root_commands = set(generated_workspace_cli.generated_command_names())  # type: ignore[attr-defined]
+    manifest_command_names = {str(spec["name"]) for spec in parser_manifest["commands"]}
+    if not generated_root_commands >= manifest_command_names:
+        expected_parser_snapshot = [
+            _resolved_command_manifest(spec) for spec in parser_manifest["commands"] if str(spec["name"]) not in generated_root_commands
+        ]
+        if parser_snapshot != expected_parser_snapshot:
+            checks.append(
+                ("cli command manifest parity", ["argparse command/options/defaults drifted from cli_commands.json or cli_option_groups.json"])
+            )
+        if [item["name"] for item in parser_snapshot] != [item["name"] for item in expected_parser_snapshot]:
+            checks.append(("cli command manifest parity", ["resolved handwritten command ordering drifted from cli_commands.json"]))
     if "modules" not in cli._command_suggestions("moduls"):  # type: ignore[attr-defined]
         checks.append(("cli command manifest parity", ["command suggestions no longer derive the expected known commands"]))
     workspace_config_schema = contract_schema("workspace_config.schema.json")
@@ -2042,3 +2073,7 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+
+

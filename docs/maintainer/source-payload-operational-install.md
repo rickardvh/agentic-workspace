@@ -4,7 +4,7 @@ Use `uv run python scripts/check/check_source_payload_operational_install.py --f
 
 Authority flows from package source and bootstrap payloads into packaged `_payload` files, then into the root operational install through package upgrade commands. Root-local planning state, memory current notes, and dogfooding archives are intentional operational differences, not payload drift.
 
-Generated Python CLI package metadata lives under `generated/python/<package>/generated_cli_package` as a peer generated target projection beside `generated/typescript`. Generated command adapter metadata lives beside it as JSON under `generated/python/<package>/generated_command_adapters.json`. Package source trees keep only small `generated_cli_package` import bridges and hand-owned runtime glue. Built wheels may bundle the generated Python projection under a private package-local implementation module so installed CLIs do not depend on repository layout.
+Generated Python command package metadata lives under `generated/<package>/python` as a peer target projection beside `generated/typescript`. Generated command adapter metadata lives beside it as JSON under each generated target root. Package source trees keep no generated command-package source bridge; built wheels may bundle the generated Python projection under a private package-local compatibility module so installed CLIs do not depend on repository layout.
 
 Generated command adapter metadata is not a package-local Python runtime module; checks and conformance load the generated JSON artifacts from the repository generated tree.
 

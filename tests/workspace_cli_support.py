@@ -10,9 +10,34 @@ from pathlib import Path
 import pytest
 from jsonschema import Draft202012Validator
 
-from agentic_workspace import _runtime_cli as cli
+from agentic_workspace import workspace_runtime_primitives
 from agentic_workspace.contract_tooling import authority_markers_manifest, cli_commands_manifest
 from agentic_workspace.result_adapter import adapt_action, adapt_module_result
+from command_generation.generated_package_loader import load_generated_command_module_for_entrypoint
+
+_generated_cli = load_generated_command_module_for_entrypoint("agentic-workspace", "cli.py")
+
+
+class _WorkspaceCliTestProxy:
+    def __getattr__(self, name: str):
+        if hasattr(_generated_cli, name):
+            return getattr(_generated_cli, name)
+        return getattr(workspace_runtime_primitives, name)
+
+    def __setattr__(self, name: str, value: object) -> None:
+        if hasattr(_generated_cli, name):
+            setattr(_generated_cli, name, value)
+            return
+        setattr(workspace_runtime_primitives, name, value)
+
+    def __delattr__(self, name: str) -> None:
+        if hasattr(_generated_cli, name):
+            delattr(_generated_cli, name)
+            return
+        delattr(workspace_runtime_primitives, name)
+
+
+cli = _WorkspaceCliTestProxy()
 
 _ORIGINAL_PATH_WRITE_TEXT = Path.write_text
 
@@ -69,7 +94,7 @@ def _assert_invoked_cli_identity(payload: dict[str, object], *, target_relation:
     assert identity["source_class"] in {"source-checkout", "installed-package", "unknown"}
     if "confidence" in identity:
         assert identity["confidence"] in {"high", "medium", "low"}
-    assert str(identity["module_path"]).endswith("src/agentic_workspace/_runtime_cli.py")
+    assert str(identity["module_path"]).replace("\\", "/").endswith("generated/workspace/python/cli.py")
     if "python_executable" in identity:
         assert identity["python_executable"]
     assert identity["target_relation"] == target_relation

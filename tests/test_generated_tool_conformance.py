@@ -14,20 +14,23 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 CLI_SHIM = (
     "import sys; "
     f"sys.path.insert(0, {str(REPO_ROOT / 'src')!r}); "
-    "from agentic_workspace._runtime_cli import main; "
-    "raise SystemExit(main(sys.argv[1:]))"
+    f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'command-generation' / 'src')!r}); "
+    "from command_generation.console import main_for_entrypoint; "
+    "raise SystemExit(main_for_entrypoint('agentic-workspace', sys.argv[1:]))"
 )
 PLANNING_CLI_SHIM = (
     "import sys; "
+    f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'command-generation' / 'src')!r}); "
     f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'planning' / 'src')!r}); "
-    "from repo_planning_bootstrap.generated_cli_package import main; "
-    "raise SystemExit(main(sys.argv[1:]))"
+    "from command_generation.console import main_for_entrypoint; "
+    "raise SystemExit(main_for_entrypoint('agentic-planning', sys.argv[1:]))"
 )
 MEMORY_CLI_SHIM = (
     "import sys; "
+    f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'command-generation' / 'src')!r}); "
     f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'memory' / 'src')!r}); "
-    "from repo_memory_bootstrap.generated_cli_package import main; "
-    "raise SystemExit(main(sys.argv[1:]))"
+    "from command_generation.console import main_for_entrypoint; "
+    "raise SystemExit(main_for_entrypoint('agentic-memory', sys.argv[1:]))"
 )
 
 
@@ -137,9 +140,9 @@ def test_generated_adapters_are_backed_by_black_box_conformance_contracts() -> N
     contracts_by_id = {contract["id"]: contract for contract in registry["contracts"]}
 
     generated_adapters_by_command = {
-        **_generated_adapters_by_command("generated/python/workspace-cli/generated_command_adapters.json"),
-        **_generated_adapters_by_command("generated/python/planning-cli/generated_command_adapters.json"),
-        **_generated_adapters_by_command("generated/python/memory-cli/generated_command_adapters.json"),
+        **_generated_adapters_by_command("generated/workspace/python/generated_command_adapters.json"),
+        **_generated_adapters_by_command("generated/planning/python/generated_command_adapters.json"),
+        **_generated_adapters_by_command("generated/memory/python/generated_command_adapters.json"),
     }
     for command_name, adapter in generated_adapters_by_command.items():
         for conformance_ref in adapter["conformance_refs"]:

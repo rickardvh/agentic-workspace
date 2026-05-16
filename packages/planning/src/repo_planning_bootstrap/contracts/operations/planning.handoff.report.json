@@ -1,0 +1,98 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "planning.handoff.report",
+  "command_surface": {
+    "program": "agentic-planning",
+    "command": "handoff",
+    "format_option": "format"
+  },
+  "summary": "Emit the active Planning handoff through the workspace front door.",
+  "classification": "read-only-report",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "text-or-json"
+  },
+  "effects": {
+    "read_only": true,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": false,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": "target repository Planning state",
+      "required": false
+    }
+  ],
+  "writes": [],
+  "steps": [
+    {
+      "id": "load_handoff",
+      "uses": "python.function.call",
+      "description": "Load the active planning handoff payload for the requested target."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit the planning handoff in the requested format."
+    }
+  ],
+  "guards": [
+    "Host-facing guidance must use agentic-workspace planning handoff rather than a direct module CLI."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json"
+  ],
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Planning handoff executes generated operation IR through codegen-owned primitive dataflow while the planning module supplies the package-specific handoff payload.",
+    "steps": [
+      {
+        "id": "load_handoff",
+        "uses": "python.function.call",
+        "description": "Load the active planning handoff payload for the requested target.",
+        "arguments": {
+          "import_module": "repo_planning_bootstrap.installer",
+          "function": "planning_handoff",
+          "kwargs": {
+            "target": {
+              "value": "target"
+            }
+          }
+        },
+        "outputs": [
+          "result"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit",
+        "description": "Emit the planning handoff in the requested format.",
+        "arguments": {},
+        "outputs": [
+          "emitted"
+        ],
+        "on_error": "emit_usage_error"
+      }
+    ]
+  }
+}

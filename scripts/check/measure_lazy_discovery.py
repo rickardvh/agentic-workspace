@@ -10,9 +10,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
-from repo_planning_bootstrap import _runtime_cli as planning_cli
+from command_generation.generated_package_loader import load_generated_command_module_for_entrypoint
 
-from agentic_workspace import _runtime_cli as workspace_cli
+planning_cli = load_generated_command_module_for_entrypoint("agentic-planning", "cli.py")
+workspace_cli = load_generated_command_module_for_entrypoint("agentic-workspace", "cli.py")
 
 JsonRunner = Callable[[list[str]], int]
 
@@ -317,3 +318,4 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

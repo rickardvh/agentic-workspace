@@ -695,7 +695,8 @@ def test_config_command_layers_shared_local_config_below_repo_local_override(tmp
     shared.write_text(
         "schema_version = 1\n\n"
         "[workspace]\n"
-        'cli_invoke = "python -c \\"import sys; from agentic_workspace.generated_cli_package import main; raise SystemExit(main(sys.argv[1:]))\\""\n\n'
+        'cli_invoke = "python -c \\"import sys; from command_generation.console import main_for_entrypoint; '
+        "raise SystemExit(main_for_entrypoint('agentic-workspace', sys.argv[1:]))\\\"\"\n\n"
         "[runtime]\n"
         "strong_planner_available = true\n"
         "cheap_bounded_executor_available = false\n\n"
@@ -718,7 +719,8 @@ def test_config_command_layers_shared_local_config_below_repo_local_override(tmp
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["workspace"]["cli_invoke"] == (
-        'python -c "import sys; from agentic_workspace.generated_cli_package import main; raise SystemExit(main(sys.argv[1:]))"'
+        'python -c "import sys; from command_generation.console import main_for_entrypoint; '
+        "raise SystemExit(main_for_entrypoint('agentic-workspace', sys.argv[1:]))\""
     )
     assert payload["workspace"]["cli_invoke_source"] == "shared-local-config"
     local_override = payload["mixed_agent"]["local_override"]
@@ -1440,14 +1442,17 @@ def test_local_config_cli_invoke_overrides_repo_owned_invocation_policy(tmp_path
     )
     _write(
         target / ".agentic-workspace" / "config.local.toml",
-        'schema_version = 1\n\n[workspace]\ncli_invoke = "python -c \\"import sys; from agentic_workspace.generated_cli_package import main; raise SystemExit(main(sys.argv[1:]))\\""\n',
+        'schema_version = 1\n\n[workspace]\ncli_invoke = "python -c \\"import sys; '
+        "from command_generation.console import main_for_entrypoint; "
+        "raise SystemExit(main_for_entrypoint('agentic-workspace', sys.argv[1:]))\\\"\"\n",
     )
 
     assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["workspace"]["cli_invoke"] == (
-        'python -c "import sys; from agentic_workspace.generated_cli_package import main; raise SystemExit(main(sys.argv[1:]))"'
+        'python -c "import sys; from command_generation.console import main_for_entrypoint; '
+        "raise SystemExit(main_for_entrypoint('agentic-workspace', sys.argv[1:]))\""
     )
     assert payload["workspace"]["cli_invoke_source"] == "local-override"
     assert payload["warnings"] == []

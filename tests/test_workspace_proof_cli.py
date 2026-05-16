@@ -141,7 +141,7 @@ def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
             [
                 "proof",
                 "--changed",
-                "src/agentic_workspace/_runtime_cli.py",
+                "generated/workspace/python/cli.py",
                 "--format",
                 "json",
             ]
@@ -152,7 +152,7 @@ def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
     payload = json.loads(capsys.readouterr().out)
     encoded = json.dumps(payload)
     assert payload["kind"] == "proof-next-decision/v1"
-    assert payload["selector"] == {"changed": ["src/agentic_workspace/_runtime_cli.py"]}
+    assert payload["selector"] == {"changed": ["generated/workspace/python/cli.py"]}
     assert payload["next"]["action"] == "run-validation-command"
     assert payload["next"]["command"] == "make test-workspace"
     assert "make lint-workspace" in payload["required_commands"]
@@ -347,16 +347,20 @@ def test_proof_changed_uses_subrepo_makefile_for_package_paths(tmp_path: Path, c
     assert project_roots["packages/planning"]["changed_path_matched"] is True
     assert project_roots["packages/planning"]["make"]["targets"] == ["lint", "test"]
     assert "cd packages/planning && make test" in answer["target_proof_capabilities"]["candidate_commands"]
-    assert answer["selected_commands"][0] == {
-        "kind": "proof-command/v1",
-        "command": "cd packages/planning && make test",
-        "cwd": "packages/planning",
-        "run": "make test",
-        "selected_from": "live-adapted-target-capability",
-        "intent_type": "behavior-test",
-        "lane": "planning_package",
-        "required": True,
-    }
+    assert (
+        answer["selected_commands"][0].items()
+        >= {
+            "kind": "proof-command/v1",
+            "command": "cd packages/planning && make test",
+            "cwd": "packages/planning",
+            "run": "make test",
+            "selected_from": "live-adapted-target-capability",
+            "intent_type": "behavior-test",
+            "lane": "planning_package",
+            "required": True,
+        }.items()
+    )
+    assert answer["selected_commands"][0]["execution_mode"] == "parallel-ok"
     assert answer["proof_route_decision"]["selected_command"] == {
         "command": "cd packages/planning && make test",
         "lane": "planning_package",
@@ -904,7 +908,10 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
     assert weak_agent_routing["status"] == "proof-gated"
     assert "generated-package static plus conformance proof pass" in weak_agent_routing["rule"]
     assert "serially" in answer["selected_lanes"][0]["ci_relationship"]
-    assert [lane["id"] for lane in answer["selected_lanes"]] == ["generated_command_packages", "cli_authority"]
+    assert [lane["id"] for lane in answer["selected_lanes"]] == [
+        "generated_command_packages",
+        "cli_authority",
+    ]
     assert "route back through command-package checks" in answer["selected_lanes"][0]["recovery_signal"]
     assert answer["required_commands"] == [
         "uv run python scripts/check/check_generated_command_packages.py",
@@ -920,6 +927,13 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
         "generated_command_packages",
         "cli_authority",
     ]
+    generated_steps = [step for step in answer["validation_plan"]["required"] if step["lane_id"] == "generated_command_packages"]
+    assert {step["execution_mode"] for step in generated_steps} == {"serial"}
+    assert {step["proof_responsibility"] for step in generated_steps} == {"local-serial"}
+    assert all("serially" in step["ci_relationship"] for step in generated_steps)
+    generated_commands = [command for command in answer["selected_commands"] if command["lane"] == "generated_command_packages"]
+    assert {command["execution_mode"] for command in generated_commands} == {"serial"}
+    assert {command["proof_responsibility"] for command in generated_commands} == {"local-serial"}
     assert answer["validation_plan"]["required_count"] == len(answer["required_commands"])
     assert answer["validation_plan"]["optional"][0]["required"] is False
     review = answer["cli_authority_review"]
@@ -939,7 +953,7 @@ def test_proof_changed_selector_routes_python_generated_packages_to_python_docke
                 "proof",
                 "--verbose",
                 "--changed",
-                "generated/python/workspace-cli/generated_cli_package/__init__.py",
+                "generated/workspace/python/__init__.py",
                 "scripts/check/check_generated_command_packages.py",
                 "--format",
                 "json",
@@ -950,18 +964,27 @@ def test_proof_changed_selector_routes_python_generated_packages_to_python_docke
 
     payload = json.loads(capsys.readouterr().out)
     answer = payload["answer"]
-    assert [lane["id"] for lane in answer["selected_lanes"]] == ["generated_command_packages", "cli_authority"]
+    assert [lane["id"] for lane in answer["selected_lanes"]] == [
+        "generated_command_packages",
+        "cli_authority",
+        "subsystem:workspace-cli-runtime",
+    ]
     assert answer["required_commands"] == [
         "uv run python scripts/check/check_generated_command_packages.py",
         "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
         "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
         "uv run agentic-workspace defaults --section root_cli_authority --format json",
+        "uv run pytest tests/test_workspace_cli.py -q",
     ]
     assert (
-        "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker"
-        not in answer["required_commands"]
+        "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker"
+        in answer["required_commands"]
     )
-    assert "Python Docker conformance" in answer["selected_lanes"][0]["ci_relationship"]
+    assert "CI may repeat generated-package proof" in answer["selected_lanes"][0]["ci_relationship"]
+    generated_steps = [step for step in answer["validation_plan"]["required"] if step["lane_id"] == "generated_command_packages"]
+    assert generated_steps
+    assert {step["execution_mode"] for step in generated_steps} == {"serial"}
+    assert all("serially" in step["ci_relationship"] for step in generated_steps)
 
 
 def test_proof_changed_selector_routes_contract_only_changes_to_focused_lane(capsys) -> None:
@@ -1124,7 +1147,19 @@ def test_proof_tiny_readme_profile_keeps_docs_only_validation_light(capsys) -> N
 
 
 def test_proof_changed_selector_flags_direct_cli_edits(capsys) -> None:
-    assert cli.main(["proof", "--verbose", "--changed", "src/agentic_workspace/_runtime_cli.py", "--format", "json"]) == 0
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--changed",
+                "generated/workspace/python/cli.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
 
     payload = json.loads(capsys.readouterr().out)
     answer = payload["answer"]
@@ -1144,7 +1179,7 @@ def test_proof_changed_selector_flags_direct_cli_edits(capsys) -> None:
     assert authority_review["authority_query"] == "agentic-workspace defaults --section root_cli_authority --format json"
     review = payload["answer"]["direct_cli_edit_review"]
     assert review["status"] == "review-needed"
-    assert review["changed_paths"] == ["src/agentic_workspace/_runtime_cli.py"]
+    assert review["changed_paths"] == ["generated/workspace/python/cli.py"]
     assert "normal interface authoring belongs in command contracts" in review["rule"]
     assert "runtime primitive implementation and live workspace inspection" in review["allowed_direct_cli_work"]
     assert "route interface or generated-surface changes back" in review["recovery_signal"]
@@ -1159,7 +1194,7 @@ def test_proof_changed_selector_broadens_contract_plus_cli_changes(capsys) -> No
                 "--verbose",
                 "--changed",
                 "src/agentic_workspace/contracts/proof_selection_rules.json",
-                "src/agentic_workspace/_runtime_cli.py",
+                "generated/workspace/python/cli.py",
                 "--format",
                 "json",
             ]
@@ -1188,7 +1223,7 @@ def test_proof_changed_selector_escalates_for_cross_lane_changes(capsys) -> None
                 "--verbose",
                 "--changed",
                 "packages/planning/src/repo_planning_bootstrap/installer.py",
-                "src/agentic_workspace/_runtime_cli.py",
+                "generated/workspace/python/cli.py",
                 "--format",
                 "json",
             ]

@@ -3,7 +3,7 @@ requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
-name = "agentic-command-generation"
+name = "command-generation"
 version = "0.0.0"
 description = "Internal generic command package generation boundary for Agentic Workspace dogfooding."
 readme = "README.md"
@@ -14,12 +14,12 @@ dependencies = ["jsonschema"]
 package = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/agentic_command_generation"]
+packages = ["src/command_generation"]
 force-include = { "schemas" = "schemas" }
 
 [tool.hatch.build.targets.sdist]
 include = [
   "/README.md",
   "/schemas",
-  "/src/agentic_command_generation",
+  "/src/command_generation",
 ]

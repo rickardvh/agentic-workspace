@@ -16,9 +16,26 @@ def contracts_root() -> Path:
     return Path(__file__).resolve().parent / "contracts"
 
 
+def contract_roots() -> tuple[Path, ...]:
+    repo_root = contracts_root().parents[2]
+    return (
+        contracts_root(),
+        repo_root / "packages" / "planning" / "src" / "repo_planning_bootstrap" / "contracts",
+        repo_root / "packages" / "memory" / "src" / "repo_memory_bootstrap" / "contracts",
+    )
+
+
+def contract_path(relative_path: str) -> Path:
+    for root in contract_roots():
+        candidate = root / relative_path
+        if candidate.is_file():
+            return candidate
+    return contracts_root() / relative_path
+
+
 @lru_cache(maxsize=None)
 def load_contract_json(relative_path: str) -> dict[str, Any]:
-    path = contracts_root() / relative_path
+    path = contract_path(relative_path)
     return json.loads(path.read_text(encoding="utf-8"))
 
 
@@ -154,6 +171,10 @@ def context_templates_manifest() -> dict[str, Any]:
 
 def python_runtime_boundary_manifest() -> dict[str, Any]:
     return load_validated_contract_json("python_runtime_boundary.json", "python_runtime_boundary.schema.json")
+
+
+def python_runtime_projection_inventory_manifest() -> dict[str, Any]:
+    return load_validated_contract_json("python_runtime_projection_inventory.json", "python_runtime_projection_inventory.schema.json")
 
 
 def contract_schema(relative_path: str) -> dict[str, Any]:

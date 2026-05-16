@@ -5,8 +5,7 @@ import tomllib
 from pathlib import Path
 
 from repo_planning_bootstrap.installer import install_bootstrap
-
-from agentic_workspace import _runtime_cli as cli
+from tests.workspace_cli_support import cli
 
 
 def _write(path: Path, content: str) -> None:

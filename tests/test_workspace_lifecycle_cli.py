@@ -51,7 +51,7 @@ def test_setup_command_loads_promotable_findings_artifact(tmp_path: Path, capsys
                         "class": "repo_friction_evidence",
                         "summary": "Workspace CLI remains a large shared hotspot.",
                         "confidence": 0.91,
-                        "path": "src/agentic_workspace/_runtime_cli.py",
+                        "path": "generated/workspace/python/cli.py",
                         "refs": [".agentic-workspace/docs/reporting-contract.md"],
                     },
                     {
@@ -77,7 +77,7 @@ def test_setup_command_loads_promotable_findings_artifact(tmp_path: Path, capsys
     payload = json.loads(capsys.readouterr().out)
     assert payload["analysis_input"]["status"] == "loaded"
     assert payload["analysis_input"]["loaded_count"] == 3
-    assert payload["analysis_input"]["promotable"]["repo_friction_evidence"][0]["path"] == "src/agentic_workspace/_runtime_cli.py"
+    assert payload["analysis_input"]["promotable"]["repo_friction_evidence"][0]["path"] == "generated/workspace/python/cli.py"
     assert payload["analysis_input"]["promotable"]["planning_candidate"][0]["next_action"].startswith("Promote the next")
     assert payload["analysis_input"]["transient"][0]["promotion_reason"] == "planning candidate needs a bounded next_action"
     assert payload["next_action"]["summary"] == "Review promotable setup findings before seeding or promoting anything durable"
@@ -347,7 +347,7 @@ def test_init_can_write_prompt_file(monkeypatch, tmp_path: Path, capsys) -> None
 
 
 def test_selection_commands_accept_non_interactive_flag() -> None:
-    generated_parser = cli.build_generated_cli_package_parser()
+    generated_parser = cli.build_generated_parser()
 
     install_args = generated_parser.parse_args(["install", "--target", ".", "--local-only", "--non-interactive"])
     init_args = generated_parser.parse_args(["init", "--target", ".", "--non-interactive"])
@@ -803,7 +803,7 @@ def test_upgrade_removes_retired_generated_llms_adapter(tmp_path: Path) -> None:
 
 Authority marker:
 
-- canonical_source: `src/agentic_workspace/_runtime_cli.py:_external_agent_handoff_text`
+- canonical_source: `generated/workspace/python/cli.py:_external_agent_handoff_text`
 
 Generated compatibility adapter.
 """,

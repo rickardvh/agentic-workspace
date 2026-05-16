@@ -1,0 +1,332 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Python next runtime delegate reduction",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Reduce the next Python generated runtime delegate by implementing memory status and memory doctor non-verbose JSON payload generation in generated Python target primitives instead of delegating that path to repo_memory_bootstrap.runtime_primitives.",
+    "hard_constraints": "Keep this slice to the memory status and memory doctor JSON fast path, preserve source fallback for verbose/text/full lifecycle behavior, and do not hand-edit generated files directly.",
+    "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Add a generator-supported local runtime override for memory status and memory doctor JSON fast paths, wire it through command_package_ir, regenerate generated outputs, and prove no behavioral regression.",
+    "proof_expectations": [
+      "uv run python scripts/generate/generate_command_packages.py --check",
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+      "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/contracts/command_package_ir.json",
+      "packages/command-generation/schemas/command_package_ir.schema.json",
+      "packages/command-generation/src/command_generation/generator.py",
+      "scripts/check/check_generated_command_packages.py",
+      "generated/memory/python/primitives/memory_runtime.py",
+      ".agentic-workspace/planning/execplans/python-next-runtime-delegate-reduction.plan.json",
+      ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+    ],
+    "completion_criteria": [
+      "memory.status.report and memory.doctor.report non-verbose JSON no longer call repo_memory_bootstrap.runtime_primitives before producing their payload.",
+      "Text, verbose, and full lifecycle behavior remains routed through the existing source fallback.",
+      "The slice is validated and closed out without claiming full #892 completion."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "Reduce the next Python generated runtime delegate by implementing memory status and memory doctor non-verbose JSON payload generation in generated Python target primitives instead of delegating that path to repo_memory_bootstrap.runtime_primitives."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Reduce the next Python generated runtime delegate by implementing memory status and memory doctor non-verbose JSON payload generation in generated Python target primitives instead of delegating that path to repo_memory_bootstrap.runtime_primitives.",
+      "constraints": "Keep this slice to the memory status and memory doctor JSON fast path, preserve source fallback for verbose/text/full lifecycle behavior, and do not hand-edit generated files directly.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "python-next-runtime-delegate-reduction",
+      "status": "completed",
+      "next_step": "Add a generator-supported local runtime override for memory status and memory doctor JSON fast paths, wire it through command_package_ir, regenerate generated outputs, and prove no behavioral regression.",
+      "proof": "Generated freshness, static generated package proof, and memory Python/Docker conformance prove the promoted work."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/contracts/command_package_ir.json",
+        "packages/command-generation/schemas/command_package_ir.schema.json",
+        "packages/command-generation/src/command_generation/generator.py",
+        "scripts/check/check_generated_command_packages.py",
+        "generated/memory/python/primitives/memory_runtime.py",
+        ".agentic-workspace/planning/execplans/python-next-runtime-delegate-reduction.plan.json",
+        ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Complete #892's Python generated CLI lane by eliminating generic deterministic shipped module runtime behavior from module source and making generated/<package>/python the reproducible executable projection.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+    "activation trigger": "Continue with the next runtime delegate reduction after this slice closes."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Python next runtime delegate reduction",
+    "inferred intended outcome": "Reduce one concrete remaining source-runtime delegate on the path to #892 completion.",
+    "chosen concrete what": "Move memory status and memory doctor non-verbose JSON payload generation into generated target primitives with source fallback only for verbose/text/full lifecycle behavior.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "command_package_ir, command-generation generator, generated package static proof, regenerated memory Python primitives, and the active #892 planning/decomposition surfaces.",
+    "max changed files": "About 6 directly edited files plus regenerated generated output.",
+    "required validation commands": "uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Current slice: memory status and memory doctor JSON fast paths should be generated-local primitives with source fallback retained for verbose/text behavior.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Create a bounded plan for Python next runtime delegate reduction.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-16T12:43:16+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "python-next-runtime-delegate-reduction",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to memory status and memory doctor non-verbose JSON runtime delegate reduction.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Add a generator-supported local runtime override for memory status and memory doctor JSON fast paths, wire it through command_package_ir, regenerate generated outputs, and prove no behavioral regression."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    "packages/command-generation/schemas/command_package_ir.schema.json",
+    "packages/command-generation/src/command_generation/generator.py",
+    "scripts/check/check_generated_command_packages.py",
+    "generated/memory/python/primitives/memory_runtime.py",
+    ".agentic-workspace/planning/execplans/python-next-runtime-delegate-reduction.plan.json",
+    ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run python scripts/generate/generate_command_packages.py --check",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+    "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "memory.status.report and memory.doctor.report non-verbose JSON no longer call repo_memory_bootstrap.runtime_primitives before producing their payload.",
+    "Text, verbose, and full lifecycle behavior remains routed through the existing source fallback.",
+    "The slice is validated and closed out without claiming full #892 completion."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Added schema-backed generated local runtime override for memory status and memory doctor non-verbose JSON; regenerated memory Python and TypeScript command package metadata; added static proof for the generated fast path and source fallback.",
+    "scope touched": "command_package_ir, command_package_ir schema, command-generation generator, generated memory runtime output, generated package metadata, generated package proof, and #892 planning surfaces",
+    "changed surfaces": "generated/memory/python/primitives/memory_runtime.py now builds the status and doctor JSON payload locally from a TOML-table count primitive before falling back to repo_memory_bootstrap.runtime_primitives for verbose/text behavior.",
+    "validations run": "ruff on touched generator/check/generated runtime; generate --check; generated package static proof; Python adapter conformance; Node conformance; Docker proof; Docker conformance; targeted contract-tooling pytest.",
+    "result for continuation": "bounded slice complete; #892 remains open via python-generated-cli decomposition.",
+    "next step": "Continue #892 with the next runtime delegate reduction; worker audit recommends memory _load_memory_promotion_report as the next smallest candidate."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "bounded slice served; full #892 intent still open",
+    "config compliance": "used uv run agentic-workspace and recorded planning recovery provenance",
+    "misinterpretation risk": "low for this slice; high for the epic if remaining runtime delegates are treated as completion",
+    "follow-on decision": "archive this slice and keep the #892 decomposition active"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "not skipped",
+    "expected savings": "read-only delegate audit in parallel with local inspection",
+    "actual friction": "useful; read-only worker confirmed no dead delegates and identified memory promotion-report as the next smallest candidate",
+    "proof result": "passed validation",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "ruff, generated freshness, static generated-package proof, Python adapter conformance, Node conformance, Docker proof, Docker conformance, and targeted contract-tooling pytest passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "The static proof checks memory_runtime builds _load_memory_bootstrap_status and _load_memory_bootstrap_doctor through _tiny_lifecycle_payload_from_toml_table_counts while retaining source fallback; generated conformance and Docker proof passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "Reduce the next Python generated runtime delegate on the path to #892 completion.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "Memory status and memory doctor non-verbose JSON now execute generated TOML-table lifecycle payload code before source fallback, but #892 remains open because other memory, planning, and workspace runtime delegates remain.",
+    "unsolved intent passed to": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+  },
+  "execution_summary": {
+    "outcome delivered": "memory status and memory doctor JSON fast-path delegate reduction",
+    "validation confirmed": "yes",
+    "follow-on routed to": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+    "post-work posterity capture": "decomposition notes updated with this slice and worker next-candidate audit",
+    "knowledge promoted (Memory/Docs/Config)": "decomposition",
+    "resume from": "next #892 runtime delegate reduction slice"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "none",
+    "proposed durable intent": "none yet",
+    "confidence": "low",
+    "needs review": "True",
+    "owner surface": "none"
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "Bounded delegate-reduction slice completed; full Python generated CLI epic remains open.",
+    "evidence carried forward": "generate --check, generated package static proof, Python adapter conformance, Node conformance, Docker proof, Docker conformance, ruff, and targeted contract-tooling pytest passed.",
+    "reopen trigger": "Reopen if memory status or memory doctor non-verbose JSON again delegates to repo_memory_bootstrap.runtime_primitives before constructing the payload."
+  },
+  "improvement_signal_review": {
+    "status": "completed",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [
+      "Generated helper emission initially broadened TOML helper output into unrelated planning/workspace facades."
+    ],
+    "signals fixed": [
+      "Generator now only emits TOML-table lifecycle helpers when a binding uses that override."
+    ],
+    "signals routed": [
+      "Worker audit next candidate captured in continuation closeout."
+    ],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Command-by-command execution detail stays in the archived proof record.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Continue #892 with memory _load_memory_promotion_report as the next smallest runtime delegate reduction candidate; broader planning and workspace delegates remain separate domain-runtime slices.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-16: Scaffolded by agentic-planning new-plan.",
+    "2026-05-16: Recorded delegation decision route=delegate-exploration."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Reduce the next Python generated runtime delegate on the path to #892 completion.\nIntent satisfied: no\nArchive decision: archive-but-keep-lane-open\nProof: ruff, generated freshness, static generated-package proof, Python adapter conformance, Node conformance, Docker proof, Docker conformance, and targeted contract-tooling pytest passed\nChanged surfaces: generated/memory/python/primitives/memory_runtime.py now builds the status and doctor JSON payload locally from a TOML-table count primitive before falling back to repo_memory_bootstrap.runtime_primitives for verbose/text behavior.\nDurable residue: none (none)\nMemory learning: none\nFollow-up: .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+  }
+}

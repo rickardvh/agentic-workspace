@@ -1,0 +1,108 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "planning.doctor.report",
+  "command_surface": {
+    "program": "agentic-planning",
+    "command": "doctor",
+    "format_option": "format"
+  },
+  "summary": "Read-only agentic-planning doctor report.",
+  "classification": "read-only-report",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "verbose",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "text-or-json"
+  },
+  "effects": {
+    "read_only": true,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": false,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": "package-local runtime state",
+      "required": false
+    },
+    {
+      "surface": "verbose flag for broad diagnostic output",
+      "required": false
+    }
+  ],
+  "writes": [],
+  "steps": [
+    {
+      "id": "load_report",
+      "uses": "python.function.call",
+      "description": "Load package-local report payload."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit report in the requested format."
+    }
+  ],
+  "guards": [
+    "doctor must remain read-only."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "process conformance remains compatible"
+  ],
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Planning doctor executes generated operation IR through codegen-owned primitive dataflow while planning runtime supplies the bootstrap doctor payload source and text/json compatibility formatting.",
+    "steps": [
+      {
+        "id": "load_doctor",
+        "uses": "python.function.call",
+        "description": "Load the planning bootstrap doctor payload for the requested target.",
+        "arguments": {
+          "import_module": "repo_planning_bootstrap.installer",
+          "function": "doctor_bootstrap",
+          "kwargs": {
+            "target": {
+              "value": "target"
+            }
+          }
+        },
+        "outputs": [
+          "result"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit",
+        "description": "Emit the planning doctor payload in the requested format.",
+        "arguments": {},
+        "outputs": [
+          "emitted"
+        ],
+        "on_error": "emit_usage_error"
+      }
+    ]
+  }
+}

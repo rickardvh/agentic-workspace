@@ -1,0 +1,126 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "planning.adopt.lifecycle",
+  "command_surface": {
+    "program": "agentic-planning",
+    "command": "adopt",
+    "format_option": "format"
+  },
+  "summary": "Conservatively add planning bootstrap files to an existing repository.",
+  "classification": "lifecycle-mutation",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "dry_run",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "include_optional",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "module-result"
+  },
+  "effects": {
+    "read_only": false,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": true,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": "planning package payload files",
+      "required": true
+    },
+    {
+      "surface": "target repository managed planning surfaces",
+      "required": false
+    }
+  ],
+  "writes": [
+    {
+      "surface": "target repository managed planning surfaces",
+      "required": true,
+      "when": "not a dry run"
+    }
+  ],
+  "steps": [
+    {
+      "id": "apply_lifecycle",
+      "uses": "python.function.call",
+      "description": "Conservatively add planning bootstrap files to an existing repository."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit planning lifecycle result in the requested format."
+    }
+  ],
+  "guards": [
+    "Respect dry-run mode by avoiding writes.",
+    "Keep lifecycle writes scoped to managed planning surfaces."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated adopt dry-run process conformance passes"
+  ],
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Planning adopt executes generated operation IR through codegen-owned primitive dataflow while the planning module owns lifecycle mutation policy.",
+    "steps": [
+      {
+        "id": "apply_lifecycle",
+        "uses": "python.function.call",
+        "description": "Conservatively add planning bootstrap files to an existing repository.",
+        "arguments": {
+          "import_module": "repo_planning_bootstrap.installer",
+          "function": "adopt_bootstrap",
+          "kwargs": {
+            "target": {
+              "value": "target"
+            },
+            "dry_run": {
+              "value": "dry_run"
+            },
+            "include_optional": {
+              "value": "include_optional"
+            }
+          }
+        },
+        "outputs": [
+          "result"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit",
+        "description": "Emit planning lifecycle result in the requested format.",
+        "arguments": {},
+        "outputs": [
+          "emitted"
+        ],
+        "on_error": "emit_usage_error"
+      }
+    ]
+  }
+}

@@ -272,6 +272,7 @@
         "id",
         "program",
         "package_role",
+        "operation_contract_root",
         "targets",
         "commands"
       ],
@@ -294,26 +295,219 @@
           ],
           "description": "Allowed package role value for routing or validation."
         },
+        "operation_contract_root": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Repository-relative contract root that owns this package's operation artifacts."
+        },
         "python_runtime_binding": {
           "type": "object",
           "required": [
-            "generated_package_module",
-            "runtime_module"
+            "entrypoint",
+            "runtime_module_file"
           ],
           "properties": {
-            "generated_package_module": {
+            "entrypoint": {
               "type": "string",
-              "pattern": "^[A-Za-z_][A-Za-z0-9_.]*$",
-              "description": "Python module imported by generated process handoff for this package."
+              "minLength": 1,
+              "description": "Generated CLI entrypoint used by generic command_generation console handoff."
             },
-            "runtime_module": {
+            "runtime_module_file": {
               "type": "string",
-              "pattern": "^[A-Za-z_][A-Za-z0-9_.]*$",
-              "description": "Hand-owned Python runtime module imported by generated Python package bridge code."
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+              "description": "Generated sibling runtime module file imported by generated Python package bridge code."
+            },
+            "render_runtime_module": {
+              "type": "boolean",
+              "description": "Whether command-generation should render the runtime handler module instead of treating it as a hand-owned compatibility file."
+            },
+            "runtime_module_exports": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "import_module"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+                  },
+                  "import_module": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "function": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "description": "Compatibility functions re-exported by a generated runtime handler module for older internal callers while behavior lives in module runtime APIs."
+            },
+            "runtime_module_handlers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "operation_id",
+                  "import_module",
+                  "function"
+                ],
+                "properties": {
+                  "operation_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "import_module": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "function": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "description": "Operation handlers rendered into a generated runtime handler map by importing named runtime primitive functions."
+            },
+            "resource_copies": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "source_root",
+                  "generated_root"
+                ],
+                "properties": {
+                  "source_root": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "generated_root": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "required_marker": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "additionalProperties": false
+              },
+              "description": "Package product resources copied into the generated Python target so context roots do not depend on source package path helpers."
+            },
+            "local_runtime_bindings": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "source_import_module",
+                  "module_file"
+                ],
+                "properties": {
+                  "source_import_module": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "module_file": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$"
+                  },
+                  "generated_function_overrides": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "function",
+                        "implementation"
+                      ],
+                      "properties": {
+                        "function": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+                        },
+                        "implementation": {
+                          "type": "string",
+                          "enum": [
+                            "target_root_resolve",
+                            "sectioned_payload_select",
+                            "json_output_with_source_fallback"
+                          ]
+                        },
+                        "payload_value": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+                        },
+                        "source_command": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "common_sections": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "relative_path": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "table_name": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "relevance_field": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "required_value": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "optional_value": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "routing_only_field": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "dry_run": {
+                          "type": "boolean"
+                        },
+                        "detail_command": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "unhealthy_detail": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "additionalProperties": false
+              },
+              "description": "Package-owned runtime modules that should be projected behind generated-local facade modules instead of imported directly by generated commands or operation executors."
+            },
+            "operation_executor": {
+              "$ref": "#/$defs/python_operation_executor_binding",
+              "description": "Optional binding data used to render a generated Python operation IR executor module."
             }
           },
           "additionalProperties": false,
-          "description": "Python-specific runtime binding data supplied by IR rather than hard-coded in the generator."
+          "description": "Python-specific generated runtime binding data supplied by IR rather than hard-coded in the generator."
         },
         "targets": {
           "type": "array",
@@ -336,6 +530,295 @@
       },
       "additionalProperties": false,
       "description": "Package details used by this contract."
+    },
+    "python_operation_executor_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "module_file",
+        "supported_operation_ids",
+        "initial_values",
+        "handlers"
+      ],
+      "properties": {
+        "module_file": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$"
+        },
+        "supported_operation_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "initial_values": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/python_operation_executor_initial_value"
+          }
+        },
+        "context_roots": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/python_operation_executor_context_root"
+          },
+          "default": []
+        },
+        "handlers": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/python_operation_executor_handler"
+          }
+        }
+      }
+    },
+    "python_operation_executor_initial_value": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "arg"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "arg": {
+          "type": "string",
+          "minLength": 1
+        },
+        "default": {}
+      }
+    },
+    "python_operation_executor_context_root": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "import_module": {
+          "type": "string",
+          "minLength": 1
+        },
+        "function": {
+          "type": "string",
+          "minLength": 1
+        },
+        "generated_root": {
+          "type": "string",
+          "minLength": 1
+        },
+        "required_marker": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "python_operation_executor_handler": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "primitive",
+            "handler",
+            "function"
+          ],
+          "properties": {
+            "primitive": {
+              "type": "string",
+              "minLength": 1
+            },
+            "handler": {
+              "const": "runtime_handler"
+            },
+            "function": {
+              "type": "string",
+              "minLength": 1
+            },
+            "import_module": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "primitive",
+            "handler",
+            "import_module",
+            "function",
+            "kwargs"
+          ],
+          "properties": {
+            "primitive": {
+              "type": "string",
+              "minLength": 1
+            },
+            "handler": {
+              "const": "function_call"
+            },
+            "import_module": {
+              "type": "string",
+              "minLength": 1
+            },
+            "function": {
+              "type": "string",
+              "minLength": 1
+            },
+            "kwargs": {
+              "$ref": "#/$defs/python_operation_executor_kwargs"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "primitive",
+            "handler",
+            "condition_value",
+            "if_true",
+            "if_false"
+          ],
+          "properties": {
+            "primitive": {
+              "type": "string",
+              "minLength": 1
+            },
+            "handler": {
+              "const": "conditional_function_call"
+            },
+            "condition_value": {
+              "type": "string",
+              "minLength": 1
+            },
+            "if_true": {
+              "$ref": "#/$defs/python_operation_executor_call"
+            },
+            "if_false": {
+              "$ref": "#/$defs/python_operation_executor_call"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "primitive",
+            "handler",
+            "project_markers"
+          ],
+          "properties": {
+            "primitive": {
+              "type": "string",
+              "minLength": 1
+            },
+            "handler": {
+              "const": "generated_target_root_resolve"
+            },
+            "project_markers": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "primitive",
+            "handler",
+            "runtime_function",
+            "result_value",
+            "format_value",
+            "default_format"
+          ],
+          "properties": {
+            "primitive": {
+              "type": "string",
+              "minLength": 1
+            },
+            "handler": {
+              "const": "runtime_emit"
+            },
+            "runtime_function": {
+              "type": "string",
+              "minLength": 1
+            },
+            "result_value": {
+              "type": "string",
+              "minLength": 1
+            },
+            "format_value": {
+              "type": "string",
+              "minLength": 1
+            },
+            "default_format": {
+              "type": "string",
+              "minLength": 1
+            },
+            "dict_text_function": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      ]
+    },
+    "python_operation_executor_call": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "import_module",
+        "function",
+        "kwargs"
+      ],
+      "properties": {
+        "import_module": {
+          "type": "string",
+          "minLength": 1
+        },
+        "function": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kwargs": {
+          "$ref": "#/$defs/python_operation_executor_kwargs"
+        }
+      }
+    },
+    "python_operation_executor_kwargs": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "value"
+        ],
+        "properties": {
+          "value": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
     },
     "target": {
       "type": "object",
@@ -396,6 +879,7 @@
             "runnable-read-only-adapter",
             "runtime-backed-read-only-adapter",
             "weak-agent-safe-adapter",
+            "mutation-capable-adapter",
             "deferred"
           ],
           "description": "Allowed generation status value for routing or validation."
@@ -678,6 +1162,14 @@
           },
           "description": "Option semantics for this generated command level."
         },
+        "arguments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/argument",
+            "description": "One generated positional argument accepted by this command."
+          },
+          "description": "Positional argument semantics for this generated command level."
+        },
         "subcommand_dest": {
           "type": "string",
           "minLength": 1,
@@ -719,6 +1211,42 @@
       },
       "additionalProperties": false,
       "description": "Generated parser-facing interface for migrated command surfaces."
+    },
+    "argument": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Normalized positional argument destination name."
+        },
+        "default": {
+          "description": "Default value applied by the generated parser when the argument is omitted."
+        },
+        "nargs": {
+          "description": "Argparse-style arity marker for optional or list-like positional arguments."
+        },
+        "choices": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": "One accepted positional argument value."
+          },
+          "description": "Allowed positional argument values."
+        },
+        "help": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Argument help text rendered by generated adapters."
+        }
+      },
+      "additionalProperties": false,
+      "description": "One generated parser positional argument."
     },
     "option": {
       "type": "object",

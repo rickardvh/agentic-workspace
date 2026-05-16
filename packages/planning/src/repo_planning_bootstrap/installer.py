@@ -8731,7 +8731,6 @@ def _promote_decomposition_lane_to_execplan(
     updated_lane = copy.deepcopy(matched_lane)
     updated_lane["readiness"] = "promoted"
     updated_lane["owner_surface"] = record_relative
-    updated_lane["promoted_execplan"] = record_relative
     updated_lanes[matched_index] = updated_lane
     updated_record["candidate_lanes"] = updated_lanes
 
@@ -10239,6 +10238,7 @@ def close_planning_item(
             target=target_root,
             dry_run=dry_run,
             apply_cleanup=True,
+            retain_archive=True,
         )
         archive_result.message = f"Close planning item {item_id} through execplan archive flow"
         return archive_result
@@ -10725,15 +10725,24 @@ def archive_execplan(
     record_path = _canonical_execplan_record_path(plan_path)
     destination = archive_dir / plan_path.name
     destination_record = _canonical_execplan_record_path(destination)
+    destination_record_conflict = destination_record.exists()
+    if retain_archive and destination_record_conflict:
+        destination_record = _unique_archive_record_path(destination_record)
     archived_record_relative = destination_record.relative_to(target_root).as_posix()
     has_record = record_path.exists()
     if retain_archive:
-        if destination.exists():
-            result.add("manual review", destination, "archive destination already exists")
-            return result
-        if has_record and destination_record.exists():
-            result.add("manual review", destination_record, "archive destination for canonical execplan record already exists")
-            return result
+        if destination.exists() and destination.suffix == ".md":
+            result.add(
+                "retention",
+                destination_record,
+                f"retained Markdown archive view already exists; using canonical record {archived_record_relative}",
+            )
+        if destination_record_conflict:
+            result.add(
+                "retention",
+                destination_record,
+                "retained archive destination already exists; using unique retained archive path",
+            )
 
     cleanup_todo_lines: list[str] | None = None
     todo_ref_items = _todo_referencing_items(target_root / ".agentic-workspace/planning/state.toml", plan_path, target_root)
@@ -10851,9 +10860,15 @@ def archive_execplan(
         )
         if retain_archive:
             if has_record:
-                result.add("would move", destination_record, f"archive {record_path.relative_to(target_root).as_posix()}")
+                detail = f"archive {record_path.relative_to(target_root).as_posix()}"
+                if destination_record_conflict:
+                    detail += " using unique retained archive path"
+                result.add("would move", destination_record, detail)
             else:
-                result.add("would create", destination_record, "build canonical record from Markdown and archive")
+                detail = "build canonical record from Markdown and archive"
+                if destination_record_conflict:
+                    detail += " using unique retained archive path"
+                result.add("would create", destination_record, detail)
             if plan_path != record_path:
                 result.add("would remove", plan_path, "remove active Markdown view")
         else:
@@ -10899,6 +10914,21 @@ def archive_execplan(
         result.add("closed", plan_path, "completed execplan removed from Planning after closeout distillation")
     _stamp_result_action_mutations(result, command="agentic-planning archive-plan", reason=f"archive execplan {plan}")
     return result
+
+
+def _unique_archive_record_path(destination_record: Path) -> Path:
+    """Return a deterministic sibling archive path without overwriting retained evidence."""
+    if destination_record.name.endswith(".plan.json"):
+        base_name = destination_record.name[: -len(".plan.json")]
+        suffix_text = ".plan.json"
+    else:
+        base_name = destination_record.stem
+        suffix_text = destination_record.suffix
+    for suffix in range(2, 1000):
+        candidate = destination_record.with_name(f"{base_name}-{suffix}{suffix_text}")
+        if not candidate.exists():
+            return candidate
+    raise RuntimeError(f"unable to choose unique archive path for {destination_record}")
 
 
 def _archive_size_guardrail_warning(
@@ -11707,6 +11737,8 @@ def _file_reference_candidates(text: str) -> list[str]:
         normalized = value.replace("\\", "/")
         if normalized.startswith("//"):
             continue
+        if _looks_like_conceptual_slash_phrase(normalized):
+            continue
         suffix = Path(normalized).suffix.lower()
         if suffix in _FILE_REFERENCE_SUFFIXES or "/" in normalized:
             candidates.append(normalized)
@@ -11723,6 +11755,13 @@ def _strip_file_reference_token(raw: str) -> str:
 def _looks_like_markup_tag(token: str) -> bool:
     stripped = token.strip().rstrip(".,;:")
     return bool(re.search(r"</?[A-Za-z][A-Za-z0-9:-]*(?:\s+[^<>]*)?/?>", stripped))
+
+
+def _looks_like_conceptual_slash_phrase(value: str) -> bool:
+    if Path(value).suffix:
+        return False
+    parts = [part for part in value.split("/") if part]
+    return len(parts) > 1 and any(len(part) > 1 and part.isupper() for part in parts)
 
 
 def _execplan_missing_reference_warnings(*, target_root: Path, plan_path: Path, record: dict[str, Any]) -> list[dict[str, str]]:

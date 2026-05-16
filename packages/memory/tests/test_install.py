@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import json
 import sys as _sys
 
 # ruff: noqa: F403,F405
 from pathlib import Path as _Path
+
+from jsonschema import Draft202012Validator
 
 _sys.path.insert(0, str(_Path(__file__).resolve().parent))
 from memory_test_support import *
@@ -489,6 +492,42 @@ def test_verify_payload_passes_for_current_payload(tmp_path: Path) -> None:
     assert not any(action.category == "contract-drift" for action in result.actions)
 
 
+def test_payload_verification_policy_matches_installer_constants() -> None:
+    policy = installer._load_payload_verification_policy()
+    schema_path = (
+        Path(__file__).resolve().parents[3]
+        / "src"
+        / "agentic_workspace"
+        / "contracts"
+        / "schemas"
+        / "payload_verification_policy.schema.json"
+    )
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    assert list(Draft202012Validator(schema).iter_errors(policy)) == []
+
+    assert policy["bootstrap_version"] == installer.BOOTSTRAP_VERSION
+    assert Path(policy["version_path"]) == installer.VERSION_PATH
+    assert policy["legacy_version_path"] == "memory/system/VERSION.md"
+    assert Path(policy["manifest_path"]) == installer.MANIFEST_PATH
+    assert Path(policy["upgrade_source"]["path"]) == installer.UPGRADE_SOURCE_PATH
+    assert Path(policy["upgrade_source"]["legacy_path"]) == installer.LEGACY_UPGRADE_SOURCE_PATH
+    assert policy["upgrade_source"]["allowed_source_types"] == ["git", "local"]
+    assert policy["upgrade_source"]["required_fields"] == ["source_ref"]
+    assert policy["upgrade_source"]["date_fields"] == {"recorded_at": "YYYY-MM-DD"}
+    assert policy["upgrade_source"]["integer_fields"] == ["recommended_upgrade_after_days"]
+    assert policy["payload_path_aliases"] == [{"source": "AGENTS.template.md", "target": "AGENTS.md"}]
+    assert policy["current_memory"]["prefix"] == ".agentic-workspace/memory/repo/current/"
+    assert tuple(Path(path) for path in policy["required_files"]) == installer.PAYLOAD_REQUIRED_FILES
+    assert tuple(Path(path) for path in policy["compatibility_contract_files"]) == installer.MEMORY_COMPATIBILITY_CONTRACT_FILES
+    assert tuple(Path(path) for path in policy["current_memory"]["required"]) == installer.CURRENT_MEMORY_BASELINE
+    assert tuple(Path(path) for path in policy["current_memory"]["optional"]) == installer.OPTIONAL_CURRENT_MEMORY_FILES
+    assert tuple(Path(path) for path in policy["forbidden_files"]) == installer.FORBIDDEN_PAYLOAD_FILES
+    assert tuple(policy["forbidden_prefixes"]) == installer.FORBIDDEN_PAYLOAD_PREFIXES
+    assert {
+        Path(path): tuple(fragments) for path, fragments in policy["guidance_fragments"].items()
+    } == installer.PAYLOAD_GUIDANCE_FRAGMENTS
+
+
 def test_verify_payload_reports_contract_surface_shortlists(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True, exist_ok=True)
@@ -692,27 +731,26 @@ def test_migrate_layout_moves_legacy_managed_files_into_agentic_memory_root(tmp_
 
 
 def test_cli_parser_accepts_new_commands_and_placeholder_flags() -> None:
-    parser = cli.build_parser()
-    generated_parser = cli.build_generated_cli_package_parser()
+    generated_parser = cli.build_generated_parser()
 
-    current_args = parser.parse_args(["current", "check", "--target", "."])
+    current_args = generated_parser.parse_args(["current", "check", "--target", "."])
     list_skills_args = generated_parser.parse_args(["list-skills", "--format", "json"])
-    cleanup_args = parser.parse_args(["bootstrap-cleanup", "--target", ".", "--format", "json"])
-    migrate_args = parser.parse_args(["migrate-layout", "--target", ".", "--dry-run", "--format", "json"])
-    uninstall_args = parser.parse_args(["uninstall", "--target", ".", "--dry-run", "--format", "json"])
+    cleanup_args = generated_parser.parse_args(["bootstrap-cleanup", "--target", ".", "--format", "json"])
+    migrate_args = generated_parser.parse_args(["migrate-layout", "--target", ".", "--dry-run", "--format", "json"])
+    uninstall_args = generated_parser.parse_args(["uninstall", "--target", ".", "--dry-run", "--format", "json"])
     doctor_args = generated_parser.parse_args(["doctor", "--target", "."])
-    prompt_install_args = parser.parse_args(["prompt", "install", "--target", "./repo"])
-    prompt_args = parser.parse_args(["prompt", "adopt", "--target", "./repo"])
-    prompt_populate_args = parser.parse_args(["prompt", "populate", "--target", "./repo"])
-    prompt_uninstall_args = parser.parse_args(["prompt", "uninstall", "--target", "./repo"])
-    route_args = parser.parse_args(["route", "--files", "src/app.py"])
-    sync_args = parser.parse_args(["sync-memory", "--notes", ".agentic-workspace/memory/repo/index.md"])
+    prompt_install_args = generated_parser.parse_args(["prompt", "install", "--target", "./repo"])
+    prompt_args = generated_parser.parse_args(["prompt", "adopt", "--target", "./repo"])
+    prompt_populate_args = generated_parser.parse_args(["prompt", "populate", "--target", "./repo"])
+    prompt_uninstall_args = generated_parser.parse_args(["prompt", "uninstall", "--target", "./repo"])
+    route_args = generated_parser.parse_args(["route", "--files", "src/app.py"])
+    sync_args = generated_parser.parse_args(["sync-memory", "--notes", ".agentic-workspace/memory/repo/index.md"])
     promotion_args = generated_parser.parse_args(
         ["promotion-report", "--notes", ".agentic-workspace/memory/repo/domains/api.md", "--mode", "remediation"]
     )
     report_args = generated_parser.parse_args(["report", "--target", ".", "--format", "json"])
-    verify_args = parser.parse_args(["verify-payload", "--format", "json"])
-    install_args = parser.parse_args(
+    verify_args = generated_parser.parse_args(["verify-payload", "--format", "json"])
+    install_args = generated_parser.parse_args(
         [
             "install",
             "--project-name",

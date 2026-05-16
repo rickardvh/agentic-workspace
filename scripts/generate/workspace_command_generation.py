@@ -8,7 +8,7 @@ COMMAND_GENERATION_SRC = REPO_ROOT / "packages" / "command-generation" / "src"
 if str(COMMAND_GENERATION_SRC) not in sys.path:
     sys.path.insert(0, str(COMMAND_GENERATION_SRC))
 
-from agentic_command_generation import (  # noqa: E402
+from command_generation import (  # noqa: E402
     GeneratedOutput,
     generate_command_packages,
     load_command_package_ir,

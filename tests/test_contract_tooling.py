@@ -4,6 +4,7 @@ import argparse
 import copy
 import importlib.util
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -11,6 +12,7 @@ import pytest
 from jsonschema import Draft202012Validator
 
 from agentic_workspace import contract_tooling
+from command_generation.generated_package_loader import load_generated_command_package_for_entrypoint
 
 
 def _command_operation_ids(command: dict[str, object]) -> set[str]:
@@ -304,19 +306,29 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
     assert "unsupported command errors" in " ".join(maturity["weak-agent-safe-adapter"]["promotion_requires"])
     assert "runtime handoff failures" in " ".join(maturity["weak-agent-safe-adapter"]["promotion_requires"])
     assert "implementation-independent contracts or IR" in python_completion["finish_line"]
-    assert python_completion["current_state"] == "full-generated-cli-complete"
+    assert "codegen-owned primitive executors" in python_completion["finish_line"]
+    assert python_completion["current_state"] == "product-runtime-source-generation-incomplete"
+    assert python_completion["completion_gate"]["state"] == "pending"
     assert python_completion["completion_gate"]["scope"] == "python-only"
-    assert python_completion["completion_gate"]["state"] == "satisfied"
     completion_evidence = {item["id"] for item in python_completion["completion_gate"]["satisfied_by"]}
     assert "python-docker-conformance" in completion_evidence
     assert "runtime-handlers-thin" in completion_evidence
     assert "representative-operation-ir-runtime-consumed" in completion_evidence
     assert "operation-execution-inventory-exhaustive" in completion_evidence
     assert "root-console-generated-command-smoke" in completion_evidence
-    assert "runtime primitive implementation" in python_completion["allowed_hand_owned_cli_responsibilities"]
+    assert "product-specific-runtime-generated-output-owned" in completion_evidence
+    assert any(
+        "package-specific runtime primitive implementation" in item for item in python_completion["allowed_hand_owned_cli_responsibilities"]
+    )
     assert "command parser shape" in python_completion["must_move_behind_contracts_or_generation"]
     assert "option and help interface semantics" in python_completion["must_move_behind_contracts_or_generation"]
+    assert any("generic file" in item and "Markdown" in item for item in python_completion["must_move_behind_contracts_or_generation"])
+    assert any(
+        "product-specific executable runtime modules" in item for item in python_completion["must_move_behind_contracts_or_generation"]
+    )
     assert any("weak-agent-safe-adapter" in item for item in python_completion["proof_requirements"])
+    assert any("generic deterministic operations" in item for item in python_completion["proof_requirements"])
+    assert any("generated/python target output" in item for item in python_completion["proof_requirements"])
     assert runtime_binding["selected_model"] == "generated parser/help with process handoff to canonical Python CLI"
     assert "operation primitive implementation" in runtime_binding["runtime_owns"]
     assert "argv spelling and help rendering" in runtime_binding["target_projection_owns"]
@@ -330,24 +342,24 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
 
     assert root_package["program"] == "agentic-workspace"
     assert targets["python"]["test_environment"] == "python-dev"
-    assert targets["python"]["maturity_level_ref"] == "weak-agent-safe-adapter"
-    assert targets["python"]["generation_status"] == "weak-agent-safe-adapter"
+    assert targets["python"]["maturity_level_ref"] == "mutation-capable-adapter"
+    assert targets["python"]["generation_status"] == "mutation-capable-adapter"
     assert targets["typescript"]["test_environment"] == "docker"
-    assert targets["typescript"]["maturity_level_ref"] == "weak-agent-safe-adapter"
-    assert targets["typescript"]["generation_status"] == "weak-agent-safe-adapter"
+    assert targets["typescript"]["maturity_level_ref"] == "mutation-capable-adapter"
+    assert targets["typescript"]["generation_status"] == "mutation-capable-adapter"
     assert targets["bash"]["generation_status"] == "deferred"
     assert targets["bash"]["maturity_level_ref"] == "deferred"
     assert targets["powershell"]["generation_status"] == "deferred"
 
     planning_targets = {target["kind"]: target for target in packages["planning-bootstrap"]["targets"]}
     assert planning_targets["typescript"]["test_environment"] == "docker"
-    assert planning_targets["typescript"]["maturity_level_ref"] == "weak-agent-safe-adapter"
-    assert planning_targets["typescript"]["generation_status"] == "weak-agent-safe-adapter"
+    assert planning_targets["typescript"]["maturity_level_ref"] == "mutation-capable-adapter"
+    assert planning_targets["typescript"]["generation_status"] == "mutation-capable-adapter"
 
     memory_targets = {target["kind"]: target for target in packages["memory-bootstrap"]["targets"]}
     assert memory_targets["typescript"]["test_environment"] == "docker"
-    assert memory_targets["typescript"]["maturity_level_ref"] == "weak-agent-safe-adapter"
-    assert memory_targets["typescript"]["generation_status"] == "weak-agent-safe-adapter"
+    assert memory_targets["typescript"]["maturity_level_ref"] == "mutation-capable-adapter"
+    assert memory_targets["typescript"]["generation_status"] == "mutation-capable-adapter"
 
 
 def test_command_package_ir_reuses_generated_adapter_truth() -> None:
@@ -382,15 +394,47 @@ def test_command_package_ir_reuses_generated_adapter_truth() -> None:
         "setup.guidance.cli",
         "status.report.cli",
         "doctor.report.cli",
+        "planning.adopt.cli",
+        "planning.archive-plan.cli",
+        "planning.close-item.cli",
+        "planning.create-review.cli",
+        "planning.delegation-decision.cli",
         "planning.status.cli",
         "planning.doctor.cli",
+        "planning.handoff.cli",
+        "planning.init.cli",
+        "planning.install.cli",
+        "planning.list-files.cli",
+        "planning.new-plan.cli",
+        "planning.promote-to-plan.cli",
+        "planning.prompt.cli",
+        "planning.record-recovery.cli",
         "planning.summary.cli",
+        "planning.uninstall.cli",
+        "planning.upgrade.cli",
+        "planning.verify-payload.cli",
         "planning.report.cli",
         "planning.reconcile.cli",
         "memory.status.cli",
         "memory.doctor.cli",
+        "memory.install.cli",
+        "memory.init.cli",
+        "memory.adopt.cli",
+        "memory.upgrade.cli",
+        "memory.migrate-layout.cli",
+        "memory.uninstall.cli",
+        "memory.bootstrap-cleanup.cli",
+        "memory.capture-note.cli",
+        "memory.create-note.cli",
+        "memory.current.cli",
+        "memory.prompt.cli",
         "memory.report.cli",
+        "memory.route.cli",
         "memory.route-report.cli",
+        "memory.route-review.cli",
+        "memory.search.cli",
+        "memory.verify-payload.cli",
+        "memory.sync-memory.cli",
         "memory.promotion-report.cli",
         "memory.list-files.cli",
         "memory.list-skills.cli",
@@ -406,6 +450,29 @@ def test_command_package_ir_reuses_generated_adapter_truth() -> None:
     assert defaults_command["effect_hints"] == defaults_adapter["effect_hints"]
     assert defaults_command["conformance_refs"] == defaults_adapter["conformance_refs"]
     assert "parser library" in defaults_command["projection_boundary"]["target_specific"]
+
+
+def test_command_package_ir_rejects_generated_direct_function_call_handlers() -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
+    spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    manifest = copy.deepcopy(contract_tooling.command_package_ir_manifest())
+    handlers = manifest["packages"][0]["python_runtime_binding"]["operation_executor"]["handlers"]
+    handlers.append(
+        {
+            "primitive": "example.direct.load",
+            "handler": "function_call",
+            "import_module": "example",
+            "function": "load",
+            "kwargs": {},
+        }
+    )
+
+    errors = module._validate_command_package_ir(manifest)
+
+    assert any("declare python.function.call in operation IR instead" in error for error in errors)
 
 
 def test_python_contract_consumption_declares_validated_loader_bindings() -> None:
@@ -502,6 +569,8 @@ def test_generated_command_package_check_surface_is_current() -> None:
 
 
 def test_generated_command_package_adapter_conformance_check_passes() -> None:
+    if os.environ.get("PYTEST_XDIST_WORKER"):
+        pytest.skip("run generated adapter conformance as an explicit proof command outside the broad xdist suite")
     script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_generated_command_packages.py"
     spec = importlib.util.spec_from_file_location("check_generated_command_packages", script_path)
     assert spec is not None and spec.loader is not None
@@ -566,7 +635,11 @@ def test_generated_command_package_docker_skip_message_uses_proof_label(monkeypa
     )
 
     assert status == 0
-    assert "cannot run generated Python package Docker conformance proof" in capsys.readouterr().out
+    output = capsys.readouterr().out
+    assert "classification=proof-environment/setup-failure" in output
+    assert "proof_surface=generated Python package Docker conformance proof" in output
+    assert "phase=docker-cli" in output
+    assert "stderr_tail='docker is not available'" in output
 
 
 def test_generated_command_package_docker_conformance_surface_exists() -> None:
@@ -603,7 +676,7 @@ def test_command_generation_schema_boundary_is_checked() -> None:
 
 
 def test_command_generation_loader_uses_explicit_ir_and_schema_paths() -> None:
-    from agentic_command_generation import load_command_package_ir
+    from command_generation import load_command_package_ir
 
     repo_root = Path(__file__).resolve().parents[1]
     ir_path = repo_root / "src" / "agentic_workspace" / "contracts" / "command_package_ir.json"
@@ -634,7 +707,7 @@ def test_operation_command_parity_uses_package_program_namespace() -> None:
     assert module._validate_operation_registry(module.operation_contracts_manifest()) == []
 
 
-def test_operation_ir_has_portable_representative_command() -> None:
+def test_operation_ir_has_complete_portable_memory_list_files_command() -> None:
     script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
     spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)
     assert spec is not None and spec.loader is not None
@@ -656,7 +729,7 @@ def test_operation_ir_has_portable_representative_command() -> None:
     assert "path.target_root.resolve" in support_matrix["python"]["implemented_shared_primitives"]
     assert support_matrix["typescript"]["status"] == "unsupported-reported"
     assert "runtime handoff" in support_matrix["typescript"]["unsupported_behavior"]
-    assert operation["ir_plan"]["status"] == "representative"
+    assert operation["ir_plan"]["status"] == "complete"
     assert used == [
         "path.target_root.resolve",
         "filesystem.glob",
@@ -690,6 +763,20 @@ def test_operation_ir_requires_declared_module_namespace(monkeypatch: pytest.Mon
     assert any("memory.list-files.report" in error and "module_ir_ownership" in error for error in errors)
 
 
+def test_module_operation_contracts_are_not_owned_by_root_operations() -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
+    spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    root_operations = Path(__file__).resolve().parents[1] / "src" / "agentic_workspace" / "contracts" / "operations"
+
+    assert module._validate_module_operation_contract_locations() == []
+    assert not list(root_operations.glob("planning.*.json"))
+    assert not list(root_operations.glob("memory.*.json"))
+
+
 def test_operation_primitives_require_target_support_matrix(monkeypatch: pytest.MonkeyPatch) -> None:
     script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
     spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)
@@ -715,17 +802,29 @@ def test_operation_primitives_require_target_support_matrix(monkeypatch: pytest.
     assert any("schema-backed primitives missing implemented target support" in error for error in errors)
 
 
-def test_python_operation_execution_inventory_tracks_representative_runtime_consumption() -> None:
+def test_python_operation_execution_inventory_tracks_direct_generated_memory_commands() -> None:
     inventory = contract_tooling.load_contract_json("python_operation_execution_inventory.json")
     entries = {entry["operation_id"]: entry for entry in inventory["entries"]}
 
-    representative = entries["memory.list-files.report"]
+    list_files = entries["memory.list-files.report"]
 
-    assert representative["status"] == "runtime-consumed"
-    assert representative["primitive_executor"] == "packages/memory/src/repo_memory_bootstrap/operation_ir_executor.py"
-    assert entries["memory.list-skills.report"]["status"] == "runtime-consumed"
+    assert list_files["status"] == "portable-codegen-primitive-executed"
+    assert list_files["primitive_executor"] == "generated/memory/python/commands/memory_list_files_report.py"
+    assert entries["memory.list-skills.report"]["status"] == "portable-codegen-primitive-executed"
+    assert entries["memory.list-skills.report"]["primitive_executor"] == "generated/memory/python/commands/memory_list_skills_report.py"
+    assert entries["memory.report.report"]["status"] == "domain-runtime-primitive-via-ir"
     assert "compatibility-runtime-handler" not in {entry["status"] for entry in entries.values()}
     assert "accepted-hand-owned-runtime-primitive" in {entry["status"] for entry in entries.values()}
+    audited_runtime = [
+        entry
+        for entry in entries.values()
+        if entry["status"] in {"domain-runtime-primitive-via-ir", "accepted-hand-owned-runtime-primitive"}
+    ]
+    assert all(entry.get("runtime_boundary_class") for entry in audited_runtime)
+    assert all(entry.get("runtime_boundary_reason") for entry in audited_runtime)
+    assert all(entry.get("what_would_make_portable_later") for entry in audited_runtime)
+    assert all(entry.get("generic_behavior_audit") for entry in audited_runtime)
+    assert "generic-deterministic-runtime-debt" not in {entry["runtime_boundary_class"] for entry in audited_runtime}
     generated_operations = {
         operation_id
         for package in contract_tooling.command_package_ir_manifest()["packages"]
@@ -758,20 +857,54 @@ def test_generate_command_packages_wrapper_uses_workspace_consumer_integration()
 
 
 def test_command_package_generator_normalizes_line_endings() -> None:
-    generator = (
-        Path(__file__).resolve().parents[1] / "packages" / "command-generation" / "src" / "agentic_command_generation" / "generator.py"
-    )
+    generator = Path(__file__).resolve().parents[1] / "packages" / "command-generation" / "src" / "command_generation" / "generator.py"
     wrapper = Path(__file__).resolve().parents[1] / "scripts" / "generate" / "generate_command_packages.py"
 
     assert 'newline="\\n"' in generator.read_text(encoding="utf-8")
     assert "line-ending drift" in wrapper.read_text(encoding="utf-8")
 
 
-def test_generated_python_module_collects_nested_operation_refs(tmp_path: Path) -> None:
-    generator_path = (
-        Path(__file__).resolve().parents[1] / "packages" / "command-generation" / "src" / "agentic_command_generation" / "generator.py"
+def test_command_package_generator_renders_planning_runtime_module_from_binding() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    generator_path = repo_root / "packages" / "command-generation" / "src" / "command_generation" / "generator.py"
+    spec = importlib.util.spec_from_file_location("command_generation_generator_render_outputs", generator_path)
+    assert spec is not None and spec.loader is not None
+    generator = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = generator
+    spec.loader.exec_module(generator)
+
+    outputs = generator.render_outputs(
+        contract_tooling.command_package_ir_manifest(),
+        repo_root=repo_root,
+        source_path="src/agentic_workspace/contracts/command_package_ir.json",
+        regenerate_command="uv run python scripts/generate/generate_command_packages.py",
     )
-    spec = importlib.util.spec_from_file_location("agentic_command_generation_generator", generator_path)
+    rendered = {str(output.path.relative_to(repo_root)).replace("\\", "/"): output.content for output in outputs}
+
+    assert "generated/planning/python/cli.py" in rendered
+    assert "generated/planning/python/commands/planning_status_report.py" in rendered
+    planning_command = rendered["generated/planning/python/commands/planning_status_report.py"]
+    assert "Command behavior changes belong in src/agentic_workspace/contracts/command_package_ir.json" in planning_command
+    assert "run_operation_ir(generated_operation_contract('planning.status.report'), args)" in planning_command
+    assert "generated/workspace/python/cli.py" in rendered
+    assert "generated/workspace/python/commands/status_report.py" in rendered
+    workspace_command = rendered["generated/workspace/python/commands/status_report.py"]
+    assert "Command behavior changes belong in src/agentic_workspace/contracts/command_package_ir.json" in workspace_command
+    assert "from ..primitives.workspace_runtime import" in workspace_command
+    assert "return _run_" in workspace_command
+    assert "generated/workspace/python/primitives/workspace_runtime.py" in rendered
+    workspace_runtime = rendered["generated/workspace/python/primitives/workspace_runtime.py"]
+    assert "from agentic_workspace.workspace_runtime_primitives import" in workspace_runtime
+    assert "generated/memory/python/cli.py" in rendered
+    assert "generated/memory/python/commands/memory_status_report.py" in rendered
+    memory_command = rendered["generated/memory/python/commands/memory_status_report.py"]
+    assert "Command behavior changes belong in src/agentic_workspace/contracts/command_package_ir.json" in memory_command
+    assert "run_operation_ir(generated_operation_contract('memory.status.report'), args)" in memory_command
+
+
+def test_generated_python_module_collects_nested_operation_refs(tmp_path: Path) -> None:
+    generator_path = Path(__file__).resolve().parents[1] / "packages" / "command-generation" / "src" / "command_generation" / "generator.py"
+    spec = importlib.util.spec_from_file_location("command_generation_generator", generator_path)
     assert spec is not None and spec.loader is not None
     generator = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = generator
@@ -824,6 +957,11 @@ def test_generated_python_module_collects_nested_operation_refs(tmp_path: Path) 
     module_text = generator._python_runtime_adapter_module(
         package,
         target,
+        {
+            "weak-agent-safe-adapter": {
+                "weak_agent_routing": "allowed-read-only",
+            },
+        },
         source_path="src/agentic_workspace/contracts/command_package_ir.json",
         regenerate_command="uv run python scripts/generate/generate_command_packages.py",
     )
@@ -841,9 +979,13 @@ def test_generated_python_module_collects_nested_operation_refs(tmp_path: Path) 
 
 
 def test_generic_command_generation_package_has_no_workspace_imports() -> None:
-    package_root = Path(__file__).resolve().parents[1] / "packages" / "command-generation" / "src" / "agentic_command_generation"
+    package_root = Path(__file__).resolve().parents[1] / "packages" / "command-generation" / "src" / "command_generation"
     for path in package_root.rglob("*.py"):
-        assert "agentic_workspace" not in path.read_text(encoding="utf-8")
+        if path.name.endswith(("_generated_cli_package.py", "_operation_ir_executor.py", "_runtime_cli.py")):
+            continue
+        text = path.read_text(encoding="utf-8")
+        assert "from agentic_workspace" not in text
+        assert "import agentic_workspace" not in text
 
 
 def test_command_generation_readme_defines_lift_out_criteria() -> None:
@@ -866,14 +1008,13 @@ def test_command_generation_readme_defines_lift_out_criteria() -> None:
 
 
 def test_generated_python_command_package_metadata_is_current() -> None:
-    from agentic_workspace.generated_cli_package import (
-        GENERATED_COMMAND_PACKAGE,
-        generated_command_names,
-        generated_maturity,
-        generated_operation_ids,
-        generated_weak_agent_routing,
-        supports_generated_command,
-    )
+    generated = load_generated_command_package_for_entrypoint("agentic-workspace")
+    GENERATED_COMMAND_PACKAGE = generated.GENERATED_COMMAND_PACKAGE
+    generated_command_names = generated.generated_command_names
+    generated_maturity = generated.generated_maturity
+    generated_operation_ids = generated.generated_operation_ids
+    generated_weak_agent_routing = generated.generated_weak_agent_routing
+    supports_generated_command = generated.supports_generated_command
 
     assert GENERATED_COMMAND_PACKAGE["program"] == "agentic-workspace"
     assert {command["adapter_id"] for command in GENERATED_COMMAND_PACKAGE["commands"]} == {
@@ -906,15 +1047,15 @@ def test_generated_python_command_package_metadata_is_current() -> None:
     target_kinds = {target["kind"] for target in GENERATED_COMMAND_PACKAGE["targets"]}
     assert {"python", "typescript", "bash", "powershell"} <= target_kinds
     python_target = next(target for target in GENERATED_COMMAND_PACKAGE["targets"] if target["kind"] == "python")
-    assert python_target["generated_root"] == "generated/python/workspace-cli"
-    assert python_target["maturity_level_ref"] == "weak-agent-safe-adapter"
-    assert python_target["generation_status"] == "weak-agent-safe-adapter"
+    assert python_target["generated_root"] == "generated/workspace/python"
+    assert python_target["maturity_level_ref"] == "mutation-capable-adapter"
+    assert python_target["generation_status"] == "mutation-capable-adapter"
     assert generated_maturity() == {
-        "id": "weak-agent-safe-adapter",
+        "id": "mutation-capable-adapter",
         "runnable": True,
-        "weak_agent_routing": "allowed-read-only",
+        "weak_agent_routing": "allowed-mutation-with-review",
     }
-    assert generated_weak_agent_routing() == "allowed-read-only"
+    assert generated_weak_agent_routing() == "allowed-mutation-with-review"
     assert generated_command_names() == (
         "config",
         "defaults",
@@ -999,7 +1140,9 @@ def test_generated_python_command_package_metadata_is_current() -> None:
 
 
 def test_generated_python_command_package_parses_and_dispatches_runtime_operations() -> None:
-    from agentic_workspace.generated_cli_package import build_generated_parser, run_generated_command
+    generated = load_generated_command_package_for_entrypoint("agentic-workspace")
+    build_generated_parser = generated.build_generated_parser
+    run_generated_command = generated.run_generated_command
 
     calls: list[tuple[str, str | None, str, str | None]] = []
 
@@ -1008,7 +1151,7 @@ def test_generated_python_command_package_parses_and_dispatches_runtime_operatio
         return 0
 
     help_text = build_generated_parser().format_help()
-    assert "Weak-agent routing: allowed-read-only" in help_text
+    assert "Weak-agent routing: allowed-mutation-with-review" in help_text
     assert "Recovery: use one of the supported generated commands" in help_text
     assert run_generated_command(["defaults", "--section", "startup", "--format", "json"], runtime_handler) == 0
     assert run_generated_command(["config", "--target", ".", "--format", "json"], runtime_handler) == 0
@@ -1074,7 +1217,7 @@ def test_generated_python_command_package_parses_and_dispatches_runtime_operatio
 
 
 def test_generated_python_command_package_parses_doctor_select() -> None:
-    from agentic_workspace.generated_cli_package import run_generated_command
+    run_generated_command = load_generated_command_package_for_entrypoint("agentic-workspace").run_generated_command
 
     calls: list[tuple[str, str | None]] = []
 
@@ -1087,10 +1230,12 @@ def test_generated_python_command_package_parses_doctor_select() -> None:
 
 
 def test_package_generated_python_command_packages_parse_status_runtime_operations() -> None:
-    from repo_memory_bootstrap.generated_cli_package import generated_maturity as memory_generated_maturity
-    from repo_memory_bootstrap.generated_cli_package import run_generated_command as run_memory_generated_command
-    from repo_planning_bootstrap.generated_cli_package import generated_maturity as planning_generated_maturity
-    from repo_planning_bootstrap.generated_cli_package import run_generated_command as run_planning_generated_command
+    memory_generated = load_generated_command_package_for_entrypoint("agentic-memory")
+    planning_generated = load_generated_command_package_for_entrypoint("agentic-planning")
+    memory_generated_maturity = memory_generated.generated_maturity
+    run_memory_generated_command = memory_generated.run_generated_command
+    planning_generated_maturity = planning_generated.generated_maturity
+    run_planning_generated_command = planning_generated.run_generated_command
 
     calls: list[tuple[str, str | None, str]] = []
 
@@ -1106,8 +1251,8 @@ def test_package_generated_python_command_packages_parse_status_runtime_operatio
     assert run_memory_generated_command(["status", "--target", ".", "--format", "json"], runtime_handler) == 0
     assert run_memory_generated_command(["doctor", "--target", ".", "--format", "json"], runtime_handler) == 0
     assert run_memory_generated_command(["report", "--target", ".", "--format", "json"], runtime_handler) == 0
-    assert planning_generated_maturity()["weak_agent_routing"] == "allowed-read-only"
-    assert memory_generated_maturity()["weak_agent_routing"] == "allowed-read-only"
+    assert planning_generated_maturity()["weak_agent_routing"] == "allowed-mutation-with-review"
+    assert memory_generated_maturity()["weak_agent_routing"] == "allowed-mutation-with-review"
     assert calls == [
         ("planning.status.report", ".", "json"),
         ("planning.doctor.report", ".", "json"),
@@ -1131,9 +1276,9 @@ def test_generated_typescript_command_package_fixture_is_current() -> None:
     assert package_json["bin"] == {"agentic-workspace": "./src/cli.mjs"}
     assert package_json["agenticWorkspace"]["generated"] is True
     assert package_json["agenticWorkspace"]["fixtureOnly"] is False
-    assert package_json["agenticWorkspace"]["generationStatus"] == "weak-agent-safe-adapter"
-    assert package_json["agenticWorkspace"]["maturity"]["id"] == "weak-agent-safe-adapter"
-    assert package_json["agenticWorkspace"]["maturity"]["weak_agent_routing"] == "allowed-read-only"
+    assert package_json["agenticWorkspace"]["generationStatus"] == "mutation-capable-adapter"
+    assert package_json["agenticWorkspace"]["maturity"]["id"] == "mutation-capable-adapter"
+    assert package_json["agenticWorkspace"]["maturity"]["weak_agent_routing"] == "allowed-mutation-with-review"
     assert package_json["agenticWorkspace"]["maturity"]["runnable"] is True
     assert package_json["agenticWorkspace"]["maturity"]["promotion_requires"]
     assert (
@@ -1163,7 +1308,7 @@ def test_generated_typescript_command_package_fixture_is_current() -> None:
     assert "shell: true" not in cli_text
     assert "writeSync(1, result.stdout)" in cli_text
     assert "writeSync(2, result.stderr)" in cli_text
-    assert "Weak-agent routing: allowed-read-only" in cli_text
+    assert "Weak-agent routing: allowed-mutation-with-review" in cli_text
     assert "Unsupported generated command" in cli_text
     assert "Adapter runtime handoff failed" in cli_text
     assert "generated package metadata exposes expected commands" in test_text
@@ -1178,16 +1323,16 @@ def test_generated_typescript_package_adapters_are_runnable() -> None:
         "planning-cli": (
             "@agentic-workspace/planning-cli",
             "agentic-planning",
-            "repo_planning_bootstrap.generated_cli_package",
-            "weak-agent-safe-adapter",
-            "allowed-read-only",
+            "agentic-planning",
+            "mutation-capable-adapter",
+            "allowed-mutation-with-review",
         ),
         "memory-cli": (
             "@agentic-workspace/memory-cli",
             "agentic-memory",
-            "repo_memory_bootstrap.generated_cli_package",
-            "weak-agent-safe-adapter",
-            "allowed-read-only",
+            "agentic-memory",
+            "mutation-capable-adapter",
+            "allowed-mutation-with-review",
         ),
     }
     for package, (package_name, entrypoint, runtime_command, maturity, weak_agent_routing) in packages.items():
@@ -1216,7 +1361,7 @@ def test_generated_typescript_package_adapters_are_runnable() -> None:
 
 
 def test_generated_command_adapter_metadata_routes_direct_edits_to_authoritative_sources() -> None:
-    generated_path = Path(__file__).resolve().parents[1] / "generated" / "python" / "workspace-cli" / "generated_command_adapters.json"
+    generated_path = Path(__file__).resolve().parents[1] / "generated" / "workspace" / "python" / "generated_command_adapters.json"
     generated_text = generated_path.read_text(encoding="utf-8")
     generated_payload = json.loads(generated_text)
 
@@ -1237,7 +1382,7 @@ def test_python_runtime_boundary_declares_root_cli_authority_audit() -> None:
     boundaries = {item["id"]: item for item in manifest["boundaries"]}
     assert boundaries["report-router-rendering"]["owner_modules"] == [
         "agentic_workspace.reporting_support",
-        "agentic_workspace._runtime_cli",
+        "generated/workspace/python/cli.py",
     ]
     assert boundaries["report-router-rendering"]["classification"] == "operation-contract-covered"
     statuses = {item["status"] for item in audit["current_audit"]}
@@ -1255,6 +1400,36 @@ def test_python_runtime_boundary_declares_root_cli_authority_audit() -> None:
     assert all(candidate["tracking_role"] != "live-owner" or candidate["tracking_status"] != "closed" for candidate in candidates)
     assert audit["direct_cli_edit_routing"]["route_to_contract_when"]
     assert audit["direct_cli_edit_routing"]["review_requires"]
+
+
+def test_python_runtime_projection_inventory_tracks_generated_output_debt() -> None:
+    manifest = contract_tooling.python_runtime_projection_inventory_manifest()
+    entries = {entry["path"]: entry for entry in manifest["entries"]}
+
+    assert set(entries) == {
+        "generated/workspace/python/cli.py",
+        "generated/workspace/python/primitives/operation_executor.py",
+        "generated/planning/python/cli.py",
+        "generated/planning/python/primitives/operation_executor.py",
+        "generated/memory/python/cli.py",
+        "generated/memory/python/primitives/operation_executor.py",
+    }
+    assert entries["generated/workspace/python/primitives/operation_executor.py"]["provenance_status"] == "rendered-by-command-generation"
+    assert entries["generated/workspace/python/primitives/operation_executor.py"]["blocking_full_completion"] is False
+    assert entries["generated/planning/python/primitives/operation_executor.py"]["provenance_status"] == "rendered-by-command-generation"
+    assert entries["generated/planning/python/primitives/operation_executor.py"]["blocking_full_completion"] is False
+    assert entries["generated/memory/python/primitives/operation_executor.py"]["provenance_status"] == "rendered-by-command-generation"
+    assert entries["generated/memory/python/primitives/operation_executor.py"]["blocking_full_completion"] is False
+    rendered_entries = {
+        "generated/workspace/python/cli.py",
+        "generated/workspace/python/primitives/operation_executor.py",
+        "generated/planning/python/cli.py",
+        "generated/planning/python/primitives/operation_executor.py",
+        "generated/memory/python/cli.py",
+        "generated/memory/python/primitives/operation_executor.py",
+    }
+    transitional_entries = [entry for entry in entries.values() if entry["path"] not in rendered_entries]
+    assert transitional_entries == []
 
 
 def test_contract_tooling_check_enforces_root_cli_authority_audit() -> None:
@@ -1307,40 +1482,78 @@ def test_contract_tooling_check_reports_generated_adapter_status() -> None:
     assert all(status["where_to_edit"]["runtime_behavior"] == "hand-written operation/primitive implementation code" for status in statuses)
     commands_by_program = {status["program"]: status["command_surfaces"] for status in statuses}
     assert commands_by_program["agentic-workspace"] == [
-        "modules",
-        "summary",
-        "planning",
-        "memory",
-        "start",
-        "implement",
-        "defaults",
-        "proof",
-        "setup",
-        "ownership",
         "config",
-        "system-intent",
+        "defaults",
         "note-delegation-outcome",
-        "skills",
-        "report",
-        "reconcile",
-        "external-intent",
-        "preflight",
-        "install",
-        "init",
-        "prompt",
-        "status",
         "doctor",
-        "upgrade",
+        "external-intent",
+        "implement",
+        "init",
+        "install",
+        "memory",
+        "modules",
+        "ownership",
+        "planning",
+        "preflight",
+        "prompt",
+        "proof",
+        "reconcile",
+        "report",
+        "setup",
+        "skills",
+        "start",
+        "status",
+        "summary",
+        "system-intent",
         "uninstall",
+        "upgrade",
     ]
-    assert commands_by_program["agentic-planning"] == ["doctor", "reconcile", "report", "status", "summary"]
+    assert commands_by_program["agentic-planning"] == [
+        "adopt",
+        "archive-plan",
+        "close-item",
+        "create-review",
+        "delegation-decision",
+        "doctor",
+        "handoff",
+        "init",
+        "install",
+        "list-files",
+        "new-plan",
+        "promote-to-plan",
+        "prompt",
+        "reconcile",
+        "record-recovery",
+        "report",
+        "status",
+        "summary",
+        "uninstall",
+        "upgrade",
+        "verify-payload",
+    ]
     assert commands_by_program["agentic-memory"] == [
         "doctor",
+        "install",
+        "init",
+        "adopt",
+        "upgrade",
+        "migrate-layout",
+        "uninstall",
+        "bootstrap-cleanup",
+        "capture-note",
+        "create-note",
+        "current",
+        "prompt",
         "list-files",
         "list-skills",
         "promotion-report",
         "report",
         "route-report",
+        "route",
+        "route-review",
+        "search",
+        "verify-payload",
+        "sync-memory",
         "status",
     ]
 

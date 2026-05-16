@@ -13,7 +13,7 @@
       "id": "lifecycle-execution",
       "classification": "procedural-owned",
       "owner_modules": [
-        "agentic_workspace._runtime_cli"
+        "generated/workspace/python/cli.py"
       ],
       "runtime_surfaces": [
         "install",
@@ -35,7 +35,7 @@
       "id": "live-report-and-doctor-assembly",
       "classification": "live-inspection-owned",
       "owner_modules": [
-        "agentic_workspace._runtime_cli",
+        "generated/workspace/python/cli.py",
         "agentic_workspace.doctor",
         "agentic_workspace.workspace_output"
       ],
@@ -60,7 +60,7 @@
       "classification": "operation-contract-covered",
       "owner_modules": [
         "agentic_workspace.reporting_support",
-        "agentic_workspace._runtime_cli"
+        "generated/workspace/python/cli.py"
       ],
       "runtime_surfaces": [
         "report",
@@ -79,7 +79,7 @@
       "id": "runtime-preflight-token-validation",
       "classification": "procedural-owned",
       "owner_modules": [
-        "agentic_workspace._runtime_cli"
+        "generated/workspace/python/cli.py"
       ],
       "runtime_surfaces": [
         "preflight",
@@ -97,7 +97,7 @@
       "id": "command-dispatch-and-parser-construction",
       "classification": "operation-contract-covered",
       "owner_modules": [
-        "agentic_workspace._runtime_cli"
+        "generated/workspace/python/cli.py"
       ],
       "runtime_surfaces": [
         "argparse parser",
@@ -115,7 +115,7 @@
       "id": "path-normalization-and-boundary-matching",
       "classification": "procedural-owned",
       "owner_modules": [
-        "agentic_workspace._runtime_cli"
+        "generated/workspace/python/cli.py"
       ],
       "runtime_surfaces": [
         "ownership --path",
@@ -161,7 +161,7 @@
       "id": "generated-adapter-text",
       "classification": "deferred-extractable",
       "owner_modules": [
-        "agentic_workspace._runtime_cli"
+        "generated/workspace/python/cli.py"
       ],
       "runtime_surfaces": [
         "root AGENTS.md template"
@@ -187,14 +187,14 @@
       {
         "id": "runtime-primitives",
         "authority_class": "allowed-root-runtime",
-        "allowed_owner": "src/agentic_workspace/_runtime_cli.py and runtime helper modules",
+        "allowed_owner": "generated/workspace/python/cli.py and runtime helper modules",
         "route_when": "The behavior performs live repo inspection, subprocess execution, mutation sequencing, preflight token evaluation, or output emission mechanics.",
         "extract_or_guard_when": "Stable command shape, effect hints, schemas, or reusable wording can be expressed in contracts without owning live behavior."
       },
       {
         "id": "derived-renderers",
         "authority_class": "derived-renderer",
-        "allowed_owner": "src/agentic_workspace/_runtime_cli.py as renderer over contract and live module payloads",
+        "allowed_owner": "generated/workspace/python/cli.py as renderer over contract and live module payloads",
         "route_when": "The output assembles current config, module reports, planning state, or contract manifests into a compact answer.",
         "extract_or_guard_when": "A rendered field becomes stable enough to require schema, operation contract, or report-contract coverage."
       },
@@ -287,10 +287,12 @@
         "a direct edit would be repeated by another generated target"
       ],
       "review_requires": [
-        "agentic-workspace proof direct_cli_edit_review for any src/agentic_workspace/_runtime_cli.py change",
+        "agentic-workspace proof direct_cli_edit_review for any generated/workspace/python/cli.py change",
         "root_cli_authority audit check when the edit changes interface or report authority",
         "command generation or contract-surface validation when command semantics change"
       ]
     }
   }
 }
+
+

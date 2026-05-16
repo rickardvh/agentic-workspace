@@ -1,0 +1,339 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Python memory route-report portable primitive reduction",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Move memory.route-report non-verbose JSON from a memory-specific generated runtime override to schema-backed portable operation primitives while keeping verbose/text package-domain fallback explicit.",
+    "hard_constraints": "Do not copy verbose/text route-report policy or fixture evaluation into generated code; generated output must be regenerated from contracts/generator changes; keep #892 larger completion open.",
+    "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Close the slice after generated package, contract tooling, primitive, Python conformance, and node conformance proof pass.",
+    "proof_expectations": [
+      "uv run pytest tests/test_command_generation_primitive_executor.py -q",
+      "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+      "uv run python scripts/check/check_generated_command_packages.py --primitive-conformance",
+      "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
+      "uv run ruff check packages/command-generation/src/command_generation/primitive_executor.py tests/test_command_generation_primitive_executor.py scripts/check/check_generated_command_packages.py",
+      "rg -n \"target_file_route_report_json_with_source_fallback|_tiny_route_report_payload_from_target_files|_tiny_route_report_payload\" .",
+      "uv run python scripts/check/check_generated_command_packages.py --primitive-docker-conformance --require-docker"
+    ],
+    "touched_scope": [
+      "packages/command-generation/src/command_generation/primitive_executor.py",
+      "packages/command-generation/src/command_generation/generator.py",
+      "packages/command-generation/schemas/command_package_ir.schema.json",
+      "src/agentic_workspace/contracts/command_package_ir.json",
+      "src/agentic_workspace/contracts/command_adapter_generation.json",
+      "src/agentic_workspace/contracts/operation_primitives.json",
+      "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+      "src/agentic_workspace/contracts/schemas/command_package_ir.schema.json",
+      "src/agentic_workspace/contracts/schemas/operation.schema.json",
+      "src/agentic_workspace/contracts/schemas/primitives/filesystem_exists.input.schema.json",
+      "src/agentic_workspace/contracts/schemas/primitives/filesystem_exists.output.schema.json",
+      "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.route-report.report.json",
+      "scripts/check/check_generated_command_packages.py",
+      "tests/test_command_generation_primitive_executor.py",
+      "generated/"
+    ],
+    "completion_criteria": [
+      "memory.route-report non-verbose JSON is expressed through portable operation IR primitives path.target_root.resolve, filesystem.exists, filesystem.glob, payload.assemble, and output.emit.",
+      "The old target_file_route_report_json_with_source_fallback generator override is removed.",
+      "Verbose/text route-report remains explicit package-domain fallback and is not counted as portable completion.",
+      "Generated outputs are regenerated and static/conformance proof passes."
+    ],
+    "continuation_owner": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+    "closeout_decision": "archive-but-keep-lane-open"
+  },
+  "goal": [
+    "Move memory.route-report non-verbose JSON from a memory-specific generated runtime override to schema-backed portable operation primitives while keeping verbose/text package-domain fallback explicit."
+  ],
+  "non_goals": [
+    "Do not migrate verbose/text route-report evaluation, routing policy, or package-domain report analysis in this slice.",
+    "Do not claim full #892 completion from this bounded reduction."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Move memory.route-report non-verbose JSON from a memory-specific generated runtime override to schema-backed portable operation primitives while keeping verbose/text package-domain fallback explicit.",
+      "constraints": "Do not copy verbose/text route-report policy or fixture evaluation into generated code; generated output must be regenerated from contracts/generator changes; keep #892 larger completion open.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "python-next-runtime-delegate-reduction-2",
+      "status": "completed",
+      "next_step": "Commit and continue #892 with the next bounded runtime delegate reduction.",
+      "proof": "generated package, contract tooling, primitive tests, Python conformance, node conformance, and ruff passed."
+    },
+    "scope": {
+      "touched": [
+        "packages/command-generation/src/command_generation/primitive_executor.py",
+        "packages/command-generation/src/command_generation/generator.py",
+        "packages/command-generation/schemas/command_package_ir.schema.json",
+        "src/agentic_workspace/contracts/command_package_ir.json",
+        "src/agentic_workspace/contracts/command_adapter_generation.json",
+        "src/agentic_workspace/contracts/operation_primitives.json",
+        "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+        "src/agentic_workspace/contracts/schemas/command_package_ir.schema.json",
+        "src/agentic_workspace/contracts/schemas/operation.schema.json",
+        "src/agentic_workspace/contracts/schemas/primitives/filesystem_exists.input.schema.json",
+        "src/agentic_workspace/contracts/schemas/primitives/filesystem_exists.output.schema.json",
+        "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.route-report.report.json",
+        "scripts/check/check_generated_command_packages.py",
+        "tests/test_command_generation_primitive_executor.py",
+        "generated/"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Complete #892 Python generated CLI lane by representing generic deterministic behavior as implementation-independent IR/contracts plus codegen-owned primitives and generated Python projections.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+    "activation trigger": "Continue with the next source-runtime delegate reduction or honest completion-gate proof slice."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Reduce next Python runtime delegate",
+    "inferred intended outcome": "Replace the memory-specific route-report JSON fast-path override with generic portable operation primitives.",
+    "chosen concrete what": "memory.route-report non-verbose JSON now uses path/exists/glob/template primitives with verbose/text fallback kept explicit.",
+    "interpretation distance": "medium",
+    "review guidance": "Verify this is counted as partial #892 progress, not full completion."
+  },
+  "execution_bounds": {
+    "allowed paths": "command-generation primitive/generator code, operation and command contracts, generated outputs, focused tests/checks, and planning closeout.",
+    "max changed files": "About 25 files including regenerated outputs.",
+    "required validation commands": "generated package checks, contract tooling, primitive tests/conformance, Python conformance, node conformance, and ruff.",
+    "ask-before-refactor threshold": "Stop before migrating additional memory report commands or lifecycle operations.",
+    "stop before touching": "Verbose/text route-report source policy, memory installer behavior, unrelated planning/workspace runtime delegates."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Create a bounded plan for Reduce next Python runtime delegate.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-16T14:04:34+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "python-next-runtime-delegate-reduction-2",
+    "status": "completed",
+    "scope": "memory.route-report portable primitive reduction",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Commit and push this bounded slice, then continue #892."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/command-generation/src/command_generation/primitive_executor.py",
+    "packages/command-generation/src/command_generation/generator.py",
+    "packages/command-generation/schemas/command_package_ir.schema.json",
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    "src/agentic_workspace/contracts/command_adapter_generation.json",
+    "src/agentic_workspace/contracts/operation_primitives.json",
+    "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+    "src/agentic_workspace/contracts/schemas/command_package_ir.schema.json",
+    "src/agentic_workspace/contracts/schemas/operation.schema.json",
+    "src/agentic_workspace/contracts/schemas/primitives/filesystem_exists.input.schema.json",
+    "src/agentic_workspace/contracts/schemas/primitives/filesystem_exists.output.schema.json",
+    "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.route-report.report.json",
+    "scripts/check/check_generated_command_packages.py",
+    "tests/test_command_generation_primitive_executor.py",
+    "generated/"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_command_generation_primitive_executor.py -q",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+    "uv run python scripts/check/check_generated_command_packages.py --primitive-conformance",
+    "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
+    "uv run ruff check packages/command-generation/src/command_generation/primitive_executor.py tests/test_command_generation_primitive_executor.py scripts/check/check_generated_command_packages.py",
+    "rg -n \"target_file_route_report_json_with_source_fallback|_tiny_route_report_payload_from_target_files|_tiny_route_report_payload\" .",
+    "uv run python scripts/check/check_generated_command_packages.py --primitive-docker-conformance --require-docker"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "memory.route-report non-verbose JSON is expressed through portable operation IR primitives path.target_root.resolve, filesystem.exists, filesystem.glob, payload.assemble, and output.emit.",
+    "The old target_file_route_report_json_with_source_fallback generator override is removed.",
+    "Verbose/text route-report remains explicit package-domain fallback and is not counted as portable completion.",
+    "Generated outputs are regenerated and static/conformance proof passes."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex with Hilbert read-only exploration",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Added conditional execution, filesystem.exists, value-root globbing, and template payload assembly to command-generation primitive execution; moved memory.route-report non-verbose JSON to portable operation IR; removed the memory-specific target_file_route_report generated override; regenerated packages/adapters.",
+    "scope touched": "command-generation primitive/generator code, root contracts, memory route-report operation contract, generated outputs, focused tests/checks, and planning surfaces",
+    "changed surfaces": "generic primitive executor/generator plus generated memory operation output; no package source route-report policy changed",
+    "validations run": "uv run pytest tests/test_command_generation_primitive_executor.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --primitive-conformance; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run ruff check packages/command-generation/src/command_generation/primitive_executor.py tests/test_command_generation_primitive_executor.py scripts/check/check_generated_command_packages.py; rg -n \"target_file_route_report_json_with_source_fallback|_tiny_route_report_payload_from_target_files|_tiny_route_report_payload\" .; uv run python scripts/check/check_generated_command_packages.py --primitive-docker-conformance --require-docker",
+    "result for continuation": "route-report JSON generic primitive slice complete; verbose/text fallback remains package-domain debt",
+    "next step": "Commit/push and select the next #892 slice."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; verbose/text route-report policy stayed in source fallback",
+    "proof status": "passed",
+    "intent served": "yes for bounded route-report JSON primitive reduction; #892 remains open",
+    "config compliance": "used uv run agentic-workspace start/summary/implement and recorded delegation decision",
+    "misinterpretation risk": "controlled by inventory and decomposition notes that fallback remains debt",
+    "follow-on decision": "archive this slice but keep #892 decomposition open"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "not skipped",
+    "expected savings": "Reused open worker Hilbert to identify the next safe #892 slice while local work continued.",
+    "actual friction": "Worker response arrived after local inventory, but it confirmed memory.route-report as the best bounded slice.",
+    "proof result": "Exploration result selected portable target-file route-report JSON primitive slice; implementation kept verbose/text fallback explicit.",
+    "quality concern": "Do not count remaining memory.route_report.load fallback as portable completion.",
+    "decomposition adjustment": "Record route-report JSON as portable primitive progress while #892 remains open."
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_command_generation_primitive_executor.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --primitive-conformance; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run ruff check packages/command-generation/src/command_generation/primitive_executor.py tests/test_command_generation_primitive_executor.py scripts/check/check_generated_command_packages.py; rg -n \"target_file_route_report_json_with_source_fallback|_tiny_route_report_payload_from_target_files|_tiny_route_report_payload\" .; uv run python scripts/check/check_generated_command_packages.py --primitive-docker-conformance --require-docker",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "All listed commands passed locally; generated route-report JSON ran through portable IR primitives and text output still used source fallback."
+  },
+  "intent_satisfaction": {
+    "original intent": "Move memory.route-report non-verbose JSON from a memory-specific generated runtime override to schema-backed portable operation primitives while keeping verbose/text package-domain fallback explicit.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "memory.route-report non-verbose JSON no longer depends on the memory-specific generated route-report override; generated operation IR uses portable primitives and fallback remains explicit.",
+    "unsolved intent passed to": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+  },
+  "execution_summary": {
+    "outcome delivered": "memory.route-report non-verbose JSON portable primitive reduction",
+    "validation confirmed": "generated package, contract tooling, primitive tests/conformance, Python conformance, node conformance, and ruff passed; primitive Docker conformance passed",
+    "follow-on routed to": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+    "post-work posterity capture": "decomposition records this as partial #892 progress; inventory records remaining verbose/text fallback debt",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "next #892 runtime delegate reduction lane"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "The bounded generic route-report JSON slice is complete, but #892 still has many explicit domain/runtime delegates.",
+    "evidence carried forward": "operation IR, primitive registry, generated output, tests, and inventory show route-report JSON primitive coverage.",
+    "reopen trigger": "Route-report JSON conformance or generated static proof regresses."
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [
+        "Continue #892 with the next bounded runtime delegate reduction; do not count memory.route-report verbose/text fallback as portable completion."
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-16: Scaffolded by agentic-planning new-plan.",
+    "2026-05-16: Recorded delegation decision route=delegate-exploration."
+  ]
+}

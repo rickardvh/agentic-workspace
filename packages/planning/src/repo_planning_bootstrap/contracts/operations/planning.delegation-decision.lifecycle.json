@@ -1,0 +1,143 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "planning.delegation-decision.lifecycle",
+  "command_surface": {
+    "program": "agentic-planning",
+    "command": "delegation-decision",
+    "format_option": "format"
+  },
+  "summary": "Record the delegation route chosen for the active execplan.",
+  "classification": "lifecycle-mutation",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "plan",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "route",
+      "source": "cli-option",
+      "required": true
+    },
+    {
+      "name": "skipped_reason",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "expected_savings",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "actual_friction",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "proof_result",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "quality_concern",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "decomposition_adjustment",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "dry_run",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "module-result"
+  },
+  "effects": {
+    "read_only": false,
+    "destructive": false,
+    "idempotent": false,
+    "writes_repo_state": true,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": "target repository Planning state",
+      "required": false
+    }
+  ],
+  "writes": [
+    {
+      "surface": ".agentic-workspace/planning/",
+      "required": false,
+      "when": "not a dry run"
+    }
+  ],
+  "steps": [
+    {
+      "id": "apply_lifecycle_operation",
+      "uses": "planning.delegation-decision.apply",
+      "description": "Record the delegation route chosen for the active execplan."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit planning lifecycle result in the requested format."
+    }
+  ],
+  "guards": [
+    "Respect dry-run mode by avoiding writes.",
+    "Route planning state edits through package lifecycle functions instead of hand-editing state files."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated delegation-decision dry-run process conformance passes"
+  ],
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Planning delegation-decision executes generated operation IR through codegen-owned primitive dataflow while the planning module owns state mutation policy.",
+    "steps": [
+      {
+        "id": "apply_lifecycle_operation",
+        "uses": "planning.delegation-decision.apply",
+        "description": "Record the delegation route chosen for the active execplan.",
+        "arguments": {},
+        "outputs": [
+          "result"
+        ],
+        "on_error": "emit_usage_error"
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit",
+        "description": "Emit planning lifecycle result in the requested format.",
+        "arguments": {},
+        "outputs": [
+          "emitted"
+        ],
+        "on_error": "emit_usage_error"
+      }
+    ]
+  }
+}

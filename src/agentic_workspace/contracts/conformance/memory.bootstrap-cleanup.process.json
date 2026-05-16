@@ -1,0 +1,62 @@
+{
+  "schema_version": "agentic-workspace/conformance/v1",
+  "id": "memory.bootstrap-cleanup.process",
+  "operation_id": "memory.bootstrap-cleanup.apply",
+  "adapter": {
+    "kind": "process",
+    "command_template": [
+      "{agentic_memory_cli}",
+      "bootstrap-cleanup",
+      "--target",
+      ".",
+      "--format",
+      "json"
+    ],
+    "cwd": "fixture_root"
+  },
+  "fixtures": [
+    {
+      "id": "memory-bootstrap-cleanup-process",
+      "files": {
+        ".git/.keep": "",
+        ".agentic-workspace/memory/bootstrap/temp.txt": "temporary\n"
+      }
+    }
+  ],
+  "expectations": {
+    "exit": {
+      "code": 0
+    },
+    "stdout": {
+      "format": "json",
+      "field_assertions": [
+        {
+          "path": [
+            "message"
+          ],
+          "equals": "Bootstrap workspace cleanup"
+        }
+      ]
+    },
+    "stderr": {
+      "allow_non_empty": false
+    },
+    "filesystem": {
+      "allowed_write_paths": [
+        ".agentic-workspace/memory/bootstrap/temp.txt"
+      ],
+      "required_paths": [
+        ".git/.keep"
+      ],
+      "forbidden_paths": [
+        ".agentic-workspace/memory/bootstrap"
+      ]
+    },
+    "idempotency": {
+      "run_twice": false
+    },
+    "safety": {
+      "no_writes_outside_repo_root": true
+    }
+  }
+}

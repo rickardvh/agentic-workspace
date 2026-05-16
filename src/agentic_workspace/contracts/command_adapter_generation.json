@@ -100,15 +100,15 @@
   "generated_outputs": [
     {
       "program": "agentic-workspace",
-      "path": "generated/python/workspace-cli/generated_command_adapters.json"
+      "path": "generated/workspace/python/generated_command_adapters.json"
     },
     {
       "program": "agentic-planning",
-      "path": "generated/python/planning-cli/generated_command_adapters.json"
+      "path": "generated/planning/python/generated_command_adapters.json"
     },
     {
       "program": "agentic-memory",
-      "path": "generated/python/memory-cli/generated_command_adapters.json"
+      "path": "generated/memory/python/generated_command_adapters.json"
     }
   ],
   "package_surface_migration": {
@@ -127,203 +127,45 @@
   },
   "adapters": [
     {
-      "id": "modules.report.cli",
+      "id": "config.report.cli",
       "status": "generated",
       "command": {
         "program": "agentic-workspace",
-        "name": "modules",
+        "name": "config",
         "command_manifest": "cli_commands.json",
         "option_group_manifest": "cli_option_groups.json"
       },
       "operation_ref": {
-        "id": "modules.report",
+        "id": "config.report",
         "registry": "operation_contracts.json",
-        "path": "operations/modules.report.json"
+        "path": "operations/config.report.json"
       },
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
           "workspace.root.resolve",
-          "workspace.modules.inspect",
-          "output.emit"
-        ]
-      },
-      "schemas": {
-        "input": [],
-        "output": []
-      },
-      "effect_hints": {
-        "read_only": true,
-        "destructive": false,
-        "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
-      },
-      "projection_hints": {
-        "universal_fields": [
-          "command.name",
-          "command.options",
-          "operation_ref.id",
-          "runtime_binding.primitive_refs",
-          "effect_hints",
-          "conformance_refs"
-        ],
-        "adapter_specific_fields": [
-          {
-            "kind": "process-cli",
-            "fields": [
-              "program",
-              "argument rendering",
-              "help rendering",
-              "exit-code rendering"
-            ]
-          }
-        ]
-      },
-      "generation_boundary": {
-        "contract_owns": [
-          "visible command name",
-          "argument and option shape",
-          "help and usage text source",
-          "operation id",
-          "effect/read/write hints",
-          "conformance refs"
-        ],
-        "generated_adapter_owns": [
-          "parser and usage wiring",
-          "argument normalization into the operation input shape",
-          "dispatch wiring from command id to runtime binding"
-        ],
-        "runtime_owns": [
-          "target root resolution",
-          "module descriptor inspection",
-          "installed-signal detection",
-          "output emission mechanics"
-        ]
-      },
-      "conformance_refs": [
-        "modules.report.process"
-      ]
-    },
-    {
-      "id": "summary.report.cli",
-      "status": "generated",
-      "command": {
-        "program": "agentic-workspace",
-        "name": "summary",
-        "command_manifest": "cli_commands.json",
-        "option_group_manifest": "cli_option_groups.json"
-      },
-      "operation_ref": {
-        "id": "summary.report",
-        "registry": "operation_contracts.json",
-        "path": "operations/summary.report.json"
-      },
-      "runtime_binding": {
-        "kind": "operation-primitive-sequence",
-        "primitive_refs": [
-          "workspace.root.resolve",
-          "planning.summary.load",
+          "workspace.config.load",
           "output.fields.select",
-          "output.emit"
-        ]
-      },
-      "schemas": {
-        "input": [],
-        "output": []
-      },
-      "effect_hints": {
-        "read_only": true,
-        "destructive": false,
-        "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
-      },
-      "projection_hints": {
-        "universal_fields": [
-          "command.name",
-          "command.options",
-          "operation_ref.id",
-          "runtime_binding.primitive_refs",
-          "effect_hints",
-          "conformance_refs"
-        ],
-        "adapter_specific_fields": [
-          {
-            "kind": "process-cli",
-            "fields": [
-              "program",
-              "argument rendering",
-              "help rendering",
-              "exit-code rendering"
-            ]
-          }
-        ]
-      },
-      "generation_boundary": {
-        "contract_owns": [
-          "visible command name",
-          "argument and option shape",
-          "help and usage text source",
-          "operation id",
-          "effect/read/write hints",
-          "conformance refs"
-        ],
-        "generated_adapter_owns": [
-          "parser and usage wiring",
-          "argument normalization into the operation input shape",
-          "dispatch wiring from command id to runtime binding"
-        ],
-        "runtime_owns": [
-          "target root resolution",
-          "planning summary loading",
-          "memory consult augmentation",
-          "output emission mechanics"
-        ]
-      },
-      "conformance_refs": [
-        "summary.report.process"
-      ]
-    },
-    {
-      "id": "planning.front-door.cli",
-      "status": "generated",
-      "command": {
-        "program": "agentic-workspace",
-        "name": "planning",
-        "command_manifest": "cli_commands.json",
-        "option_group_manifest": "cli_option_groups.json"
-      },
-      "operation_ref": {
-        "id": "planning.front-door",
-        "registry": "operation_contracts.json",
-        "path": "operations/planning.front-door.json"
-      },
-      "runtime_binding": {
-        "kind": "operation-primitive-sequence",
-        "primitive_refs": [
-          "planning.front_door.dispatch",
-          "output.emit"
+          "workspace.config.emit"
         ]
       },
       "schemas": {
         "input": [],
         "output": [
-          "compact_contract_answer.schema.json"
+          "workspace_config.schema.json"
         ]
       },
       "effect_hints": {
-        "read_only": false,
+        "read_only": true,
         "destructive": false,
-        "idempotent": false,
-        "writes_repo_state": true,
+        "idempotent": true,
+        "writes_repo_state": false,
         "requires_preflight_gate": false
       },
       "projection_hints": {
         "universal_fields": [
           "command.name",
           "command.options",
-          "command.subcommands",
           "operation_ref.id",
           "runtime_binding.primitive_refs",
           "schemas.output",
@@ -335,7 +177,7 @@
             "kind": "process-cli",
             "fields": [
               "program",
-              "nested argument rendering",
+              "argument rendering",
               "help rendering",
               "exit-code rendering"
             ]
@@ -346,7 +188,6 @@
         "contract_owns": [
           "visible command name",
           "argument and option shape",
-          "nested subcommand shape",
           "help and usage text source",
           "operation id",
           "effect/read/write hints",
@@ -359,264 +200,14 @@
           "dispatch wiring from command id to runtime binding"
         ],
         "runtime_owns": [
-          "primitive implementation",
-          "module runtime policy",
+          "target root resolution",
+          "config loading",
           "payload assembly",
           "output emission mechanics"
         ]
       },
       "conformance_refs": [
-        "planning.front-door.process"
-      ]
-    },
-    {
-      "id": "memory.front-door.cli",
-      "status": "generated",
-      "command": {
-        "program": "agentic-workspace",
-        "name": "memory",
-        "command_manifest": "cli_commands.json",
-        "option_group_manifest": "cli_option_groups.json"
-      },
-      "operation_ref": {
-        "id": "memory.front-door",
-        "registry": "operation_contracts.json",
-        "path": "operations/memory.front-door.json"
-      },
-      "runtime_binding": {
-        "kind": "operation-primitive-sequence",
-        "primitive_refs": [
-          "memory.front_door.dispatch",
-          "output.emit"
-        ]
-      },
-      "schemas": {
-        "input": [],
-        "output": [
-          "compact_contract_answer.schema.json"
-        ]
-      },
-      "effect_hints": {
-        "read_only": false,
-        "destructive": false,
-        "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
-      },
-      "projection_hints": {
-        "universal_fields": [
-          "command.name",
-          "command.options",
-          "command.subcommands",
-          "operation_ref.id",
-          "runtime_binding.primitive_refs",
-          "schemas.output",
-          "effect_hints",
-          "conformance_refs"
-        ],
-        "adapter_specific_fields": [
-          {
-            "kind": "process-cli",
-            "fields": [
-              "program",
-              "nested argument rendering",
-              "help rendering",
-              "exit-code rendering"
-            ]
-          }
-        ]
-      },
-      "generation_boundary": {
-        "contract_owns": [
-          "visible command name",
-          "argument and option shape",
-          "nested subcommand shape",
-          "help and usage text source",
-          "operation id",
-          "effect/read/write hints",
-          "schema refs",
-          "conformance refs"
-        ],
-        "generated_adapter_owns": [
-          "parser and usage wiring",
-          "argument normalization into the operation input shape",
-          "dispatch wiring from command id to runtime binding"
-        ],
-        "runtime_owns": [
-          "primitive implementation",
-          "module runtime policy",
-          "payload assembly",
-          "output emission mechanics"
-        ]
-      },
-      "conformance_refs": [
-        "memory.front-door.process"
-      ]
-    },
-    {
-      "id": "start.context.cli",
-      "status": "generated",
-      "command": {
-        "program": "agentic-workspace",
-        "name": "start",
-        "command_manifest": "cli_commands.json",
-        "option_group_manifest": "cli_option_groups.json"
-      },
-      "operation_ref": {
-        "id": "start.context",
-        "registry": "operation_contracts.json",
-        "path": "operations/start.context.json"
-      },
-      "runtime_binding": {
-        "kind": "operation-primitive-sequence",
-        "primitive_refs": [
-          "workspace.root.resolve",
-          "preflight.context.assemble",
-          "startup.context.assemble",
-          "output.emit"
-        ]
-      },
-      "schemas": {
-        "input": [],
-        "output": [
-          "startup_context.schema.json"
-        ]
-      },
-      "effect_hints": {
-        "read_only": true,
-        "destructive": false,
-        "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
-      },
-      "projection_hints": {
-        "universal_fields": [
-          "command.name",
-          "command.options",
-          "operation_ref.id",
-          "runtime_binding.primitive_refs",
-          "schemas.output",
-          "effect_hints",
-          "conformance_refs"
-        ],
-        "adapter_specific_fields": [
-          {
-            "kind": "process-cli",
-            "fields": [
-              "program",
-              "argument rendering",
-              "help rendering",
-              "exit-code rendering"
-            ]
-          }
-        ]
-      },
-      "generation_boundary": {
-        "contract_owns": [
-          "visible command name",
-          "argument and option shape",
-          "help and usage text source",
-          "operation id",
-          "effect/read/write hints",
-          "schema refs",
-          "conformance refs"
-        ],
-        "generated_adapter_owns": [
-          "parser and usage wiring",
-          "argument normalization into the operation input shape",
-          "dispatch wiring from command id to runtime binding"
-        ],
-        "runtime_owns": [
-          "target root resolution",
-          "startup context assembly",
-          "changed-path proof selection",
-          "output emission mechanics"
-        ]
-      },
-      "conformance_refs": [
-        "start.context.process"
-      ]
-    },
-    {
-      "id": "implement.context.cli",
-      "status": "generated",
-      "command": {
-        "program": "agentic-workspace",
-        "name": "implement",
-        "command_manifest": "cli_commands.json",
-        "option_group_manifest": "cli_option_groups.json"
-      },
-      "operation_ref": {
-        "id": "implement.context",
-        "registry": "operation_contracts.json",
-        "path": "operations/implement.context.json"
-      },
-      "runtime_binding": {
-        "kind": "operation-primitive-sequence",
-        "primitive_refs": [
-          "workspace.root.resolve",
-          "implementer.context.assemble",
-          "output.profile.select",
-          "output.fields.select",
-          "output.emit"
-        ]
-      },
-      "schemas": {
-        "input": [],
-        "output": []
-      },
-      "effect_hints": {
-        "read_only": true,
-        "destructive": false,
-        "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
-      },
-      "projection_hints": {
-        "universal_fields": [
-          "command.name",
-          "command.options",
-          "operation_ref.id",
-          "runtime_binding.primitive_refs",
-          "effect_hints",
-          "conformance_refs"
-        ],
-        "adapter_specific_fields": [
-          {
-            "kind": "process-cli",
-            "fields": [
-              "program",
-              "argument rendering",
-              "help rendering",
-              "exit-code rendering"
-            ]
-          }
-        ]
-      },
-      "generation_boundary": {
-        "contract_owns": [
-          "visible command name",
-          "argument and option shape",
-          "help and usage text source",
-          "operation id",
-          "effect/read/write hints",
-          "conformance refs"
-        ],
-        "generated_adapter_owns": [
-          "parser and usage wiring",
-          "argument normalization into the operation input shape",
-          "dispatch wiring from command id to runtime binding"
-        ],
-        "runtime_owns": [
-          "target root resolution",
-          "implementer context assembly",
-          "changed-path proof selection",
-          "field selection",
-          "output emission"
-        ]
-      },
-      "conformance_refs": [
-        "implement.context.process"
+        "config.report.process"
       ]
     },
     {
@@ -703,413 +294,6 @@
       ]
     },
     {
-      "id": "proof.report.cli",
-      "status": "generated",
-      "command": {
-        "program": "agentic-workspace",
-        "name": "proof",
-        "command_manifest": "cli_commands.json",
-        "option_group_manifest": "cli_option_groups.json"
-      },
-      "operation_ref": {
-        "id": "proof.report",
-        "registry": "operation_contracts.json",
-        "path": "operations/proof.report.json"
-      },
-      "runtime_binding": {
-        "kind": "operation-primitive-sequence",
-        "primitive_refs": [
-          "workspace.root.resolve",
-          "proof.routes.resolve",
-          "proof.routes.resolve",
-          "output.profile.select",
-          "output.fields.select",
-          "output.emit"
-        ]
-      },
-      "schemas": {
-        "input": [],
-        "output": []
-      },
-      "effect_hints": {
-        "read_only": true,
-        "destructive": false,
-        "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
-      },
-      "projection_hints": {
-        "universal_fields": [
-          "command.name",
-          "command.options",
-          "operation_ref.id",
-          "runtime_binding.primitive_refs",
-          "effect_hints",
-          "conformance_refs"
-        ],
-        "adapter_specific_fields": [
-          {
-            "kind": "process-cli",
-            "fields": [
-              "program",
-              "argument rendering",
-              "help rendering",
-              "exit-code rendering"
-            ]
-          }
-        ]
-      },
-      "generation_boundary": {
-        "contract_owns": [
-          "visible command name",
-          "argument and option shape",
-          "help and usage text source",
-          "operation id",
-          "effect/read/write hints",
-          "conformance refs"
-        ],
-        "generated_adapter_owns": [
-          "parser and usage wiring",
-          "argument normalization into the operation input shape",
-          "dispatch wiring from command id to runtime binding"
-        ],
-        "runtime_owns": [
-          "target root resolution",
-          "proof route resolution",
-          "changed-path proof selection",
-          "surface-value review",
-          "output emission"
-        ]
-      },
-      "conformance_refs": [
-        "proof.report.process"
-      ]
-    },
-    {
-      "id": "setup.guidance.cli",
-      "status": "generated",
-      "command": {
-        "program": "agentic-workspace",
-        "name": "setup",
-        "command_manifest": "cli_commands.json",
-        "option_group_manifest": "cli_option_groups.json"
-      },
-      "operation_ref": {
-        "id": "setup.guidance",
-        "registry": "operation_contracts.json",
-        "path": "operations/setup.guidance.json"
-      },
-      "runtime_binding": {
-        "kind": "operation-primitive-sequence",
-        "primitive_refs": [
-          "workspace.root.resolve",
-          "workspace.selection.resolve",
-          "workspace.report.assemble",
-          "output.emit"
-        ]
-      },
-      "schemas": {
-        "input": [],
-        "output": []
-      },
-      "effect_hints": {
-        "read_only": true,
-        "destructive": false,
-        "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
-      },
-      "projection_hints": {
-        "universal_fields": [
-          "command.name",
-          "command.options",
-          "operation_ref.id",
-          "runtime_binding.primitive_refs",
-          "effect_hints",
-          "conformance_refs"
-        ],
-        "adapter_specific_fields": [
-          {
-            "kind": "process-cli",
-            "fields": [
-              "program",
-              "argument rendering",
-              "help rendering",
-              "exit-code rendering"
-            ]
-          }
-        ]
-      },
-      "generation_boundary": {
-        "contract_owns": [
-          "visible command name",
-          "argument and option shape",
-          "help and usage text source",
-          "operation id",
-          "effect/read/write hints",
-          "conformance refs"
-        ],
-        "generated_adapter_owns": [
-          "parser and usage wiring",
-          "argument normalization into the operation input shape",
-          "dispatch wiring from command id to runtime binding"
-        ],
-        "runtime_owns": [
-          "target root resolution",
-          "module selection",
-          "setup guidance assembly",
-          "output emission"
-        ]
-      },
-      "conformance_refs": [
-        "setup.guidance.process"
-      ]
-    },
-    {
-      "id": "ownership.report.cli",
-      "status": "generated",
-      "command": {
-        "program": "agentic-workspace",
-        "name": "ownership",
-        "command_manifest": "cli_commands.json",
-        "option_group_manifest": "cli_option_groups.json"
-      },
-      "operation_ref": {
-        "id": "ownership.report",
-        "registry": "operation_contracts.json",
-        "path": "operations/ownership.report.json"
-      },
-      "runtime_binding": {
-        "kind": "operation-primitive-sequence",
-        "primitive_refs": [
-          "workspace.root.resolve",
-          "ownership.answer.resolve",
-          "output.emit"
-        ]
-      },
-      "schemas": {
-        "input": [],
-        "output": []
-      },
-      "effect_hints": {
-        "read_only": true,
-        "destructive": false,
-        "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
-      },
-      "projection_hints": {
-        "universal_fields": [
-          "command.name",
-          "command.options",
-          "operation_ref.id",
-          "runtime_binding.primitive_refs",
-          "effect_hints",
-          "conformance_refs"
-        ],
-        "adapter_specific_fields": [
-          {
-            "kind": "process-cli",
-            "fields": [
-              "program",
-              "argument rendering",
-              "help rendering",
-              "exit-code rendering"
-            ]
-          }
-        ]
-      },
-      "generation_boundary": {
-        "contract_owns": [
-          "visible command name",
-          "argument and option shape",
-          "help and usage text source",
-          "operation id",
-          "effect/read/write hints",
-          "conformance refs"
-        ],
-        "generated_adapter_owns": [
-          "parser and usage wiring",
-          "argument normalization into the operation input shape",
-          "dispatch wiring from command id to runtime binding"
-        ],
-        "runtime_owns": [
-          "target root resolution",
-          "ownership ledger loading",
-          "authority answer selection",
-          "output emission"
-        ]
-      },
-      "conformance_refs": [
-        "ownership.report.process"
-      ]
-    },
-    {
-      "id": "config.report.cli",
-      "status": "generated",
-      "command": {
-        "program": "agentic-workspace",
-        "name": "config",
-        "command_manifest": "cli_commands.json",
-        "option_group_manifest": "cli_option_groups.json"
-      },
-      "operation_ref": {
-        "id": "config.report",
-        "registry": "operation_contracts.json",
-        "path": "operations/config.report.json"
-      },
-      "runtime_binding": {
-        "kind": "operation-primitive-sequence",
-        "primitive_refs": [
-          "workspace.root.resolve",
-          "workspace.config.load",
-          "output.fields.select",
-          "workspace.config.emit"
-        ]
-      },
-      "schemas": {
-        "input": [],
-        "output": [
-          "workspace_config.schema.json"
-        ]
-      },
-      "effect_hints": {
-        "read_only": true,
-        "destructive": false,
-        "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
-      },
-      "projection_hints": {
-        "universal_fields": [
-          "command.name",
-          "command.options",
-          "operation_ref.id",
-          "runtime_binding.primitive_refs",
-          "schemas.output",
-          "effect_hints",
-          "conformance_refs"
-        ],
-        "adapter_specific_fields": [
-          {
-            "kind": "process-cli",
-            "fields": [
-              "program",
-              "argument rendering",
-              "help rendering",
-              "exit-code rendering"
-            ]
-          }
-        ]
-      },
-      "generation_boundary": {
-        "contract_owns": [
-          "visible command name",
-          "argument and option shape",
-          "help and usage text source",
-          "operation id",
-          "effect/read/write hints",
-          "schema refs",
-          "conformance refs"
-        ],
-        "generated_adapter_owns": [
-          "parser and usage wiring",
-          "argument normalization into the operation input shape",
-          "dispatch wiring from command id to runtime binding"
-        ],
-        "runtime_owns": [
-          "target root resolution",
-          "config loading",
-          "payload assembly",
-          "output emission mechanics"
-        ]
-      },
-      "conformance_refs": [
-        "config.report.process"
-      ]
-    },
-    {
-      "id": "system-intent.sync.cli",
-      "status": "generated",
-      "command": {
-        "program": "agentic-workspace",
-        "name": "system-intent",
-        "command_manifest": "cli_commands.json",
-        "option_group_manifest": "cli_option_groups.json"
-      },
-      "operation_ref": {
-        "id": "system-intent.sync",
-        "registry": "operation_contracts.json",
-        "path": "operations/system-intent.sync.json"
-      },
-      "runtime_binding": {
-        "kind": "operation-primitive-sequence",
-        "primitive_refs": [
-          "workspace.root.resolve",
-          "system_intent.config.resolve",
-          "system_intent.source_metadata.refresh",
-          "system_intent.mirror.read_or_create",
-          "system_intent.result.emit"
-        ]
-      },
-      "schemas": {
-        "input": [],
-        "output": []
-      },
-      "effect_hints": {
-        "read_only": false,
-        "destructive": false,
-        "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
-      },
-      "projection_hints": {
-        "universal_fields": [
-          "command.name",
-          "command.options",
-          "operation_ref.id",
-          "runtime_binding.primitive_refs",
-          "effect_hints",
-          "conformance_refs"
-        ],
-        "adapter_specific_fields": [
-          {
-            "kind": "process-cli",
-            "fields": [
-              "program",
-              "argument rendering",
-              "help rendering",
-              "exit-code rendering"
-            ]
-          }
-        ]
-      },
-      "generation_boundary": {
-        "contract_owns": [
-          "visible command name",
-          "argument and option shape",
-          "help and usage text source",
-          "operation id",
-          "effect/read/write hints",
-          "conformance refs"
-        ],
-        "generated_adapter_owns": [
-          "parser and usage wiring",
-          "argument normalization into the operation input shape",
-          "dispatch wiring from command id to runtime binding"
-        ],
-        "runtime_owns": [
-          "target root resolution",
-          "system-intent source metadata refresh",
-          "compiled intent mirror loading",
-          "output emission"
-        ]
-      },
-      "conformance_refs": [
-        "system-intent.sync.process"
-      ]
-    },
-    {
       "id": "delegation-outcome.append.cli",
       "status": "generated",
       "command": {
@@ -1188,24 +372,25 @@
       ]
     },
     {
-      "id": "skills.report.cli",
+      "id": "doctor.report.cli",
       "status": "generated",
       "command": {
         "program": "agentic-workspace",
-        "name": "skills",
+        "name": "doctor",
         "command_manifest": "cli_commands.json",
         "option_group_manifest": "cli_option_groups.json"
       },
       "operation_ref": {
-        "id": "skills.report",
+        "id": "doctor.report",
         "registry": "operation_contracts.json",
-        "path": "operations/skills.report.json"
+        "path": "operations/doctor.report.json"
       },
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
           "workspace.root.resolve",
-          "skills.registry.inspect",
+          "workspace.selection.resolve",
+          "workspace.report.assemble",
           "output.fields.select",
           "output.emit"
         ]
@@ -1258,179 +443,14 @@
         ],
         "runtime_owns": [
           "target root resolution",
-          "skill registry discovery",
-          "task recommendation scoring",
-          "field selection",
-          "output emission"
-        ]
-      },
-      "conformance_refs": [
-        "skills.report.process"
-      ]
-    },
-    {
-      "id": "report.combined.cli",
-      "status": "generated",
-      "command": {
-        "program": "agentic-workspace",
-        "name": "report",
-        "command_manifest": "cli_commands.json",
-        "option_group_manifest": "cli_option_groups.json"
-      },
-      "operation_ref": {
-        "id": "report.combined",
-        "registry": "operation_contracts.json",
-        "path": "operations/report.combined.json"
-      },
-      "runtime_binding": {
-        "kind": "operation-primitive-sequence",
-        "primitive_refs": [
-          "workspace.root.resolve",
-          "workspace.config.load",
-          "workspace.selection.resolve",
-          "workspace.report.assemble",
-          "workspace.report.select",
-          "output.emit"
-        ]
-      },
-      "schemas": {
-        "input": [],
-        "output": []
-      },
-      "effect_hints": {
-        "read_only": true,
-        "destructive": false,
-        "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
-      },
-      "projection_hints": {
-        "universal_fields": [
-          "command.name",
-          "command.options",
-          "operation_ref.id",
-          "runtime_binding.primitive_refs",
-          "effect_hints",
-          "conformance_refs"
-        ],
-        "adapter_specific_fields": [
-          {
-            "kind": "process-cli",
-            "fields": [
-              "program",
-              "argument rendering",
-              "help rendering",
-              "exit-code rendering"
-            ]
-          }
-        ]
-      },
-      "generation_boundary": {
-        "contract_owns": [
-          "visible command name",
-          "argument and option shape",
-          "help and usage text source",
-          "operation id",
-          "effect/read/write hints",
-          "conformance refs"
-        ],
-        "generated_adapter_owns": [
-          "parser and usage wiring",
-          "argument normalization into the operation input shape",
-          "dispatch wiring from command id to runtime binding"
-        ],
-        "runtime_owns": [
-          "target root resolution",
-          "config loading",
           "module selection",
-          "combined report assembly",
-          "profile or section selection",
+          "doctor report assembly",
+          "repair guidance assembly",
           "output emission"
         ]
       },
       "conformance_refs": [
-        "report.combined.process"
-      ]
-    },
-    {
-      "id": "reconcile.report.cli",
-      "status": "generated",
-      "command": {
-        "program": "agentic-workspace",
-        "name": "reconcile",
-        "command_manifest": "cli_commands.json",
-        "option_group_manifest": "cli_option_groups.json"
-      },
-      "operation_ref": {
-        "id": "reconcile.report",
-        "registry": "operation_contracts.json",
-        "path": "operations/reconcile.report.json"
-      },
-      "runtime_binding": {
-        "kind": "operation-primitive-sequence",
-        "primitive_refs": [
-          "workspace.root.resolve",
-          "planning.reconcile.load",
-          "planning.reconcile.load",
-          "output.emit"
-        ]
-      },
-      "schemas": {
-        "input": [],
-        "output": []
-      },
-      "effect_hints": {
-        "read_only": false,
-        "destructive": false,
-        "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
-      },
-      "projection_hints": {
-        "universal_fields": [
-          "command.name",
-          "command.options",
-          "operation_ref.id",
-          "runtime_binding.primitive_refs",
-          "effect_hints",
-          "conformance_refs"
-        ],
-        "adapter_specific_fields": [
-          {
-            "kind": "process-cli",
-            "fields": [
-              "program",
-              "argument rendering",
-              "help rendering",
-              "exit-code rendering"
-            ]
-          }
-        ]
-      },
-      "generation_boundary": {
-        "contract_owns": [
-          "visible command name",
-          "argument and option shape",
-          "help and usage text source",
-          "operation id",
-          "effect/read/write hints",
-          "conformance refs"
-        ],
-        "generated_adapter_owns": [
-          "parser and usage wiring",
-          "argument normalization into the operation input shape",
-          "dispatch wiring from command id to runtime binding"
-        ],
-        "runtime_owns": [
-          "target root resolution",
-          "external intent cache refresh when available",
-          "planning reconciliation loading",
-          "safe-prune state mutation",
-          "output emission"
-        ]
-      },
-      "conformance_refs": [
-        "reconcile.report.process"
+        "doctor.report.process"
       ]
     },
     {
@@ -1518,28 +538,26 @@
       ]
     },
     {
-      "id": "preflight.report.cli",
+      "id": "implement.context.cli",
       "status": "generated",
       "command": {
         "program": "agentic-workspace",
-        "name": "preflight",
+        "name": "implement",
         "command_manifest": "cli_commands.json",
         "option_group_manifest": "cli_option_groups.json"
       },
       "operation_ref": {
-        "id": "preflight.report",
+        "id": "implement.context",
         "registry": "operation_contracts.json",
-        "path": "operations/preflight.report.json"
+        "path": "operations/implement.context.json"
       },
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
           "workspace.root.resolve",
-          "workspace.defaults.load",
-          "workspace.config.load",
-          "planning.summary.load",
-          "preflight.token.create",
-          "preflight.context.assemble",
+          "implementer.context.assemble",
+          "output.profile.select",
+          "output.fields.select",
           "output.emit"
         ]
       },
@@ -1550,7 +568,7 @@
       "effect_hints": {
         "read_only": true,
         "destructive": false,
-        "idempotent": false,
+        "idempotent": true,
         "writes_repo_state": false,
         "requires_preflight_gate": false
       },
@@ -1591,97 +609,14 @@
         ],
         "runtime_owns": [
           "target root resolution",
-          "preflight token creation",
-          "takeover context assembly",
+          "implementer context assembly",
+          "changed-path proof selection",
+          "field selection",
           "output emission"
         ]
       },
       "conformance_refs": [
-        "preflight.report.process"
-      ]
-    },
-    {
-      "id": "install.lifecycle.cli",
-      "status": "generated",
-      "command": {
-        "program": "agentic-workspace",
-        "name": "install",
-        "command_manifest": "cli_commands.json",
-        "option_group_manifest": "cli_option_groups.json"
-      },
-      "operation_ref": {
-        "id": "install.lifecycle",
-        "registry": "operation_contracts.json",
-        "path": "operations/install.lifecycle.json"
-      },
-      "runtime_binding": {
-        "kind": "operation-primitive-sequence",
-        "primitive_refs": [
-          "workspace.root.resolve",
-          "workspace.config.load",
-          "workspace.selection.resolve",
-          "workspace.lifecycle.plan",
-          "workspace.lifecycle.apply",
-          "output.emit"
-        ]
-      },
-      "schemas": {
-        "input": [],
-        "output": []
-      },
-      "effect_hints": {
-        "read_only": false,
-        "destructive": false,
-        "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
-      },
-      "projection_hints": {
-        "universal_fields": [
-          "command.name",
-          "command.options",
-          "operation_ref.id",
-          "runtime_binding.primitive_refs",
-          "schemas.output",
-          "effect_hints",
-          "conformance_refs"
-        ],
-        "adapter_specific_fields": [
-          {
-            "kind": "process-cli",
-            "fields": [
-              "program",
-              "argument rendering",
-              "help rendering",
-              "exit-code rendering"
-            ]
-          }
-        ]
-      },
-      "generation_boundary": {
-        "contract_owns": [
-          "visible command name",
-          "argument and option shape",
-          "help and usage text source",
-          "operation id",
-          "effect/read/write hints",
-          "schema refs",
-          "conformance refs"
-        ],
-        "generated_adapter_owns": [
-          "parser and usage wiring",
-          "argument normalization into the operation input shape",
-          "dispatch wiring from command id to runtime binding"
-        ],
-        "runtime_owns": [
-          "lifecycle primitive implementation",
-          "live workspace inspection",
-          "mutation policy",
-          "output emission mechanics"
-        ]
-      },
-      "conformance_refs": [
-        "install.lifecycle.dry-run.process"
+        "implement.context.process"
       ]
     },
     {
@@ -1769,266 +704,18 @@
       ]
     },
     {
-      "id": "prompt.lifecycle.cli",
+      "id": "install.lifecycle.cli",
       "status": "generated",
       "command": {
         "program": "agentic-workspace",
-        "name": "prompt",
-        "command_manifest": "cli_commands.json",
-        "option_group_manifest": "cli_option_groups.json",
-        "subcommands": [
-          "init",
-          "upgrade",
-          "uninstall"
-        ]
-      },
-      "operation_ref": {
-        "id": "prompt.init",
-        "registry": "operation_contracts.json",
-        "path": "operations/prompt.init.json"
-      },
-      "runtime_binding": {
-        "kind": "operation-primitive-sequence",
-        "primitive_refs": [
-          "workspace.selection.resolve",
-          "prompt.render",
-          "output.emit"
-        ]
-      },
-      "schemas": {
-        "input": [],
-        "output": []
-      },
-      "effect_hints": {
-        "read_only": true,
-        "destructive": false,
-        "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
-      },
-      "projection_hints": {
-        "universal_fields": [
-          "command.name",
-          "command.options",
-          "command.subcommands",
-          "operation_ref.id",
-          "runtime_binding.primitive_refs",
-          "effect_hints",
-          "conformance_refs"
-        ],
-        "adapter_specific_fields": [
-          {
-            "kind": "process-cli",
-            "fields": [
-              "program",
-              "argument rendering",
-              "help rendering",
-              "exit-code rendering"
-            ]
-          }
-        ]
-      },
-      "generation_boundary": {
-        "contract_owns": [
-          "visible command name",
-          "argument and option shape",
-          "help and usage text source",
-          "operation id",
-          "effect/read/write hints",
-          "conformance refs"
-        ],
-        "generated_adapter_owns": [
-          "parser and usage wiring",
-          "argument normalization into the operation input shape",
-          "dispatch wiring from command id to runtime binding"
-        ],
-        "runtime_owns": [
-          "module selection",
-          "lifecycle handoff prompt rendering",
-          "output emission"
-        ]
-      },
-      "conformance_refs": [
-        "prompt.init.process",
-        "prompt.upgrade.process",
-        "prompt.uninstall.process"
-      ]
-    },
-    {
-      "id": "status.report.cli",
-      "status": "generated",
-      "command": {
-        "program": "agentic-workspace",
-        "name": "status",
+        "name": "install",
         "command_manifest": "cli_commands.json",
         "option_group_manifest": "cli_option_groups.json"
       },
       "operation_ref": {
-        "id": "status.report",
+        "id": "install.lifecycle",
         "registry": "operation_contracts.json",
-        "path": "operations/status.report.json"
-      },
-      "runtime_binding": {
-        "kind": "operation-primitive-sequence",
-        "primitive_refs": [
-          "workspace.root.resolve",
-          "workspace.selection.resolve",
-          "workspace.report.assemble",
-          "output.emit"
-        ]
-      },
-      "schemas": {
-        "input": [],
-        "output": []
-      },
-      "effect_hints": {
-        "read_only": true,
-        "destructive": false,
-        "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
-      },
-      "projection_hints": {
-        "universal_fields": [
-          "command.name",
-          "command.options",
-          "operation_ref.id",
-          "runtime_binding.primitive_refs",
-          "effect_hints",
-          "conformance_refs"
-        ],
-        "adapter_specific_fields": [
-          {
-            "kind": "process-cli",
-            "fields": [
-              "program",
-              "argument rendering",
-              "help rendering",
-              "exit-code rendering"
-            ]
-          }
-        ]
-      },
-      "generation_boundary": {
-        "contract_owns": [
-          "visible command name",
-          "argument and option shape",
-          "help and usage text source",
-          "operation id",
-          "effect/read/write hints",
-          "conformance refs"
-        ],
-        "generated_adapter_owns": [
-          "parser and usage wiring",
-          "argument normalization into the operation input shape",
-          "dispatch wiring from command id to runtime binding"
-        ],
-        "runtime_owns": [
-          "target root resolution",
-          "module selection",
-          "status report assembly",
-          "output emission"
-        ]
-      },
-      "conformance_refs": [
-        "status.report.process"
-      ]
-    },
-    {
-      "id": "doctor.report.cli",
-      "status": "generated",
-      "command": {
-        "program": "agentic-workspace",
-        "name": "doctor",
-        "command_manifest": "cli_commands.json",
-        "option_group_manifest": "cli_option_groups.json"
-      },
-      "operation_ref": {
-        "id": "doctor.report",
-        "registry": "operation_contracts.json",
-        "path": "operations/doctor.report.json"
-      },
-      "runtime_binding": {
-        "kind": "operation-primitive-sequence",
-        "primitive_refs": [
-          "workspace.root.resolve",
-          "workspace.selection.resolve",
-          "workspace.report.assemble",
-          "output.fields.select",
-          "output.emit"
-        ]
-      },
-      "schemas": {
-        "input": [],
-        "output": []
-      },
-      "effect_hints": {
-        "read_only": true,
-        "destructive": false,
-        "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
-      },
-      "projection_hints": {
-        "universal_fields": [
-          "command.name",
-          "command.options",
-          "operation_ref.id",
-          "runtime_binding.primitive_refs",
-          "effect_hints",
-          "conformance_refs"
-        ],
-        "adapter_specific_fields": [
-          {
-            "kind": "process-cli",
-            "fields": [
-              "program",
-              "argument rendering",
-              "help rendering",
-              "exit-code rendering"
-            ]
-          }
-        ]
-      },
-      "generation_boundary": {
-        "contract_owns": [
-          "visible command name",
-          "argument and option shape",
-          "help and usage text source",
-          "operation id",
-          "effect/read/write hints",
-          "conformance refs"
-        ],
-        "generated_adapter_owns": [
-          "parser and usage wiring",
-          "argument normalization into the operation input shape",
-          "dispatch wiring from command id to runtime binding"
-        ],
-        "runtime_owns": [
-          "target root resolution",
-          "module selection",
-          "doctor report assembly",
-          "repair guidance assembly",
-          "output emission"
-        ]
-      },
-      "conformance_refs": [
-        "doctor.report.process"
-      ]
-    },
-    {
-      "id": "upgrade.lifecycle.cli",
-      "status": "generated",
-      "command": {
-        "program": "agentic-workspace",
-        "name": "upgrade",
-        "command_manifest": "cli_commands.json",
-        "option_group_manifest": "cli_option_groups.json"
-      },
-      "operation_ref": {
-        "id": "upgrade.lifecycle",
-        "registry": "operation_contracts.json",
-        "path": "operations/upgrade.lifecycle.json"
+        "path": "operations/install.lifecycle.json"
       },
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
@@ -2050,7 +737,7 @@
         "destructive": false,
         "idempotent": true,
         "writes_repo_state": true,
-        "requires_preflight_gate": true
+        "requires_preflight_gate": false
       },
       "projection_hints": {
         "universal_fields": [
@@ -2097,93 +784,7 @@
         ]
       },
       "conformance_refs": [
-        "upgrade.lifecycle.dry-run.process",
-        "upgrade.lifecycle.strict-preflight-refusal.process"
-      ]
-    },
-    {
-      "id": "uninstall.lifecycle.cli",
-      "status": "generated",
-      "command": {
-        "program": "agentic-workspace",
-        "name": "uninstall",
-        "command_manifest": "cli_commands.json",
-        "option_group_manifest": "cli_option_groups.json"
-      },
-      "operation_ref": {
-        "id": "uninstall.lifecycle",
-        "registry": "operation_contracts.json",
-        "path": "operations/uninstall.lifecycle.json"
-      },
-      "runtime_binding": {
-        "kind": "operation-primitive-sequence",
-        "primitive_refs": [
-          "workspace.root.resolve",
-          "workspace.config.load",
-          "workspace.selection.resolve",
-          "workspace.lifecycle.plan",
-          "workspace.lifecycle.apply",
-          "output.emit"
-        ]
-      },
-      "schemas": {
-        "input": [],
-        "output": []
-      },
-      "effect_hints": {
-        "read_only": false,
-        "destructive": true,
-        "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": true
-      },
-      "projection_hints": {
-        "universal_fields": [
-          "command.name",
-          "command.options",
-          "operation_ref.id",
-          "runtime_binding.primitive_refs",
-          "schemas.output",
-          "effect_hints",
-          "conformance_refs"
-        ],
-        "adapter_specific_fields": [
-          {
-            "kind": "process-cli",
-            "fields": [
-              "program",
-              "argument rendering",
-              "help rendering",
-              "exit-code rendering"
-            ]
-          }
-        ]
-      },
-      "generation_boundary": {
-        "contract_owns": [
-          "visible command name",
-          "argument and option shape",
-          "help and usage text source",
-          "operation id",
-          "effect/read/write hints",
-          "schema refs",
-          "conformance refs"
-        ],
-        "generated_adapter_owns": [
-          "parser and usage wiring",
-          "argument normalization into the operation input shape",
-          "dispatch wiring from command id to runtime binding"
-        ],
-        "runtime_owns": [
-          "lifecycle primitive implementation",
-          "live workspace inspection",
-          "mutation policy",
-          "output emission mechanics"
-        ]
-      },
-      "conformance_refs": [
-        "uninstall.lifecycle.destructive-refusal.process",
-        "uninstall.lifecycle.strict-preflight-refusal.process"
+        "install.lifecycle.dry-run.process"
       ]
     },
     {
@@ -2203,6 +804,9 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
+          "path.target_root.resolve",
+          "toml.table.counts",
+          "payload.assemble",
           "memory.bootstrap.doctor.load",
           "output.emit"
         ]
@@ -2258,6 +862,918 @@
       },
       "conformance_refs": [
         "memory.doctor.process"
+      ]
+    },
+    {
+      "id": "memory.install.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-memory",
+        "name": "install",
+        "command_manifest": "package:memory:cli",
+        "option_group_manifest": "package:memory:cli"
+      },
+      "operation_ref": {
+        "id": "memory.install.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/memory.install.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "python.function.call",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "memory lifecycle policy",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "memory.install.lifecycle.dry-run.process"
+      ]
+    },
+    {
+      "id": "memory.init.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-memory",
+        "name": "init",
+        "command_manifest": "package:memory:cli",
+        "option_group_manifest": "package:memory:cli"
+      },
+      "operation_ref": {
+        "id": "memory.init.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/memory.init.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "python.function.call",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "memory lifecycle policy",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "memory.init.lifecycle.dry-run.process"
+      ]
+    },
+    {
+      "id": "memory.adopt.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-memory",
+        "name": "adopt",
+        "command_manifest": "package:memory:cli",
+        "option_group_manifest": "package:memory:cli"
+      },
+      "operation_ref": {
+        "id": "memory.adopt.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/memory.adopt.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "python.function.call",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "memory lifecycle policy",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "memory.adopt.lifecycle.dry-run.process"
+      ]
+    },
+    {
+      "id": "memory.upgrade.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-memory",
+        "name": "upgrade",
+        "command_manifest": "package:memory:cli",
+        "option_group_manifest": "package:memory:cli"
+      },
+      "operation_ref": {
+        "id": "memory.upgrade.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/memory.upgrade.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "python.function.call",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "memory lifecycle policy",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "memory.upgrade.lifecycle.dry-run.process"
+      ]
+    },
+    {
+      "id": "memory.migrate-layout.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-memory",
+        "name": "migrate-layout",
+        "command_manifest": "package:memory:cli",
+        "option_group_manifest": "package:memory:cli"
+      },
+      "operation_ref": {
+        "id": "memory.migrate-layout.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/memory.migrate-layout.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "python.function.call",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "memory lifecycle policy",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "memory.migrate-layout.lifecycle.dry-run.process"
+      ]
+    },
+    {
+      "id": "memory.uninstall.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-memory",
+        "name": "uninstall",
+        "command_manifest": "package:memory:cli",
+        "option_group_manifest": "package:memory:cli"
+      },
+      "operation_ref": {
+        "id": "memory.uninstall.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/memory.uninstall.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "python.function.call",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": true,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "memory lifecycle policy",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "memory.uninstall.lifecycle.dry-run.process"
+      ]
+    },
+    {
+      "id": "memory.bootstrap-cleanup.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-memory",
+        "name": "bootstrap-cleanup",
+        "command_manifest": "package:memory:cli",
+        "option_group_manifest": "package:memory:cli"
+      },
+      "operation_ref": {
+        "id": "memory.bootstrap-cleanup.apply",
+        "registry": "operation_contracts.json",
+        "path": "operations/memory.bootstrap-cleanup.apply.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "python.function.call",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "memory bootstrap cleanup safety policy",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "memory.bootstrap-cleanup.process"
+      ]
+    },
+    {
+      "id": "memory.capture-note.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-memory",
+        "name": "capture-note",
+        "command_manifest": "package:memory:cli",
+        "option_group_manifest": "package:memory:cli"
+      },
+      "operation_ref": {
+        "id": "memory.capture-note.report",
+        "registry": "operation_contracts.json",
+        "path": "operations/memory.capture-note.report.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "python.function.call",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "memory capture recommendation policy",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "memory.capture-note.process"
+      ]
+    },
+    {
+      "id": "memory.create-note.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-memory",
+        "name": "create-note",
+        "command_manifest": "package:memory:cli",
+        "option_group_manifest": "package:memory:cli"
+      },
+      "operation_ref": {
+        "id": "memory.create-note.apply",
+        "registry": "operation_contracts.json",
+        "path": "operations/memory.create-note.apply.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "python.function.call",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "memory note creation policy",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "memory.create-note.dry-run.process"
+      ]
+    },
+    {
+      "id": "memory.current.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-memory",
+        "name": "current",
+        "command_manifest": "package:memory:cli",
+        "option_group_manifest": "package:memory:cli"
+      },
+      "operation_ref": {
+        "id": "memory.current.report",
+        "registry": "operation_contracts.json",
+        "path": "operations/memory.current.report.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.current.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "command.subcommands",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "nested argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "nested subcommand shape",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "legacy current-memory inspection policy",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "memory.current-show.process",
+        "memory.current-check.process"
+      ]
+    },
+    {
+      "id": "memory.prompt.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-memory",
+        "name": "prompt",
+        "command_manifest": "package:memory:cli",
+        "option_group_manifest": "package:memory:cli"
+      },
+      "operation_ref": {
+        "id": "memory.prompt.render",
+        "registry": "operation_contracts.json",
+        "path": "operations/memory.prompt.render.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.prompt.render",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "command.subcommands",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "nested argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "nested subcommand shape",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "memory prompt wording",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "memory.prompt.process"
+      ]
+    },
+    {
+      "id": "memory.front-door.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-workspace",
+        "name": "memory",
+        "command_manifest": "cli_commands.json",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "memory.front-door",
+        "registry": "operation_contracts.json",
+        "path": "operations/memory.front-door.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "memory.front_door.dispatch",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "command.subcommands",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "schemas.output",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "nested argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "nested subcommand shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "schema refs",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "primitive implementation",
+          "module runtime policy",
+          "payload assembly",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "memory.front-door.process"
       ]
     },
     {
@@ -2429,7 +1945,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "memory.promotion_report.load",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -2503,6 +2019,9 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
+          "path.target_root.resolve",
+          "toml.table.counts",
+          "payload.assemble",
           "memory.report.load",
           "output.emit"
         ]
@@ -2577,6 +2096,10 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
+          "path.target_root.resolve",
+          "filesystem.exists",
+          "filesystem.glob",
+          "payload.assemble",
           "memory.route_report.load",
           "output.emit"
         ]
@@ -2635,6 +2158,372 @@
       ]
     },
     {
+      "id": "memory.route.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-memory",
+        "name": "route",
+        "command_manifest": "package:memory:cli",
+        "option_group_manifest": "package:memory:cli"
+      },
+      "operation_ref": {
+        "id": "memory.route.report",
+        "registry": "operation_contracts.json",
+        "path": "operations/memory.route.report.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "python.function.call",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "live memory route selection",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "memory.route.process"
+      ]
+    },
+    {
+      "id": "memory.route-review.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-memory",
+        "name": "route-review",
+        "command_manifest": "package:memory:cli",
+        "option_group_manifest": "package:memory:cli"
+      },
+      "operation_ref": {
+        "id": "memory.route-review.report",
+        "registry": "operation_contracts.json",
+        "path": "operations/memory.route-review.report.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "python.function.call",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "memory route-review policy",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "memory.route-review.process"
+      ]
+    },
+    {
+      "id": "memory.search.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-memory",
+        "name": "search",
+        "command_manifest": "package:memory:cli",
+        "option_group_manifest": "package:memory:cli"
+      },
+      "operation_ref": {
+        "id": "memory.search.report",
+        "registry": "operation_contracts.json",
+        "path": "operations/memory.search.report.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "python.function.call",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "memory search policy",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "memory.search.process"
+      ]
+    },
+    {
+      "id": "memory.verify-payload.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-memory",
+        "name": "verify-payload",
+        "command_manifest": "package:memory:cli",
+        "option_group_manifest": "package:memory:cli"
+      },
+      "operation_ref": {
+        "id": "memory.verify-payload.report",
+        "registry": "operation_contracts.json",
+        "path": "operations/memory.verify-payload.report.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "path.target_root.resolve",
+          "payload.verify",
+          "python.function.call",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "text-output package runtime fallback",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "memory.verify-payload.process"
+      ]
+    },
+    {
+      "id": "memory.sync-memory.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-memory",
+        "name": "sync-memory",
+        "command_manifest": "package:memory:cli",
+        "option_group_manifest": "package:memory:cli"
+      },
+      "operation_ref": {
+        "id": "memory.sync-memory.report",
+        "registry": "operation_contracts.json",
+        "path": "operations/memory.sync-memory.report.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "python.function.call",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local primitive implementation",
+          "memory sync suggestion policy",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "memory.sync-memory.process"
+      ]
+    },
+    {
       "id": "memory.status.cli",
       "status": "generated",
       "command": {
@@ -2651,6 +2540,9 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
+          "path.target_root.resolve",
+          "toml.table.counts",
+          "payload.assemble",
           "memory.bootstrap.status.load",
           "output.emit"
         ]
@@ -2709,6 +2601,543 @@
       ]
     },
     {
+      "id": "modules.report.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-workspace",
+        "name": "modules",
+        "command_manifest": "cli_commands.json",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "modules.report",
+        "registry": "operation_contracts.json",
+        "path": "operations/modules.report.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "workspace.modules.inspect",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "target root resolution",
+          "module descriptor inspection",
+          "installed-signal detection",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "modules.report.process"
+      ]
+    },
+    {
+      "id": "ownership.report.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-workspace",
+        "name": "ownership",
+        "command_manifest": "cli_commands.json",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "ownership.report",
+        "registry": "operation_contracts.json",
+        "path": "operations/ownership.report.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "ownership.answer.resolve",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "target root resolution",
+          "ownership ledger loading",
+          "authority answer selection",
+          "output emission"
+        ]
+      },
+      "conformance_refs": [
+        "ownership.report.process"
+      ]
+    },
+    {
+      "id": "planning.adopt.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-planning",
+        "name": "adopt",
+        "command_manifest": "package:planning:cli",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "planning.adopt.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.adopt.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "python.function.call",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "planning lifecycle policy",
+          "managed planning payload mutation",
+          "module result assembly"
+        ]
+      },
+      "conformance_refs": [
+        "planning.adopt.lifecycle.dry-run.process"
+      ]
+    },
+    {
+      "id": "planning.archive-plan.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-planning",
+        "name": "archive-plan",
+        "command_manifest": "package:planning:cli",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "planning.archive-plan.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.archive-plan.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.archive-plan.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "command.arguments",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "planning state mutation policy",
+          "planning provenance updates",
+          "module result assembly"
+        ]
+      },
+      "conformance_refs": [
+        "planning.archive-plan.lifecycle.dry-run.process"
+      ]
+    },
+    {
+      "id": "planning.close-item.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-planning",
+        "name": "close-item",
+        "command_manifest": "package:planning:cli",
+        "option_group_manifest": "package:planning:cli"
+      },
+      "operation_ref": {
+        "id": "planning.close-item.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.close-item.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "python.function.call",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local lifecycle primitive implementation",
+          "module result assembly",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "planning.close-item.process"
+      ]
+    },
+    {
+      "id": "planning.create-review.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-planning",
+        "name": "create-review",
+        "command_manifest": "package:planning:cli",
+        "option_group_manifest": "package:planning:cli"
+      },
+      "operation_ref": {
+        "id": "planning.create-review.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.create-review.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "python.function.call",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local lifecycle primitive implementation",
+          "module result assembly",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "planning.create-review.process"
+      ]
+    },
+    {
+      "id": "planning.delegation-decision.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-planning",
+        "name": "delegation-decision",
+        "command_manifest": "package:planning:cli",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "planning.delegation-decision.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.delegation-decision.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.delegation-decision.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "command.arguments",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "planning state mutation policy",
+          "planning provenance updates",
+          "module result assembly"
+        ]
+      },
+      "conformance_refs": [
+        "planning.delegation-decision.lifecycle.dry-run.process"
+      ]
+    },
+    {
       "id": "planning.doctor.cli",
       "status": "generated",
       "command": {
@@ -2725,7 +3154,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "planning.bootstrap.doctor.load",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -2780,6 +3209,628 @@
       },
       "conformance_refs": [
         "planning.doctor.process"
+      ]
+    },
+    {
+      "id": "planning.front-door.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-workspace",
+        "name": "planning",
+        "command_manifest": "cli_commands.json",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "planning.front-door",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.front-door.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.front_door.dispatch",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "command.subcommands",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "schemas.output",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "nested argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "nested subcommand shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "schema refs",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "primitive implementation",
+          "module runtime policy",
+          "payload assembly",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "planning.front-door.process"
+      ]
+    },
+    {
+      "id": "planning.handoff.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-planning",
+        "name": "handoff",
+        "command_manifest": "package:planning:cli",
+        "option_group_manifest": "package:planning:cli"
+      },
+      "operation_ref": {
+        "id": "planning.handoff.report",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.handoff.report.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "python.function.call",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local handoff payload assembly",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "planning.handoff.process"
+      ]
+    },
+    {
+      "id": "planning.init.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-planning",
+        "name": "init",
+        "command_manifest": "package:planning:cli",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "planning.init.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.init.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "python.function.call",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "planning lifecycle policy",
+          "managed planning payload mutation",
+          "module result assembly"
+        ]
+      },
+      "conformance_refs": [
+        "planning.init.lifecycle.dry-run.process"
+      ]
+    },
+    {
+      "id": "planning.install.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-planning",
+        "name": "install",
+        "command_manifest": "package:planning:cli",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "planning.install.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.install.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "python.function.call",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "planning lifecycle policy",
+          "managed planning payload mutation",
+          "module result assembly"
+        ]
+      },
+      "conformance_refs": [
+        "planning.install.lifecycle.dry-run.process"
+      ]
+    },
+    {
+      "id": "planning.list-files.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-planning",
+        "name": "list-files",
+        "command_manifest": "package:planning:cli",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "planning.list-files.report",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.list-files.report.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "filesystem.glob",
+          "filesystem.glob",
+          "payload.assemble",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "command.arguments",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "planning payload inventory",
+          "module result assembly"
+        ]
+      },
+      "conformance_refs": [
+        "planning.list-files.process"
+      ]
+    },
+    {
+      "id": "planning.new-plan.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-planning",
+        "name": "new-plan",
+        "command_manifest": "package:planning:cli",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "planning.new-plan.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.new-plan.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.new-plan.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "command.arguments",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "planning state mutation policy",
+          "planning provenance updates",
+          "module result assembly"
+        ]
+      },
+      "conformance_refs": [
+        "planning.new-plan.lifecycle.dry-run.process"
+      ]
+    },
+    {
+      "id": "planning.promote-to-plan.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-planning",
+        "name": "promote-to-plan",
+        "command_manifest": "package:planning:cli",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "planning.promote-to-plan.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.promote-to-plan.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.promote-to-plan.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "command.arguments",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "planning state mutation policy",
+          "planning provenance updates",
+          "module result assembly"
+        ]
+      },
+      "conformance_refs": [
+        "planning.promote-to-plan.lifecycle.dry-run.process"
+      ]
+    },
+    {
+      "id": "planning.prompt.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-planning",
+        "name": "prompt",
+        "command_manifest": "package:planning:cli",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "planning.prompt.render",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.prompt.render.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.prompt.render",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "command.arguments",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "planning upgrade-source guidance",
+          "prompt text compatibility formatting"
+        ]
+      },
+      "conformance_refs": [
+        "planning.prompt.process"
       ]
     },
     {
@@ -2855,6 +3906,84 @@
       },
       "conformance_refs": [
         "planning.reconcile.process"
+      ]
+    },
+    {
+      "id": "planning.record-recovery.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-planning",
+        "name": "record-recovery",
+        "command_manifest": "package:planning:cli",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "planning.record-recovery.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.record-recovery.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.record-recovery.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "command.arguments",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "planning state mutation policy",
+          "planning provenance updates",
+          "module result assembly"
+        ]
+      },
+      "conformance_refs": [
+        "planning.record-recovery.lifecycle.dry-run.process"
       ]
     },
     {
@@ -2948,7 +4077,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "planning.bootstrap.status.load",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -3077,6 +4206,1305 @@
       },
       "conformance_refs": [
         "planning.summary.process"
+      ]
+    },
+    {
+      "id": "planning.uninstall.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-planning",
+        "name": "uninstall",
+        "command_manifest": "package:planning:cli",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "planning.uninstall.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.uninstall.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "python.function.call",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": true,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "planning lifecycle policy",
+          "managed planning payload mutation",
+          "module result assembly"
+        ]
+      },
+      "conformance_refs": [
+        "planning.uninstall.lifecycle.dry-run.process"
+      ]
+    },
+    {
+      "id": "planning.upgrade.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-planning",
+        "name": "upgrade",
+        "command_manifest": "package:planning:cli",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "planning.upgrade.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.upgrade.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "python.function.call",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "planning lifecycle policy",
+          "managed planning payload mutation",
+          "module result assembly"
+        ]
+      },
+      "conformance_refs": [
+        "planning.upgrade.lifecycle.dry-run.process"
+      ]
+    },
+    {
+      "id": "planning.verify-payload.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-planning",
+        "name": "verify-payload",
+        "command_manifest": "package:planning:cli",
+        "option_group_manifest": "package:planning:cli"
+      },
+      "operation_ref": {
+        "id": "planning.verify-payload.report",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.verify-payload.report.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "python.function.call",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.program",
+          "command.name",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local payload verification",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "planning.verify-payload.process"
+      ]
+    },
+    {
+      "id": "preflight.report.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-workspace",
+        "name": "preflight",
+        "command_manifest": "cli_commands.json",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "preflight.report",
+        "registry": "operation_contracts.json",
+        "path": "operations/preflight.report.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "workspace.defaults.load",
+          "workspace.config.load",
+          "planning.summary.load",
+          "preflight.token.create",
+          "preflight.context.assemble",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "target root resolution",
+          "preflight token creation",
+          "takeover context assembly",
+          "output emission"
+        ]
+      },
+      "conformance_refs": [
+        "preflight.report.process"
+      ]
+    },
+    {
+      "id": "prompt.lifecycle.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-workspace",
+        "name": "prompt",
+        "command_manifest": "cli_commands.json",
+        "option_group_manifest": "cli_option_groups.json",
+        "subcommands": [
+          "init",
+          "upgrade",
+          "uninstall"
+        ]
+      },
+      "operation_ref": {
+        "id": "prompt.init",
+        "registry": "operation_contracts.json",
+        "path": "operations/prompt.init.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.selection.resolve",
+          "prompt.render",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "command.subcommands",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "module selection",
+          "lifecycle handoff prompt rendering",
+          "output emission"
+        ]
+      },
+      "conformance_refs": [
+        "prompt.init.process",
+        "prompt.upgrade.process",
+        "prompt.uninstall.process"
+      ]
+    },
+    {
+      "id": "proof.report.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-workspace",
+        "name": "proof",
+        "command_manifest": "cli_commands.json",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "proof.report",
+        "registry": "operation_contracts.json",
+        "path": "operations/proof.report.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "proof.routes.resolve",
+          "proof.routes.resolve",
+          "output.profile.select",
+          "output.fields.select",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "target root resolution",
+          "proof route resolution",
+          "changed-path proof selection",
+          "surface-value review",
+          "output emission"
+        ]
+      },
+      "conformance_refs": [
+        "proof.report.process"
+      ]
+    },
+    {
+      "id": "reconcile.report.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-workspace",
+        "name": "reconcile",
+        "command_manifest": "cli_commands.json",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "reconcile.report",
+        "registry": "operation_contracts.json",
+        "path": "operations/reconcile.report.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "planning.reconcile.load",
+          "planning.reconcile.load",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "target root resolution",
+          "external intent cache refresh when available",
+          "planning reconciliation loading",
+          "safe-prune state mutation",
+          "output emission"
+        ]
+      },
+      "conformance_refs": [
+        "reconcile.report.process"
+      ]
+    },
+    {
+      "id": "report.combined.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-workspace",
+        "name": "report",
+        "command_manifest": "cli_commands.json",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "report.combined",
+        "registry": "operation_contracts.json",
+        "path": "operations/report.combined.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "workspace.config.load",
+          "workspace.selection.resolve",
+          "workspace.report.assemble",
+          "workspace.report.select",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "target root resolution",
+          "config loading",
+          "module selection",
+          "combined report assembly",
+          "profile or section selection",
+          "output emission"
+        ]
+      },
+      "conformance_refs": [
+        "report.combined.process"
+      ]
+    },
+    {
+      "id": "setup.guidance.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-workspace",
+        "name": "setup",
+        "command_manifest": "cli_commands.json",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "setup.guidance",
+        "registry": "operation_contracts.json",
+        "path": "operations/setup.guidance.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "workspace.selection.resolve",
+          "workspace.report.assemble",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "target root resolution",
+          "module selection",
+          "setup guidance assembly",
+          "output emission"
+        ]
+      },
+      "conformance_refs": [
+        "setup.guidance.process"
+      ]
+    },
+    {
+      "id": "skills.report.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-workspace",
+        "name": "skills",
+        "command_manifest": "cli_commands.json",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "skills.report",
+        "registry": "operation_contracts.json",
+        "path": "operations/skills.report.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "skills.registry.inspect",
+          "output.fields.select",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "target root resolution",
+          "skill registry discovery",
+          "task recommendation scoring",
+          "field selection",
+          "output emission"
+        ]
+      },
+      "conformance_refs": [
+        "skills.report.process"
+      ]
+    },
+    {
+      "id": "start.context.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-workspace",
+        "name": "start",
+        "command_manifest": "cli_commands.json",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "start.context",
+        "registry": "operation_contracts.json",
+        "path": "operations/start.context.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "preflight.context.assemble",
+          "startup.context.assemble",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": [
+          "startup_context.schema.json"
+        ]
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "schemas.output",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "schema refs",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "target root resolution",
+          "startup context assembly",
+          "changed-path proof selection",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "start.context.process"
+      ]
+    },
+    {
+      "id": "status.report.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-workspace",
+        "name": "status",
+        "command_manifest": "cli_commands.json",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "status.report",
+        "registry": "operation_contracts.json",
+        "path": "operations/status.report.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "workspace.selection.resolve",
+          "workspace.report.assemble",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "target root resolution",
+          "module selection",
+          "status report assembly",
+          "output emission"
+        ]
+      },
+      "conformance_refs": [
+        "status.report.process"
+      ]
+    },
+    {
+      "id": "summary.report.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-workspace",
+        "name": "summary",
+        "command_manifest": "cli_commands.json",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "summary.report",
+        "registry": "operation_contracts.json",
+        "path": "operations/summary.report.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "planning.summary.load",
+          "output.fields.select",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "target root resolution",
+          "planning summary loading",
+          "memory consult augmentation",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "summary.report.process"
+      ]
+    },
+    {
+      "id": "system-intent.sync.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-workspace",
+        "name": "system-intent",
+        "command_manifest": "cli_commands.json",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "system-intent.sync",
+        "registry": "operation_contracts.json",
+        "path": "operations/system-intent.sync.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "system_intent.config.resolve",
+          "system_intent.source_metadata.refresh",
+          "system_intent.mirror.read_or_create",
+          "system_intent.result.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "target root resolution",
+          "system-intent source metadata refresh",
+          "compiled intent mirror loading",
+          "output emission"
+        ]
+      },
+      "conformance_refs": [
+        "system-intent.sync.process"
+      ]
+    },
+    {
+      "id": "uninstall.lifecycle.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-workspace",
+        "name": "uninstall",
+        "command_manifest": "cli_commands.json",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "uninstall.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/uninstall.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "workspace.config.load",
+          "workspace.selection.resolve",
+          "workspace.lifecycle.plan",
+          "workspace.lifecycle.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": true,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": true
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "schemas.output",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "schema refs",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "lifecycle primitive implementation",
+          "live workspace inspection",
+          "mutation policy",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "uninstall.lifecycle.destructive-refusal.process",
+        "uninstall.lifecycle.strict-preflight-refusal.process"
+      ]
+    },
+    {
+      "id": "upgrade.lifecycle.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-workspace",
+        "name": "upgrade",
+        "command_manifest": "cli_commands.json",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "upgrade.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/upgrade.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.root.resolve",
+          "workspace.config.load",
+          "workspace.selection.resolve",
+          "workspace.lifecycle.plan",
+          "workspace.lifecycle.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": true
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "schemas.output",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "schema refs",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "lifecycle primitive implementation",
+          "live workspace inspection",
+          "mutation policy",
+          "output emission mechanics"
+        ]
+      },
+      "conformance_refs": [
+        "upgrade.lifecycle.dry-run.process",
+        "upgrade.lifecycle.strict-preflight-refusal.process"
       ]
     }
   ]

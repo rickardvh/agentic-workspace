@@ -1,0 +1,323 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Reduce workspace defaults runtime delegate",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Determine whether defaults.report can reduce its generated Python runtime delegate without moving workspace policy judgment into command-generation.",
+    "hard_constraints": "Keep scope bounded to defaults.report and the generated Python operation/runtime ownership proof. Do not hand-edit generated output.",
+    "agent_may_decide": "Replace generic deterministic defaults behavior with codegen-owned/resource-backed primitives if it is data-only; otherwise close this slice as no-safe-route with evidence.",
+    "escalate_when": "A correct fix requires extracting the entire workspace defaults policy payload into declarative package-owned data or changing command-generation ownership boundaries.",
+    "next_action": "Audit defaults payload ownership, then either implement a resource-backed generated load primitive or record the no-safe-route result.",
+    "proof_expectations": [
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+      "uv run pytest tests/test_workspace_defaults_cli.py -q"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/contracts/operations/defaults.report.json",
+      "src/agentic_workspace/contracts/command_package_ir.json",
+      "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+      "packages/command-generation/src/command_generation/generator.py",
+      "packages/command-generation/src/command_generation/primitive_executor.py",
+      "tests/test_workspace_defaults_cli.py",
+      ".agentic-workspace/planning/execplans/python-workspace-defaults-runtime-reduction.plan.json",
+      ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+    ],
+    "completion_criteria": [
+      "defaults.report runtime delegate reduction is either implemented through source contracts and regeneration, or explicitly closed as no-safe-route because the current payload is package policy assembly rather than generic deterministic primitive work."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "Determine whether defaults.report can reduce its generated Python runtime delegate without moving workspace policy judgment into command-generation."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Determine whether defaults.report can reduce its generated Python runtime delegate without moving workspace policy judgment into command-generation.",
+      "constraints": "Keep scope bounded to defaults.report and the generated Python operation/runtime ownership proof. Do not hand-edit generated output.",
+      "latitude": "Replace generic deterministic defaults behavior with codegen-owned/resource-backed primitives if it is data-only; otherwise close this slice as no-safe-route with evidence.",
+      "escalation": "Escalate when a correct fix requires extracting the entire workspace defaults policy payload into declarative package-owned data or changing command-generation ownership boundaries."
+    },
+    "execution": {
+      "milestone": "python-workspace-defaults-runtime-reduction",
+      "status": "active",
+      "next_step": "Audit defaults payload ownership, then either implement a resource-backed generated load primitive or record the no-safe-route result.",
+      "proof": "Generated command package checks, contract tooling checks, and focused defaults CLI tests prove any implemented change; no-safe-route requires diff-backed ownership evidence."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/contracts/operations/defaults.report.json",
+        "src/agentic_workspace/contracts/command_package_ir.json",
+        "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+        "packages/command-generation/src/command_generation/generator.py",
+        "packages/command-generation/src/command_generation/primitive_executor.py",
+        "tests/test_workspace_defaults_cli.py",
+        ".agentic-workspace/planning/execplans/python-workspace-defaults-runtime-reduction.plan.json",
+        ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Continue #892 by reducing generated Python runtime delegates only where behavior can be expressed as declarative contracts and codegen-owned primitives.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "ownership audit complete",
+    "validation still needed": "none for this no-safe-route slice beyond planning health",
+    "next likely slice": "continue #892 with the next safe runtime delegate reduction candidate"
+  },
+  "intent_interpretation": {
+    "literal request": "Reduce workspace defaults runtime delegate",
+    "inferred intended outcome": "Determine whether defaults.report can reduce its generated Python runtime delegate without moving workspace policy judgment into command-generation.",
+    "chosen concrete what": "Audit defaults payload ownership, then either implement a resource-backed generated load primitive or record the no-safe-route result.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "defaults.report operation/IR/inventory, command-generation generator/primitives if a safe reduction exists, focused defaults tests, and this execplan/decomposition.",
+    "max changed files": "About 8 source/planning files plus regenerated outputs if implementation proceeds.",
+    "required validation commands": "uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run pytest tests/test_workspace_defaults_cli.py -q",
+    "ask-before-refactor threshold": "Do not extract the full defaults policy payload into declarative data under this bounded plan; route that as a larger lane if needed.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work requires extracting broad workspace defaults policy from Python into data or changing target ownership beyond defaults.report.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Audit defaults payload ownership; implement only if data-only, otherwise close no-safe-route and continue #892.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Determine whether defaults.report can reduce its generated Python runtime delegate without moving workspace policy judgment into command-generation.",
+    "hard constraints": "Keep scope bounded to defaults.report and the generated Python operation/runtime ownership proof. Do not hand-edit generated output.",
+    "agent may decide locally": "Replace generic deterministic defaults behavior with codegen-owned/resource-backed primitives if it is data-only; otherwise close this slice as no-safe-route with evidence.",
+    "escalate when": "A correct fix requires extracting the entire workspace defaults policy payload into declarative package-owned data or changing command-generation ownership boundaries."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-16T14:08:13+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "python-workspace-defaults-runtime-reduction",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to defaults.report runtime delegate reduction or no-safe-route proof.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Audit defaults payload ownership, then either implement a resource-backed generated load primitive or record the no-safe-route result."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/operations/defaults.report.json",
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+    "packages/command-generation/src/command_generation/generator.py",
+    "packages/command-generation/src/command_generation/primitive_executor.py",
+    "tests/test_workspace_defaults_cli.py",
+    ".agentic-workspace/planning/execplans/python-workspace-defaults-runtime-reduction.plan.json",
+    ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run pytest tests/test_workspace_defaults_cli.py -q"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "defaults.report runtime delegate reduction is either implemented through source contracts and regeneration, or explicitly closed as no-safe-route because the current payload is package policy assembly rather than generic deterministic primitive work."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Audited defaults.report and found the remaining load delegate is backed by _defaults_payload, a broad workspace default-route policy assembly that composes compact/proof manifests and validation policy and is reused by other workspace internals.",
+    "scope touched": "planning closeout only",
+    "changed surfaces": "active execplan, planning state/provenance",
+    "validations run": "uv run agentic-workspace summary --format json",
+    "result for continuation": "defaults.report remains explicit package-domain runtime debt until a larger declarative defaults-payload extraction lane exists.",
+    "next step": "Continue #892 with the next safe runtime delegate reduction candidate."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; no source implementation was changed after the no-safe-route boundary was identified",
+    "proof status": "audit evidence only",
+    "intent served": "yes for this bounded slice; no for the larger #892 epic",
+    "config compliance": "used uv run agentic-workspace and recorded manual planning repair provenance",
+    "misinterpretation risk": "low; the slice explicitly avoids claiming defaults.report portability",
+    "follow-on decision": "continue #892 with another reducible runtime delegate and route declarative defaults extraction separately if promoted"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "not skipped",
+    "expected savings": "Reused open worker Lovelace to identify workspace.defaults.load as the next candidate slice.",
+    "actual friction": "Read-only exploration returned after the route-report slice, but it provided a focused next candidate.",
+    "proof result": "No implementation yet; candidate requires local verification that defaults payload can be generated without moving product policy into command-generation.",
+    "quality concern": "workspace.defaults may still be product policy assembly; close as no-safe-route if generation would copy policy.",
+    "decomposition adjustment": "If implemented, record defaults as partial #892 progress; otherwise record no-safe-route."
+  },
+  "proof_report": {
+    "validation proof": "uv run agentic-workspace summary --format json",
+    "proof achieved now": "no-safe-route audit",
+    "evidence for \"proof achieved\" state": "src/agentic_workspace/workspace_runtime_primitives.py:_defaults_payload spans the workspace default-route policy payload and is reused outside defaults.report; generated/workspace/python/primitives/workspace_runtime.py delegates _load_workspace_operation_defaults to that package-domain source."
+  },
+  "intent_satisfaction": {
+    "original intent": "Determine whether defaults.report can reduce its generated Python runtime delegate without moving workspace policy judgment into command-generation.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The bounded defaults.report audit found no safe small implementation route: _defaults_payload is broad workspace policy assembly reused by other workspace internals, while generated defaults load currently delegates to that package-domain source.",
+    "unsolved intent passed to": "Continue #892 runtime delegate reduction from the next safe candidate; defaults.report requires a larger declarative defaults-payload extraction lane before its load primitive can be portable."
+  },
+  "execution_summary": {
+    "outcome delivered": "defaults.report runtime reduction closed as no-safe-route for this bounded slice",
+    "validation confirmed": "planning summary remained clean after record-recovery",
+    "follow-on routed to": "#892 continuation",
+    "post-work posterity capture": "Carry forward that defaults.report load is not a safe small runtime reduction; it depends on declarative defaults-payload extraction before portability can be claimed.",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "select the next safe runtime delegate reduction candidate"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "none",
+    "proposed durable intent": "none yet",
+    "confidence": "low",
+    "needs review": "True",
+    "owner surface": "none"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "No safe bounded implementation route for defaults.report load reduction under this plan.",
+    "evidence carried forward": "src/agentic_workspace/workspace_runtime_primitives.py:_defaults_payload and generated/workspace/python/primitives/workspace_runtime.py:_load_workspace_operation_defaults show the remaining package-domain boundary.",
+    "reopen trigger": "Open a dedicated declarative defaults payload extraction lane that moves workspace default-route policy into package-owned JSON/contracts before regenerating defaults.report load."
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#892 continuation",
+          "owner": "none",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-16: Scaffolded by agentic-planning new-plan.",
+    "2026-05-16: Recorded delegation decision route=delegate-exploration."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Determine whether defaults.report can reduce its generated Python runtime delegate without moving workspace policy judgment into command-generation.\nIntent satisfied: yes\nArchive decision: archive-but-keep-lane-open\nProof: uv run agentic-workspace summary --format json\nChanged surfaces: active execplan, planning state/provenance\nDurable residue: none (none)\nMemory learning: none\nFollow-up: Continue #892 runtime delegate reduction from the next safe candidate; defaults.report requires a larger declarative defaults-payload extraction lane before its load primitive can be portable."
+  }
+}

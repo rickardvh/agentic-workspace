@@ -21,7 +21,10 @@ classifiers = [
 authors = [
   { name = "Rickard von Haugwitz" },
 ]
-dependencies = ["jsonschema>=4.0"]
+dependencies = ["command-generation", "jsonschema>=4.0"]
+
+[tool.uv.sources]
+command-generation = { workspace = true }
 
 [project.urls]
 Homepage = "https://github.com/rickardvh/agentic-workspace/tree/master/packages/planning"
@@ -29,7 +32,7 @@ Repository = "https://github.com/rickardvh/agentic-workspace"
 Issues = "https://github.com/rickardvh/agentic-workspace/issues"
 
 [project.scripts]
-agentic-planning = "repo_planning_bootstrap.generated_cli_package:main"
+agentic-planning = "command_generation.console:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/repo_planning_bootstrap"]
@@ -47,9 +50,14 @@ packages = ["src/repo_planning_bootstrap"]
 "bootstrap/.agentic-workspace/planning/agent-manifest.json" = "src/repo_planning_bootstrap/_payload/.agentic-workspace/planning/agent-manifest.json"
 "skills" = "src/repo_planning_bootstrap/_skills"
 "src/repo_planning_bootstrap/_ownership.toml" = "src/repo_planning_bootstrap/_ownership.toml"
-"../../generated/python/planning-cli/generated_cli_package/__init__.py" = "src/repo_planning_bootstrap/_generated_cli_package_impl/__init__.py"
-"../../generated/python/planning-cli/generated_cli_package/command_package.json" = "src/repo_planning_bootstrap/_generated_cli_package_impl/command_package.json"
-"../../generated/python/planning-cli/generated_cli_package/adapter_commands.json" = "src/repo_planning_bootstrap/_generated_cli_package_impl/adapter_commands.json"
+"../../generated/planning/python/__init__.py" = "src/repo_planning_bootstrap/_generated_cli_package_impl/__init__.py"
+"../../generated/planning/python/cli.py" = "src/repo_planning_bootstrap/_generated_cli_package_impl/cli.py"
+"../../generated/planning/python/command_package.json" = "src/repo_planning_bootstrap/_generated_cli_package_impl/command_package.json"
+"../../generated/planning/python/adapter_commands.json" = "src/repo_planning_bootstrap/_generated_cli_package_impl/adapter_commands.json"
+"../../generated/planning/python/operations" = "src/repo_planning_bootstrap/_generated_cli_package_impl/operations"
+"../../generated/planning/python/commands" = "src/repo_planning_bootstrap/_generated_cli_package_impl/commands"
+"../../generated/planning/python/primitives" = "src/repo_planning_bootstrap/_generated_cli_package_impl/primitives"
+"../../generated/planning/python/primitives/operation_executor.py" = "src/repo_planning_bootstrap/_generated_cli_package_impl/primitives/operation_executor.py"
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -61,9 +69,14 @@ include = [
 ]
 
 [tool.hatch.build.targets.sdist.force-include]
-"../../generated/python/planning-cli/generated_cli_package/__init__.py" = "src/repo_planning_bootstrap/_generated_cli_package_impl/__init__.py"
-"../../generated/python/planning-cli/generated_cli_package/command_package.json" = "src/repo_planning_bootstrap/_generated_cli_package_impl/command_package.json"
-"../../generated/python/planning-cli/generated_cli_package/adapter_commands.json" = "src/repo_planning_bootstrap/_generated_cli_package_impl/adapter_commands.json"
+"../../generated/planning/python/__init__.py" = "src/repo_planning_bootstrap/_generated_cli_package_impl/__init__.py"
+"../../generated/planning/python/cli.py" = "src/repo_planning_bootstrap/_generated_cli_package_impl/cli.py"
+"../../generated/planning/python/command_package.json" = "src/repo_planning_bootstrap/_generated_cli_package_impl/command_package.json"
+"../../generated/planning/python/adapter_commands.json" = "src/repo_planning_bootstrap/_generated_cli_package_impl/adapter_commands.json"
+"../../generated/planning/python/operations" = "src/repo_planning_bootstrap/_generated_cli_package_impl/operations"
+"../../generated/planning/python/commands" = "src/repo_planning_bootstrap/_generated_cli_package_impl/commands"
+"../../generated/planning/python/primitives" = "src/repo_planning_bootstrap/_generated_cli_package_impl/primitives"
+"../../generated/planning/python/primitives/operation_executor.py" = "src/repo_planning_bootstrap/_generated_cli_package_impl/primitives/operation_executor.py"
 
 [tool.pytest.ini_options]
 addopts = [

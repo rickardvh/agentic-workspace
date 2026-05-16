@@ -58,6 +58,72 @@
       "adapter_kind": "process"
     },
     {
+      "id": "memory.capture-note.process",
+      "operation_id": "memory.capture-note.report",
+      "path": "conformance/memory.capture-note.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "memory.install.lifecycle.dry-run.process",
+      "operation_id": "memory.install.lifecycle",
+      "path": "conformance/memory.install.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "memory.init.lifecycle.dry-run.process",
+      "operation_id": "memory.init.lifecycle",
+      "path": "conformance/memory.init.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "memory.adopt.lifecycle.dry-run.process",
+      "operation_id": "memory.adopt.lifecycle",
+      "path": "conformance/memory.adopt.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "memory.upgrade.lifecycle.dry-run.process",
+      "operation_id": "memory.upgrade.lifecycle",
+      "path": "conformance/memory.upgrade.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "memory.migrate-layout.lifecycle.dry-run.process",
+      "operation_id": "memory.migrate-layout.lifecycle",
+      "path": "conformance/memory.migrate-layout.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "memory.uninstall.lifecycle.dry-run.process",
+      "operation_id": "memory.uninstall.lifecycle",
+      "path": "conformance/memory.uninstall.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "memory.bootstrap-cleanup.process",
+      "operation_id": "memory.bootstrap-cleanup.apply",
+      "path": "conformance/memory.bootstrap-cleanup.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "memory.create-note.dry-run.process",
+      "operation_id": "memory.create-note.apply",
+      "path": "conformance/memory.create-note.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "memory.current-check.process",
+      "operation_id": "memory.current.report",
+      "path": "conformance/memory.current-check.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "memory.current-show.process",
+      "operation_id": "memory.current.report",
+      "path": "conformance/memory.current-show.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "memory.front-door.process",
       "path": "conformance/memory.front-door.process.json",
       "operation_id": "memory.front-door",
@@ -82,6 +148,12 @@
       "adapter_kind": "process"
     },
     {
+      "id": "memory.prompt.process",
+      "operation_id": "memory.prompt.render",
+      "path": "conformance/memory.prompt.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "memory.report.process",
       "operation_id": "memory.report.report",
       "path": "conformance/memory.report.process.json",
@@ -94,9 +166,39 @@
       "adapter_kind": "process"
     },
     {
+      "id": "memory.route.process",
+      "operation_id": "memory.route.report",
+      "path": "conformance/memory.route.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "memory.route-review.process",
+      "operation_id": "memory.route-review.report",
+      "path": "conformance/memory.route-review.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "memory.search.process",
+      "operation_id": "memory.search.report",
+      "path": "conformance/memory.search.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "memory.verify-payload.process",
+      "operation_id": "memory.verify-payload.report",
+      "path": "conformance/memory.verify-payload.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "memory.status.process",
       "operation_id": "memory.status.report",
       "path": "conformance/memory.status.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "memory.sync-memory.process",
+      "operation_id": "memory.sync-memory.report",
+      "path": "conformance/memory.sync-memory.process.json",
       "adapter_kind": "process"
     },
     {
@@ -112,6 +214,36 @@
       "adapter_kind": "process"
     },
     {
+      "id": "planning.adopt.lifecycle.dry-run.process",
+      "operation_id": "planning.adopt.lifecycle",
+      "path": "conformance/planning.adopt.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.archive-plan.lifecycle.dry-run.process",
+      "operation_id": "planning.archive-plan.lifecycle",
+      "path": "conformance/planning.archive-plan.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.close-item.process",
+      "operation_id": "planning.close-item.lifecycle",
+      "path": "conformance/planning.close-item.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.create-review.process",
+      "operation_id": "planning.create-review.lifecycle",
+      "path": "conformance/planning.create-review.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.delegation-decision.lifecycle.dry-run.process",
+      "operation_id": "planning.delegation-decision.lifecycle",
+      "path": "conformance/planning.delegation-decision.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "planning.doctor.process",
       "operation_id": "planning.doctor.report",
       "path": "conformance/planning.doctor.process.json",
@@ -124,9 +256,57 @@
       "adapter_kind": "process"
     },
     {
+      "id": "planning.handoff.process",
+      "operation_id": "planning.handoff.report",
+      "path": "conformance/planning.handoff.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.init.lifecycle.dry-run.process",
+      "operation_id": "planning.init.lifecycle",
+      "path": "conformance/planning.init.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.install.lifecycle.dry-run.process",
+      "operation_id": "planning.install.lifecycle",
+      "path": "conformance/planning.install.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.list-files.process",
+      "operation_id": "planning.list-files.report",
+      "path": "conformance/planning.list-files.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.new-plan.lifecycle.dry-run.process",
+      "operation_id": "planning.new-plan.lifecycle",
+      "path": "conformance/planning.new-plan.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.promote-to-plan.lifecycle.dry-run.process",
+      "operation_id": "planning.promote-to-plan.lifecycle",
+      "path": "conformance/planning.promote-to-plan.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.prompt.process",
+      "operation_id": "planning.prompt.render",
+      "path": "conformance/planning.prompt.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "planning.reconcile.process",
       "operation_id": "planning.reconcile.report",
       "path": "conformance/planning.reconcile.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.record-recovery.lifecycle.dry-run.process",
+      "operation_id": "planning.record-recovery.lifecycle",
+      "path": "conformance/planning.record-recovery.lifecycle.dry-run.process.json",
       "adapter_kind": "process"
     },
     {
@@ -145,6 +325,24 @@
       "id": "planning.summary.process",
       "operation_id": "planning.summary.report",
       "path": "conformance/planning.summary.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.uninstall.lifecycle.dry-run.process",
+      "operation_id": "planning.uninstall.lifecycle",
+      "path": "conformance/planning.uninstall.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.upgrade.lifecycle.dry-run.process",
+      "operation_id": "planning.upgrade.lifecycle",
+      "path": "conformance/planning.upgrade.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.verify-payload.process",
+      "operation_id": "planning.verify-payload.report",
+      "path": "conformance/planning.verify-payload.process.json",
       "adapter_kind": "process"
     },
     {

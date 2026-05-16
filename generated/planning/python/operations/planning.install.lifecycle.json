@@ -1,0 +1,142 @@
+{
+  "classification": "lifecycle-mutation",
+  "command_surface": {
+    "command": "install",
+    "format_option": "format",
+    "program": "agentic-planning"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": true
+  },
+  "guards": [
+    "Respect dry-run mode by avoiding writes.",
+    "Keep lifecycle writes scoped to managed planning surfaces."
+  ],
+  "id": "planning.install.lifecycle",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "dry_run",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "force",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "local",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "include_optional",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "arguments": {
+          "function": "install_bootstrap",
+          "import_module": "repo_planning_bootstrap.installer",
+          "kwargs": {
+            "dry_run": {
+              "value": "dry_run"
+            },
+            "force": {
+              "value": "force"
+            },
+            "include_optional": {
+              "value": "include_optional"
+            },
+            "local_only": {
+              "value": "local"
+            },
+            "target": {
+              "value": "target"
+            }
+          }
+        },
+        "description": "Install planning bootstrap files into a repository.",
+        "id": "apply_lifecycle",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "python.function.call"
+      },
+      {
+        "arguments": {},
+        "description": "Emit planning lifecycle result in the requested format.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Planning install executes generated operation IR through codegen-owned primitive dataflow while the planning module owns lifecycle mutation policy."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "module-result"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated install dry-run process conformance passes"
+  ],
+  "reads": [
+    {
+      "required": true,
+      "surface": "planning package payload files"
+    },
+    {
+      "required": false,
+      "surface": "target repository managed planning surfaces"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Install planning bootstrap files into a repository.",
+      "id": "apply_lifecycle",
+      "uses": "python.function.call"
+    },
+    {
+      "description": "Emit planning lifecycle result in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Install planning bootstrap files into a repository.",
+  "writes": [
+    {
+      "required": true,
+      "surface": "target repository managed planning surfaces",
+      "when": "not a dry run"
+    }
+  ]
+}

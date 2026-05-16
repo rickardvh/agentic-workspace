@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bootstrap Adoption"
+  short_description: "Add the bootstrap to an existing repo."
+  default_prompt: "Use $bootstrap-adoption to adopt the bootstrap into an existing repository."

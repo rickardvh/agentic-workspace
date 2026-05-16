@@ -1,0 +1,338 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Python codegen-owned primitive executor migration",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "lane",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "required_continuation",
+      "iterative_follow_through",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane python-codegen-owned-primitive-executor-migration.",
+    "hard_constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Move representative generic deterministic behavior for generated Python operations from module-local runtime helpers into codegen-owned primitive executors.",
+    "proof_expectations": [
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+      "uv run pytest tests/test_generated_command_package_proof_runner.py packages/command-generation/tests -q"
+    ],
+    "touched_scope": [
+      "packages/command-generation/src/agentic_command_generation/",
+      "packages/command-generation/tests/",
+      "packages/memory/src/repo_memory_bootstrap/operation_ir_executor.py",
+      "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+      "src/agentic_workspace/contracts/command_package_ir.json",
+      "scripts/check/check_generated_command_packages.py",
+      ".agentic-workspace/planning/execplans/python-codegen-owned-primitive-executor-migration.plan.json"
+    ],
+    "completion_criteria": [
+      "Representative memory package-resource operations use a codegen-owned Python primitive executor.",
+      "Primitive conformance proves the codegen-owned executor primitives.",
+      "Generated package static proof and generated Python black-box conformance pass."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-but-keep-lane-open"
+  },
+  "goal": [
+    "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane python-codegen-owned-primitive-executor-migration."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane python-codegen-owned-primitive-executor-migration.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "python-codegen-owned-primitive-executor-migration",
+      "status": "active",
+      "next_step": "Move representative generic deterministic behavior for generated Python operations from module-local runtime helpers into codegen-owned primitive executors.",
+      "proof": "Static generated-package proof, codegen primitive tests, and generated Python conformance."
+    },
+    "scope": {
+      "touched": [
+        "packages/command-generation/src/agentic_command_generation/",
+        "packages/command-generation/tests/",
+        "packages/memory/src/repo_memory_bootstrap/operation_ir_executor.py",
+        "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+        "src/agentic_workspace/contracts/command_package_ir.json",
+        "scripts/check/check_generated_command_packages.py"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane python-codegen-owned-primitive-executor-migration.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "#892"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "#892",
+    "activation trigger": "Promote the next codegen-owned primitive/executor or completion-gate slice."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "representative memory package-resource operations now run through codegen-owned primitive steps",
+    "validation still needed": "full #892 completion still needs a follow-up slice to either migrate remaining practical generic behavior or prove the remaining hand-owned runtime entries are package-specific judgment",
+    "next likely slice": "promote python-generated-cli-completion-promotion only after remaining runtime inventory is reconciled"
+  },
+  "intent_interpretation": {
+    "literal request": "Python codegen-owned primitive executor migration",
+    "inferred intended outcome": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane python-codegen-owned-primitive-executor-migration.",
+    "chosen concrete what": "Move representative generic deterministic behavior for generated Python operations from module-local runtime helpers into codegen-owned primitive executors.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "packages/command-generation, package-resource operation executor call sites, command package IR/inventory contracts, generated-package proof, tests, and this execplan.",
+    "max changed files": "12",
+    "required validation commands": "Static generated-package proof, codegen primitive tests, and generated Python conformance.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Move representative memory package-resource operation execution onto codegen-owned Python primitives, then reassess remaining module-local runtime inventory.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane python-codegen-owned-primitive-executor-migration.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "pending",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "label": "decomposition lane python-codegen-owned-primitive-executor-migration",
+      "role": "intake",
+      "locator": "candidate_lanes[6]"
+    }
+  ],
+  "active_milestone": {
+    "id": "python-codegen-owned-primitive-executor-migration",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Move representative generic deterministic behavior for generated Python operations from module-local runtime helpers into codegen-owned primitive executors."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/command-generation/src/agentic_command_generation/",
+    "packages/command-generation/tests/",
+    "packages/memory/src/repo_memory_bootstrap/operation_ir_executor.py",
+    "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    "scripts/check/check_generated_command_packages.py",
+    ".agentic-workspace/planning/execplans/python-codegen-owned-primitive-executor-migration.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run pytest tests/test_generated_command_package_proof_runner.py packages/command-generation/tests -q"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Representative memory package-resource operations use a codegen-owned Python primitive executor.",
+    "Primitive conformance proves the codegen-owned executor primitives.",
+    "Generated package static proof and generated Python black-box conformance pass."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "codex",
+    "handoff source": "agentic-planning promote-to-plan decomposition lane",
+    "what happened": "Added codegen-owned operation step execution to agentic_command_generation.primitive_executor and routed representative memory package-resource operations through it.",
+    "scope touched": "command-generation primitive executor, memory operation IR executor, generated Python conformance environment, Python operation execution inventory, generated-package static proof, tests, and planning.",
+    "changed surfaces": "packages/command-generation/src/agentic_command_generation/primitive_executor.py; packages/memory/src/repo_memory_bootstrap/operation_ir_executor.py; generated/python/Dockerfile.conformance; scripts/check/check_generated_command_packages.py; src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+    "validations run": "check_generated_command_packages; python conformance; python Docker conformance; primitive conformance; focused pytest; ruff",
+    "result for continuation": "Representative generic primitive execution is now codegen-owned; #892 still owns remaining inventory reconciliation and completion promotion.",
+    "next step": "Promote the next #892 slice to reconcile remaining module-local runtime inventory before completion."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes for the representative primitive-executor migration slice",
+    "config compliance": "used uv run agentic-workspace and kept active planning current",
+    "misinterpretation risk": "remaining risk is overclaiming full #892 completion from a representative slice",
+    "follow-on decision": "#892 remains open"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "pending",
+    "route skipped reason": "pending",
+    "expected savings": "pending",
+    "actual friction": "pending",
+    "proof result": "passed",
+    "quality concern": "pending",
+    "decomposition adjustment": "pending"
+  },
+  "proof_report": {
+    "validation proof": "uv run python packages/command-generation/tests/primitive_conformance.py; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q; uv run ruff check selected files",
+    "proof achieved now": "passed",
+    "evidence for \"proof achieved\" state": "Static proof, generated Python conformance, generated Python Docker conformance, primitive conformance, focused pytest, and ruff all passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane python-codegen-owned-primitive-executor-migration.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Representative memory package-resource operations now use codegen-owned run_operation_steps and primitive executor surfaces.",
+    "unsolved intent passed to": "#892"
+  },
+  "execution_summary": {
+    "outcome delivered": "Representative generated Python memory package-resource operations now execute generic primitive steps through the codegen package.",
+    "validation confirmed": "passed",
+    "follow-on routed to": "#892",
+    "post-work posterity capture": "updated planning and static proof",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "#892 remaining runtime inventory reconciliation"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "none",
+    "proposed durable intent": "none yet",
+    "confidence": "low",
+    "needs review": "True",
+    "owner surface": "none"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The representative primitive-executor migration landed, but #892 requires remaining runtime inventory reconciliation before full generated CLI completion.",
+    "evidence carried forward": "Codegen primitive executor owns operation step dataflow for memory list-files and list-skills; Python conformance and Docker conformance pass.",
+    "reopen trigger": "none; #892 remains open"
+  },
+  "improvement_signal_review": {
+    "status": "complete",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [
+      "promote-to-plan emitted schema-invalid decomposition metadata and slash-like prose path references"
+    ],
+    "signals fixed": [],
+    "signals routed": [
+      "#967"
+    ],
+    "signals dismissed": [],
+    "next owner": "#967"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#892",
+          "owner": "#892",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "promote-to-plan emits schema-invalid decomposition metadata",
+          "owner": "github-issue",
+          "source": "#967"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-05-14: Scaffolded by agentic-planning promote-to-plan from decomposition lane python-codegen-owned-primitive-executor-migration."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane python-codegen-owned-primitive-executor-migration.\nIntent satisfied: yes\nArchive decision: archive-but-keep-lane-open\nProof: uv run python packages/command-generation/tests/primitive_conformance.py; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q; uv run ruff check selected files\nChanged surfaces: packages/command-generation/src/agentic_command_generation/primitive_executor.py; packages/memory/src/repo_memory_bootstrap/operation_ir_executor.py; generated/python/Dockerfile.conformance; scripts/check/check_generated_command_packages.py; src/agentic_workspace/contracts/python_operation_execution_inventory.json\nDurable residue: none (none)\nMemory learning: none\nFollow-up: #892"
+  }
+}

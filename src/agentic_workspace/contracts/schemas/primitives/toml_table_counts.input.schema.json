@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/primitives/toml-table-counts-input/v1",
+  "title": "TOML table counts primitive input",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "root": {
+      "type": "string"
+    },
+    "base_value": {
+      "type": "string"
+    },
+    "path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "table": {
+      "type": "string",
+      "minLength": 1
+    },
+    "relevance_field": {
+      "type": "string"
+    },
+    "required_value": {
+      "type": "string"
+    },
+    "optional_value": {
+      "type": "string"
+    },
+    "routing_only_field": {
+      "type": "string"
+    }
+  },
+  "required": ["path", "table"]
+}

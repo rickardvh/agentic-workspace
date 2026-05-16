@@ -1,0 +1,154 @@
+{
+  "classification": "read-only-report",
+  "command_surface": {
+    "command": "verify-payload",
+    "format_option": "format",
+    "program": "agentic-memory"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": true,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
+  },
+  "guards": [
+    "Verification must remain read-only.",
+    "Generated code owns parser/help/dispatch shape.",
+    "JSON output must execute payload verification through the codegen-owned payload.verify primitive and package-owned policy JSON.",
+    "Text output may remain a declared python.function.call runtime fallback until text rendering is represented by portable primitives."
+  ],
+  "id": "memory.verify-payload.report",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "arguments": {
+          "must_be_dir": true,
+          "must_exist": true
+        },
+        "description": "Resolve the target repository root for version detection and relative output paths.",
+        "id": "resolve_target_root",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "target_root"
+        ],
+        "uses": "path.target_root.resolve"
+      },
+      {
+        "arguments": {
+          "payload_root": "memory.package-payload",
+          "policy_path": "payload_verification.memory.json",
+          "policy_root": "memory.contracts",
+          "target_root_value": "target_root"
+        },
+        "description": "Verify bundled memory payload files through package-owned payload verification policy when JSON output is requested.",
+        "id": "verify_payload_policy",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "payload.verify",
+        "when": {
+          "equals": "json",
+          "value": "format"
+        }
+      },
+      {
+        "arguments": {
+          "function": "verify_payload",
+          "import_module": "repo_memory_bootstrap.installer",
+          "kwargs": {
+            "target": {
+              "value": "target"
+            }
+          }
+        },
+        "description": "Preserve package runtime text formatting until text output is ported to declared rendering primitives.",
+        "id": "load_text_verification",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "python.function.call",
+        "when": {
+          "not": {
+            "equals": "json",
+            "value": "format"
+          }
+        }
+      },
+      {
+        "arguments": {},
+        "description": "Emit memory payload verification result in the requested format.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Memory verify-payload JSON executes generated operation IR through codegen-owned primitive dataflow and package-owned payload verification policy; text output remains a declared package runtime fallback."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "module-result"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated memory verify-payload process conformance passes"
+  ],
+  "reads": [
+    {
+      "required": true,
+      "surface": "memory package payload files"
+    },
+    {
+      "required": true,
+      "surface": "packages/memory/src/repo_memory_bootstrap/contracts/payload_verification.memory.json"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the target repository root for version detection and relative output paths.",
+      "id": "resolve_target_root",
+      "uses": "path.target_root.resolve"
+    },
+    {
+      "description": "Verify bundled memory payload files through package-owned payload verification policy when JSON output is requested.",
+      "id": "verify_payload_policy",
+      "uses": "payload.verify"
+    },
+    {
+      "description": "Preserve package runtime text formatting until text output is ported to declared rendering primitives.",
+      "id": "load_text_verification",
+      "uses": "python.function.call"
+    },
+    {
+      "description": "Emit memory payload verification result in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Verify bundled memory payload and generated operation resources against the package-owned declarative payload verification policy.",
+  "writes": []
+}

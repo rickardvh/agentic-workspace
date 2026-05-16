@@ -1,0 +1,312 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Python memory promotion report runtime delegate reduction",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Retire the generated memory promotion-report facade delegate to repo_memory_bootstrap.runtime_primitives by expressing the operation as a generated IR function-call step to the existing memory domain report function.",
+    "hard_constraints": "Keep scope bounded to promotion-report wrapper removal; do not claim the memory promotion-report domain logic has moved into generic primitives or that #892 is complete.",
+    "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Update the memory promotion-report operation contract to call repo_memory_bootstrap.installer.promotion_report through python.function.call, remove the obsolete operation-executor handler, regenerate outputs, and prove conformance.",
+    "proof_expectations": [
+      "uv run python scripts/generate/generate_command_packages.py --check",
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+      "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker"
+    ],
+    "touched_scope": [
+      "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.promotion-report.report.json",
+      "src/agentic_workspace/contracts/command_package_ir.json",
+      "scripts/check/check_generated_command_packages.py",
+      "generated/memory/python/operations/memory.promotion-report.report.json",
+      "generated/memory/python/primitives/operation_executor.py",
+      "generated/memory/python/primitives/memory_runtime.py",
+      ".agentic-workspace/planning/execplans/python-memory-promotion-report-runtime-reduction.plan.json",
+      ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+    ],
+    "completion_criteria": [
+      "memory.promotion-report.report operation IR uses python.function.call instead of memory.promotion_report.load.",
+      "generated memory operation executor no longer defines or routes _handle_memory_promotion_report_load.",
+      "generated memory runtime facade no longer exports _load_memory_promotion_report.",
+      "The slice is validated and closed out without claiming the domain promotion-report implementation is generic primitive coverage."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-but-keep-lane-open"
+  },
+  "goal": [
+    "Create a bounded plan for Python memory promotion report runtime delegate reduction."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+    "outcome": "Retire the generated memory promotion-report facade delegate to repo_memory_bootstrap.runtime_primitives by expressing the operation as a generated IR function-call step to the existing memory domain report function.",
+    "constraints": "Keep scope bounded to promotion-report wrapper removal; do not claim the memory promotion-report domain logic has moved into generic primitives or that #892 is complete.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "python-memory-promotion-report-runtime-reduction",
+      "status": "completed",
+      "next_step": "Continue the #892 Python lane with the next source runtime delegate reduction after this bounded slice is committed.",
+      "proof": "Generated freshness, static generated package proof, Python adapter conformance, and Docker conformance prove the wrapper delegate is gone."
+    },
+    "scope": {
+      "touched": [
+        "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.promotion-report.report.json",
+        "src/agentic_workspace/contracts/command_package_ir.json",
+        "scripts/check/check_generated_command_packages.py",
+        "generated/memory/python/operations/memory.promotion-report.report.json",
+        "generated/memory/python/primitives/operation_executor.py",
+        "generated/memory/python/primitives/memory_runtime.py",
+        ".agentic-workspace/planning/execplans/python-memory-promotion-report-runtime-reduction.plan.json",
+        ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Complete #892's Python generated CLI lane by eliminating generic deterministic shipped module runtime behavior and making remaining domain-runtime boundaries explicit.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+    "activation trigger": "Continue with the next runtime delegate reduction after this slice closes."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Python memory promotion report runtime delegate reduction",
+    "inferred intended outcome": "Create a bounded plan for Python memory promotion report runtime delegate reduction.",
+    "chosen concrete what": "Replace the memory promotion-report runtime facade hop with a generated operation IR python.function.call to repo_memory_bootstrap.installer.promotion_report.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "memory promotion-report operation contract, command_package_ir handler inventory, generated memory operation/runtime output, static generated-package proof, and the active #892 planning/decomposition surfaces.",
+    "max changed files": "About 8 directly edited or regenerated files.",
+    "required validation commands": "uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Current slice: memory promotion-report should call the existing domain report function directly through generated operation IR and drop the extra generated runtime facade delegate.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Create a bounded plan for Python memory promotion report runtime delegate reduction.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-16T13:01:24+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "python-memory-promotion-report-runtime-reduction",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to memory promotion-report runtime facade delegate retirement.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Update the memory promotion-report operation contract to call repo_memory_bootstrap.installer.promotion_report through python.function.call, remove the obsolete operation-executor handler, regenerate outputs, and prove conformance."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.promotion-report.report.json",
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    "scripts/check/check_generated_command_packages.py",
+    "generated/memory/python/operations/memory.promotion-report.report.json",
+    "generated/memory/python/primitives/operation_executor.py",
+    "generated/memory/python/primitives/memory_runtime.py",
+    ".agentic-workspace/planning/execplans/python-memory-promotion-report-runtime-reduction.plan.json",
+    ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run python scripts/generate/generate_command_packages.py --check",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+    "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
+    "rg -n \"_load_memory_promotion_report|memory\\.promotion_report\\.load\" generated/memory/python src/agentic_workspace/contracts packages/memory/src"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "memory.promotion-report.report operation IR uses python.function.call instead of memory.promotion_report.load.",
+    "generated memory operation executor no longer defines or routes _handle_memory_promotion_report_load.",
+    "generated memory runtime facade no longer exports _load_memory_promotion_report.",
+    "The slice is validated and closed out without claiming the domain promotion-report implementation is generic primitive coverage."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "memory.promotion-report.report now executes its package-domain report function through generated operation IR python.function.call instead of an extra memory.promotion_report.load runtime facade; the generated operation executor handler and generated memory runtime facade export were removed.",
+    "scope touched": "memory promotion-report operation contract, command package IR, operation primitive and execution inventories, generated memory Python operation/runtime outputs, generated TypeScript command metadata, generated adapter metadata, static generated-package proof, and planning closeout surfaces",
+    "changed surfaces": "contracts and generated outputs only for the promotion-report wrapper reduction plus required inventory/proof updates",
+    "validations run": "ruff focused check; generate_command_packages --check; generate_command_adapters --check; check_contract_tooling_surfaces; check_generated_command_packages; check_generated_command_packages --python-conformance; check_generated_command_packages --conformance --require-node; make lint-memory; make test-memory; Docker generated command package proof; Docker conformance proof; stale delegate rg sweep",
+    "result for continuation": "bounded slice complete; continue #892 from the decomposition with the next runtime delegate reduction",
+    "next step": "Close this planning item and continue from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; no adjacent memory report or lifecycle behavior was reclassified as portable coverage",
+    "proof status": "passed",
+    "intent served": "yes for this bounded slice only",
+    "config compliance": "used uv run agentic-workspace startup/summary/implement and recorded planning state",
+    "misinterpretation risk": "controlled by inventory external_adapter_note and static proof wording that python.function.call is external-adapter debt, not portable primitive coverage",
+    "follow-on decision": "archive this slice but keep the #892 lane open"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "not skipped",
+    "expected savings": "Reuse existing worker for read-only contract/source audit while local plan is tightened; implementation remains local unless audit finds a mechanical patch split.",
+    "actual friction": "The worker audit found stale inventory and command-adapter references after the first local pass, which prevented a too-narrow closeout.",
+    "proof result": "passed after adding the required external_adapter_note for python.function.call domain-runtime debt",
+    "quality concern": "bounded source delegate reduction must not hide domain-runtime behavior as generic completion",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "All selected freshness, static, conformance, memory, and Docker checks passed after the inventory note fix.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "The stale delegate sweep returned no matches for _load_memory_promotion_report or memory.promotion_report.load in generated/memory/python, src/agentic_workspace/contracts, or packages/memory/src; generated package static proof, Python conformance, Node conformance, and Docker conformance passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Python memory promotion report runtime delegate reduction.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "For this bounded slice, memory.promotion-report.report uses python.function.call, the generated operation executor no longer contains _handle_memory_promotion_report_load, the generated memory runtime no longer exports _load_memory_promotion_report, and static proof rejects treating the call as portable primitive coverage. The larger #892 epic remains open.",
+    "unsolved intent passed to": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+  },
+  "execution_summary": {
+    "outcome delivered": "retired the memory promotion-report runtime facade delegate while keeping the remaining package-domain report function explicit as python.function.call external-adapter debt",
+    "validation confirmed": "yes",
+    "follow-on routed to": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+    "post-work posterity capture": "decomposition note updated",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "next #892 runtime delegate reduction lane"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "The slice removes one obsolete generated runtime facade hop but does not make promotion-report portable and does not complete #892.",
+    "evidence carried forward": "python.function.call is explicitly inventoried as external-adapter debt; stale delegate names are absent; generated package, conformance, memory, and Docker proofs passed.",
+    "reopen trigger": "A future proof finds memory.promotion_report.load or _load_memory_promotion_report reintroduced, or promotion-report is claimed as portable primitive coverage without replacing the package-domain function."
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [
+      "Static proof needed an explicit external_adapter_note for python.function.call entries so domain-runtime function calls cannot be mistaken for portable primitive coverage."
+    ],
+    "signals fixed": [
+      "Added external_adapter_note to the promotion-report inventory entry and kept the static proof guard."
+    ],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [
+        "Continue #892 by shrinking the next generated memory/planning/workspace source runtime delegate while keeping product-domain boundaries explicit."
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-16: Scaffolded by agentic-planning new-plan.",
+    "2026-05-16: Recorded delegation decision route=delegate-exploration."
+  ]
+}

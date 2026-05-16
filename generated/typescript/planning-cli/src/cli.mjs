@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Generated runnable read-only adapter.
+// Generated runnable adapter.
 // Source: src/agentic_workspace/contracts/command_package_ir.json
 // Program: agentic-planning
 // Regenerate with: uv run python scripts/generate/generate_command_packages.py
@@ -8,14 +8,14 @@
 import { spawnSync } from 'node:child_process';
 import { writeSync } from 'node:fs';
 
-const supportedCommands = new Set(["doctor", "reconcile", "report", "status", "summary"]);
+const supportedCommands = new Set(["adopt", "archive-plan", "close-item", "create-review", "delegation-decision", "doctor", "handoff", "init", "install", "list-files", "new-plan", "promote-to-plan", "prompt", "reconcile", "record-recovery", "report", "status", "summary", "uninstall", "upgrade", "verify-payload"]);
 const argv = process.argv.slice(2);
 const command = argv[0];
 
 if (!command || command === '--help' || command === '-h') {
   console.log(`Usage: agentic-planning <command> [options]`);
   console.log(`Supported generated commands: ${Array.from(supportedCommands).join(', ')}`);
-  console.log('Weak-agent routing: allowed-read-only');
+  console.log('Weak-agent routing: allowed-mutation-with-review');
   console.log('Recovery: use a supported generated command or route back to the canonical Python CLI.');
   process.exit(0);
 }
@@ -26,7 +26,7 @@ if (!supportedCommands.has(command)) {
   process.exit(2);
 }
 
-const runtimeCommand = process.env.AGENTIC_WORKSPACE_RUNTIME ?? "python -c \"import sys; from repo_planning_bootstrap.generated_cli_package import main; raise SystemExit(main(sys.argv[1:]))\"";
+const runtimeCommand = process.env.AGENTIC_WORKSPACE_RUNTIME ?? "python -c \"import sys; from command_generation.console import main_for_entrypoint; raise SystemExit(main_for_entrypoint('agentic-planning', sys.argv[1:]))\"";
 
 function splitRuntimeCommand(commandLine) {
   const parts = [];

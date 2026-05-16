@@ -2,11 +2,12 @@
   "kind": "planning-decomposition/v1",
   "title": "Python generated CLI completion",
   "status": "partially-promoted",
-  "larger_intended_outcome": "Complete the Python side of #892 by moving command parser, dispatch, interface behavior, adapter metadata, runtime operation contracts, and conformance expectations behind implementation-independent contracts or IR, so later implementation targets are not forced to depend on Python internals unless that dependency is explicit and temporary.",
+  "larger_intended_outcome": "Complete the Python side of #892 by making modules own behavior meaning as IR/contracts/product data only, making command-generation own reusable primitive execution machinery and target renderers, and making generated/<package>/python own the shipped executable Python CLI projection. Package behavior changes should be possible by editing implementation-independent artifacts and regenerating outputs, without hand-editing shipped module executable code.",
   "non_goals": [
     "Do not claim weak-agent-safe adapter maturity is full Python generated CLI completion.",
     "Do not treat a generated non-Python CLI that shells into Python package internals as target completion unless the dependency is explicitly accepted as a transitional runtime bridge.",
     "Do not move live workspace inspection, mutation orchestration, or package-specific runtime primitive implementation into generated code until the operation contracts make the target-runtime boundary explicit.",
+    "Do not treat moving product-specific executable runtime code from module packages into packages/command-generation/src as Python generated CLI completion; command-generation source must stay generic, and product-specific executable projections must live under generated/<package>/python.",
     "Do not create a broad general-purpose language when a small JSON-Schema-backed operation IR plus thin target executors is sufficient.",
     "Do not advance Bash, PowerShell, or TypeScript in this Python lane except where shared contracts must remain implementation-independent."
   ],
@@ -26,8 +27,8 @@
       "title": "Python runtime handler boundary",
       "readiness": "promoted",
       "outcome": "Generated Python dispatch can identify supported operation ids from IR while runtime operation handlers expose an explicit contract boundary that can be implemented or bridged by future targets without relying on package-local cli.py ownership.",
-      "owner_surface": "packages/command-generation/src/agentic_command_generation/generator.py and generated/python/*/generated_cli_package/__init__.py",
-      "proof": "Generated package static proof plus Python conformance prove operation dispatch is generated, runtime handlers are behind an explicit operation contract, and any Python-runtime bridge assumption is visible rather than implicit. Root, planning, and memory executable front doors now route through generated_cli_entrypoint modules.",
+      "owner_surface": "packages/command-generation/src/command_generation/generator.py, generated/<package>/python/cli.py, generated/<package>/python/commands/, and generated/<package>/python/primitives/",
+      "proof": "Generated package static proof plus Python conformance prove operation dispatch is generated, runtime handlers are behind an explicit operation contract, and any Python-runtime bridge assumption is visible rather than implicit. The python-generated-entrypoint-source-import-retirement slice removed runtime_module_exports and patch-forwarding from generated Python entrypoints and added a static guard against reintroducing package-owned runtime helper imports there.",
       "depends_on": [
         "json-schema-operation-ir"
       ],
@@ -38,8 +39,8 @@
       "title": "Python package-resource operation IR migration",
       "readiness": "promoted",
       "outcome": "Simple package-resource generated Python commands consume checked-in operation contracts and target-executor primitives instead of compatibility runtime handlers.",
-      "owner_surface": "src/agentic_workspace/contracts/operations/memory.list-*.report.json, src/agentic_workspace/contracts/python_operation_execution_inventory.json, packages/memory/src/repo_memory_bootstrap/operation_ir_executor.py, and generated/python/memory-cli/generated_cli_package/operations/",
-      "proof": "Active execplan .agentic-workspace/planning/execplans/python-operation-ir-package-resource-commands.plan.json must prove contract tooling, generated Python conformance, generated package freshness, and structured inventory before this lane is complete.",
+      "owner_surface": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.list-*.report.json, src/agentic_workspace/contracts/python_operation_execution_inventory.json, packages/command-generation/src/command_generation/primitive_executor.py, and generated/memory/python/operations/",
+      "proof": "Contract tooling, generated Python conformance, generated package freshness, and structured operation inventory passed before Python completion promotion.",
       "depends_on": [
         "json-schema-operation-ir",
         "python-runtime-handler-boundary"
@@ -50,8 +51,8 @@
       "id": "python-handwritten-parser-retirement",
       "title": "Python handwritten parser retirement for generated commands",
       "readiness": "promoted",
-      "outcome": "Commands covered by command_package_ir no longer require duplicate handwritten argparse definitions in package-local cli.py files; hand-owned runtime helpers live in _runtime_cli.py modules while executable front doors route through generated_cli_entrypoint.",
-      "owner_surface": "src/agentic_workspace/generated_cli_entrypoint.py, src/agentic_workspace/_runtime_cli.py, packages/planning/src/repo_planning_bootstrap/generated_cli_entrypoint.py, packages/planning/src/repo_planning_bootstrap/_runtime_cli.py, packages/memory/src/repo_memory_bootstrap/generated_cli_entrypoint.py, packages/memory/src/repo_memory_bootstrap/_runtime_cli.py, and generated/python/*/generated_cli_package/__init__.py",
+      "outcome": "Commands covered by command_package_ir no longer require duplicate handwritten argparse definitions or product-specific runtime shims in package-local or command-generation source; executable projections route through generated Python packages plus generic command_generation machinery.",
+      "owner_surface": "generated/<package>/python/cli.py, generated/<package>/python/commands/, generated/<package>/python/primitives/, and generic packages/command-generation/src/command_generation machinery",
       "proof": "Static proof rejects duplicated handwritten parser ownership for generated command/interface surfaces; Python black-box conformance still passes; repository inventory has no cli.py files outside generated Python surfaces.",
       "depends_on": [
         "python-runtime-handler-boundary",
@@ -72,22 +73,77 @@
       "parallel_with": []
     },
     {
+      "id": "python-module-source-executable-retirement",
+      "title": "Python shipped module executable source retirement",
+      "readiness": "promoted",
+      "outcome": "Shipped module source trees, including the root module, no longer own executable CLI front doors, parser/help construction, command dispatch/fallback envelopes, generated-command runtime dispatch, or generic deterministic file/data/schema/template/output primitive execution, and this cannot be satisfied by relocating product-specific executable behavior into command-generation source.",
+      "owner_surface": ".agentic-workspace/planning/execplans/python-module-source-executable-retirement.plan.json",
+      "proof": "Generated-package static checks reject full completion while executable markers remain in shipped module src or product-specific command-generation runtime source; Python black-box and Docker conformance passed; stale-reference sweep found no retired module runtime imports outside the expected static gate list.",
+      "depends_on": [
+        "python-handwritten-parser-retirement",
+        "python-codegen-owned-primitive-executor-migration"
+      ],
+      "parallel_with": []
+    },
+    {
+      "id": "python-product-runtime-source-generation",
+      "title": "Python product runtime source generation",
+      "readiness": "promoted",
+      "outcome": "Workspace, planning, and memory product-specific executable runtime modules are generated target output under generated/<package>/python from IR/contracts and codegen-owned primitives; packages/command-generation/src owns only generic generator, renderer, executor, schema, freshness, and conformance machinery.",
+      "owner_surface": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
+      "proof": "Static proof rejects full Python completion while packages/command-generation/src contains product-specific executable runtime modules such as workspace_runtime_cli.py, planning_runtime_cli.py, or memory_runtime_cli.py; regenerated Python outputs provide the executable projection and black-box/Docker conformance passes.",
+      "depends_on": [
+        "python-module-source-executable-retirement",
+        "python-codegen-owned-primitive-executor-migration"
+      ],
+      "parallel_with": []
+    },
+    {
       "id": "python-generated-cli-completion-promotion",
       "title": "Python generated CLI completion promotion",
       "readiness": "promoted",
-      "outcome": "The command-package IR can promote Python from adapter-layer-proven-not-full-generated-cli to full generated CLI completion only after parser, dispatch, interface, proof, and runtime-handler boundaries are all proven.",
-      "owner_surface": "src/agentic_workspace/contracts/command_package_ir.json",
-      "proof": "Generated package static proof, Python Docker conformance, root CLI authority, closeout trust, and package planning summary all agree that original Python generated-CLI intent is satisfied.",
+      "outcome": "Promote Python to full generated CLI completion only after generated/<package>/python is the visible executable projection and old generated CLI package compatibility layout is gone.",
+      "owner_surface": ".agentic-workspace/planning/execplans/python-generated-cli-completion-promotion.plan.json",
+      "proof": "Generated package static proof, Python Docker conformance, packaging proof, structured-file inventory, and layout audits agree that generated ownership is mechanically reproducible from contracts.",
       "depends_on": [
-        "python-runtime-handler-boundary",
+        "python-codegen-owned-primitive-executor-migration",
+        "python-generated-target-layout",
         "python-handwritten-parser-retirement",
-        "python-interface-change-gate"
+        "python-interface-change-gate",
+        "python-module-source-executable-retirement",
+        "python-product-runtime-source-generation",
+        "python-runtime-handler-boundary"
+      ],
+      "parallel_with": []
+    },
+    {
+      "id": "python-codegen-owned-primitive-executor-migration",
+      "title": "Python codegen-owned primitive executor migration",
+      "readiness": "promoted",
+      "outcome": "Generic deterministic CLI-visible behavior over files, JSON, TOML, Markdown sections, schemas, templates, managed payloads, and JSON text emission moves from module-local runtime helpers into codegen-owned primitive executors where practical.",
+      "owner_surface": ".agentic-workspace/planning/execplans/python-codegen-owned-primitive-executor-migration.plan.json",
+      "proof": "Primitive conformance and generated Python black-box conformance prove representative operations execute through codegen-owned primitives without importing module-local CLI/runtime internals except explicitly inventoried package-specific judgment.",
+      "depends_on": [
+        "json-schema-operation-ir",
+        "python-package-resource-operation-ir"
+      ],
+      "parallel_with": []
+    },
+    {
+      "id": "python-generated-target-layout",
+      "title": "Python generated target layout correction",
+      "readiness": "promoted",
+      "outcome": "Generated Python output uses generated/<package>/python with cli.py, commands/, primitives/, operations/, and resources; old generated CLI package compatibility layout is not the target completion shape.",
+      "owner_surface": ".agentic-workspace/planning/execplans/python-generated-target-layout.plan.json",
+      "proof": "Generated package proof, Docker conformance, packaging tests, and structured-file inventory prove command-generation reproduces the visible target projection and old generated CLI package outputs are removed.",
+      "depends_on": [
+        "python-product-runtime-source-generation"
       ],
       "parallel_with": []
     }
   ],
   "dependency_assumptions": [
-    "Runtime primitive behavior remains hand-owned in the Python lane only after it is separated from CLI ownership behind explicit operation contracts.",
+    "Package-specific runtime judgment may remain hand-owned in the Python lane only after it is separated from CLI ownership behind explicit operation contracts; generic deterministic file/data/template/schema/output behavior must move toward codegen-owned primitives before full completion is claimed.",
     "Future non-Python targets must either implement the same operation contracts or use an explicitly accepted transitional bridge; an implicit call into Python internals is not completion.",
     "JSON Schema is sufficient as the contract layer for command packages, operation plans, payloads, and conformance fixtures; execution semantics belong to a small documented primitive set.",
     "Generated Python parser and dispatch should consume command_package_ir and conformance contracts as the single source of truth.",
@@ -101,9 +157,9 @@
     "Each promoted Python lane must include Python black-box conformance and Docker-backed Python conformance unless the lane is planning-only.",
     "Completion proof must distinguish generated CLI transport, runtime operation contract coverage, and any target bridge dependency instead of treating them as one surface.",
     "Closeout must run or inspect closeout_trust before claiming Python completion.",
-    "The command-package IR python_cli_completion.current_state may be full-generated-cli-complete only with a schema-backed python-only completion gate and static proof for all prerequisite evidence ids."
+    "The command-package IR python_cli_completion.current_state may be full-generated-cli-complete only with a schema-backed python-only completion gate, static proof for all prerequisite evidence ids, codegen-owned primitive executor proof for generic deterministic behavior, and source-executable ownership proof that shipped module src no longer owns executable CLI/runtime implementation."
   ],
-  "promotion_rule": "Promote only the next ready Python lane with clear generated-output ownership, no Bash/PowerShell scope, and proof that implementation-independent artifacts remain authoritative.",
+  "promotion_rule": "Python lane remains incomplete until generated/<package>/python is the checked and shipped target projection, command-generation has no package-specific executable source, old generated CLI package compatibility output is removed, and Docker-backed conformance plus staged structured-file inventory pass.",
   "references": [
     {
       "kind": "github-issue",
@@ -136,5 +192,5 @@
       "role": "active package-resource operation IR slice"
     }
   ],
-  "notes": "Created after #921 showed that adapter maturity was incorrectly treated as Python generated-CLI completion. Updated after user clarification that non-Python generated CLI targets are not meant to depend implicitly on Python internals. #930 established the small JSON-Schema-backed operation IR boundary with memory.list-files.report as the representative portable command. #931 promoted memory.list-files to runtime-consumed operation IR and opened #933 for remaining command groups. Root, planning, and memory executable front doors have now been moved off package-local cli.py files and through generated_cli_entrypoint modules while runtime helpers remain in _runtime_cli.py. The active execplan .agentic-workspace/planning/execplans/python-codegen-completion.plan.json now owns final Python completion reconciliation before #892 Python-lane completion is claimed. Bash, PowerShell, TypeScript follow-through, and any future mutation-capable generated adapters remain outside this Python branch unless the shared operation contract must change."
+  "notes": "Created after #921 showed that adapter maturity was incorrectly treated as Python generated-CLI completion. Updated after user clarification that non-Python generated CLI targets are not meant to depend implicitly on Python internals. #930 established the small JSON-Schema-backed operation IR boundary with memory.list-files.report as the representative portable command. #931 promoted memory.list-files to runtime-consumed operation IR and opened #933 for remaining command groups. #933 is closed for the previous migration slice: every generated Python operation id is inventoried as runtime-consumed or accepted-hand-owned-runtime-primitive, with compatibility-runtime-handler rejected. The 2026-05-14 #892 clarification sharpened the finish line: accepted hand-owned runtime primitives are transitional debt, not full generated CLI completion, when they contain generic deterministic file/data/schema/template/output behavior that should belong to codegen-owned primitive executors. Root, planning, and memory executable front doors were moved off package-local cli.py files and through generated_cli_entrypoint modules before the final source-executable retirement lane. #954 closed the root runtime dispatch and completion-contract blocker in the base branch via PR #956; that implementation was necessary progress but not sufficient for #892 completion. The Python-scoped #892 lane was corrected after product-specific runtime was briefly relocated into packages/command-generation/src. The final product-runtime source generation slice moved workspace/planning/memory runtime and operation executor implementations into generated/python package outputs, left command-generation with generic loader compatibility shims only, updated package force-includes, and promoted command_package_ir python_cli_completion to full-generated-cli-complete with completion_gate.state=satisfied after generated package proof, conformance, packaging, py_compile, and planning health checks passed. TypeScript generated-resource completion remains tracked separately by #929 and Bash/PowerShell remain out of scope until re-promoted. PR #966 review on 2026-05-15 demoted the completion claim: generated-output placement is not generated ownership, runtime-consumed is split into portable codegen primitive execution versus domain runtime primitives via IR, and accepted hand-owned runtime requires a compact audit before completion can be promoted again. The reopened product-runtime source-generation lane now has schema-backed runtime projection inventory: workspace_operation_ir_executor.py, planning_operation_ir_executor.py, and memory_operation_ir_executor.py are rendered by command-generation, while the workspace/planning/memory runtime modules remain blocking transitional debt until their behavior is generated from IR/contracts and codegen-owned primitives. Planning summary/reconcile are now generated operation resources and execute through planning_operation_ir_executor, reducing but not clearing planning_runtime_cli.py debt. Dogfooding follow-ups #987, #990, and #991 captured and fixed generated CLI container proof fragility from host Python bytecode caches, ambient terminal sizing, and legacy operation steps without executable ir_plan. On 2026-05-15 the target architecture was corrected again: generated placement under generated/<package>/python was insufficient because the filesystem boundary did not make package truth, command-generation machinery, and disposable target projection obvious. The new promoted lane python-generated-target-layout owns moving Python output to generated/<package>/python with cli.py, commands/, primitives/, operations/, and resource files. The python-generated-target-layout lane completed on 2026-05-15: generated Python projections now live under generated/<package>/python, stale generated CLI package target files were removed, and #996 captures the serial conformance proof dogfooding follow-up. The 2026-05-15 honest-gate slice demoted command_package_ir python_cli_completion to product-runtime-source-generation-incomplete with completion_gate.state=pending and added static proof that a full completion claim is rejected while shipped module runtime/lifecycle source files remain or generated command modules import package runtime helpers directly. The memory.list-skills slice then made generated/memory/python/commands/memory_list_skills_report.py the first concrete generated Python command projection: it composes package-resource JSON read, payload assembly, and output emission directly, without run_operation_ir or repo_memory_bootstrap runtime imports. The memory.list-files slice then made generated/memory/python/commands/memory_list_files_report.py a concrete package-payload projection with no run_operation_ir or repo_memory_bootstrap runtime import. The planning.list-files slice then made generated/planning/python/commands/planning_list_files_report.py a concrete package-payload and bundled-skill projection with no run_operation_ir or repo_planning_bootstrap runtime import, and contract tooling forced command_adapter_generation plus command_package_ir primitive refs to stay aligned with the promoted operation steps. The 2026-05-16 python-generated-resource-primitives slice corrected the next architectural problem: direct generated list commands should compose a small common primitive set rather than copying exact helper mechanics. command-generation now renders target-local generated resource primitives for resource-root discovery, resource file listing, JSON object loading, and JSON/text line emission; memory.list-skills and planning.list-files compose those primitives. Docker conformance revealed a recovered native-crash proof signal; #1001 tracks making recovered crashes structured and optionally strict. The 2026-05-16 python-memory-list-files-primitives slice then converted memory.list-files from copied helper mechanics into declarative product rules plus generated primitives for repo target resolution, payload entry projection, path rewrite, role classification, strategy mapping, version detection, mode detection, action construction, and action-report output. This removes the last large copied mechanics block from the direct generated list commands, but full #892 still depends on continuing the remaining product-runtime and completion-promotion lanes. The source-runtime blocker audit found that full completion is now blocked by generated operation executors and generated command modules still importing module-owned runtime files: workspace operation executor and generated workspace commands depend on agentic_workspace.workspace_runtime_primitives; generated planning operations depend on repo_planning_bootstrap.installer and repo_planning_bootstrap.runtime_projection; generated memory operations depend on repo_memory_bootstrap.installer and repo_memory_bootstrap.runtime_primitives. The next safe implementation order is workspace generated-runtime relocation first, then memory package runtime relocation, then planning lifecycle/runtime relocation, because workspace imports both package installers and has the widest console surface. The 2026-05-16 python-next-runtime-delegate-reduction slice started shrinking memory runtime source delegates by adding a schema-backed TOML-table lifecycle JSON fast-path primitive override for memory status and memory doctor, leaving verbose and text lifecycle behavior on the explicit source fallback. The 2026-05-16 python-memory-promotion-report-runtime-reduction slice retired the memory.promotion_report.load runtime facade and generated _load_memory_promotion_report export; promotion-report now uses generated operation IR python.function.call to invoke repo_memory_bootstrap.installer.promotion_report, with inventory proof explicitly marking that call as external-adapter debt rather than portable primitive coverage. The 2026-05-16 python-memory-report-json-runtime-reduction slice added generated TOML-table tiny memory report projection for memory.report JSON non-verbose, removed source _tiny_memory_report_fast, preserved verbose/text memory.report.load fallback, and fixed generated target-root ambiguity handling to raise RepoDetectionError like memory package source. The 2026-05-16 python-memory-route-report-json-runtime-reduction slice added generated target-file tiny route-report projection for memory.route-report JSON non-verbose, removed source _tiny_route_report_payload, and preserved verbose/text memory.route_report.load fallback. The 2026-05-16 python-memory-current-runtime-reduction audit found no safe small generated-runtime reduction: memory.current owns current-memory migration policy, planning contradiction checks, and custom text guidance, so it remains explicit package-domain runtime debt until that policy is modeled in IR. The 2026-05-16 python-memory-prompt-runtime-reduction audit found no safe small generated-runtime reduction: memory.prompt owns prompt wording policy, recorded upgrade-source resolution, local runner selection, and legacy layout detection, so it remains explicit package-domain runtime debt until template/source-resolution primitives exist. The 2026-05-16 python-next-runtime-delegate-reduction-2 slice replaced the memory-specific generated route-report JSON override with portable operation IR primitives (path.target_root.resolve, filesystem.exists, filesystem.glob, payload.assemble, output.emit) while retaining memory.route_report.load as explicit verbose/text package-domain fallback. The 2026-05-16 python-workspace-defaults-runtime-reduction audit found no safe small generated-runtime reduction: defaults.report load depends on _defaults_payload, a broad workspace default-route policy assembly reused by doctor/startup/reporting internals, so it remains explicit package-domain runtime debt until a larger declarative defaults-payload extraction lane moves that policy into package-owned JSON/contracts. The 2026-05-16 python-memory-status-runtime-reduction slice introduced the schema-backed toml.table.counts primitive and moved memory.status non-verbose JSON to portable operation IR, removing the generated _load_memory_bootstrap_status JSON fast-path override while preserving verbose/text source fallback. The 2026-05-16 python-memory-doctor-runtime-reduction slice moved memory.doctor non-verbose JSON to the same portable toml.table.counts IR path, removing the generated _load_memory_bootstrap_doctor JSON fast-path override while preserving verbose/text source fallback. The 2026-05-16 python-memory-report-runtime-reduction slice moved memory.report non-verbose JSON to portable operation IR using path.target_root.resolve, toml.table.counts, payload.assemble $field selectors, and output.emit; removed the generated memory report TOML helper override path from command-generation; preserved memory.report.load as explicit verbose/text domain fallback; and fixed generated target-root resource errors to raise RepoDetectionError so CLI usage handling remains compatible. The 2026-05-16 python-memory-verify-payload-runtime-audit found no safe small primitive reduction: verify_payload owns broad payload verification policy including version metadata, upgrade-source validation, required/forbidden payload surfaces, current-memory baseline checks, contract surface summaries, and guidance-fragment assertions. #1007 tracks the required declarative payload-verification IR before this can become portable codegen behavior. The 2026-05-16 python-memory-payload-verification-ir slice added schema-backed packages/memory/src/repo_memory_bootstrap/contracts/payload_verification.memory.json, made verify_payload consume that policy for its existing checks, updated packaging to include the contracts directory, and kept generated execution on memory.verify-payload.load until #1007's primitive-executor migration is implemented. The 2026-05-16 python-memory-payload-verify-primitive slice added codegen-owned payload.verify with schema-backed primitive contracts, copied memory contracts into generated/memory/python/_contracts, routed memory.verify-payload JSON through path.target_root.resolve plus payload.verify, and preserved only text output as explicit python.function.call external-adapter debt. The 2026-05-16 python-memory-status-text-runtime-reduction audit found no safe small primitive reduction: current status text depends on payload-entry expansion, target-layout detection, per-file action metadata, obsolete-file and optional-append policy, version display, and InstallResult formatting that are not present in the compact status JSON payload. #1008 tracks the required declarative status/payload-entry IR before status text can leave source runtime."
 }

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 # ruff: noqa: F401
+import importlib
 import json
 import subprocess
 import sys
@@ -8,8 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from repo_memory_bootstrap import _runtime_cli as cli
-from repo_memory_bootstrap import installer
+from repo_memory_bootstrap import installer, runtime_primitives
 from repo_memory_bootstrap._installer_output import _infer_action_category
 from repo_memory_bootstrap._installer_shared import (
     MEMORY_COMPATIBILITY_CONTRACT_FILES,
@@ -22,6 +22,21 @@ from repo_memory_bootstrap._ownership import module_root as memory_module_root
 FIXTURES_ROOT = Path(__file__).resolve().parent / "fixtures" / "routing"
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 WORKSPACE_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(WORKSPACE_ROOT))
+_generated_cli = importlib.import_module("generated.memory.python.cli")
+
+
+class _GeneratedCliTestFacade:
+    def main(self, argv: list[str] | None = None) -> int:
+        return int(_generated_cli.main(argv))
+
+    def __getattr__(self, name: str):
+        if hasattr(_generated_cli, name):
+            return getattr(_generated_cli, name)
+        return getattr(runtime_primitives, name)
+
+
+cli = _GeneratedCliTestFacade()
 MEMORY_INDEX_TEMPLATE = FIXTURES_ROOT / "memory-index-template.md"
 MEMORY_MANIFEST_TEMPLATE = FIXTURES_ROOT / "memory-manifest-template.toml"
 MEMORY_GIT_SOURCE_REF = "git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory"

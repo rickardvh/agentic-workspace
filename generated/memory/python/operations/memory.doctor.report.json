@@ -1,0 +1,315 @@
+{
+  "classification": "read-only-report",
+  "command_surface": {
+    "command": "doctor",
+    "format_option": "format",
+    "program": "agentic-memory"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": true,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
+  },
+  "guards": [
+    "doctor must remain read-only."
+  ],
+  "id": "memory.doctor.report",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "strict_doc_ownership",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "verbose",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "command_visibility": "runtime-only",
+      "description": "Runtime adapter compatibility value shared with lifecycle prompt/template operations; not exposed by doctor.",
+      "name": "project_name",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "command_visibility": "runtime-only",
+      "description": "Runtime adapter compatibility value shared with lifecycle prompt/template operations; not exposed by doctor.",
+      "name": "project_purpose",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "command_visibility": "runtime-only",
+      "description": "Runtime adapter compatibility value shared with lifecycle prompt/template operations; not exposed by doctor.",
+      "name": "key_repo_docs",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "command_visibility": "runtime-only",
+      "description": "Runtime adapter compatibility value shared with lifecycle prompt/template operations; not exposed by doctor.",
+      "name": "key_subsystems",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "command_visibility": "runtime-only",
+      "description": "Runtime adapter compatibility value shared with lifecycle prompt/template operations; not exposed by doctor.",
+      "name": "primary_build_command",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "command_visibility": "runtime-only",
+      "description": "Runtime adapter compatibility value shared with lifecycle prompt/template operations; not exposed by doctor.",
+      "name": "primary_test_command",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "command_visibility": "runtime-only",
+      "description": "Runtime adapter compatibility value shared with lifecycle prompt/template operations; not exposed by doctor.",
+      "name": "other_key_commands",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "command_visibility": "runtime-only",
+      "description": "Runtime adapter compatibility value shared with lifecycle prompt/template operations; not exposed by doctor.",
+      "name": "policy_profile",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "arguments": {
+          "must_be_dir": true,
+          "must_exist": true
+        },
+        "description": "Resolve the target root for target-local memory doctor checks.",
+        "id": "resolve_target_root",
+        "on_error": "fail",
+        "outputs": [
+          "target_root"
+        ],
+        "uses": "path.target_root.resolve",
+        "when": {
+          "all": [
+            {
+              "equals": "json",
+              "value": "format"
+            },
+            {
+              "equals": false,
+              "value": "verbose"
+            }
+          ]
+        }
+      },
+      {
+        "arguments": {
+          "base_value": "target_root",
+          "optional_value": "optional",
+          "path": ".agentic-workspace/memory/repo/manifest.toml",
+          "relevance_field": "task_relevance",
+          "required_value": "required",
+          "routing_only_field": "routing_only",
+          "table": "notes"
+        },
+        "description": "Count note records and relevance categories in the target memory manifest.",
+        "id": "count_manifest_notes",
+        "on_error": "fail",
+        "outputs": [
+          "table_counts",
+          "table_present",
+          "table_status"
+        ],
+        "uses": "toml.table.counts",
+        "when": {
+          "all": [
+            {
+              "equals": "json",
+              "value": "format"
+            },
+            {
+              "equals": false,
+              "value": "verbose"
+            }
+          ]
+        }
+      },
+      {
+        "arguments": {
+          "fields": {
+            "template": {
+              "action_count": {
+                "$exists_status": {
+                  "missing": 1,
+                  "present": 0,
+                  "value": "table_present"
+                }
+              },
+              "actions": {
+                "$exists_status": {
+                  "missing": [
+                    {
+                      "detail": "memory manifest is not readable; run full doctor for remediation detail",
+                      "kind": {
+                        "$value": "table_status"
+                      },
+                      "path": ".agentic-workspace/memory/repo/manifest.toml"
+                    }
+                  ],
+                  "present": [],
+                  "value": "table_present"
+                }
+              },
+              "active": {
+                "$value": "table_counts"
+              },
+              "bootstrap_version": null,
+              "detail_command": "agentic-memory doctor --target . --verbose --format json",
+              "detected_version": null,
+              "dry_run": true,
+              "health": {
+                "$exists_status": {
+                  "missing": "attention-needed",
+                  "present": "healthy",
+                  "value": "table_present"
+                }
+              },
+              "message": "Doctor report",
+              "mode": "",
+              "target_root": {
+                "$value": "target_root"
+              }
+            }
+          }
+        },
+        "description": "Assemble the compact doctor payload from primitive outputs.",
+        "id": "assemble_doctor",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "payload.assemble",
+        "when": {
+          "all": [
+            {
+              "equals": "json",
+              "value": "format"
+            },
+            {
+              "equals": false,
+              "value": "verbose"
+            }
+          ]
+        }
+      },
+      {
+        "arguments": {},
+        "description": "Load the package-domain doctor report when verbose or text output is requested.",
+        "id": "load_verbose_or_text_doctor",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "memory.bootstrap.doctor.load",
+        "when": {
+          "not": {
+            "all": [
+              {
+                "equals": "json",
+                "value": "format"
+              },
+              {
+                "equals": false,
+                "value": "verbose"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "arguments": {},
+        "description": "Emit the memory report payload in the requested format.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Memory doctor non-verbose JSON executes generated operation IR through codegen-owned portable primitives. Verbose/text doctor behavior remains package-domain source runtime."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "text-or-json"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "process conformance remains compatible"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": "package-local runtime state"
+    },
+    {
+      "required": false,
+      "surface": "verbose flag for broad diagnostic output"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the target root for target-local memory doctor checks.",
+      "id": "resolve_target_root",
+      "uses": "path.target_root.resolve"
+    },
+    {
+      "description": "Count note records and relevance categories in the target memory manifest.",
+      "id": "count_manifest_notes",
+      "uses": "toml.table.counts"
+    },
+    {
+      "description": "Assemble the compact doctor payload from primitive outputs.",
+      "id": "assemble_doctor",
+      "uses": "payload.assemble"
+    },
+    {
+      "description": "Load the package-domain doctor report when verbose or text output is requested.",
+      "id": "load_verbose_or_text_doctor",
+      "uses": "memory.bootstrap.doctor.load"
+    },
+    {
+      "description": "Emit report in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Read-only agentic-memory doctor report.",
+  "writes": []
+}

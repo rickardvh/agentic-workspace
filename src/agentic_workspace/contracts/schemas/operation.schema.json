@@ -109,6 +109,15 @@
             ],
             "description": "Origin or authority source for this value."
           },
+          "command_visibility": {
+            "type": "string",
+            "enum": [
+              "command-visible",
+              "runtime-only",
+              "non-command-visible"
+            ],
+            "description": "Whether a cli-option source must be exposed by the generated command parser. Use runtime-only/non-command-visible only for explicit compatibility or runtime adapter values."
+          },
           "required": {
             "type": "boolean",
             "description": "Required true/false policy flag used by this contract."
@@ -278,8 +287,15 @@
             "description": "Longer explanation or display text for this entry."
           },
           "when": {
-            "type": "string",
-            "description": "When text value used by this contract."
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object"
+              }
+            ],
+            "description": "When guard used by this contract."
           },
           "inputs": {
             "type": "array",
@@ -369,7 +385,14 @@
                 "description": "Named outputs produced by this step."
               },
               "when": {
-                "type": "string",
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "object"
+                  }
+                ],
                 "description": "A named boolean fact or input-presence guard; arbitrary expressions are not allowed."
               },
               "on_error": {

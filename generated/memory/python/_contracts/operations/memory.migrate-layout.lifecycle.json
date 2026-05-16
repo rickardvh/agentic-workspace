@@ -1,0 +1,114 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "memory.migrate-layout.lifecycle",
+  "command_surface": {
+    "program": "agentic-memory",
+    "command": "migrate-layout",
+    "format_option": "format"
+  },
+  "summary": "Move legacy Memory bootstrap layout files into the current layout.",
+  "classification": "lifecycle-mutation",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "dry_run",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "text-or-json"
+  },
+  "effects": {
+    "read_only": false,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": true,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": true,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": "target repository Memory install state",
+      "required": false
+    }
+  ],
+  "writes": [
+    {
+      "surface": "target repository Memory managed surfaces",
+      "required": false,
+      "when": "not a dry run"
+    }
+  ],
+  "steps": [
+    {
+      "id": "apply_memory_lifecycle",
+      "uses": "python.function.call",
+      "description": "Move legacy Memory bootstrap layout files into the current layout."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit the migrate-layout result in the requested format."
+    }
+  ],
+  "guards": [
+    "Generated code owns parser/help/dispatch shape; memory-owned lifecycle policy remains behind the declared primitive.",
+    "Dry-run conformance must prove generated lifecycle adapters can execute without repository writes."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated memory migrate-layout dry-run process conformance passes"
+  ],
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Memory migrate-layout executes generated operation IR through codegen-owned primitive dataflow while the memory module owns lifecycle policy.",
+    "steps": [
+      {
+        "id": "apply_memory_lifecycle",
+        "uses": "python.function.call",
+        "description": "Move legacy Memory bootstrap layout files into the current layout.",
+        "arguments": {
+          "import_module": "repo_memory_bootstrap.installer",
+          "function": "migrate_layout",
+          "kwargs": {
+            "target": {
+              "value": "target"
+            },
+            "dry_run": {
+              "value": "dry_run"
+            }
+          }
+        },
+        "outputs": [
+          "result"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit",
+        "description": "Emit the migrate-layout result in the requested format.",
+        "arguments": {},
+        "outputs": [
+          "emitted"
+        ],
+        "on_error": "emit_usage_error"
+      }
+    ]
+  }
+}

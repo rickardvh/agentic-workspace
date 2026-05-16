@@ -109,15 +109,15 @@ def test_workspace_artifacts_ship_generated_cli_package_import_dependency() -> N
         wheel_inventory = _raw_wheel_inventory(wheel_path)
         sdist_inventory = _raw_sdist_inventory(sdist_path)
 
-        assert "agentic_workspace/generated_cli_package.py" in wheel_inventory
+        assert "agentic_workspace/generated_cli_package.py" not in wheel_inventory
         assert "agentic_workspace/generated_cli_package/__init__.py" not in wheel_inventory
         assert "agentic_workspace/_generated_cli_package_impl/__init__.py" in wheel_inventory
         assert "agentic_workspace/_generated_cli_package_impl/command_package.json" in wheel_inventory
         assert "agentic_workspace/_generated_cli_package_impl/adapter_commands.json" in wheel_inventory
-        assert any(name.endswith("/generated/python/workspace-cli/generated_cli_package/__init__.py") for name in sdist_inventory)
-        assert any(name.endswith("/generated/python/workspace-cli/generated_cli_package/command_package.json") for name in sdist_inventory)
-        assert any(name.endswith("/generated/python/workspace-cli/generated_cli_package/adapter_commands.json") for name in sdist_inventory)
-        assert any(name.endswith("/src/agentic_workspace/generated_cli_package.py") for name in sdist_inventory)
+        assert any(name.endswith("/generated/workspace/python/__init__.py") for name in sdist_inventory)
+        assert any(name.endswith("/generated/workspace/python/command_package.json") for name in sdist_inventory)
+        assert any(name.endswith("/generated/workspace/python/adapter_commands.json") for name in sdist_inventory)
+        assert not any(name.endswith("/src/agentic_workspace/generated_cli_package.py") for name in sdist_inventory)
         assert not any(name.endswith("/src/agentic_workspace/generated_cli_package/__init__.py") for name in sdist_inventory)
 
 
@@ -127,7 +127,7 @@ def test_root_wheel_ships_generated_cli_package_import_dependency() -> None:
         inventory = _raw_wheel_inventory(wheel_path)
 
     assert "agentic_workspace/generated_command_adapters.py" not in inventory
-    assert "agentic_workspace/generated_cli_package.py" in inventory
+    assert "agentic_workspace/generated_cli_package.py" not in inventory
     assert "agentic_workspace/generated_cli_package/__init__.py" not in inventory
     assert "agentic_workspace/_generated_cli_package_impl/__init__.py" in inventory
     assert "agentic_workspace/_generated_cli_package_impl/command_package.json" in inventory
@@ -140,14 +140,14 @@ def test_root_sdist_ships_generated_cli_package_import_dependency() -> None:
         inventory = _raw_sdist_inventory(sdist_path)
 
     assert not any(name.endswith("/src/agentic_workspace/generated_command_adapters.py") for name in inventory)
-    assert any(name.endswith("/generated/python/memory-cli/generated_command_adapters.json") for name in inventory)
-    assert any(name.endswith("/generated/python/planning-cli/generated_command_adapters.json") for name in inventory)
-    assert any(name.endswith("/generated/python/workspace-cli/generated_command_adapters.json") for name in inventory)
-    assert any(name.endswith("/src/agentic_workspace/generated_cli_package.py") for name in inventory)
+    assert any(name.endswith("/generated/memory/python/generated_command_adapters.json") for name in inventory)
+    assert any(name.endswith("/generated/planning/python/generated_command_adapters.json") for name in inventory)
+    assert any(name.endswith("/generated/workspace/python/generated_command_adapters.json") for name in inventory)
+    assert not any(name.endswith("/src/agentic_workspace/generated_cli_package.py") for name in inventory)
     assert not any(name.endswith("/src/agentic_workspace/generated_cli_package/__init__.py") for name in inventory)
-    assert any(name.endswith("/generated/python/workspace-cli/generated_cli_package/__init__.py") for name in inventory)
-    assert any(name.endswith("/generated/python/workspace-cli/generated_cli_package/command_package.json") for name in inventory)
-    assert any(name.endswith("/generated/python/workspace-cli/generated_cli_package/adapter_commands.json") for name in inventory)
+    assert any(name.endswith("/generated/workspace/python/__init__.py") for name in inventory)
+    assert any(name.endswith("/generated/workspace/python/command_package.json") for name in inventory)
+    assert any(name.endswith("/generated/workspace/python/adapter_commands.json") for name in inventory)
 
 
 def test_installed_workspace_wheel_imports_cli_module() -> None:
@@ -166,7 +166,7 @@ def test_installed_workspace_wheel_imports_cli_module() -> None:
             [
                 sys.executable,
                 "-c",
-                "import agentic_workspace._runtime_cli; from agentic_workspace.generated_cli_package import build_generated_parser",
+                "from agentic_workspace._generated_cli_package_impl import build_generated_parser",
             ],
             cwd=Path(tmpdir),
             env={**os.environ, "PYTHONPATH": str(install_root)},

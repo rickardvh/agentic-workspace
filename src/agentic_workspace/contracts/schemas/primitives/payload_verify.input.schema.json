@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/primitives/payload_verify.input.schema.json",
+  "title": "payload.verify input",
+  "type": "object",
+  "properties": {
+    "policy_root": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Declared context root containing the package-owned payload verification policy."
+    },
+    "policy_path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Root-relative JSON policy path."
+    },
+    "payload_root": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Declared context root containing payload files to verify."
+    },
+    "target_root_value": {
+      "type": "string",
+      "minLength": 1,
+      "default": "target_root",
+      "description": "Name of the prior step value containing the resolved target root."
+    }
+  },
+  "required": [
+    "policy_root",
+    "policy_path",
+    "payload_root"
+  ],
+  "additionalProperties": false
+}

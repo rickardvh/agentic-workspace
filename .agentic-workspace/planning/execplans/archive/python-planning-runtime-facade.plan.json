@@ -1,0 +1,343 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Python planning runtime facade slice",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Advance #892 by routing generated planning Python operation-executor source-runtime imports through generated-local facade modules, making remaining planning runtime delegates explicit and mechanically auditable.",
+    "hard_constraints": "Do not claim full #892 completion. Do not hand-edit generated planning outputs except by regeneration. Keep behavior identical; this slice isolates the boundary and adds proof against direct planning source-runtime imports in the generated operation executor.",
+    "agent_may_decide": "Exact facade module names, generator factoring, static proof wording, and narrow validation commands.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Add planning local runtime bindings, teach generated function-call handlers to use local facades, regenerate outputs, and prove direct planning source-runtime imports are absent from generated/planning/python/primitives/operation_executor.py.",
+    "proof_expectations": [
+      "uv run python scripts/generate/generate_command_packages.py --check",
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "uv run ruff check packages/command-generation/src/command_generation/generator.py scripts/check/check_generated_command_packages.py generated/planning/python/primitives/operation_executor.py generated/planning/python/primitives/planning_installer.py generated/planning/python/primitives/planning_runtime.py",
+      "uv run python scripts/check/check_generated_command_packages.py --python-conformance"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/contracts/command_package_ir.json",
+      "packages/command-generation/src/command_generation/generator.py",
+      "scripts/check/check_generated_command_packages.py",
+      "generated/planning/python/primitives/operation_executor.py",
+      "generated/planning/python/primitives/planning_installer.py",
+      "generated/planning/python/primitives/planning_runtime.py",
+      "packages/planning/payload-surface-classification.json",
+      ".agentic-workspace/planning/execplans/python-planning-runtime-facade.plan.json",
+      ".agentic-workspace/planning/state.toml",
+      ".agentic-workspace/planning/mutation-provenance.json"
+    ],
+    "completion_criteria": [
+      "Generated planning operation executor imports generated-local planning facade modules instead of repo_planning_bootstrap.installer or repo_planning_bootstrap.runtime_projection directly.",
+      "Generated facade modules are produced from command_package_ir local_runtime_bindings and expose every remaining planning installer/runtime_projection delegate used by operation executor handlers.",
+      "Static proof rejects regression to direct planning source-runtime imports in generated/planning/python/primitives/operation_executor.py.",
+      "The slice is archived as bounded progress with #892 still open because facade delegates remain transitional runtime debt."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "Create a bounded plan for Python planning runtime facade slice."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Advance #892 by routing generated planning Python operation-executor source-runtime imports through generated-local facade modules.",
+      "constraints": "Keep behavior identical and do not claim full #892 completion; generated outputs must be regenerated.",
+      "latitude": "Exact facade module names, generator factoring, static proof wording, and narrow validation commands.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "python-planning-runtime-facade",
+      "status": "active",
+      "next_step": "Add planning local runtime bindings, update generator routing, regenerate outputs, and prove direct generated planning operation-executor source imports are absent.",
+      "proof": "Generation freshness, static generated package proof, ruff on touched generated/generator/check files, and Python conformance."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/contracts/command_package_ir.json",
+        "packages/command-generation/src/command_generation/generator.py",
+        "scripts/check/check_generated_command_packages.py",
+        "generated/planning/python/primitives/operation_executor.py",
+        "generated/planning/python/primitives/planning_installer.py",
+        "generated/planning/python/primitives/planning_runtime.py",
+        "packages/planning/payload-surface-classification.json",
+        ".agentic-workspace/planning/execplans/python-planning-runtime-facade.plan.json",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/mutation-provenance.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#892 Python generated CLI completion: packages own declarative behavior truth, command-generation owns generic machinery, and generated/<package>/python owns disposable shipped executable projection without module-source runtime ownership.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+    "activation trigger": "Continue removing facade delegates by converting behavior into operation IR and codegen-owned primitives."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Planning source-runtime delegates become visible in generated-local facade modules, so later slices can remove them one function or operation family at a time.",
+    "intentionally deferred": "Converting planning lifecycle/report behavior into portable primitives; removing repo_planning_bootstrap runtime source files; #892 completion promotion.",
+    "discovered implications": "Function-call handler rendering needs the same local-runtime binding support already used by runtime_handler rendering.",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Keep going on #892 until done or stopped.",
+    "inferred intended outcome": "Continue honest, slice-by-slice Python generated CLI completion without silently narrowing the epic.",
+    "chosen concrete what": "Route planning operation-executor imports through generated-local facades as a bounded boundary-isolation slice.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "command_package_ir, command-generation generator, generated planning python primitives, generated package proof check, planning payload classification if generated files are force-included, and this execplan/state/provenance.",
+    "max changed files": "about 10",
+    "required validation commands": "generation freshness, static generated package proof, ruff on touched Python files, and Python generated command conformance.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Planning runtime facade slice: add local_runtime_bindings for repo_planning_bootstrap installer/runtime_projection, regenerate planning facade modules, prove operation_executor has no direct planning source-runtime imports.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Advance #892 by routing generated planning Python operation-executor source-runtime imports through generated-local facade modules.",
+    "hard constraints": "Keep behavior identical, regenerate outputs, do not overclaim #892 completion.",
+    "agent may decide locally": "Exact facade module names, generator factoring, static proof wording, and narrow validation commands.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "delegate-exploration",
+    "required evidence": "Reused open worker 019e2bd3-d0cf-7213-a543-ca8093c54431 for read-only audit of remaining generated planning delegates while local implementation proceeds.",
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-16T12:14:02+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "python-planning-runtime-facade",
+    "status": "completed",
+    "scope": "Planning generated operation-executor source-runtime import facade boundary only.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Add planning local runtime bindings, update generator routing, regenerate outputs, and prove direct generated planning operation-executor source imports are absent."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    "packages/command-generation/src/command_generation/generator.py",
+    "scripts/check/check_generated_command_packages.py",
+    "generated/planning/python/primitives/operation_executor.py",
+    "generated/planning/python/primitives/planning_installer.py",
+    "generated/planning/python/primitives/planning_runtime.py",
+    "packages/planning/payload-surface-classification.json",
+    ".agentic-workspace/planning/execplans/python-planning-runtime-facade.plan.json",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/mutation-provenance.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run python scripts/generate/generate_command_packages.py --check",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run ruff check packages/command-generation/src/command_generation/generator.py scripts/check/check_generated_command_packages.py generated/planning/python/primitives/operation_executor.py generated/planning/python/primitives/planning_installer.py generated/planning/python/primitives/planning_runtime.py",
+    "uv run python scripts/check/check_generated_command_packages.py --python-conformance"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Generated planning operation executor imports generated-local planning facade modules instead of repo_planning_bootstrap.installer or repo_planning_bootstrap.runtime_projection directly.",
+    "Generated facade modules are produced from command_package_ir local_runtime_bindings and expose every remaining planning installer/runtime_projection delegate used by operation executor handlers.",
+    "Static proof rejects regression to direct planning source-runtime imports in generated/planning/python/primitives/operation_executor.py.",
+    "The slice is archived as bounded progress with #892 still open because facade delegates remain transitional runtime debt."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "codex plus delegated read-only audit",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Generated planning operation-executor source-runtime imports now route through generated-local planning_installer and planning_runtime facades; static proof rejects direct planning source-runtime imports in the generated planning operation executor.",
+    "scope touched": "command_package_ir planning python runtime bindings, command-generation generator, generated planning Python facades/executor, static generated package proof, planning payload classification, and planning records.",
+    "changed surfaces": "src/agentic_workspace/contracts/command_package_ir.json; packages/command-generation/src/command_generation/generator.py; scripts/check/check_generated_command_packages.py; generated/planning/python/primitives/*; generated planning package metadata; packages/planning/payload-surface-classification.json; planning execplan/state/provenance",
+    "validations run": "generate --check; generated package static proof; ruff; python conformance; python docker conformance; full conformance with node; docker proof; docker conformance; planning package/contract tests; make lint-planning; make test-planning; planning doctor",
+    "result for continuation": "#892 remains open; generated planning facades still delegate to repo_planning_bootstrap runtime source and must be converted to IR/codegen-owned primitives in later slices.",
+    "next step": "Continue #892 by reducing remaining facade delegates, prioritizing behavior that can be expressed by common file/json/toml/markdown/template/output primitives."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes; bounded facade boundary slice only",
+    "proof status": "passed",
+    "intent served": "partial progress toward #892, not full completion",
+    "config compliance": "used uv run agentic-workspace and recorded delegation decision through planning CLI",
+    "misinterpretation risk": "low for this slice; high for the larger epic if facade delegation is mistaken for completion",
+    "follow-on decision": "archive but keep lane open"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "not skipped",
+    "expected savings": "moderate read-only audit in parallel with local implementation",
+    "actual friction": "worker recommended runtime_projection-only; local implementation safely included installer after adding nested conditional handler support",
+    "proof result": "passed",
+    "quality concern": "facade delegation remains transitional debt",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "generate --check, static proof, ruff, generated conformance, Docker conformance, planning package/contract tests, make lint-planning, make test-planning, and planning doctor passed",
+    "proof achieved now": "planning operation executor no longer imports repo_planning_bootstrap.installer or repo_planning_bootstrap.runtime_projection directly",
+    "evidence for \"proof achieved\" state": "scripts/check/check_generated_command_packages.py includes a regression guard and rg confirmed direct imports absent from generated/planning/python/primitives/operation_executor.py"
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Python planning runtime facade slice.",
+    "was original intent fully satisfied?": "false",
+    "evidence of intent satisfaction": "This slice only routes generated/planning/python/primitives/operation_executor.py through generated-local planning_installer.py and planning_runtime.py facades and adds static proof against direct source-runtime imports.",
+    "unsolved intent passed to": "#892 remains open: generated planning facades still delegate to module-owned planning runtime source; workspace and memory also retain transitional delegates."
+  },
+  "execution_summary": {
+    "outcome delivered": "Generated planning operation-executor source-runtime imports now route through generated-local planning_installer.py and planning_runtime.py facade modules, produced from command_package_ir local_runtime_bindings.",
+    "validation confirmed": "generate --check, static proof, ruff, generated conformance, Docker conformance, planning package/contract tests, make lint-planning, make test-planning, and planning doctor passed.",
+    "follow-on routed to": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json and #892 continuation",
+    "post-work posterity capture": "Static proof in scripts/check/check_generated_command_packages.py and generated facade files under generated/planning/python/primitives/",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "none",
+    "proposed durable intent": "none yet",
+    "confidence": "low",
+    "needs review": "True",
+    "owner surface": "none"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "Bounded facade boundary slice completed without claiming full Python generated CLI completion.",
+    "evidence carried forward": "Generation check, static generated package proof, ruff, Python and Docker conformance, planning tests/lint, and AW doctor passed.",
+    "reopen trigger": "A generated planning operation executor imports repo_planning_bootstrap.installer or repo_planning_bootstrap.runtime_projection directly again."
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Continue removing facade delegates by converting behavior into operation IR and codegen-owned primitives.",
+          "owner": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+          "source": "required_continuation"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "none",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-16: Scaffolded by agentic-planning new-plan.",
+    "2026-05-16: Recorded delegation decision route=delegate-exploration."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Create a bounded plan for Python planning runtime facade slice.\nIntent satisfied: false\nArchive decision: archive-but-keep-lane-open\nProof: generate --check, static proof, ruff, generated conformance, Docker conformance, planning package/contract tests, make lint-planning, make test-planning, and planning doctor passed\nChanged surfaces: src/agentic_workspace/contracts/command_package_ir.json; packages/command-generation/src/command_generation/generator.py; scripts/check/check_generated_command_packages.py; generated/planning/python/primitives/*; generated planning package metadata; packages/planning/payload-surface-classification.json; planning execplan/state/provenance\nDurable residue: none (none)\nMemory learning: none\nFollow-up: #892 remains open: generated planning facades still delegate to module-owned planning runtime source; workspace and memory also retain transitional delegates."
+  }
+}

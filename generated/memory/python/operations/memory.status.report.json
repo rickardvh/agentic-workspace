@@ -1,0 +1,254 @@
+{
+  "classification": "read-only-report",
+  "command_surface": {
+    "command": "status",
+    "format_option": "format",
+    "program": "agentic-memory"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": true,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
+  },
+  "guards": [
+    "Status must remain read-only."
+  ],
+  "id": "memory.status.report",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "verbose",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "arguments": {
+          "must_be_dir": true,
+          "must_exist": true
+        },
+        "description": "Resolve the target root for target-local memory status checks.",
+        "id": "resolve_target_root",
+        "on_error": "fail",
+        "outputs": [
+          "target_root"
+        ],
+        "uses": "path.target_root.resolve",
+        "when": {
+          "all": [
+            {
+              "equals": "json",
+              "value": "format"
+            },
+            {
+              "equals": false,
+              "value": "verbose"
+            }
+          ]
+        }
+      },
+      {
+        "arguments": {
+          "base_value": "target_root",
+          "optional_value": "optional",
+          "path": ".agentic-workspace/memory/repo/manifest.toml",
+          "relevance_field": "task_relevance",
+          "required_value": "required",
+          "routing_only_field": "routing_only",
+          "table": "notes"
+        },
+        "description": "Count note records and relevance categories in the target memory manifest.",
+        "id": "count_manifest_notes",
+        "on_error": "fail",
+        "outputs": [
+          "table_counts",
+          "table_present",
+          "table_status"
+        ],
+        "uses": "toml.table.counts",
+        "when": {
+          "all": [
+            {
+              "equals": "json",
+              "value": "format"
+            },
+            {
+              "equals": false,
+              "value": "verbose"
+            }
+          ]
+        }
+      },
+      {
+        "arguments": {
+          "fields": {
+            "template": {
+              "action_count": {
+                "$exists_status": {
+                  "missing": 1,
+                  "present": 0,
+                  "value": "table_present"
+                }
+              },
+              "actions": {
+                "$exists_status": {
+                  "missing": [
+                    {
+                      "detail": "memory manifest is not readable; run full doctor for remediation detail",
+                      "kind": {
+                        "$value": "table_status"
+                      },
+                      "path": ".agentic-workspace/memory/repo/manifest.toml"
+                    }
+                  ],
+                  "present": [],
+                  "value": "table_present"
+                }
+              },
+              "active": {
+                "$value": "table_counts"
+              },
+              "bootstrap_version": null,
+              "detail_command": "agentic-memory status --target . --verbose --format json",
+              "detected_version": null,
+              "dry_run": false,
+              "health": {
+                "$exists_status": {
+                  "missing": "attention-needed",
+                  "present": "healthy",
+                  "value": "table_present"
+                }
+              },
+              "message": "Status report",
+              "mode": "",
+              "target_root": {
+                "$value": "target_root"
+              }
+            }
+          }
+        },
+        "description": "Assemble the compact status payload from primitive outputs.",
+        "id": "assemble_status",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "payload.assemble",
+        "when": {
+          "all": [
+            {
+              "equals": "json",
+              "value": "format"
+            },
+            {
+              "equals": false,
+              "value": "verbose"
+            }
+          ]
+        }
+      },
+      {
+        "arguments": {},
+        "description": "Load the package-domain status report when verbose or text output is requested.",
+        "id": "load_verbose_or_text_status",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "memory.bootstrap.status.load",
+        "when": {
+          "not": {
+            "all": [
+              {
+                "equals": "json",
+                "value": "format"
+              },
+              {
+                "equals": false,
+                "value": "verbose"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "arguments": {},
+        "description": "Emit the memory status payload in the requested format.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Memory status non-verbose JSON executes generated operation IR through codegen-owned portable primitives. Verbose/text status behavior remains package-domain source runtime."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "module-result"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "memory status command conformance remains compatible"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": "target repository memory bootstrap files"
+    },
+    {
+      "required": false,
+      "surface": "verbose flag for broad diagnostic output"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the target root for target-local memory status checks.",
+      "id": "resolve_target_root",
+      "uses": "path.target_root.resolve"
+    },
+    {
+      "description": "Count note records and relevance categories in the target memory manifest.",
+      "id": "count_manifest_notes",
+      "uses": "toml.table.counts"
+    },
+    {
+      "description": "Assemble the compact status payload from primitive outputs.",
+      "id": "assemble_status",
+      "uses": "payload.assemble"
+    },
+    {
+      "description": "Load the package-domain status report when verbose or text output is requested.",
+      "id": "load_verbose_or_text_status",
+      "uses": "memory.bootstrap.status.load"
+    },
+    {
+      "description": "Emit memory status in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Report whether memory bootstrap files are present for a target repository.",
+  "writes": []
+}

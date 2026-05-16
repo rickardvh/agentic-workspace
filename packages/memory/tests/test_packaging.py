@@ -150,7 +150,7 @@ def test_memory_wheel_ships_generated_cli_package_import_dependency() -> None:
         inventory = _raw_artifact_inventory(wheel_path)
 
     assert "repo_memory_bootstrap/generated_command_adapters.py" not in inventory
-    assert "repo_memory_bootstrap/generated_cli_package.py" in inventory
+    assert "repo_memory_bootstrap/generated_cli_package.py" not in inventory
     assert "repo_memory_bootstrap/generated_cli_package/__init__.py" not in inventory
     assert "repo_memory_bootstrap/_generated_cli_package_impl/__init__.py" in inventory
     assert "repo_memory_bootstrap/_generated_cli_package_impl/command_package.json" in inventory
@@ -163,7 +163,7 @@ def test_memory_sdist_ships_generated_cli_package_import_dependency() -> None:
         inventory = _raw_artifact_inventory(sdist_path)
 
     assert "src/repo_memory_bootstrap/generated_command_adapters.py" not in inventory
-    assert "src/repo_memory_bootstrap/generated_cli_package.py" in inventory
+    assert "src/repo_memory_bootstrap/generated_cli_package.py" not in inventory
     assert "src/repo_memory_bootstrap/generated_cli_package/__init__.py" not in inventory
     assert "src/repo_memory_bootstrap/_generated_cli_package_impl/__init__.py" in inventory
     assert "src/repo_memory_bootstrap/_generated_cli_package_impl/command_package.json" in inventory
@@ -187,7 +187,7 @@ def test_installed_memory_wheel_imports_cli_module() -> None:
             [
                 sys.executable,
                 "-c",
-                "import repo_memory_bootstrap._runtime_cli; from repo_memory_bootstrap.generated_cli_package import build_generated_parser",
+                "from repo_memory_bootstrap._generated_cli_package_impl import build_generated_parser",
             ],
             cwd=tmpdir_path,
             env={**os.environ, "PYTHONPATH": str(install_root)},

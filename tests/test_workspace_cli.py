@@ -44,6 +44,16 @@ def test_verbose_aliases_full_diagnostic_output_for_major_workspace_commands(tmp
         assert assertion(payload), argv
 
 
+def test_defaults_text_uses_tiny_router_payload(capsys) -> None:
+    assert cli.main(["defaults"]) == 0
+
+    output = capsys.readouterr().out
+    assert "Default-route contract sections are available on demand" in output
+    assert "Common sections:" in output
+    assert "- startup" in output
+    assert "agentic-workspace defaults --verbose --format json" in output
+
+
 def test_summary_and_config_support_exact_field_selectors(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -129,7 +139,7 @@ def test_proof_supports_exact_field_selectors_for_sufficiency(tmp_path: Path, ca
                 "--target",
                 str(tmp_path),
                 "--changed",
-                "src/agentic_workspace/_runtime_cli.py",
+                "generated/workspace/python/cli.py",
                 "--select",
                 "sufficiency,next",
                 "--format",
@@ -193,7 +203,7 @@ def test_summary_task_scoped_profile_omits_historical_audit_detail(tmp_path: Pat
                 "--task",
                 "Implement adaptive read action routing",
                 "--changed",
-                "src/agentic_workspace/_runtime_cli.py",
+                "generated/workspace/python/cli.py",
                 "--format",
                 "json",
             ]
@@ -204,7 +214,7 @@ def test_summary_task_scoped_profile_omits_historical_audit_detail(tmp_path: Pat
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "compact-task"
     assert payload["task_scope"]["task_text_available"] is True
-    assert payload["task_scope"]["changed_paths"] == ["src/agentic_workspace/_runtime_cli.py"]
+    assert payload["task_scope"]["changed_paths"] == ["generated/workspace/python/cli.py"]
     assert "detail_commands" in payload
     assert "historical_audit_pressure" not in payload
     assert payload["omitted_context"]["historical_audit_pressure"].startswith("not relevant")

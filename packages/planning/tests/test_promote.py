@@ -5,6 +5,8 @@ import sys as _sys
 # ruff: noqa: F403,F405
 from pathlib import Path as _Path
 
+from jsonschema import Draft202012Validator
+
 _sys.path.insert(0, str(_Path(__file__).resolve().parent))
 from planning_test_support import *
 
@@ -248,7 +250,7 @@ def test_promote_to_plan_supports_decomposition_lane(tmp_path: Path) -> None:
                         "id": "safety-slice",
                         "title": "Safety slice",
                         "readiness": "ready",
-                        "outcome": "Implement the planning safety gate.",
+                        "outcome": "Represent JSON/text planning behavior in schema-valid promoted work.",
                         "owner_surface": "",
                         "proof": "Focused workspace tests pass.",
                         "depends_on": [],
@@ -278,12 +280,29 @@ def test_promote_to_plan_supports_decomposition_lane(tmp_path: Path) -> None:
     assert active["surface"] == ".agentic-workspace/planning/execplans/safety-slice.plan.json"
 
     plan = json.loads((tmp_path / ".agentic-workspace" / "planning" / "execplans" / "safety-slice.plan.json").read_text(encoding="utf-8"))
-    assert "Implement the planning safety gate." in plan["canonical_core"]["next_action"]
+    assert "JSON/text" in plan["canonical_core"]["next_action"]
 
     decomposition = json.loads(decomposition_path.read_text(encoding="utf-8"))
+    schema_path = (
+        _Path(__file__).resolve().parents[1]
+        / "bootstrap"
+        / ".agentic-workspace"
+        / "planning"
+        / "schemas"
+        / "planning-decomposition.schema.json"
+    )
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    schema_errors = sorted(Draft202012Validator(schema).iter_errors(decomposition), key=lambda error: list(error.path))
+    assert [error.message for error in schema_errors] == []
     lane = decomposition["candidate_lanes"][0]
     assert lane["readiness"] == "promoted"
     assert lane["owner_surface"] == ".agentic-workspace/planning/execplans/safety-slice.plan.json"
+    assert "promoted_execplan" not in lane
+    summary = planning_summary(target=tmp_path, profile="compact")
+    warnings = summary["planning_surface_health"]["warnings"]
+    assert not any(
+        warning["warning_class"] == "execplan_missing_file_reference" and "JSON/text" in warning["message"] for warning in warnings
+    )
 
 
 def test_planning_summary_validates_planning_state_v1_maturity_contract(tmp_path: Path) -> None:

@@ -1,0 +1,116 @@
+{
+  "classification": "read-only-report",
+  "command_surface": {
+    "command": "route",
+    "format_option": "format",
+    "program": "agentic-memory"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": true,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
+  },
+  "guards": [
+    "Keep routing read-only.",
+    "Generated code owns parser/help/dispatch shape; memory-owned routing policy remains behind the declared primitive."
+  ],
+  "id": "memory.route.report",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "files",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "surface",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "arguments": {
+          "function": "route_memory",
+          "import_module": "repo_memory_bootstrap.installer",
+          "kwargs": {
+            "files": {
+              "value": "files"
+            },
+            "surfaces": {
+              "value": "surface"
+            },
+            "target": {
+              "value": "target"
+            }
+          }
+        },
+        "description": "Load the Memory routing recommendation.",
+        "id": "load_route",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "python.function.call"
+      },
+      {
+        "arguments": {},
+        "description": "Emit Memory routing output in the requested format.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Memory route executes generated operation IR through codegen-owned primitive dataflow while the memory module owns routing policy."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "module-result"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated memory route process conformance passes"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": "target repository Memory index and manifest"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Load the Memory routing recommendation.",
+      "id": "load_route",
+      "uses": "python.function.call"
+    },
+    {
+      "description": "Emit Memory routing output in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Route to relevant Memory notes through the memory module CLI.",
+  "writes": []
+}

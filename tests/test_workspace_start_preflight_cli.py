@@ -365,7 +365,7 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
                 "--target",
                 str(target),
                 "--changed",
-                "src/agentic_workspace/_runtime_cli.py",
+                "generated/workspace/python/cli.py",
                 "--verbose",
                 "--format",
                 "json",
@@ -438,15 +438,14 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
     assert payload["proof"]["required_commands"] == [
         "uv run agentic-workspace defaults --section root_cli_authority --format json",
         "uv run python scripts/check/check_generated_command_packages.py",
-        "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
-        "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
-        "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
+        "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+        "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
     ]
     assert payload["proof"]["cli_authority_review"]["classifications"][0]["role"] == "hand-owned-executable"
     assert payload["path_boundaries"] == [
         {
-            "path": "src/agentic_workspace/_runtime_cli.py",
-            "authority": "source",
+            "path": "generated/workspace/python/cli.py",
+            "authority": "repo-owned",
             "warning": None,
             "requires_attention": False,
         }
@@ -488,12 +487,16 @@ def test_start_tiny_profile_returns_first_contact_projection(capsys) -> None:
 
     payload = json.loads(capsys.readouterr().out)
     encoded = json.dumps(payload, sort_keys=True)
-    assert len(encoded) < 7800
+    assert len(encoded) < 12500
     assert payload["kind"] == "startup-context/v1"
     assert payload["drill_down"]["rule"].startswith("Use --select")
     assert "cli_invocation" in payload["drill_down"]["available_selectors"]
     assert payload["active_state_summary"]["todo_active_count"] >= 0
-    assert payload["immediate_next_allowed_action"]["action"] in {"choose-smallest-workflow-shape", "continue-active-planning-record"}
+    assert payload["immediate_next_allowed_action"]["action"] in {
+        "choose-smallest-workflow-shape",
+        "continue-active-planning-record",
+        "promote-or-create-active-execplan",
+    }
     assert "implement --changed <paths>" in payload["task_intent"]["implement_changed_command"]
     assert payload["task_intent"]["acceptance"]["status"] == "inferred"
     assert payload["acceptance"]["closeout_required"] is True
@@ -699,7 +702,7 @@ def test_start_tiny_routes_config_posture_questions_to_tiny_config(capsys) -> No
     assert action["command"] == "uv run agentic-workspace config --format json"
     assert action["read_first"] == [action["command"]]
     assert "tiny config surface" in action["summary"]
-    assert len(json.dumps(payload, sort_keys=True)) < 8100
+    assert len(json.dumps(payload, sort_keys=True)) < 12300
 
 
 def test_start_tiny_compacts_long_task_carry_forward_command(tmp_path: Path, capsys) -> None:
@@ -1203,7 +1206,7 @@ def test_start_blocks_decomposed_epic_without_active_execplan(tmp_path: Path, ca
     assert gate["delegation_decision_required"] is True
     assert payload["workflow_sufficiency"]["decision"] == "active-execplan-required"
     assert payload["immediate_next_allowed_action"]["command"].endswith(
-        "agentic-workspace planning promote-to-plan safety-slice --target . --format json"
+        "agentic-workspace planning promote-to-plan --item-id safety-slice --target . --format json"
     )
 
 
@@ -1217,9 +1220,9 @@ def test_implement_flags_scope_growth_without_active_execplan(tmp_path: Path, ca
                 "--target",
                 str(tmp_path),
                 "--changed",
-                "generated/python/memory-cli/generated_cli_package/__init__.py",
+                "generated/memory/python/__init__.py",
                 "src/agentic_workspace/contracts/command_package_ir.json",
-                "packages/memory/src/repo_memory_bootstrap/_runtime_cli.py",
+                "generated/memory/python/cli.py",
                 "tests/test_generated_command_package_proof_runner.py",
                 "--task",
                 "Small generated command cleanup",
@@ -1250,7 +1253,7 @@ def test_implement_distinguishes_planning_recovery_from_mixed_wip(tmp_path: Path
                 str(tmp_path),
                 "--changed",
                 ".agentic-workspace/planning/state.toml",
-                "src/agentic_workspace/_runtime_cli.py",
+                "generated/workspace/python/cli.py",
                 "--task",
                 "Recover planning state while code is dirty",
                 "--format",

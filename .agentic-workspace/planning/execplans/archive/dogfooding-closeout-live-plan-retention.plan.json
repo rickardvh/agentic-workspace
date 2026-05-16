@@ -1,0 +1,298 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Closeout live plan retention",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Fix #969 so planning closeout cannot delete a live execplan when the retained archive is stale, missing, or not updated.",
+    "hard_constraints": "Preserve detailed execution records unless the user explicitly chooses discard-only closeout; use planning CLI surfaces for planning mutations; keep this slice to archive-plan/close-item retention behavior and tests.",
+    "agent_may_decide": "Whether retained archives should be safely replaced or uniquely archived, provided closeout output clearly names the retention result and close-item blocks unsafe removal.",
+    "escalate_when": "The fix requires redesigning closeout distillation broadly, changing unrelated archive semantics, or weakening proof that live plans are retained before removal.",
+    "next_action": "Inspect archive-plan/close-item implementation and tests, implement the narrow retention guard, and prove stale archive/live plan scenarios.",
+    "proof_expectations": [
+      "uv run pytest packages/planning/tests/test_archive_plan.py packages/planning/tests/test_close_item.py -q",
+      "make test-planning",
+      "make lint-planning"
+    ],
+    "touched_scope": [
+      "packages/planning/src/repo_planning_bootstrap/installer.py",
+      "packages/planning/tests/test_archive_plan.py",
+      "packages/planning/tests/test_close_item.py",
+      ".agentic-workspace/planning/execplans/dogfooding-closeout-live-plan-retention.plan.json"
+    ],
+    "completion_criteria": [
+      "archive-plan --retain-archive updates/replaces or uniquely retains detailed plan content before allowing live plan removal.",
+      "close-item does not remove a live execplan when retained archive is stale or missing unless explicit discard-only behavior is present.",
+      "closeout output names retained/replaced/unique/discarded status.",
+      "Issue #969 is closed only after focused and planning test/lint proof passes."
+    ],
+    "continuation_owner": "remaining dogfooding backlog",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Create a bounded plan for Closeout live plan retention."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Fix #969 so planning closeout cannot delete a live execplan when the retained archive is stale, missing, or not updated.",
+      "constraints": "Preserve detailed execution records unless the user explicitly chooses discard-only closeout; keep this slice to archive-plan/close-item retention behavior and tests.",
+      "latitude": "Choose safe replacement or unique archive behavior if the live plan is retained before removal and output names the result.",
+      "escalation": "Escalate when the fix requires broad closeout redesign or weakens detailed plan retention."
+    },
+    "execution": {
+      "milestone": "dogfooding-closeout-live-plan-retention",
+      "status": "active",
+      "next_step": "Inspect archive-plan/close-item implementation and tests, implement the narrow retention guard, and prove stale archive/live plan scenarios.",
+      "proof": "Focused archive-plan/close-item regression tests plus make test-planning and make lint-planning."
+    },
+    "scope": {
+      "touched": [
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/tests/test_archive_plan.py",
+        "packages/planning/tests/test_close_item.py",
+        ".agentic-workspace/planning/execplans/dogfooding-closeout-live-plan-retention.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Planning closeout must preserve detailed live execplan records unless explicitly discarded.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Retained execplan archives can no longer be bypassed by stale archive destinations during closeout.",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "Focused archive/close-item regressions, make test-planning, and make lint-planning passed.",
+    "validation still needed": "none for this bounded dogfooding issue",
+    "next likely slice": "return to the next dogfooding/codegen issue after #969 is committed"
+  },
+  "intent_interpretation": {
+    "literal request": "Fix #969 before returning to the codegen epic.",
+    "inferred intended outcome": "archive-plan/close-item must not silently lose the latest detailed execplan when retained archive state is stale or missing.",
+    "chosen concrete what": "Add retention semantics and regression coverage for stale/missing retained archives before close-item removes the live plan.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "planning installer closeout/archive code, planning archive/close-item tests, this execplan and planning provenance.",
+    "max changed files": "about 6",
+    "required validation commands": "uv run pytest packages/planning/tests/test_archive_plan.py packages/planning/tests/test_close_item.py -q; make test-planning; make lint-planning",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue #969: implement closeout archive retention guard so stale/missing retained archive blocks or is safely replaced before live execplan removal.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Create a bounded plan for Closeout live plan retention.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "Reuse open workers for read-only exploration: archive-plan retained archive semantics and close-item removal path for #969; implementation remains local after findings.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-15T20:45:54+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "dogfooding-closeout-live-plan-retention",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Commit and push the completed #969 slice after closeout proof."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/planning/tests/test_archive.py",
+    "packages/planning/tests/test_close_item.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest packages/planning/tests/test_archive.py packages/planning/tests/test_close_item.py -q",
+    "make test-planning",
+    "make lint-planning"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Closeout live plan retention is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "orchestrator with reused read-only worker exploration",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "archive-plan retained archives now choose a unique retained archive record when the canonical archive path already exists, and close-item routes execplan closure through retained archive mode before removing live state.",
+    "scope touched": "planning archive/close-item implementation and regression tests",
+    "changed surfaces": "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_archive.py; packages/planning/tests/test_close_item.py",
+    "validations run": "uv run pytest packages/planning/tests/test_archive.py packages/planning/tests/test_close_item.py -q; make test-planning; make lint-planning",
+    "result for continuation": "bounded #969 fix complete; resume dogfooding backlog after commit",
+    "next step": "Commit and push #969, close the issue with validation proof, then continue dogfooding backlog."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "satisfied",
+    "intent served": "yes",
+    "config compliance": "used configured uv run agentic-workspace invocation, active execplan, implement context, and planning mutation provenance recovery",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive-and-close"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "Reuse open workers for read-only exploration: archive-plan retained archive semantics and close-item removal path for #969; implementation remains local after findings.",
+    "expected savings": "read-only workers reduced local search over archive/close-item paths and tests",
+    "actual friction": "low; one worker result arrived after implementation but confirmed the chosen path",
+    "proof result": "focused regressions and planning proof passed",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest packages/planning/tests/test_archive.py packages/planning/tests/test_close_item.py -q; make test-planning; make lint-planning",
+    "proof achieved now": "archive/close-item stale retained archive regressions passed and planning package test/lint targets passed.",
+    "evidence for \"proof achieved\" state": "The new tests assert stale retained archive preservation, unique fresh retained archive creation, live execplan removal only after retention, and live state cleanup."
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Closeout live plan retention.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "archive_execplan(... retain_archive=True) no longer blocks on stale retained archive paths; close_planning_item now retains execplan records and tests cover both paths.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Fixed #969 so retained archive conflicts use a unique archive record path and close-item preserves execplan detail before removing live planning state.",
+    "validation confirmed": "uv run pytest packages/planning/tests/test_archive.py packages/planning/tests/test_close_item.py -q; make test-planning; make lint-planning",
+    "follow-on routed to": "remaining dogfooding backlog after this slice is committed and issue #969 is closed",
+    "post-work posterity capture": "The durable behavior is encoded in planning implementation and regression tests; no separate memory note is needed.",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "next dogfooding issue after #969"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "regression tests and implementation",
+    "target scope": "planning closeout retention",
+    "proposed durable intent": "none; behavior is carried by tests and code",
+    "confidence": "high",
+    "needs review": false,
+    "owner surface": "packages/planning/tests/test_archive.py"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "The bounded dogfooding issue acceptance is directly covered by behavior changes and focused regressions.",
+    "evidence carried forward": "installer.py retention logic plus test_archive.py and test_close_item.py stale archive scenarios",
+    "reopen trigger": "A retained archive conflict again causes live execplan loss or an unstated discard path."
+  },
+  "improvement_signal_review": {
+    "status": "completed",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [
+      "close-item could remove live execplan detail without retaining a fresh archive when a stale archive existed"
+    ],
+    "signals fixed": [
+      "#969 fixed by unique retained archive paths and retained close-item execplan closure"
+    ],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "remaining dogfooding backlog"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Command-by-command execution chronology is not needed after the regression and proof are recorded.",
+          "owner": "discard",
+          "source": "closeout"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-15: Scaffolded by agentic-planning new-plan.",
+    "2026-05-15: Recorded delegation decision route=delegate-exploration.",
+    "2026-05-15: Completed #969 implementation and validation."
+  ]
+}

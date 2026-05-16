@@ -1,0 +1,209 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/payload-verification-policy.schema.json",
+  "title": "Payload Verification Policy",
+  "description": "Declarative policy used by generated payload verification primitives to validate managed package payload files without embedding package-specific checks in codegen.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "package",
+    "bootstrap_version",
+    "version_path",
+    "legacy_version_path",
+    "manifest_path",
+    "upgrade_source",
+    "payload_path_aliases",
+    "required_files",
+    "compatibility_contract_files",
+    "current_memory",
+    "forbidden_files",
+    "forbidden_prefixes",
+    "guidance_fragments"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "description": "Version marker for the payload verification policy contract.",
+      "const": "agentic-workspace/payload-verification-policy/v1"
+    },
+    "package": {
+      "description": "Package identifier whose managed payload is verified by this policy.",
+      "type": "string",
+      "minLength": 1
+    },
+    "bootstrap_version": {
+      "description": "Expected bootstrap payload version for this package.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "version_path": {
+      "description": "Current package payload version file path relative to the target root.",
+      "$ref": "#/$defs/relative_path"
+    },
+    "legacy_version_path": {
+      "description": "Legacy package payload version file path accepted for compatibility checks.",
+      "$ref": "#/$defs/relative_path"
+    },
+    "manifest_path": {
+      "description": "Managed payload manifest path relative to the target root.",
+      "$ref": "#/$defs/relative_path"
+    },
+    "upgrade_source": {
+      "description": "Upgrade-source metadata policy and field validation rules.",
+      "type": "object",
+      "required": [
+        "path",
+        "legacy_path",
+        "allowed_source_types",
+        "required_fields",
+        "date_fields",
+        "integer_fields"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "description": "Current upgrade-source metadata file path relative to the target root.",
+          "$ref": "#/$defs/relative_path"
+        },
+        "legacy_path": {
+          "description": "Legacy upgrade-source metadata file path accepted for compatibility checks.",
+          "$ref": "#/$defs/relative_path"
+        },
+        "allowed_source_types": {
+          "description": "Allowed source_type values for upgrade-source metadata.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "required_fields": {
+          "description": "Upgrade-source metadata fields that must be present.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "date_fields": {
+          "description": "Upgrade-source metadata fields that must parse as dates, keyed by field name with an explanatory label.",
+          "type": "object",
+          "additionalProperties": {
+            "description": "Description of the date field expectation.",
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "integer_fields": {
+          "description": "Upgrade-source metadata fields that must parse as integers.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "required_files": {
+      "description": "Managed payload files that must be present for this package.",
+      "$ref": "#/$defs/path_list"
+    },
+    "payload_path_aliases": {
+      "description": "Source-to-target payload path aliases accepted when verifying installed payloads.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "source",
+          "target"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "source": {
+            "description": "Payload source path represented by the alias.",
+            "$ref": "#/$defs/relative_path"
+          },
+          "target": {
+            "description": "Installed target path represented by the alias.",
+            "$ref": "#/$defs/relative_path"
+          }
+        }
+      }
+    },
+    "compatibility_contract_files": {
+      "description": "Contract files whose presence preserves compatibility with existing installed payload expectations.",
+      "$ref": "#/$defs/path_list"
+    },
+    "current_memory": {
+      "description": "Current-memory path policy for required and optional memory payload files.",
+      "type": "object",
+      "required": [
+        "prefix",
+        "required",
+        "optional"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "prefix": {
+          "description": "Path prefix under which current-memory files are installed.",
+          "$ref": "#/$defs/relative_path"
+        },
+        "required": {
+          "description": "Current-memory files that must be present.",
+          "$ref": "#/$defs/path_list"
+        },
+        "optional": {
+          "description": "Current-memory files that may be present but are not required.",
+          "$ref": "#/$defs/path_list"
+        }
+      }
+    },
+    "forbidden_files": {
+      "description": "Managed payload files that must not be present.",
+      "$ref": "#/$defs/path_list"
+    },
+    "forbidden_prefixes": {
+      "description": "Path prefixes that must not appear in the managed payload.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "guidance_fragments": {
+      "description": "Expected guidance text fragments keyed by guidance file path or identifier.",
+      "type": "object",
+      "additionalProperties": {
+        "description": "Ordered guidance fragments that must be present.",
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  },
+  "$defs": {
+    "relative_path": {
+      "description": "Repository-relative path that must not be absolute.",
+      "type": "string",
+      "minLength": 1,
+      "not": {
+        "pattern": "^[A-Za-z]:|^/"
+      }
+    },
+    "path_list": {
+      "description": "Unique list of repository-relative paths.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/relative_path"
+      },
+      "uniqueItems": true
+    }
+  },
+  "x-agentic-workspace-doc-role": "contract-reference"
+}

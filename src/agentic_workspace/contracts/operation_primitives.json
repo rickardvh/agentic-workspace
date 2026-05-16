@@ -16,7 +16,7 @@
     ]
   },
   "module_ir_ownership": {
-    "rule": "Module-owned operation IR may remain physically centralized during the Python lane, but each operation id must belong to an explicit module namespace and codegen must consume it as data rather than importing module runtime code.",
+    "rule": "Operation IR is owned by the module namespace that defines the behavior. The root workspace may reference module operations through command-package metadata, but module-prefixed operation artifacts live under the owning module contract root.",
     "namespaces": [
       {
         "id": "workspace",
@@ -26,18 +26,53 @@
         "future_contract_root": "modules/workspace/contracts"
       },
       {
+        "id": "workspace-config",
+        "operation_id_prefix": "config.",
+        "contract_owner": "src/agentic_workspace/contracts",
+        "current_contract_root": "src/agentic_workspace/contracts/operations",
+        "future_contract_root": "modules/workspace/contracts"
+      },
+      {
+        "id": "workspace-defaults",
+        "operation_id_prefix": "defaults.",
+        "contract_owner": "src/agentic_workspace/contracts",
+        "current_contract_root": "src/agentic_workspace/contracts/operations",
+        "future_contract_root": "modules/workspace/contracts"
+      },
+      {
+        "id": "workspace-prompt",
+        "operation_id_prefix": "prompt.",
+        "contract_owner": "src/agentic_workspace/contracts",
+        "current_contract_root": "src/agentic_workspace/contracts/operations",
+        "future_contract_root": "modules/workspace/contracts"
+      },
+      {
+        "id": "workspace-delegation-outcome",
+        "operation_id_prefix": "delegation-outcome.",
+        "contract_owner": "src/agentic_workspace/contracts",
+        "current_contract_root": "src/agentic_workspace/contracts/operations",
+        "future_contract_root": "modules/workspace/contracts"
+      },
+      {
+        "id": "workspace-system-intent",
+        "operation_id_prefix": "system-intent.",
+        "contract_owner": "src/agentic_workspace/contracts",
+        "current_contract_root": "src/agentic_workspace/contracts/operations",
+        "future_contract_root": "modules/workspace/contracts"
+      },
+      {
         "id": "planning",
         "operation_id_prefix": "planning.",
         "contract_owner": "packages/planning",
-        "current_contract_root": "src/agentic_workspace/contracts/operations",
-        "future_contract_root": "packages/planning/contracts"
+        "current_contract_root": "packages/planning/src/repo_planning_bootstrap/contracts/operations",
+        "future_contract_root": "packages/planning/src/repo_planning_bootstrap/contracts"
       },
       {
         "id": "memory",
         "operation_id_prefix": "memory.",
         "contract_owner": "packages/memory",
-        "current_contract_root": "src/agentic_workspace/contracts/operations",
-        "future_contract_root": "packages/memory/contracts"
+        "current_contract_root": "packages/memory/src/repo_memory_bootstrap/contracts/operations",
+        "future_contract_root": "packages/memory/src/repo_memory_bootstrap/contracts"
       }
     ]
   },
@@ -52,9 +87,12 @@
         "implemented_shared_primitives": [
           "path.target_root.resolve",
           "filesystem.read",
+          "filesystem.exists",
           "filesystem.glob",
           "json.parse",
+          "toml.table.counts",
           "payload.assemble",
+          "payload.verify",
           "output.emit"
         ],
         "domain_runtime_extension_behavior": "Python generated packages may bridge explicit domain-runtime primitives through the declared runtime module binding; that bridge is not counted as shared primitive executor coverage.",
@@ -127,7 +165,9 @@
       "summary": "Check whether a path exists within the operation root.",
       "kind": "filesystem",
       "portability": "target-executor",
-      "semantics": "Return a boolean for a normalized path without escaping the operation root."
+      "semantics": "Return a boolean for a normalized path without escaping the operation root.",
+      "input_schema_ref": "schemas/primitives/filesystem_exists.input.schema.json",
+      "output_schema_ref": "schemas/primitives/filesystem_exists.output.schema.json"
     },
     {
       "id": "filesystem.glob",
@@ -205,22 +245,114 @@
       "summary": "Load package-local memory bootstrap status for a target repository."
     },
     {
+      "id": "memory.bootstrap.cleanup",
+      "summary": "Remove package-local temporary Memory bootstrap workspace files.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "memory.capture_note.load",
+      "summary": "Load package-local Memory capture recommendations.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "memory.current.load",
+      "summary": "Load package-local legacy current-memory show or check result.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime"
+    },
+    {
       "id": "memory.front_door.dispatch",
       "summary": "Dispatch generated workspace memory front-door argv to the Memory module runtime boundary.",
       "kind": "memory-runtime",
       "portability": "domain-runtime"
     },
     {
-      "id": "memory.promotion_report.load",
-      "summary": "Load package-local memory promotion candidate report state."
+      "id": "memory.install.apply",
+      "summary": "Install or initialize package-local Memory bootstrap surfaces.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "memory.init.apply",
+      "summary": "Initialize package-local Memory bootstrap surfaces using install semantics.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "memory.adopt.apply",
+      "summary": "Adopt package-local Memory bootstrap surfaces in an existing repository.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "memory.upgrade.apply",
+      "summary": "Upgrade package-local Memory bootstrap surfaces.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "memory.migrate_layout.apply",
+      "summary": "Migrate package-local Memory bootstrap legacy layout surfaces.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "memory.uninstall.apply",
+      "summary": "Remove package-local Memory bootstrap surfaces conservatively.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "memory.note.create",
+      "summary": "Create or dry-run a package-local Memory note and manifest entry.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "memory.prompt.render",
+      "summary": "Render package-local Memory bootstrap prompt guidance.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime"
     },
     {
       "id": "memory.report.load",
       "summary": "Load package-local memory report state for a target repository."
     },
     {
+      "id": "memory.route.load",
+      "summary": "Load package-local Memory note routing recommendations.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime"
+    },
+    {
       "id": "memory.route_report.load",
       "summary": "Load package-local memory routing aggregate report state."
+    },
+    {
+      "id": "memory.route_review.load",
+      "summary": "Load package-local Memory routing feedback review results.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "memory.search.load",
+      "summary": "Load package-local Memory note search results.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "memory.verify-payload.load",
+      "summary": "Load package-local Memory payload verification results.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "memory.sync_memory.load",
+      "summary": "Load package-local Memory synchronization suggestions.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime"
     },
     {
       "id": "output.emit",
@@ -262,6 +394,27 @@
       "output_schema_ref": "schemas/primitives/payload_assemble.output.schema.json"
     },
     {
+      "id": "payload.verify",
+      "summary": "Verify a package payload against package-owned declarative verification policy.",
+      "kind": "validation",
+      "portability": "target-executor",
+      "semantics": "Read a schema-backed payload verification policy and inspect rooted payload files for declared version markers, required files, forbidden paths, manifest validity, upgrade-source metadata, and guidance fragments without package-specific executable policy.",
+      "input_schema_ref": "schemas/primitives/payload_verify.input.schema.json",
+      "output_schema_ref": "schemas/primitives/payload_verify.output.schema.json"
+    },
+    {
+      "id": "planning.adopt.apply",
+      "summary": "Conservatively add planning bootstrap files to an existing repository.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "planning.archive-plan.apply",
+      "summary": "Close a completed execplan or parent lane after distillation.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
+    },
+    {
       "id": "planning.bootstrap.doctor.load",
       "summary": "Load package-local planning doctor diagnostics for a target repository."
     },
@@ -270,8 +423,32 @@
       "summary": "Load package-local planning bootstrap status for a target repository."
     },
     {
+      "id": "planning.close-item.apply",
+      "summary": "Apply package-local planning close-item lifecycle mutation for a target repository.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "planning.create-review.apply",
+      "summary": "Apply package-local planning create-review lifecycle mutation for a target repository.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "planning.delegation-decision.apply",
+      "summary": "Record the delegation route chosen for the active execplan.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
+    },
+    {
       "id": "planning.front_door.dispatch",
       "summary": "Dispatch generated workspace planning front-door argv to the Planning module runtime boundary.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "planning.handoff.load",
+      "summary": "Load package-local planning handoff payload for a target repository.",
       "kind": "planning-runtime",
       "portability": "domain-runtime"
     },
@@ -280,8 +457,50 @@
       "summary": "Build planning orientation guidance and lifecycle command affordances without mutating planning state."
     },
     {
+      "id": "planning.init.apply",
+      "summary": "Initialise planning bootstrap files in a repository.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "planning.install.apply",
+      "summary": "Install planning bootstrap files into a repository.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "planning.list-files.load",
+      "summary": "Load package-local planning payload file inventory.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "planning.new-plan.apply",
+      "summary": "Create a schema-valid execplan scaffold and optionally register it.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "planning.promote-to-plan.apply",
+      "summary": "Promote a direct TODO item into an execplan scaffold.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "planning.prompt.render",
+      "summary": "Render package-local planning prompt guidance for a selected bootstrap command.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
+    },
+    {
       "id": "planning.reconcile.load",
       "summary": "Load provider-agnostic planning reconciliation state when the planning module is installed."
+    },
+    {
+      "id": "planning.record-recovery.apply",
+      "summary": "Bless an emergency manual repair to managed planning surfaces with explicit provenance.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
     },
     {
       "id": "planning.report.load",
@@ -292,12 +511,37 @@
       "summary": "Load compact active planning summary when the planning module is installed."
     },
     {
+      "id": "planning.uninstall.apply",
+      "summary": "Remove managed planning bootstrap files when they still match package content.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "planning.upgrade.apply",
+      "summary": "Refresh package-managed planning helper surfaces.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
+    },
+    {
+      "id": "planning.verify-payload.load",
+      "summary": "Load package-local planning payload verification result.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
+    },
+    {
       "id": "preflight.context.assemble",
       "summary": "Assemble startup defaults, resolved config, and active planning state into takeover-safe context."
     },
     {
       "id": "preflight.token.create",
       "summary": "Create a fresh preflight token using the configured token policy."
+    },
+    {
+      "id": "python.function.call",
+      "summary": "Call a checked-in Python runtime function declared by operation IR.",
+      "kind": "external-runtime",
+      "portability": "external-adapter",
+      "semantics": "Resolve import module, function name, and keyword bindings only from checked-in operation artifacts; user input may supply values but never the callable target."
     },
     {
       "id": "prompt.render",
@@ -393,6 +637,15 @@
       "kind": "structured-data",
       "portability": "target-executor",
       "semantics": "Parse TOML using the target runtime's declared TOML library and fail the operation on invalid TOML."
+    },
+    {
+      "id": "toml.table.counts",
+      "summary": "Count records and simple categorical fields in a declared TOML table.",
+      "kind": "structured-data",
+      "portability": "target-executor",
+      "semantics": "Read one rooted TOML file, count records in a named table, and return deterministic category counts without interpreting package policy.",
+      "input_schema_ref": "schemas/primitives/toml_table_counts.input.schema.json",
+      "output_schema_ref": "schemas/primitives/toml_table_counts.output.schema.json"
     },
     {
       "id": "toml.write",

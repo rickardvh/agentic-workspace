@@ -4,14 +4,14 @@ requires-python = ">=3.11"
 
 [manifest]
 members = [
-    "agentic-command-generation",
+    "command-generation",
     "agentic-memory",
     "agentic-planning",
     "agentic-workspace",
 ]
 
 [[package]]
-name = "agentic-command-generation"
+name = "command-generation"
 version = "0.0.0"
 source = { editable = "packages/command-generation" }
 dependencies = [
@@ -25,23 +25,34 @@ requires-dist = [{ name = "jsonschema" }]
 name = "agentic-memory"
 version = "0.3.11"
 source = { editable = "packages/memory" }
+dependencies = [
+    { name = "command-generation" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "command-generation", editable = "packages/command-generation" }]
 
 [[package]]
 name = "agentic-planning"
 version = "0.1.2"
 source = { editable = "packages/planning" }
 dependencies = [
+    { name = "command-generation" },
     { name = "jsonschema" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "jsonschema", specifier = ">=4.0" }]
+requires-dist = [
+    { name = "command-generation", editable = "packages/command-generation" },
+    { name = "jsonschema", specifier = ">=4.0" },
+]
 
 [[package]]
 name = "agentic-workspace"
 version = "0.0.0"
 source = { editable = "." }
 dependencies = [
+    { name = "command-generation" },
     { name = "agentic-memory" },
     { name = "agentic-planning" },
 ]
@@ -60,6 +71,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "command-generation", editable = "packages/command-generation" },
     { name = "agentic-memory", editable = "packages/memory" },
     { name = "agentic-planning", editable = "packages/planning" },
 ]
@@ -903,4 +915,3 @@ sdist = { url = "https://files.pythonhosted.org/packages/35/a2/8e3becb46433538a3
 wheels = [
     { url = "https://files.pythonhosted.org/packages/68/5a/199c59e0a824a3db2b89c5d2dade7ab5f9624dbf6448dc291b46d5ec94d3/wcwidth-0.6.0-py3-none-any.whl", hash = "sha256:1a3a1e510b553315f8e146c54764f4fb6264ffad731b3d78088cdb1478ffbdad", size = 94189, upload-time = "2026-02-06T19:19:39.646Z" },
 ]
-

@@ -1,0 +1,307 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Python workspace facade source-runtime elimination",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Advance #892 by replacing generated workspace runtime facade top-level source-runtime re-exports with generated per-function lazy bindings, while preserving full-completion proof failure until source-runtime delegates are replaced by generated primitives.",
+    "hard_constraints": "Do not claim full #892 completion; do not move package-specific runtime behavior into command-generation source; keep command-generation package-agnostic; generated outputs must be reproducible from command_package_ir and generator templates.",
+    "agent_may_decide": "Bounded implementation details for generated facade rendering, static proof wording, and validation tightening.",
+    "escalate_when": "A correct fix requires broad runtime behavior migration, changing public command behavior, or touching memory/planning runtime blockers in this slice.",
+    "next_action": "Render generated workspace runtime facade functions as lazy wrappers instead of top-level source-runtime imports, then update static proof to keep full completion blocked while any generated facade delegates to package-owned runtime.",
+    "proof_expectations": [
+      "uv run python scripts/generate/generate_command_packages.py --check",
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+      "uv run pytest tests/test_workspace_cli.py tests/test_workspace_cli_blackbox.py tests/test_generated_command_package_proof_runner.py -q",
+      "uv run ruff check affected generator/check/generated/test files"
+    ],
+    "touched_scope": [
+      "packages/command-generation/src/command_generation/generator.py",
+      "generated/workspace/python/primitives/workspace_runtime.py",
+      "scripts/check/check_generated_command_packages.py",
+      "tests/test_generated_command_package_proof_runner.py",
+      ".agentic-workspace/planning/execplans/python-workspace-facade-source-runtime-elimination.plan.json"
+    ],
+    "completion_criteria": [
+      "generated/workspace/python/primitives/workspace_runtime.py no longer imports agentic_workspace.workspace_runtime_primitives at module import time.",
+      "The generated facade still makes remaining source-runtime delegation explicit per function, so follow-on primitive migration can be audited function by function.",
+      "Static proof rejects full Python generated CLI completion while generated facade wrappers still delegate to package-owned runtime helpers.",
+      "Generated freshness, static proof, Python conformance, workspace CLI tests, and affected lint pass."
+    ],
+    "continuation_owner": "#892 workspace generated primitive migration",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "Advance #892 by turning the generated workspace runtime facade from a top-level source-runtime re-export into generated lazy wrapper functions, without hiding that source-runtime delegates remain."
+  ],
+  "non_goals": [
+    "Do not attempt the full workspace runtime primitive migration in this slice.",
+    "Do not touch memory or planning runtime blockers in this slice.",
+    "Do not claim full Python generated CLI completion."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Generated workspace runtime facade no longer performs a top-level source-runtime re-export.",
+      "constraints": "Keep command-generation package-agnostic and keep full-completion proof blocked while facade delegates remain.",
+      "latitude": "Adjust generated facade rendering, static proof, and tests inside the named scope.",
+      "escalation": "Escalate if full behavior migration or public command behavior changes are required."
+    },
+    "execution": {
+      "milestone": "python-workspace-facade-source-runtime-elimination",
+      "status": "active",
+      "next_step": "Render lazy wrappers and rerun generated proof.",
+      "proof": "generated freshness, static proof, Python conformance, workspace CLI tests, and affected lint"
+    },
+    "scope": {
+      "touched": [
+        "packages/command-generation/src/command_generation/generator.py",
+        "generated/workspace/python/primitives/workspace_runtime.py",
+        "scripts/check/check_generated_command_packages.py",
+        "tests/test_generated_command_package_proof_runner.py"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#892 Python generated CLI completion with no shipped executable CLI behavior in module source and generated target behavior derived from contracts/IR plus codegen-owned primitives.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "#892 workspace generated primitive migration"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "#892 / python-generated-cli decomposition",
+    "activation trigger": "After this slice, replace remaining generated facade delegates with generated/codegen-owned primitives function by function."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Python workspace facade source-runtime elimination",
+    "inferred intended outcome": "#892 workspace runtime facade blocker",
+    "chosen concrete what": "Convert generated workspace facade source-runtime top-level re-export into generated lazy wrappers and keep proof honest about remaining source-runtime delegates.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "packages/command-generation/src/command_generation/generator.py; generated/workspace/python/primitives/workspace_runtime.py; scripts/check/check_generated_command_packages.py; tests/test_generated_command_package_proof_runner.py; this execplan",
+    "max changed files": "about 6 plus regenerated command package metadata if freshness requires it",
+    "required validation commands": "generated freshness, static proof, Python conformance, workspace CLI tests, affected ruff",
+    "ask-before-refactor threshold": "Ask before implementing broad workspace runtime semantics, changing public command behavior, or touching memory/planning runtime blockers.",
+    "stop before touching": "Memory runtime blockers, planning runtime blockers, package installers, and command behavior contracts not required for lazy facade wrappers."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Replace generated workspace facade top-level source import with generated per-function lazy wrappers; keep static proof failing full completion while delegates remain.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Generated workspace facade should not import source runtime at module import time.",
+    "hard constraints": "Keep command-generation package-agnostic and do not claim full #892 completion.",
+    "agent may decide locally": "Facade wrapper rendering and proof wording.",
+    "escalate when": "The fix needs broad runtime semantic migration or a changed ownership boundary."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "implementation remains local because the slice is small and generator/proof changes are tightly coupled; reused open worker for read-only next-candidate audit.",
+    "decision command": "agentic-workspace start delegation recommendation plus existing worker handoff",
+    "recorded at": "2026-05-16"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "#892 workspace runtime facade blocker",
+      "label": "#892 workspace runtime facade blocker",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "python-workspace-facade-source-runtime-elimination",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Render generated workspace runtime facade functions as lazy wrappers instead of top-level source-runtime imports."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/command-generation/src/command_generation/generator.py",
+    "generated/workspace/python/primitives/workspace_runtime.py",
+    "scripts/check/check_generated_command_packages.py",
+    "tests/test_generated_command_package_proof_runner.py",
+    ".agentic-workspace/planning/execplans/python-workspace-facade-source-runtime-elimination.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run python scripts/generate/generate_command_packages.py --check",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+    "uv run pytest tests/test_workspace_cli.py tests/test_workspace_cli_blackbox.py tests/test_generated_command_package_proof_runner.py -q",
+    "uv run ruff check packages/command-generation/src/command_generation/generator.py scripts/check/check_generated_command_packages.py tests/test_generated_command_package_proof_runner.py generated/workspace/python/primitives/workspace_runtime.py"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "generated/workspace/python/primitives/workspace_runtime.py no longer imports agentic_workspace.workspace_runtime_primitives at module import time.",
+    "Remaining generated facade delegates are explicit per function and still block full Python completion proof.",
+    "Generated freshness, static proof, Python conformance, workspace CLI tests, and affected lint pass."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Changed command-generation to render generated workspace runtime facade functions as lazy per-function wrappers instead of one top-level source-runtime re-export import.",
+    "scope touched": "generated workspace runtime facade rendering, generated facade output, static proof wording, proof test, and planning state",
+    "changed surfaces": "packages/command-generation/src/command_generation/generator.py; generated/workspace/python/primitives/workspace_runtime.py; scripts/check/check_generated_command_packages.py; tests/test_generated_command_package_proof_runner.py; planning execplan/state/provenance",
+    "validations run": "uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; make test-workspace; make lint-workspace; uv run pytest tests/test_workspace_cli.py tests/test_workspace_cli_blackbox.py tests/test_generated_command_package_proof_runner.py -q; uv run ruff check affected files",
+    "result for continuation": "generated facade no longer imports source runtime at module import time; remaining per-function source-runtime delegates still block full #892 completion",
+    "next step": "Migrate the safest workspace facade functions to generated/codegen-owned primitives, starting with defaults selection and generic JSON output."
+  },
+  "finished_run_review": {
+    "review status": "bounded slice complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "partially: removed top-level generated facade re-export, but source-runtime delegates remain",
+    "config compliance": "used uv run agentic-workspace and checked-in planning state",
+    "misinterpretation risk": "medium if lazy wrappers are mistaken for generated primitive ownership",
+    "follow-on decision": "continue #892 with function-by-function generated primitive migration"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "implementation kept local because generator/proof edits were tiny and tightly coupled",
+    "expected savings": "moderate future savings from read-only candidate audit",
+    "actual friction": "low",
+    "proof result": "passed",
+    "quality concern": "Do not treat lazy delegates as completion; they still call package-owned runtime helpers.",
+    "decomposition adjustment": "Worker audit recommends migrating defaults selection/output first, then defaults loading, then target-root resolution."
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "Generated facade no longer imports source runtime at module import time; static proof still rejects full completion while per-function source-runtime delegates remain.",
+    "evidence for \"proof achieved\" state": "uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; make test-workspace; make lint-workspace; uv run pytest tests/test_workspace_cli.py tests/test_workspace_cli_blackbox.py tests/test_generated_command_package_proof_runner.py -q; uv run ruff check affected files."
+  },
+  "intent_satisfaction": {
+    "original intent": "#892 workspace runtime facade blocker",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "This slice removed the top-level re-export shape but did not remove per-function source-runtime delegates.",
+    "unsolved intent passed to": "#892 workspace generated primitive migration"
+  },
+  "execution_summary": {
+    "outcome delivered": "generated workspace runtime facade uses explicit lazy wrappers rather than a module-import-time source-runtime re-export",
+    "validation confirmed": "yes",
+    "follow-on routed to": "#892 workspace generated primitive migration",
+    "post-work posterity capture": "The useful residue is the ordered next primitive candidates from the worker audit and the invariant that lazy wrappers are not generated primitive ownership; both are carried through this plan's continuation bucket and static proof wording.",
+    "knowledge promoted (Memory/Docs/Config)": "static proof wording now says generated facades delegate to package-owned runtime helpers, not merely re-export them",
+    "resume from": "migrate defaults selection and generic JSON output wrappers to generated/codegen-owned primitives"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "bounded slice complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "The top-level facade re-export is gone, but source-runtime delegates remain and #892 is not complete.",
+    "evidence carried forward": "Proof passed and static proof still blocks full completion while generated facades delegate to package-owned runtime.",
+    "reopen trigger": "Generated facade regains module-import-time source runtime imports, or full completion is claimed while per-function delegates remain."
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [
+        "Migrate `_select_workspace_operation_defaults` and generic JSON output paths from facade delegates to generated/codegen-owned primitives next."
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-16: Scaffolded by agentic-planning new-plan."
+  ]
+}
