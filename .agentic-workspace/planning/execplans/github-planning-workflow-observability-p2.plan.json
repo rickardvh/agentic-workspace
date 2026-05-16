@@ -32,12 +32,13 @@
     "hard_constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
     "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
     "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
-    "next_action": "Define the smallest next-safe-action or intent-verification packet that can say answer-directly/no-artifact, use state.toml, or create an execplan, with tests for routine triage and durable intake.",
+    "next_action": "Implement the first product-semantic skill surface for intent, Memory, or proof while preserving the next-safe-action packet semantics.",
     "proof_expectations": [
-      "Fill in the narrowest command that proves the promoted work."
+      "uv run pytest tests/test_workspace_start_preflight_cli.py -q"
     ],
     "touched_scope": [
-      "Fill in the concrete files before implementation starts."
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "tests/test_workspace_start_preflight_cli.py"
     ],
     "completion_criteria": [
       "Intent verification, Memory consultation, proof selection, SkillSpec gates, operating-loop slots, and next-safe-action packets reduce live context by answering what to read, what to skip, what proof is required, and whether an artifact is warranted."
@@ -61,12 +62,13 @@
     "execution": {
       "milestone": "github-planning-workflow-observability-p2",
       "status": "in-progress",
-      "next_step": "Define the smallest next-safe-action or intent-verification packet that can say answer-directly/no-artifact, use state.toml, or create an execplan, with tests for routine triage and durable intake.",
-      "proof": "Fill in the narrowest command that proves the promoted work."
+      "next_step": "Implement the first product-semantic skill surface for intent, Memory, or proof while preserving the next-safe-action packet semantics.",
+      "proof": "uv run pytest tests/test_workspace_start_preflight_cli.py -q"
     },
     "scope": {
       "touched": [
-        "Fill in the concrete files before implementation starts."
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "tests/test_workspace_start_preflight_cli.py"
       ],
       "invariants": [
         "Preserve the planning contract and keep the work bounded to this plan."
@@ -94,7 +96,7 @@
   "intent_interpretation": {
     "literal request": "Github Planning Workflow Observability P2",
     "inferred intended outcome": "Medium-priority planning workflow issues are accepted but should remain behind immediate trust and recoverability failures; when promoted, success should be measured by fewer raw-file reads and fewer human corrections, not by adding more workflow prose.",
-    "chosen concrete what": "Define the smallest next-safe-action or intent-verification packet that can say answer-directly/no-artifact, use state.toml, or create an execplan, with tests for routine triage and durable intake.",
+    "chosen concrete what": "Implemented #988: a compact next_safe_action packet emitted by start and covered by routine triage, prep-only planning, and completion/closeout routing tests.",
     "interpretation distance": "low",
     "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
   },
@@ -117,7 +119,7 @@
     "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
     "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
     "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
-    "tiny resumability note": "Define the smallest next-safe-action or intent-verification packet that can say answer-directly/no-artifact, use state.toml, or create an execplan, with tests for routine triage and durable intake.",
+    "tiny resumability note": "#988 is complete; continue with product-semantic skills/observability slices under #981/#983/#984/#985/#986.",
     "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
   },
   "delegated_judgment": {
@@ -127,10 +129,14 @@
     "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
   },
   "post_decomposition_delegation": {
-    "status": "pending",
+    "status": "recorded",
     "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
     "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
-    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "#988 is a narrow packet-shape slice with local runtime/tests; delegation would add coordination overhead.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-16T18:43:17+00:00"
   },
   "system_intent_alignment": {
     "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
@@ -148,19 +154,20 @@
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Define the smallest next-safe-action or intent-verification packet that can say answer-directly/no-artifact, use state.toml, or create an execplan, with tests for routine triage and durable intake."
+    "Implement the first product-semantic skill surface for intent, Memory, or proof while preserving the next-safe-action packet semantics."
   ],
   "blockers": [
     "None."
   ],
   "touched_paths": [
-    "Fill in the concrete files before implementation starts."
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "tests/test_workspace_start_preflight_cli.py"
   ],
   "invariants": [
     "Preserve the planning contract and keep the work bounded to this plan."
   ],
   "validation_commands": [
-    "Fill in the narrowest command that proves the promoted work."
+    "uv run pytest tests/test_workspace_start_preflight_cli.py -q"
   ],
   "required_tools": [
     "None."
@@ -172,47 +179,47 @@
     "run status": "not-run-yet",
     "executor": "",
     "handoff source": "agentic-planning promote-to-plan",
-    "what happened": "execution has not started",
-    "scope touched": "none yet",
-    "changed surfaces": "none yet; execution has not changed files",
-    "validations run": "pending",
-    "result for continuation": "continue from this scaffolded execplan",
-    "next step": "Define the smallest next-safe-action or intent-verification packet that can say answer-directly/no-artifact, use state.toml, or create an execplan, with tests for routine triage and durable intake."
+    "what happened": "#988 completed: start now exposes a compact next_safe_action packet derived from immediate_next_allowed_action, workflow_sufficiency, skill_routing, and memory_consult.",
+    "scope touched": "src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_start_preflight_cli.py",
+    "changed surfaces": "startup routing packet projection and startup/preflight tests",
+    "validations run": "uv run pytest tests/test_workspace_start_preflight_cli.py -q",
+    "result for continuation": "continue P2 with product-semantic skill surfaces and module-slot/transition follow-ons",
+    "next step": "Implement the first product-semantic skill surface for intent, Memory, or proof while preserving the next-safe-action packet semantics."
   },
   "finished_run_review": {
-    "review status": "pending",
-    "scope respected": "pending",
-    "proof status": "pending",
-    "intent served": "pending",
-    "config compliance": "pending",
-    "misinterpretation risk": "pending",
+    "review status": "slice reviewed",
+    "scope respected": "yes; #988 touched startup packet projection and focused tests",
+    "proof status": "passed for #988 startup/preflight coverage",
+    "intent served": "#988 now gives agents one compact packet for next action, CLI, module slot, forbidden actions, proof/completion boundaries, Memory status, and fallback",
+    "config compliance": "used AW start/implement context and recorded keep-local delegation decision",
+    "misinterpretation risk": "low for #988; broader P2 remains open",
     "follow-on decision": "pending"
   },
   "delegation_outcome_feedback": {
-    "route chosen": "pending",
-    "route skipped reason": "pending",
-    "expected savings": "pending",
+    "route chosen": "keep-local",
+    "route skipped reason": "#988 is a narrow packet-shape slice with local runtime/tests; delegation would add coordination overhead.",
+    "expected savings": "unknown",
     "actual friction": "pending",
-    "proof result": "pending",
-    "quality concern": "pending",
-    "decomposition adjustment": "pending"
+    "proof result": "passed for #988",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
   },
   "proof_report": {
-    "validation proof": "pending",
-    "proof achieved now": "pending",
-    "evidence for \"proof achieved\" state": ""
+    "validation proof": "uv run pytest tests/test_workspace_start_preflight_cli.py -q",
+    "proof achieved now": "#988 startup/preflight tests passed",
+    "evidence for \"proof achieved\" state": "Startup/preflight test file: 53 passed."
   },
   "intent_satisfaction": {
     "original intent": "Medium-priority planning workflow issues are accepted but should remain behind immediate trust and recoverability failures; when promoted, success should be measured by fewer raw-file reads and fewer human corrections, not by adding more workflow prose.",
-    "was original intent fully satisfied?": "pending",
-    "evidence of intent satisfaction": "",
-    "unsolved intent passed to": "none yet"
+    "was original intent fully satisfied?": "partial",
+    "evidence of intent satisfaction": "#988 next-safe-action packet completed; #981/#983/#984/#985/#986 remain in the active P2 lane.",
+    "unsolved intent passed to": "active P2 execplan continuation"
   },
   "execution_summary": {
-    "outcome delivered": "not completed yet",
-    "validation confirmed": "pending",
-    "follow-on routed to": "none yet",
-    "post-work posterity capture": "pending",
+    "outcome delivered": "#988 slice complete; P2 lane still in progress",
+    "validation confirmed": "startup/preflight pytest passed",
+    "follow-on routed to": "#981/#983/#984/#985/#986 in this execplan",
+    "post-work posterity capture": "updated execplan and mutation provenance",
     "knowledge promoted (Memory/Docs/Config)": "none",
     "resume from": "current milestone"
   },
@@ -235,13 +242,13 @@
     "owner surface": ""
   },
   "closure_check": {
-    "slice status": "pending",
-    "larger-intent status": "pending",
-    "closure decision": "pending",
+    "slice status": "#988 complete; active milestone in progress",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
     "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
     "why this decision is honest": "",
-    "evidence carried forward": "",
-    "reopen trigger": ""
+    "evidence carried forward": "start.next_safe_action carries next_safe_action, preferred_cli, module_slot, forbidden_actions, proof_required, completion_claim_allowed, memory_consultation_status, and no-CLI fallback.",
+    "reopen trigger": "If start/skill guidance diverges again from the compact next action semantics."
   },
   "improvement_signal_review": {
     "status": "pending",
@@ -264,6 +271,8 @@
     }
   },
   "drift_log": [
-    "2026-05-16: Promoted from TODO direct-task shape into an execplan."
+    "2026-05-16: Promoted from TODO direct-task shape into an execplan.",
+    "2026-05-16: Recorded delegation decision route=keep-local.",
+    "2026-05-16: Completed #988 next-safe-action packet slice and carried remaining P2 work forward."
   ]
 }

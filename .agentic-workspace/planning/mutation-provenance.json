@@ -2,22 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/execplans/python-workspace-facade-source-runtime-elimination.plan.json",
-      "sha256": "2cbd0884c914272ca28f96ca7c2b8f7554a2b6e66a9a4f60c8177b5cdeb25311",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-workspace-facade-source-runtime-elimination",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T10:43:32+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "0a331548136121314715d80690bbc8a391eb1f5811137f8af141daa48a32b8f4",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-workspace-facade-source-runtime-elimination",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T10:43:32+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/state.toml",
       "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
       "command": "agentic-planning archive-plan",
@@ -1600,6 +1584,22 @@
       "reason": "promote planning item github-planning-workflow-observability-p2",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-16T18:42:14+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-planning-workflow-observability-p2.plan.json",
+      "sha256": "fe35821d3948d594d2db361e83d382b330d5f40b5c132919a38c2b2b2e681bc5",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T18:43:17+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-planning-workflow-observability-p2.plan.json",
+      "sha256": "7669739331b8ff126c5882f8fef0d8b412d6ce928bc61c35e2e7de9f6a5ccb8c",
+      "command": "agentic-planning record-recovery",
+      "reason": "Updated active P2 execplan after completing #988 next-safe-action packet slice.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T18:47:24+00:00"
     }
   ]
 }

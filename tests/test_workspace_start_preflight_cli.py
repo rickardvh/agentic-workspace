@@ -523,7 +523,7 @@ def test_start_default_returns_selector_first_router(tmp_path: Path, capsys) -> 
 
     payload = json.loads(capsys.readouterr().out)
     encoded = json.dumps(payload, sort_keys=True)
-    assert len(encoded) < 4700
+    assert len(encoded) < 5700
     assert payload["kind"] == "startup-context/v1"
     assert "adaptive_routing" not in payload
     assert "context_router" not in payload
@@ -532,6 +532,17 @@ def test_start_default_returns_selector_first_router(tmp_path: Path, capsys) -> 
         "choose-smallest-workflow-shape",
         "continue-active-planning-record",
     }
+    packet = payload["next_safe_action"]
+    assert packet["kind"] == "agentic-workspace/next-safe-action/v1"
+    assert packet["next_safe_action"] == payload["immediate_next_allowed_action"]["action"]
+    assert packet["module_slot"] in {"workspace", "planning"}
+    assert packet["memory_consultation_status"] in {"recommended", "unknown"}
+    assert packet["source_fields"] == [
+        "immediate_next_allowed_action",
+        "workflow_sufficiency",
+        "skill_routing",
+        "memory_consult",
+    ]
     assert payload["active_state_summary"]["todo_active_count"] >= 0
     assert payload["skill_routing"]["preferred_routes"]
     assert payload["task_intent"]["implement_changed_command"] == (
@@ -757,6 +768,13 @@ def test_start_tiny_routes_prep_only_handoff_to_planning_bridge(tmp_path: Path, 
     assert "--prep-only" in action["command"]
     assert action["next_proof"] == "agentic-workspace summary --verbose --format json"
     assert action["read_first"] == []
+    packet = payload["next_safe_action"]
+    assert packet["next_safe_action"] == "create-prep-only-planning-state"
+    assert packet["module_slot"] == "planning"
+    assert packet["preferred_cli"] == action["command"]
+    assert packet["completion_claim_allowed"] is False
+    assert {"edit product source", "claim implementation complete"} <= set(packet["forbidden_actions"])
+    assert packet["proof_required"] is True
     assert "do not create product source" in action["summary"]
     prep_only = payload["prep_only_handoff"]
     assert prep_only["first_command"].startswith("agentic-workspace planning new-plan")
