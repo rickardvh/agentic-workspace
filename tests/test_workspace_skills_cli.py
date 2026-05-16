@@ -4,6 +4,20 @@ from __future__ import annotations
 from tests.workspace_cli_support import *
 
 
+def test_workspace_startup_skill_declares_skillspec_pilot_contract() -> None:
+    root = Path(__file__).resolve().parents[1]
+    root_skill = (root / ".agentic-workspace" / "skills" / "workspace-startup" / "SKILL.md").read_text(encoding="utf-8")
+    payload_skill = (
+        root / "src" / "agentic_workspace" / "_payload" / ".agentic-workspace" / "skills" / "workspace-startup" / "SKILL.md"
+    ).read_text(encoding="utf-8")
+
+    for text in (root_skill, payload_skill):
+        assert "startup-router` SkillSpec contract" in text
+        assert "`planning_safety_gate.implementation_allowed` is false" in text
+        assert "avoid planning, review, Memory, or handoff artifacts" in text
+        assert "No-CLI fallback" in text
+
+
 def test_skills_command_lists_registered_workspace_skills(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

@@ -1640,6 +1640,56 @@ def test_start_direct_task_keeps_stated_assumption_out_of_default(tmp_path: Path
     assert "intent_acknowledgement" not in payload
 
 
+def test_startup_skillspec_pilot_keeps_direct_work_light_and_blocks_epic_work(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(target),
+                "--task",
+                "Fix a typo in README.md",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    direct = json.loads(capsys.readouterr().out)
+    assert "planning_safety_gate" not in direct
+    assert direct["next_safe_action"]["next_safe_action"] == "choose-smallest-workflow-shape"
+    assert direct["next_safe_action"]["proof_required"] is False
+    assert direct["next_safe_action"]["module_slot"] == "workspace"
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(target),
+                "--task",
+                "Decompose an epic into lanes before implementation",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    epic = json.loads(capsys.readouterr().out)
+    gate = epic["planning_safety_gate"]
+    assert gate["implementation_allowed"] is False
+    assert gate["work_shape"] == "epic"
+    assert gate["required_next_action"] == "promote-or-create-active-execplan"
+    assert epic["next_safe_action"]["next_safe_action"] == "promote-or-create-active-execplan"
+    assert epic["skill_routing"]["preferred_routes"][0]["skill"] == "planning-reporting"
+
+
 def test_start_task_includes_compact_skill_recommendations(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
