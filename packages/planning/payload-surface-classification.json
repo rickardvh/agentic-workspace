@@ -588,6 +588,20 @@
       "rationale": "The planning wheel force-includes target-local resource primitives as private runtime import data; primitive implementation remains owned by command-generation."
     },
     {
+      "source_path": "generated/planning/python/primitives/planning_installer.py",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/primitives/planning_installer.py",
+      "classification": "maintainer/development only",
+      "owner": "generated planning runtime facade projection",
+      "rationale": "The planning wheel force-includes the generated-local installer facade as private runtime import data; remaining delegates are explicit transitional runtime debt."
+    },
+    {
+      "source_path": "generated/planning/python/primitives/planning_runtime.py",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/primitives/planning_runtime.py",
+      "classification": "maintainer/development only",
+      "owner": "generated planning runtime facade projection",
+      "rationale": "The planning wheel force-includes the generated-local runtime facade as private runtime import data; remaining delegates are explicit transitional runtime debt."
+    },
+    {
       "source_path": "generated/planning/python/commands/__init__.py",
       "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/commands/__init__.py",
       "classification": "maintainer/development only",

@@ -2188,6 +2188,16 @@
   "program": "agentic-planning",
   "python_runtime_binding": {
     "entrypoint": "agentic-planning",
+    "local_runtime_bindings": [
+      {
+        "module_file": "primitives.planning_installer",
+        "source_import_module": "repo_planning_bootstrap.installer"
+      },
+      {
+        "module_file": "primitives.planning_runtime",
+        "source_import_module": "repo_planning_bootstrap.runtime_projection"
+      }
+    ],
     "operation_executor": {
       "handlers": [
         {

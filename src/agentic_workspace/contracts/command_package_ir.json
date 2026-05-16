@@ -4568,6 +4568,16 @@
         "entrypoint": "agentic-planning",
         "runtime_module_file": "cli",
         "render_runtime_module": true,
+        "local_runtime_bindings": [
+          {
+            "source_import_module": "repo_planning_bootstrap.installer",
+            "module_file": "primitives.planning_installer"
+          },
+          {
+            "source_import_module": "repo_planning_bootstrap.runtime_projection",
+            "module_file": "primitives.planning_runtime"
+          }
+        ],
         "operation_executor": {
           "module_file": "primitives.operation_executor",
           "supported_operation_ids": [

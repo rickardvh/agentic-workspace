@@ -876,17 +876,27 @@ def _render_value_kwargs(kwargs: dict[str, Any]) -> str:
     return ", ".join(rendered)
 
 
-def _render_function_call_handler(function_name: str, handler: dict[str, Any]) -> str:
+def _handler_import_module(package: dict[str, Any], import_module: str, *, operation_executor: bool) -> str:
+    local_binding = _local_runtime_binding_for_import(package, import_module)
+    if local_binding is None:
+        return import_module
+    if operation_executor:
+        return _operation_executor_import_for_binding(local_binding)
+    return _command_module_import_for_binding(local_binding)
+
+
+def _render_function_call_handler(package: dict[str, Any], function_name: str, handler: dict[str, Any]) -> str:
     imported_name = str(handler["function"])
     kwargs = _render_value_kwargs(handler.get("kwargs", {}))
+    import_module = _handler_import_module(package, str(handler["import_module"]), operation_executor=True)
     return (
         f"def {function_name}(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:\n"
-        f"    from {handler['import_module']} import {imported_name}\n\n"
+        f"    from {import_module} import {imported_name}\n\n"
         f"    return {imported_name}({kwargs})\n"
     )
 
 
-def _render_conditional_function_call_handler(function_name: str, handler: dict[str, Any]) -> str:
+def _render_conditional_function_call_handler(package: dict[str, Any], function_name: str, handler: dict[str, Any]) -> str:
     condition_value = str(handler["condition_value"])
     true_handler = handler["if_true"]
     false_handler = handler["if_false"]
@@ -894,12 +904,14 @@ def _render_conditional_function_call_handler(function_name: str, handler: dict[
     false_name = str(false_handler["function"])
     true_kwargs = _render_value_kwargs(true_handler.get("kwargs", {}))
     false_kwargs = _render_value_kwargs(false_handler.get("kwargs", {}))
+    true_import_module = _handler_import_module(package, str(true_handler["import_module"]), operation_executor=True)
+    false_import_module = _handler_import_module(package, str(false_handler["import_module"]), operation_executor=True)
     return (
         f"def {function_name}(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:\n"
         f"    if values.get({condition_value!r}):\n"
-        f"        from {true_handler['import_module']} import {true_name}\n\n"
+        f"        from {true_import_module} import {true_name}\n\n"
         f"        return {true_name}({true_kwargs})\n"
-        f"    from {false_handler['import_module']} import {false_name}\n\n"
+        f"    from {false_import_module} import {false_name}\n\n"
         f"    return {false_name}({false_kwargs})\n"
     )
 
@@ -973,10 +985,19 @@ def _render_runtime_handler(
 def _local_runtime_binding_functions(package: dict[str, Any], binding: dict[str, Any]) -> list[str]:
     source_import_module = str(binding["source_import_module"])
     functions: set[str] = set()
+
+    def collect_handler_function(handler: dict[str, Any]) -> None:
+        if handler.get("import_module") == source_import_module:
+            functions.add(str(handler["function"]))
+        for branch in ("if_true", "if_false"):
+            nested = handler.get(branch)
+            if isinstance(nested, dict):
+                collect_handler_function(nested)
+
     operation_executor = _operation_executor_binding(package)
     for handler in operation_executor.get("handlers", []):
-        if isinstance(handler, dict) and handler.get("import_module") == source_import_module:
-            functions.add(str(handler["function"]))
+        if isinstance(handler, dict):
+            collect_handler_function(handler)
     python_runtime_binding = package.get("python_runtime_binding", {})
     if isinstance(python_runtime_binding, dict):
         for handler in python_runtime_binding.get("runtime_module_handlers", []):
@@ -1203,9 +1224,9 @@ def _python_operation_executor_module(
         if handler_kind == "runtime_handler":
             handlers.append(_render_runtime_handler(package, function_name, handler, runtime_module_file=runtime_module_file))
         elif handler_kind == "function_call":
-            handlers.append(_render_function_call_handler(function_name, handler))
+            handlers.append(_render_function_call_handler(package, function_name, handler))
         elif handler_kind == "conditional_function_call":
-            handlers.append(_render_conditional_function_call_handler(function_name, handler))
+            handlers.append(_render_conditional_function_call_handler(package, function_name, handler))
         elif handler_kind == "generated_target_root_resolve":
             handlers.append(_render_generated_target_root_handler(function_name, handler))
         elif handler_kind == "runtime_emit":

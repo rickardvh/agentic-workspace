@@ -1654,6 +1654,16 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         errors.append("planning operation IR executor must import the codegen-owned primitive executor")
     if "run_operation_steps(" not in planning_operation_executor_text:
         errors.append("planning operation IR executor must execute operation plans through codegen-owned run_operation_steps")
+    for forbidden_import in (
+        "from repo_planning_bootstrap.installer import",
+        "from repo_planning_bootstrap.runtime_projection import",
+    ):
+        if forbidden_import in planning_operation_executor_text:
+            errors.append("planning operation IR executor must route live runtime delegates through generated planning facades")
+    for facade_name in ("planning_installer.py", "planning_runtime.py"):
+        facade_path = REPO_ROOT / "generated" / "planning" / "python" / "primitives" / facade_name
+        if not facade_path.is_file():
+            errors.append(f"generated planning runtime facade is missing: {facade_path.relative_to(REPO_ROOT).as_posix()}")
     if "planning.list-files.report" in planning_operation_executor_text:
         errors.append("planning.list-files.report must be executed by its direct generated command module, not planning run_operation_ir")
     for module_name in ("planning_doctor_report", "planning_report_report", "planning_status_report"):

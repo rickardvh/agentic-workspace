@@ -131,69 +131,69 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
 
 def _handle_planning_report_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
     if values.get('verbose'):
-        from repo_planning_bootstrap.installer import planning_report
+        from .planning_installer import planning_report
 
         return planning_report(target=values.get('target'))
-    from repo_planning_bootstrap.installer import planning_report_tiny
+    from .planning_installer import planning_report_tiny
 
     return planning_report_tiny(target=values.get('target'))
 
 
 def _handle_planning_summary_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from repo_planning_bootstrap.runtime_projection import load_planning_summary_operation
+    from .planning_runtime import load_planning_summary_operation
 
     return load_planning_summary_operation(values, arguments, context)
 
 
 def _handle_planning_reconcile_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from repo_planning_bootstrap.runtime_projection import load_planning_reconcile_operation
+    from .planning_runtime import load_planning_reconcile_operation
 
     return load_planning_reconcile_operation(values, arguments, context)
 
 
 def _handle_output_emit(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from repo_planning_bootstrap.runtime_projection import emit_planning_operation_output
+    from .planning_runtime import emit_planning_operation_output
 
     return emit_planning_operation_output(values, arguments, context)
 
 
 def _handle_planning_list_files_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from repo_planning_bootstrap.runtime_projection import load_planning_list_files_operation
+    from .planning_runtime import load_planning_list_files_operation
 
     return load_planning_list_files_operation(values, arguments, context)
 
 
 def _handle_planning_prompt_render(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from repo_planning_bootstrap.runtime_projection import render_planning_prompt_operation
+    from .planning_runtime import render_planning_prompt_operation
 
     return render_planning_prompt_operation(values, arguments, context)
 
 
 def _handle_planning_new_plan_apply(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from repo_planning_bootstrap.runtime_projection import apply_planning_new_plan_operation
+    from .planning_runtime import apply_planning_new_plan_operation
 
     return apply_planning_new_plan_operation(values, arguments, context)
 
 
 def _handle_planning_promote_to_plan_apply(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from repo_planning_bootstrap.runtime_projection import apply_planning_promote_to_plan_operation
+    from .planning_runtime import apply_planning_promote_to_plan_operation
 
     return apply_planning_promote_to_plan_operation(values, arguments, context)
 
 
 def _handle_planning_archive_plan_apply(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from repo_planning_bootstrap.runtime_projection import apply_planning_archive_plan_operation
+    from .planning_runtime import apply_planning_archive_plan_operation
 
     return apply_planning_archive_plan_operation(values, arguments, context)
 
 
 def _handle_planning_delegation_decision_apply(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from repo_planning_bootstrap.runtime_projection import apply_planning_delegation_decision_operation
+    from .planning_runtime import apply_planning_delegation_decision_operation
 
     return apply_planning_delegation_decision_operation(values, arguments, context)
 
 
 def _handle_planning_record_recovery_apply(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from repo_planning_bootstrap.runtime_projection import apply_planning_record_recovery_operation
+    from .planning_runtime import apply_planning_record_recovery_operation
 
     return apply_planning_record_recovery_operation(values, arguments, context)
