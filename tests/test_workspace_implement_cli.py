@@ -4,11 +4,30 @@ from __future__ import annotations
 from tests.workspace_cli_support import *
 
 
-def test_implement_command_returns_bounded_context_and_boundary_warnings(capsys) -> None:
+def test_implement_command_returns_bounded_context_and_boundary_warnings(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+
     assert (
         cli.main(
             [
                 "implement",
+                "--target",
+                str(tmp_path),
                 "--changed",
                 "packages/planning/bootstrap/repo_planning_bootstrap/installer.py",
                 "generated/workspace/python/cli.py",
@@ -27,16 +46,18 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(capsys)
         "generated/workspace/python/cli.py",
     ]
     assert payload["required_validation_commands"] == [
+        "agentic-workspace defaults --section root_cli_authority --format json",
+        "uv run python scripts/check/check_generated_command_packages.py",
+        "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+        "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
+    ]
+    unavailable_commands = {item["command"] for item in payload["proof"]["unavailable_commands"]}
+    assert {
         "make test-planning",
         "make lint-planning",
         "make test-workspace",
         "make lint-workspace",
-        "uv run agentic-workspace defaults --section root_cli_authority --format json",
-        "uv run python scripts/check/check_generated_command_packages.py",
-        "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
-        "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
-        "uv run pytest tests/test_workspace_cli.py -q",
-    ]
+    } <= unavailable_commands
     assert payload["proof"]["cli_authority_review"]["classifications"][0]["role"] == "hand-owned-executable"
     assert payload["orientation"]["status"] == "changed-path-context"
     assert "preflight" in payload["orientation"]["preflight_command"]
@@ -53,8 +74,8 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(capsys)
     assert payload["acceptance_reconciliation"]["requested_outcomes"] == []
     assert payload["acceptance"]["status"] == "unavailable"
     assert payload["objective_drift"]["status"] == "unavailable"
-    assert "quality" in payload["execution_posture"]["quality_tradeoff"]
-    assert "Token saving" in payload["execution_posture"]["token_tradeoff"]
+    assert "safer path" in payload["execution_posture"]["quality_tradeoff"].lower()
+    assert "token" in payload["execution_posture"]["token_tradeoff"].lower()
     assert payload["durable_intent"]["kind"] == "agentic-workspace/durable-intent-decision/v1"
     assert payload["durable_intent"]["subsystem_intent"]["surface"] == ".agentic-workspace/system-intent/subsystems.toml"
     assert (
@@ -63,10 +84,9 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(capsys)
     assert payload["path_boundaries"][0]["authority"] == "payload"
     assert payload["path_boundaries"][0]["requires_attention"] is True
     assert payload["authority_markers"][0]["safe_to_edit"] is False
-    assert payload["next_allowed_action"] in {
-        "Resolve boundary warnings before editing.",
-        "Create or promote an active execplan before continuing implementation.",
-    }
+    assert payload["next_allowed_action"] == "Create or promote an active execplan before continuing implementation."
+    assert payload["planning_safety_gate"]["status"] == "escalation-required"
+    assert payload["planning_safety_gate"]["decision"] == "planning-escalation-required"
 
 
 def test_implement_tiny_profile_returns_next_decision_without_diagnostics(capsys) -> None:
