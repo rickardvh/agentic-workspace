@@ -101,6 +101,65 @@ def test_json_parse_uses_named_source_value(primitive_context: PrimitiveContext)
     assert registry == {"skills": [{"id": "review"}]}
 
 
+def test_toml_table_counts_returns_stable_counts(primitive_context: PrimitiveContext) -> None:
+    target = primitive_context.cwd / "target"
+    manifest = target / ".agentic-workspace" / "memory" / "repo"
+    manifest.mkdir(parents=True)
+    (manifest / "manifest.toml").write_text(
+        "\n".join(
+            [
+                "[notes.required]",
+                'task_relevance = "required"',
+                "[notes.optional]",
+                'task_relevance = "optional"',
+                "routing_only = true",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = execute_primitive(
+        "toml.table.counts",
+        values={"target_root": str(target)},
+        arguments={
+            "base_value": "target_root",
+            "path": ".agentic-workspace/memory/repo/manifest.toml",
+            "table": "notes",
+            "relevance_field": "task_relevance",
+            "required_value": "required",
+            "optional_value": "optional",
+            "routing_only_field": "routing_only",
+        },
+        context=primitive_context,
+    )
+
+    assert result == {
+        "table_counts": {
+            "status": "present",
+            "note_count": 2,
+            "required_count": 1,
+            "optional_count": 1,
+            "routing_only_count": 1,
+            "path": ".agentic-workspace/memory/repo/manifest.toml",
+        },
+        "table_present": True,
+        "table_status": "present",
+    }
+
+
+def test_toml_table_counts_reports_missing_file(primitive_context: PrimitiveContext) -> None:
+    result = execute_primitive(
+        "toml.table.counts",
+        values={"target_root": str(primitive_context.cwd / "target")},
+        arguments={"base_value": "target_root", "path": "missing.toml", "table": "notes"},
+        context=primitive_context,
+    )
+
+    assert result["table_counts"]["status"] == "missing"
+    assert result["table_present"] is False
+    assert result["table_status"] == "missing"
+
+
 def test_payload_assemble_supports_file_and_skill_records(primitive_context: PrimitiveContext) -> None:
     file_payload = execute_primitive(
         "payload.assemble",

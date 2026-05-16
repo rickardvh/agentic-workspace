@@ -2,70 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "b1e0e57a16351ee65aa058af3df52e9e14507a5469f14ee8eee65b64ee42ec7d",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-generated-entrypoint-source-import-retirement",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T20:59:33+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-generated-entrypoint-source-import-retirement.plan.json",
-      "sha256": "56545b6c5d595c7d37a6ee2c13feb20adc9c159f47fbbdfe193a19c741a2e691",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=delegate-exploration",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T21:01:02+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-generated-entrypoint-source-import-retirement.plan.json",
-      "sha256": "8fa73e6bae5fa8cf814fdaac28b5b7e47e943a06d4d36cb71a4f14085b44cb55",
-      "command": "agentic-planning record-recovery",
-      "reason": "Tightened the active #892 execplan bounds and proof after promoting the slice; manual projection cleanup was needed before implementation proof.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-15T21:16:04+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-generated-entrypoint-source-import-retirement.plan.json",
-      "sha256": "7b9468b31d2895812584fda91640326e7c3dc6e5f2dd645fc1393539f4d825e9",
-      "command": "agentic-planning record-recovery",
-      "reason": "Marked the completed #892 bounded slice with proof and continuation before archive; archive command requires completed milestone status.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-15T21:26:24+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-generated-entrypoint-source-import-retirement.plan.json",
-      "sha256": "5f455e404e14bdb76d0674bb0ed268e4e77dede9b47e3eecf9d2670dbad0fe6d",
-      "command": "agentic-planning record-recovery",
-      "reason": "Filled the archive-required execution_summary resume cue after archive validation reported it missing.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-15T21:26:47+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-generated-entrypoint-source-import-retirement.plan.json",
-      "sha256": "cbf534aaa72a74cca81f866bd10e2753ecedc3d39e36eb18ed43b0f97d317813",
-      "command": "agentic-planning record-recovery",
-      "reason": "Added the archive-required stale-reference sweep proof for runtime export retirement.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-15T21:27:10+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-generated-entrypoint-source-import-retirement",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T21:27:17+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/archive/python-generated-entrypoint-source-import-retirement.plan.json",
-      "sha256": "55c810349f03c87a63bf5ad5958b64762e1d09ec1430ab40969914173f9f0a7b",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-generated-entrypoint-source-import-retirement",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T21:27:17+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
       "sha256": "11cd5fef89eb13dceee85856b4a3fab9a0ef854f3165972fab21324f2ee26d54",
       "command": "agentic-planning record-recovery",
@@ -1600,6 +1536,70 @@
       "reason": "Recorded defaults.report no-safe-route audit in the epic decomposition after closing the bounded plan.",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-16T14:14:48+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-next-runtime-delegate-candidate.plan.json",
+      "sha256": "1c7aea53ba9af4c3ac6c8f29dbe36e2f854148df58ab368159f0ff50fe650594",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-next-runtime-delegate-candidate",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T14:15:24+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "789064cd5062873c02eaad6ea0e6a15ab125e637c07582fd4f5f4cb243c1718b",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-next-runtime-delegate-candidate",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T14:15:24+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-next-runtime-delegate-candidate.plan.json",
+      "sha256": "7a4f5d27eb9731adec300a7586253a0048a610c772c87dc7d63c21f2806b1c66",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=delegate-exploration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T14:15:43+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-next-runtime-delegate-candidate.plan.json",
+      "sha256": "5c8ffeb3e91c32c783f51dfae6f5090389c927bd02997addb608e021326aa5a5",
+      "command": "agentic-planning record-recovery",
+      "reason": "Bound active #892 slice to memory.status runtime delegate reduction after candidate selection.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T14:17:47+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-next-runtime-delegate-candidate.plan.json",
+      "sha256": "5ed7549a2114dc2e24d87427f52538581ab60169caf6b368815cbc791398d152",
+      "command": "agentic-planning record-recovery",
+      "reason": "Closed memory.status runtime delegate reduction plan after green proof; no focused execplan closeout field command exists.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T14:25:18+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-next-runtime-delegate-candidate",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T14:25:22+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/python-next-runtime-delegate-candidate.plan.json",
+      "sha256": "5ed7549a2114dc2e24d87427f52538581ab60169caf6b368815cbc791398d152",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-next-runtime-delegate-candidate",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T14:25:22+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "94b25ae9a94a48f1d2993670a63e9df1339485e4433f7528cf33a9e515cfd3e5",
+      "command": "agentic-planning record-recovery",
+      "reason": "Recorded memory.status portable-IR reduction in the epic decomposition.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T14:26:33+00:00"
     }
   ]
 }

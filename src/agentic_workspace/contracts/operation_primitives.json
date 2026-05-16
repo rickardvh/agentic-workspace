@@ -90,6 +90,7 @@
           "filesystem.exists",
           "filesystem.glob",
           "json.parse",
+          "toml.table.counts",
           "payload.assemble",
           "output.emit"
         ],
@@ -626,6 +627,15 @@
       "kind": "structured-data",
       "portability": "target-executor",
       "semantics": "Parse TOML using the target runtime's declared TOML library and fail the operation on invalid TOML."
+    },
+    {
+      "id": "toml.table.counts",
+      "summary": "Count records and simple categorical fields in a declared TOML table.",
+      "kind": "structured-data",
+      "portability": "target-executor",
+      "semantics": "Read one rooted TOML file, count records in a named table, and return deterministic category counts without interpreting package policy.",
+      "input_schema_ref": "schemas/primitives/toml_table_counts.input.schema.json",
+      "output_schema_ref": "schemas/primitives/toml_table_counts.output.schema.json"
     },
     {
       "id": "toml.write",

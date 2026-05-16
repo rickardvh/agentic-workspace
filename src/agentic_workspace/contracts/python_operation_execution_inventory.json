@@ -654,18 +654,21 @@
       "operation_contract": "operations/memory.status.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
-        "memory.bootstrap.status.load",
-        "module-result text/json compatibility formatting"
+        "memory.bootstrap.status.load for verbose/text fallback",
+        "module-result text compatibility formatting"
       ],
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "memory.status.process",
       "domain_runtime_primitive_refs": [
+        "path.target_root.resolve",
+        "toml.table.counts",
+        "payload.assemble",
         "memory.bootstrap.status.load"
       ],
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior.",
-      "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.bootstrap.status.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "runtime_boundary_reason": "Non-verbose JSON status executes through codegen-owned portable primitives; package-domain runtime remains only for verbose/text compatibility output.",
+      "what_would_make_portable_later": "Replace the remaining verbose/text memory.bootstrap.status.load fallback with schema-backed output/template primitives or explicitly retire compatibility text output.",
+      "generic_behavior_audit": "Non-verbose JSON behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, toml.table.counts, payload.assemble, and output.emit. The remaining package-domain primitive is a compatibility fallback for verbose/text behavior and is not counted as portable codegen coverage."
     },
     {
       "operation_id": "memory.sync-memory.report",

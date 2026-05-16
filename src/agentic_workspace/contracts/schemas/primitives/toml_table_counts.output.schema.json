@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/primitives/toml-table-counts-output/v1",
+  "title": "TOML table counts primitive output",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "table_present": {
+      "type": "boolean"
+    },
+    "table_status": {
+      "type": "string",
+      "enum": ["present", "missing", "invalid"]
+    },
+    "table_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["present", "missing", "invalid"]
+        },
+        "note_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "required_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "optional_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "routing_only_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "note_count",
+        "required_count",
+        "optional_count",
+        "routing_only_count",
+        "path"
+      ]
+    }
+  },
+  "required": ["table_counts", "table_present", "table_status"]
+}

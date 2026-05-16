@@ -82,6 +82,9 @@ export const generatedCommandPackage = {
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
+          "path.target_root.resolve",
+          "toml.table.counts",
+          "payload.assemble",
           "memory.bootstrap.status.load",
           "output.emit"
         ]
@@ -2574,20 +2577,6 @@ export const generatedCommandPackage = {
             "function": "_load_memory_bootstrap_doctor",
             "implementation": "toml_table_lifecycle_json_with_source_fallback",
             "message": "Doctor report",
-            "optional_value": "optional",
-            "relative_path": ".agentic-workspace/memory/repo/manifest.toml",
-            "relevance_field": "task_relevance",
-            "required_value": "required",
-            "routing_only_field": "routing_only",
-            "table_name": "notes",
-            "unhealthy_detail": "memory manifest is not readable; run full doctor for remediation detail"
-          },
-          {
-            "detail_command": "agentic-memory status --target . --verbose --format json",
-            "dry_run": false,
-            "function": "_load_memory_bootstrap_status",
-            "implementation": "toml_table_lifecycle_json_with_source_fallback",
-            "message": "Status report",
             "optional_value": "optional",
             "relative_path": ".agentic-workspace/memory/repo/manifest.toml",
             "relevance_field": "task_relevance",

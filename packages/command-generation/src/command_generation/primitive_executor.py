@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import tomllib
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -77,6 +78,8 @@ def execute_primitive(
         return _glob(arguments=arguments, context=context, values=values)
     if primitive == "json.parse":
         return _parse_json(values=values, arguments=arguments)
+    if primitive == "toml.table.counts":
+        return _toml_table_counts(values=values, arguments=arguments, context=context)
     if primitive == "payload.assemble":
         return _assemble_payload(values=values, arguments=arguments)
     if primitive == "output.emit":
@@ -184,6 +187,47 @@ def _parse_json(*, values: dict[str, Any], arguments: dict[str, Any]) -> Any:
     except KeyError as exc:
         raise PrimitiveExecutionError(f"json.parse missing source value: {source_name!r}") from exc
     return json.loads(str(text))
+
+
+def _toml_table_counts(*, values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> dict[str, Any]:
+    root = _primitive_root(arguments=arguments, context=context, values=values)
+    relative_path = str(arguments.get("path", ""))
+    path = _resolve_inside(root, relative_path)
+    table_name = str(arguments.get("table", ""))
+    relevance_field = str(arguments.get("relevance_field", ""))
+    required_value = str(arguments.get("required_value", "required")).strip().lower()
+    optional_value = str(arguments.get("optional_value", "optional")).strip().lower()
+    routing_only_field = str(arguments.get("routing_only_field", "routing_only"))
+    counts = {
+        "status": "missing",
+        "note_count": 0,
+        "required_count": 0,
+        "optional_count": 0,
+        "routing_only_count": 0,
+        "path": relative_path,
+    }
+    if not path.exists():
+        return {"table_counts": counts, "table_present": False, "table_status": counts["status"]}
+    try:
+        payload = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        counts["status"] = "invalid"
+        return {"table_counts": counts, "table_present": False, "table_status": counts["status"]}
+    records = payload.get(table_name, {}) if isinstance(payload, dict) else {}
+    record_values = list(records.values()) if isinstance(records, dict) else []
+    counts["status"] = "present"
+    counts["note_count"] = len(record_values)
+    for record in record_values:
+        if not isinstance(record, dict):
+            continue
+        relevance = str(record.get(relevance_field, "")).strip().lower()
+        if relevance == required_value:
+            counts["required_count"] += 1
+        elif relevance == optional_value:
+            counts["optional_count"] += 1
+        if bool(record.get(routing_only_field, False)):
+            counts["routing_only_count"] += 1
+    return {"table_counts": counts, "table_present": True, "table_status": counts["status"]}
 
 
 def _assemble_payload(*, values: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
