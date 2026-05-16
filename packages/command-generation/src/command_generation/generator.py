@@ -1134,7 +1134,8 @@ def _python_local_runtime_generated_function(
     if implementation == "json_output_with_source_fallback":
         return (
             f"def {function}(values: dict[str, Any], arguments: dict[str, Any], context: Any) -> Any:\n"
-            "    if str(values.get('format') or 'text') == 'json':\n"
+            "    result = values['result']\n"
+            "    if str(values.get('format') or 'text') == 'json' and isinstance(result, dict):\n"
             "        print(json.dumps(_serialise_value(values['result']), indent=2))\n"
             "        return None\n"
             f"    from {source_import_module} import {function} as source_function\n\n"

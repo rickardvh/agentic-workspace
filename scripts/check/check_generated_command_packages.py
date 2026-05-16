@@ -1615,6 +1615,10 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
     memory_runtime_facade = REPO_ROOT / "generated" / "memory" / "python" / "primitives" / "memory_runtime.py"
     if not memory_runtime_facade.is_file():
         errors.append("generated memory runtime facade is missing")
+    else:
+        memory_runtime_text = memory_runtime_facade.read_text(encoding="utf-8")
+        if "isinstance(result, dict)" not in memory_runtime_text or "json.dumps(_serialise_value(values['result']), indent=2)" not in memory_runtime_text:
+            errors.append("generated memory runtime facade must emit dict JSON through generated-local code before source fallback")
     if "repo_memory_bootstrap._installer_paths" in memory_operation_executor_text:
         errors.append("memory operation IR executor must resolve package resources from generated target-local copies")
     if "_resolve_memory_target_root" in memory_operation_executor_text:

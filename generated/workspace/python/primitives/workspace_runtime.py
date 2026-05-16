@@ -120,7 +120,8 @@ def _append_workspace_operation_delegation_outcome(*args: Any, **kwargs: Any) ->
 
 
 def _emit_workspace_operation_output(values: dict[str, Any], arguments: dict[str, Any], context: Any) -> Any:
-    if str(values.get('format') or 'text') == 'json':
+    result = values['result']
+    if str(values.get('format') or 'text') == 'json' and isinstance(result, dict):
         print(json.dumps(_serialise_value(values['result']), indent=2))
         return None
     from agentic_workspace.workspace_runtime_primitives import _emit_workspace_operation_output as source_function

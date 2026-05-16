@@ -2559,6 +2559,12 @@ export const generatedCommandPackage = {
     "entrypoint": "agentic-memory",
     "local_runtime_bindings": [
       {
+        "generated_function_overrides": [
+          {
+            "function": "_emit_memory_operation_output",
+            "implementation": "json_output_with_source_fallback"
+          }
+        ],
         "module_file": "primitives.memory_runtime",
         "source_import_module": "repo_memory_bootstrap.runtime_primitives"
       }
