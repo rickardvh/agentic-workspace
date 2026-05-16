@@ -78,7 +78,8 @@
       ],
       "role": "core_context_router",
       "audience": "ordinary_host_repo",
-      "classification_note": "compact active planning and handoff state"
+      "classification_note": "compact active planning and handoff state",
+      "mutates_state": false
     },
     {
       "name": "planning",
@@ -187,7 +188,8 @@
           ],
           "role": "core_context_router",
           "audience": "ordinary_host_repo",
-          "classification_note": "Planning mutation front door"
+          "classification_note": "Planning mutation front door",
+          "mutates_state": true
         },
         {
           "name": "promote-to-plan",
@@ -229,7 +231,8 @@
           ],
           "role": "core_context_router",
           "audience": "ordinary_host_repo",
-          "classification_note": "Planning mutation front door"
+          "classification_note": "Planning mutation front door",
+          "mutates_state": true
         },
         {
           "name": "archive-plan",
@@ -482,7 +485,8 @@
           ],
           "role": "core_context_router",
           "audience": "ordinary_host_repo",
-          "classification_note": "Planning review mutation front door"
+          "classification_note": "Planning review mutation front door",
+          "mutates_state": true
         },
         {
           "name": "delegation-decision",
@@ -580,7 +584,8 @@
           ],
           "role": "core_context_router",
           "audience": "ordinary_host_repo",
-          "classification_note": "Planning delegation decision front door"
+          "classification_note": "Planning delegation decision front door",
+          "mutates_state": true
         },
         {
           "name": "record-recovery",
@@ -967,7 +972,8 @@
       ],
       "role": "core_context_router",
       "audience": "ordinary_host_repo",
-      "classification_note": "ordinary first-contact startup context"
+      "classification_note": "ordinary first-contact startup context",
+      "mutates_state": false
     },
     {
       "name": "implement",
@@ -1511,7 +1517,8 @@
       ],
       "role": "core_context_router",
       "audience": "ordinary_host_repo",
-      "classification_note": "takeover-safe compact startup plus active state"
+      "classification_note": "takeover-safe compact startup plus active state",
+      "mutates_state": false
     },
     {
       "name": "install",

@@ -113,6 +113,7 @@ def test_contract_inventory_declares_owner_choice_model() -> None:
 def test_skill_specs_contract_models_startup_and_planning_behavior() -> None:
     manifest = contract_tooling.skill_specs_manifest()
     schema = contract_tooling.contract_schema("skill_spec.schema.json")
+    cli_manifest = contract_tooling.cli_commands_manifest()
 
     assert list(Draft202012Validator(schema).iter_errors(manifest)) == []
     assert manifest["rule"].startswith("Skills steer agent behavior")
@@ -180,6 +181,29 @@ def test_skill_specs_contract_models_startup_and_planning_behavior() -> None:
     assert planning_commands["planning-delegation-decision"]["mutates_state"] is True
     assert any("Hand-edit planning state" in action for action in planning["forbidden_actions"])
     assert planning["generated_target_requirements"]["status"] == "contract-only"
+
+    def _command_registry() -> dict[str, dict[str, object]]:
+        registry: dict[str, dict[str, object]] = {}
+
+        def visit(command: dict[str, object], prefix: str = "") -> None:
+            name = str(command["name"])
+            ref = f"{prefix}.{name}" if prefix else name
+            registry[ref] = command
+            for subcommand in command.get("subcommands", []):
+                if isinstance(subcommand, dict):
+                    visit(subcommand, ref)
+
+        for command in cli_manifest["commands"]:
+            visit(command)
+        return registry
+
+    commands_by_ref = _command_registry()
+    for spec in manifest["specs"]:
+        for affordance in spec["preferred_cli_commands"]:
+            command_ref = affordance["command_ref"]
+            assert command_ref in commands_by_ref
+            assert affordance["command"].replace(" ", ".") == command_ref
+            assert affordance["mutates_state"] is commands_by_ref[command_ref]["mutates_state"]
 
 
 def test_agent_feedback_schema_validates_normalized_feedback_artifact() -> None:

@@ -76,6 +76,10 @@
           "type": "string",
           "description": "Classification note text value used by this contract."
         },
+        "mutates_state": {
+          "type": "boolean",
+          "description": "True when this command or subcommand is expected to write workspace state."
+        },
         "uses_option_groups": {
           "type": "array",
           "items": {

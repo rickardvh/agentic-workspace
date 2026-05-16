@@ -498,6 +498,7 @@
       "preferred_cli_commands": [
         {
           "id": "startup-context",
+          "command_ref": "start",
           "command": "start",
           "preferred_invocation": "uv run agentic-workspace start --task \"<task>\" --format json",
           "purpose": "Resolve work shape, active state, skill routing, next-safe-action, proof hints, and proportional read budget before raw workspace reads.",
@@ -598,6 +599,7 @@
       "preferred_cli_commands": [
         {
           "id": "planning-summary",
+          "command_ref": "summary",
           "command": "summary",
           "preferred_invocation": "uv run agentic-workspace summary --format json",
           "purpose": "Inspect active planning state, active execplans, planning surface health, and recommended next action without opening raw state first.",
@@ -617,6 +619,7 @@
         },
         {
           "id": "planning-promote-to-plan",
+          "command_ref": "planning.promote-to-plan",
           "command": "planning promote-to-plan",
           "preferred_invocation": "uv run agentic-workspace planning promote-to-plan --item-id <id> --target . --format json",
           "purpose": "Move an accepted planning candidate into an execplan while preserving planning provenance.",
@@ -633,6 +636,7 @@
         },
         {
           "id": "planning-delegation-decision",
+          "command_ref": "planning.delegation-decision",
           "command": "planning delegation-decision",
           "preferred_invocation": "uv run agentic-workspace planning delegation-decision --route keep-local --skipped-reason <reason> --target . --format json",
           "purpose": "Record why a lane, high-assurance, or decomposed slice is being kept local or delegated.",

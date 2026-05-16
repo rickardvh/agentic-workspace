@@ -2,46 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-memory-target-root-primitive",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T11:19:11+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/archive/python-memory-target-root-primitive.plan.json",
-      "sha256": "95f7bee3e28f65c7db4b77db23adf7fdab3f598e8d1ab161f5421c77e68d672e",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-memory-target-root-primitive",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T11:19:11+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-direct-operation-executor-prune.plan.json",
-      "sha256": "d0731d60f38365235c6810f3923331ba6bc95063f5821fe054c1fb29b3a8349c",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-direct-operation-executor-prune",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T11:20:08+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "278b51a070529426d7787f12258dc7757a684a6f6699999d33fb18b5f53bd692",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-direct-operation-executor-prune",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T11:20:08+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-direct-operation-executor-prune.plan.json",
-      "sha256": "01a8930850ad30d1a87d717c24b2f2d5139687fa029f2cbbf4d752ff0823a1ca",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=keep-local",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T11:20:15+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/execplans/python-direct-operation-executor-prune.plan.json",
       "sha256": "073c020c186e1889f4c23938538f79a10a2d62eb113daa239f9ed2673eadfa15",
       "command": "agentic-planning record-recovery",
@@ -1600,6 +1560,46 @@
       "reason": "archive execplan github-1016-1017-workflow-authority-demotion",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-16T21:47:33+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-1018-cli-skillspec-command-boundary.plan.json",
+      "sha256": "0250280738ae6bf4d2332326b1392003ed09dcbc4a56aa8db1b4b19f3f172733",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold github-1018-cli-skillspec-command-boundary",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T21:48:26+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "ebe8bb1a199e671281019e80704e95463efb550e7e7002f68a23ac1f8b01c99a",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold github-1018-cli-skillspec-command-boundary",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T21:48:26+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-1018-cli-skillspec-command-boundary.plan.json",
+      "sha256": "96e03864c51d670a837c931eb96a9ca451650a65fadc5ee5fec6fcae8733e130",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T21:50:37+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "2825a103bb66f149fb0a5df4c54a27542a980a4b8f789ea801637c26cd080901",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan github-1018-cli-skillspec-command-boundary",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T21:51:09+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/github-1018-cli-skillspec-command-boundary.plan.json",
+      "sha256": "0001f79e881660e4179fb9e517f702f72c371f48ffe4be78fd110de1a6900a03",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan github-1018-cli-skillspec-command-boundary",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T21:51:09+00:00"
     }
   ]
 }

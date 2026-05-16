@@ -115,6 +115,7 @@
       "type": "object",
       "required": [
         "id",
+        "command_ref",
         "command",
         "preferred_invocation",
         "purpose",
@@ -128,9 +129,13 @@
           "$ref": "#/$defs/non_empty_string",
           "description": "Stable command affordance identifier."
         },
+        "command_ref": {
+          "$ref": "#/$defs/non_empty_string",
+          "description": "Dot-separated reference to the canonical command metadata entry in cli_commands.json."
+        },
         "command": {
           "$ref": "#/$defs/non_empty_string",
-          "description": "CLI command name or subcommand path."
+          "description": "Skill invocation command path; command_ref is the canonical command surface fact."
         },
         "preferred_invocation": {
           "$ref": "#/$defs/non_empty_string",
