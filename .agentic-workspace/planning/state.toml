@@ -9,9 +9,7 @@ schema_version = "planning-state/v1"
 work_items = []
 
 [active]
-execplans = [
-  { id = "github-planning-trust-recoverability-p0", maturity = "active", status = "active", priority = "P0", refs = "GitHub #1006, #973", title = "Fix planning trust and recoverability blockers", outcome = "Planning mutation provenance and closeout intent verification are trustworthy under near-term use.", reason = "Issue intake on 2026-05-16 found these high-priority non-codegen issues are the strongest next planning candidates.", suggested_first_slice = "Start with #1006 provenance concurrency or #973 larger-intent closeout verification.", path = ".agentic-workspace/planning/execplans/github-planning-trust-recoverability-p0.plan.json" },
-]
+execplans = []
 
 [todo]
 active_items = []

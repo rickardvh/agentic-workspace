@@ -2,22 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "66ac1e276a8e21d565497a643c9900dc025d1cbe5357d144f02db91fa5a79a65",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-runtime-source-blocker-audit",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T10:00:00+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-runtime-source-blocker-audit.plan.json",
-      "sha256": "578e51aa92704adfe74fe29d456a171e44c3a7e285a8f00b19f2c7803464fed8",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=keep-local",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T10:00:05+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/execplans/python-runtime-source-blocker-audit.plan.json",
       "sha256": "23e25dab3c2d79533bd958286a3fe2f820366bb9837d86b5f9a628573bab1d81",
       "command": "agentic-planning record-recovery",
@@ -1600,6 +1584,22 @@
       "reason": "Aligned active P0 execplan compatibility projections to canonical_core after summary reported projection drift.",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-16T17:08:49+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-planning-trust-recoverability-p0.plan.json",
+      "sha256": "e49a1fe059dec06e058a2c72cebf319734c21adf8b04136359fe0bdb13fd9953",
+      "command": "agentic-planning record-recovery",
+      "reason": "Updated active P0 execplan closeout after completing #1006 and #973 slices.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T17:14:18+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "adb06bf24f4b6e065c21b5f7040598bfdfd08ddfd00e9b24ea390520724c0669",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan github-planning-trust-recoverability-p0",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T17:14:40+00:00"
     }
   ]
 }

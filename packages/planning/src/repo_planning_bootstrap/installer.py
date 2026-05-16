@@ -67,6 +67,7 @@ ARCHIVE_SLICE_STATUS_VALUES = ("complete", "completed", "bounded slice complete"
 ARCHIVE_AND_CLOSE_LARGER_INTENT_VALUES = ("closed", "complete", "completed")
 ARCHIVE_KEEP_OPEN_LARGER_INTENT_VALUES = ("open", "partial", "unfinished")
 ARCHIVE_CLOSURE_DECISION_VALUES = ("archive-and-close", "archive-but-keep-lane-open")
+ARCHIVE_CLOSEOUT_SCOPE_VALUES = ("slice", "lane", "epic")
 ARCHIVE_CLOSEOUT_VALUE_HINT = (
     "Accepted values: slice status = complete|completed|bounded slice complete; "
     "larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished "
@@ -9736,6 +9737,41 @@ def _prepared_task_intent_promotion(record: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _closeout_larger_intent_is_unresolved(
+    *,
+    completes_larger_outcome: str,
+    required_follow_on: str,
+    continuation_owner: str = "",
+) -> bool:
+    normalized_completion = completes_larger_outcome.strip().lower()
+    normalized_follow_on = required_follow_on.strip().lower()
+    normalized_owner = continuation_owner.strip().lower()
+    return (
+        normalized_completion == "no"
+        or normalized_follow_on == "yes"
+        or (normalized_owner and normalized_owner not in {"none", "n/a", "none yet", "no further action"})
+    )
+
+
+def _inferred_closeout_scope(
+    *,
+    existing_scope: str,
+    completes_larger_outcome: str,
+    required_follow_on: str,
+    continuation_owner: str,
+) -> str:
+    normalized = existing_scope.strip().lower()
+    if normalized in ARCHIVE_CLOSEOUT_SCOPE_VALUES:
+        return normalized
+    if _closeout_larger_intent_is_unresolved(
+        completes_larger_outcome=completes_larger_outcome,
+        required_follow_on=required_follow_on,
+        continuation_owner=continuation_owner,
+    ):
+        return "lane"
+    return "slice"
+
+
 def _execplan_durable_residue(path: Path) -> dict[str, str]:
     record = _record_section_dict(_load_execplan_record(path), "durable_residue")
     if record is not None:
@@ -9870,6 +9906,7 @@ def _prepare_execplan_closeout(
     proof_report = _record_section_dict(record, "proof_report") or {}
     existing_closure_check = _record_section_dict(record, "closure_check") or {}
     completes_larger_outcome = intent_continuity.get("this slice completes the larger intended outcome", "").strip().lower()
+    required_follow_on = required_continuation.get("required follow-on for the larger intended outcome", "").strip().lower()
     continuation_owner = (
         unsolved_intent
         or intent_continuity.get("continuation surface")
@@ -9896,6 +9933,38 @@ def _prepare_execplan_closeout(
 
     existing_slice_status = str(existing_closure_check.get("slice status", "")).strip().lower()
     existing_larger_status = str(existing_closure_check.get("larger-intent status", "")).strip().lower()
+    continuation_owner_for_gate = continuation_owner if completes_larger_outcome == "no" or required_follow_on == "yes" else ""
+    closeout_scope = _inferred_closeout_scope(
+        existing_scope=str(existing_closure_check.get("closeout scope", "")),
+        completes_larger_outcome=completes_larger_outcome,
+        required_follow_on=required_follow_on,
+        continuation_owner=continuation_owner_for_gate,
+    )
+    larger_intent_unresolved = _closeout_larger_intent_is_unresolved(
+        completes_larger_outcome=completes_larger_outcome,
+        required_follow_on=required_follow_on,
+        continuation_owner=continuation_owner_for_gate,
+    )
+    if normalized_closure == "archive-and-close" and larger_intent_unresolved:
+        result.warnings.append(
+            {
+                "warning_class": "archive_larger_intent_proxy_closeout_blocked",
+                "path": record_path.relative_to(target_root).as_posix(),
+                "message": (
+                    "Closeout scope is lane/epic-like and still has unresolved larger intent; "
+                    "validation of a bounded proxy cannot prepare archive-and-close."
+                ),
+            }
+        )
+        result.add(
+            "manual review",
+            record_path,
+            (
+                "use `archive-but-keep-lane-open` and name the continuation owner, or first prove the larger "
+                "intent is closed before preparing lane/epic closeout"
+            ),
+        )
+        return False
     slice_status = existing_slice_status or "completed"
     larger_status = existing_larger_status or ("open" if normalized_closure == "archive-but-keep-lane-open" else "closed")
     routed_unsolved_intent = continuation_owner if normalized_closure == "archive-but-keep-lane-open" else "none"
@@ -9943,6 +10012,7 @@ def _prepare_execplan_closeout(
             "unsolved intent passed to": routed_unsolved_intent,
         },
         "closure_check": {
+            "closeout scope": closeout_scope,
             "slice status": slice_status,
             "larger-intent status": larger_status,
             "closure decision": normalized_closure,
@@ -10433,6 +10503,7 @@ def archive_execplan(
     satisfaction_evidence = intent_satisfaction.get("evidence of intent satisfaction", "").strip()
     unsolved_intent = intent_satisfaction.get("unsolved intent passed to", "").strip()
     closure_check = _execplan_closure_check(plan_path)
+    closeout_scope = closure_check.get("closeout scope", "").strip().lower()
     slice_status = closure_check.get("slice status", "").strip().lower()
     larger_intent_status = closure_check.get("larger-intent status", "").strip().lower()
     closure_decision = closure_check.get("closure decision", "").strip().lower()
@@ -10635,6 +10706,41 @@ def archive_execplan(
             }
         )
         result.add("manual review", plan_path, "keep the plan active until `Closure Check` allows archive")
+        return result
+    if closeout_scope and closeout_scope not in ARCHIVE_CLOSEOUT_SCOPE_VALUES:
+        result.warnings.append(
+            {
+                "warning_class": "archive_missing_closure_check",
+                "path": plan_path.relative_to(target_root).as_posix(),
+                "message": f"Closure Check uses an unsupported closeout scope: {closeout_scope}.",
+            }
+        )
+        result.add(
+            "manual review",
+            plan_path,
+            "`closure_check.closeout scope` must be one of `slice`, `lane`, or `epic` when present",
+        )
+        return result
+    if closure_decision == "archive-and-close" and _closeout_larger_intent_is_unresolved(
+        completes_larger_outcome=completes_larger_outcome,
+        required_follow_on=required_follow_on,
+        continuation_owner=required_owner_surface if required_follow_on == "yes" else "",
+    ):
+        result.warnings.append(
+            {
+                "warning_class": "archive_larger_intent_proxy_closeout_blocked",
+                "path": plan_path.relative_to(target_root).as_posix(),
+                "message": (
+                    "Archive-and-close is blocked because the execplan still records unresolved larger intent "
+                    "or a required continuation owner."
+                ),
+            }
+        )
+        result.add(
+            "manual review",
+            plan_path,
+            "switch to `archive-but-keep-lane-open` or close the recorded larger-intent continuation before archiving",
+        )
         return result
     if closure_decision == "archive-and-close":
         if fully_satisfied not in {"yes", "true"} or larger_intent_status not in ARCHIVE_AND_CLOSE_LARGER_INTENT_VALUES:
