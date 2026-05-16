@@ -123,9 +123,15 @@ from repo_memory_bootstrap._installer_shared import (
 )
 
 
-def _add_contract_surface_summary(result: InstallResult, target_root: Path) -> None:
-    compatibility = ", ".join(path.as_posix() for path in MEMORY_COMPATIBILITY_CONTRACT_FILES)
-    helpers = ", ".join(path.as_posix() for path in MEMORY_LOWER_STABILITY_HELPER_FILES)
+def _add_contract_surface_summary(
+    result: InstallResult,
+    target_root: Path,
+    *,
+    compatibility_files: tuple[Path, ...] = MEMORY_COMPATIBILITY_CONTRACT_FILES,
+    helper_files: tuple[Path, ...] = MEMORY_LOWER_STABILITY_HELPER_FILES,
+) -> None:
+    compatibility = ", ".join(path.as_posix() for path in compatibility_files)
+    helpers = ", ".join(path.as_posix() for path in helper_files)
     result.add(
         "current",
         target_root / MANIFEST_PATH,
@@ -261,6 +267,51 @@ PAYLOAD_GUIDANCE_FRAGMENTS: dict[Path, tuple[str, ...]] = {
         "Prefer one live case per routing issue and prune resolved entries quickly",
     ),
 }
+
+
+PAYLOAD_VERIFICATION_POLICY_PATH = Path(__file__).with_name("contracts") / "payload_verification.memory.json"
+
+
+def _load_payload_verification_policy() -> dict[str, Any]:
+    return json.loads(PAYLOAD_VERIFICATION_POLICY_PATH.read_text(encoding="utf-8"))
+
+
+def _policy_path(policy: dict[str, Any], key: str) -> Path:
+    value = policy.get(key)
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"payload verification policy missing path: {key}")
+    return Path(value)
+
+
+def _policy_paths(policy: dict[str, Any], key: str) -> tuple[Path, ...]:
+    values = policy.get(key)
+    if not isinstance(values, list) or not all(isinstance(value, str) and value for value in values):
+        raise ValueError(f"payload verification policy missing path list: {key}")
+    return tuple(Path(value) for value in values)
+
+
+def _policy_current_paths(policy: dict[str, Any], key: str) -> tuple[Path, ...]:
+    current_memory = policy.get("current_memory", {})
+    if not isinstance(current_memory, dict):
+        raise ValueError("payload verification policy missing current_memory")
+    values = current_memory.get(key)
+    if not isinstance(values, list) or not all(isinstance(value, str) and value for value in values):
+        raise ValueError(f"payload verification policy missing current_memory.{key}")
+    return tuple(Path(value) for value in values)
+
+
+def _policy_guidance_fragments(policy: dict[str, Any]) -> dict[Path, tuple[str, ...]]:
+    raw_fragments = policy.get("guidance_fragments", {})
+    if not isinstance(raw_fragments, dict):
+        raise ValueError("payload verification policy missing guidance_fragments")
+    fragments: dict[Path, tuple[str, ...]] = {}
+    for raw_path, raw_values in raw_fragments.items():
+        if not isinstance(raw_path, str) or not isinstance(raw_values, list):
+            raise ValueError("payload verification guidance fragments must map paths to lists")
+        if not all(isinstance(value, str) and value for value in raw_values):
+            raise ValueError(f"payload verification guidance fragments for {raw_path!r} must be non-empty strings")
+        fragments[Path(raw_path)] = tuple(raw_values)
+    return fragments
 
 
 def _safe_note_slug(slug: str) -> str:
@@ -3242,51 +3293,69 @@ def _recurring_friction_report(*, target_root: Path) -> dict[str, object]:
 
 
 def verify_payload(target: str | Path | None = None) -> InstallResult:
+    policy = _load_payload_verification_policy()
+    bootstrap_version = int(policy["bootstrap_version"])
+    version_path = _policy_path(policy, "version_path")
+    manifest_path = _policy_path(policy, "manifest_path")
+    required_files = _policy_paths(policy, "required_files")
+    compatibility_files = _policy_paths(policy, "compatibility_contract_files")
+    helper_files = tuple(path for path in required_files if path not in set(compatibility_files))
+    required_current = set(_policy_current_paths(policy, "required"))
+    optional_current = set(_policy_current_paths(policy, "optional"))
+    forbidden_files = _policy_paths(policy, "forbidden_files")
+    forbidden_prefixes = tuple(str(prefix) for prefix in policy.get("forbidden_prefixes", []))
+    guidance_fragments = _policy_guidance_fragments(policy)
+    upgrade_source = policy.get("upgrade_source", {})
+    if not isinstance(upgrade_source, dict):
+        raise ValueError("payload verification policy missing upgrade_source")
+    upgrade_source_path = Path(str(upgrade_source["path"]))
+    legacy_upgrade_source_path = Path(str(upgrade_source["legacy_path"]))
+
     target_root = resolve_target_root(target)
     source_root = payload_root()
     result = _new_result(target_root, dry_run=True, message="Payload verification")
     payload_paths = {entry.relative_path for entry in _payload_entries(source_root, target_layout="managed-root")}
-    payload_version = _read_installed_version(_existing_version_path(source_root))
-    manifest = _load_memory_manifest(source_root / MANIFEST_PATH)
+    payload_version = _read_installed_version(source_root / version_path)
+    manifest = _load_memory_manifest(source_root / manifest_path)
 
     if payload_version is None:
         result.add(
             "manual review",
-            target_root / VERSION_PATH,
+            target_root / version_path,
             "payload version marker is missing or invalid",
             role="payload-contract",
             safety="manual",
-            source=VERSION_PATH.as_posix(),
+            source=version_path.as_posix(),
             category="contract-drift",
         )
-    elif payload_version != BOOTSTRAP_VERSION:
+    elif payload_version != bootstrap_version:
         result.add(
             "manual review",
-            target_root / VERSION_PATH,
-            f"payload version marker ({payload_version}) does not match installer bootstrap version ({BOOTSTRAP_VERSION})",
+            target_root / version_path,
+            f"payload version marker ({payload_version}) does not match installer bootstrap version ({bootstrap_version})",
             role="payload-contract",
             safety="manual",
-            source=VERSION_PATH.as_posix(),
+            source=version_path.as_posix(),
             category="contract-drift",
         )
 
-    upgrade_source_path = source_root / UPGRADE_SOURCE_PATH
-    if not upgrade_source_path.exists():
-        upgrade_source_path = source_root / LEGACY_UPGRADE_SOURCE_PATH
-    if upgrade_source_path.exists():
-        _validate_upgrade_source_record(upgrade_source_path, result)
+    source_upgrade_source_path = source_root / upgrade_source_path
+    if not source_upgrade_source_path.exists():
+        source_upgrade_source_path = source_root / legacy_upgrade_source_path
+    if source_upgrade_source_path.exists():
+        _validate_upgrade_source_record(source_upgrade_source_path, result)
     else:
         result.add(
             "manual review",
-            target_root / UPGRADE_SOURCE_PATH,
+            target_root / upgrade_source_path,
             "upgrade source metadata is missing from the payload",
             role="payload-contract",
             safety="manual",
-            source=UPGRADE_SOURCE_PATH.as_posix(),
+            source=upgrade_source_path.as_posix(),
             category="contract-drift",
         )
 
-    for required in PAYLOAD_REQUIRED_FILES:
+    for required in required_files:
         present = required in payload_paths
         result.add(
             "current" if present else "manual review",
@@ -3298,11 +3367,15 @@ def verify_payload(target: str | Path | None = None) -> InstallResult:
             category="safe-update" if present else "contract-drift",
         )
 
-    _add_contract_surface_summary(result, target_root)
+    _add_contract_surface_summary(
+        result,
+        target_root,
+        compatibility_files=compatibility_files,
+        helper_files=helper_files,
+    )
 
     current_payload = {path for path in payload_paths if path.as_posix().startswith(".agentic-workspace/memory/repo/current/")}
-    required_current = set(CURRENT_MEMORY_BASELINE)
-    allowed_current = required_current | set(OPTIONAL_CURRENT_MEMORY_FILES)
+    allowed_current = required_current | optional_current
     for extra in sorted(current_payload - allowed_current):
         result.add(
             "manual review",
@@ -3323,7 +3396,7 @@ def verify_payload(target: str | Path | None = None) -> InstallResult:
             source=missing.as_posix(),
             category="contract-drift",
         )
-    for forbidden in FORBIDDEN_PAYLOAD_FILES:
+    for forbidden in forbidden_files:
         if forbidden in payload_paths:
             result.add(
                 "manual review",
@@ -3335,7 +3408,7 @@ def verify_payload(target: str | Path | None = None) -> InstallResult:
                 category="contract-drift",
             )
     for payload_path in payload_paths:
-        if any(payload_path.as_posix().startswith(prefix) for prefix in FORBIDDEN_PAYLOAD_PREFIXES):
+        if any(payload_path.as_posix().startswith(prefix) for prefix in forbidden_prefixes):
             result.add(
                 "manual review",
                 target_root / payload_path,
@@ -3348,15 +3421,15 @@ def verify_payload(target: str | Path | None = None) -> InstallResult:
     if manifest is None:
         result.add(
             "manual review",
-            target_root / MANIFEST_PATH,
+            target_root / manifest_path,
             "payload manifest is missing or invalid",
             role="payload-contract",
             safety="manual",
-            source=MANIFEST_PATH.as_posix(),
+            source=manifest_path.as_posix(),
             category="contract-drift",
         )
 
-    for relative, fragments in PAYLOAD_GUIDANCE_FRAGMENTS.items():
+    for relative, fragments in guidance_fragments.items():
         destination = source_root / relative
         if not destination.exists():
             continue

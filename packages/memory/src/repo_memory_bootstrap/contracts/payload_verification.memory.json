@@ -1,0 +1,100 @@
+{
+  "schema_version": "agentic-workspace/payload-verification-policy/v1",
+  "package": "memory",
+  "bootstrap_version": 47,
+  "version_path": ".agentic-workspace/memory/VERSION.md",
+  "manifest_path": ".agentic-workspace/memory/repo/manifest.toml",
+  "upgrade_source": {
+    "path": ".agentic-workspace/memory/UPGRADE-SOURCE.toml",
+    "legacy_path": "memory/system/UPGRADE-SOURCE.toml",
+    "allowed_source_types": [
+      "git",
+      "local"
+    ],
+    "required_fields": [
+      "source_ref"
+    ],
+    "date_fields": {
+      "recorded_at": "YYYY-MM-DD"
+    },
+    "integer_fields": [
+      "recommended_upgrade_after_days"
+    ]
+  },
+  "required_files": [
+    "AGENTS.md",
+    ".agentic-workspace/memory/repo/index.md",
+    ".agentic-workspace/memory/repo/manifest.toml",
+    ".agentic-workspace/memory/SKILLS.md",
+    ".agentic-workspace/memory/WORKFLOW.md",
+    ".agentic-workspace/memory/UPGRADE-SOURCE.toml",
+    ".agentic-workspace/memory/repo/domains/README.md",
+    ".agentic-workspace/memory/repo/invariants/README.md",
+    ".agentic-workspace/memory/repo/runbooks/README.md",
+    ".agentic-workspace/memory/repo/decisions/README.md",
+    ".agentic-workspace/memory/repo/templates/invariant.template.md",
+    ".agentic-workspace/memory/repo/templates/memory-note.template.md",
+    ".agentic-workspace/memory/repo/templates/runbook.template.md",
+    ".agentic-workspace/docs/memory-metadata-contract.md",
+    ".agentic-workspace/docs/installer-behavior.md",
+    ".agentic-workspace/memory/bootstrap/README.md",
+    ".agentic-workspace/memory/bootstrap/skills/REGISTRY.json",
+    ".agentic-workspace/memory/bootstrap/skills/install/SKILL.md",
+    ".agentic-workspace/memory/bootstrap/skills/install/agents/openai.yaml",
+    ".agentic-workspace/memory/bootstrap/skills/cleanup/SKILL.md",
+    ".agentic-workspace/memory/bootstrap/skills/cleanup/agents/openai.yaml",
+    ".agentic-workspace/memory/skills/README.md",
+    ".agentic-workspace/memory/skills/REGISTRY.json",
+    ".agentic-workspace/memory/skills/memory-capture/SKILL.md",
+    ".agentic-workspace/memory/skills/memory-capture/agents/openai.yaml",
+    ".agentic-workspace/memory/skills/memory-hygiene/SKILL.md",
+    ".agentic-workspace/memory/skills/memory-hygiene/agents/openai.yaml",
+    ".agentic-workspace/memory/skills/memory-upgrade/SKILL.md",
+    ".agentic-workspace/memory/skills/memory-upgrade/agents/openai.yaml",
+    ".agentic-workspace/memory/skills/memory-refresh/SKILL.md",
+    ".agentic-workspace/memory/skills/memory-refresh/agents/openai.yaml",
+    ".agentic-workspace/memory/skills/memory-router/SKILL.md",
+    ".agentic-workspace/memory/skills/memory-router/agents/openai.yaml"
+  ],
+  "compatibility_contract_files": [
+    "AGENTS.md",
+    ".agentic-workspace/memory/repo/index.md",
+    ".agentic-workspace/memory/repo/manifest.toml",
+    ".agentic-workspace/memory/SKILLS.md",
+    ".agentic-workspace/memory/WORKFLOW.md",
+    ".agentic-workspace/memory/repo/domains/README.md",
+    ".agentic-workspace/memory/repo/invariants/README.md",
+    ".agentic-workspace/memory/repo/runbooks/README.md",
+    ".agentic-workspace/memory/repo/decisions/README.md",
+    ".agentic-workspace/docs/memory-metadata-contract.md"
+  ],
+  "current_memory": {
+    "required": [],
+    "optional": [
+      ".agentic-workspace/memory/repo/current/routing-feedback.md"
+    ]
+  },
+  "forbidden_files": [
+    "TODO.md",
+    ".agentic-workspace/memory/repo/current/active-decisions.md",
+    "memory/system/UPGRADE.md",
+    ".agentic-workspace/memory/UPGRADE.md"
+  ],
+  "forbidden_prefixes": [
+    ".agent-work/"
+  ],
+  "guidance_fragments": {
+    ".agentic-workspace/memory/repo/current/project-state.md": [
+      "Keep this note concise and weak-authority",
+      "Prefer replacing stale bullets instead of appending timeline-style progress logs"
+    ],
+    ".agentic-workspace/memory/repo/current/task-context.md": [
+      "Do not turn it into a task list, backlog, execution log, roadmap, or sequencing surface.",
+      "Prefer replacing resolved resume bullets instead of accumulating pass-by-pass checkpoints"
+    ],
+    ".agentic-workspace/memory/repo/current/routing-feedback.md": [
+      "Keep only concrete cases that materially improve routing.",
+      "Prefer one live case per routing issue and prune resolved entries quickly"
+    ]
+  }
+}

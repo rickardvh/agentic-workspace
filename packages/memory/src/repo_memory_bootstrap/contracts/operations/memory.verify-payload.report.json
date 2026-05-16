@@ -6,7 +6,7 @@
     "command": "verify-payload",
     "format_option": "format"
   },
-  "summary": "Verify bundled memory payload and generated operation resources.",
+  "summary": "Verify bundled memory payload and generated operation resources against the package-owned declarative payload verification policy.",
   "classification": "read-only-report",
   "inputs": [
     {
@@ -39,6 +39,10 @@
     {
       "surface": "memory package payload files",
       "required": true
+    },
+    {
+      "surface": "packages/memory/src/repo_memory_bootstrap/contracts/payload_verification.memory.json",
+      "required": true
     }
   ],
   "writes": [],
@@ -56,7 +60,7 @@
   ],
   "guards": [
     "Verification must remain read-only.",
-    "Generated code owns parser/help/dispatch shape; memory-owned payload verification remains behind the declared primitive."
+    "Generated code owns parser/help/dispatch shape; memory-owned payload verification remains behind the declared primitive until the payload verification policy is executable through codegen-owned primitives."
   ],
   "proof": [
     "operation contract validates against operation.schema.json",
@@ -65,7 +69,7 @@
   "migration_status": "runtime-consumed",
   "ir_plan": {
     "status": "representative",
-    "summary": "Memory verify-payload executes generated operation IR through codegen-owned primitive dataflow while the memory module supplies package payload verification.",
+    "summary": "Memory verify-payload executes generated operation IR through codegen-owned primitive dataflow while the memory module supplies package payload verification from a package-owned declarative policy.",
     "steps": [
       {
         "id": "load_verification",

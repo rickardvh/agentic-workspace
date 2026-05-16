@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/payload-verification-policy.schema.json",
+  "title": "Payload Verification Policy",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "package",
+    "bootstrap_version",
+    "version_path",
+    "manifest_path",
+    "upgrade_source",
+    "required_files",
+    "compatibility_contract_files",
+    "current_memory",
+    "forbidden_files",
+    "forbidden_prefixes",
+    "guidance_fragments"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "agentic-workspace/payload-verification-policy/v1"
+    },
+    "package": {
+      "type": "string",
+      "minLength": 1
+    },
+    "bootstrap_version": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "version_path": {
+      "$ref": "#/$defs/relative_path"
+    },
+    "manifest_path": {
+      "$ref": "#/$defs/relative_path"
+    },
+    "upgrade_source": {
+      "type": "object",
+      "required": [
+        "path",
+        "legacy_path",
+        "allowed_source_types",
+        "required_fields",
+        "date_fields",
+        "integer_fields"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/relative_path"
+        },
+        "legacy_path": {
+          "$ref": "#/$defs/relative_path"
+        },
+        "allowed_source_types": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "required_fields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "date_fields": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "integer_fields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "required_files": {
+      "$ref": "#/$defs/path_list"
+    },
+    "compatibility_contract_files": {
+      "$ref": "#/$defs/path_list"
+    },
+    "current_memory": {
+      "type": "object",
+      "required": [
+        "required",
+        "optional"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "required": {
+          "$ref": "#/$defs/path_list"
+        },
+        "optional": {
+          "$ref": "#/$defs/path_list"
+        }
+      }
+    },
+    "forbidden_files": {
+      "$ref": "#/$defs/path_list"
+    },
+    "forbidden_prefixes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "guidance_fragments": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  },
+  "$defs": {
+    "relative_path": {
+      "type": "string",
+      "minLength": 1,
+      "not": {
+        "pattern": "^[A-Za-z]:|^/"
+      }
+    },
+    "path_list": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/relative_path"
+      },
+      "uniqueItems": true
+    }
+  }
+}

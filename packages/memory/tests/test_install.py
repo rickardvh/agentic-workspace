@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import json
 import sys as _sys
 
 # ruff: noqa: F403,F405
 from pathlib import Path as _Path
+
+from jsonschema import Draft202012Validator
 
 _sys.path.insert(0, str(_Path(__file__).resolve().parent))
 from memory_test_support import *
@@ -487,6 +490,39 @@ def test_verify_payload_passes_for_current_payload(tmp_path: Path) -> None:
     result = installer.verify_payload(target=target)
 
     assert not any(action.category == "contract-drift" for action in result.actions)
+
+
+def test_payload_verification_policy_matches_installer_constants() -> None:
+    policy = installer._load_payload_verification_policy()
+    schema_path = (
+        Path(__file__).resolve().parents[3]
+        / "src"
+        / "agentic_workspace"
+        / "contracts"
+        / "schemas"
+        / "payload_verification_policy.schema.json"
+    )
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    assert list(Draft202012Validator(schema).iter_errors(policy)) == []
+
+    assert policy["bootstrap_version"] == installer.BOOTSTRAP_VERSION
+    assert Path(policy["version_path"]) == installer.VERSION_PATH
+    assert Path(policy["manifest_path"]) == installer.MANIFEST_PATH
+    assert Path(policy["upgrade_source"]["path"]) == installer.UPGRADE_SOURCE_PATH
+    assert Path(policy["upgrade_source"]["legacy_path"]) == installer.LEGACY_UPGRADE_SOURCE_PATH
+    assert policy["upgrade_source"]["allowed_source_types"] == ["git", "local"]
+    assert policy["upgrade_source"]["required_fields"] == ["source_ref"]
+    assert policy["upgrade_source"]["date_fields"] == {"recorded_at": "YYYY-MM-DD"}
+    assert policy["upgrade_source"]["integer_fields"] == ["recommended_upgrade_after_days"]
+    assert tuple(Path(path) for path in policy["required_files"]) == installer.PAYLOAD_REQUIRED_FILES
+    assert tuple(Path(path) for path in policy["compatibility_contract_files"]) == installer.MEMORY_COMPATIBILITY_CONTRACT_FILES
+    assert tuple(Path(path) for path in policy["current_memory"]["required"]) == installer.CURRENT_MEMORY_BASELINE
+    assert tuple(Path(path) for path in policy["current_memory"]["optional"]) == installer.OPTIONAL_CURRENT_MEMORY_FILES
+    assert tuple(Path(path) for path in policy["forbidden_files"]) == installer.FORBIDDEN_PAYLOAD_FILES
+    assert tuple(policy["forbidden_prefixes"]) == installer.FORBIDDEN_PAYLOAD_PREFIXES
+    assert {
+        Path(path): tuple(fragments) for path, fragments in policy["guidance_fragments"].items()
+    } == installer.PAYLOAD_GUIDANCE_FRAGMENTS
 
 
 def test_verify_payload_reports_contract_surface_shortlists(tmp_path: Path) -> None:
