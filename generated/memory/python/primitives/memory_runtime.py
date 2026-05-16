@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import copy
 import json
-import tomllib
 from pathlib import Path
 from typing import Any
 
@@ -114,183 +113,6 @@ def _tiny_sectioned_payload(payload: dict[str, Any], *, common_sections: list[st
     }
 
 
-class RepoDetectionError(ValueError):
-    pass
-
-
-def _has_git_boundary(path: Path) -> bool:
-    git_dir = path / '.git'
-    return git_dir.is_dir() or git_dir.is_file()
-
-
-def _resolve_repo_target_root(target: Any) -> Path:
-    explicit_target = target is not None
-    start = Path(str(target)).resolve() if explicit_target else Path.cwd().resolve()
-    if not start.exists():
-        raise RepoDetectionError(f'Target does not exist: {start}')
-    if not start.is_dir():
-        raise RepoDetectionError(f'Target must be a directory: {start}')
-    if explicit_target:
-        return start
-    markers = ('pyproject.toml', 'package.json', 'Cargo.toml', '.hg')
-    candidates = [
-        candidate
-        for candidate in [start, *start.parents]
-        if _has_git_boundary(candidate) or any((candidate / marker).exists() for marker in markers)
-    ]
-    if not candidates:
-        raise RepoDetectionError('Could not find a repository root from the current directory. Pass --target explicitly.')
-    if len(candidates) > 1:
-        roots = ', '.join(str(path) for path in candidates)
-        raise RepoDetectionError(f'Ambiguous repository root detected ({roots}). Pass --target explicitly. Retry with --target .')
-    return candidates[0]
-
-
-def _toml_table_record_counts(
-    target_root: Path,
-    *,
-    relative_path: str,
-    table_name: str,
-    relevance_field: str,
-    required_value: str,
-    optional_value: str,
-    routing_only_field: str,
-) -> dict[str, object]:
-    manifest_path = target_root / relative_path
-    if not manifest_path.exists():
-        return {'status': 'missing', 'note_count': 0, 'required_count': 0, 'optional_count': 0, 'routing_only_count': 0, 'path': relative_path}
-    try:
-        payload = tomllib.loads(manifest_path.read_text(encoding='utf-8'))
-    except (OSError, tomllib.TOMLDecodeError):
-        return {'status': 'invalid', 'note_count': 0, 'required_count': 0, 'optional_count': 0, 'routing_only_count': 0, 'path': relative_path}
-    records = payload.get(table_name, {}) if isinstance(payload, dict) else {}
-    record_values = list(records.values()) if isinstance(records, dict) else []
-    required_count = 0
-    optional_count = 0
-    routing_only_count = 0
-    for record in record_values:
-        if not isinstance(record, dict):
-            continue
-        relevance = str(record.get(relevance_field, '')).strip().lower()
-        if relevance == required_value:
-            required_count += 1
-        elif relevance == optional_value:
-            optional_count += 1
-        if bool(record.get(routing_only_field, False)):
-            routing_only_count += 1
-    return {
-        'status': 'present',
-        'note_count': len(record_values),
-        'required_count': required_count,
-        'optional_count': optional_count,
-        'routing_only_count': routing_only_count,
-        'path': relative_path,
-    }
-
-
-def _tiny_lifecycle_payload_from_toml_table_counts(
-    *,
-    target: Any,
-    relative_path: str,
-    table_name: str,
-    relevance_field: str,
-    required_value: str,
-    optional_value: str,
-    routing_only_field: str,
-    message: str,
-    dry_run: bool,
-    detail_command: str,
-    unhealthy_detail: str,
-) -> dict[str, object]:
-    target_root = _resolve_repo_target_root(target)
-    counts = _toml_table_record_counts(
-        target_root,
-        relative_path=relative_path,
-        table_name=table_name,
-        relevance_field=relevance_field,
-        required_value=required_value,
-        optional_value=optional_value,
-        routing_only_field=routing_only_field,
-    )
-    health = 'healthy' if counts['status'] == 'present' else 'attention-needed'
-    return {
-        'target_root': str(target_root),
-        'dry_run': dry_run,
-        'mode': '',
-        'message': message,
-        'health': health,
-        'detected_version': None,
-        'bootstrap_version': None,
-        'action_count': 0 if health == 'healthy' else 1,
-        'actions': [] if health == 'healthy' else [{'kind': counts['status'], 'path': counts['path'], 'detail': unhealthy_detail}],
-        'active': counts,
-        'detail_command': detail_command,
-    }
-
-
-def _tiny_memory_report_payload_from_toml_table_counts(
-    *,
-    target: Any,
-    relative_path: str,
-    table_name: str,
-    relevance_field: str,
-    required_value: str,
-    optional_value: str,
-    routing_only_field: str,
-    detail_command: str,
-    unhealthy_detail: str,
-) -> dict[str, object]:
-    target_root = _resolve_repo_target_root(target)
-    counts = _toml_table_record_counts(
-        target_root,
-        relative_path=relative_path,
-        table_name=table_name,
-        relevance_field=relevance_field,
-        required_value=required_value,
-        optional_value=optional_value,
-        routing_only_field=routing_only_field,
-    )
-    health = 'healthy' if counts['status'] == 'present' else 'attention-needed'
-    findings = [] if health == 'healthy' else [{'severity': 'warning', 'path': counts['path'], 'message': unhealthy_detail}]
-    return {
-        'kind': 'memory-module-report/v1',
-        'profile': 'tiny',
-        'module': 'memory',
-        'target_root': str(target_root),
-        'health': health,
-        'status': {
-            'detected_version': None,
-            'bootstrap_version': None,
-            'note_count': counts['note_count'],
-            'manifest_status': counts['status'],
-        },
-        'active': {
-            'note_count': counts['note_count'],
-            'manifest_note_count': counts['note_count'],
-            'required_count': counts['required_count'],
-            'optional_count': counts['optional_count'],
-            'routing_only_count': counts['routing_only_count'],
-        },
-        'habitual_pull': {
-            'status': 'available' if counts['status'] == 'present' else 'unavailable',
-            'read_first': ['.agentic-workspace/memory/repo/index.md'],
-            'do_not_bulk_read': True,
-        },
-        'promotion_pressure': {'status': 'not-evaluated', 'detail_command': detail_command},
-        'trust': {'status': 'not-evaluated', 'detail_command': detail_command},
-        'finding_count': len(findings),
-        'findings': findings,
-        'next_action': {
-            'summary': 'No immediate memory action.' if health == 'healthy' else 'Run full memory report for remediation detail.',
-            'commands': [] if health == 'healthy' else [detail_command],
-        },
-        'detail_commands': {
-            'full': detail_command,
-            'route': 'agentic-memory route --target . --files <paths> --format json',
-        },
-    }
-
-
 def _emit_memory_operation_output(values: dict[str, Any], arguments: dict[str, Any], context: Any) -> Any:
     result = values['result']
     if str(values.get('format') or 'text') == 'json' and isinstance(result, dict):
@@ -325,22 +147,10 @@ def _load_memory_prompt(*args: Any, **kwargs: Any) -> Any:
     return source_function(*args, **kwargs)
 
 
-def _load_memory_report(values: dict[str, Any], arguments: dict[str, Any], context: Any) -> Any:
-    if str(values.get('format') or 'text') == 'json' and not values.get('verbose'):
-        return _tiny_memory_report_payload_from_toml_table_counts(
-            target=values.get('target'),
-            relative_path='.agentic-workspace/memory/repo/manifest.toml',
-            table_name='notes',
-            relevance_field='task_relevance',
-            required_value='required',
-            optional_value='optional',
-            routing_only_field='routing_only',
-            detail_command='agentic-memory report --target . --verbose --format json',
-            unhealthy_detail='Memory manifest is not readable; run full report for remediation detail.',
-        )
+def _load_memory_report(*args: Any, **kwargs: Any) -> Any:
     from repo_memory_bootstrap.runtime_primitives import _load_memory_report as source_function
 
-    return source_function(values, arguments, context)
+    return source_function(*args, **kwargs)
 
 
 def _load_memory_route_report(*args: Any, **kwargs: Any) -> Any:

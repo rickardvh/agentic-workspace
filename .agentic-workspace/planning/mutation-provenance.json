@@ -2,46 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/execplans/python-memory-list-skills-concrete-command.plan.json",
-      "sha256": "01303dfd1aee046b1675e8903f2f78a995795030069f14907649f609c1fada7b",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-memory-list-skills-concrete-command",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T21:57:33+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8d4a0131ad377b4e01fc28ab7864a71d73d96b14fb6e03740115847ca7420d96",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-memory-list-skills-concrete-command",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T21:57:33+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-memory-list-skills-concrete-command.plan.json",
-      "sha256": "48e45f1a3f2ee619213d0ade89523b8d615726589174522245afc7c6783580a4",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=delegate-exploration",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T21:57:39+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-memory-list-skills-concrete-command.plan.json",
-      "sha256": "33c33f590441d1b5a42c93260a8bb5f28e70beb2d980401026ea6b8bd320a1bd",
-      "command": "agentic-planning record-recovery",
-      "reason": "Tightened and closed the #892 memory.list-skills direct generated command projection plan after implementation.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-15T22:06:10+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
-      "sha256": "ff1fd438a46cc4ddf43e1ced78a0b9614a55dd1f3be9fa55aa773986803d52cc",
-      "command": "agentic-planning record-recovery",
-      "reason": "Recorded memory.list-skills as the first concrete generated Python command projection in the #892 decomposition.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-15T22:06:10+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/state.toml",
       "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
       "command": "agentic-planning archive-plan",
@@ -1600,6 +1560,46 @@
       "reason": "Recorded memory.doctor portable-IR reduction in the epic decomposition.",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-16T14:33:14+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-memory-report-runtime-reduction.plan.json",
+      "sha256": "ff00b01049b85dc910d9a8fb41ddb253ca03a0764177a93d419bd98d50602de1",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-memory-report-runtime-reduction",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T14:34:52+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "a7a3e77279b69543d5ebb1ae43dbd31b31f5b28768ae2d5b9377637301720dc4",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-memory-report-runtime-reduction",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T14:34:52+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-memory-report-runtime-reduction.plan.json",
+      "sha256": "8f5a7238d3655f612cee395290670e39714f3bdc0972568762a6c8b01d0c59ea",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=delegate-exploration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T14:36:59+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-memory-report-runtime-reduction",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T14:47:07+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/python-memory-report-runtime-reduction.plan.json",
+      "sha256": "526a26670954275dbbc95e1da597d26a11409094ff40c5932fd01344ee3ad59e",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-memory-report-runtime-reduction",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T14:47:07+00:00"
     }
   ]
 }

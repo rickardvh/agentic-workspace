@@ -270,6 +270,24 @@ def _resolve_template(template: Any, *, values: dict[str, Any]) -> Any:
         return template
     if set(template) == {"$value"}:
         return values.get(str(template["$value"]))
+    if "$field" in template:
+        spec = template["$field"]
+        if not isinstance(spec, dict):
+            raise PrimitiveExecutionError("template $field must be an object")
+        value_name = str(spec.get("value", ""))
+        path = spec.get("path", [])
+        if isinstance(path, str):
+            path_parts = [part for part in path.split(".") if part]
+        elif isinstance(path, Sequence) and not isinstance(path, (str, bytes)):
+            path_parts = [str(part) for part in path]
+        else:
+            raise PrimitiveExecutionError("template $field path must be a string or sequence")
+        value: Any = values.get(value_name)
+        for part in path_parts:
+            if not isinstance(value, Mapping) or part not in value:
+                raise PrimitiveExecutionError(f"template $field cannot resolve {value_name!r}.{'.'.join(path_parts)}")
+            value = value[part]
+        return value
     if set(template) == {"$count"}:
         counted = values.get(str(template["$count"]), [])
         if not isinstance(counted, Sequence) or isinstance(counted, (str, bytes)):

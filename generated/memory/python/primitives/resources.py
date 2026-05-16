@@ -64,22 +64,26 @@ def find_repo_candidates(start: Path, project_markers: Iterable[str]) -> list[Pa
     return candidates
 
 
+class RepoDetectionError(ValueError):
+    pass
+
+
 def resolve_repo_target_root(target: str | None, project_markers: Iterable[str]) -> Path:
     explicit = target is not None
     start = Path(target or Path.cwd()).resolve()
     if not start.exists():
-        raise RuntimeError(f'Target does not exist: {start}')
+        raise RepoDetectionError(f'Target does not exist: {start}')
     if start.is_file():
-        raise RuntimeError(f'Target must be a directory: {start}')
+        raise RepoDetectionError(f'Target must be a directory: {start}')
     if explicit:
         return start
     candidates = find_repo_candidates(start, project_markers)
     if not candidates:
         message = 'Could not find a repository root from the current directory. Pass --target explicitly.'
-        raise RuntimeError(message)
+        raise RepoDetectionError(message)
     if len(candidates) > 1:
         roots = ', '.join(str(path) for path in candidates)
-        raise RuntimeError(f'Ambiguous repository root detected ({roots}). Pass --target explicitly. Retry with --target .')
+        raise RepoDetectionError(f'Ambiguous repository root detected ({roots}). Pass --target explicitly. Retry with --target .')
     return candidates[0]
 
 

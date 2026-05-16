@@ -533,12 +533,15 @@
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "memory.report.process",
       "domain_runtime_primitive_refs": [
+        "path.target_root.resolve",
+        "toml.table.counts",
+        "payload.assemble",
         "memory.report.load"
       ],
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps; generated Python runtime projection owns the non-verbose JSON tiny report payload, while package-domain primitive fallback still owns verbose/text report behavior.",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps; non-verbose JSON compact report behavior is portable primitive dataflow, while package-domain primitive fallback still owns verbose/text report behavior.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, and the generated Python runtime projection builds the non-verbose JSON tiny report from manifest TOML counts. The remaining memory.report.load fallback is still explicit package-domain debt for verbose/text behavior, not portable codegen completion."
+      "generic_behavior_audit": "Non-verbose JSON behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, toml.table.counts, payload.assemble, and output.emit. The remaining memory.report.load fallback is still explicit package-domain debt for verbose/text behavior, not portable codegen completion."
     },
     {
       "operation_id": "memory.route-report.report",

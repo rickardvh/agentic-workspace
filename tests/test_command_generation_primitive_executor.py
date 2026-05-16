@@ -213,6 +213,33 @@ def test_payload_assemble_supports_template_records(primitive_context: Primitive
     assert payload["route_report_summary"]["fixtures"]["fixture_count"] == 1
 
 
+def test_payload_assemble_supports_template_field_selectors(primitive_context: PrimitiveContext) -> None:
+    payload = execute_primitive(
+        "payload.assemble",
+        values={
+            "table_counts": {
+                "status": "present",
+                "note_count": 3,
+                "required_count": 1,
+            }
+        },
+        arguments={
+            "fields": {
+                "template": {
+                    "status": {"$field": {"value": "table_counts", "path": "status"}},
+                    "nested": {
+                        "note_count": {"$field": {"value": "table_counts", "path": ["note_count"]}},
+                        "required_count": {"$field": {"value": "table_counts", "path": "required_count"}},
+                    },
+                }
+            }
+        },
+        context=primitive_context,
+    )
+
+    assert payload == {"status": "present", "nested": {"note_count": 3, "required_count": 1}}
+
+
 def test_output_emit_supports_json_and_text(primitive_context: PrimitiveContext) -> None:
     payload = {
         "dry_run": True,

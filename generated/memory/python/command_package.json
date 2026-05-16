@@ -1770,6 +1770,9 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
+          "path.target_root.resolve",
+          "toml.table.counts",
+          "payload.assemble",
           "memory.report.load",
           "output.emit"
         ]
@@ -2567,18 +2570,6 @@
           {
             "function": "_emit_memory_operation_output",
             "implementation": "json_output_with_source_fallback"
-          },
-          {
-            "detail_command": "agentic-memory report --target . --verbose --format json",
-            "function": "_load_memory_report",
-            "implementation": "toml_table_memory_report_json_with_source_fallback",
-            "optional_value": "optional",
-            "relative_path": ".agentic-workspace/memory/repo/manifest.toml",
-            "relevance_field": "task_relevance",
-            "required_value": "required",
-            "routing_only_field": "routing_only",
-            "table_name": "notes",
-            "unhealthy_detail": "Memory manifest is not readable; run full report for remediation detail."
           }
         ],
         "module_file": "primitives.memory_runtime",

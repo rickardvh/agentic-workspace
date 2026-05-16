@@ -1629,8 +1629,15 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
                 errors.append(f"{function_name} JSON fast path must live in portable operation IR, not the generated memory runtime facade")
     if "_load_memory_promotion_report" in memory_runtime_text:
         errors.append("generated memory runtime facade must not keep the retired promotion-report runtime delegate")
-    if "_tiny_memory_report_payload_from_toml_table_counts" not in memory_runtime_text:
-        errors.append("generated memory runtime facade must own the tiny memory report JSON payload projection")
+    report_function_marker = "def _load_memory_report(*args: Any, **kwargs: Any) -> Any:"
+    if report_function_marker not in memory_runtime_text:
+        errors.append("generated memory runtime facade must retain _load_memory_report source fallback for verbose/text behavior")
+    else:
+        report_function_text = memory_runtime_text.split(report_function_marker, 1)[1].split("\ndef ", 1)[0]
+        if "_tiny_memory_report_payload_from_toml_table_counts(" in report_function_text:
+            errors.append("_load_memory_report JSON fast path must live in portable operation IR, not the generated memory runtime facade")
+    if "_tiny_memory_report_payload_from_toml_table_counts" in memory_runtime_text:
+        errors.append("generated memory runtime facade must not own memory report JSON projection helpers; memory report JSON uses portable operation IR primitives")
     if "_tiny_memory_report_fast" in memory_runtime_text:
         errors.append("generated memory runtime facade must not import the source tiny memory report fast path")
     if "_tiny_route_report_payload" in memory_runtime_text:
@@ -1646,6 +1653,17 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         ):
             if fragment not in route_report_text:
                 errors.append("generated memory route-report operation must retain portable JSON primitives plus explicit verbose/text fallback")
+    report_operation = REPO_ROOT / "generated" / "memory" / "python" / "operations" / "memory.report.report.json"
+    if report_operation.is_file():
+        report_text = report_operation.read_text(encoding="utf-8")
+        for fragment in (
+            '"uses": "path.target_root.resolve"',
+            '"uses": "toml.table.counts"',
+            '"uses": "payload.assemble"',
+            '"uses": "memory.report.load"',
+        ):
+            if fragment not in report_text:
+                errors.append("generated memory report operation must retain portable JSON primitives plus explicit verbose/text fallback")
     if "repo_memory_bootstrap._installer_paths" in memory_operation_executor_text:
         errors.append("memory operation IR executor must resolve package resources from generated target-local copies")
     if "_resolve_memory_target_root" in memory_operation_executor_text:
