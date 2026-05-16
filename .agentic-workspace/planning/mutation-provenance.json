@@ -2,30 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/execplans/python-codegen-intent-correction.plan.json",
-      "sha256": "8f223bc4655cc379055ed4fc19ce7dec5e9963d648cf897b919964cd7fde4308",
-      "command": "agentic-planning record-recovery",
-      "reason": "Add explicit resume cue required for archiving corrective intent slice.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T20:27:57+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-codegen-intent-correction",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T20:28:07+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
-      "sha256": "2ba17d75e1ff3fa39357dccb07bfdfff3e173eb665072599cb4a44a41b2c9408",
-      "command": "agentic-planning promote-to-plan",
-      "reason": "promote decomposition lane python-product-runtime-source-generation",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T20:40:48+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/state.toml",
       "sha256": "7785acbc297c8e7ed5f34a2ba6ae26fcf082b8197dddd56884413d43723196bc",
       "command": "agentic-planning promote-to-plan",
@@ -1600,6 +1576,30 @@
       "reason": "archive execplan python-runtime-source-blocker-audit",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-16T10:02:31+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-workspace-runtime-relocation.plan.json",
+      "sha256": "151bcc2931306f4fceb72cdbfe73ffdbd44a52f90ae9d26406cafa4a61fcd172",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-workspace-runtime-relocation",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T10:02:46+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "fef91d6575eaa30ca6211329fbb347eddbdd388be3d5d63ae37d007122dd1fda",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-workspace-runtime-relocation",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T10:02:46+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-workspace-runtime-relocation.plan.json",
+      "sha256": "3fb5364195241843bea6c8ed21455f4a8cf76739aa1daa8887f914b7492a23e7",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T10:02:51+00:00"
     }
   ]
 }
