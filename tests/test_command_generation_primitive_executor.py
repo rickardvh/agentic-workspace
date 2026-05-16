@@ -69,6 +69,28 @@ def test_filesystem_glob_returns_stable_relative_files(primitive_context: Primit
     assert files == [{"relative_path": "alpha.txt"}, {"relative_path": "nested/beta.txt"}]
 
 
+def test_filesystem_primitives_can_use_value_roots(primitive_context: PrimitiveContext) -> None:
+    target = primitive_context.cwd / "target"
+    (target / "feedback.md").write_text("ok", encoding="utf-8")
+    (target / "fixtures").mkdir()
+    (target / "fixtures" / "case.json").write_text("{}", encoding="utf-8")
+
+    values = {"target_root": str(target)}
+
+    assert execute_primitive(
+        "filesystem.exists",
+        values=values,
+        arguments={"base_value": "target_root", "path": "feedback.md", "kind": "file"},
+        context=primitive_context,
+    )
+    assert execute_primitive(
+        "filesystem.glob",
+        values=values,
+        arguments={"base_value": "target_root", "pattern": "fixtures/*.json"},
+        context=primitive_context,
+    ) == [{"relative_path": "fixtures/case.json"}]
+
+
 def test_json_parse_uses_named_source_value(primitive_context: PrimitiveContext) -> None:
     registry = execute_primitive(
         "json.parse",
@@ -98,6 +120,38 @@ def test_payload_assemble_supports_file_and_skill_records(primitive_context: Pri
 
     assert file_payload["actions"] == [{"kind": "file", "path": "alpha.txt"}]
     assert skill_payload["actions"] == [{"kind": "skill", "id": "review", "path": "review/SKILL.md"}]
+
+
+def test_payload_assemble_supports_template_records(primitive_context: PrimitiveContext) -> None:
+    payload = execute_primitive(
+        "payload.assemble",
+        values={
+            "target_root": str((primitive_context.cwd / "target").resolve()),
+            "feedback_exists": True,
+            "fixture_files": [{"relative_path": "fixtures/case.json"}],
+        },
+        arguments={
+            "fields": {
+                "template": {
+                    "target_root": {"$value": "target_root"},
+                    "route_report_summary": {
+                        "feedback": {
+                            "status": {"$exists_status": {"value": "feedback_exists", "present": "present", "missing": "missing"}},
+                            "path": {"$join_path": {"base": "target_root", "path": "feedback.md"}},
+                        },
+                        "fixtures": {
+                            "status": {"$count_status": {"value": "fixture_files", "present": "present", "missing": "missing"}},
+                            "fixture_count": {"$count": "fixture_files"},
+                        },
+                    },
+                }
+            }
+        },
+        context=primitive_context,
+    )
+
+    assert payload["route_report_summary"]["feedback"]["status"] == "present"
+    assert payload["route_report_summary"]["fixtures"]["fixture_count"] == 1
 
 
 def test_output_emit_supports_json_and_text(primitive_context: PrimitiveContext) -> None:
@@ -180,3 +234,30 @@ def test_run_operation_steps_executes_declared_dataflow(primitive_context: Primi
     values = run_operation_steps(operation, initial_values={"format": "json"}, context=primitive_context)
 
     assert json.loads(values["emitted"])["actions"][0]["id"] == "review"
+
+
+def test_run_operation_steps_honors_simple_when_conditions(primitive_context: PrimitiveContext) -> None:
+    operation = {
+        "ir_plan": {
+            "steps": [
+                {
+                    "id": "skip_text",
+                    "uses": "payload.assemble",
+                    "when": {"value": "format", "equals": "text"},
+                    "arguments": {"fields": {"dry_run": True, "message": "Text", "actions_from": "files"}},
+                    "outputs": ["result"],
+                },
+                {
+                    "id": "emit_json",
+                    "uses": "payload.assemble",
+                    "when": {"all": [{"value": "format", "equals": "json"}, {"not": {"value": "verbose", "equals": True}}]},
+                    "arguments": {"fields": {"template": {"message": "JSON"}}},
+                    "outputs": ["result"],
+                },
+            ]
+        }
+    }
+
+    values = run_operation_steps(operation, initial_values={"format": "json", "verbose": False}, context=primitive_context)
+
+    assert values["result"] == {"message": "JSON"}

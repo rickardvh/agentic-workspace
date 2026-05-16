@@ -2090,6 +2090,10 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
+          "path.target_root.resolve",
+          "filesystem.exists",
+          "filesystem.glob",
+          "payload.assemble",
           "memory.route_report.load",
           "output.emit"
         ]

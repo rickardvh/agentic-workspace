@@ -1856,6 +1856,10 @@ export const generatedCommandPackage = {
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
+          "path.target_root.resolve",
+          "filesystem.exists",
+          "filesystem.glob",
+          "payload.assemble",
           "memory.route_report.load",
           "output.emit"
         ]
@@ -2603,10 +2607,6 @@ export const generatedCommandPackage = {
             "routing_only_field": "routing_only",
             "table_name": "notes",
             "unhealthy_detail": "Memory manifest is not readable; run full report for remediation detail."
-          },
-          {
-            "function": "_load_memory_route_report",
-            "implementation": "target_file_route_report_json_with_source_fallback"
           }
         ],
         "module_file": "primitives.memory_runtime",

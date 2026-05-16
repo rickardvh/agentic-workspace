@@ -1268,24 +1268,6 @@ def _python_local_runtime_toml_table_helper_block() -> str:
         "            'route': 'agentic-memory route --target . --files <paths> --format json',\n"
         "        },\n"
         "    }\n"
-        "\n\n"
-        "def _tiny_route_report_payload_from_target_files(*, target: Any) -> dict[str, object]:\n"
-        "    target_root = _resolve_repo_target_root(target)\n"
-        "    feedback_path = target_root / '.agentic-workspace' / 'memory' / 'repo' / 'current' / 'routing-feedback.md'\n"
-        "    fixtures_root = target_root / 'tests' / 'fixtures' / 'routing'\n"
-        "    fixture_count = len(list(fixtures_root.glob('*.json'))) if fixtures_root.exists() else 0\n"
-        "    return {\n"
-        "        'target_root': str(target_root),\n"
-        "        'dry_run': True,\n"
-        "        'message': 'Routing report',\n"
-        "        'health': 'healthy',\n"
-        "        'route_report_summary': {\n"
-        "            'feedback': {'status': 'present' if feedback_path.exists() else 'missing', 'path': feedback_path.as_posix()},\n"
-        "            'fixtures': {'status': 'present' if fixture_count else 'missing', 'fixture_count': fixture_count},\n"
-        "            'detail': 'Run full route-report for fixture evaluation and feedback-case matching.',\n"
-        "        },\n"
-        "        'detail_command': 'agentic-memory route-report --target . --verbose --format json',\n"
-        "    }\n"
     )
 
 
@@ -1372,14 +1354,6 @@ def _python_local_runtime_generated_function(
             f"    from {source_import_module} import {function} as source_function\n\n"
             "    return source_function(values, arguments, context)\n"
         )
-    if implementation == "target_file_route_report_json_with_source_fallback":
-        return (
-            f"def {function}(values: dict[str, Any], arguments: dict[str, Any], context: Any) -> Any:\n"
-            "    if str(values.get('format') or 'text') == 'json' and not values.get('verbose'):\n"
-            "        return _tiny_route_report_payload_from_target_files(target=values.get('target'))\n"
-            f"    from {source_import_module} import {function} as source_function\n\n"
-            "    return source_function(values, arguments, context)\n"
-        )
     raise ValueError(f"unsupported generated local runtime implementation: {implementation!r}")
 
 
@@ -1414,7 +1388,6 @@ def _python_local_runtime_binding_module(
         {
             "toml_table_lifecycle_json_with_source_fallback",
             "toml_table_memory_report_json_with_source_fallback",
-            "target_file_route_report_json_with_source_fallback",
         }
     ):
         helper_parts.append(_python_local_runtime_toml_table_helper_block())
@@ -1426,7 +1399,6 @@ def _python_local_runtime_binding_module(
         {
             "toml_table_lifecycle_json_with_source_fallback",
             "toml_table_memory_report_json_with_source_fallback",
-            "target_file_route_report_json_with_source_fallback",
         }
     ):
         helper_imports = "import copy\nimport json\nimport tomllib\nfrom pathlib import Path\n"
@@ -1537,7 +1509,7 @@ def _python_operation_executor_module(
         '    if operation.get("migration_status") != "runtime-consumed":\n'
         "        raise OperationIrExecutionError(f\"operation is not marked runtime-consumed: {operation.get('id')!r}\")\n\n"
         "    try:\n"
-        "        run_operation_steps(\n"
+        "        values = run_operation_steps(\n"
         "            operation,\n"
         "            initial_values={\n"
         '                "operation_id": operation.get("id"),\n' + "\n".join(initial_values) + "\n"
@@ -1546,6 +1518,9 @@ def _python_operation_executor_module(
         "            handlers={\n" + "\n".join(handler_items) + "\n"
         "            },\n"
         "        )\n"
+        "        emitted = values.get('emitted')\n"
+        "        if isinstance(emitted, str):\n"
+        "            print(emitted, end='')\n"
         "    except PrimitiveExecutionError as exc:\n"
         "        raise OperationIrExecutionError(str(exc)) from exc\n"
         "    return 0\n\n\n" + "\n\n".join(root_functions + handlers)

@@ -87,6 +87,7 @@
         "implemented_shared_primitives": [
           "path.target_root.resolve",
           "filesystem.read",
+          "filesystem.exists",
           "filesystem.glob",
           "json.parse",
           "payload.assemble",
@@ -162,7 +163,9 @@
       "summary": "Check whether a path exists within the operation root.",
       "kind": "filesystem",
       "portability": "target-executor",
-      "semantics": "Return a boolean for a normalized path without escaping the operation root."
+      "semantics": "Return a boolean for a normalized path without escaping the operation root.",
+      "input_schema_ref": "schemas/primitives/filesystem_exists.input.schema.json",
+      "output_schema_ref": "schemas/primitives/filesystem_exists.output.schema.json"
     },
     {
       "id": "filesystem.glob",

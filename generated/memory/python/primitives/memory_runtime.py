@@ -291,25 +291,6 @@ def _tiny_memory_report_payload_from_toml_table_counts(
     }
 
 
-def _tiny_route_report_payload_from_target_files(*, target: Any) -> dict[str, object]:
-    target_root = _resolve_repo_target_root(target)
-    feedback_path = target_root / '.agentic-workspace' / 'memory' / 'repo' / 'current' / 'routing-feedback.md'
-    fixtures_root = target_root / 'tests' / 'fixtures' / 'routing'
-    fixture_count = len(list(fixtures_root.glob('*.json'))) if fixtures_root.exists() else 0
-    return {
-        'target_root': str(target_root),
-        'dry_run': True,
-        'message': 'Routing report',
-        'health': 'healthy',
-        'route_report_summary': {
-            'feedback': {'status': 'present' if feedback_path.exists() else 'missing', 'path': feedback_path.as_posix()},
-            'fixtures': {'status': 'present' if fixture_count else 'missing', 'fixture_count': fixture_count},
-            'detail': 'Run full route-report for fixture evaluation and feedback-case matching.',
-        },
-        'detail_command': 'agentic-memory route-report --target . --verbose --format json',
-    }
-
-
 def _emit_memory_operation_output(values: dict[str, Any], arguments: dict[str, Any], context: Any) -> Any:
     result = values['result']
     if str(values.get('format') or 'text') == 'json' and isinstance(result, dict):
@@ -390,12 +371,10 @@ def _load_memory_report(values: dict[str, Any], arguments: dict[str, Any], conte
     return source_function(values, arguments, context)
 
 
-def _load_memory_route_report(values: dict[str, Any], arguments: dict[str, Any], context: Any) -> Any:
-    if str(values.get('format') or 'text') == 'json' and not values.get('verbose'):
-        return _tiny_route_report_payload_from_target_files(target=values.get('target'))
+def _load_memory_route_report(*args: Any, **kwargs: Any) -> Any:
     from repo_memory_bootstrap.runtime_primitives import _load_memory_route_report as source_function
 
-    return source_function(values, arguments, context)
+    return source_function(*args, **kwargs)
 
 
 __all__ = [

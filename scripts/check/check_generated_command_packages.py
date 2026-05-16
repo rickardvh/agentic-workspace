@@ -1638,10 +1638,19 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         errors.append("generated memory runtime facade must own the tiny memory report JSON payload projection")
     if "_tiny_memory_report_fast" in memory_runtime_text:
         errors.append("generated memory runtime facade must not import the source tiny memory report fast path")
-    if "_tiny_route_report_payload_from_target_files" not in memory_runtime_text:
-        errors.append("generated memory runtime facade must own the tiny route-report JSON payload projection")
-    if "_tiny_route_report_payload" in memory_runtime_text and "_tiny_route_report_payload_from_target_files" not in memory_runtime_text:
-        errors.append("generated memory runtime facade must not import the source tiny route-report fast path")
+    if "_tiny_route_report_payload" in memory_runtime_text:
+        errors.append("generated memory runtime facade must not own route-report JSON projection helpers; route-report JSON uses portable operation IR primitives")
+    route_report_operation = REPO_ROOT / "generated" / "memory" / "python" / "operations" / "memory.route-report.report.json"
+    if route_report_operation.is_file():
+        route_report_text = route_report_operation.read_text(encoding="utf-8")
+        for fragment in (
+            '"uses": "filesystem.exists"',
+            '"uses": "filesystem.glob"',
+            '"uses": "payload.assemble"',
+            '"uses": "memory.route_report.load"',
+        ):
+            if fragment not in route_report_text:
+                errors.append("generated memory route-report operation must retain portable JSON primitives plus explicit verbose/text fallback")
     if "repo_memory_bootstrap._installer_paths" in memory_operation_executor_text:
         errors.append("memory operation IR executor must resolve package resources from generated target-local copies")
     if "_resolve_memory_target_root" in memory_operation_executor_text:

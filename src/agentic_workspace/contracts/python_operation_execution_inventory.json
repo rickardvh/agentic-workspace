@@ -551,12 +551,16 @@
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "memory.route-report.process",
       "domain_runtime_primitive_refs": [
+        "path.target_root.resolve",
+        "filesystem.exists",
+        "filesystem.glob",
+        "payload.assemble",
         "memory.route_report.load"
       ],
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps; generated Python runtime projection owns the non-verbose JSON tiny route snapshot, while package-domain primitive fallback still owns verbose/text routing evaluation.",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps; portable primitives own the non-verbose JSON tiny route snapshot, while package-domain primitive fallback still owns verbose/text routing evaluation.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, and the generated Python runtime projection builds the non-verbose JSON tiny route snapshot from target-local files. The remaining memory.route_report.load fallback is still explicit package-domain debt for verbose/text behavior, not portable codegen completion."
+      "generic_behavior_audit": "Classified as package-specific-judgment for the remaining verbose/text fallback; generated operation IR now builds the non-verbose JSON tiny route snapshot from target-local files with path.target_root.resolve, filesystem.exists, filesystem.glob, and payload.assemble. The remaining memory.route_report.load fallback is still explicit package-domain debt for verbose/text behavior, not portable codegen completion."
     },
     {
       "operation_id": "memory.route.report",

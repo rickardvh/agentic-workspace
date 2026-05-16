@@ -47,6 +47,8 @@ def run_operation_steps(
         arguments = raw_step.get("arguments", {})
         if not isinstance(arguments, dict):
             raise PrimitiveExecutionError(f"step {raw_step.get('id', primitive)!r} arguments must be an object")
+        if not _condition_matches(raw_step.get("when"), values=values):
+            continue
         handler = custom_handlers.get(primitive)
         result = (
             handler(values, arguments, context)
@@ -66,11 +68,13 @@ def execute_primitive(
 ) -> Any:
     arguments = arguments or {}
     if primitive == "path.target_root.resolve":
-        return _resolve_target_root(values=values, context=context)
+        return _resolve_target_root(values=values, arguments=arguments, context=context)
+    if primitive == "filesystem.exists":
+        return _exists(arguments=arguments, context=context, values=values)
     if primitive == "filesystem.read":
         return _read_text(arguments=arguments, context=context)
     if primitive == "filesystem.glob":
-        return _glob(arguments=arguments, context=context)
+        return _glob(arguments=arguments, context=context, values=values)
     if primitive == "json.parse":
         return _parse_json(values=values, arguments=arguments)
     if primitive == "payload.assemble":
@@ -103,9 +107,42 @@ def _store_step_result(*, values: dict[str, Any], outputs: Any, result: Any) -> 
         values[output_name] = result[output_name]
 
 
-def _resolve_target_root(*, values: dict[str, Any], context: PrimitiveContext) -> str:
+def _condition_matches(condition: Any, *, values: dict[str, Any]) -> bool:
+    if condition in (None, {}, []):
+        return True
+    if not isinstance(condition, dict):
+        raise PrimitiveExecutionError("step when condition must be an object")
+    if "all" in condition:
+        items = condition["all"]
+        if not isinstance(items, Sequence) or isinstance(items, (str, bytes)):
+            raise PrimitiveExecutionError("step when all condition must be a sequence")
+        return all(_condition_matches(item, values=values) for item in items)
+    if "any" in condition:
+        items = condition["any"]
+        if not isinstance(items, Sequence) or isinstance(items, (str, bytes)):
+            raise PrimitiveExecutionError("step when any condition must be a sequence")
+        return any(_condition_matches(item, values=values) for item in items)
+    if "not" in condition:
+        return not _condition_matches(condition["not"], values=values)
+    value_name = str(condition.get("value", ""))
+    if not value_name:
+        raise PrimitiveExecutionError("step when condition must declare value, all, any, or not")
+    actual = values.get(value_name)
+    if "equals" in condition:
+        return actual == condition["equals"]
+    if "present" in condition:
+        return (actual is not None) == bool(condition["present"])
+    raise PrimitiveExecutionError("step when value condition must declare equals or present")
+
+
+def _resolve_target_root(*, values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> str:
     target = values.get("target") or "."
-    return str((context.cwd / str(target)).resolve())
+    target_root = (context.cwd / str(target)).resolve()
+    if bool(arguments.get("must_exist", False)) and not target_root.exists():
+        raise PrimitiveExecutionError(f"target root does not exist: {target_root}")
+    if bool(arguments.get("must_be_dir", False)) and not target_root.is_dir():
+        raise PrimitiveExecutionError(f"target root is not a directory: {target_root}")
+    return str(target_root)
 
 
 def _read_text(*, arguments: dict[str, Any], context: PrimitiveContext) -> str:
@@ -116,8 +153,8 @@ def _read_text(*, arguments: dict[str, Any], context: PrimitiveContext) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def _glob(*, arguments: dict[str, Any], context: PrimitiveContext) -> list[dict[str, str]]:
-    root = context.root(str(arguments.get("root", "")))
+def _glob(*, arguments: dict[str, Any], context: PrimitiveContext, values: dict[str, Any]) -> list[dict[str, str]]:
+    root = _primitive_root(arguments=arguments, context=context, values=values)
     pattern = str(arguments.get("pattern", ""))
     if not pattern or Path(pattern).is_absolute() or ".." in Path(pattern).parts:
         raise PrimitiveExecutionError(f"unsupported filesystem.glob pattern: {pattern!r}")
@@ -128,6 +165,16 @@ def _glob(*, arguments: dict[str, Any], context: PrimitiveContext) -> list[dict[
         if resolved.is_file():
             matches.append({"relative_path": resolved.relative_to(root).as_posix()})
     return sorted(matches, key=lambda item: item["relative_path"])
+
+
+def _exists(*, arguments: dict[str, Any], context: PrimitiveContext, values: dict[str, Any]) -> bool:
+    root = _primitive_root(arguments=arguments, context=context, values=values)
+    path = _resolve_inside(root, str(arguments.get("path", "")))
+    if str(arguments.get("kind", "any")) == "file":
+        return path.is_file()
+    if str(arguments.get("kind", "any")) == "directory":
+        return path.is_dir()
+    return path.exists()
 
 
 def _parse_json(*, values: dict[str, Any], arguments: dict[str, Any]) -> Any:
@@ -143,6 +190,8 @@ def _assemble_payload(*, values: dict[str, Any], arguments: dict[str, Any]) -> d
     fields = arguments.get("fields", {})
     if not isinstance(fields, dict):
         raise PrimitiveExecutionError("payload.assemble fields must be an object")
+    if "template" in fields:
+        return _resolve_template(fields["template"], values=values)
     actions_from = str(fields.get("actions_from", ""))
     payload: dict[str, Any] = {
         "dry_run": bool(fields.get("dry_run", True)),
@@ -168,6 +217,41 @@ def _assemble_payload(*, values: dict[str, Any], arguments: dict[str, Any]) -> d
         ]
         return payload
     raise PrimitiveExecutionError(f"unsupported payload.assemble actions_from: {actions_from!r}")
+
+
+def _resolve_template(template: Any, *, values: dict[str, Any]) -> Any:
+    if isinstance(template, list):
+        return [_resolve_template(item, values=values) for item in template]
+    if not isinstance(template, dict):
+        return template
+    if set(template) == {"$value"}:
+        return values.get(str(template["$value"]))
+    if set(template) == {"$count"}:
+        counted = values.get(str(template["$count"]), [])
+        if not isinstance(counted, Sequence) or isinstance(counted, (str, bytes)):
+            raise PrimitiveExecutionError(f"template count source must be a sequence: {template['$count']!r}")
+        return len(counted)
+    if "$exists_status" in template:
+        spec = template["$exists_status"]
+        if not isinstance(spec, dict):
+            raise PrimitiveExecutionError("template $exists_status must be an object")
+        value = bool(values.get(str(spec.get("value", ""))))
+        return spec.get("present", "present") if value else spec.get("missing", "missing")
+    if "$count_status" in template:
+        spec = template["$count_status"]
+        if not isinstance(spec, dict):
+            raise PrimitiveExecutionError("template $count_status must be an object")
+        counted = values.get(str(spec.get("value", "")), [])
+        if not isinstance(counted, Sequence) or isinstance(counted, (str, bytes)):
+            raise PrimitiveExecutionError(f"template count source must be a sequence: {spec.get('value')!r}")
+        return spec.get("present", "present") if len(counted) else spec.get("missing", "missing")
+    if "$join_path" in template:
+        spec = template["$join_path"]
+        if not isinstance(spec, dict):
+            raise PrimitiveExecutionError("template $join_path must be an object")
+        base = Path(str(values.get(str(spec.get("base", "")), "")))
+        return (base / str(spec.get("path", ""))).as_posix()
+    return {str(key): _resolve_template(value, values=values) for key, value in template.items()}
 
 
 def _emit_output(*, values: dict[str, Any]) -> str:
@@ -221,6 +305,15 @@ def _resolve_inside(root: Path, relative: str) -> Path:
     candidate = (root / relative).resolve()
     _ensure_inside(root, candidate)
     return candidate
+
+
+def _primitive_root(*, arguments: dict[str, Any], context: PrimitiveContext, values: dict[str, Any]) -> Path:
+    if "base_value" in arguments:
+        value_name = str(arguments["base_value"])
+        if value_name not in values:
+            raise PrimitiveExecutionError(f"unknown primitive base value: {value_name!r}")
+        return Path(str(values[value_name])).resolve()
+    return context.root(str(arguments.get("root", "")))
 
 
 def _ensure_inside(root: Path, candidate: Path) -> None:

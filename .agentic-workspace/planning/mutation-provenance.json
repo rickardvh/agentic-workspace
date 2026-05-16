@@ -2,78 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/execplans/dogfooding-generated-command-input-proof.plan.json",
-      "sha256": "4f62f986df92e275ba95c7ec4bff554a631571b5391a07a0572b9e4186b15c37",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold dogfooding-generated-command-input-proof",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T20:18:29+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "f8d83e36c5688156cfb7d044e95158aa1e9337709fcc1cc4889bf8f08f6b8d35",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold dogfooding-generated-command-input-proof",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T20:18:29+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/dogfooding-generated-command-input-proof.plan.json",
-      "sha256": "d26d85364e33a1a4104bbe38e9e2b7cca3ea80f66130a90e6e28214cf7359f25",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=delegate-exploration",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T20:18:38+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "f8d83e36c5688156cfb7d044e95158aa1e9337709fcc1cc4889bf8f08f6b8d35",
-      "command": "agentic-planning record-recovery",
-      "reason": "Intentional #968 execplan update while the close-item command does not yet cover arbitrary field updates; keeping mutation provenance explicit before closeout.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-15T20:36:03+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/dogfooding-generated-command-input-proof.plan.json",
-      "sha256": "c046d157ac91b26d99ca65a4b90cec1d5851a00e2a998d7b3d05a8617a6c5954",
-      "command": "agentic-planning record-recovery",
-      "reason": "Intentional #968 execplan update while the close-item command does not yet cover arbitrary field updates; keeping mutation provenance explicit before closeout.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-15T20:38:56+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/dogfooding-generated-command-input-proof.plan.json",
-      "sha256": "5f4edb1982e475aad7ac92eb9a48e87a4d3d5813c46c80c6f247e03ae0261faa",
-      "command": "agentic-planning record-recovery",
-      "reason": "Final #968 execplan closeout fields were updated after validation; record recovery before archiving.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-15T20:42:54+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/dogfooding-generated-command-input-proof.plan.json",
-      "sha256": "11cfc5e81899cb93c915f954a6817298d4a20ddc89c30306151854101e140bd6",
-      "command": "agentic-planning record-recovery",
-      "reason": "Mark #968 execplan active milestone completed before archive-plan closeout.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-15T20:43:13+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/dogfooding-generated-command-input-proof.plan.json",
-      "sha256": "2854ad5702fda21b0c85c97e7d561ffce109a8e01daf58491bbddee74e2ef321",
-      "command": "agentic-planning record-recovery",
-      "reason": "Fill final #968 proof report and resume cue before archive-plan closeout.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-15T20:43:49+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/dogfooding-generated-command-input-proof.plan.json",
-      "sha256": "bbe2f8c2fbb74a131cf5a7d60d302c09df2a546743581ed5498e67613eae6a3d",
-      "command": "agentic-planning record-recovery",
-      "reason": "Mark bounded #968 intent complete before archive-and-close.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-15T20:44:05+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/state.toml",
       "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
       "command": "agentic-planning archive-plan",
@@ -1600,6 +1528,78 @@
       "reason": "archive execplan python-memory-prompt-runtime-reduction",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-16T13:48:58+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-next-runtime-delegate-reduction-2.plan.json",
+      "sha256": "896e007c80a99fbb7fdb2cd6ca44add4028a3d1d5d357aa2e2c499f13ffeb359",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-next-runtime-delegate-reduction-2",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T13:49:43+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "b7c3acca4cb4c0a831085ac47a2c5daf77de94a3cae460ff3ebdea07592ed19d",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-next-runtime-delegate-reduction-2",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T13:49:43+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-next-runtime-delegate-reduction-2.plan.json",
+      "sha256": "e9ed644ffa5f1998a71c77c1411443baab0f6f356f177e0fbab3d68be18b3df5",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=delegate-exploration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T14:04:34+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-next-runtime-delegate-reduction-2.plan.json",
+      "sha256": "d7ff07364c56eea9544fcade7c2ca734ae5a337a3c8daa031c5f91b39c15ac43",
+      "command": "agentic-planning record-recovery",
+      "reason": "Filled active #892 route-report primitive reduction plan after implementation and proof",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T14:05:42+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "feba6b1ea1c13c63dcf005fc76fc31184a95f7fd012a08f09750ac77d9992d57",
+      "command": "agentic-planning record-recovery",
+      "reason": "Recorded route-report portable primitive slice in #892 decomposition",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T14:05:42+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-next-runtime-delegate-reduction-2.plan.json",
+      "sha256": "0f75540a3641dba70de5d6f82b59abf50688e7ce3c97f13a84ab65cec92fa1a2",
+      "command": "agentic-planning record-recovery",
+      "reason": "Added stale-reference sweep required by archive gate",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T14:06:09+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-next-runtime-delegate-reduction-2",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T14:06:09+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/python-next-runtime-delegate-reduction-2.plan.json",
+      "sha256": "0f75540a3641dba70de5d6f82b59abf50688e7ce3c97f13a84ab65cec92fa1a2",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-next-runtime-delegate-reduction-2",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T14:06:09+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/python-next-runtime-delegate-reduction-2.plan.json",
+      "sha256": "85e3af3d02d973629842419924426d2053dac88738176653c8a778fef9754cf9",
+      "command": "agentic-planning record-recovery",
+      "reason": "Added primitive Docker conformance proof run after archive closeout",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T14:07:15+00:00"
     }
   ]
 }

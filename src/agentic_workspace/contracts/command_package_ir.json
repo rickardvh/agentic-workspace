@@ -7217,10 +7217,6 @@
                 "routing_only_field": "routing_only",
                 "detail_command": "agentic-memory report --target . --verbose --format json",
                 "unhealthy_detail": "Memory manifest is not readable; run full report for remediation detail."
-              },
-              {
-                "function": "_load_memory_route_report",
-                "implementation": "target_file_route_report_json_with_source_fallback"
               }
             ]
           }
@@ -9357,6 +9353,10 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
+              "path.target_root.resolve",
+              "filesystem.exists",
+              "filesystem.glob",
+              "payload.assemble",
               "memory.route_report.load",
               "output.emit"
             ]

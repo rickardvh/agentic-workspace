@@ -55,7 +55,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
         raise OperationIrExecutionError(f"operation is not marked runtime-consumed: {operation.get('id')!r}")
 
     try:
-        run_operation_steps(
+        values = run_operation_steps(
             operation,
             initial_values={
                 "operation_id": operation.get("id"),
@@ -113,6 +113,9 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'output.emit': _handle_output_emit,
             },
         )
+        emitted = values.get('emitted')
+        if isinstance(emitted, str):
+            print(emitted, end='')
     except PrimitiveExecutionError as exc:
         raise OperationIrExecutionError(str(exc)) from exc
     return 0
