@@ -133,26 +133,6 @@ def _tiny_memory_lifecycle_payload(*, target: str | Path | None, command: str) -
     }
 
 
-def _tiny_route_report_payload(*, target: str | Path | None) -> dict[str, object]:
-    target_root = resolve_target_root(target)
-    feedback_path = target_root / ".agentic-workspace" / "memory" / "repo" / "current" / "routing-feedback.md"
-    fixtures_root = target_root / "tests" / "fixtures" / "routing"
-    fixture_count = len(list(fixtures_root.glob("*.json"))) if fixtures_root.exists() else 0
-    feedback_present = feedback_path.exists()
-    return {
-        "target_root": str(target_root),
-        "dry_run": True,
-        "message": "Routing report",
-        "health": "healthy",
-        "route_report_summary": {
-            "feedback": {"status": "present" if feedback_present else "missing", "path": feedback_path.as_posix()},
-            "fixtures": {"status": "present" if fixture_count else "missing", "fixture_count": fixture_count},
-            "detail": "Run full route-report for fixture evaluation and feedback-case matching.",
-        },
-        "detail_command": "agentic-memory route-report --target . --verbose --format json",
-    }
-
-
 def _tiny_memory_report(report: dict[str, object]) -> dict[str, object]:
     findings = report.get("findings", [])
     active = report.get("active", {})
@@ -238,8 +218,6 @@ def _load_memory_report(values: dict[str, Any], _arguments: dict[str, Any], _con
 
 
 def _load_memory_route_report(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> Any:
-    if values.get("format") == "json" and (not values.get("verbose")):
-        return _tiny_route_report_payload(target=values.get("target"))
     return report_routes(target=values.get("target"))
 
 

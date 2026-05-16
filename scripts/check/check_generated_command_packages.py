@@ -1638,6 +1638,10 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         errors.append("generated memory runtime facade must own the tiny memory report JSON payload projection")
     if "_tiny_memory_report_fast" in memory_runtime_text:
         errors.append("generated memory runtime facade must not import the source tiny memory report fast path")
+    if "_tiny_route_report_payload_from_target_files" not in memory_runtime_text:
+        errors.append("generated memory runtime facade must own the tiny route-report JSON payload projection")
+    if "_tiny_route_report_payload" in memory_runtime_text and "_tiny_route_report_payload_from_target_files" not in memory_runtime_text:
+        errors.append("generated memory runtime facade must not import the source tiny route-report fast path")
     if "repo_memory_bootstrap._installer_paths" in memory_operation_executor_text:
         errors.append("memory operation IR executor must resolve package resources from generated target-local copies")
     if "_resolve_memory_target_root" in memory_operation_executor_text:

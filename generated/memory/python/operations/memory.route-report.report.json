@@ -57,7 +57,7 @@
         "uses": "output.emit"
       }
     ],
-    "summary": "Memory route-report executes generated operation IR through codegen-owned primitive dataflow while memory runtime supplies routing aggregate payload sources and text/json compatibility formatting."
+    "summary": "Memory route-report executes generated operation IR through codegen-owned primitive dataflow. The generated Python runtime projection builds the non-verbose JSON tiny route snapshot from target-local files and falls back to the package-domain route report source for verbose/text behavior."
   },
   "locality": {
     "network": "forbidden",
@@ -95,6 +95,6 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Show a compact aggregate memory routing snapshot from checked-in feedback cases and fixtures.",
+  "summary": "Show a compact aggregate memory routing snapshot from checked-in feedback cases and fixtures; non-verbose JSON uses generated target-file checks while verbose/text behavior remains on the explicit source fallback.",
   "writes": []
 }
