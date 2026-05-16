@@ -1610,6 +1610,14 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         errors.append("memory operation IR executor must import the codegen-owned primitive executor")
     if "run_operation_steps(" not in memory_operation_executor_text:
         errors.append("memory operation IR executor must execute operation plans through codegen-owned run_operation_steps")
+    if "repo_memory_bootstrap._installer_paths" in memory_operation_executor_text:
+        errors.append("memory operation IR executor must resolve package resources from generated target-local copies")
+    for marker in (
+        "generated/memory/python/_payload/AGENTS.template.md",
+        "generated/memory/python/_skills/REGISTRY.json",
+    ):
+        if not (REPO_ROOT / marker).is_file():
+            errors.append(f"memory generated Python resource copy is missing required marker: {marker}")
     for module_name in (
         "memory_doctor_report",
         "memory_promotion_report_report",

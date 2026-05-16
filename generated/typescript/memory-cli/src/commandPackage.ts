@@ -2560,14 +2560,14 @@ export const generatedCommandPackage = {
     "operation_executor": {
       "context_roots": [
         {
-          "function": "payload_root",
-          "import_module": "repo_memory_bootstrap._installer_paths",
-          "name": "memory.package-payload"
+          "generated_root": "_payload",
+          "name": "memory.package-payload",
+          "required_marker": "AGENTS.template.md"
         },
         {
-          "function": "skills_root",
-          "import_module": "repo_memory_bootstrap._installer_paths",
-          "name": "memory.package-skills"
+          "generated_root": "_skills",
+          "name": "memory.package-skills",
+          "required_marker": "REGISTRY.json"
         }
       ],
       "handlers": [
@@ -2852,6 +2852,18 @@ export const generatedCommandPackage = {
       ]
     },
     "render_runtime_module": true,
+    "resource_copies": [
+      {
+        "generated_root": "_payload",
+        "required_marker": "AGENTS.template.md",
+        "source_root": "packages/memory/bootstrap"
+      },
+      {
+        "generated_root": "_skills",
+        "required_marker": "REGISTRY.json",
+        "source_root": "packages/memory/skills"
+      }
+    ],
     "runtime_module_file": "cli"
   },
   "targets": [

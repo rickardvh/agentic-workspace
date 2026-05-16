@@ -123,15 +123,15 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
 
 
 def _handle_context_root_memory_package_payload() -> Path:
-    from repo_memory_bootstrap._installer_paths import payload_root
+    from .resources import find_resource_root
 
-    return payload_root()
+    return find_resource_root(__file__, [('_payload', 'AGENTS.template.md')])
 
 
 def _handle_context_root_memory_package_skills() -> Path:
-    from repo_memory_bootstrap._installer_paths import skills_root
+    from .resources import find_resource_root
 
-    return skills_root()
+    return find_resource_root(__file__, [('_skills', 'REGISTRY.json')])
 
 
 def _handle_path_target_root_resolve(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:

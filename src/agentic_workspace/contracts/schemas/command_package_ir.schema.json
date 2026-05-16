@@ -374,6 +374,32 @@
               },
               "description": "Operation handlers rendered into a generated runtime handler map by importing named runtime primitive functions."
             },
+            "resource_copies": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "source_root",
+                  "generated_root"
+                ],
+                "properties": {
+                  "source_root": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "generated_root": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "required_marker": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "additionalProperties": false
+              },
+              "description": "Package product resources copied into the generated Python target so context roots do not depend on source package path helpers."
+            },
             "local_runtime_bindings": {
               "type": "array",
               "items": {
@@ -534,9 +560,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "name",
-        "import_module",
-        "function"
+        "name"
       ],
       "properties": {
         "name": {
@@ -548,6 +572,14 @@
           "minLength": 1
         },
         "function": {
+          "type": "string",
+          "minLength": 1
+        },
+        "generated_root": {
+          "type": "string",
+          "minLength": 1
+        },
+        "required_marker": {
           "type": "string",
           "minLength": 1
         }

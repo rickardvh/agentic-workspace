@@ -7148,6 +7148,18 @@
       "python_runtime_binding": {
         "entrypoint": "agentic-memory",
         "runtime_module_file": "cli",
+        "resource_copies": [
+          {
+            "source_root": "packages/memory/bootstrap",
+            "generated_root": "_payload",
+            "required_marker": "AGENTS.template.md"
+          },
+          {
+            "source_root": "packages/memory/skills",
+            "generated_root": "_skills",
+            "required_marker": "REGISTRY.json"
+          }
+        ],
         "operation_executor": {
           "module_file": "primitives.operation_executor",
           "supported_operation_ids": [
@@ -7370,13 +7382,13 @@
           "context_roots": [
             {
               "name": "memory.package-payload",
-              "import_module": "repo_memory_bootstrap._installer_paths",
-              "function": "payload_root"
+              "generated_root": "_payload",
+              "required_marker": "AGENTS.template.md"
             },
             {
               "name": "memory.package-skills",
-              "import_module": "repo_memory_bootstrap._installer_paths",
-              "function": "skills_root"
+              "generated_root": "_skills",
+              "required_marker": "REGISTRY.json"
             }
           ],
           "handlers": [

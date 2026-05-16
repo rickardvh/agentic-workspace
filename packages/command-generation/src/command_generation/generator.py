@@ -85,6 +85,13 @@ def _local_runtime_bindings(package: dict[str, Any]) -> list[dict[str, Any]]:
     return [item for item in binding.get("local_runtime_bindings", []) if isinstance(item, dict)]
 
 
+def _python_resource_copies(package: dict[str, Any]) -> list[dict[str, Any]]:
+    binding = package.get("python_runtime_binding", {})
+    if not isinstance(binding, dict):
+        return []
+    return [item for item in binding.get("resource_copies", []) if isinstance(item, dict)]
+
+
 def _local_runtime_binding_for_import(package: dict[str, Any], import_module: str) -> dict[str, Any] | None:
     for binding in _local_runtime_bindings(package):
         if str(binding.get("source_import_module") or "") == import_module:
@@ -168,6 +175,25 @@ def _runtime_consumed_operation_outputs(
                 continue
             emitted.add(operation_path)
             outputs.append(GeneratedOutput(root / operation_path, _json_block(operation) + "\n"))
+    return outputs
+
+
+def _python_resource_copy_outputs(
+    package: dict[str, Any],
+    *,
+    repo_root: Path,
+    root: Path,
+) -> list[GeneratedOutput]:
+    outputs: list[GeneratedOutput] = []
+    for copy in _python_resource_copies(package):
+        source_root = repo_root / str(copy["source_root"])
+        generated_root = root / str(copy["generated_root"])
+        required_marker = str(copy.get("required_marker") or "")
+        if required_marker and not (source_root / required_marker).is_file():
+            raise FileNotFoundError(f"missing required resource marker: {(source_root / required_marker).as_posix()}")
+        for source in sorted(path for path in source_root.rglob("*") if path.is_file()):
+            relative = source.relative_to(source_root)
+            outputs.append(GeneratedOutput(generated_root / relative, source.read_text(encoding="utf-8")))
     return outputs
 
 
@@ -1124,6 +1150,14 @@ def _python_local_runtime_binding_module(
 
 def _render_context_root_function(root: dict[str, Any]) -> str:
     function_name = _handler_function_name(f"context.root.{root['name']}")
+    generated_root = str(root.get("generated_root") or "")
+    if generated_root:
+        required_marker = str(root.get("required_marker") or "")
+        return (
+            f"def {function_name}() -> Path:\n"
+            "    from .resources import find_resource_root\n\n"
+            f"    return find_resource_root(__file__, [({generated_root!r}, {required_marker!r})])\n"
+        )
     imported_name = str(root["function"])
     return f"def {function_name}() -> Path:\n    from {root['import_module']} import {imported_name}\n\n    return {imported_name}()\n"
 
@@ -1836,6 +1870,7 @@ def render_outputs(
                 outputs.append(GeneratedOutput(root / "command_package.json", _json_block(package) + "\n"))
                 if _is_runtime_backed_python_target(target):
                     outputs.extend(_runtime_consumed_operation_outputs(package, repo_root=repo_root, root=root))
+                    outputs.extend(_python_resource_copy_outputs(package, repo_root=repo_root, root=root))
                     operation_executor = _operation_executor_binding(package)
                     if operation_executor:
                         executor_module_path = Path(str(operation_executor.get("module_file", "operation_executor")).replace(".", "/"))

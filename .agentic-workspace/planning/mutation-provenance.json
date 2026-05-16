@@ -2,78 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/execplans/python-generated-cli-review-blockers.plan.json",
-      "sha256": "da8b5cea13efbb04b74e36c490ee9e0dcce62d1d9813256f225a97597eb632cf",
-      "command": "agentic-planning record-recovery",
-      "reason": "Correct PR #966 review-blocker planning state after manual decomposition and execplan updates; values were schema-preserving recovery for stale premature-completion closeout.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-15T08:04:58+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-generated-cli-review-blockers.plan.json",
-      "sha256": "e36ae80755d961c53ca3c6d18be49d86ea91a12db191b00527b0410e506d112e",
-      "command": "agentic-planning record-recovery",
-      "reason": "Mark PR #966 review-blocker execplan completed with proof before archive; closeout fields were normalized after validation.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-15T08:07:21+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-generated-cli-review-blockers.plan.json",
-      "sha256": "b0f6e815219c9cce142f6c9f858aca318b57ac314c16d11910152afaf2c35c37",
-      "command": "agentic-planning record-recovery",
-      "reason": "Fill required execution summary before archiving PR #966 review-blocker execplan.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-15T08:07:41+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-generated-cli-review-blockers.plan.json",
-      "sha256": "e5dcf5e4c85b352faf258eb009b418a3d5f3a7b2ddf99a46d1eabe50460c5722",
-      "command": "agentic-planning record-recovery",
-      "reason": "Fill closure_check for PR #966 review-blocker archive.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-15T08:08:01+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-generated-cli-review-blockers",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T08:08:08+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/archive/python-generated-cli-review-blockers.plan.json",
-      "sha256": "e5dcf5e4c85b352faf258eb009b418a3d5f3a7b2ddf99a46d1eabe50460c5722",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-generated-cli-review-blockers",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T08:08:08+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-module-source-executable-retirement.plan.json",
-      "sha256": "109058c87270f9827d0b81b07bc7886b04c08d12d71dc7ba6b9522c226634184",
-      "command": "agentic-planning promote-to-plan",
-      "reason": "promote decomposition lane python-module-source-executable-retirement",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T08:17:47+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "6ebc6c9fc6c481726fd1c37e5d9868a82e50237ab8218e4af0c5cea8e74dcda6",
-      "command": "agentic-planning promote-to-plan",
-      "reason": "promote decomposition lane python-module-source-executable-retirement",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T08:17:47+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
-      "sha256": "33f0e499791c8a622b21594f2b4efbc46ea7a8dc4881faf4ac275301d0920d90",
-      "command": "agentic-planning promote-to-plan",
-      "reason": "promote decomposition lane python-module-source-executable-retirement",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T08:17:47+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/execplans/python-module-source-executable-retirement.plan.json",
       "sha256": "51f16a1710407a8d6ebcf54a13963e94a4480e451cae2ea51e91b81830106775",
       "command": "agentic-planning delegation-decision",
@@ -1600,6 +1528,78 @@
       "reason": "archive execplan python-workspace-root-primitive-migration",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-16T11:03:16+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-memory-generated-resources.plan.json",
+      "sha256": "9dd17df88c3b951ed3a7a3ae22eda43c05fc92a58982e530e1890767eb6c8da4",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-memory-generated-resources",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T11:06:08+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "04a07da35f0d15bc8bb5fa48cf1f39e133c0b1458cf12221c0a5b9d5d0f83d49",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-memory-generated-resources",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T11:06:08+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-memory-generated-resources.plan.json",
+      "sha256": "302c890e64947a7af5ad554b836ebbfd251d6a105e22f602ee0dbc4ed863bdfd",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T11:06:08+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-memory-generated-resources.plan.json",
+      "sha256": "302c890e64947a7af5ad554b836ebbfd251d6a105e22f602ee0dbc4ed863bdfd",
+      "command": "agentic-planning record-recovery",
+      "reason": "Completed #1004 slice: memory generated Python package now carries target-local _payload and _skills resource copies, and generated memory operation context roots resolve those resources without repo_memory_bootstrap._installer_paths. Proof: generation check, static generated package proof, python conformance, docker python conformance, planning doctor, contract/tooling/packaging tests.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T11:11:41+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-memory-generated-resources.plan.json",
+      "sha256": "48471e88b67dfa4a492622c3f393d78ecdb512622aae26e98ff5e6bb56fe945e",
+      "command": "agentic-planning record-recovery",
+      "reason": "Minimal closeout field repair: archive-plan/close-item requires active_milestone.status completed before CLI archive can run; no exposed planning command marks a scaffold milestone complete independently.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T11:12:38+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-memory-generated-resources.plan.json",
+      "sha256": "1754468d6be904e8a932bd3013496de08cf8dc3001170dc13672aac202bc4b6b",
+      "command": "agentic-planning record-recovery",
+      "reason": "Added explicit execution_summary resume cue required by archive-plan validation.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T11:12:55+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-memory-generated-resources.plan.json",
+      "sha256": "525fa214203cfb009d2ead5dd01f06f70240d7093b89e035109879293d804a2e",
+      "command": "agentic-planning record-recovery",
+      "reason": "Set unsolved intent owner to #892 so partial slice archive can preserve the epic continuation.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T11:13:08+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-memory-generated-resources",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T11:13:21+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/python-memory-generated-resources.plan.json",
+      "sha256": "67e1966cc81341c8a0c8620cc1602970e9f14018ade1d2bc3c76652ecef2e517",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-memory-generated-resources",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T11:13:21+00:00"
     }
   ]
 }
