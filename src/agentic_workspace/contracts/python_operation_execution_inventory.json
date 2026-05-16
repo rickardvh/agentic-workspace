@@ -441,12 +441,9 @@
       "command": "list-files",
       "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.list-files.report.json",
-      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "generated/memory/python/commands/memory_list_files_report.py",
       "hand_owned_runtime_code": [
-        "codegen-owned filesystem glob primitive",
-        "memory package payload metadata enrichment",
-        "target-root resolution",
-        "module-result emission mechanics"
+        "none; generated command projection composes target-root resolution, package payload listing, payload assembly, and output emission directly"
       ],
       "status": "portable-codegen-primitive-executed",
       "conformance_ref": "memory.list-files.process",

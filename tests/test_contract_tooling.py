@@ -707,7 +707,7 @@ def test_operation_command_parity_uses_package_program_namespace() -> None:
     assert module._validate_operation_registry(module.operation_contracts_manifest()) == []
 
 
-def test_operation_ir_has_portable_representative_command() -> None:
+def test_operation_ir_has_complete_portable_memory_list_files_command() -> None:
     script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
     spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)
     assert spec is not None and spec.loader is not None
@@ -729,7 +729,7 @@ def test_operation_ir_has_portable_representative_command() -> None:
     assert "path.target_root.resolve" in support_matrix["python"]["implemented_shared_primitives"]
     assert support_matrix["typescript"]["status"] == "unsupported-reported"
     assert "runtime handoff" in support_matrix["typescript"]["unsupported_behavior"]
-    assert operation["ir_plan"]["status"] == "representative"
+    assert operation["ir_plan"]["status"] == "complete"
     assert used == [
         "path.target_root.resolve",
         "filesystem.glob",
@@ -802,15 +802,16 @@ def test_operation_primitives_require_target_support_matrix(monkeypatch: pytest.
     assert any("schema-backed primitives missing implemented target support" in error for error in errors)
 
 
-def test_python_operation_execution_inventory_tracks_representative_runtime_consumption() -> None:
+def test_python_operation_execution_inventory_tracks_direct_generated_memory_commands() -> None:
     inventory = contract_tooling.load_contract_json("python_operation_execution_inventory.json")
     entries = {entry["operation_id"]: entry for entry in inventory["entries"]}
 
-    representative = entries["memory.list-files.report"]
+    list_files = entries["memory.list-files.report"]
 
-    assert representative["status"] == "portable-codegen-primitive-executed"
-    assert representative["primitive_executor"] == "packages/command-generation/src/command_generation/primitive_executor.py"
+    assert list_files["status"] == "portable-codegen-primitive-executed"
+    assert list_files["primitive_executor"] == "generated/memory/python/commands/memory_list_files_report.py"
     assert entries["memory.list-skills.report"]["status"] == "portable-codegen-primitive-executed"
+    assert entries["memory.list-skills.report"]["primitive_executor"] == "generated/memory/python/commands/memory_list_skills_report.py"
     assert entries["memory.report.report"]["status"] == "domain-runtime-primitive-via-ir"
     assert "compatibility-runtime-handler" not in {entry["status"] for entry in entries.values()}
     assert "accepted-hand-owned-runtime-primitive" in {entry["status"] for entry in entries.values()}

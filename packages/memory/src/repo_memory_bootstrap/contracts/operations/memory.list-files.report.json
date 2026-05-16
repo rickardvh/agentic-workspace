@@ -65,8 +65,8 @@
     }
   ],
   "ir_plan": {
-    "status": "representative",
-    "summary": "Representative target-executor IR for a read-only package-resource command from CLI input through emitted JSON/text output.",
+    "status": "complete",
+    "summary": "Complete target-executor IR for a read-only package-resource command from CLI input through emitted JSON/text output. The generated Python command projection composes this behavior directly instead of delegating to package runtime code or the generic operation IR runner.",
     "steps": [
       {
         "id": "resolve_target",
@@ -130,7 +130,7 @@
     ],
     "portability_notes": [
       "Target executors can implement this representative plan with filesystem globbing and payload assembly; it does not require importing package internals.",
-      "Generated command adapters consume this operation contract directly for list-files; other generated commands remain on compatibility runtime handlers until promoted."
+      "Generated Python command projection consumes this operation contract directly for list-files; other generated commands remain on compatibility runtime handlers until promoted."
     ]
   },
   "guards": [

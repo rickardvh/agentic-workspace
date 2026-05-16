@@ -2,46 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/execplans/python-codegen-owned-primitive-executor-migration.plan.json",
-      "sha256": "346ff5da7b12b36d0396e0a68612519f3a77e53efdfdc2172e07a54e23818984",
-      "command": "agentic-planning record-recovery",
-      "reason": "Aligned immediate_next_action with canonical next_action and removed slash-like prose path.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T16:54:36+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-codegen-owned-primitive-executor-migration.plan.json",
-      "sha256": "8f59b0c146445d691653842a377c137c95dd081edb562c2b7aee147456330d5f",
-      "command": "agentic-planning record-recovery",
-      "reason": "Closed representative codegen-owned primitive executor migration slice while keeping #892 open.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T17:01:55+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-codegen-owned-primitive-executor-migration.plan.json",
-      "sha256": "2e537cd1043da870cc59b1c092b9b84981a98e8e1034b16b1aff1f75d74cde5c",
-      "command": "agentic-planning record-recovery",
-      "reason": "Normalized intent_satisfaction value for archive compatibility.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T17:02:06+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "9005c47e51a048285f67be2d08c5623a570981c505b03f40bcb8dcdabd5fff91",
-      "command": "agentic-planning record-recovery",
-      "reason": "Removed completed primitive executor migration TODO reference before retaining archive.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T17:02:17+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/archive/python-codegen-owned-primitive-executor-migration.plan.json",
-      "sha256": "7a56cc7b0e9d69a522c3556cbcf961d119dea507a25dae7a57535b00b7bb8690",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-codegen-owned-primitive-executor-migration",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T17:02:17+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/execplans/archive/python-codegen-owned-primitive-executor-migration.plan.json",
       "sha256": "63195625be6d65a82fe10f39eeee0dece7fcd95ddba025c2a33339cfea872215",
       "command": "agentic-planning record-recovery",
@@ -1600,6 +1560,46 @@
       "reason": "archive execplan python-memory-list-skills-concrete-command",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-15T22:06:21+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-memory-list-files-concrete-command.plan.json",
+      "sha256": "705998f755ba541c1d8bfdbdd64664e25e2ce13df400ea18d34a3219d7b9e3c1",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-memory-list-files-concrete-command",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T22:06:58+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "78c97539592d567b84bad88fd8834a3a9c5cb8cd5ae7d14ff252141b9471f586",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-memory-list-files-concrete-command",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-15T22:06:58+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-memory-list-files-concrete-command.plan.json",
+      "sha256": "76bd49d6d448c262033a077fcee2696fafc6e3e01b3ae899fe6647790b5ff77e",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T08:25:18+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-memory-list-files-concrete-command",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T08:38:25+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/python-memory-list-files-concrete-command.plan.json",
+      "sha256": "91e34d46a8dcb3908dc19b0c8eb11c06b216c4eac00c4cd4e962cf49f3956d00",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-memory-list-files-concrete-command",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T08:38:25+00:00"
     }
   ]
 }

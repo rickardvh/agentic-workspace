@@ -202,6 +202,13 @@ def _python_command_module(
             source_path=source_path,
             regenerate_command=regenerate_command,
         )
+    if _is_memory_list_files_direct_projection(package, operation_id):
+        return _python_memory_list_files_command_module(
+            package,
+            operation_id,
+            source_path=source_path,
+            regenerate_command=regenerate_command,
+        )
     operation_executor = _operation_executor_binding(package)
     direct_handlers = {
         str(handler["operation_id"]): handler for handler in binding.get("runtime_module_handlers", []) if isinstance(handler, dict)
@@ -236,7 +243,11 @@ def _is_memory_list_skills_direct_projection(package: dict[str, Any], operation_
     return package.get("id") == "memory-bootstrap" and operation_id == "memory.list-skills.report"
 
 
-def _python_memory_list_skills_command_module(
+def _is_memory_list_files_direct_projection(package: dict[str, Any], operation_id: str) -> bool:
+    return package.get("id") == "memory-bootstrap" and operation_id == "memory.list-files.report"
+
+
+def _python_memory_direct_projection_header(
     package: dict[str, Any],
     operation_id: str,
     *,
@@ -251,7 +262,24 @@ def _python_memory_list_skills_command_module(
         f"Regenerate with: {regenerate_command}\n"
         '"""\n\n'
         "from __future__ import annotations\n\n"
-        "import argparse\n"
+    )
+
+
+def _python_memory_list_skills_command_module(
+    package: dict[str, Any],
+    operation_id: str,
+    *,
+    source_path: str,
+    regenerate_command: str,
+) -> str:
+    return (
+        _python_memory_direct_projection_header(
+            package,
+            operation_id,
+            source_path=source_path,
+            regenerate_command=regenerate_command,
+        )
+        + "import argparse\n"
         "import json\n"
         "from pathlib import Path\n"
         "from typing import Any\n\n"
@@ -328,6 +356,215 @@ def _python_memory_list_skills_command_module(
         "    skills_root = _skills_root()\n"
         "    registry = _read_json_resource(skills_root, 'REGISTRY.json')\n"
         "    payload = _assemble_payload(registry, skills_root)\n"
+        "    _emit_output(payload, str(getattr(args, 'format', 'text') or 'text'))\n"
+        "    return 0\n"
+    )
+
+
+def _python_memory_list_files_command_module(
+    package: dict[str, Any],
+    operation_id: str,
+    *,
+    source_path: str,
+    regenerate_command: str,
+) -> str:
+    return (
+        _python_memory_direct_projection_header(
+            package,
+            operation_id,
+            source_path=source_path,
+            regenerate_command=regenerate_command,
+        )
+        + "import argparse\n"
+        "import json\n"
+        "import re\n"
+        "from pathlib import Path\n"
+        "from typing import Any\n\n"
+        "# DO NOT EDIT DIRECTLY.\n"
+        f"# Command behavior changes belong in {source_path} and the referenced operation contract.\n"
+        f"# Regenerate with: {regenerate_command}\n\n"
+        "BOOTSTRAP_VERSION = 47\n"
+        "PROJECT_MARKERS = ('pyproject.toml', 'package.json', 'Cargo.toml', '.hg')\n"
+        "AGENTS_PATH = Path('AGENTS.md')\n"
+        "MANAGED_ROOT = Path('.agentic-workspace/memory')\n"
+        "VERSION_PATH = MANAGED_ROOT / 'VERSION.md'\n"
+        "LEGACY_VERSION_PATH = Path('memory/system/VERSION.md')\n"
+        "BOOTSTRAP_WORKSPACE_ROOT = MANAGED_ROOT / 'bootstrap'\n"
+        "SHIPPED_SKILLS_ROOT = MANAGED_ROOT / 'skills'\n"
+        "LEGACY_SYSTEM_ROOT = Path('memory/system')\n"
+        "LEGACY_BOOTSTRAP_WORKSPACE_ROOT = Path('memory/bootstrap')\n"
+        "LEGACY_SHIPPED_SKILLS_ROOT = Path('memory/skills')\n"
+        "VERSION_RE = re.compile(r'bootstrap version:\\s*(\\d+)', re.IGNORECASE)\n\n\n"
+        "class RepoDetectionError(RuntimeError):\n"
+        "    pass\n\n\n"
+        "def _payload_root() -> Path:\n"
+        "    for parent in Path(__file__).resolve().parents:\n"
+        "        for candidate in (parent / '_payload', parent / 'packages' / 'memory' / 'bootstrap'):\n"
+        "            if (candidate / 'AGENTS.template.md').is_file():\n"
+        "                return candidate\n"
+        "    raise FileNotFoundError('Bootstrap payload directory is not available.')\n\n\n"
+        "def _find_repo_candidates(start: Path) -> list[Path]:\n"
+        "    candidates = []\n"
+        "    for path in (start, *start.parents):\n"
+        "        if any((path / marker).exists() for marker in PROJECT_MARKERS) or (path / '.git').exists():\n"
+        "            candidates.append(path)\n"
+        "    return candidates\n\n\n"
+        "def _resolve_target_root(target: str | None) -> Path:\n"
+        "    explicit = target is not None\n"
+        "    start = Path(target or Path.cwd()).resolve()\n"
+        "    if not start.exists():\n"
+        "        raise RepoDetectionError(f'Target does not exist: {start}')\n"
+        "    if start.is_file():\n"
+        "        raise RepoDetectionError(f'Target must be a directory: {start}')\n"
+        "    if explicit:\n"
+        "        return start\n"
+        "    candidates = _find_repo_candidates(start)\n"
+        "    if not candidates:\n"
+        "        raise RepoDetectionError('Could not find a repository root from the current directory. Pass --target explicitly.')\n"
+        "    if len(candidates) > 1:\n"
+        "        roots = ', '.join(str(path) for path in candidates)\n"
+        "        raise RepoDetectionError(f'Ambiguous repository root detected ({roots}). Pass --target explicitly. Retry with --target .')\n"
+        "    return candidates[0]\n\n\n"
+        "def _target_relative_path(relative_path: Path) -> Path:\n"
+        "    path_str = relative_path.as_posix()\n"
+        "    if path_str.startswith('docs/'):\n"
+        "        return Path('.agentic-workspace/docs') / relative_path.relative_to('docs')\n"
+        "    if path_str.startswith('memory/system/'):\n"
+        "        return Path('.agentic-workspace/memory') / relative_path.relative_to('memory/system')\n"
+        "    if path_str.startswith('memory/bootstrap/'):\n"
+        "        return Path('.agentic-workspace/memory/bootstrap') / relative_path.relative_to('memory/bootstrap')\n"
+        "    if path_str.startswith('memory/skills/'):\n"
+        "        return Path('.agentic-workspace/memory/skills') / relative_path.relative_to('memory/skills')\n"
+        "    if path_str.startswith('memory/'):\n"
+        "        return Path('.agentic-workspace/memory/repo') / relative_path.relative_to('memory')\n"
+        "    return relative_path\n\n\n"
+        "def _classify_role(relative_path: Path) -> str:\n"
+        "    path_str = relative_path.as_posix()\n"
+        "    if relative_path == AGENTS_PATH:\n"
+        "        return 'local-entrypoint'\n"
+        "    if path_str.startswith('.agentic-workspace/memory/repo/templates/'):\n"
+        "        return 'shared-template'\n"
+        "    if path_str in {\n"
+        "        '.agentic-workspace/memory/repo/index.md',\n"
+        "        '.agentic-workspace/memory/repo/mistakes/recurring-failures.md',\n"
+        "        '.agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md',\n"
+        "    }:\n"
+        "        return 'seed-note'\n"
+        "    if path_str.startswith('.agentic-workspace/memory/repo/current/'):\n"
+        "        return 'seed-note'\n"
+        "    if path_str.startswith('.agentic-workspace/memory/'):\n"
+        "        return 'shared-replaceable'\n"
+        "    if path_str.startswith(BOOTSTRAP_WORKSPACE_ROOT.as_posix()):\n"
+        "        return 'shared-replaceable'\n"
+        "    if path_str.startswith(SHIPPED_SKILLS_ROOT.as_posix()):\n"
+        "        return 'shared-replaceable'\n"
+        "    if path_str.endswith('/README.md'):\n"
+        "        return 'seed-note'\n"
+        "    return 'managed-file'\n\n\n"
+        "def _strategy_for_role(role: str) -> str:\n"
+        "    return {\n"
+        "        'local-entrypoint': 'patch-or-review',\n"
+        "        'shared-replaceable': 'replace',\n"
+        "        'shared-template': 'replace',\n"
+        "        'seed-note': 'seed',\n"
+        "        'managed-file': 'create-only',\n"
+        "    }[role]\n\n\n"
+        "def _payload_entries(source_root: Path) -> list[dict[str, str]]:\n"
+        "    entries = []\n"
+        "    seen = set()\n"
+        "    for relative_root in (AGENTS_PATH, Path('.agentic-workspace'), Path('memory'), Path('docs')):\n"
+        "        source_path = source_root / relative_root\n"
+        "        if not source_path.exists() and relative_root.name.endswith('.md'):\n"
+        "            template_path = source_root / relative_root.with_name(relative_root.name.replace('.md', '.template.md'))\n"
+        "            if template_path.exists():\n"
+        "                source_path = template_path\n"
+        "        if not source_path.exists():\n"
+        "            continue\n"
+        "        children = [source_path] if source_path.is_file() else sorted(path for path in source_path.rglob('*') if path.is_file())\n"
+        "        for child in children:\n"
+        "            source_relative = child.relative_to(source_root)\n"
+        "            target_relative = source_relative\n"
+        "            if target_relative.name.endswith('.template.md'):\n"
+        "                target_relative = target_relative.with_name(target_relative.name.replace('.template.md', '.md'))\n"
+        "            target_relative = _target_relative_path(target_relative)\n"
+        "            if target_relative in seen:\n"
+        "                continue\n"
+        "            seen.add(target_relative)\n"
+        "            role = _classify_role(target_relative)\n"
+        "            entries.append({\n"
+        "                'relative_path': target_relative.as_posix(),\n"
+        "                'role': role,\n"
+        "                'strategy': _strategy_for_role(role),\n"
+        "                'kind': 'managed file',\n"
+        "                'source': target_relative.as_posix(),\n"
+        "                'source_relative': source_relative.as_posix(),\n"
+        "            })\n"
+        "    return entries\n\n\n"
+        "def _read_installed_version(target_root: Path) -> int | None:\n"
+        "    for relative in (VERSION_PATH, LEGACY_VERSION_PATH):\n"
+        "        path = target_root / relative\n"
+        "        if path.exists():\n"
+        "            match = VERSION_RE.search(path.read_text(encoding='utf-8'))\n"
+        "            return int(match.group(1)) if match else None\n"
+        "    return None\n\n\n"
+        "def _detect_mode(target_root: Path) -> str:\n"
+        "    if any((target_root / path).exists() for path in (MANAGED_ROOT, BOOTSTRAP_WORKSPACE_ROOT, SHIPPED_SKILLS_ROOT)):\n"
+        "        return 'full'\n"
+        "    return 'augment'\n\n\n"
+        "def _action(entry: dict[str, str], target_root: Path) -> dict[str, str]:\n"
+        "    return {\n"
+        "        'kind': entry['kind'],\n"
+        "        'path': entry['relative_path'],\n"
+        "        'detail': entry['strategy'],\n"
+        "        'role': entry['role'],\n"
+        "        'safety': 'safe',\n"
+        "        'source': entry['source'],\n"
+        "        'category': 'safe-update',\n"
+        "        'remediation_kind': '',\n"
+        "        'remediation_target': '',\n"
+        "        'remediation_reason': '',\n"
+        "        'remediation_confidence': '',\n"
+        "        'memory_action': '',\n"
+        "        'match_source': '',\n"
+        "    }\n\n\n"
+        "def _assemble_payload(target_root: Path, payload_root: Path) -> dict[str, Any]:\n"
+        "    entries = sorted(_payload_entries(payload_root), key=lambda item: (item['kind'], item['relative_path'], item['source']))\n"
+        "    return {\n"
+        "        'target_root': str(target_root),\n"
+        "        'dry_run': True,\n"
+        "        'mode': _detect_mode(target_root),\n"
+        "        'message': 'Packaged bootstrap file preview',\n"
+        "        'detected_version': _read_installed_version(target_root),\n"
+        "        'bootstrap_version': BOOTSTRAP_VERSION,\n"
+        "        'actions': [_action(entry, target_root) for entry in entries],\n"
+        "        'route_summary': {},\n"
+        "        'missing_note_hint': '',\n"
+        "        'review_summary': {},\n"
+        "        'review_cases': [],\n"
+        "        'sync_summary': {},\n"
+        "        'route_report_summary': {},\n"
+        "        'route_report_feedback_cases': [],\n"
+        "        'route_report_fixture_results': [],\n"
+        "    }\n\n\n"
+        "def _emit_output(payload: dict[str, Any], output_format: str) -> None:\n"
+        "    if output_format == 'json':\n"
+        "        print(json.dumps(payload, indent=2))\n"
+        "        return\n"
+        "    print(f\"Target: {payload['target_root']}\")\n"
+        "    print(str(payload['message']))\n"
+        "    detected = payload['detected_version']\n"
+        "    if detected is None:\n"
+        "        print(f\"Detected version: none (payload version {payload['bootstrap_version']})\")\n"
+        "    else:\n"
+        "        print(f\"Detected version: {detected} (payload version {payload['bootstrap_version']})\")\n"
+        "    for action in payload['actions']:\n"
+        "        print(\n"
+        "            f\"- {action['kind']}: {action['path']} \"\n"
+        "            f\"({action['detail']}; role={action['role']}; safety={action['safety']}; category={action['category']})\"\n"
+        "        )\n\n\n"
+        "def run(args: argparse.Namespace) -> int:\n"
+        "    target_root = _resolve_target_root(getattr(args, 'target', None))\n"
+        "    payload = _assemble_payload(target_root, _payload_root())\n"
         "    _emit_output(payload, str(getattr(args, 'format', 'text') or 'text'))\n"
         "    return 0\n"
     )

@@ -1177,6 +1177,7 @@ def _generated_command_module_package_runtime_imports() -> list[str]:
 def _validate_direct_generated_python_command_projection() -> list[str]:
     errors: list[str] = []
     direct_commands = {
+        "memory.list-files.report": REPO_ROOT / "generated" / "memory" / "python" / "commands" / "memory_list_files_report.py",
         "memory.list-skills.report": REPO_ROOT / "generated" / "memory" / "python" / "commands" / "memory_list_skills_report.py",
     }
     forbidden_fragments = (
@@ -1185,12 +1186,20 @@ def _validate_direct_generated_python_command_projection() -> list[str]:
         "command_generation.primitive_executor",
         "repo_memory_bootstrap.runtime_primitives",
     )
-    required_fragments = (
-        "def _read_json_resource(",
-        "def _assemble_payload(",
-        "def _emit_output(",
-        "_read_json_resource(skills_root, 'REGISTRY.json')",
-    )
+    required_fragments_by_operation = {
+        "memory.list-files.report": (
+            "def _payload_entries(",
+            "def _assemble_payload(",
+            "def _emit_output(",
+            "_assemble_payload(target_root, _payload_root())",
+        ),
+        "memory.list-skills.report": (
+            "def _read_json_resource(",
+            "def _assemble_payload(",
+            "def _emit_output(",
+            "_read_json_resource(skills_root, 'REGISTRY.json')",
+        ),
+    }
     for operation_id, path in direct_commands.items():
         if not path.is_file():
             errors.append(f"{path.relative_to(REPO_ROOT).as_posix()} is missing for direct generated command {operation_id}")
@@ -1202,7 +1211,7 @@ def _validate_direct_generated_python_command_projection() -> list[str]:
                     f"{path.relative_to(REPO_ROOT).as_posix()} direct generated command {operation_id} "
                     f"must not contain {fragment!r}"
                 )
-        for fragment in required_fragments:
+        for fragment in required_fragments_by_operation[operation_id]:
             if fragment not in text:
                 errors.append(
                     f"{path.relative_to(REPO_ROOT).as_posix()} direct generated command {operation_id} "
@@ -1476,6 +1485,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
     }
     portable_primitive_operations = {"memory.list-files.report", "memory.list-skills.report"}
     expected_primitive_executors = {
+        "memory.list-files.report": "generated/memory/python/commands/memory_list_files_report.py",
         "memory.list-skills.report": "generated/memory/python/commands/memory_list_skills_report.py",
     }
     for operation_id in sorted(ir_consumed_operations):
@@ -1556,7 +1566,6 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         errors.append("memory operation IR executor must execute operation plans through codegen-owned run_operation_steps")
     for module_name in (
         "memory_doctor_report",
-        "memory_list_files_report",
         "memory_promotion_report_report",
         "memory_report_report",
         "memory_route_report_report",
