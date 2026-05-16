@@ -1,0 +1,320 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Python memory list-files primitive decomposition",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Advance #892 by converting memory.list-files from copied generated helper mechanics into a rule-driven composition of common generated Python primitives.",
+    "hard_constraints": "Do not import memory package runtime internals; do not move memory-specific product policy into command-generation code; generic primitives must be parameterized by command-owned constants and rules; keep generated outputs reproducible from the renderer.",
+    "agent_may_decide": "Primitive helper signatures, exact rule data shape, and focused validation set.",
+    "escalate_when": "The command requires product judgment that cannot be represented as declarative rules or would make command-generation package-specific.",
+    "next_action": "Add rule-driven generated primitives for repo target resolution, payload entry projection, role and strategy classification, version and mode detection, and action report emission; refactor memory.list-files to compose them.",
+    "proof_expectations": [
+      "uv run python scripts/generate/generate_command_packages.py --check",
+      "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+      "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
+      "uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_command_generation_artifacts.py",
+      "uv run ruff check affected generator/check/generated files"
+    ],
+    "touched_scope": [
+      "packages/command-generation/src/command_generation/generator.py",
+      "generated/memory/python/commands/memory_list_files_report.py",
+      "generated/memory/python/primitives/resources.py",
+      "generated/planning/python/primitives/resources.py",
+      "generated/workspace/python/primitives/resources.py",
+      "scripts/check/check_generated_command_packages.py",
+      ".agentic-workspace/planning/execplans/python-memory-list-files-primitives.plan.json"
+    ],
+    "completion_criteria": [
+      "memory.list-files generated command contains declarative product constants/rules and composes generated resource primitives for the mechanics.",
+      "Static proof checks require primitive composition and reject reintroduced copied helper mechanics for memory.list-files.",
+      "Generated outputs are reproducible from command-generation.",
+      "Any remaining product-domain boundary is recorded instead of claiming full #892 completion."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-but-keep-lane-open"
+  },
+  "goal": [
+    "#892 memory.list-files primitive composition"
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Advance #892 by converting memory.list-files from copied generated helper mechanics into a rule-driven composition of common generated Python primitives.",
+      "constraints": "Do not import memory package runtime internals; do not move memory-specific product policy into command-generation code; generic primitives must be parameterized by command-owned constants and rules; keep generated outputs reproducible from the renderer.",
+      "latitude": "Primitive helper signatures, exact rule data shape, and focused validation set.",
+      "escalation": "The command requires product judgment that cannot be represented as declarative rules or would make command-generation package-specific."
+    },
+    "execution": {
+      "milestone": "python-memory-list-files-primitives",
+      "status": "active",
+      "next_step": "Add rule-driven generated primitives for repo target resolution, payload entry projection, role and strategy classification, version and mode detection, and action report emission; refactor memory.list-files to compose them.",
+      "proof": "Run generated freshness, static proof, Python conformance, Docker conformance, focused artifact tests, live memory list-files smoke, and ruff checks."
+    },
+    "scope": {
+      "touched": [
+        "packages/command-generation/src/command_generation/generator.py",
+        "generated/memory/python/commands/memory_list_files_report.py",
+        "generated/memory/python/primitives/resources.py",
+        "generated/planning/python/primitives/resources.py",
+        "generated/workspace/python/primitives/resources.py",
+        "scripts/check/check_generated_command_packages.py",
+        ".agentic-workspace/planning/execplans/python-memory-list-files-primitives.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#892 memory.list-files primitive composition",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+    "activation trigger": "Continue remaining #892 product-runtime and completion-promotion lanes."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "memory.list-files now composes generated rule-driven primitives instead of copied helper mechanics.",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "Freshness, static proof, Python conformance, Docker conformance, focused artifact tests, generated ruff, live memory list-files smoke, defaults root authority, workspace CLI tests, and planning doctor passed.",
+    "validation still needed": "No validation remains for this bounded slice; the larger #892 lane still needs remaining product-runtime and completion-promotion work.",
+    "next likely slice": "Continue remaining #892 product-runtime or completion-promotion lane from the python-generated-cli decomposition."
+  },
+  "intent_interpretation": {
+    "literal request": "Python memory list-files primitive decomposition",
+    "inferred intended outcome": "#892 memory.list-files primitive composition",
+    "chosen concrete what": "Refactor memory.list-files generated command mechanics into parameterized generated primitives while keeping memory-specific policy in command-owned rule constants.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "packages/command-generation/src/command_generation/generator.py; generated memory command and primitive projections; generated planning and workspace primitive projections; scripts/check/check_generated_command_packages.py; this execplan and planning state.",
+    "max changed files": "Fill in an expected upper bound before implementation starts.",
+    "required validation commands": "Run generated freshness, static proof, Python conformance, Docker conformance, focused artifact tests, live memory list-files smoke, and ruff checks.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue memory.list-files primitive decomposition; implementation is in progress and proof is pending.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "#892 memory.list-files primitive composition",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "The next decision is architectural classification of memory list-files behavior into generic primitives versus product-domain boundaries; same-model internal delegation would not save tokens until the primitive signature is decided.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-16T09:51:34+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "#892 memory.list-files primitive composition",
+      "label": "#892 memory.list-files primitive composition",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "python-memory-list-files-primitives",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Add rule-driven generated primitives for repo target resolution, payload entry projection, role and strategy classification, version and mode detection, and action report emission; refactor memory.list-files to compose them."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/command-generation/src/command_generation/generator.py",
+    "generated/memory/python/commands/memory_list_files_report.py",
+    "generated/memory/python/primitives/resources.py",
+    "generated/planning/python/primitives/resources.py",
+    "generated/workspace/python/primitives/resources.py",
+    "scripts/check/check_generated_command_packages.py",
+    ".agentic-workspace/planning/execplans/python-memory-list-files-primitives.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run python scripts/generate/generate_command_packages.py --check",
+    "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+    "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
+    "uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_command_generation_artifacts.py",
+    "uv run ruff check affected generator/check/generated files"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "memory.list-files generated command contains declarative product constants/rules and composes generated resource primitives for the mechanics.",
+    "Static proof checks require primitive composition and reject reintroduced copied helper mechanics for memory.list-files.",
+    "Generated outputs are reproducible from command-generation.",
+    "Any remaining product-domain boundary is recorded instead of claiming full #892 completion."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Converted memory.list-files generated command mechanics into declarative command-owned rules plus generated resource primitives.",
+    "scope touched": "command-generation renderer, generated memory list-files command, generated target resource primitives, static proof, and #892 planning records",
+    "changed surfaces": "packages/command-generation/src/command_generation/generator.py; generated/memory/python/commands/memory_list_files_report.py; generated/*/python/primitives/resources.py; scripts/check/check_generated_command_packages.py; planning execplan/decomposition/state/provenance",
+    "validations run": "uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_command_generation_artifacts.py; uv run ruff check affected generator/check/generated files; uv run agentic-memory list-files --target . --format json; uv run agentic-workspace defaults --section root_cli_authority --format json; uv run pytest tests/test_workspace_cli.py -q; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "result for continuation": "Bounded slice complete; continue larger #892 from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json.",
+    "next step": "Commit and push this slice, then promote the next remaining #892 lane."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "bounded-slice yes; larger #892 no",
+    "config compliance": "used uv run agentic-workspace and planning lifecycle commands",
+    "misinterpretation risk": "low for this slice; do not claim full #892 completion from this slice alone",
+    "follow-on decision": "archive-but-keep-lane-open"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "The next decision is architectural classification of memory list-files behavior into generic primitives versus product-domain boundaries; same-model internal delegation would not save tokens until the primitive signature is decided.",
+    "expected savings": "possible later after primitive signature is fixed",
+    "actual friction": "planning text still required path-like wording cleanup after summary detected false file references",
+    "proof result": "passed",
+    "quality concern": "Avoid copying exact internal mechanics into generated commands; keep primitive surfaces generic and testable.",
+    "decomposition adjustment": "Promote memory.list-files mapping/classification decomposition as the next bounded #892 slice."
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "passed",
+    "evidence for \"proof achieved\" state": "Freshness, static proof, Python conformance, Docker conformance, focused artifact tests, generated ruff, live memory list-files smoke, defaults root authority, workspace CLI tests, and planning doctor passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "#892 memory.list-files primitive composition",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "memory.list-files now uses command-owned declarative rules and generated common primitives for repo target resolution, payload projection, path rewrite, classification, version and mode detection, action construction, and output emission.",
+    "unsolved intent passed to": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+  },
+  "execution_summary": {
+    "outcome delivered": "memory.list-files generated command mechanics now compose generated common primitives.",
+    "validation confirmed": "passed",
+    "follow-on routed to": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+    "post-work posterity capture": "updated decomposition notes",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json next remaining #892 lane."
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "bounded slice complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "The memory.list-files primitive decomposition slice is complete and proven, but the full #892 Python generated CLI architecture still has remaining lanes.",
+    "evidence carried forward": "memory.list-files now composes generated resource primitives; decomposition notes record the slice; proof passed.",
+    "reopen trigger": "Reopen if memory.list-files reintroduces copied repo detection, payload projection, role classification, version/mode detection, action creation, or output mechanics."
+  },
+  "improvement_signal_review": {
+    "status": "completed",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [
+      "Planning summary still catches path-like wording in execplans after manual tightening."
+    ],
+    "signals fixed": [
+      "Corrected path-like wording and projection drift before proof."
+    ],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        "Transient proof logs and generated command inspection output."
+      ],
+      "continuation": [
+        "Continue remaining #892 product-runtime and completion-promotion lanes from python-generated-cli.decomposition.json."
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-16: Scaffolded by agentic-planning new-plan.",
+    "2026-05-16: Recorded delegation decision route=keep-local."
+  ]
+}

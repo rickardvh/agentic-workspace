@@ -1195,10 +1195,11 @@ def _validate_direct_generated_python_command_projection() -> list[str]:
     )
     required_fragments_by_operation = {
         "memory.list-files.report": (
-            "def _payload_entries(",
+            "from ..primitives.resources import (",
+            "project_payload_entries(",
+            "resolve_repo_target_root(getattr(args, 'target', None), PROJECT_MARKERS)",
             "def _assemble_payload(",
-            "def _emit_output(",
-            "_assemble_payload(target_root, _payload_root())",
+            "emit_action_report(payload, str(getattr(args, 'format', 'text') or 'text'))",
         ),
         "memory.list-skills.report": (
             "from ..primitives.resources import find_resource_root, read_json_object",
