@@ -2,30 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/execplans/python-workspace-defaults-primitive-migration.plan.json",
-      "sha256": "1a9cbccfd5e76480202ea6146817311f1ab1c47220e8fbe8da5223d0cf098e9c",
-      "command": "agentic-planning record-recovery",
-      "reason": "Manual closeout field update after validated #892 defaults primitive migration slice.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T10:58:38+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-workspace-defaults-primitive-migration",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T10:58:38+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/archive/python-workspace-defaults-primitive-migration.plan.json",
-      "sha256": "1a9cbccfd5e76480202ea6146817311f1ab1c47220e8fbe8da5223d0cf098e9c",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-workspace-defaults-primitive-migration",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T10:58:38+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/execplans/python-workspace-root-primitive-migration.plan.json",
       "sha256": "a9356dfa3db46c27fd9832849d0af5ab10747a62418b9e5e03b3a04244d6c233",
       "command": "agentic-planning new-plan",
@@ -1600,6 +1576,30 @@
       "reason": "archive execplan .agentic-workspace/planning/execplans/github-planning-workflow-observability-p2.plan.json",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-16T19:11:11+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-low-priority-planning-lanes-p3.plan.json",
+      "sha256": "20e5440d2c33e231ea767e89e9e787705f8d3616999fdc5852e2efc7beb325a0",
+      "command": "agentic-planning promote-to-plan",
+      "reason": "promote planning item github-low-priority-planning-lanes-p3",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T20:05:24+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "1b21c19d3bcf16ba553cb06f3c73e5294c37c9dddf145b401d7e497254916c1b",
+      "command": "agentic-planning promote-to-plan",
+      "reason": "promote planning item github-low-priority-planning-lanes-p3",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T20:05:24+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-low-priority-planning-lanes-p3.plan.json",
+      "sha256": "5eaeaa10c33d385aae977909b73d357319dbe99f6be4efda4160c87aa0b28554",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T20:06:35+00:00"
     }
   ]
 }

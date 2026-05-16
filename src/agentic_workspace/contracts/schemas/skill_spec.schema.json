@@ -1,0 +1,298 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/skill-spec.schema.json",
+  "title": "SkillSpec Contract",
+  "description": "Package-owned semantic contract for skills that steer agent behavior while the CLI performs robust state inspection, mutation, validation, and reporting.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "rule",
+    "specs"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "agentic-workspace/skill-spec/v1",
+      "description": "Version marker for SkillSpec manifests."
+    },
+    "rule": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Operating rule that explains how SkillSpec relates skills, CLI commands, fallback guidance, and generated targets."
+    },
+    "specs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/spec"
+      },
+      "description": "Ordered skill contracts that can be consumed by hand-authored skills, references, or later generators."
+    }
+  },
+  "$defs": {
+    "non_empty_string": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Non-empty text used in SkillSpec fields."
+    },
+    "non_empty_strings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/non_empty_string"
+      },
+      "description": "Ordered non-empty text entries."
+    },
+    "field_ref": {
+      "type": "object",
+      "required": [
+        "path",
+        "decision"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/non_empty_string",
+          "description": "Dot-path or selector path in a CLI JSON output that a skill is expected to inspect."
+        },
+        "decision": {
+          "$ref": "#/$defs/non_empty_string",
+          "description": "Agent decision answered by this field."
+        },
+        "fallback_when_missing": {
+          "$ref": "#/$defs/non_empty_string",
+          "description": "Conservative behavior when the field is absent or the output is unavailable."
+        }
+      },
+      "additionalProperties": false,
+      "description": "CLI output field interpreted by a skill."
+    },
+    "surface": {
+      "type": "object",
+      "required": [
+        "path",
+        "authority"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/non_empty_string",
+          "description": "Repo-relative surface owned, read, or mutated under this skill contract."
+        },
+        "authority": {
+          "enum": [
+            "read-only-router",
+            "cli-mutated-state",
+            "package-payload",
+            "reference-only"
+          ],
+          "description": "Authority role the skill assigns to the surface."
+        },
+        "edit_rule": {
+          "$ref": "#/$defs/non_empty_string",
+          "description": "How an agent should change or avoid changing this surface."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Workspace surface governed by the skill."
+    },
+    "cli_command": {
+      "type": "object",
+      "required": [
+        "id",
+        "command",
+        "preferred_invocation",
+        "purpose",
+        "mutates_state",
+        "key_output_fields",
+        "decisions_answered",
+        "failure_fallback"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/non_empty_string",
+          "description": "Stable command affordance identifier."
+        },
+        "command": {
+          "$ref": "#/$defs/non_empty_string",
+          "description": "CLI command name or subcommand path."
+        },
+        "preferred_invocation": {
+          "$ref": "#/$defs/non_empty_string",
+          "description": "Preferred invocation shape, including format expectations when relevant."
+        },
+        "purpose": {
+          "$ref": "#/$defs/non_empty_string",
+          "description": "Situation where the skill should prefer this command over raw file inspection or manual mutation."
+        },
+        "mutates_state": {
+          "type": "boolean",
+          "description": "True when the command is expected to write workspace state."
+        },
+        "key_output_fields": {
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "CLI output fields the skill should interpret."
+        },
+        "decisions_answered": {
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "Agent decisions this command is expected to make cheaper or safer."
+        },
+        "failure_fallback": {
+          "$ref": "#/$defs/non_empty_string",
+          "description": "Conservative fallback if the command is unavailable or fails before producing usable output."
+        }
+      },
+      "additionalProperties": false,
+      "description": "CLI affordance used by a skill."
+    },
+    "proportionality": {
+      "type": "object",
+      "required": [
+        "no_artifact_by_default",
+        "artifact_creation_allowed_when",
+        "ordinary_work_rule"
+      ],
+      "properties": {
+        "no_artifact_by_default": {
+          "type": "boolean",
+          "description": "Whether routine use of this skill should avoid creating review, planning, memory, or handoff artifacts."
+        },
+        "artifact_creation_allowed_when": {
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "Conditions that justify durable artifact creation."
+        },
+        "ordinary_work_rule": {
+          "$ref": "#/$defs/non_empty_string",
+          "description": "Rule for keeping low-risk or direct work lightweight."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Proportionality and artifact policy for the skill."
+    },
+    "generated_target_requirements": {
+      "type": "object",
+      "required": [
+        "status",
+        "must_preserve"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "contract-only",
+            "ready-for-renderer",
+            "deferred"
+          ],
+          "description": "Current readiness of this skill contract for generated target output."
+        },
+        "must_preserve": {
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "Semantics that any generated or adapter-specific surface must preserve."
+        },
+        "deferred_until": {
+          "$ref": "#/$defs/non_empty_string",
+          "description": "Condition that must be satisfied before renderer or target-adapter work begins."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Constraints for future generated skill or adapter surfaces."
+    },
+    "spec": {
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "status",
+        "applies_when",
+        "proportionality",
+        "preferred_cli_commands",
+        "interpreted_output_fields",
+        "owned_surfaces",
+        "allowed_actions",
+        "forbidden_actions",
+        "fallback_when_cli_unavailable",
+        "proof_obligations",
+        "closeout_obligations",
+        "generated_target_requirements"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/non_empty_string",
+          "description": "Stable SkillSpec identifier."
+        },
+        "title": {
+          "$ref": "#/$defs/non_empty_string",
+          "description": "Human-readable skill contract title."
+        },
+        "status": {
+          "enum": [
+            "active",
+            "draft",
+            "deferred"
+          ],
+          "description": "Lifecycle status for this skill contract."
+        },
+        "applies_when": {
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "Conditions that should route an agent to this skill behavior."
+        },
+        "proportionality": {
+          "$ref": "#/$defs/proportionality",
+          "description": "Artifact and proportionality policy for this skill."
+        },
+        "preferred_cli_commands": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/cli_command"
+          },
+          "description": "CLI commands the skill should prefer when available."
+        },
+        "interpreted_output_fields": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/field_ref"
+          },
+          "description": "Output fields that drive skill decisions."
+        },
+        "owned_surfaces": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/surface"
+          },
+          "description": "Repo surfaces this skill may read, route to, or ask the CLI to mutate."
+        },
+        "allowed_actions": {
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "Actions permitted under this skill contract."
+        },
+        "forbidden_actions": {
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "Actions this skill must not instruct or normalize."
+        },
+        "fallback_when_cli_unavailable": {
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "Conservative behavior when the preferred CLI cannot be used."
+        },
+        "proof_obligations": {
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "Validation or inspection obligations before claiming the skill-guided work is correct."
+        },
+        "closeout_obligations": {
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "Continuation and completion obligations before the agent reports done."
+        },
+        "generated_target_requirements": {
+          "$ref": "#/$defs/generated_target_requirements",
+          "description": "Requirements for future generated projections of the skill."
+        }
+      },
+      "additionalProperties": false,
+      "description": "A single skill behavior contract."
+    }
+  },
+  "additionalProperties": false,
+  "x-agentic-workspace-doc-role": "contract-reference",
+  "x-agentic-workspace-see-also": [
+    "docs/reference/startup-context.md",
+    "docs/reference/cli-commands.md",
+    "docs/reference/proof-selection-rules.md"
+  ]
+}

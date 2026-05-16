@@ -1,0 +1,241 @@
+{
+  "schema_version": "agentic-workspace/skill-spec/v1",
+  "rule": "Skills steer agent behavior and proportionality; the CLI is preferred for robust state inspection, mutation, validation, and reporting when it is available.",
+  "specs": [
+    {
+      "id": "startup-router",
+      "title": "Startup Router Skill",
+      "status": "active",
+      "applies_when": [
+        "An agent begins or resumes work in a repository before opening broad workspace state.",
+        "The task shape, active planning state, or applicable package skill is not yet known."
+      ],
+      "proportionality": {
+        "no_artifact_by_default": true,
+        "artifact_creation_allowed_when": [
+          "Compact routing reports lane, epic, high-assurance, or scope-widened work that requires durable planning ownership.",
+          "The task cannot be completed honestly without preserving continuation state."
+        ],
+        "ordinary_work_rule": "Direct low-risk work may proceed from compact startup guidance and local proof without creating planning, review, or memory artifacts."
+      },
+      "preferred_cli_commands": [
+        {
+          "id": "startup-context",
+          "command": "start",
+          "preferred_invocation": "uv run agentic-workspace start --task \"<task>\" --format json",
+          "purpose": "Resolve work shape, active state, skill routing, next-safe-action, proof hints, and proportional read budget before raw workspace reads.",
+          "mutates_state": false,
+          "key_output_fields": [
+            "immediate_next_allowed_action",
+            "next_safe_action",
+            "planning_safety_gate",
+            "skill_routing.preferred_routes",
+            "detail_commands"
+          ],
+          "decisions_answered": [
+            "whether direct implementation is allowed",
+            "which package skill or fallback path should guide the next action",
+            "which exact detail command should be used before opening larger surfaces"
+          ],
+          "failure_fallback": "Read the installed workflow instructions only far enough to identify the effective CLI invocation and conservative no-CLI startup path."
+        }
+      ],
+      "interpreted_output_fields": [
+        {
+          "path": "immediate_next_allowed_action",
+          "decision": "The next allowed action before any broad file reads."
+        },
+        {
+          "path": "skill_routing.preferred_routes",
+          "decision": "The skill guidance to load when task-specific instructions are useful.",
+          "fallback_when_missing": "Use the workflow prose as a conservative fallback and avoid durable artifact creation unless the work shape requires it."
+        },
+        {
+          "path": "next_safe_action.implementation_allowed",
+          "decision": "Whether implementation can start without additional planning or proof setup.",
+          "fallback_when_missing": "Treat implementation as provisional and inspect the compact planning safety gate before editing."
+        }
+      ],
+      "owned_surfaces": [
+        {
+          "path": ".agentic-workspace/config.toml",
+          "authority": "read-only-router",
+          "edit_rule": "Read effective CLI invocation and workflow policy; do not mutate during startup routing."
+        },
+        {
+          "path": ".agentic-workspace/WORKFLOW.md",
+          "authority": "package-payload",
+          "edit_rule": "Use only as fallback when the CLI is unavailable."
+        }
+      ],
+      "allowed_actions": [
+        "Run the configured startup CLI command before broad workspace inspection.",
+        "Use selector or detail commands when compact output identifies the needed field.",
+        "Proceed with direct work when compact routing permits it and proof is obvious."
+      ],
+      "forbidden_actions": [
+        "Open raw planning or memory state before compact startup routing points there.",
+        "Create planning, review, memory, or handoff artifacts for routine direct work.",
+        "Treat generated skill or adapter output as the source of product behavior."
+      ],
+      "fallback_when_cli_unavailable": [
+        "Read `.agentic-workspace/WORKFLOW.md` before other workspace files.",
+        "Use the smallest safe manual path and preserve no-artifact-by-default behavior.",
+        "Escalate to planning only when the work shape, risk, or continuation need requires durable state."
+      ],
+      "proof_obligations": [
+        "Use the proof command or compact proof hints before claiming completion.",
+        "For direct work, name the narrow validation or inspection that proves the change."
+      ],
+      "closeout_obligations": [
+        "Report delivered behavior, proof, and any deferred scope.",
+        "Do not claim completion when compact routing reports closure blockers or missing continuation ownership."
+      ],
+      "generated_target_requirements": {
+        "status": "contract-only",
+        "must_preserve": [
+          "CLI-first startup routing when available.",
+          "Conservative no-CLI fallback.",
+          "No-artifact-by-default behavior for ordinary direct work.",
+          "Forbidden raw planning/memory reads before compact routing."
+        ],
+        "deferred_until": "A renderer slice is intentionally selected after the SkillSpec contract proves sufficient."
+      }
+    },
+    {
+      "id": "planning-autopilot",
+      "title": "Planning Autopilot Skill",
+      "status": "active",
+      "applies_when": [
+        "Compact startup or summary output reports active planning, lane/epic work, scope growth, or a planning mutation next action.",
+        "An agent needs to create, promote, update, or close durable planning state."
+      ],
+      "proportionality": {
+        "no_artifact_by_default": true,
+        "artifact_creation_allowed_when": [
+          "The CLI reports planning-backed work, active execution pressure, or a required planning safety gate.",
+          "The work has grown beyond a direct slice and needs durable continuation ownership."
+        ],
+        "ordinary_work_rule": "Use planning only when the router requires it; do not route routine direct edits into reviews or execplans."
+      },
+      "preferred_cli_commands": [
+        {
+          "id": "planning-summary",
+          "command": "summary",
+          "preferred_invocation": "uv run agentic-workspace summary --format json",
+          "purpose": "Inspect active planning state, active execplans, planning surface health, and recommended next action without opening raw state first.",
+          "mutates_state": false,
+          "key_output_fields": [
+            "todo.active_items",
+            "execplans.active_execplans",
+            "planning_surface_health.recommended_next_action",
+            "execution_readiness"
+          ],
+          "decisions_answered": [
+            "whether an active planning item already owns the work",
+            "whether raw planning detail needs to be opened",
+            "which planning mutation or validation should happen next"
+          ],
+          "failure_fallback": "Read the planning workflow guidance first, then inspect only the named active state surface needed to continue safely."
+        },
+        {
+          "id": "planning-promote-to-plan",
+          "command": "planning promote-to-plan",
+          "preferred_invocation": "uv run agentic-workspace planning promote-to-plan --item-id <id> --target . --format json",
+          "purpose": "Move an accepted planning candidate into an execplan while preserving planning provenance.",
+          "mutates_state": true,
+          "key_output_fields": [
+            "actions",
+            "warnings"
+          ],
+          "decisions_answered": [
+            "which planning files changed",
+            "whether the mutation succeeded cleanly"
+          ],
+          "failure_fallback": "Do not hand-edit state; use planning recovery or preflight guidance before attempting manual repair."
+        },
+        {
+          "id": "planning-delegation-decision",
+          "command": "planning delegation-decision",
+          "preferred_invocation": "uv run agentic-workspace planning delegation-decision --route keep-local --skipped-reason <reason> --target . --format json",
+          "purpose": "Record why a lane, high-assurance, or decomposed slice is being kept local or delegated.",
+          "mutates_state": true,
+          "key_output_fields": [
+            "actions",
+            "warnings"
+          ],
+          "decisions_answered": [
+            "whether high-assurance planning has explicit execution ownership",
+            "whether implementation can proceed without hiding delegation obligations"
+          ],
+          "failure_fallback": "Pause implementation and inspect preflight or planning doctor output rather than bypassing the planning gate."
+        }
+      ],
+      "interpreted_output_fields": [
+        {
+          "path": "todo.active_items",
+          "decision": "The active planning item that owns the current work."
+        },
+        {
+          "path": "execplans.active_execplans",
+          "decision": "The checked-in execplan to inspect when implementation needs plan detail."
+        },
+        {
+          "path": "planning_surface_health.recommended_next_action",
+          "decision": "The next state-safe planning action.",
+          "fallback_when_missing": "Run planning doctor or preflight before mutating state."
+        }
+      ],
+      "owned_surfaces": [
+        {
+          "path": ".agentic-workspace/planning/state.toml",
+          "authority": "cli-mutated-state",
+          "edit_rule": "Mutate through planning CLI commands when available."
+        },
+        {
+          "path": ".agentic-workspace/planning/execplans/",
+          "authority": "cli-mutated-state",
+          "edit_rule": "Create, promote, update, archive, or close through planning CLI commands when available."
+        },
+        {
+          "path": ".agentic-workspace/planning/mutation-provenance.json",
+          "authority": "cli-mutated-state",
+          "edit_rule": "Do not hand-author provenance."
+        }
+      ],
+      "allowed_actions": [
+        "Use summary, planning mutation commands, and proof commands as the primary state interface.",
+        "Open the active execplan only after compact output points there.",
+        "Record keep-local or delegation decisions for lane/high-assurance work before implementation."
+      ],
+      "forbidden_actions": [
+        "Hand-edit planning state when a planning CLI mutation command is available.",
+        "Create review artifacts as issue intake or active planning substitutes.",
+        "Close planning work without proof, continuation, and acceptance reconciliation."
+      ],
+      "fallback_when_cli_unavailable": [
+        "Read planning workflow guidance before raw state edits.",
+        "Prefer recovery/preflight instructions over ad hoc state repair.",
+        "Leave a minimal continuation note only when durable state cannot be safely mutated through the package."
+      ],
+      "proof_obligations": [
+        "Run changed-path proof selected by `agentic-workspace implement` or `agentic-workspace proof`.",
+        "Verify planning surface health before closeout."
+      ],
+      "closeout_obligations": [
+        "Archive or close only the planning item that the slice actually completed.",
+        "Keep codegen or generated target work deferred unless the selected slice explicitly owns it."
+      ],
+      "generated_target_requirements": {
+        "status": "contract-only",
+        "must_preserve": [
+          "Planning CLI commands own state mutation when available.",
+          "Issue intake belongs in planning state, not review artifacts.",
+          "Routine work does not create planning artifacts by default.",
+          "Codegen and target renderer work remain separately selectable follow-ons."
+        ],
+        "deferred_until": "Generated skill rendering is selected as its own codegen slice."
+      }
+    }
+  ]
+}

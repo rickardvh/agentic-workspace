@@ -110,6 +110,33 @@ def test_contract_inventory_declares_owner_choice_model() -> None:
     assert concern_classes["review_evidence"]["authority_class"] == "historical-evidence"
 
 
+def test_skill_specs_contract_models_startup_and_planning_behavior() -> None:
+    manifest = contract_tooling.skill_specs_manifest()
+    schema = contract_tooling.contract_schema("skill_spec.schema.json")
+
+    assert list(Draft202012Validator(schema).iter_errors(manifest)) == []
+    assert manifest["rule"].startswith("Skills steer agent behavior")
+
+    specs = {entry["id"]: entry for entry in manifest["specs"]}
+    assert {"startup-router", "planning-autopilot"} <= specs.keys()
+
+    startup = specs["startup-router"]
+    startup_command = startup["preferred_cli_commands"][0]
+    assert startup["proportionality"]["no_artifact_by_default"] is True
+    assert startup_command["command"] == "start"
+    assert startup_command["mutates_state"] is False
+    assert "skill_routing.preferred_routes" in startup_command["key_output_fields"]
+    assert any("Create planning" in action or "planning" in action for action in startup["forbidden_actions"])
+
+    planning = specs["planning-autopilot"]
+    planning_commands = {command["id"]: command for command in planning["preferred_cli_commands"]}
+    assert planning["proportionality"]["ordinary_work_rule"].startswith("Use planning only when the router requires it")
+    assert planning_commands["planning-promote-to-plan"]["mutates_state"] is True
+    assert planning_commands["planning-delegation-decision"]["mutates_state"] is True
+    assert any("Hand-edit planning state" in action for action in planning["forbidden_actions"])
+    assert planning["generated_target_requirements"]["status"] == "contract-only"
+
+
 def test_agent_feedback_schema_validates_normalized_feedback_artifact() -> None:
     schema = contract_tooling.contract_schema("agent_feedback.schema.json")
     metadata = schema["x-agentic-workspace"]

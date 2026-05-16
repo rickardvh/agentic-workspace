@@ -25,6 +25,7 @@ Do not hand-edit generated pages. Update the source schema and regenerate the re
 
 - [CLI commands](cli-commands.md): declared root CLI command surface.
 - [CLI option groups](cli-option-groups.md): shared option group contract.
+- [SkillSpec contract](skill-spec.md): package-owned skill semantics for CLI-assisted agent behavior.
 - [Module registry](module-registry.md): module profiles, components, and package footprint metadata.
 - [Module capability](module-capability.md): module capability descriptor shape.
 - [Lifecycle generation readiness](lifecycle-generation-readiness.md): lifecycle generation readiness contract.
