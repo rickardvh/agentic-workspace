@@ -306,10 +306,6 @@
       "portability": "domain-runtime"
     },
     {
-      "id": "memory.promotion_report.load",
-      "summary": "Load package-local memory promotion candidate report state."
-    },
-    {
       "id": "memory.prompt.render",
       "summary": "Render package-local Memory bootstrap prompt guidance.",
       "kind": "memory-runtime",

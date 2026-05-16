@@ -7468,12 +7468,6 @@
               "import_module": "repo_memory_bootstrap.runtime_primitives"
             },
             {
-              "primitive": "memory.promotion_report.load",
-              "handler": "runtime_handler",
-              "function": "_load_memory_promotion_report",
-              "import_module": "repo_memory_bootstrap.runtime_primitives"
-            },
-            {
               "primitive": "memory.prompt.render",
               "handler": "runtime_handler",
               "function": "_load_memory_prompt",
@@ -9878,7 +9872,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "memory.promotion_report.load",
+              "python.function.call",
               "output.emit"
             ]
           },

@@ -55,8 +55,8 @@
   "steps": [
     {
       "id": "load_promotion_report",
-      "uses": "memory.promotion_report.load",
-      "description": "Load package-local memory promotion candidate state."
+      "uses": "python.function.call",
+      "description": "Call the memory package promotion report domain function."
     },
     {
       "id": "emit_output",
@@ -74,13 +74,27 @@
   "migration_status": "runtime-consumed",
   "ir_plan": {
     "status": "representative",
-    "summary": "Memory promotion-report executes generated operation IR through codegen-owned primitive dataflow while memory runtime supplies promotion candidate payload sources and text/json compatibility formatting.",
+    "summary": "Memory promotion-report executes generated operation IR through codegen-owned primitive dataflow while the memory package supplies the promotion candidate domain report function and text/json compatibility formatting.",
     "steps": [
       {
         "id": "load_report",
-        "uses": "memory.promotion_report.load",
-        "description": "Load the memory promotion report payload for the requested target.",
-        "arguments": {},
+        "uses": "python.function.call",
+        "description": "Call the memory promotion report domain function for the requested target and filters.",
+        "arguments": {
+          "import_module": "repo_memory_bootstrap.installer",
+          "function": "promotion_report",
+          "kwargs": {
+            "target": {
+              "value": "target"
+            },
+            "notes": {
+              "value": "notes"
+            },
+            "mode": {
+              "value": "mode"
+            }
+          }
+        },
         "outputs": [
           "result"
         ],

@@ -2387,7 +2387,7 @@ export const generatedCommandPackage = {
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "memory.promotion_report.load",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -2638,12 +2638,6 @@ export const generatedCommandPackage = {
           "handler": "runtime_handler",
           "import_module": "repo_memory_bootstrap.runtime_primitives",
           "primitive": "memory.current.load"
-        },
-        {
-          "function": "_load_memory_promotion_report",
-          "handler": "runtime_handler",
-          "import_module": "repo_memory_bootstrap.runtime_primitives",
-          "primitive": "memory.promotion_report.load"
         },
         {
           "function": "_load_memory_prompt",

@@ -20,7 +20,6 @@ from repo_memory_bootstrap.installer import (
     format_actions,
     format_result_json,
     memory_report,
-    promotion_report,
     report_routes,
     resolve_target_root,
     resolve_upgrade_source,
@@ -277,12 +276,6 @@ def _load_memory_current(values: dict[str, Any], _arguments: dict[str, Any], _co
     if str(values.get("current_command") or "show") == "check":
         return check_current_memory(target=values.get("target"))
     return show_current_memory(target=values.get("target"))
-
-
-def _load_memory_promotion_report(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> Any:
-    notes_value = values.get("notes")
-    notes = [str(note) for note in notes_value] if isinstance(notes_value, list) else None
-    return promotion_report(target=values.get("target"), notes=notes, mode=str(values.get("mode") or "all"))
 
 
 def _load_memory_prompt(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> str:

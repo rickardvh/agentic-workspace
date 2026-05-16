@@ -1632,6 +1632,8 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
                 errors.append(f"generated memory runtime facade must build {function_name} JSON fast path through generated TOML-table primitives")
             if f"from repo_memory_bootstrap.runtime_primitives import {function_name} as source_function" not in function_text:
                 errors.append(f"generated memory runtime facade must retain {function_name} source fallback for non-fast-path behavior")
+        if "_load_memory_promotion_report" in memory_runtime_text:
+            errors.append("generated memory runtime facade must not keep the retired promotion-report runtime delegate")
     if "repo_memory_bootstrap._installer_paths" in memory_operation_executor_text:
         errors.append("memory operation IR executor must resolve package resources from generated target-local copies")
     if "_resolve_memory_target_root" in memory_operation_executor_text:
@@ -1641,6 +1643,8 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
     for direct_operation_id in ("memory.list-files.report", "memory.list-skills.report"):
         if direct_operation_id in memory_operation_executor_text:
             errors.append(f"{direct_operation_id} must be executed by its direct generated command module, not memory run_operation_ir")
+    if "_handle_memory_promotion_report_load" in memory_operation_executor_text:
+        errors.append("memory promotion-report must execute through declared python.function.call, not a runtime facade handler")
     if "_assemble_memory_operation_payload" in memory_operation_executor_text:
         errors.append("memory operation IR executor must not keep the dead payload.assemble runtime bridge for direct commands")
     for marker in (

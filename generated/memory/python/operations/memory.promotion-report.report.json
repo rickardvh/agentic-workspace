@@ -42,14 +42,28 @@
     "status": "representative",
     "steps": [
       {
-        "arguments": {},
-        "description": "Load the memory promotion report payload for the requested target.",
+        "arguments": {
+          "function": "promotion_report",
+          "import_module": "repo_memory_bootstrap.installer",
+          "kwargs": {
+            "mode": {
+              "value": "mode"
+            },
+            "notes": {
+              "value": "notes"
+            },
+            "target": {
+              "value": "target"
+            }
+          }
+        },
+        "description": "Call the memory promotion report domain function for the requested target and filters.",
         "id": "load_report",
         "on_error": "fail",
         "outputs": [
           "result"
         ],
-        "uses": "memory.promotion_report.load"
+        "uses": "python.function.call"
       },
       {
         "arguments": {},
@@ -62,7 +76,7 @@
         "uses": "output.emit"
       }
     ],
-    "summary": "Memory promotion-report executes generated operation IR through codegen-owned primitive dataflow while memory runtime supplies promotion candidate payload sources and text/json compatibility formatting."
+    "summary": "Memory promotion-report executes generated operation IR through codegen-owned primitive dataflow while the memory package supplies the promotion candidate domain report function and text/json compatibility formatting."
   },
   "locality": {
     "network": "forbidden",
@@ -86,9 +100,9 @@
   "schema_version": "agentic-workspace/operation/v1",
   "steps": [
     {
-      "description": "Load package-local memory promotion candidate state.",
+      "description": "Call the memory package promotion report domain function.",
       "id": "load_promotion_report",
-      "uses": "memory.promotion_report.load"
+      "uses": "python.function.call"
     },
     {
       "description": "Emit promotion report in the requested format.",

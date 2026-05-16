@@ -435,7 +435,8 @@
                           "enum": [
                             "target_root_resolve",
                             "sectioned_payload_select",
-                            "json_output_with_source_fallback"
+                            "json_output_with_source_fallback",
+                            "toml_table_lifecycle_json_with_source_fallback"
                           ]
                         },
                         "payload_value": {
@@ -452,6 +453,45 @@
                             "type": "string",
                             "minLength": 1
                           }
+                        },
+                        "relative_path": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "table_name": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "relevance_field": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "required_value": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "optional_value": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "routing_only_field": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "dry_run": {
+                          "type": "boolean"
+                        },
+                        "detail_command": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "unhealthy_detail": {
+                          "type": "string",
+                          "minLength": 1
                         }
                       },
                       "additionalProperties": false
