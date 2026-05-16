@@ -2543,7 +2543,6 @@ export const generatedCommandPackage = {
         "planning.handoff.report",
         "planning.init.lifecycle",
         "planning.install.lifecycle",
-        "planning.list-files.report",
         "planning.new-plan.lifecycle",
         "planning.promote-to-plan.lifecycle",
         "planning.prompt.render",

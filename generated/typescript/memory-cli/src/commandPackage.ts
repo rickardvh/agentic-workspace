@@ -2624,12 +2624,6 @@ export const generatedCommandPackage = {
           "primitive": "memory.route_report.load"
         },
         {
-          "function": "_assemble_memory_operation_payload",
-          "handler": "runtime_handler",
-          "import_module": "repo_memory_bootstrap.runtime_primitives",
-          "primitive": "payload.assemble"
-        },
-        {
           "function": "_emit_memory_operation_output",
           "handler": "runtime_handler",
           "import_module": "repo_memory_bootstrap.runtime_primitives",
@@ -2841,8 +2835,6 @@ export const generatedCommandPackage = {
         "memory.capture-note.report",
         "memory.create-note.apply",
         "memory.current.report",
-        "memory.list-files.report",
-        "memory.list-skills.report",
         "memory.promotion-report.report",
         "memory.prompt.render",
         "memory.report.report",

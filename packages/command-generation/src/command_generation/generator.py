@@ -210,6 +210,7 @@ def _python_commands_package_module(
 ) -> str:
     operation_executor = _operation_executor_binding(package)
     operation_ids = {str(operation_id) for operation_id in operation_executor.get("supported_operation_ids", [])}
+    operation_ids.update(_direct_generated_operation_ids(package))
     direct_handlers = {
         str(handler["operation_id"]): handler for handler in binding.get("runtime_module_handlers", []) if isinstance(handler, dict)
     }
@@ -313,6 +314,14 @@ def _is_memory_list_files_direct_projection(package: dict[str, Any], operation_i
 
 def _is_planning_list_files_direct_projection(package: dict[str, Any], operation_id: str) -> bool:
     return package.get("id") == "planning-bootstrap" and operation_id == "planning.list-files.report"
+
+
+def _direct_generated_operation_ids(package: dict[str, Any]) -> set[str]:
+    if package.get("id") == "memory-bootstrap":
+        return {"memory.list-files.report", "memory.list-skills.report"}
+    if package.get("id") == "planning-bootstrap":
+        return {"planning.list-files.report"}
+    return set()
 
 
 def _python_memory_direct_projection_header(
@@ -607,6 +616,7 @@ def _python_command_module_outputs(
 ) -> list[GeneratedOutput]:
     operation_executor = _operation_executor_binding(package)
     operation_ids = {str(operation_id) for operation_id in operation_executor.get("supported_operation_ids", [])}
+    operation_ids.update(_direct_generated_operation_ids(package))
     operation_ids.update(
         str(handler["operation_id"]) for handler in binding.get("runtime_module_handlers", []) if isinstance(handler, dict)
     )

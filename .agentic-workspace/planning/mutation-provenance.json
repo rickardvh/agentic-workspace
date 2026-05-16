@@ -2,54 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "7785acbc297c8e7ed5f34a2ba6ae26fcf082b8197dddd56884413d43723196bc",
-      "command": "agentic-planning promote-to-plan",
-      "reason": "promote decomposition lane python-product-runtime-source-generation",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T08:23:35+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
-      "sha256": "ee2090dfb9e3df23f27a1bbec79e4b2e6ef8ef20c8f783c2c6d9114d3db5e2bc",
-      "command": "agentic-planning promote-to-plan",
-      "reason": "promote decomposition lane python-product-runtime-source-generation",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T08:23:35+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
-      "sha256": "2fa14e50758ef487e29d8c863dbef083e29d9fcd9e8af870d12ecd779921b600",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=keep-local",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T08:24:16+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
-      "sha256": "3c6c941d85aa2a345ab4c34e0618c6c533f0dacba047823079aa00f7ed1deddb",
-      "command": "agentic-planning record-recovery",
-      "reason": "Removed promote-to-plan promoted_execplan field rejected by planning-decomposition.schema.json while continuing python-product-runtime-source-generation; tracked by #979.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-15T08:33:02+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
-      "sha256": "58b785b4450c7c57e7f595131e9474ac03a13f446780d9b0194a43344404ca47",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=delegate-exploration",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T08:45:01+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
-      "sha256": "b84c4006e4f33991169c1b2d1a88acea8b887110b0ce7d065db3bba66daa6ab3",
-      "command": "agentic-planning record-recovery",
-      "reason": "Updated active execplan closeout notes for #980 dogfooding fix while continuing #892 lane.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-15T08:53:42+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
       "sha256": "cb70f73a354fc7e4efc7c3605b828654431e8352341acf52bb34f9a740175122",
       "command": "agentic-planning record-recovery",
@@ -1600,6 +1552,54 @@
       "reason": "archive execplan python-memory-target-root-primitive",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-16T11:19:11+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-direct-operation-executor-prune.plan.json",
+      "sha256": "d0731d60f38365235c6810f3923331ba6bc95063f5821fe054c1fb29b3a8349c",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-direct-operation-executor-prune",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T11:20:08+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "278b51a070529426d7787f12258dc7757a684a6f6699999d33fb18b5f53bd692",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-direct-operation-executor-prune",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T11:20:08+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-direct-operation-executor-prune.plan.json",
+      "sha256": "01a8930850ad30d1a87d717c24b2f2d5139687fa029f2cbbf4d752ff0823a1ca",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T11:20:15+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-direct-operation-executor-prune.plan.json",
+      "sha256": "073c020c186e1889f4c23938538f79a10a2d62eb113daa239f9ed2673eadfa15",
+      "command": "agentic-planning record-recovery",
+      "reason": "Completed #892 dead operation-executor prune slice, recorded proof, stale sweep, and #1005 follow-up before CLI close-item archive.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T11:26:55+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-direct-operation-executor-prune",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T11:26:59+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/python-direct-operation-executor-prune.plan.json",
+      "sha256": "073c020c186e1889f4c23938538f79a10a2d62eb113daa239f9ed2673eadfa15",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-direct-operation-executor-prune",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T11:26:59+00:00"
     }
   ]
 }

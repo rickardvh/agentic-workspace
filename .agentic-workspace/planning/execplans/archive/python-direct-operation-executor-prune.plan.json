@@ -1,0 +1,285 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Python direct operation executor prune",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "#892 dead runtime delegate blocker",
+    "hard_constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "proof_expectations": [
+      "Fill in the narrowest command that proves the promoted work."
+    ],
+    "touched_scope": [
+      "Fill in the concrete files before implementation starts."
+    ],
+    "completion_criteria": [
+      "Python direct operation executor prune is implemented, validated, and closed out honestly."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "#892 dead runtime delegate blocker"
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "#892 dead runtime delegate blocker",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "python-direct-operation-executor-prune",
+      "status": "completed",
+      "next_step": "Continue #892 with the next live runtime delegate blocker after this slice is committed.",
+      "proof": "Generated package checks, Python conformance, Docker Python conformance, planning doctor, targeted pytest suite, and stale-reference sweep passed."
+    },
+    "scope": {
+      "touched": [
+        "Fill in the concrete files before implementation starts."
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#892 dead runtime delegate blocker",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "dead operation-executor support and payload.assemble runtime bridge for direct list commands removed",
+    "validation still needed": "none for this slice; #892 remains open for remaining live delegates",
+    "next likely slice": "continue #892 with the next live memory/planning/workspace runtime delegate"
+  },
+  "intent_interpretation": {
+    "literal request": "Python direct operation executor prune",
+    "inferred intended outcome": "#892 dead runtime delegate blocker",
+    "chosen concrete what": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Fill in the concrete write scope before implementation starts.",
+    "max changed files": "Fill in an expected upper bound before implementation starts.",
+    "required validation commands": "Fill in the narrowest command that proves the promoted work.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "#892 dead runtime delegate blocker",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "Small contract pruning slice; no code behavior should change except removing unreachable operation executor support for commands already directly generated.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-16T11:20:15+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "#892 dead runtime delegate blocker",
+      "label": "#892 dead runtime delegate blocker",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "python-direct-operation-executor-prune",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Fill in execution bounds, touched paths, and validation before implementation starts."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "Fill in the concrete files before implementation starts."
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run python scripts/generate/generate_command_packages.py --check",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+    "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
+    "uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py packages/memory/tests/test_packaging.py packages/planning/tests/test_packaging.py -q",
+    "rg -n \"payload.assemble|_assemble_memory_operation_payload|memory.list-files.report|memory.list-skills.report|planning.list-files.report\" generated/memory/python/primitives/operation_executor.py generated/planning/python/primitives/operation_executor.py"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Python direct operation executor prune is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Pruned direct generated list operations from generated operation executors while keeping their direct command modules and operation artifacts generated.",
+    "scope touched": "command package IR, command-generation renderer, generated memory/planning projections, generated proof, planning classification, and plan state",
+    "changed surfaces": "memory/planning operation executors no longer support direct list operation ids; memory executor no longer renders the dead payload.assemble runtime bridge",
+    "validations run": "generation check; generated package static proof; Python conformance; Docker Python conformance; planning doctor; targeted pytest suite; stale-reference sweep",
+    "result for continuation": "portable direct commands are routed only through direct generated command modules, reducing runtime delegate surface",
+    "next step": "commit/push this slice, then continue #892 with the next live runtime delegate blocker."
+  },
+  "finished_run_review": {
+    "review status": "pending",
+    "scope respected": "pending",
+    "proof status": "passed",
+    "intent served": "yes for this bounded blocker",
+    "config compliance": "used uv run agentic-workspace",
+    "misinterpretation risk": "low",
+    "follow-on decision": "continue #892"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "Small contract pruning slice; no code behavior should change except removing unreachable operation executor support for commands already directly generated.",
+    "expected savings": "low",
+    "actual friction": "none",
+    "proof result": "passed",
+    "quality concern": "Do not stop generating operation contracts for direct commands; only remove run_operation_ir support and dead payload.assemble runtime bridge.",
+    "decomposition adjustment": "Prune dead portable direct-command runtime delegates before migrating remaining live memory/planning delegates."
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "direct list commands are no longer supported by run_operation_ir and memory payload.assemble bridge is gone",
+    "evidence for \"proof achieved\" state": "uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py packages/memory/tests/test_packaging.py packages/planning/tests/test_packaging.py -q"
+  },
+  "intent_satisfaction": {
+    "original intent": "#892 dead runtime delegate blocker",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "generated memory/planning command registries still route direct list commands, while generated operation executors no longer advertise those operation ids or payload.assemble bridge.",
+    "unsolved intent passed to": "#892"
+  },
+  "execution_summary": {
+    "outcome delivered": "dead operation-executor support for direct generated list commands pruned",
+    "validation confirmed": "yes",
+    "follow-on routed to": "#892 continuation and #1005 dogfooding follow-up",
+    "post-work posterity capture": "#1005 filed for generated force-include classification drift",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "Continue #892 with the next live runtime delegate blocker; this dead-executor-prune slice is complete."
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "The bounded dead delegate cleanup is complete, but #892 remains open because other generated command modules still import package runtime modules.",
+    "evidence carried forward": "Generated command registries still include direct list operations; generated operation executors do not; static/conformance/Docker proof passed.",
+    "reopen trigger": "Generated operation executors regain direct list operation ids or memory payload.assemble runtime bridge."
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-16: Scaffolded by agentic-planning new-plan.",
+    "2026-05-16: Recorded delegation decision route=keep-local."
+  ]
+}

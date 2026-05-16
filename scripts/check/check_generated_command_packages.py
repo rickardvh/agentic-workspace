@@ -1616,6 +1616,11 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         errors.append("memory operation IR executor must use the generated target-root primitive instead of memory runtime")
     if "resolve_repo_target_root(values.get('target')" not in memory_operation_executor_text:
         errors.append("memory operation IR executor must render target-root resolution through target-local resource primitives")
+    for direct_operation_id in ("memory.list-files.report", "memory.list-skills.report"):
+        if direct_operation_id in memory_operation_executor_text:
+            errors.append(f"{direct_operation_id} must be executed by its direct generated command module, not memory run_operation_ir")
+    if "_assemble_memory_operation_payload" in memory_operation_executor_text:
+        errors.append("memory operation IR executor must not keep the dead payload.assemble runtime bridge for direct commands")
     for marker in (
         "generated/memory/python/_payload/AGENTS.template.md",
         "generated/memory/python/_skills/REGISTRY.json",
@@ -1644,6 +1649,8 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         errors.append("planning operation IR executor must import the codegen-owned primitive executor")
     if "run_operation_steps(" not in planning_operation_executor_text:
         errors.append("planning operation IR executor must execute operation plans through codegen-owned run_operation_steps")
+    if "planning.list-files.report" in planning_operation_executor_text:
+        errors.append("planning.list-files.report must be executed by its direct generated command module, not planning run_operation_ir")
     for module_name in ("planning_doctor_report", "planning_report_report", "planning_status_report"):
         command_text = (REPO_ROOT / "generated" / "planning" / "python" / "commands" / f"{module_name}.py").read_text(
             encoding="utf-8"

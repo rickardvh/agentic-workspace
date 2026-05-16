@@ -36,8 +36,6 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
         'memory.doctor.report',
         'memory.init.lifecycle',
         'memory.install.lifecycle',
-        'memory.list-files.report',
-        'memory.list-skills.report',
         'memory.migrate-layout.lifecycle',
         'memory.promotion-report.report',
         'memory.prompt.render',
@@ -113,7 +111,6 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'memory.prompt.render': _handle_memory_prompt_render,
                 'memory.report.load': _handle_memory_report_load,
                 'memory.route_report.load': _handle_memory_route_report_load,
-                'payload.assemble': _handle_payload_assemble,
                 'output.emit': _handle_output_emit,
             },
         )
@@ -180,12 +177,6 @@ def _handle_memory_route_report_load(values: dict[str, Any], arguments: dict[str
     from repo_memory_bootstrap.runtime_primitives import _load_memory_route_report
 
     return _load_memory_route_report(values, arguments, context)
-
-
-def _handle_payload_assemble(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from repo_memory_bootstrap.runtime_primitives import _assemble_memory_operation_payload
-
-    return _assemble_memory_operation_payload(values, arguments, context)
 
 
 def _handle_output_emit(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
