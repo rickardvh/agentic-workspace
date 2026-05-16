@@ -1610,6 +1610,11 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         errors.append("memory operation IR executor must import the codegen-owned primitive executor")
     if "run_operation_steps(" not in memory_operation_executor_text:
         errors.append("memory operation IR executor must execute operation plans through codegen-owned run_operation_steps")
+    if "from repo_memory_bootstrap.runtime_primitives import" in memory_operation_executor_text:
+        errors.append("memory operation IR executor must route live runtime delegates through generated memory_runtime facade")
+    memory_runtime_facade = REPO_ROOT / "generated" / "memory" / "python" / "primitives" / "memory_runtime.py"
+    if not memory_runtime_facade.is_file():
+        errors.append("generated memory runtime facade is missing")
     if "repo_memory_bootstrap._installer_paths" in memory_operation_executor_text:
         errors.append("memory operation IR executor must resolve package resources from generated target-local copies")
     if "_resolve_memory_target_root" in memory_operation_executor_text:

@@ -1146,6 +1146,7 @@ def _python_local_runtime_binding_module(
                 "    return source_function(*args, **kwargs)\n"
             )
     helper_block = _python_local_runtime_helper_block() + "\n\n" if overrides else ""
+    helper_imports = "import copy\nimport json\nfrom pathlib import Path\n" if overrides else ""
     return (
         '"""Generated runtime binding facade.\n\n'
         f"Source: {source_path}\n"
@@ -1153,9 +1154,7 @@ def _python_local_runtime_binding_module(
         f"Regenerate with: {regenerate_command}\n"
         '"""\n\n'
         "from __future__ import annotations\n\n"
-        "import copy\n"
-        "import json\n"
-        "from pathlib import Path\n"
+        f"{helper_imports}"
         "from typing import Any\n\n"
         "# DO NOT EDIT DIRECTLY.\n"
         "# This generated-local seam makes remaining source-runtime delegates explicit per function.\n"

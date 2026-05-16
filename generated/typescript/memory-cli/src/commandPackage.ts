@@ -2557,6 +2557,12 @@ export const generatedCommandPackage = {
   "program": "agentic-memory",
   "python_runtime_binding": {
     "entrypoint": "agentic-memory",
+    "local_runtime_bindings": [
+      {
+        "module_file": "primitives.memory_runtime",
+        "source_import_module": "repo_memory_bootstrap.runtime_primitives"
+      }
+    ],
     "operation_executor": {
       "context_roots": [
         {

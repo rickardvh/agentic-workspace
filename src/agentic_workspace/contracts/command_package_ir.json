@@ -7159,6 +7159,12 @@
             "required_marker": "REGISTRY.json"
           }
         ],
+        "local_runtime_bindings": [
+          {
+            "source_import_module": "repo_memory_bootstrap.runtime_primitives",
+            "module_file": "primitives.memory_runtime"
+          }
+        ],
         "operation_executor": {
           "module_file": "primitives.operation_executor",
           "supported_operation_ids": [
