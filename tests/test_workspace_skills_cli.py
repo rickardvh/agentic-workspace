@@ -19,6 +19,8 @@ def test_skills_command_lists_registered_workspace_skills(tmp_path: Path, capsys
     assert "workspace-startup" in skill_ids
     assert "workspace-setup-jumpstart" in skill_ids
     assert "workspace-proof-selection" in skill_ids
+    assert "workspace-transition-gates" in skill_ids
+    assert "workspace-operating-loop" in skill_ids
     assert "planning-autopilot" in skill_ids
     assert "memory-router" in skill_ids
     assert "planning-reporting" in skill_ids
@@ -387,6 +389,8 @@ def test_skills_command_recommends_high_risk_workflow_decision_skills(tmp_path: 
         ("high assurance planning lifecycle preserve intent satisfaction across a whole epic", "planning-high-assurance-lifecycle"),
         ("verify parent intent and negative invariants before completion claim", "planning-intent-verification"),
         ("select proof before completion claim allowed after passed with warning validation", "workspace-proof-selection"),
+        ("apply SkillSpec-backed transition gate with preferred CLI forbidden actions and no-CLI fallback", "workspace-transition-gates"),
+        ("use module slot contract for planning memory workspace operating loop without creating an artifact", "workspace-operating-loop"),
         ("closeout trust and residue distillation after implementation", "planning-closeout-trust"),
     ]
     for task, expected in cases:

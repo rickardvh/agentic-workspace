@@ -32,7 +32,7 @@
     "hard_constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
     "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
     "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
-    "next_action": "Implement SkillSpec-backed transition gates and the operating-loop/module-slot contract for #985/#986.",
+    "next_action": "Prepare final lane validation, archive closeout, and create the PR linked to #974, #976, #981, #983, #984, #985, #986, and #988.",
     "proof_expectations": [
       "uv run pytest tests/test_workspace_start_preflight_cli.py -q",
       "uv run pytest packages/planning/tests/test_skills_catalog.py -q",
@@ -44,7 +44,8 @@
       "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
       "uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py",
       "make lint-workspace",
-      "make test-workspace"
+      "make test-workspace",
+      "uv run pytest tests/test_workspace_skills_cli.py::test_skills_command_lists_registered_workspace_skills tests/test_workspace_skills_cli.py::test_skills_command_recommends_high_risk_workflow_decision_skills tests/test_workspace_doctor_status_cli.py::test_doctor_json_exposes_standardised_summary_fields tests/test_workspace_packaging.py::test_workspace_surface_manifest_payload_entries_exist_in_source_payload -q"
     ],
     "touched_scope": [
       "src/agentic_workspace/workspace_runtime_primitives.py",
@@ -78,13 +79,17 @@
       "generated/memory/python/_payload/.agentic-workspace/memory/skills/memory-consultation-and-residue/SKILL.md",
       "generated/memory/python/_payload/.agentic-workspace/memory/skills/memory-consultation-and-residue/agents/openai.yaml",
       "tests/test_workspace_doctor_status_cli.py",
+      ".agentic-workspace/skills/workspace-transition-gates/SKILL.md",
+      ".agentic-workspace/skills/workspace-operating-loop/SKILL.md",
+      "src/agentic_workspace/_payload/.agentic-workspace/skills/workspace-transition-gates/SKILL.md",
+      "src/agentic_workspace/_payload/.agentic-workspace/skills/workspace-operating-loop/SKILL.md",
       "tests/test_workspace_skills_cli.py"
     ],
     "completion_criteria": [
       "Intent verification, Memory consultation, proof selection, SkillSpec gates, operating-loop slots, and next-safe-action packets reduce live context by answering what to read, what to skip, what proof is required, and whether an artifact is warranted."
     ],
     "continuation_owner": "none",
-    "closeout_decision": "pending"
+    "closeout_decision": "ready-for-closeout-after-final-validation"
   },
   "goal": [
     "Medium-priority planning workflow issues are accepted but should remain behind immediate trust and recoverability failures; when promoted, success should be measured by fewer raw-file reads and fewer human corrections, not by adding more workflow prose."
@@ -102,8 +107,8 @@
     "execution": {
       "milestone": "github-planning-workflow-observability-p2",
       "status": "in-progress",
-      "next_step": "Implement SkillSpec-backed transition gates and the operating-loop/module-slot contract for #985/#986.",
-      "proof": "uv run pytest tests/test_workspace_skills_cli.py -q; uv run pytest tests/test_workspace_doctor_status_cli.py::test_doctor_json_exposes_standardised_summary_fields tests/test_workspace_packaging.py::test_workspace_artifacts_match_checked_in_payload_inventory -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make lint-workspace; make test-workspace"
+      "next_step": "Prepare final lane validation, archive closeout, and create the PR linked to #974, #976, #981, #983, #984, #985, #986, and #988.",
+      "proof": "uv run pytest tests/test_workspace_skills_cli.py::test_skills_command_lists_registered_workspace_skills tests/test_workspace_skills_cli.py::test_skills_command_recommends_high_risk_workflow_decision_skills tests/test_workspace_doctor_status_cli.py::test_doctor_json_exposes_standardised_summary_fields tests/test_workspace_packaging.py::test_workspace_surface_manifest_payload_entries_exist_in_source_payload -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make lint-workspace; make test-workspace"
     },
     "scope": {
       "touched": [
@@ -138,6 +143,10 @@
         "generated/memory/python/_payload/.agentic-workspace/memory/skills/memory-consultation-and-residue/SKILL.md",
         "generated/memory/python/_payload/.agentic-workspace/memory/skills/memory-consultation-and-residue/agents/openai.yaml",
         "tests/test_workspace_doctor_status_cli.py",
+        ".agentic-workspace/skills/workspace-transition-gates/SKILL.md",
+        ".agentic-workspace/skills/workspace-operating-loop/SKILL.md",
+        "src/agentic_workspace/_payload/.agentic-workspace/skills/workspace-transition-gates/SKILL.md",
+        "src/agentic_workspace/_payload/.agentic-workspace/skills/workspace-operating-loop/SKILL.md",
         "tests/test_workspace_skills_cli.py"
       ],
       "invariants": [
@@ -217,14 +226,14 @@
   "references": [],
   "active_milestone": {
     "id": "github-planning-workflow-observability-p2",
-    "status": "in-progress",
+    "status": "implementation-complete",
     "scope": "Keep this execution thread bounded to the promoted TODO item.",
     "ready": "ready",
     "blocked": "none",
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Implement SkillSpec-backed transition gates and the operating-loop/module-slot contract for #985/#986."
+    "Prepare final lane validation, archive closeout, and create the PR linked to #974, #976, #981, #983, #984, #985, #986, and #988."
   ],
   "blockers": [
     "None."
@@ -261,6 +270,10 @@
     "generated/memory/python/_payload/.agentic-workspace/memory/skills/memory-consultation-and-residue/SKILL.md",
     "generated/memory/python/_payload/.agentic-workspace/memory/skills/memory-consultation-and-residue/agents/openai.yaml",
     "tests/test_workspace_doctor_status_cli.py",
+    ".agentic-workspace/skills/workspace-transition-gates/SKILL.md",
+    ".agentic-workspace/skills/workspace-operating-loop/SKILL.md",
+    "src/agentic_workspace/_payload/.agentic-workspace/skills/workspace-transition-gates/SKILL.md",
+    "src/agentic_workspace/_payload/.agentic-workspace/skills/workspace-operating-loop/SKILL.md",
     "tests/test_workspace_skills_cli.py"
   ],
   "invariants": [
@@ -277,7 +290,8 @@
     "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
     "uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py",
     "make lint-workspace",
-    "make test-workspace"
+    "make test-workspace",
+    "uv run pytest tests/test_workspace_skills_cli.py::test_skills_command_lists_registered_workspace_skills tests/test_workspace_skills_cli.py::test_skills_command_recommends_high_risk_workflow_decision_skills tests/test_workspace_doctor_status_cli.py::test_doctor_json_exposes_standardised_summary_fields tests/test_workspace_packaging.py::test_workspace_surface_manifest_payload_entries_exist_in_source_payload -q"
   ],
   "required_tools": [
     "None."
@@ -289,12 +303,12 @@
     "run status": "not-run-yet",
     "executor": "",
     "handoff source": "agentic-planning promote-to-plan",
-    "what happened": "#988 completed: start exposes a compact next_safe_action packet. #981 completed: planning-intent-verification skill added. #983 completed: memory-consultation-and-residue skill added to installed core memory skills and package payload contract. #984 completed: workspace-proof-selection skill added to workspace skill payload and installed mirror; generated memory payload refreshed and startup_context schema updated for next_safe_action contract tooling.",
-    "scope touched": "startup packet/tests; planning intent skill catalogs; memory consultation/residue core skill payload; workspace proof-selection skill payload; generated memory payload; workspace contract schema and tests",
-    "changed surfaces": "startup routing packet projection/schema; planning, memory, and workspace skill catalogs; memory generated payload; workspace surface manifest; workspace skill/doctor/packaging tests",
-    "validations run": "uv run pytest tests/test_workspace_skills_cli.py -q; uv run pytest tests/test_workspace_doctor_status_cli.py::test_doctor_json_exposes_standardised_summary_fields tests/test_workspace_packaging.py::test_workspace_artifacts_match_checked_in_payload_inventory -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make lint-workspace; make test-workspace",
-    "result for continuation": "continue P2 with #985/#986 SkillSpec gate and operating-loop/module-slot surfaces",
-    "next step": "Implement SkillSpec-backed transition gates and the operating-loop/module-slot contract for #985/#986."
+    "what happened": "#988 completed: start exposes a compact next_safe_action packet. #981 completed: planning-intent-verification skill added. #983 completed: memory-consultation-and-residue skill added to installed core memory skills and package payload contract. #984 completed: workspace-proof-selection skill added to workspace skill payload and installed mirror; generated memory payload refreshed and startup_context schema updated for next_safe_action contract tooling. #985/#986 completed: workspace-transition-gates and workspace-operating-loop skills added to installed and payload workspace skill surfaces, with module slot contract, SkillSpec-shaped transition gates, and routing tests.",
+    "scope touched": "startup packet/tests; planning, memory, and workspace skills; workspace proof, transition gate, and operating-loop skill payload; generated memory payload; workspace contract schema/manifests and tests",
+    "changed surfaces": "workspace skill registry and payload; workspace surface manifest; skill routing tests; doctor fixture for required workspace payload files",
+    "validations run": "uv run pytest tests/test_workspace_skills_cli.py::test_skills_command_lists_registered_workspace_skills tests/test_workspace_skills_cli.py::test_skills_command_recommends_high_risk_workflow_decision_skills tests/test_workspace_doctor_status_cli.py::test_doctor_json_exposes_standardised_summary_fields tests/test_workspace_packaging.py::test_workspace_surface_manifest_payload_entries_exist_in_source_payload -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make lint-workspace; make test-workspace",
+    "result for continuation": "P2 implementation complete; run final lane validation, archive closeout, and open PR",
+    "next step": "Prepare final lane validation, archive closeout, and create the PR linked to #974, #976, #981, #983, #984, #985, #986, and #988."
   },
   "finished_run_review": {
     "review status": "slice reviewed",
@@ -315,29 +329,30 @@
     "decomposition adjustment": "none"
   },
   "proof_report": {
-    "validation proof": "uv run pytest tests/test_workspace_skills_cli.py -q; uv run pytest tests/test_workspace_doctor_status_cli.py::test_doctor_json_exposes_standardised_summary_fields tests/test_workspace_packaging.py::test_workspace_artifacts_match_checked_in_payload_inventory -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make lint-workspace; make test-workspace",
-    "proof achieved now": "#988, #981, #983, and #984 slices passed focused tests; #984 also passes contract tooling, structured inventory, workspace lint, and full workspace tests",
-    "evidence for \"proof achieved\" state": "Workspace skill CLI file: 17 passed. Doctor/packaging targeted tests: 2 passed. Contract tooling: ok. Structured inventory: passed. Ruff contracts/scripts/inventory: passed. make lint-workspace: ok. make test-workspace: ok with 819 passed, 1 skipped."
+    "validation proof": "uv run pytest tests/test_workspace_skills_cli.py::test_skills_command_lists_registered_workspace_skills tests/test_workspace_skills_cli.py::test_skills_command_recommends_high_risk_workflow_decision_skills tests/test_workspace_doctor_status_cli.py::test_doctor_json_exposes_standardised_summary_fields tests/test_workspace_packaging.py::test_workspace_surface_manifest_payload_entries_exist_in_source_payload -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make lint-workspace; make test-workspace",
+    "proof achieved now": "#988, #981, #983, #984, #985, and #986 implementation slices passed focused and workspace-level proof",
+    "evidence for \"proof achieved\" state": "Focused workspace skill/doctor/manifest tests: 4 passed. Contract tooling: ok. Structured inventory: passed. Ruff contracts/scripts/inventory: passed. make lint-workspace: ok. make test-workspace: ok with 819 passed, 1 skipped."
   },
   "intent_satisfaction": {
     "original intent": "Medium-priority planning workflow issues are accepted but should remain behind immediate trust and recoverability failures; when promoted, success should be measured by fewer raw-file reads and fewer human corrections, not by adding more workflow prose.",
     "was original intent fully satisfied?": "partial",
     "evidence of intent satisfaction": "#988 next-safe-action packet completed; #981 planning-intent-verification skill completed; #983/#984/#985/#986 remain in the active P2 lane.",
-    "unsolved intent passed to": "active P2 execplan continuation"
+    "unsolved intent passed to": "active P2 execplan continuation",
+    "status": "satisfied-after-final-validation"
   },
   "execution_summary": {
-    "outcome delivered": "#988, #981, #983, and #984 slices complete; P2 lane still in progress",
-    "validation confirmed": "startup/preflight, planning skill catalog, memory payload contract, workspace skill routing, contract tooling, structured inventory, lint, and full workspace pytest passed",
-    "follow-on routed to": "#985/#986 in this execplan",
+    "outcome delivered": "#988, #981, #983, #984, #985, and #986 slices complete; P2 lane ready for final validation and PR",
+    "validation confirmed": "focused tests, contract tooling, structured inventory, lint, and full workspace pytest passed for final #985/#986 slice",
+    "follow-on routed to": "final lane validation and PR closeout",
     "post-work posterity capture": "updated execplan and mutation provenance",
     "knowledge promoted (Memory/Docs/Config)": "none",
     "resume from": "current milestone"
   },
   "durable_residue": {
     "status": "none",
-    "learned constraint": "none yet",
+    "learned constraint": "P2 skills now encode the context-reduction rules instead of relying on review artifacts or raw planning prose.",
     "motivation worth preserving": "none yet",
-    "canonical owner now": "none",
+    "canonical owner now": "workspace, planning, and memory package-managed skill surfaces",
     "promotion trigger": "none",
     "retention after promotion": "retain"
   },
@@ -352,13 +367,13 @@
     "owner surface": ""
   },
   "closure_check": {
-    "slice status": "#988, #981, #983, and #984 complete; active milestone in progress",
-    "larger-intent status": "open",
-    "closure decision": "archive-but-keep-lane-open",
+    "slice status": "#988, #981, #983, #984, #985, and #986 complete",
+    "larger-intent status": "complete-after-final-validation",
+    "closure decision": "archive-and-close-after-final-validation",
     "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
-    "why this decision is honest": "",
-    "evidence carried forward": "start.next_safe_action carries compact action/proof/completion fields; planning-intent-verification captures parent intent and negative invariant checks; memory-consultation-and-residue captures memory consultation/residue decisions; workspace-proof-selection separates proof result from completion_claim_allowed and claim level.",
-    "reopen trigger": "If start/skill guidance diverges again from the compact next action semantics."
+    "why this decision is honest": "All referenced child issues have package-owned or installed skill/runtime surfaces with tests; parent issues #974 and #976 are satisfied by the intent and memory skill slices plus next-safe-action/proof/gate/slot support.",
+    "evidence carried forward": "start.next_safe_action carries compact action/proof/completion fields; planning-intent-verification captures parent intent and negative invariant checks; memory-consultation-and-residue captures memory consultation/residue decisions; workspace-proof-selection separates proof result from completion_claim_allowed and claim level; workspace-transition-gates and workspace-operating-loop encode SkillSpec gates and module slot ownership.",
+    "reopen trigger": "Reopen if agents still need broad raw planning/memory reads to answer next action, proof, module owner, durable residue, or artifact necessity for ordinary P2 workflow transitions."
   },
   "improvement_signal_review": {
     "status": "pending",
