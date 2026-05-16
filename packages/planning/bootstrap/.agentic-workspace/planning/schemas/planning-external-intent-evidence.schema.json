@@ -149,6 +149,12 @@
           "planning_residue_expected": {
             "type": "string"
           },
+          "negative_invariants": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "url": {
             "type": "string"
           },

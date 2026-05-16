@@ -1380,6 +1380,132 @@ def test_report_closeout_trust_surfaces_package_workflow_evidence(tmp_path: Path
     assert "lower_trust_closeout_count is 0" in terminal_action["changes_closure"]
 
 
+def test_report_closeout_trust_requires_external_negative_invariant_reconciliation(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        "schema_version = 1\n\n[assurance]\nstrict_closeout = true\n",
+    )
+    plan = target / ".agentic-workspace" / "planning" / "execplans" / "negative-invariant.plan.json"
+    plan_payload = {
+        "kind": "planning-execplan/v1",
+        "title": "Negative invariant closeout #970",
+        "active_milestone": {"id": "negative-invariant", "status": "active"},
+        "delegated_judgment": {
+            "requested outcome": "Close #970 only when external negative invariants are reconciled.",
+            "hard constraints": "Do not trust self-authored completion state alone.",
+            "agent may decide locally": "Exact closeout wording.",
+            "escalate when": "External evidence is stale or missing.",
+        },
+        "immediate_next_action": ["Use report closeout_trust before closing #970."],
+        "completion_criteria": ["#970 closeout preserves external negative invariants."],
+        "validation_commands": ["uv run agentic-workspace proof --target . --format json"],
+        "intent_continuity": {
+            "larger intended outcome": "Close #970.",
+            "this slice completes the larger intended outcome": "yes",
+            "continuation surface": "none",
+        },
+        "required_continuation": {
+            "required follow-on for the larger intended outcome": "no",
+            "owner surface": "none",
+            "activation trigger": "none",
+        },
+        "iterative_follow_through": {
+            "what this slice enabled": "package workflow evidence",
+            "intentionally deferred": "none",
+            "discovered implications": "external negative invariants must be reconciled",
+            "proof achieved now": "yes",
+            "validation still needed": "none",
+            "next likely slice": "none",
+        },
+        "context_budget": {
+            "live working set": "closeout trust",
+            "recoverable later": "external evidence",
+            "externalize before shift": "plan",
+            "pre-work config pull": "uv run agentic-workspace summary --format json",
+            "pre-work memory pull": "uv run agentic-workspace report --format json",
+            "tiny resumability note": "external negative invariant check",
+            "context-shift triggers": "closeout",
+        },
+        "execution_run": {
+            "run status": "active",
+            "executor": "test",
+            "handoff source": "uv run agentic-workspace preflight --format json",
+            "what happened": "Used agentic-workspace report --target . --format json and proof-selected validation.",
+            "scope touched": "test",
+            "changed surfaces": "test",
+            "validations run": "uv run agentic-workspace summary --format json; uv run agentic-workspace reconcile --format json",
+            "result for continuation": "close",
+            "next step": "close",
+        },
+        "proof_report": {
+            "validation proof": "uv run agentic-workspace proof passed",
+            "acceptance reconciliation": "requested #970 closeout -> delivered closeout report evidence -> proof passed",
+            "proof achieved now": "yes",
+            'evidence for "proof achieved" state': "focused report test fixture",
+        },
+        "closure_check": {
+            "slice status": "active",
+            "larger-intent status": "closed",
+            "closure decision": "archive-and-close",
+            "why this decision is honest": "The proof passed.",
+            "evidence carried forward": "report closeout_trust",
+            "reopen trigger": "external invariant mismatch",
+        },
+    }
+    _write_json(plan, plan_payload)
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        "[todo]\n"
+        "active_items = [\n"
+        "  { id = 'negative-invariant', title = 'Negative invariant', surface = '.agentic-workspace/planning/execplans/negative-invariant.plan.json' },\n"
+        "]\n"
+        "queued_items = []\n\n"
+        "[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+    _write_json(
+        target / ".agentic-workspace" / "planning" / "external-intent-evidence.json",
+        {
+            "kind": "planning-external-intent-evidence/v1",
+            "items": [
+                {
+                    "system": "github",
+                    "id": "#970",
+                    "title": "Intent closeout accepts proxy completion without negative invariants",
+                    "status": "closed",
+                    "negative_invariants": ["Do not accept proxy completion without explicit invariant reconciliation."],
+                }
+            ],
+        },
+    )
+
+    assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
+
+    closeout = json.loads(capsys.readouterr().out)["closeout_trust"]
+    assert closeout["trust"] == "lower-trust"
+    assert closeout["intent_satisfaction_lower_trust_count"] == 1
+    external_check = closeout["intent_satisfaction_check"]["external_intent_evidence"]
+    assert external_check["trust"] == "follow-up-required"
+    assert external_check["unresolved_negative_invariant_count"] == 1
+    assert external_check["negative_invariants"][0]["status"] == "unreconciled"
+
+    plan_payload["proof_report"]["acceptance reconciliation"] += (
+        " Negative invariant: Do not accept proxy completion without explicit invariant reconciliation. Status: satisfied."
+    )
+    _write_json(plan, plan_payload)
+    assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
+
+    closeout = json.loads(capsys.readouterr().out)["closeout_trust"]
+    assert closeout["trust"] == "normal"
+    external_check = closeout["intent_satisfaction_check"]["external_intent_evidence"]
+    assert external_check["trust"] == "normal"
+    assert external_check["negative_invariants"][0]["status"] == "satisfied"
+
+
 def test_report_closeout_trust_lowers_trust_for_open_package_owned_continuation_without_active_plan(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
@@ -1720,8 +1846,8 @@ def test_external_intent_refresh_github_writes_provider_agnostic_evidence(tmp_pa
                         "createdAt": "2026-04-01T00:00:00Z",
                         "updatedAt": "2026-04-27T00:00:00Z",
                         "closedAt": None,
-                        "body": "## Issue kind\n\nChild slice\n\n## Parent issue or lane\n\n#10\n\n## Closed lane(s) to revisit\n\n#8, #9\n",
-                        "comments": [{"body": "closeout"}],
+                        "body": "## Issue kind\n\nChild slice\n\n## Parent issue or lane\n\n#10\n\n## Closed lane(s) to revisit\n\n#8, #9\n\n## Negative invariants\n\n- Do not accept proxy completion.\n",
+                        "comments": [{"body": "Must not: discard explicit invariant follow-up."}],
                     },
                     {
                         "number": 2,
@@ -1780,6 +1906,10 @@ def test_external_intent_refresh_github_writes_provider_agnostic_evidence(tmp_pa
     assert refreshed["items"][0]["kind"] == "slice"
     assert refreshed["items"][0]["parent_id"] == "#10"
     assert refreshed["items"][0]["reopens"] == ["#8", "#9"]
+    assert refreshed["items"][0]["negative_invariants"] == [
+        "Do not accept proxy completion.",
+        "discard explicit invariant follow-up.",
+    ]
     assert refreshed["items"][0]["labels"] == ["planning"]
     assert refreshed["items"][1]["status"] == "closed"
 

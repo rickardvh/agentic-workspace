@@ -1372,6 +1372,118 @@ queued_items = []
     assert recorded["status"] == "satisfied"
 
 
+def test_implement_blocks_stale_parent_decomposition_for_active_epic_plan(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "safety-slice", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/safety-slice.plan.json", why_now = "prove parent decomposition gate." },
+]
+queued_items = []
+""",
+    )
+    _write(
+        target / ".agentic-workspace/planning/execplans/safety-slice.plan.json",
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "id": "safety-slice",
+                "status": "in-progress",
+                "active_milestone": {"id": "safety-slice", "status": "in-progress"},
+                "post_decomposition_delegation": {"status": "recorded", "route chosen": "keep-local"},
+            }
+        ),
+    )
+    decomposition_path = target / ".agentic-workspace/planning/decompositions/dogfood.decomposition.json"
+    _write(
+        decomposition_path,
+        json.dumps(
+            {
+                "kind": "planning-decomposition/v1",
+                "title": "Dogfood planning safety",
+                "status": "ready-for-lane-promotion",
+                "larger_intended_outcome": "Prevent stale epic decomposition from becoming invisible.",
+                "non_goals": [],
+                "candidate_lanes": [
+                    {
+                        "id": "safety-slice",
+                        "title": "Safety slice",
+                        "readiness": "ready",
+                        "outcome": "Implement the planning safety gate.",
+                        "owner_surface": ".agentic-workspace/planning/execplans/safety-slice.plan.json",
+                        "proof": "Focused workspace tests pass.",
+                        "depends_on": [],
+                        "parallel_with": [],
+                    }
+                ],
+                "dependency_assumptions": [],
+                "parallelization_assumptions": [],
+                "proof_expectations": ["Focused workspace tests pass."],
+                "promotion_rule": "Promote ready lanes only.",
+                "references": [],
+                "notes": "",
+            },
+            indent=2,
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(target),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "--task",
+                "Continue active epic-backed safety-slice implementation",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    gate = payload["planning_safety_gate"]
+    assert gate["status"] == "blocked"
+    assert gate["decision"] == "parent-decomposition-decision-required"
+    assert gate["implementation_allowed"] is False
+    assert gate["active_parent_decomposition_requirement"]["decomposition"].endswith("dogfood.decomposition.json")
+    assert "skip decision" in " ".join(gate["active_parent_decomposition_requirement"]["required_before_implementation"])
+    assert payload["workflow_sufficiency"]["decision"] == "parent-decomposition-decision-required"
+
+    record = json.loads(decomposition_path.read_text(encoding="utf-8"))
+    record["candidate_lanes"][0]["readiness"] = "promoted"
+    _write(decomposition_path, json.dumps(record, indent=2))
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(target),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "--task",
+                "Continue active epic-backed safety-slice implementation",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    resolved = json.loads(capsys.readouterr().out)["planning_safety_gate"]
+    assert resolved["status"] == "satisfied"
+    assert resolved["active_parent_decomposition_requirement"]["status"] == "parent-decomposition-resolved"
+
+
 def test_planning_archive_plan_front_door_forwards_plan_positionally() -> None:
     args = argparse.Namespace(
         planning_command="archive-plan",

@@ -1,0 +1,300 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Github Planning Gates Dogfooding P1",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "lane",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "required_continuation",
+      "iterative_follow_through",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "High-priority non-codegen review and dogfooding findings should follow the P0 planning trust blockers.",
+    "hard_constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Run final P1 validation and prepare PR closeout.",
+    "proof_expectations": [
+      "uv run pytest tests/test_workspace_implement_cli.py::test_implement_command_returns_bounded_context_and_boundary_warnings -q",
+      "uv run pytest tests/test_workspace_implement_cli.py -q",
+      "uv run pytest tests/test_workspace_start_preflight_cli.py::test_implement_blocks_stale_parent_decomposition_for_active_epic_plan tests/test_workspace_start_preflight_cli.py::test_implement_requires_delegation_decision_for_active_decomposed_lane tests/test_workspace_start_preflight_cli.py::test_start_blocks_decomposed_epic_without_active_execplan -q",
+      "uv run pytest tests/test_workspace_implement_cli.py::test_implement_epic_decomposition_prefers_reusable_worker_over_manual_relay -q",
+      "uv run pytest tests/test_workspace_report_cli.py -q"
+    ],
+    "touched_scope": [
+      "tests/test_workspace_implement_cli.py",
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "tests/test_workspace_start_preflight_cli.py",
+      "tests/test_workspace_report_cli.py",
+      ".agentic-workspace/planning/schemas/planning-external-intent-evidence.schema.json",
+      "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-external-intent-evidence.schema.json"
+    ],
+    "completion_criteria": [
+      "Planning safety tests, completion gates, and epic decomposition checks stop depending on ambient or self-reinforcing state."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "High-priority non-codegen review and dogfooding findings should follow the P0 planning trust blockers."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "High-priority non-codegen review and dogfooding findings should follow the P0 planning trust blockers.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "github-planning-gates-dogfooding-p1",
+      "status": "completed",
+      "next_step": "Run final P1 validation and prepare PR closeout.",
+      "proof": "Focused #1000, #975, and #970/#971 tests passed; report CLI test file passed."
+    },
+    "scope": {
+      "touched": [
+        "tests/test_workspace_implement_cli.py",
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "tests/test_workspace_start_preflight_cli.py",
+        "tests/test_workspace_report_cli.py",
+        ".agentic-workspace/planning/schemas/planning-external-intent-evidence.schema.json",
+        "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-external-intent-evidence.schema.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "High-priority non-codegen review and dogfooding findings should follow the P0 planning trust blockers.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "#1000, #975, and #970/#971 focused proof passed",
+    "validation still needed": "repo-level make validation before PR closeout",
+    "next likely slice": "none for P1; follow CI if PR checks fail"
+  },
+  "intent_interpretation": {
+    "literal request": "Github Planning Gates Dogfooding P1",
+    "inferred intended outcome": "High-priority non-codegen review and dogfooding findings should follow the P0 planning trust blockers.",
+    "chosen concrete what": "Completed #1000, #975, #970, and #971 for the P1 planning gates lane.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Fill in the concrete write scope before implementation starts.",
+    "max changed files": "Fill in an expected upper bound before implementation starts.",
+    "required validation commands": "Fill in the narrowest command that proves the promoted work.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "P1 implementation is complete; run final validation and PR closeout.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "High-priority non-codegen review and dogfooding findings should follow the P0 planning trust blockers.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "#1000 is a narrow test-only dogfooding regression; local proof is cheaper than delegation.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-16T18:24:35+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "github-planning-gates-dogfooding-p1",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Run final P1 validation and prepare PR closeout."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "tests/test_workspace_implement_cli.py",
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "tests/test_workspace_start_preflight_cli.py",
+    "tests/test_workspace_report_cli.py",
+    ".agentic-workspace/planning/schemas/planning-external-intent-evidence.schema.json",
+    "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-external-intent-evidence.schema.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_implement_cli.py::test_implement_command_returns_bounded_context_and_boundary_warnings -q",
+    "uv run pytest tests/test_workspace_implement_cli.py -q",
+    "uv run pytest tests/test_workspace_start_preflight_cli.py::test_implement_blocks_stale_parent_decomposition_for_active_epic_plan tests/test_workspace_start_preflight_cli.py::test_implement_requires_delegation_decision_for_active_decomposed_lane tests/test_workspace_start_preflight_cli.py::test_start_blocks_decomposed_epic_without_active_execplan -q",
+    "uv run pytest tests/test_workspace_implement_cli.py::test_implement_epic_decomposition_prefers_reusable_worker_over_manual_relay -q",
+    "uv run pytest tests/test_workspace_report_cli.py -q"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Planning safety tests, completion gates, and epic decomposition checks stop depending on ambient or self-reinforcing state."
+  ],
+  "execution_run": {
+    "run status": "in-progress",
+    "executor": "Codex",
+    "handoff source": "agentic-planning promote-to-plan",
+    "what happened": "#1000 completed by making the implement CLI regression build its own temporary workspace state. #975 completed by blocking active epic-backed implementation when a parent decomposition lane still appears unresolved/stale. #970/#971 completed by requiring refreshed external issue evidence and explicit negative invariant reconciliation before closeout can be normal-trust.",
+    "scope touched": "tests/test_workspace_implement_cli.py; src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_start_preflight_cli.py; tests/test_workspace_report_cli.py; external intent evidence schemas",
+    "changed surfaces": "workspace implement CLI test coverage; planning safety gate runtime; start/preflight planning gate tests; closeout trust runtime and report tests; external intent evidence schema",
+    "validations run": "uv run pytest tests/test_workspace_implement_cli.py::test_implement_command_returns_bounded_context_and_boundary_warnings -q; uv run pytest tests/test_workspace_implement_cli.py -q; uv run pytest tests/test_workspace_start_preflight_cli.py::test_implement_blocks_stale_parent_decomposition_for_active_epic_plan tests/test_workspace_start_preflight_cli.py::test_implement_requires_delegation_decision_for_active_decomposed_lane tests/test_workspace_start_preflight_cli.py::test_start_blocks_decomposed_epic_without_active_execplan -q; uv run pytest tests/test_workspace_implement_cli.py::test_implement_epic_decomposition_prefers_reusable_worker_over_manual_relay -q; uv run pytest tests/test_workspace_report_cli.py -q",
+    "result for continuation": "P1 implementation complete; final repo validation and PR remain",
+    "next step": "Run final P1 validation and prepare PR closeout."
+  },
+  "finished_run_review": {
+    "review status": "slice reviewed",
+    "scope respected": "yes; #1000 changed one focused implement CLI test",
+    "proof status": "passed for #1000, #975, and #970/#971 focused coverage",
+    "intent served": "#1000 no longer depends on ambient active execplan state; #975 blocks stale parent decomposition before implementation; #970/#971 prevent proxy/self-authored closeout from bypassing external evidence and negative invariants",
+    "config compliance": "used AW implement context and recorded keep-local delegation decision",
+    "misinterpretation risk": "low for #1000; broader P1 remains open",
+    "follow-on decision": "create PR and monitor CI"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "#1000 is a narrow test-only dogfooding regression; local proof is cheaper than delegation.",
+    "expected savings": "unknown",
+    "actual friction": "pending",
+    "proof result": "passed for #1000, #975, and #970/#971 focused coverage",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_workspace_implement_cli.py::test_implement_command_returns_bounded_context_and_boundary_warnings -q; uv run pytest tests/test_workspace_implement_cli.py -q; uv run pytest tests/test_workspace_start_preflight_cli.py::test_implement_blocks_stale_parent_decomposition_for_active_epic_plan tests/test_workspace_start_preflight_cli.py::test_implement_requires_delegation_decision_for_active_decomposed_lane tests/test_workspace_start_preflight_cli.py::test_start_blocks_decomposed_epic_without_active_execplan -q; uv run pytest tests/test_workspace_implement_cli.py::test_implement_epic_decomposition_prefers_reusable_worker_over_manual_relay -q; uv run pytest tests/test_workspace_report_cli.py -q",
+    "proof achieved now": "#1000, #975, and #970/#971 focused tests passed",
+    "evidence for \"proof achieved\" state": "Focused #1000 regression: 1 passed. Implement CLI test file: 17 passed. Focused #975/nearby gate tests: 3 passed. Epic decomposition implement test: 1 passed. Report CLI test file: 56 passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "High-priority non-codegen review and dogfooding findings should follow the P0 planning trust blockers.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "#1000 dogfooding regression completed; #975 stale parent decomposition gate completed; #970/#971 external closeout evidence and negative invariant gate completed.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "P1 lane implementation complete",
+    "validation confirmed": "focused implement CLI, planning gate, and report CLI pytest passed",
+    "follow-on routed to": "PR and CI",
+    "post-work posterity capture": "updated execplan and mutation provenance",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "final validation and PR closeout"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "",
+    "evidence carried forward": "#1000 test now creates explicit no-active planning state and expects the correct planning escalation. #975 runtime gate exposes active_parent_decomposition_requirement, sets implementation_allowed=false, and requires update/link/skip before implementation when a parent decomposition lane is stale. #970/#971 closeout trust compares referenced issues to external evidence and requires negative invariants to be satisfied/deferred/rejected.",
+    "reopen trigger": "If implement CLI tests again depend on ambient repository planning state."
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-16: Promoted from TODO direct-task shape into an execplan.",
+    "2026-05-16: Recorded delegation decision route=keep-local.",
+    "2026-05-16: Completed #1000 test slice and carried remaining P1 work forward to #975/#970/#971.",
+    "2026-05-16: Completed #975 stale parent decomposition gate and carried remaining P1 work forward to #970/#971.",
+    "2026-05-16: Completed #970/#971 closeout trust gate; P1 implementation is ready for final validation and PR."
+  ]
+}

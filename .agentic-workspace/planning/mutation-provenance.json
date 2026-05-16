@@ -2,54 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/execplans/python-runtime-source-blocker-audit.plan.json",
-      "sha256": "23e25dab3c2d79533bd958286a3fe2f820366bb9837d86b5f9a628573bab1d81",
-      "command": "agentic-planning record-recovery",
-      "reason": "Recorded source runtime blocker audit findings, proof, continuation, and closeout.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T10:02:22+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
-      "sha256": "26414356be109e5a4ff9bc10ccc21db408cede12d5ba537167e8114f561e2bbd",
-      "command": "agentic-planning record-recovery",
-      "reason": "Recorded source runtime blocker transition order for #892.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T10:02:22+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-runtime-source-blocker-audit",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T10:02:31+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/archive/python-runtime-source-blocker-audit.plan.json",
-      "sha256": "23e25dab3c2d79533bd958286a3fe2f820366bb9837d86b5f9a628573bab1d81",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-runtime-source-blocker-audit",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T10:02:31+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-workspace-runtime-relocation.plan.json",
-      "sha256": "151bcc2931306f4fceb72cdbfe73ffdbd44a52f90ae9d26406cafa4a61fcd172",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-workspace-runtime-relocation",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T10:02:46+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "fef91d6575eaa30ca6211329fbb347eddbdd388be3d5d63ae37d007122dd1fda",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-workspace-runtime-relocation",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T10:02:46+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/execplans/python-workspace-runtime-relocation.plan.json",
       "sha256": "3fb5364195241843bea6c8ed21455f4a8cf76739aa1daa8887f914b7492a23e7",
       "command": "agentic-planning delegation-decision",
@@ -1600,6 +1552,54 @@
       "reason": "archive execplan github-planning-trust-recoverability-p0",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-16T17:14:40+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-planning-gates-dogfooding-p1.plan.json",
+      "sha256": "18600b58e6f6d82c729c562fe2b8fab754b09cb44b0306407ba367287d12cb31",
+      "command": "agentic-planning promote-to-plan",
+      "reason": "promote planning item github-planning-gates-dogfooding-p1",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T18:21:42+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "133e3e07e437ac8fd1d41e149f369e44a78b1d39e8822e453abc0755907f5aa9",
+      "command": "agentic-planning promote-to-plan",
+      "reason": "promote planning item github-planning-gates-dogfooding-p1",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T18:21:42+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-planning-gates-dogfooding-p1.plan.json",
+      "sha256": "eb143e1bc5cb75ba863080feedfbb1e4bcb0a19c6297ae5567366561fe777fd4",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T18:24:35+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-planning-gates-dogfooding-p1.plan.json",
+      "sha256": "c87a968192d89f595a9bac423a3056f838adeb48b0ff9c2088b4e709e09a201e",
+      "command": "agentic-planning record-recovery",
+      "reason": "Updated active P1 execplan after completing #1000 ambient active-execplan test slice.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T18:25:59+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-planning-gates-dogfooding-p1.plan.json",
+      "sha256": "3f15d5f8a093cc458968afe78406b72a21753f366bae00f1a1ab370fb7757b86",
+      "command": "agentic-planning record-recovery",
+      "reason": "Updated active P1 execplan after completing #975 stale parent decomposition gate slice.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T18:29:53+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-planning-gates-dogfooding-p1.plan.json",
+      "sha256": "2c26fbfd80db67ac52649465516414f5b37d8f90c1a323a098981eae572b9c65",
+      "command": "agentic-planning record-recovery",
+      "reason": "Updated active P1 execplan after completing #970/#971 closeout trust gate slice.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T18:36:15+00:00"
     }
   ]
 }

@@ -6961,7 +6961,7 @@ def _report_closeout_trust_payload(
             "reason": "planning module is not installed",
             "strict_closeout_gate": gate,
             "package_workflow_evidence": _package_workflow_evidence_payload(planning_report={}),
-            "intent_satisfaction_check": _intent_satisfaction_check_payload(planning_report={}),
+            "intent_satisfaction_check": _intent_satisfaction_check_payload(planning_report={}, target_root=target_root),
             "acceptance_criteria_reconciliation": _acceptance_criteria_reconciliation_payload(planning_report={}),
             "historical_review_artifacts": _historical_review_artifacts_policy(
                 planning_report={}, intent_validation={}, target_root=target_root
@@ -6979,7 +6979,7 @@ def _report_closeout_trust_payload(
             "reason": "planning intent validation is unavailable",
             "strict_closeout_gate": gate,
             "package_workflow_evidence": _package_workflow_evidence_payload(planning_report=planning_report),
-            "intent_satisfaction_check": _intent_satisfaction_check_payload(planning_report=planning_report),
+            "intent_satisfaction_check": _intent_satisfaction_check_payload(planning_report=planning_report, target_root=target_root),
             "acceptance_criteria_reconciliation": _acceptance_criteria_reconciliation_payload(planning_report=planning_report),
             "historical_review_artifacts": _historical_review_artifacts_policy(
                 planning_report=planning_report, intent_validation={}, target_root=target_root
@@ -7001,7 +7001,7 @@ def _report_closeout_trust_payload(
     ]
     sample_signals = [message for message in sample_signals if message][:3]
     package_workflow_evidence = _package_workflow_evidence_payload(planning_report=planning_report)
-    intent_satisfaction_check = _intent_satisfaction_check_payload(planning_report=planning_report)
+    intent_satisfaction_check = _intent_satisfaction_check_payload(planning_report=planning_report, target_root=target_root)
     acceptance_reconciliation = _acceptance_criteria_reconciliation_payload(planning_report=planning_report)
     active_planning_record = package_workflow_evidence.get("status") == "present"
     package_absence_signals: list[str] = []
@@ -7414,7 +7414,109 @@ def _open_package_owned_continuation_payload(*, planning_report: dict[str, Any])
     }
 
 
-def _intent_satisfaction_check_payload(*, planning_report: dict[str, Any]) -> dict[str, Any]:
+def _planning_record_text_for_external_check(planning_record: dict[str, Any]) -> str:
+    return json.dumps(planning_record, sort_keys=True, ensure_ascii=False)
+
+
+def _negative_invariant_status(*, invariant: str, evidence_text: str) -> str:
+    normalized = " ".join(invariant.lower().split())
+    normalized_evidence = " ".join(evidence_text.lower().split())
+    if not normalized or normalized not in normalized_evidence:
+        return "unreconciled"
+    for marker in ("satisfied", "deferred", "rejected"):
+        if marker in normalized_evidence:
+            return marker
+    return "unreconciled"
+
+
+def _external_intent_closeout_check(*, target_root: Path | None, planning_record: dict[str, Any]) -> dict[str, Any]:
+    planning_text = _planning_record_text_for_external_check(planning_record)
+    issue_refs = sorted(set(re.findall("#\\d+", planning_text)), key=lambda value: int(value.lstrip("#")))
+    if not issue_refs:
+        return {"status": "not-applicable", "trust": "normal", "matched_issue_ids": [], "negative_invariants": []}
+    if target_root is None:
+        return {
+            "status": "unavailable",
+            "trust": "needs-review",
+            "matched_issue_ids": issue_refs,
+            "reason": "external issue references are present but no target root was available for evidence comparison",
+            "recommended_next_action": "Refresh external intent evidence before trusting closeout for referenced issues.",
+        }
+    evidence_path, evidence_relative_path, evidence_storage = _external_intent_evidence_read_location(target_root)
+    if not evidence_path.is_file():
+        return {
+            "status": "unavailable",
+            "trust": "needs-review",
+            "matched_issue_ids": issue_refs,
+            "source": evidence_relative_path,
+            "storage": evidence_storage,
+            "reason": "external intent evidence cache is absent",
+            "recommended_next_action": "Refresh external intent evidence before trusting closeout for referenced issues.",
+        }
+    try:
+        payload = json.loads(evidence_path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {
+            "status": "invalid",
+            "trust": "needs-review",
+            "matched_issue_ids": issue_refs,
+            "source": evidence_relative_path,
+            "storage": evidence_storage,
+            "reason": str(exc),
+            "recommended_next_action": "Repair or refresh external intent evidence before trusting closeout.",
+        }
+    schema_findings = _external_intent_evidence_schema_findings(target_root=target_root, payload=payload)
+    if schema_findings:
+        return {
+            "status": "invalid",
+            "trust": "needs-review",
+            "matched_issue_ids": issue_refs,
+            "source": evidence_relative_path,
+            "storage": evidence_storage,
+            "schema_findings": schema_findings,
+            "recommended_next_action": "Repair or refresh external intent evidence before trusting closeout.",
+        }
+    items = [item for item in _list_payload(payload.get("items")) if isinstance(item, dict)]
+    by_id = {str(item.get("id", "")): item for item in items if str(item.get("id", ""))}
+    matched_items = [by_id[issue_ref] for issue_ref in issue_refs if issue_ref in by_id]
+    missing_issue_ids = [issue_ref for issue_ref in issue_refs if issue_ref not in by_id]
+    open_issue_ids = [str(item.get("id", "")) for item in matched_items if str(item.get("status", "")).strip().lower() == "open"]
+    negative_checks: list[dict[str, str]] = []
+    for item in matched_items:
+        issue_id = str(item.get("id", ""))
+        for invariant in _list_payload(item.get("negative_invariants")):
+            invariant_text = str(invariant).strip()
+            if invariant_text:
+                negative_checks.append(
+                    {
+                        "issue_id": issue_id,
+                        "invariant": invariant_text,
+                        "status": _negative_invariant_status(invariant=invariant_text, evidence_text=planning_text),
+                    }
+                )
+    unresolved_negative_invariants = [check for check in negative_checks if check["status"] == "unreconciled"]
+    if missing_issue_ids or open_issue_ids or unresolved_negative_invariants:
+        trust = "follow-up-required"
+    else:
+        trust = "normal"
+    return {
+        "status": "present",
+        "trust": trust,
+        "source": evidence_relative_path,
+        "storage": evidence_storage,
+        "matched_issue_ids": [str(item.get("id", "")) for item in matched_items],
+        "missing_issue_ids": missing_issue_ids,
+        "open_issue_ids": open_issue_ids,
+        "negative_invariants": negative_checks,
+        "unresolved_negative_invariant_count": len(unresolved_negative_invariants),
+        "rule": "Referenced external issues and their negative invariants must be compared against refreshed external intent evidence before closeout can be normal-trust.",
+        "recommended_next_action": "Refresh external evidence or reconcile open issues and negative invariants before trusting closeout."
+        if trust != "normal"
+        else "External evidence and negative invariant reconciliation are compatible with closeout.",
+    }
+
+
+def _intent_satisfaction_check_payload(*, planning_report: dict[str, Any], target_root: Path | None = None) -> dict[str, Any]:
     active = planning_report.get("active", {}) if isinstance(planning_report, dict) else {}
     planning_record = active.get("planning_record", {}) if isinstance(active, dict) else {}
     if not isinstance(planning_record, dict) or planning_record.get("status") != "present":
@@ -7518,6 +7620,7 @@ def _intent_satisfaction_check_payload(*, planning_report: dict[str, Any]) -> di
         closure_check = hierarchy_closure
     completes = str(intent_continuity.get("this slice completes the larger intended outcome", "")).strip().lower()
     continuation = str(required_continuation.get("required follow-on for the larger intended outcome", "")).strip().lower()
+    external_closeout = _external_intent_closeout_check(target_root=target_root, planning_record=planning_record)
     if completes in {"yes", "true"} and continuation in {"no", "false", "none"}:
         trust = "satisfied"
         recommended_next_action = "Closeout may claim intent satisfaction if proof also passed."
@@ -7527,6 +7630,9 @@ def _intent_satisfaction_check_payload(*, planning_report: dict[str, Any]) -> di
     else:
         trust = "needs-review"
         recommended_next_action = "Name whether the larger intent is satisfied or requires follow-up before broad-work closeout."
+    if trust == "satisfied" and external_closeout.get("trust") != "normal":
+        trust = "follow-up-required"
+        recommended_next_action = str(external_closeout.get("recommended_next_action") or recommended_next_action)
     return {
         "status": "present",
         "required_for_broad_work": True,
@@ -7572,8 +7678,10 @@ def _intent_satisfaction_check_payload(*, planning_report: dict[str, Any]) -> di
                 "source": "planning.active.hierarchy_contract.closure_check",
                 "rule": "Only explicit closure-check evidence may close the larger intent.",
             },
+            "external_intent_evidence": external_closeout,
             "non_substitution_rule": "Validation success alone is not closure evidence.",
         },
+        "external_intent_evidence": external_closeout,
         "recommended_next_action": recommended_next_action,
     }
 
@@ -7940,6 +8048,29 @@ def _infer_external_issue_reopens(body: str) -> list[str]:
     return refs
 
 
+def _infer_external_issue_negative_invariants(*, body: str, comments: Any) -> list[str]:
+    text_blocks = [body]
+    if isinstance(comments, list):
+        for comment in comments:
+            if isinstance(comment, dict):
+                text_blocks.append(str(comment.get("body", "") or ""))
+            else:
+                text_blocks.append(str(comment or ""))
+    invariants: list[str] = []
+    for text in text_blocks:
+        for heading in ("Negative invariants", "Negative invariant", "Must not", "Must never"):
+            section_value = _markdown_section_value(text, heading)
+            for line in section_value.splitlines():
+                normalized = line.strip().lstrip("-*").strip()
+                if normalized and normalized not in invariants:
+                    invariants.append(normalized)
+        for match in re.finditer("(?im)^\\s*(?:negative invariant|must not|must never)\\s*[:\\-]\\s*(.+?)\\s*$", text):
+            normalized = match.group(1).strip()
+            if normalized and normalized not in invariants:
+                invariants.append(normalized)
+    return invariants
+
+
 def _github_issue_to_external_intent_item(*, issue: dict[str, Any], repo: str) -> dict[str, Any] | None:
     number = issue.get("number")
     if number is None:
@@ -7962,6 +8093,7 @@ def _github_issue_to_external_intent_item(*, issue: dict[str, Any], repo: str) -
         "parent_id": _infer_external_issue_parent_id(body),
         "reopens": _infer_external_issue_reopens(body),
         "planning_residue_expected": _github_planning_residue_expected(labels),
+        "negative_invariants": _infer_external_issue_negative_invariants(body=body, comments=issue.get("comments")),
         "url": str(issue.get("url", "")).strip(),
         "source_repository": repo,
         "labels": labels,
@@ -11306,6 +11438,8 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "workflow_sufficient": planning_safety_gate.get("workflow_sufficient"),
                 "required_next_action": planning_safety_gate.get("required_next_action"),
                 "active_planning_present": planning_safety_gate.get("active_planning_present"),
+                "active_parent_decomposition_requirement": planning_safety_gate.get("active_parent_decomposition_requirement", {}),
+                "implementation_allowed": planning_safety_gate.get("implementation_allowed"),
                 "changed_path_classification": planning_safety_gate.get("changed_path_classification", {}),
             }
         )
@@ -11539,6 +11673,83 @@ def _active_plan_delegation_requirement(
     }
 
 
+def _active_plan_parent_decomposition_requirement(*, target_root: Path, active_summary: dict[str, Any]) -> dict[str, Any]:
+    active_surface = active_summary.get("active_execplan")
+    if not isinstance(active_surface, str) or not active_surface.strip():
+        return {"required": False, "status": "no-active-execplan"}
+    plan_path = target_root / active_surface
+    if not plan_path.exists() or plan_path.suffix != ".json":
+        return {"required": False, "status": "active-plan-not-json", "path": active_surface}
+    try:
+        plan_record = json.loads(plan_path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return {"required": False, "status": "active-plan-unreadable", "path": active_surface}
+    if not isinstance(plan_record, dict):
+        return {"required": False, "status": "active-plan-unreadable", "path": active_surface}
+
+    plan_ids = {plan_path.stem.removesuffix(".plan")}
+    for key in ("id", "active_milestone"):
+        value = plan_record.get(key)
+        if isinstance(value, str) and value.strip():
+            plan_ids.add(value.strip())
+        elif isinstance(value, dict) and isinstance(value.get("id"), str) and value.get("id", "").strip():
+            plan_ids.add(value["id"].strip())
+
+    decompositions_dir = target_root / ".agentic-workspace" / "planning" / "decompositions"
+    if not decompositions_dir.exists():
+        return {"required": False, "status": "no-parent-decomposition", "path": active_surface}
+
+    closed_record_statuses = {"closed", "retired", "superseded"}
+    resolved_lane_statuses = {"promoted", "active", "linked", "skipped", "closed", "done", "retired", "superseded"}
+    for decomposition_path in sorted(decompositions_dir.glob("*.decomposition.json")):
+        if decomposition_path.name == "TEMPLATE.decomposition.json":
+            continue
+        try:
+            decomposition = json.loads(decomposition_path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(decomposition, dict) or decomposition.get("kind") != "planning-decomposition/v1":
+            continue
+        record_status = str(decomposition.get("status", "")).strip().lower()
+        if record_status in closed_record_statuses:
+            continue
+        lanes = decomposition.get("candidate_lanes", [])
+        if not isinstance(lanes, list):
+            continue
+        for lane in lanes:
+            if not isinstance(lane, dict):
+                continue
+            lane_id = str(lane.get("id", "")).strip()
+            owner_surface = str(lane.get("owner_surface", "")).strip()
+            if owner_surface != active_surface and lane_id not in plan_ids:
+                continue
+            readiness = str(lane.get("readiness", "")).strip().lower()
+            if readiness in resolved_lane_statuses:
+                return {
+                    "required": False,
+                    "status": "parent-decomposition-resolved",
+                    "path": active_surface,
+                    "decomposition": decomposition_path.relative_to(target_root).as_posix(),
+                    "lane_id": lane_id,
+                    "readiness": readiness or "unknown",
+                }
+            return {
+                "required": True,
+                "status": "parent-decomposition-decision-required",
+                "path": active_surface,
+                "decomposition": decomposition_path.relative_to(target_root).as_posix(),
+                "lane_id": lane_id,
+                "readiness": readiness or "unknown",
+                "required_before_implementation": [
+                    "update parent decomposition lane readiness to promoted/active/linked",
+                    "link the active execplan back to the parent decomposition",
+                    "record an explicit skip decision if the parent decomposition no longer applies",
+                ],
+                "rule": "Epic-backed active implementation must not proceed while its parent decomposition still presents the lane as unresolved or stale.",
+            }
+    return {"required": False, "status": "no-parent-decomposition-match", "path": active_surface}
+
+
 def _planning_safety_gate_payload(
     *, target_root: Path, config: WorkspaceConfig, changed_paths: list[str], task_text: str | None, execution_posture: dict[str, Any]
 ) -> dict[str, Any]:
@@ -11570,11 +11781,27 @@ def _planning_safety_gate_payload(
     active_delegation_requirement = _active_plan_delegation_requirement(
         target_root=target_root, active_summary=active_summary, config=config, task_text=task_text, execution_posture=execution_posture
     )
+    active_parent_decomposition_requirement = _active_plan_parent_decomposition_requirement(
+        target_root=target_root,
+        active_summary=active_summary,
+    )
     if active_planning_present and active_delegation_requirement.get("required"):
         status = "blocked"
         decision = "delegation-decision-required"
         reason = "Active decomposed or high-assurance planning exists, but no delegation decision is recorded."
         required_next_action = "record-delegation-decision"
+        workflow_sufficient = False
+    elif (
+        active_planning_present
+        and active_parent_decomposition_requirement.get("required")
+        and (path_classification["implementation_paths"] or work_shape in {"lane", "epic"})
+    ):
+        status = "blocked"
+        decision = "parent-decomposition-decision-required"
+        reason = (
+            "Active epic-backed planning is linked to a parent decomposition lane that has not been updated, linked, or explicitly skipped."
+        )
+        required_next_action = "update-link-or-skip-parent-decomposition"
         workflow_sufficient = False
     elif active_planning_present:
         status = "satisfied"
@@ -11640,6 +11867,8 @@ def _planning_safety_gate_payload(
         "promotion_command": promotion_command,
         "delegation_decision_command": active_delegation_requirement.get("command"),
         "active_delegation_requirement": active_delegation_requirement,
+        "active_parent_decomposition_requirement": active_parent_decomposition_requirement,
+        "implementation_allowed": workflow_sufficient,
         "new_plan_command": _command_with_cli_invoke(
             command="agentic-workspace planning new-plan --id <id> --title <title> --target . --activate --format json",
             cli_invoke=config.cli_invoke,
