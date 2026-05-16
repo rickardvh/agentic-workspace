@@ -4,10 +4,13 @@ import copy
 import hashlib
 import importlib.util
 import json
+import os
 import re
 import shutil
 import subprocess
+import time
 import tomllib
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -33,6 +36,8 @@ PLANNING_EXTERNAL_INTENT_EVIDENCE_PATH = PLANNING_MANAGED_ROOT / "external-inten
 PLANNING_EXTERNAL_INTENT_CACHE_PATH = Path(".agentic-workspace") / "local" / "cache" / "external-intent-evidence.json"
 PLANNING_FINISHED_WORK_EVIDENCE_PATH = PLANNING_MANAGED_ROOT / "finished-work-evidence.json"
 PLANNING_MUTATION_PROVENANCE_PATH = PLANNING_MANAGED_ROOT / "mutation-provenance.json"
+PLANNING_MUTATION_PROVENANCE_LOCK_TIMEOUT_SECONDS = 10.0
+PLANNING_MUTATION_PROVENANCE_LOCK_STALE_SECONDS = 60.0
 PLANNING_SCHEMA_ROOT = PLANNING_MANAGED_ROOT / "schemas"
 EXECPLAN_RECORD_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-execplan.schema.json"
 DECOMPOSITION_RECORD_SCHEMA_PATH = PLANNING_SCHEMA_ROOT / "planning-decomposition.schema.json"
@@ -341,6 +346,50 @@ def _load_mutation_provenance(target_root: Path) -> dict[str, Any]:
     return payload
 
 
+@contextmanager
+def _mutation_provenance_file_lock(target_root: Path):
+    lock_path = target_root / PLANNING_MUTATION_PROVENANCE_PATH.with_name(f"{PLANNING_MUTATION_PROVENANCE_PATH.name}.lock")
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    start = time.monotonic()
+    while True:
+        try:
+            fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError:
+            try:
+                age = time.time() - lock_path.stat().st_mtime
+            except OSError:
+                age = 0.0
+            if age > PLANNING_MUTATION_PROVENANCE_LOCK_STALE_SECONDS:
+                try:
+                    lock_path.unlink()
+                except OSError:
+                    pass
+                continue
+            if time.monotonic() - start > PLANNING_MUTATION_PROVENANCE_LOCK_TIMEOUT_SECONDS:
+                raise RuntimeError(f"Timed out waiting for planning mutation provenance lock: {lock_path}")
+            time.sleep(0.05)
+            continue
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                handle.write(f"pid={os.getpid()}\ncreated_at={datetime.now(timezone.utc).isoformat()}\n")
+            yield
+        finally:
+            try:
+                lock_path.unlink()
+            except OSError:
+                pass
+        return
+
+
+def _write_mutation_provenance_payload(target_root: Path, payload: dict[str, Any]) -> Path:
+    provenance_path = target_root / PLANNING_MUTATION_PROVENANCE_PATH
+    provenance_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = provenance_path.with_name(f"{provenance_path.name}.{os.getpid()}.{id(payload)}.tmp")
+    tmp_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    tmp_path.replace(provenance_path)
+    return provenance_path
+
+
 def _record_planning_mutation_provenance(
     *,
     target_root: Path,
@@ -349,14 +398,13 @@ def _record_planning_mutation_provenance(
     reason: str,
     mode: str = "cli-mutation",
 ) -> Path:
-    existing = _load_mutation_provenance(target_root)
-    entries = [entry for entry in existing.get("entries", []) if isinstance(entry, dict)]
     now = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    new_entries: list[dict[str, str]] = []
     for path in paths:
         if not path.exists() or not path.is_file():
             continue
         relative = _planning_surface_relative(target_root, path)
-        entries.append(
+        new_entries.append(
             {
                 "path": relative,
                 "sha256": _planning_surface_sha256(path),
@@ -366,11 +414,12 @@ def _record_planning_mutation_provenance(
                 "recorded_at": now,
             }
         )
-    payload = {"kind": "planning-mutation-provenance/v1", "entries": entries[-200:]}
-    provenance_path = target_root / PLANNING_MUTATION_PROVENANCE_PATH
-    provenance_path.parent.mkdir(parents=True, exist_ok=True)
-    provenance_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-    return provenance_path
+    with _mutation_provenance_file_lock(target_root):
+        existing = _load_mutation_provenance(target_root)
+        entries = [entry for entry in existing.get("entries", []) if isinstance(entry, dict)]
+        entries.extend(new_entries)
+        payload = {"kind": "planning-mutation-provenance/v1", "entries": entries[-200:]}
+        return _write_mutation_provenance_payload(target_root, payload)
 
 
 def _stamp_result_planning_mutations(
