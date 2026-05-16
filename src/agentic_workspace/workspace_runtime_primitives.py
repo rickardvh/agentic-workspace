@@ -11306,6 +11306,8 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "workflow_sufficient": planning_safety_gate.get("workflow_sufficient"),
                 "required_next_action": planning_safety_gate.get("required_next_action"),
                 "active_planning_present": planning_safety_gate.get("active_planning_present"),
+                "active_parent_decomposition_requirement": planning_safety_gate.get("active_parent_decomposition_requirement", {}),
+                "implementation_allowed": planning_safety_gate.get("implementation_allowed"),
                 "changed_path_classification": planning_safety_gate.get("changed_path_classification", {}),
             }
         )
@@ -11539,6 +11541,83 @@ def _active_plan_delegation_requirement(
     }
 
 
+def _active_plan_parent_decomposition_requirement(*, target_root: Path, active_summary: dict[str, Any]) -> dict[str, Any]:
+    active_surface = active_summary.get("active_execplan")
+    if not isinstance(active_surface, str) or not active_surface.strip():
+        return {"required": False, "status": "no-active-execplan"}
+    plan_path = target_root / active_surface
+    if not plan_path.exists() or plan_path.suffix != ".json":
+        return {"required": False, "status": "active-plan-not-json", "path": active_surface}
+    try:
+        plan_record = json.loads(plan_path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return {"required": False, "status": "active-plan-unreadable", "path": active_surface}
+    if not isinstance(plan_record, dict):
+        return {"required": False, "status": "active-plan-unreadable", "path": active_surface}
+
+    plan_ids = {plan_path.stem.removesuffix(".plan")}
+    for key in ("id", "active_milestone"):
+        value = plan_record.get(key)
+        if isinstance(value, str) and value.strip():
+            plan_ids.add(value.strip())
+        elif isinstance(value, dict) and isinstance(value.get("id"), str) and value.get("id", "").strip():
+            plan_ids.add(value["id"].strip())
+
+    decompositions_dir = target_root / ".agentic-workspace" / "planning" / "decompositions"
+    if not decompositions_dir.exists():
+        return {"required": False, "status": "no-parent-decomposition", "path": active_surface}
+
+    closed_record_statuses = {"closed", "retired", "superseded"}
+    resolved_lane_statuses = {"promoted", "active", "linked", "skipped", "closed", "done", "retired", "superseded"}
+    for decomposition_path in sorted(decompositions_dir.glob("*.decomposition.json")):
+        if decomposition_path.name == "TEMPLATE.decomposition.json":
+            continue
+        try:
+            decomposition = json.loads(decomposition_path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(decomposition, dict) or decomposition.get("kind") != "planning-decomposition/v1":
+            continue
+        record_status = str(decomposition.get("status", "")).strip().lower()
+        if record_status in closed_record_statuses:
+            continue
+        lanes = decomposition.get("candidate_lanes", [])
+        if not isinstance(lanes, list):
+            continue
+        for lane in lanes:
+            if not isinstance(lane, dict):
+                continue
+            lane_id = str(lane.get("id", "")).strip()
+            owner_surface = str(lane.get("owner_surface", "")).strip()
+            if owner_surface != active_surface and lane_id not in plan_ids:
+                continue
+            readiness = str(lane.get("readiness", "")).strip().lower()
+            if readiness in resolved_lane_statuses:
+                return {
+                    "required": False,
+                    "status": "parent-decomposition-resolved",
+                    "path": active_surface,
+                    "decomposition": decomposition_path.relative_to(target_root).as_posix(),
+                    "lane_id": lane_id,
+                    "readiness": readiness or "unknown",
+                }
+            return {
+                "required": True,
+                "status": "parent-decomposition-decision-required",
+                "path": active_surface,
+                "decomposition": decomposition_path.relative_to(target_root).as_posix(),
+                "lane_id": lane_id,
+                "readiness": readiness or "unknown",
+                "required_before_implementation": [
+                    "update parent decomposition lane readiness to promoted/active/linked",
+                    "link the active execplan back to the parent decomposition",
+                    "record an explicit skip decision if the parent decomposition no longer applies",
+                ],
+                "rule": "Epic-backed active implementation must not proceed while its parent decomposition still presents the lane as unresolved or stale.",
+            }
+    return {"required": False, "status": "no-parent-decomposition-match", "path": active_surface}
+
+
 def _planning_safety_gate_payload(
     *, target_root: Path, config: WorkspaceConfig, changed_paths: list[str], task_text: str | None, execution_posture: dict[str, Any]
 ) -> dict[str, Any]:
@@ -11570,11 +11649,27 @@ def _planning_safety_gate_payload(
     active_delegation_requirement = _active_plan_delegation_requirement(
         target_root=target_root, active_summary=active_summary, config=config, task_text=task_text, execution_posture=execution_posture
     )
+    active_parent_decomposition_requirement = _active_plan_parent_decomposition_requirement(
+        target_root=target_root,
+        active_summary=active_summary,
+    )
     if active_planning_present and active_delegation_requirement.get("required"):
         status = "blocked"
         decision = "delegation-decision-required"
         reason = "Active decomposed or high-assurance planning exists, but no delegation decision is recorded."
         required_next_action = "record-delegation-decision"
+        workflow_sufficient = False
+    elif (
+        active_planning_present
+        and active_parent_decomposition_requirement.get("required")
+        and (path_classification["implementation_paths"] or work_shape in {"lane", "epic"})
+    ):
+        status = "blocked"
+        decision = "parent-decomposition-decision-required"
+        reason = (
+            "Active epic-backed planning is linked to a parent decomposition lane that has not been updated, linked, or explicitly skipped."
+        )
+        required_next_action = "update-link-or-skip-parent-decomposition"
         workflow_sufficient = False
     elif active_planning_present:
         status = "satisfied"
@@ -11640,6 +11735,8 @@ def _planning_safety_gate_payload(
         "promotion_command": promotion_command,
         "delegation_decision_command": active_delegation_requirement.get("command"),
         "active_delegation_requirement": active_delegation_requirement,
+        "active_parent_decomposition_requirement": active_parent_decomposition_requirement,
+        "implementation_allowed": workflow_sufficient,
         "new_plan_command": _command_with_cli_invoke(
             command="agentic-workspace planning new-plan --id <id> --title <title> --target . --activate --format json",
             cli_invoke=config.cli_invoke,
