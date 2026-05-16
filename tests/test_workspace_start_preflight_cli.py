@@ -1815,6 +1815,7 @@ def test_summary_command_includes_memory_consult(tmp_path: Path, capsys) -> None
     payload = json.loads(capsys.readouterr().out)
     assert payload["memory_consult"]["kind"] == "agentic-workspace/memory-consult/v1"
     assert payload["memory_consult"]["do_not_bulk_read"] is True
+    assert payload["memory_consult"]["consultation_state"] == "checked-with-matches"
 
 
 def test_memory_consult_uses_local_cli_invoke_for_memory_helpers(tmp_path: Path, capsys) -> None:

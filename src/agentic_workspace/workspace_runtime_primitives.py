@@ -6132,6 +6132,7 @@ def _memory_consult_payload(
         return {
             "kind": "agentic-workspace/memory-consult/v1",
             "status": "unavailable",
+            "consultation_state": "not-checked",
             "reason": "memory module is not importable",
             "read_first": [],
             "max_notes": 0,
@@ -6143,6 +6144,7 @@ def _memory_consult_payload(
         return {
             "kind": "agentic-workspace/memory-consult/v1",
             "status": "unavailable",
+            "consultation_state": "not-checked",
             "reason": f"memory report failed: {exc}",
             "read_first": [],
             "max_notes": 0,
@@ -6181,6 +6183,7 @@ def _memory_consult_payload(
     payload = {
         "kind": "agentic-workspace/memory-consult/v1",
         "status": consult_status,
+        "consultation_state": "checked-with-matches" if read_first else "checked-none",
         "source": "memory.habitual_pull",
         "why": habitual_pull.get("summary", ""),
         "read_first": read_first,
@@ -6198,8 +6201,13 @@ def _memory_consult_payload(
     }
     if compact:
         if consult_status != "recommended":
-            return {"kind": payload["kind"], "status": consult_status, "do_not_bulk_read": True}
-        keys = ("kind", "status", "read_first", "max_notes", "do_not_bulk_read")
+            return {
+                "kind": payload["kind"],
+                "status": consult_status,
+                "consultation_state": payload["consultation_state"],
+                "do_not_bulk_read": True,
+            }
+        keys = ("kind", "status", "consultation_state", "read_first", "max_notes", "do_not_bulk_read")
         keys = (*keys, "why", "selection_rule")
         return {key: payload[key] for key in keys if key in payload}
     return payload
@@ -6938,6 +6946,7 @@ def _report_closeout_trust_payload(
     def durable_residue_action(*, trust: str) -> dict[str, Any]:
         action = {
             "action": "route-durable-residue",
+            "visible_states": ["none-found", "capture", "route-to-owner", "dismissed"],
             "summary": "Review lower-trust closeout signals and route missing residue to planning, Memory, docs, checks, or issue follow-up."
             if trust == "lower-trust"
             else "If closeout produced reusable learning, route it to the narrowest durable owner; otherwise record no durable residue.",
@@ -10739,6 +10748,7 @@ def _tiny_memory_consult_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
     return {
         "kind": "agentic-workspace/memory-consult/v1",
         "status": "recommended",
+        "consultation_state": "checked-with-matches",
         "read_first": [".agentic-workspace/memory/repo/index.md"],
         "do_not_bulk_read": True,
         "why": "Start with the Memory index, then load only route-matched durable notes when the task or changed paths justify them.",

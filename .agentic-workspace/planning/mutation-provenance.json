@@ -2,46 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/execplans/python-memory-generated-resources.plan.json",
-      "sha256": "1754468d6be904e8a932bd3013496de08cf8dc3001170dc13672aac202bc4b6b",
-      "command": "agentic-planning record-recovery",
-      "reason": "Added explicit execution_summary resume cue required by archive-plan validation.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T11:12:55+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-memory-generated-resources.plan.json",
-      "sha256": "525fa214203cfb009d2ead5dd01f06f70240d7093b89e035109879293d804a2e",
-      "command": "agentic-planning record-recovery",
-      "reason": "Set unsolved intent owner to #892 so partial slice archive can preserve the epic continuation.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T11:13:08+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-memory-generated-resources",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T11:13:21+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/archive/python-memory-generated-resources.plan.json",
-      "sha256": "67e1966cc81341c8a0c8620cc1602970e9f14018ade1d2bc3c76652ecef2e517",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-memory-generated-resources",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T11:13:21+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-memory-target-root-primitive.plan.json",
-      "sha256": "6e78dfb1ce9b384fbb28075c2e32ed8f3ae045c493a3d5f1667036c1373b954c",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-memory-target-root-primitive",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T11:14:31+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/state.toml",
       "sha256": "200eb33eb9caacd2242f17724b806ac3015545cc1522448e0504e17129a6b53c",
       "command": "agentic-planning new-plan",
@@ -1600,6 +1560,46 @@
       "reason": "archive execplan github-1014-structured-skillspec-gates",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-16T21:37:41+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-1015-intent-memory-observability.plan.json",
+      "sha256": "bf4fe464c78e6d0ffb43dcabc4d4d37c89b330db3a6180f3fd5e0abe5887909f",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold github-1015-intent-memory-observability",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T21:38:56+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "a94a0d389f372c8a2abbf90b860bb47f42dbf9a650a0cf85b70a15c686050e70",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold github-1015-intent-memory-observability",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T21:38:56+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-1015-intent-memory-observability.plan.json",
+      "sha256": "222bd3ff75890954a57a04393dc3698bd8d2638d60094b897354f60b6a85e44c",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T21:41:57+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "2825a103bb66f149fb0a5df4c54a27542a980a4b8f789ea801637c26cd080901",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan github-1015-intent-memory-observability",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T21:43:29+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/github-1015-intent-memory-observability.plan.json",
+      "sha256": "b3f192a59296f7886f254d125750c4bb661839f1c33ab22f5d39ab1b5e774fff",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan github-1015-intent-memory-observability",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T21:43:29+00:00"
     }
   ]
 }

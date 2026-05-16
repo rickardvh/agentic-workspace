@@ -1366,6 +1366,7 @@ def test_report_closeout_trust_surfaces_package_workflow_evidence(tmp_path: Path
     assert acceptance["completion_criteria_count"] == 1
     residue_action = payload["closeout_trust"]["durable_residue_action"]
     assert residue_action["action"] == "route-durable-residue"
+    assert residue_action["visible_states"] == ["none-found", "capture", "route-to-owner", "dismissed"]
     assert residue_action["command"] == "agentic-workspace report --target ./repo --section closeout_trust --format json"
     assert residue_action["run"] == residue_action["command"]
     assert residue_action["risk"] == "read-only routing; mutations happen only through the selected owner surface"
@@ -1750,6 +1751,50 @@ def test_report_handles_modules_with_empty_findings_lists(tmp_path: Path, monkey
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["findings"] == []
+
+
+def test_report_memory_consult_distinguishes_checked_none_from_not_checked(tmp_path: Path, monkeypatch, capsys) -> None:
+    from repo_memory_bootstrap import installer as memory_installer
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    def _memory_report_checked_none(*, target=None):
+        return {
+            "habitual_pull": {
+                "status": "ready-for-ordinary-work",
+                "summary": "Memory checked and no durable note matched.",
+                "ordinary_work_bundle": {
+                    "always_load": [],
+                    "working_set_target": 3,
+                    "route_rule": "load only matched notes",
+                },
+                "evidence": {"checked": True},
+            },
+            "promotion_pressure": {},
+        }
+
+    monkeypatch.setattr(memory_installer, "memory_report", _memory_report_checked_none)
+    assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["memory_consult"]["status"] == "not-recommended"
+    assert payload["memory_consult"]["consultation_state"] == "checked-none"
+    assert payload["memory_consult"]["read_first"] == []
+
+    def _memory_report_not_checked(*, target=None):
+        raise RuntimeError("memory unavailable")
+
+    monkeypatch.setattr(memory_installer, "memory_report", _memory_report_not_checked)
+    from agentic_workspace.workspace_runtime_primitives import _memory_consult_payload
+
+    consult = _memory_consult_payload(target_root=target)
+    assert consult["status"] == "unavailable"
+    assert consult["consultation_state"] == "not-checked"
+    assert "memory unavailable" in consult["reason"]
 
 
 def test_report_surfaces_planning_intent_validation_findings(tmp_path: Path, capsys) -> None:
@@ -2357,6 +2402,7 @@ def test_report_surfaces_compact_lower_trust_closeout_summary(tmp_path: Path, ca
     assert any("Closed external planning item #closed-without-residue" in item for item in payload["closeout_trust"]["sample_signals"])
     action = payload["closeout_trust"]["durable_residue_action"]
     assert action["action"] == "route-durable-residue"
+    assert "route-to-owner" in action["visible_states"]
     assert "lower-trust closeout signals" in action["summary"]
 
 
