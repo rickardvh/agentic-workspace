@@ -935,20 +935,17 @@
       "command": "list-files",
       "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.list-files.report.json",
-      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "generated/planning/python/commands/planning_list_files_report.py",
       "hand_owned_runtime_code": [
-        "planning.list-files.load",
-        "module-result text/json compatibility formatting"
+        "none; generated command projection composes package payload listing, bundled skill listing, payload assembly, and output emission directly"
       ],
-      "status": "domain-runtime-primitive-via-ir",
+      "status": "portable-codegen-primitive-executed",
       "conformance_ref": "planning.list-files.process",
-      "domain_runtime_primitive_refs": [
-        "planning.list-files.load"
-      ],
-      "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but planning payload inventory still owns package-specific payload grouping and optional enablement guidance.",
-      "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.list-files.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "portable_primitive_refs": [
+        "filesystem.glob",
+        "payload.assemble",
+        "output.emit"
+      ]
     },
     {
       "operation_id": "planning.new-plan.lifecycle",

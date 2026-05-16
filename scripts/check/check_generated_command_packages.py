@@ -1179,12 +1179,19 @@ def _validate_direct_generated_python_command_projection() -> list[str]:
     direct_commands = {
         "memory.list-files.report": REPO_ROOT / "generated" / "memory" / "python" / "commands" / "memory_list_files_report.py",
         "memory.list-skills.report": REPO_ROOT / "generated" / "memory" / "python" / "commands" / "memory_list_skills_report.py",
+        "planning.list-files.report": REPO_ROOT
+        / "generated"
+        / "planning"
+        / "python"
+        / "commands"
+        / "planning_list_files_report.py",
     }
     forbidden_fragments = (
         "generated_operation_contract",
         "run_operation_ir",
         "command_generation.primitive_executor",
         "repo_memory_bootstrap.runtime_primitives",
+        "repo_planning_bootstrap.runtime_projection",
     )
     required_fragments_by_operation = {
         "memory.list-files.report": (
@@ -1198,6 +1205,13 @@ def _validate_direct_generated_python_command_projection() -> list[str]:
             "def _assemble_payload(",
             "def _emit_output(",
             "_read_json_resource(skills_root, 'REGISTRY.json')",
+        ),
+        "planning.list-files.report": (
+            "def _payload_root(",
+            "def _skills_root(",
+            "def _assemble_payload(",
+            "def _emit_output(",
+            "_assemble_payload(_payload_root(), _skills_root())",
         ),
     }
     for operation_id, path in direct_commands.items():
@@ -1483,10 +1497,11 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         "prompt.upgrade",
         "system-intent.sync",
     }
-    portable_primitive_operations = {"memory.list-files.report", "memory.list-skills.report"}
+    portable_primitive_operations = {"memory.list-files.report", "memory.list-skills.report", "planning.list-files.report"}
     expected_primitive_executors = {
         "memory.list-files.report": "generated/memory/python/commands/memory_list_files_report.py",
         "memory.list-skills.report": "generated/memory/python/commands/memory_list_skills_report.py",
+        "planning.list-files.report": "generated/planning/python/commands/planning_list_files_report.py",
     }
     for operation_id in sorted(ir_consumed_operations):
         entry = by_operation.get(operation_id)

@@ -9,6 +9,7 @@ from pathlib import Path
 
 from jsonschema import Draft202012Validator
 
+from agentic_workspace import workspace_runtime_primitives as cli
 from agentic_workspace.contract_tooling import (
     authority_markers_manifest,
     cli_commands_manifest,
@@ -47,7 +48,6 @@ from command_generation.generated_package_loader import (
     load_generated_command_module_for_entrypoint,
     load_generated_command_package_for_entrypoint,
 )
-from agentic_workspace import workspace_runtime_primitives as cli
 
 generated_workspace_cli = load_generated_command_module_for_entrypoint("agentic-workspace", "cli.py")
 

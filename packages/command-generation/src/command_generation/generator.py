@@ -209,6 +209,13 @@ def _python_command_module(
             source_path=source_path,
             regenerate_command=regenerate_command,
         )
+    if _is_planning_list_files_direct_projection(package, operation_id):
+        return _python_planning_list_files_command_module(
+            package,
+            operation_id,
+            source_path=source_path,
+            regenerate_command=regenerate_command,
+        )
     operation_executor = _operation_executor_binding(package)
     direct_handlers = {
         str(handler["operation_id"]): handler for handler in binding.get("runtime_module_handlers", []) if isinstance(handler, dict)
@@ -247,6 +254,10 @@ def _is_memory_list_files_direct_projection(package: dict[str, Any], operation_i
     return package.get("id") == "memory-bootstrap" and operation_id == "memory.list-files.report"
 
 
+def _is_planning_list_files_direct_projection(package: dict[str, Any], operation_id: str) -> bool:
+    return package.get("id") == "planning-bootstrap" and operation_id == "planning.list-files.report"
+
+
 def _python_memory_direct_projection_header(
     package: dict[str, Any],
     operation_id: str,
@@ -262,6 +273,101 @@ def _python_memory_direct_projection_header(
         f"Regenerate with: {regenerate_command}\n"
         '"""\n\n'
         "from __future__ import annotations\n\n"
+    )
+
+
+def _python_planning_list_files_command_module(
+    package: dict[str, Any],
+    operation_id: str,
+    *,
+    source_path: str,
+    regenerate_command: str,
+) -> str:
+    default_files = [
+        "AGENTS.template.md",
+        ".agentic-workspace/docs/execution-flow-contract.md",
+        ".agentic-workspace/docs/system-intent-contract.md",
+        ".agentic-workspace/docs/routing-contract.md",
+        ".agentic-workspace/docs/minimum-operating-model.md",
+        ".agentic-workspace/docs/lifecycle-and-config-contract.md",
+        ".agentic-workspace/docs/workspace-config-contract.md",
+        ".agentic-workspace/planning/execplans/README.md",
+        ".agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+        ".agentic-workspace/planning/execplans/archive/README.md",
+        ".agentic-workspace/planning/decompositions/README.md",
+        ".agentic-workspace/planning/decompositions/TEMPLATE.decomposition.json",
+        ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
+        ".agentic-workspace/planning/schemas/planning-decomposition.schema.json",
+        ".agentic-workspace/planning/schemas/planning-review.schema.json",
+        ".agentic-workspace/planning/schemas/planning-external-intent-evidence.schema.json",
+        ".agentic-workspace/planning/schemas/planning-finished-work-evidence.schema.json",
+        ".agentic-workspace/planning/UPGRADE-SOURCE.toml",
+        ".agentic-workspace/planning/agent-manifest.json",
+    ]
+    optional_files = [
+        ".agentic-workspace/docs/capability-contract.json",
+        ".agentic-workspace/planning/reviews/README.md",
+        ".agentic-workspace/planning/reviews/TEMPLATE.review.json",
+        ".agentic-workspace/planning/upstream-task-intake.md",
+        ".agentic-workspace/planning/pre-ingestion-refinement.md",
+    ]
+    return (
+        _python_memory_direct_projection_header(
+            package,
+            operation_id,
+            source_path=source_path,
+            regenerate_command=regenerate_command,
+        )
+        + "import argparse\n"
+        "import json\n"
+        "from pathlib import Path\n"
+        "from typing import Any\n\n"
+        "# DO NOT EDIT DIRECTLY.\n"
+        f"# Command behavior changes belong in {source_path} and the referenced operation contract.\n"
+        f"# Regenerate with: {regenerate_command}\n\n"
+        f"DEFAULT_PAYLOAD_FILES = {default_files!r}\n"
+        f"OPTIONAL_PAYLOAD_FILES = {optional_files!r}\n"
+        "OPTIONAL_ENABLE_COMMANDS = (\n"
+        "    'agentic-planning install --include-optional',\n"
+        "    'agentic-planning adopt --include-optional',\n"
+        "    'agentic-planning upgrade --include-optional',\n"
+        ")\n\n\n"
+        "def _payload_root() -> Path:\n"
+        "    for parent in Path(__file__).resolve().parents:\n"
+        "        for candidate in (parent / '_payload', parent / 'packages' / 'planning' / 'bootstrap'):\n"
+        "            if (candidate / 'AGENTS.template.md').is_file():\n"
+        "                return candidate\n"
+        "    raise FileNotFoundError('Planning payload directory is not available.')\n\n\n"
+        "def _skills_root() -> Path:\n"
+        "    for parent in Path(__file__).resolve().parents:\n"
+        "        for candidate in (parent / '_skills', parent / 'packages' / 'planning' / 'skills'):\n"
+        "            if (candidate / 'REGISTRY.json').is_file():\n"
+        "                return candidate\n"
+        "    raise FileNotFoundError('Planning skills directory is not available.')\n\n\n"
+        "def _resource_files(root: Path) -> list[str]:\n"
+        "    return [\n"
+        "        path.relative_to(root).as_posix()\n"
+        "        for path in sorted(root.rglob('*'))\n"
+        "        if path.is_file() and '__pycache__' not in path.parts and path.suffix != '.pyc'\n"
+        "    ]\n\n\n"
+        "def _assemble_payload(payload_root: Path, skills_root: Path) -> dict[str, Any]:\n"
+        "    return {\n"
+        "        'files': _resource_files(payload_root),\n"
+        "        'default_files': list(DEFAULT_PAYLOAD_FILES),\n"
+        "        'optional_files': list(OPTIONAL_PAYLOAD_FILES),\n"
+        "        'bundled_skill_files': _resource_files(skills_root),\n"
+        "        'optional_enable_commands': list(OPTIONAL_ENABLE_COMMANDS),\n"
+        "    }\n\n\n"
+        "def _emit_output(payload: dict[str, Any], output_format: str) -> None:\n"
+        "    if output_format == 'json':\n"
+        "        print(json.dumps(payload, indent=2))\n"
+        "        return\n"
+        "    for path in payload['files']:\n"
+        "        print(path)\n\n\n"
+        "def run(args: argparse.Namespace) -> int:\n"
+        "    payload = _assemble_payload(_payload_root(), _skills_root())\n"
+        "    _emit_output(payload, str(getattr(args, 'format', 'text') or 'text'))\n"
+        "    return 0\n"
     )
 
 

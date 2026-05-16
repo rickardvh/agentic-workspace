@@ -24,17 +24,49 @@
     }
   ],
   "ir_plan": {
-    "status": "representative",
+    "status": "complete",
     "steps": [
       {
+        "arguments": {
+          "pattern": "**/*",
+          "root": "planning.package-payload",
+          "sort": "lexicographic"
+        },
+        "description": "List bundled planning payload files as stable relative paths.",
+        "id": "list_payload_files",
+        "on_error": "fail",
+        "outputs": [
+          "files"
+        ],
+        "uses": "filesystem.glob"
+      },
+      {
+        "arguments": {
+          "pattern": "**/*",
+          "root": "planning.package-skills",
+          "sort": "lexicographic"
+        },
+        "description": "List bundled planning skill files as stable relative paths.",
+        "id": "list_bundled_skill_files",
+        "on_error": "fail",
+        "outputs": [
+          "bundled_skill_files"
+        ],
+        "uses": "filesystem.glob"
+      },
+      {
         "arguments": {},
-        "description": "Load bundled planning payload file lists and optional enablement guidance.",
-        "id": "load_payload_files",
+        "description": "Build the planning list-files payload from package resources and static enablement commands.",
+        "id": "assemble_payload",
+        "inputs": [
+          "files",
+          "bundled_skill_files"
+        ],
         "on_error": "fail",
         "outputs": [
           "result"
         ],
-        "uses": "planning.list-files.load"
+        "uses": "payload.assemble"
       },
       {
         "arguments": {},
@@ -47,7 +79,7 @@
         "uses": "output.emit"
       }
     ],
-    "summary": "Planning list-files executes generated operation IR through codegen-owned primitive dataflow while the planning module supplies payload inventory data."
+    "summary": "Planning list-files is a complete generated command projection over package payload and skill resources without importing package runtime code or the generic operation IR runner."
   },
   "locality": {
     "network": "forbidden",
@@ -71,9 +103,19 @@
   "schema_version": "agentic-workspace/operation/v1",
   "steps": [
     {
-      "description": "Load bundled planning payload file lists and optional enablement guidance.",
-      "id": "load_payload_files",
-      "uses": "planning.list-files.load"
+      "description": "List bundled planning payload files as stable relative paths.",
+      "id": "list_payload_files",
+      "uses": "filesystem.glob"
+    },
+    {
+      "description": "List bundled planning skill files as stable relative paths.",
+      "id": "list_bundled_skill_files",
+      "uses": "filesystem.glob"
+    },
+    {
+      "description": "Build the list-files payload containing required, optional, bundled skill, and optional enablement data.",
+      "id": "assemble_payload",
+      "uses": "payload.assemble"
     },
     {
       "description": "Emit the planning payload file list in the requested format.",

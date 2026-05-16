@@ -1128,7 +1128,9 @@ export const generatedCommandPackage = {
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "planning.list-files.load",
+          "filesystem.glob",
+          "filesystem.glob",
+          "payload.assemble",
           "output.emit"
         ]
       },

@@ -2,62 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/execplans/archive/python-codegen-owned-primitive-executor-migration.plan.json",
-      "sha256": "63195625be6d65a82fe10f39eeee0dece7fcd95ddba025c2a33339cfea872215",
-      "command": "agentic-planning record-recovery",
-      "reason": "Recorded dogfooding issue #967 in primitive executor migration closeout.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T17:03:15+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-generated-cli-completion-promotion.plan.json",
-      "sha256": "92892de81b9cd945c8b45f3e904f126e708d32e2166d876920acdca568c7d373",
-      "command": "agentic-planning promote-to-plan",
-      "reason": "promote decomposition lane python-generated-cli-completion-promotion",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T17:04:51+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "3a110a9d305c92daa97e1d5449cf98ba21096e8d97829604539372ea178ae624",
-      "command": "agentic-planning promote-to-plan",
-      "reason": "promote decomposition lane python-generated-cli-completion-promotion",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T17:04:51+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
-      "sha256": "f7f1a3464efcf0753cf335f17e32f5c3518e552670e0c617cd67691b75c6b59a",
-      "command": "agentic-planning promote-to-plan",
-      "reason": "promote decomposition lane python-generated-cli-completion-promotion",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T17:04:51+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-generated-cli-completion-promotion.plan.json",
-      "sha256": "03a0e47050b4d4b120a9d829d7a88c812ee43679ecd26fc57363d811c404de60",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=keep-local",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T17:06:19+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
-      "sha256": "eb899bc647ee20b89d75e7944816561687d0a6ea29b630207f5f17bab503c1d8",
-      "command": "agentic-planning record-recovery",
-      "reason": "Removed schema-invalid promote-to-plan metadata reintroduced by package command; tracked by #967.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T17:07:23+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-generated-cli-completion-promotion.plan.json",
-      "sha256": "006f442703f38199f92dfd9fcfa49d50b20a2ff4ee48fc6327a2e84836a8f6f3",
-      "command": "agentic-planning record-recovery",
-      "reason": "Synchronized #892 completion-promotion execplan projections after shaping.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T17:07:39+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/execplans/python-generated-cli-completion-promotion.plan.json",
       "sha256": "f81cc786f9dd3521c88afddd563373e0a491ae81690fb57502259f6f7a9e7a90",
       "command": "agentic-planning record-recovery",
@@ -1600,6 +1544,62 @@
       "reason": "archive execplan python-memory-list-files-concrete-command",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-16T08:38:25+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-planning-list-files-concrete-command.plan.json",
+      "sha256": "2b8e4cab17fe9473cdb865251ba48ad0907f11aed02b3035ce34f1f4170dc366",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-planning-list-files-concrete-command",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T08:39:27+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "7d4812107cf92e0ffca7606e1543f9f24aa483a97c82e7651f2a8e79ec98589f",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-planning-list-files-concrete-command",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T08:39:27+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-planning-list-files-concrete-command.plan.json",
+      "sha256": "d35ede79081473dc2676bb0eb1263a1b8e456bcc8338facd1f6340039291041b",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T08:39:36+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-planning-list-files-concrete-command.plan.json",
+      "sha256": "0501e6378f4d094d2fc9c564373bc614824bc0639daf6dfd0ac8e9579b161ffd",
+      "command": "agentic-planning record-recovery",
+      "reason": "Tightened active execplan fields for the #892 planning.list-files generated command slice after CLI scaffold creation.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T08:44:03+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-planning-list-files-concrete-command",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T08:47:07+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/python-planning-list-files-concrete-command.plan.json",
+      "sha256": "5051e968df7a6b8e6a179317b7b5af442a9bc387c541777bad6837732652074d",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-planning-list-files-concrete-command",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T08:47:07+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "ed09716f3c42005d6f5a5f59b73169e050482c26868065f4d7a5600c1b1f61ac",
+      "command": "agentic-planning record-recovery",
+      "reason": "Updated #892 decomposition notes after completing memory.list-files and planning.list-files concrete generated command slices.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T08:47:58+00:00"
     }
   ]
 }

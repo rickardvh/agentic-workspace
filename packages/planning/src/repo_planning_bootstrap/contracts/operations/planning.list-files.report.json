@@ -39,9 +39,19 @@
   "writes": [],
   "steps": [
     {
-      "id": "load_payload_files",
-      "uses": "planning.list-files.load",
-      "description": "Load bundled planning payload file lists and optional enablement guidance."
+      "id": "list_payload_files",
+      "uses": "filesystem.glob",
+      "description": "List bundled planning payload files as stable relative paths."
+    },
+    {
+      "id": "list_bundled_skill_files",
+      "uses": "filesystem.glob",
+      "description": "List bundled planning skill files as stable relative paths."
+    },
+    {
+      "id": "assemble_payload",
+      "uses": "payload.assemble",
+      "description": "Build the list-files payload containing required, optional, bundled skill, and optional enablement data."
     },
     {
       "id": "emit_output",
@@ -58,14 +68,46 @@
   ],
   "migration_status": "runtime-consumed",
   "ir_plan": {
-    "status": "representative",
-    "summary": "Planning list-files executes generated operation IR through codegen-owned primitive dataflow while the planning module supplies payload inventory data.",
+    "status": "complete",
+    "summary": "Planning list-files is a complete generated command projection over package payload and skill resources without importing package runtime code or the generic operation IR runner.",
     "steps": [
       {
-        "id": "load_payload_files",
-        "uses": "planning.list-files.load",
-        "description": "Load bundled planning payload file lists and optional enablement guidance.",
+        "id": "list_payload_files",
+        "uses": "filesystem.glob",
+        "description": "List bundled planning payload files as stable relative paths.",
+        "arguments": {
+          "root": "planning.package-payload",
+          "pattern": "**/*",
+          "sort": "lexicographic"
+        },
+        "outputs": [
+          "files"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "list_bundled_skill_files",
+        "uses": "filesystem.glob",
+        "description": "List bundled planning skill files as stable relative paths.",
+        "arguments": {
+          "root": "planning.package-skills",
+          "pattern": "**/*",
+          "sort": "lexicographic"
+        },
+        "outputs": [
+          "bundled_skill_files"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "assemble_payload",
+        "uses": "payload.assemble",
+        "description": "Build the planning list-files payload from package resources and static enablement commands.",
         "arguments": {},
+        "inputs": [
+          "files",
+          "bundled_skill_files"
+        ],
         "outputs": [
           "result"
         ],
