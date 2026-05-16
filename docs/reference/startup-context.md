@@ -80,7 +80,24 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `immediate_next_allowed_action.read_first` | array of string | yes |  | Ordered read first entries used by this contract. |  |  |
 | `immediate_next_allowed_action.open_execplan_only_when` | string | yes |  | Open execplan only when text value used by this contract. |  |  |
 | `workflow_sufficiency` | object | no |  | Small decision record that says whether the current packet is enough for the next step or which exact detail field should be requested. |  |  |
-| `next_safe_action` | object | no |  | Compact next-safe-action packet derived from startup routing, including proof and completion-claim guardrails. |  |  |
+| `next_safe_action` | ref `#/$defs/next_safe_action` | no |  | Compact next-safe-action packet derived from startup routing, including proof and completion-claim guardrails. |  |  |
+| `next_safe_action.kind` | const `"agentic-workspace/next-safe-action/v1"` | yes |  | Discriminator for the next-safe-action packet. |  |  |
+| `next_safe_action.next_safe_action` | string | yes |  | Stable action id that names the safest next step. |  |  |
+| `next_safe_action.why` | string | yes |  | Human-readable reason for the selected next action. |  |  |
+| `next_safe_action.required_skill` | string | yes |  | Recommended skill id, or empty string when no skill is required. |  |  |
+| `next_safe_action.preferred_cli` | string | yes |  | Preferred CLI command for the next action, or empty string when the packet is only a decision. |  |  |
+| `next_safe_action.preferred_cli_effect` | enum `"none"`, `"read-only"`, `"mutating"`, `"validating"`, `"reporting"` | yes |  | Effect class of the preferred CLI command. |  |  |
+| `next_safe_action.cli_availability` | enum `"available"`, `"not-needed"`, `"unknown"`, `"missing-warning"`, `"missing-blocking"` | yes |  | How strongly the packet depends on an available CLI. |  |  |
+| `next_safe_action.module_slot` | string | yes |  | Workspace module or sub-slot that owns the next action. |  |  |
+| `next_safe_action.allowed_next_actions` | array of string | yes |  | Actions allowed before the next wider context read or implementation step. |  |  |
+| `next_safe_action.forbidden_actions` | array of string | yes |  | Actions forbidden by this packet until a newer compact packet supersedes it. |  |  |
+| `next_safe_action.proof_required` | boolean | yes |  | Whether proof is required before claiming the next action is complete. |  |  |
+| `next_safe_action.completion_claim_allowed` | boolean | yes |  | Whether the packet permits claiming completion at the current claim level. |  |  |
+| `next_safe_action.closure_blockers` | array of string | yes |  | Reasons closure or completion claims are blocked. |  |  |
+| `next_safe_action.continuation_owner_required` | boolean | yes |  | Whether unfinished intent needs an explicit continuation owner before closeout. |  |  |
+| `next_safe_action.memory_consultation_status` | string | yes |  | Memory consultation or durable-residue status relevant to the next action. |  |  |
+| `next_safe_action.fallback_if_cli_unavailable` | string | yes |  | Conservative fallback when the preferred CLI cannot be used. |  |  |
+| `next_safe_action.source_fields` | array of enum `"immediate_next_allowed_action"`, `"workflow_sufficiency"`, `"skill_routing"`, `"memory_consult"`, `"planning_safety_gate"`, `"proof"`, `"closeout_trust_inspection"`, `"continuation_state"` | yes |  | Startup fields used to derive the packet. |  |  |
 | `planning_safety_gate` | object | no |  | Planning ownership guard for broad, high-assurance, decomposed, or scope-widened work. |  |  |
 | `continuation_state` | object | no |  | Compact continuation-state contract for preserving only unfinished or handoff-relevant work, not historical residue. |  |  |
 | `authority_hierarchy` | object | no |  | Authority and promotion-path guidance for deciding which repo surfaces are current instruction, durable memory, future work, or historical audit. |  |  |

@@ -6,6 +6,14 @@ import argparse
 from tests.workspace_cli_support import *
 
 
+def _assert_next_safe_action_valid(packet: dict[str, object]) -> None:
+    from agentic_workspace.contract_tooling import contract_schema
+
+    schema = contract_schema("startup_context.schema.json")["$defs"]["next_safe_action"]
+    errors = list(Draft202012Validator(schema).iter_errors(packet))
+    assert errors == []
+
+
 def test_preflight_surfaces_local_only_memory_status(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
@@ -496,6 +504,7 @@ def test_start_tiny_profile_returns_first_contact_projection(capsys) -> None:
         "choose-smallest-workflow-shape",
         "continue-active-planning-record",
         "promote-or-create-active-execplan",
+        "record-delegation-decision",
     }
     assert "implement --changed <paths>" in payload["task_intent"]["implement_changed_command"]
     assert payload["task_intent"]["acceptance"]["status"] == "inferred"
@@ -523,7 +532,7 @@ def test_start_default_returns_selector_first_router(tmp_path: Path, capsys) -> 
 
     payload = json.loads(capsys.readouterr().out)
     encoded = json.dumps(payload, sort_keys=True)
-    assert len(encoded) < 5700
+    assert len(encoded) < 5900
     assert payload["kind"] == "startup-context/v1"
     assert "adaptive_routing" not in payload
     assert "context_router" not in payload
@@ -533,9 +542,15 @@ def test_start_default_returns_selector_first_router(tmp_path: Path, capsys) -> 
         "continue-active-planning-record",
     }
     packet = payload["next_safe_action"]
+    _assert_next_safe_action_valid(packet)
     assert packet["kind"] == "agentic-workspace/next-safe-action/v1"
     assert packet["next_safe_action"] == payload["immediate_next_allowed_action"]["action"]
     assert packet["module_slot"] in {"workspace", "planning"}
+    assert packet["preferred_cli_effect"] in {"none", "reporting"}
+    assert packet["cli_availability"] in {"not-needed", "unknown"}
+    assert packet["allowed_next_actions"]
+    assert isinstance(packet["closure_blockers"], list)
+    assert isinstance(packet["continuation_owner_required"], bool)
     assert packet["memory_consultation_status"] in {"recommended", "unknown"}
     assert packet["source_fields"] == [
         "immediate_next_allowed_action",
@@ -554,6 +569,37 @@ def test_start_default_returns_selector_first_router(tmp_path: Path, capsys) -> 
     assert "durable_intent_promotion" in payload["drill_down"]["available_selectors"]
     assert "available_selectors" in payload["drill_down"]
     assert "cli_invocation" in payload["drill_down"]["available_selectors"]
+
+
+def test_next_safe_action_schema_rejects_missing_typed_fields() -> None:
+    from agentic_workspace.contract_tooling import contract_schema
+
+    schema = contract_schema("startup_context.schema.json")["$defs"]["next_safe_action"]
+    packet = {
+        "kind": "agentic-workspace/next-safe-action/v1",
+        "next_safe_action": "choose-smallest-workflow-shape",
+        "why": "fixture",
+    }
+
+    errors = list(Draft202012Validator(schema).iter_errors(packet))
+
+    assert {tuple(error.path) for error in errors}
+    assert any("required_skill" in error.message for error in errors)
+    assert any("preferred_cli_effect" in error.message for error in errors)
+
+
+def test_start_changed_path_next_safe_action_marks_proof_required(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["start", "--target", str(target), "--changed", "README.md", "--format", "json"]) == 0
+
+    packet = json.loads(capsys.readouterr().out)["next_safe_action"]
+    _assert_next_safe_action_valid(packet)
+    assert packet["proof_required"] is True
+    assert packet["module_slot"] == "workspace.proof"
+    assert packet["preferred_cli_effect"] == "none"
 
 
 def test_start_completion_question_requires_closeout_trust_when_followup_remains(tmp_path: Path, capsys) -> None:
@@ -607,6 +653,11 @@ candidates = [
     action = payload["immediate_next_allowed_action"]
     assert action["action"] == "inspect-closeout-trust-before-completion-answer"
     assert action["command"] == "agentic-workspace report --target ./repo --section closeout_trust --format json"
+    packet = payload["next_safe_action"]
+    _assert_next_safe_action_valid(packet)
+    assert packet["preferred_cli_effect"] == "reporting"
+    assert packet["continuation_owner_required"] is True
+    assert "claim completion before closeout trust is reconciled" in packet["closure_blockers"]
     closeout = payload["closeout_trust_inspection"]
     assert closeout["status"] == "required"
     assert closeout["trust"] == "lower-trust"
@@ -1662,6 +1713,7 @@ def test_startup_skillspec_pilot_keeps_direct_work_light_and_blocks_epic_work(tm
 
     direct = json.loads(capsys.readouterr().out)
     assert "planning_safety_gate" not in direct
+    _assert_next_safe_action_valid(direct["next_safe_action"])
     assert direct["next_safe_action"]["next_safe_action"] == "choose-smallest-workflow-shape"
     assert direct["next_safe_action"]["proof_required"] is False
     assert direct["next_safe_action"]["module_slot"] == "workspace"
@@ -1682,6 +1734,7 @@ def test_startup_skillspec_pilot_keeps_direct_work_light_and_blocks_epic_work(tm
     )
 
     epic = json.loads(capsys.readouterr().out)
+    _assert_next_safe_action_valid(epic["next_safe_action"])
     gate = epic["planning_safety_gate"]
     assert gate["implementation_allowed"] is False
     assert gate["work_shape"] == "epic"

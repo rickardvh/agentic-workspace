@@ -2,38 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/execplans/python-workspace-root-primitive-migration.plan.json",
-      "sha256": "6c887131b54750c3a99805755d546703f49c11e96448153b4c7e3933bf206be3",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=keep-local",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T10:59:42+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-workspace-root-primitive-migration.plan.json",
-      "sha256": "702295c78ecf2504f3ae2780ad30ee4097aac94f65cdf227555ac9057c1b2116",
-      "command": "agentic-planning record-recovery",
-      "reason": "Manual plan tightening and closeout after validated #892 target-root primitive migration slice.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T11:03:15+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-workspace-root-primitive-migration",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T11:03:16+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/archive/python-workspace-root-primitive-migration.plan.json",
-      "sha256": "702295c78ecf2504f3ae2780ad30ee4097aac94f65cdf227555ac9057c1b2116",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-workspace-root-primitive-migration",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T11:03:16+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/execplans/python-memory-generated-resources.plan.json",
       "sha256": "9dd17df88c3b951ed3a7a3ae22eda43c05fc92a58982e530e1890767eb6c8da4",
       "command": "agentic-planning new-plan",
@@ -1600,6 +1568,38 @@
       "reason": "archive execplan github-low-priority-planning-lanes-p3",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-16T20:19:37+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-1013-typed-next-safe-action.plan.json",
+      "sha256": "fcc90870a880c4e6d6c1bf7a7f9a6a0951f51ea4daeda1acd5134be3df10bbec",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold github-1013-typed-next-safe-action",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T21:21:06+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "e64103c372202de151e76e6c7317745f8c8d8acb7b3631d46365c06b744eb70a",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold github-1013-typed-next-safe-action",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T21:21:06+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "2825a103bb66f149fb0a5df4c54a27542a980a4b8f789ea801637c26cd080901",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan github-1013-typed-next-safe-action",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T21:31:37+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/github-1013-typed-next-safe-action.plan.json",
+      "sha256": "2ce523e8a18dc9c66ba445d5df8f169037b4dcc48bf1290d1a73fe4ce119b0cc",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan github-1013-typed-next-safe-action",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T21:31:37+00:00"
     }
   ]
 }

@@ -9081,19 +9081,44 @@ def _next_safe_action_packet(
     if decision in {"active-execplan-required", "planning-escalation-required", "implementation-owner-missing"}:
         forbidden_actions.append("continue implementation without active planning ownership")
     memory_status = str((memory_consult or {}).get("status", "unknown"))
+    command_effect = "none"
+    if preferred_cli:
+        if "proof" in preferred_cli or "test" in preferred_cli or "lint" in preferred_cli:
+            command_effect = "validating"
+        elif any(token in preferred_cli for token in ("promote-to-plan", "new-plan", "archive-plan", "close-item", "delegation-decision")):
+            command_effect = "mutating"
+        elif any(token in preferred_cli for token in ("report", "summary", "status", "doctor", "start", "preflight", "skills")):
+            command_effect = "reporting"
+        else:
+            command_effect = "read-only"
+    closure_blockers = sorted(set(forbidden_actions))
+    continuation_owner_required = action in {
+        "inspect-closeout-trust-before-completion-answer",
+        "create-prep-only-planning-state",
+        "promote-or-create-active-execplan",
+        "create-or-promote-active-execplan",
+    }
+    allowed_next_actions = [action]
+    if preferred_cli:
+        allowed_next_actions.append("run-preferred-cli")
     return {
         "kind": "agentic-workspace/next-safe-action/v1",
         "next_safe_action": action,
         "why": str(immediate.get("summary", "") or (workflow_sufficiency or {}).get("reason", "")),
         "required_skill": skill,
         "preferred_cli": preferred_cli,
+        "preferred_cli_effect": command_effect,
+        "cli_availability": "unknown" if preferred_cli else "not-needed",
         "module_slot": module_slot,
+        "allowed_next_actions": allowed_next_actions,
         "forbidden_actions": sorted(set(forbidden_actions)),
         "proof_required": bool(
             proof_hint
             and proof_hint not in {"select proof after changed paths are known", "no file proof unless the task later becomes an edit"}
         ),
         "completion_claim_allowed": not forbidden_actions and action not in {"choose-smallest-workflow-shape"},
+        "closure_blockers": closure_blockers,
+        "continuation_owner_required": continuation_owner_required,
         "memory_consultation_status": memory_status,
         "fallback_if_cli_unavailable": "Use generated or documented workflow fallback for the same module slot; preserve forbidden actions and do not mutate managed state by hand.",
         "source_fields": ["immediate_next_allowed_action", "workflow_sufficiency", "skill_routing", "memory_consult"],
