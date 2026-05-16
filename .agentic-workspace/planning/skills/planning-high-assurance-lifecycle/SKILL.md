@@ -7,6 +7,12 @@ description: Preserve intent, decomposition, assurance, delegation, proof, and c
 
 Use this skill when work is broad, multi-lane, high-assurance, cross-boundary, or likely to grow beyond an initially bounded slice.
 
+## Primary Ownership
+
+This skill is the routing wrapper for broad or high-assurance work. It preserves the sequence across classification, decomposition, assurance, delegation, proof, and closeout, but it does not own the detailed semantics of each phase.
+
+Route intent satisfaction to `planning-intent-verification`, closeout mechanics to `planning-closeout-trust`, decomposition structure to `planning-decompose`, and compact state projection to `planning-reporting`.
+
 ## Route
 
 1. Classify the work shape before editing: direct task, bounded execplan, decomposition lane, epic, review, or recovery.

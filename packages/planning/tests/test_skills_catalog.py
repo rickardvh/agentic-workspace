@@ -16,6 +16,8 @@ def test_bundled_skills_catalog_lists_core_and_review_skills() -> None:
     reporting_skill = skills_root / "planning-reporting" / "SKILL.md"
     lifecycle_skill = skills_root / "planning-high-assurance-lifecycle" / "SKILL.md"
     intent_skill = skills_root / "planning-intent-verification" / "SKILL.md"
+    closeout_skill = skills_root / "planning-closeout-trust" / "SKILL.md"
+    decompose_skill = skills_root / "planning-decompose" / "SKILL.md"
 
     assert autopilot_skill.exists()
     assert intake_skill.exists()
@@ -41,6 +43,11 @@ def test_bundled_skills_catalog_lists_core_and_review_skills() -> None:
     assert "planning-reporting" in registry_text
     assert "planning-high-assurance-lifecycle" in registry_text
     assert "planning-intent-verification" in registry_text
+    assert "semantic intent satisfaction" in intent_skill.read_text(encoding="utf-8")
+    assert "owns closeout procedure" in closeout_skill.read_text(encoding="utf-8")
+    assert "routing wrapper" in lifecycle_skill.read_text(encoding="utf-8")
+    assert "owns parent/lane/slice structure" in decompose_skill.read_text(encoding="utf-8")
+    assert "owns compact projection" in reporting_skill.read_text(encoding="utf-8")
     autopilot_entry = next(entry for entry in registry_payload["skills"] if entry["id"] == "planning-autopilot")
     review_entry = next(entry for entry in registry_payload["skills"] if entry["id"] == "planning-review-pass")
     reporting_entry = next(entry for entry in registry_payload["skills"] if entry["id"] == "planning-reporting")
@@ -52,6 +59,12 @@ def test_bundled_skills_catalog_lists_core_and_review_skills() -> None:
     assert "high assurance planning lifecycle" in lifecycle_entry["activation_hints"]["phrases"]
     assert "intent verification" in intent_entry["activation_hints"]["phrases"]
     assert "negative invariants" in intent_entry["activation_hints"]["phrases"]
+    summaries = {entry["id"]: entry["summary"] for entry in registry_payload["skills"]}
+    assert "semantic intent satisfaction" in summaries["planning-intent-verification"]
+    assert "closeout procedure" in summaries["planning-closeout-trust"]
+    assert "broad or high-assurance" in summaries["planning-high-assurance-lifecycle"]
+    assert "parent/lane/slice structure" in summaries["planning-decompose"]
+    assert "canonical summary JSON" in summaries["planning-reporting"]
 
 
 def test_bundled_skills_catalog_readme_matches_registry_ids() -> None:

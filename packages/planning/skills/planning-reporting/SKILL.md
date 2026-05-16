@@ -8,6 +8,12 @@ description: Report active planning state, proof expectations, and next-action g
 Use this skill when you need a compact, comparable picture of what is active and what should happen next, without rereading `.agentic-workspace/planning/state.toml` or execplan prose first.
 Use `agentic-workspace report --target <repo> --format json` first when the question is broader than planning state alone.
 
+## Primary Ownership
+
+This skill owns compact projection of active planning state. It reports the current state, warnings, next action, and proof posture from canonical JSON; it is not the semantic owner for intent satisfaction, closeout permission, or decomposition structure.
+
+Route intent satisfaction to `planning-intent-verification`, closeout mechanics to `planning-closeout-trust`, broad lifecycle sequencing to `planning-high-assurance-lifecycle`, and parent/lane/slice shaping to `planning-decompose`.
+
 ## Canonical Reporting Surface
 
 Prefer:

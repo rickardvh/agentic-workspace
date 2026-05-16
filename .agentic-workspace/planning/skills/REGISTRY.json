@@ -65,7 +65,7 @@
       "path": "planning-decompose/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "decompose epic or lane shaped work into bounded schema-backed planning records before execplans",
+      "summary": "own parent/lane/slice structure by decomposing epic or lane shaped work before execplans",
       "activation_hints": {
         "verbs": ["decompose", "split", "triage", "break", "shape"],
         "nouns": ["epic", "lane", "decomposition", "progressive maturity", "bounded tasks"],
@@ -122,7 +122,7 @@
       "path": "planning-high-assurance-lifecycle/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "preserve intent, decomposition, assurance, delegation, proof, and closeout for broad or high-assurance planning work",
+      "summary": "route broad or high-assurance planning work across intent, decomposition, assurance, delegation, proof, and closeout owners",
       "activation_hints": {
         "verbs": ["classify", "decompose", "plan", "delegate", "prove", "close"],
         "nouns": ["high assurance", "lifecycle", "intent satisfaction", "multi-lane work", "epic", "closeout", "delegation packet"],
@@ -148,7 +148,7 @@
       "path": "planning-intent-verification/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "verify original, interpreted, parent, and negative intent before decomposition, validation, or completion claims",
+      "summary": "own semantic intent satisfaction for original, interpreted, parent, and negative intent before completion claims",
       "activation_hints": {
         "verbs": ["verify", "extract", "preserve", "compare", "validate", "close"],
         "nouns": ["intent", "parent intent", "negative invariants", "completion claim", "continuation owner"],
@@ -174,7 +174,7 @@
       "path": "planning-closeout-trust/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "close out planned work with proof, intent satisfaction, trust, and residue distillation",
+      "summary": "own closeout procedure while invoking intent verification for semantic satisfaction and routing residue",
       "activation_hints": {
         "verbs": ["close", "archive", "distill", "finish", "validate", "resolve", "satisfy"],
         "nouns": [
@@ -246,7 +246,7 @@
       "path": "planning-reporting/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "report active planning state, proof expectations, and next-action guidance from the canonical summary JSON",
+      "summary": "project active planning state, proof expectations, and next-action guidance from canonical summary JSON",
       "activation_hints": {
         "verbs": ["report", "summarize", "inspect", "check"],
         "nouns": ["planning state", "active work", "next action", "proof posture", "blockers"],

@@ -7,6 +7,12 @@ description: Decompose epic or lane shaped work into bounded schema-backed plann
 
 Use this skill when broad work is too large or vague for a single execplan.
 
+## Primary Ownership
+
+This skill owns parent/lane/slice structure before execplans. It decides how broad work becomes decomposition records and ready bounded slices; it does not decide semantic intent satisfaction or closeout permission.
+
+Route intent satisfaction to `planning-intent-verification`, closeout mechanics to `planning-closeout-trust`, broad lifecycle sequencing to `planning-high-assurance-lifecycle`, and active-state projection to `planning-reporting`.
+
 ## Route
 
 1. Run `agentic-workspace planning --target . --format json`.
