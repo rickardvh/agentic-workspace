@@ -2,38 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/execplans/python-workspace-runtime-relocation.plan.json",
-      "sha256": "3fb5364195241843bea6c8ed21455f4a8cf76739aa1daa8887f914b7492a23e7",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=keep-local",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T10:02:51+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-workspace-runtime-relocation.plan.json",
-      "sha256": "67a152ee944a8b45a19777f439f8573f42d310a294fdff1a11ea750573b67963",
-      "command": "agentic-planning record-recovery",
-      "reason": "Tightened active #892 workspace runtime relocation plan after resuming autopilot work.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T10:29:03+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-workspace-runtime-relocation",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T10:42:42+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/archive/python-workspace-runtime-relocation.plan.json",
-      "sha256": "b95a2a84fe6af4991c21adc12f5284dc4a15f5ae35c203fecc25d0e050928739",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-workspace-runtime-relocation",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T10:42:42+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/execplans/python-workspace-facade-source-runtime-elimination.plan.json",
       "sha256": "2cbd0884c914272ca28f96ca7c2b8f7554a2b6e66a9a4f60c8177b5cdeb25311",
       "command": "agentic-planning new-plan",
@@ -1600,6 +1568,38 @@
       "reason": "Updated active P1 execplan after completing #970/#971 closeout trust gate slice.",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-16T18:36:15+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "cb70a68a14dc0153ae435b953da406568c2621e5c08b2f2d494e9403b9202d67",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan .agentic-workspace/planning/execplans/github-planning-gates-dogfooding-p1.plan.json",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T18:41:59+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/github-planning-gates-dogfooding-p1.plan.json",
+      "sha256": "e1dddf55ea64beebfdcb91aa4152a48fbb4121f85c7fa215076ab07dee6ebb64",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan .agentic-workspace/planning/execplans/github-planning-gates-dogfooding-p1.plan.json",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T18:41:59+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-planning-workflow-observability-p2.plan.json",
+      "sha256": "daa5b8e140db3fb2a215ff4b07d6c67db84d647c0e7291a714e12f075eb9033e",
+      "command": "agentic-planning promote-to-plan",
+      "reason": "promote planning item github-planning-workflow-observability-p2",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T18:42:14+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "50c2ca02641a22c3884032ae02d0570df5173cbdfb346923825fa7823bc16457",
+      "command": "agentic-planning promote-to-plan",
+      "reason": "promote planning item github-planning-workflow-observability-p2",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T18:42:14+00:00"
     }
   ]
 }

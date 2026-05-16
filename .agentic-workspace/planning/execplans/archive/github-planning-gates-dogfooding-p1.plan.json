@@ -232,7 +232,7 @@
   "intent_satisfaction": {
     "original intent": "High-priority non-codegen review and dogfooding findings should follow the P0 planning trust blockers.",
     "was original intent fully satisfied?": "yes",
-    "evidence of intent satisfaction": "#1000 dogfooding regression completed; #975 stale parent decomposition gate completed; #970/#971 external closeout evidence and negative invariant gate completed.",
+    "evidence of intent satisfaction": "PR #1010 merged; #1000, #975, #970, and #971 landed with local and CI validation.",
     "unsolved intent passed to": "none"
   },
   "execution_summary": {
@@ -252,23 +252,23 @@
     "retention after promotion": "retain"
   },
   "task_intent_promotion": {
-    "decision": "pending",
+    "decision": "do-not-promote",
     "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
-    "evidence source": "",
-    "target scope": "",
-    "proposed durable intent": "",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "none",
+    "proposed durable intent": "none yet",
     "confidence": "low",
-    "needs review": true,
-    "owner surface": ""
+    "needs review": "True",
+    "owner surface": "none"
   },
   "closure_check": {
+    "closeout scope": "slice",
     "slice status": "completed",
     "larger-intent status": "closed",
     "closure decision": "archive-and-close",
-    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
-    "why this decision is honest": "",
-    "evidence carried forward": "#1000 test now creates explicit no-active planning state and expects the correct planning escalation. #975 runtime gate exposes active_parent_decomposition_requirement, sets implementation_allowed=false, and requires update/link/skip before implementation when a parent decomposition lane is stale. #970/#971 closeout trust compares referenced issues to external evidence and requires negative invariants to be satisfied/deferred/rejected.",
-    "reopen trigger": "If implement CLI tests again depend on ambient repository planning state."
+    "why this decision is honest": "P1 implementation landed on master and linked issues are ready to close on merge.",
+    "evidence carried forward": "PR #1010 merge plus passing workspace, planning, and package checks.",
+    "reopen trigger": "Reopen if planning gates again depend on ambient state, stale decomposition, or self-authored closeout evidence."
   },
   "improvement_signal_review": {
     "status": "pending",
@@ -282,8 +282,20 @@
   },
   "closeout_distillation": {
     "buckets": {
-      "discard": [],
-      "continuation": [],
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "PR and CI",
+          "owner": "none",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
       "memory": [],
       "config_check": [],
       "docs": [],
@@ -296,5 +308,20 @@
     "2026-05-16: Completed #1000 test slice and carried remaining P1 work forward to #975/#970/#971.",
     "2026-05-16: Completed #975 stale parent decomposition gate and carried remaining P1 work forward to #970/#971.",
     "2026-05-16: Completed #970/#971 closeout trust gate; P1 implementation is ready for final validation and PR."
-  ]
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: High-priority non-codegen review and dogfooding findings should follow the P0 planning trust blockers.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: uv run pytest tests/test_workspace_implement_cli.py::test_implement_command_returns_bounded_context_and_boundary_warnings -q; uv run pytest tests/test_workspace_implement_cli.py -q; uv run pytest tests/test_workspace_start_preflight_cli.py::test_implement_blocks_stale_parent_decomposition_for_active_epic_plan tests/test_workspace_start_preflight_cli.py::test_implement_requires_delegation_decision_for_active_decomposed_lane tests/test_workspace_start_preflight_cli.py::test_start_blocks_decomposed_epic_without_active_execplan -q; uv run pytest tests/test_workspace_implement_cli.py::test_implement_epic_decomposition_prefers_reusable_worker_over_manual_relay -q; uv run pytest tests/test_workspace_report_cli.py -q\nChanged surfaces: workspace implement CLI test coverage; planning safety gate runtime; start/preflight planning gate tests; closeout trust runtime and report tests; external intent evidence schema\nDurable residue: none (none)\nMemory learning: none\nFollow-up: PR and CI"
+  }
 }
