@@ -949,8 +949,14 @@ def _python_local_runtime_binding_module(
 ) -> str:
     functions = _local_runtime_binding_functions(package, binding)
     source_import_module = str(binding["source_import_module"])
-    imports = ",\n    ".join(functions)
     exported = ",\n    ".join(repr(function) for function in functions)
+    function_blocks = []
+    for function in functions:
+        function_blocks.append(
+            f"def {function}(*args: Any, **kwargs: Any) -> Any:\n"
+            f"    from {source_import_module} import {function} as source_function\n\n"
+            "    return source_function(*args, **kwargs)\n"
+        )
     return (
         '"""Generated runtime binding facade.\n\n'
         f"Source: {source_path}\n"
@@ -958,13 +964,11 @@ def _python_local_runtime_binding_module(
         f"Regenerate with: {regenerate_command}\n"
         '"""\n\n'
         "from __future__ import annotations\n\n"
-        f"from {source_import_module} import (\n"
-        f"    {imports},\n"
-        ")\n\n"
+        "from typing import Any\n\n"
         "# DO NOT EDIT DIRECTLY.\n"
-        "# This generated-local seam lets generated workspace outputs avoid direct source-runtime imports.\n"
+        "# This generated-local seam makes remaining source-runtime delegates explicit per function.\n"
         "# Replace individual bindings here with generated/codegen-owned primitives as those operations migrate.\n"
-        f"# Regenerate with: {regenerate_command}\n\n"
+        f"# Regenerate with: {regenerate_command}\n\n" + "\n\n".join(function_blocks) + "\n\n"
         "__all__ = [\n"
         f"    {exported},\n"
         "]\n"

@@ -1152,7 +1152,7 @@ def _validate_full_python_completion_executable_ownership(ir: dict[str, object])
     if generated_runtime_facade_imports:
         errors.append(
             "command_package_ir.json cannot claim full Python generated CLI completion while generated runtime facades "
-            f"still re-export package-owned runtime helpers: {generated_runtime_facade_imports!r}"
+            f"still delegate to package-owned runtime helpers: {generated_runtime_facade_imports!r}"
         )
     return errors
 

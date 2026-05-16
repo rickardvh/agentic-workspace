@@ -128,7 +128,7 @@ def test_full_python_completion_rejects_runtime_source_and_command_runtime_impor
     errors = checker._validate_full_python_completion_executable_ownership(ir)
 
     assert any("still owns generated CLI runtime/lifecycle behavior" in error for error in errors)
-    assert any("generated runtime facades still re-export package-owned runtime helpers" in error for error in errors)
+    assert any("generated runtime facades still delegate to package-owned runtime helpers" in error for error in errors)
 
 
 def test_current_python_completion_state_is_not_full_while_runtime_source_remains() -> None:
