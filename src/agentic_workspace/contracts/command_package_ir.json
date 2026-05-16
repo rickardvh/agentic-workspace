@@ -7167,6 +7167,11 @@
             "source_root": "packages/memory/skills",
             "generated_root": "_skills",
             "required_marker": "REGISTRY.json"
+          },
+          {
+            "source_root": "packages/memory/src/repo_memory_bootstrap/contracts",
+            "generated_root": "_contracts",
+            "required_marker": "payload_verification.memory.json"
           }
         ],
         "local_runtime_bindings": [
@@ -7408,6 +7413,11 @@
               "name": "memory.package-skills",
               "generated_root": "_skills",
               "required_marker": "REGISTRY.json"
+            },
+            {
+              "name": "memory.contracts",
+              "generated_root": "_contracts",
+              "required_marker": "payload_verification.memory.json"
             }
           ],
           "handlers": [
@@ -9758,6 +9768,8 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
+              "path.target_root.resolve",
+              "payload.verify",
               "python.function.call",
               "output.emit"
             ]

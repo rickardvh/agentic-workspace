@@ -121,6 +121,7 @@ REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE = {
     "filesystem.glob",
     "json.parse",
     "payload.assemble",
+    "payload.verify",
     "output.emit",
 }
 PYTHON_MODULE_SOURCE_EXECUTABLE_MARKERS = {
@@ -1514,6 +1515,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         "memory.report.report",
         "memory.route-report.report",
         "memory.status.report",
+        "memory.verify-payload.report",
         "planning.doctor.report",
         "planning.close-item.lifecycle",
         "planning.create-review.lifecycle",
@@ -1575,6 +1577,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         "memory.report.report": "memory-bootstrap",
         "memory.route-report.report": "memory-bootstrap",
         "memory.status.report": "memory-bootstrap",
+        "memory.verify-payload.report": "memory-bootstrap",
         "planning.doctor.report": "planning-bootstrap",
         "planning.close-item.lifecycle": "planning-bootstrap",
         "planning.create-review.lifecycle": "planning-bootstrap",
@@ -1664,6 +1667,20 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         ):
             if fragment not in report_text:
                 errors.append("generated memory report operation must retain portable JSON primitives plus explicit verbose/text fallback")
+    verify_payload_operation = REPO_ROOT / "generated" / "memory" / "python" / "operations" / "memory.verify-payload.report.json"
+    if verify_payload_operation.is_file():
+        verify_payload_text = verify_payload_operation.read_text(encoding="utf-8")
+        for fragment in (
+            '"uses": "path.target_root.resolve"',
+            '"uses": "payload.verify"',
+            '"uses": "python.function.call"',
+            '"policy_root": "memory.contracts"',
+            '"payload_root": "memory.package-payload"',
+        ):
+            if fragment not in verify_payload_text:
+                errors.append("generated memory verify-payload operation must retain portable JSON primitive plus explicit text fallback")
+    else:
+        errors.append("generated memory verify-payload operation is missing")
     if "repo_memory_bootstrap._installer_paths" in memory_operation_executor_text:
         errors.append("memory operation IR executor must resolve package resources from generated target-local copies")
     if "_resolve_memory_target_root" in memory_operation_executor_text:
@@ -1680,6 +1697,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
     for marker in (
         "generated/memory/python/_payload/AGENTS.template.md",
         "generated/memory/python/_skills/REGISTRY.json",
+        "generated/memory/python/_contracts/payload_verification.memory.json",
     ):
         if not (REPO_ROOT / marker).is_file():
             errors.append(f"memory generated Python resource copy is missing required marker: {marker}")
@@ -1689,6 +1707,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         "memory_report_report",
         "memory_route_report_report",
         "memory_status_report",
+        "memory_verify_payload_report",
     ):
         command_text = (REPO_ROOT / "generated" / "memory" / "python" / "commands" / f"{module_name}.py").read_text(
             encoding="utf-8"

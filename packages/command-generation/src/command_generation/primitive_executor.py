@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import re
 import tomllib
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
@@ -82,6 +83,8 @@ def execute_primitive(
         return _toml_table_counts(values=values, arguments=arguments, context=context)
     if primitive == "payload.assemble":
         return _assemble_payload(values=values, arguments=arguments)
+    if primitive == "payload.verify":
+        return _verify_payload(values=values, arguments=arguments, context=context)
     if primitive == "output.emit":
         return _emit_output(values=values)
     if primitive == "python.function.call":
@@ -261,6 +264,239 @@ def _assemble_payload(*, values: dict[str, Any], arguments: dict[str, Any]) -> d
         ]
         return payload
     raise PrimitiveExecutionError(f"unsupported payload.assemble actions_from: {actions_from!r}")
+
+
+def _verify_payload(*, values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> dict[str, Any]:
+    policy_root = context.root(str(arguments.get("policy_root", "")))
+    payload_root = context.root(str(arguments.get("payload_root", "")))
+    policy_path = _resolve_inside(policy_root, str(arguments.get("policy_path", "")))
+    try:
+        policy = json.loads(policy_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise PrimitiveExecutionError(f"payload.verify cannot load policy: {policy_path}") from exc
+    target_root = Path(str(values.get(str(arguments.get("target_root_value", "target_root")), context.cwd))).resolve()
+    bootstrap_version = int(policy.get("bootstrap_version", 0))
+    version_path = str(policy.get("version_path", ""))
+    manifest_path = str(policy.get("manifest_path", ""))
+    payload_paths = _payload_file_set(payload_root=payload_root, policy=policy)
+    legacy_version_path = str(policy.get("legacy_version_path", ""))
+    detected_version = _read_first_version(target_root, [version_path, legacy_version_path])
+    payload_version = _read_version(payload_root / version_path)
+    actions: list[dict[str, str]] = []
+    if payload_version is None:
+        actions.append(_payload_action("manual review", version_path, "payload version marker is missing or invalid"))
+    elif payload_version != bootstrap_version:
+        actions.append(
+            _payload_action(
+                "manual review",
+                version_path,
+                f"payload version marker ({payload_version}) does not match installer bootstrap version ({bootstrap_version})",
+            )
+        )
+    _verify_upgrade_source(policy=policy, payload_root=payload_root, actions=actions)
+    for required in _string_list(policy.get("required_files", []), source="payload.verify required_files"):
+        present = required in payload_paths
+        actions.append(
+            _payload_action(
+                "current" if present else "manual review",
+                required,
+                "required payload file present" if present else "required payload file missing",
+                safety="safe" if present else "manual",
+                category="safe-update" if present else "contract-drift",
+            )
+        )
+    compatibility_files = _string_list(policy.get("compatibility_contract_files", []), source="payload.verify compatibility_contract_files")
+    helper_files = [
+        path
+        for path in _string_list(policy.get("required_files", []), source="payload.verify required_files")
+        if path not in set(compatibility_files)
+    ]
+    actions.append(
+        _payload_action(
+            "current",
+            manifest_path,
+            "compatibility contract files: " + ", ".join(compatibility_files),
+            safety="safe",
+            category="safe-update",
+        )
+    )
+    upgrade_path = str(policy.get("upgrade_source", {}).get("path", ""))
+    actions.append(
+        _payload_action(
+            "current",
+            upgrade_path,
+            "lower-stability helper files: " + ", ".join(helper_files),
+            safety="safe",
+            category="safe-update",
+        )
+    )
+    current_memory = policy.get("current_memory", {})
+    if not isinstance(current_memory, dict):
+        raise PrimitiveExecutionError("payload.verify current_memory must be an object")
+    current_prefix = str(current_memory.get("prefix", ".agentic-workspace/memory/repo/current/"))
+    current_payload = {path for path in payload_paths if path.startswith(current_prefix)}
+    required_current = set(_string_list(current_memory.get("required", []), source="payload.verify current_memory.required"))
+    optional_current = set(_string_list(current_memory.get("optional", []), source="payload.verify current_memory.optional"))
+    for extra in sorted(current_payload - (required_current | optional_current)):
+        actions.append(_payload_action("manual review", extra, "local-only or unexpected current-memory note is in the shipped payload"))
+    for missing in sorted(required_current - current_payload):
+        actions.append(_payload_action("manual review", missing, "baseline current-memory note missing from shipped payload"))
+    for forbidden in _string_list(policy.get("forbidden_files", []), source="payload.verify forbidden_files"):
+        if forbidden in payload_paths:
+            actions.append(_payload_action("manual review", forbidden, "forbidden file is present in the shipped payload"))
+    for payload_path in sorted(payload_paths):
+        if any(
+            payload_path.startswith(prefix)
+            for prefix in _string_list(policy.get("forbidden_prefixes", []), source="payload.verify forbidden_prefixes")
+        ):
+            actions.append(_payload_action("manual review", payload_path, "forbidden path prefix is present in the shipped payload"))
+    if not _toml_file_valid(payload_root / manifest_path):
+        actions.append(_payload_action("manual review", manifest_path, "payload manifest is missing or invalid"))
+    _verify_guidance_fragments(policy=policy, payload_root=payload_root, actions=actions)
+    return {
+        "target_root": str(target_root),
+        "dry_run": True,
+        "mode": "full",
+        "message": "Payload verification",
+        "detected_version": detected_version,
+        "bootstrap_version": bootstrap_version,
+        "actions": actions,
+        "route_summary": {},
+        "missing_note_hint": "",
+        "review_summary": {},
+        "review_cases": [],
+        "sync_summary": {},
+        "route_report_summary": {},
+        "route_report_feedback_cases": [],
+        "route_report_fixture_results": [],
+    }
+
+
+def _payload_file_set(*, payload_root: Path, policy: dict[str, Any]) -> set[str]:
+    aliases = {
+        str(item["source"]): str(item["target"])
+        for item in policy.get("payload_path_aliases", [])
+        if isinstance(item, dict) and isinstance(item.get("source"), str) and isinstance(item.get("target"), str)
+    }
+    payload_paths: set[str] = set()
+    for path in payload_root.rglob("*"):
+        if path.is_file():
+            relative = path.relative_to(payload_root).as_posix()
+            payload_paths.add(aliases.get(relative, relative))
+    return payload_paths
+
+
+def _payload_action(kind: str, path: str, detail: str, *, safety: str = "manual", category: str = "contract-drift") -> dict[str, str]:
+    return {
+        "kind": kind,
+        "path": path,
+        "detail": detail,
+        "role": "payload-contract",
+        "safety": safety,
+        "source": path,
+        "category": category,
+        "remediation_kind": "",
+        "remediation_target": "",
+        "remediation_reason": "",
+        "remediation_confidence": "",
+        "memory_action": "",
+        "match_source": "",
+    }
+
+
+def _verify_upgrade_source(*, policy: dict[str, Any], payload_root: Path, actions: list[dict[str, str]]) -> None:
+    upgrade_source = policy.get("upgrade_source", {})
+    if not isinstance(upgrade_source, dict):
+        raise PrimitiveExecutionError("payload.verify upgrade_source must be an object")
+    relative = str(upgrade_source.get("path", ""))
+    legacy_relative = str(upgrade_source.get("legacy_path", ""))
+    path = payload_root / relative
+    if not path.exists():
+        path = payload_root / legacy_relative
+    if not path.exists():
+        actions.append(_payload_action("manual review", relative, "upgrade source metadata is missing from the payload"))
+        return
+    try:
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        actions.append(_payload_action("manual review", relative, "upgrade source metadata is not valid TOML"))
+        return
+    source_type = str(data.get("source_type", "")).strip()
+    if source_type not in set(_string_list(upgrade_source.get("allowed_source_types", []), source="payload.verify allowed_source_types")):
+        actions.append(_payload_action("manual review", relative, "upgrade source metadata must declare source_type as git or local"))
+        return
+    for required in _string_list(upgrade_source.get("required_fields", []), source="payload.verify required_fields"):
+        if not str(data.get(required, "")).strip():
+            actions.append(_payload_action("manual review", relative, f"upgrade source metadata is missing {required}"))
+            return
+    for field_name, date_format in (upgrade_source.get("date_fields", {}) or {}).items():
+        value = str(data.get(str(field_name), "")).strip()
+        if value and str(date_format) == "YYYY-MM-DD" and not re.match(r"^\d{4}-\d{2}-\d{2}$", value):
+            actions.append(_payload_action("manual review", relative, f"upgrade source metadata has invalid {field_name}; use YYYY-MM-DD"))
+    for field_name in _string_list(upgrade_source.get("integer_fields", []), source="payload.verify integer_fields"):
+        if not isinstance(data.get(field_name, 30), int):
+            actions.append(
+                _payload_action("manual review", relative, f"upgrade source metadata has invalid {field_name}; use an integer day count")
+            )
+
+
+def _verify_guidance_fragments(*, policy: dict[str, Any], payload_root: Path, actions: list[dict[str, str]]) -> None:
+    raw_fragments = policy.get("guidance_fragments", {})
+    if not isinstance(raw_fragments, dict):
+        raise PrimitiveExecutionError("payload.verify guidance_fragments must be an object")
+    for relative, fragments in raw_fragments.items():
+        relative_path = str(relative)
+        path = payload_root / relative_path
+        if not path.exists():
+            continue
+        text = path.read_text(encoding="utf-8")
+        missing = [fragment for fragment in _string_list(fragments, source="payload.verify guidance fragments") if fragment not in text]
+        actions.append(
+            _payload_action(
+                "current" if not missing else "manual review",
+                relative_path,
+                "collaboration-safe current-note guidance present"
+                if not missing
+                else "current-note payload guidance is missing collaboration-safe wording",
+                safety="safe" if not missing else "manual",
+                category="safe-update" if not missing else "contract-drift",
+            )
+        )
+
+
+def _toml_file_valid(path: Path) -> bool:
+    if not path.exists():
+        return False
+    try:
+        tomllib.loads(path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return False
+    return True
+
+
+def _read_version(path: Path) -> int | None:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    match = re.search(r"^\s*Version:\s*(\d+)\s*$", text, re.MULTILINE)
+    return int(match.group(1)) if match else None
+
+
+def _read_first_version(root: Path, relative_paths: Sequence[str]) -> int | None:
+    for relative_path in relative_paths:
+        if not relative_path:
+            continue
+        version = _read_version(root / relative_path)
+        if version is not None:
+            return version
+    return None
+
+
+def _string_list(value: Any, *, source: str) -> list[str]:
+    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+        raise PrimitiveExecutionError(f"{source} must be a list of strings")
+    return value
 
 
 def _resolve_template(template: Any, *, values: dict[str, Any]) -> Any:

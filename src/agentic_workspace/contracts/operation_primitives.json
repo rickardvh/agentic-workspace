@@ -92,6 +92,7 @@
           "json.parse",
           "toml.table.counts",
           "payload.assemble",
+          "payload.verify",
           "output.emit"
         ],
         "domain_runtime_extension_behavior": "Python generated packages may bridge explicit domain-runtime primitives through the declared runtime module binding; that bridge is not counted as shared primitive executor coverage.",
@@ -391,6 +392,15 @@
       "semantics": "Build a JSON-serializable payload from declared step outputs and constants.",
       "input_schema_ref": "schemas/primitives/payload_assemble.input.schema.json",
       "output_schema_ref": "schemas/primitives/payload_assemble.output.schema.json"
+    },
+    {
+      "id": "payload.verify",
+      "summary": "Verify a package payload against package-owned declarative verification policy.",
+      "kind": "validation",
+      "portability": "target-executor",
+      "semantics": "Read a schema-backed payload verification policy and inspect rooted payload files for declared version markers, required files, forbidden paths, manifest validity, upgrade-source metadata, and guidance fragments without package-specific executable policy.",
+      "input_schema_ref": "schemas/primitives/payload_verify.input.schema.json",
+      "output_schema_ref": "schemas/primitives/payload_verify.output.schema.json"
     },
     {
       "id": "planning.adopt.apply",

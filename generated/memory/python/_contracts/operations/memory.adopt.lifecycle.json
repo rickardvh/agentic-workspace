@@ -1,0 +1,186 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "memory.adopt.lifecycle",
+  "command_surface": {
+    "program": "agentic-memory",
+    "command": "adopt",
+    "format_option": "format"
+  },
+  "summary": "Adopt Memory bootstrap capability in an existing repository.",
+  "classification": "lifecycle-mutation",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "dry_run",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "apply_local_entrypoint",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "project_name",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "project_purpose",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "key_repo_docs",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "key_subsystems",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "primary_build_command",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "primary_test_command",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "other_key_commands",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "policy_profile",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "text-or-json"
+  },
+  "effects": {
+    "read_only": false,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": true,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": true,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": "target repository Memory install state",
+      "required": false
+    }
+  ],
+  "writes": [
+    {
+      "surface": "target repository Memory managed surfaces",
+      "required": false,
+      "when": "not a dry run"
+    }
+  ],
+  "steps": [
+    {
+      "id": "apply_memory_lifecycle",
+      "uses": "python.function.call",
+      "description": "Adopt Memory bootstrap capability in an existing repository."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit the adopt result in the requested format."
+    }
+  ],
+  "guards": [
+    "Generated code owns parser/help/dispatch shape; memory-owned lifecycle policy remains behind the declared primitive.",
+    "Dry-run conformance must prove generated lifecycle adapters can execute without repository writes."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated memory adopt dry-run process conformance passes"
+  ],
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Memory adopt executes generated operation IR through codegen-owned primitive dataflow while the memory module owns lifecycle policy.",
+    "steps": [
+      {
+        "id": "apply_memory_lifecycle",
+        "uses": "python.function.call",
+        "description": "Adopt Memory bootstrap capability in an existing repository.",
+        "arguments": {
+          "import_module": "repo_memory_bootstrap.installer",
+          "function": "adopt_bootstrap",
+          "kwargs": {
+            "target": {
+              "value": "target"
+            },
+            "dry_run": {
+              "value": "dry_run"
+            },
+            "apply_local_entrypoint": {
+              "value": "apply_local_entrypoint"
+            },
+            "project_name": {
+              "value": "project_name"
+            },
+            "project_purpose": {
+              "value": "project_purpose"
+            },
+            "key_repo_docs": {
+              "value": "key_repo_docs"
+            },
+            "key_subsystems": {
+              "value": "key_subsystems"
+            },
+            "primary_build_command": {
+              "value": "primary_build_command"
+            },
+            "primary_test_command": {
+              "value": "primary_test_command"
+            },
+            "other_key_commands": {
+              "value": "other_key_commands"
+            },
+            "policy_profile": {
+              "value": "policy_profile"
+            }
+          }
+        },
+        "outputs": [
+          "result"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit",
+        "description": "Emit the adopt result in the requested format.",
+        "arguments": {},
+        "outputs": [
+          "emitted"
+        ],
+        "on_error": "emit_usage_error"
+      }
+    ]
+  }
+}

@@ -2301,6 +2301,8 @@ export const generatedCommandPackage = {
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
+          "path.target_root.resolve",
+          "payload.verify",
           "python.function.call",
           "output.emit"
         ]
@@ -2593,6 +2595,11 @@ export const generatedCommandPackage = {
           "generated_root": "_skills",
           "name": "memory.package-skills",
           "required_marker": "REGISTRY.json"
+        },
+        {
+          "generated_root": "_contracts",
+          "name": "memory.contracts",
+          "required_marker": "payload_verification.memory.json"
         }
       ],
       "handlers": [
@@ -2877,6 +2884,11 @@ export const generatedCommandPackage = {
         "generated_root": "_skills",
         "required_marker": "REGISTRY.json",
         "source_root": "packages/memory/skills"
+      },
+      {
+        "generated_root": "_contracts",
+        "required_marker": "payload_verification.memory.json",
+        "source_root": "packages/memory/src/repo_memory_bootstrap/contracts"
       }
     ],
     "runtime_module_file": "cli"

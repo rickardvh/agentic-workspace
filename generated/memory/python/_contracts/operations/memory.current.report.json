@@ -1,0 +1,97 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "memory.current.report",
+  "command_surface": {
+    "program": "agentic-memory",
+    "command": "current",
+    "format_option": "format"
+  },
+  "summary": "Inspect or check legacy current-memory migration residue through the memory module CLI.",
+  "classification": "read-only-report",
+  "inputs": [
+    {
+      "name": "current_command",
+      "source": "derived",
+      "required": true
+    },
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "module-result"
+  },
+  "effects": {
+    "read_only": true,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": false,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": "target repository legacy current-memory notes and planning state",
+      "required": false
+    }
+  ],
+  "writes": [],
+  "steps": [
+    {
+      "id": "load_current",
+      "uses": "memory.current.load",
+      "description": "Load legacy current-memory show or check result based on the current subcommand."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit legacy current-memory output in the requested format."
+    }
+  ],
+  "guards": [
+    "Keep current show/check read-only.",
+    "Generated code owns parser/help/dispatch shape; memory-owned current-memory inspection remains behind the declared primitive."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated memory current show/check process conformance passes"
+  ],
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Memory current show/check executes generated operation IR through codegen-owned primitive dataflow while the memory module owns current-note inspection policy.",
+    "steps": [
+      {
+        "id": "load_current",
+        "uses": "memory.current.load",
+        "description": "Load legacy current-memory show or check result based on the current subcommand.",
+        "arguments": {},
+        "outputs": [
+          "result"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit",
+        "description": "Emit legacy current-memory output in the requested format.",
+        "arguments": {},
+        "outputs": [
+          "emitted"
+        ],
+        "on_error": "emit_usage_error"
+      }
+    ]
+  }
+}

@@ -101,6 +101,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
             context=PrimitiveContext(cwd=Path.cwd(), roots={
                 'memory.package-payload': _handle_context_root_memory_package_payload(),
                 'memory.package-skills': _handle_context_root_memory_package_skills(),
+                'memory.contracts': _handle_context_root_memory_contracts(),
             }),
             handlers={
                 'path.target_root.resolve': _handle_path_target_root_resolve,
@@ -131,6 +132,12 @@ def _handle_context_root_memory_package_skills() -> Path:
     from .resources import find_resource_root
 
     return find_resource_root(__file__, [('_skills', 'REGISTRY.json')])
+
+
+def _handle_context_root_memory_contracts() -> Path:
+    from .resources import find_resource_root
+
+    return find_resource_root(__file__, [('_contracts', 'payload_verification.memory.json')])
 
 
 def _handle_path_target_root_resolve(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:

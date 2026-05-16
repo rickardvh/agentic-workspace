@@ -1,0 +1,341 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Execute memory payload verification policy through primitives",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Route memory verify-payload JSON output through a codegen-owned generic payload verification primitive that consumes package-owned policy IR.",
+    "hard_constraints": "Do not embed Memory-specific file lists or product policy in command-generation; preserve the text-output runtime fallback; keep the slice bounded to memory verify-payload JSON execution and proof surfaces.",
+    "agent_may_decide": "Primitive argument shape, schema names, generated freshness checks, and narrow parity tests needed to prove the JSON path.",
+    "escalate_when": "The implementation requires porting full InstallResult text rendering, changing package lifecycle semantics, or expanding beyond verify-payload policy execution.",
+    "next_action": "Implement payload.verify, wire memory.verify-payload JSON operation to it, regenerate projections, and prove parity/freshness.",
+    "proof_expectations": [
+      "Primitive unit tests cover policy-driven verification without Memory-specific command-generation constants.",
+      "Memory installer policy parity tests prove the package-owned policy matches current product behavior.",
+      "Generated command package static and conformance checks prove the generated JSON path uses payload.verify and remains fresh."
+    ],
+    "touched_scope": [
+      "packages/command-generation/src/command_generation/primitive_executor.py",
+      "tests/test_command_generation_primitive_executor.py",
+      "src/agentic_workspace/contracts/operation_primitives.json",
+      "src/agentic_workspace/contracts/schemas/primitives/*.schema.json",
+      "src/agentic_workspace/contracts/schemas/payload_verification_policy.schema.json",
+      "src/agentic_workspace/contracts/command_package_ir.json",
+      "src/agentic_workspace/contracts/command_adapter_generation.json",
+      "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+      "packages/memory/src/repo_memory_bootstrap/contracts/payload_verification.memory.json",
+      "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.verify-payload.report.json",
+      "packages/memory/tests/test_install.py",
+      "scripts/check/check_generated_command_packages.py",
+      "generated/**",
+      ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+    ],
+    "completion_criteria": [
+      "Execute memory payload verification policy through primitives is implemented, validated, and closed out honestly."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Route memory verify-payload JSON output through package policy IR and codegen-owned primitive execution."
+  ],
+  "non_goals": [
+    "Do not port full text formatting in this slice.",
+    "Do not claim all Memory lifecycle behavior is portable.",
+    "Do not add package-specific behavior to command-generation."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Route memory verify-payload JSON output through a codegen-owned generic payload verification primitive that consumes package-owned policy IR.",
+      "constraints": "Do not embed Memory-specific file lists or product policy in command-generation; preserve the text-output runtime fallback; keep the slice bounded to memory verify-payload JSON execution and proof surfaces.",
+      "latitude": "Primitive argument shape, schema names, generated freshness checks, and narrow parity tests needed to prove the JSON path.",
+      "escalation": "Escalate when the implementation requires porting full InstallResult text rendering, changing package lifecycle semantics, or expanding beyond verify-payload policy execution."
+    },
+    "execution": {
+      "milestone": "python-memory-payload-verify-primitive",
+      "status": "completed",
+      "next_step": "Implement payload.verify, wire memory.verify-payload JSON operation to it, regenerate projections, and prove parity/freshness.",
+      "proof": "Primitive unit tests, memory policy parity tests, generated package static checks, Python conformance, and relevant formatting/lint checks."
+    },
+    "scope": {
+      "touched": [
+        "primitive executor/tests, primitive schemas/catalog, memory payload policy/schema, memory verify-payload operation, command package/adapters/inventory, generated outputs, static generated-package checks, decomposition and plan state"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Complete #892 Python generated CLI by moving executable behavior out of module-owned code into declarative IR plus codegen-owned primitives/projections.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Execute memory payload verification policy through primitives",
+    "inferred intended outcome": "Reduce remaining memory verify-payload runtime dependency by making the JSON output path execute from package-owned policy IR through codegen-owned primitives.",
+    "chosen concrete what": "Add payload.verify, route memory.verify-payload JSON through it, preserve text fallback, regenerate, and prove freshness.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "primitive executor/tests; primitive schemas/catalog; memory payload policy/schema/operation/tests; command package/adapters/inventory; generated outputs; static checker; decomposition and plan state",
+    "max changed files": "About 25 files including regenerated projections.",
+    "required validation commands": "pytest primitive executor tests; memory verify-payload policy parity tests; contract tooling checks; generated package static checks; Python conformance; targeted ruff.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue from payload.verify implementation and memory.verify-payload JSON operation wiring; text fallback remains intentionally runtime-backed.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Route memory verify-payload JSON output through a codegen-owned generic payload verification primitive that consumes package-owned policy IR.",
+    "hard constraints": "Do not embed Memory-specific file lists or product policy in command-generation; preserve the text-output runtime fallback; keep the slice bounded to memory verify-payload JSON execution and proof surfaces.",
+    "agent may decide locally": "Primitive argument shape, schema names, generated freshness checks, and narrow parity tests needed to prove the JSON path.",
+    "escalate when": "The implementation requires porting full InstallResult text rendering, changing package lifecycle semantics, or expanding beyond verify-payload policy execution."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "AW suggested manual external boundary review, but #1007 now has a concrete bounded next slice: execute the declarative policy for JSON verify-payload through codegen-owned primitives while preserving text fallback.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-16T15:05:38+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "python-memory-payload-verify-primitive",
+    "status": "completed",
+    "scope": "Implement payload.verify and wire only the memory verify-payload JSON path through it.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Implement payload.verify, update operation contracts/generated projections, and run the proof commands."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/command-generation/src/command_generation/primitive_executor.py",
+    "tests/test_command_generation_primitive_executor.py",
+    "src/agentic_workspace/contracts/operation_primitives.json",
+    "src/agentic_workspace/contracts/schemas/primitives/*.schema.json",
+    "src/agentic_workspace/contracts/schemas/payload_verification_policy.schema.json",
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    "src/agentic_workspace/contracts/command_adapter_generation.json",
+    "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+    "packages/memory/src/repo_memory_bootstrap/contracts/payload_verification.memory.json",
+    "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.verify-payload.report.json",
+    "packages/memory/tests/test_install.py",
+    "scripts/check/check_generated_command_packages.py",
+    "generated/**",
+    ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_command_generation_primitive_executor.py -q",
+    "uv run pytest packages/memory/tests/test_install.py -k \"verify_payload or payload_verification_policy\" -q",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+    "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
+    "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
+    "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
+    "uv run python scripts/check/check_generated_command_packages.py --primitive-conformance",
+    "uv run python scripts/check/check_generated_command_packages.py --primitive-docker-conformance --require-docker",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run pytest tests/test_schema_reference_docs.py tests/test_contract_tooling.py -q",
+    "uv run ruff check packages/command-generation/src/command_generation/primitive_executor.py packages/command-generation/tests/primitive_conformance.py tests/test_command_generation_primitive_executor.py packages/memory/tests/test_install.py scripts/check/check_generated_command_packages.py",
+    "rg -n \"memory\\.verify-payload\\.load|payload verification policy execution\" src packages generated scripts tests .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Execute memory payload verification policy through primitives is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Added codegen-owned payload.verify, routed memory.verify-payload JSON through package-owned policy IR, generated Memory contract resources, updated inventory/static proof, and closed #1007.",
+    "scope touched": "command-generation primitive executor/conformance, Memory payload verification policy and operation contract, generated Memory Python/TypeScript projections, structured inventory, static proof, and Python generated CLI decomposition.",
+    "changed surfaces": "payload.verify primitive schemas/catalog, payload_verification.memory.json, memory.verify-payload.report operation IR, generated/memory/python/_contracts, generated command packages/adapters, python_operation_execution_inventory, structured_file_inventory, tests.",
+    "validations run": "primitive unit/conformance, Memory policy parity tests, contract tooling, generated package static/Python/node/Docker/primitive Docker conformance, structured inventory, schema/contract tests, and ruff.",
+    "result for continuation": "This #1007 slice is complete; continue #892 with the next explicit runtime-debt operation. Text output fallback remains inventoried external-adapter debt.",
+    "next step": "Archive this plan and select the next #892 runtime-debt slice."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes; the slice stayed on memory verify-payload JSON policy execution plus required proof/inventory surfaces.",
+    "proof status": "passed",
+    "intent served": "yes; JSON verify-payload executes through codegen-owned payload.verify over package-owned policy IR.",
+    "config compliance": "used uv run agentic-workspace and kept planning surfaces current.",
+    "misinterpretation risk": "low for this slice; broader #892 remains incomplete and must not be claimed complete from this slice.",
+    "follow-on decision": "continue #892 with the next explicit runtime-debt operation after commit."
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "AW suggested manual external boundary review, but #1007 now has a concrete bounded next slice: execute the declarative policy for JSON verify-payload through codegen-owned primitives while preserving text fallback.",
+    "expected savings": "No human relay delay; scope is now implementation-mechanical after the policy externalization slice.",
+    "actual friction": "Sidecar review caught missing primitive conformance and generated resource/inventory proof; both were addressed.",
+    "proof result": "passed",
+    "quality concern": "Stop before porting full InstallResult text formatting or embedding memory policy in command-generation.",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "Passed primitive unit tests, Memory policy parity tests, contract tooling, generated package static proof, Python conformance, node conformance, Docker proof, Docker conformance, primitive conformance, primitive Docker conformance, structured inventory, schema/contract tests, and ruff.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "#1007 closed with proof list; generated memory verify-payload operation contains path.target_root.resolve plus payload.verify and generated/memory/python/_contracts/payload_verification.memory.json."
+  },
+  "intent_satisfaction": {
+    "original intent": "Route memory verify-payload JSON output through a codegen-owned generic payload verification primitive that consumes package-owned policy IR.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "#1007 closed; generated memory verify-payload JSON uses path.target_root.resolve plus payload.verify over generated _contracts/payload_verification.memory.json; proof includes primitive unit/conformance, contract tooling, generated static/Python/node/Docker conformance, structured inventory, and ruff.",
+    "unsolved intent passed to": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+  },
+  "execution_summary": {
+    "outcome delivered": "memory verify-payload JSON policy execution moved to codegen-owned payload.verify",
+    "validation confirmed": "yes",
+    "follow-on routed to": "python-generated-cli decomposition / #892",
+    "post-work posterity capture": "decomposition updated; #1007 closed",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "next #892 runtime-debt slice"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "python-generated-cli decomposition and #1007 closeout",
+    "target scope": "none",
+    "proposed durable intent": "none yet",
+    "confidence": "medium",
+    "needs review": "False",
+    "owner surface": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "Bounded slice complete: payload verification JSON policy execution moved to codegen-owned primitive; broader #892 runtime-debt lane remains open outside this slice.",
+    "evidence carried forward": "Issue #1007 closed and decomposition updated with the python-memory-payload-verify-primitive slice.",
+    "reopen trigger": "Reopen if memory.verify-payload JSON reintroduces package-runtime payload verification or command-generation embeds memory-specific policy."
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "python-generated-cli decomposition / #892",
+          "owner": "none",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-16: Scaffolded by agentic-planning new-plan.",
+    "2026-05-16: Recorded delegation decision route=keep-local."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Route memory verify-payload JSON output through a codegen-owned generic payload verification primitive that consumes package-owned policy IR.\nIntent satisfied: yes\nArchive decision: archive-but-keep-lane-open\nProof: Passed primitive unit tests, Memory policy parity tests, contract tooling, generated package static proof, Python conformance, node conformance, Docker proof, Docker conformance, primitive conformance, primitive Docker conformance, structured inventory, schema/contract tests, and ruff.\nChanged surfaces: payload.verify primitive schemas/catalog, payload_verification.memory.json, memory.verify-payload.report operation IR, generated/memory/python/_contracts, generated command packages/adapters, python_operation_execution_inventory, structured_file_inventory, tests.\nDurable residue: none (none)\nMemory learning: none\nFollow-up: python-generated-cli decomposition / #892"
+  }
+}

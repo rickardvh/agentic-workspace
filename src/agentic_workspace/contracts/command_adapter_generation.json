@@ -2393,6 +2393,8 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
+          "path.target_root.resolve",
+          "payload.verify",
           "python.function.call",
           "output.emit"
         ]
@@ -2440,8 +2442,7 @@
           "dispatch wiring from command id to runtime binding"
         ],
         "runtime_owns": [
-          "package-local primitive implementation",
-          "memory payload verification policy",
+          "text-output package runtime fallback",
           "output emission mechanics"
         ]
       },

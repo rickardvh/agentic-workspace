@@ -8,8 +8,10 @@
     "package",
     "bootstrap_version",
     "version_path",
+    "legacy_version_path",
     "manifest_path",
     "upgrade_source",
+    "payload_path_aliases",
     "required_files",
     "compatibility_contract_files",
     "current_memory",
@@ -31,6 +33,9 @@
       "minimum": 0
     },
     "version_path": {
+      "$ref": "#/$defs/relative_path"
+    },
+    "legacy_version_path": {
       "$ref": "#/$defs/relative_path"
     },
     "manifest_path": {
@@ -91,17 +96,40 @@
     "required_files": {
       "$ref": "#/$defs/path_list"
     },
+    "payload_path_aliases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "source",
+          "target"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "source": {
+            "$ref": "#/$defs/relative_path"
+          },
+          "target": {
+            "$ref": "#/$defs/relative_path"
+          }
+        }
+      }
+    },
     "compatibility_contract_files": {
       "$ref": "#/$defs/path_list"
     },
     "current_memory": {
       "type": "object",
       "required": [
+        "prefix",
         "required",
         "optional"
       ],
       "additionalProperties": false,
       "properties": {
+        "prefix": {
+          "$ref": "#/$defs/relative_path"
+        },
         "required": {
           "$ref": "#/$defs/path_list"
         },

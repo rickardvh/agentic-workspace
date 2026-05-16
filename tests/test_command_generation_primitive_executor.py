@@ -240,6 +240,143 @@ def test_payload_assemble_supports_template_field_selectors(primitive_context: P
     assert payload == {"status": "present", "nested": {"note_count": 3, "required_count": 1}}
 
 
+def test_payload_verify_executes_declarative_policy(tmp_path: Path) -> None:
+    contracts = tmp_path / "contracts"
+    payload = tmp_path / "payload"
+    target = tmp_path / "target"
+    contracts.mkdir()
+    payload.mkdir()
+    target.mkdir()
+    (payload / "AGENTS.template.md").write_text("agent instructions", encoding="utf-8")
+    (payload / ".agentic-workspace" / "memory").mkdir(parents=True)
+    (payload / ".agentic-workspace" / "memory" / "VERSION.md").write_text("Version: 7\n", encoding="utf-8")
+    (payload / ".agentic-workspace" / "memory" / "UPGRADE-SOURCE.toml").write_text(
+        'source_type = "git"\nsource_ref = "abc123"\nrecorded_at = "2026-05-16"\n',
+        encoding="utf-8",
+    )
+    repo_root = payload / ".agentic-workspace" / "memory" / "repo"
+    repo_root.mkdir(parents=True)
+    (repo_root / "manifest.toml").write_text("[notes]\n", encoding="utf-8")
+    current_root = repo_root / "current"
+    current_root.mkdir()
+    (current_root / "routing-feedback.md").write_text("Keep this note compact\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "memory").mkdir(parents=True)
+    (target / ".agentic-workspace" / "memory" / "VERSION.md").write_text("Version: 6\n", encoding="utf-8")
+    (contracts / "payload.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "agentic-workspace/payload-verification-policy/v1",
+                "package": "memory",
+                "bootstrap_version": 7,
+                "version_path": ".agentic-workspace/memory/VERSION.md",
+                "legacy_version_path": "memory/system/VERSION.md",
+                "manifest_path": ".agentic-workspace/memory/repo/manifest.toml",
+                "upgrade_source": {
+                    "path": ".agentic-workspace/memory/UPGRADE-SOURCE.toml",
+                    "legacy_path": "legacy/UPGRADE-SOURCE.toml",
+                    "allowed_source_types": ["git", "local"],
+                    "required_fields": ["source_ref"],
+                    "date_fields": {"recorded_at": "YYYY-MM-DD"},
+                    "integer_fields": ["recommended_upgrade_after_days"],
+                },
+                "payload_path_aliases": [{"source": "AGENTS.template.md", "target": "AGENTS.md"}],
+                "required_files": [
+                    "AGENTS.md",
+                    ".agentic-workspace/memory/VERSION.md",
+                    ".agentic-workspace/memory/UPGRADE-SOURCE.toml",
+                    ".agentic-workspace/memory/repo/manifest.toml",
+                ],
+                "compatibility_contract_files": [
+                    "AGENTS.md",
+                    ".agentic-workspace/memory/repo/manifest.toml",
+                ],
+                "current_memory": {
+                    "prefix": ".agentic-workspace/memory/repo/current/",
+                    "required": [],
+                    "optional": [".agentic-workspace/memory/repo/current/routing-feedback.md"],
+                },
+                "forbidden_files": ["forbidden.txt"],
+                "forbidden_prefixes": [".agent-work/"],
+                "guidance_fragments": {".agentic-workspace/memory/repo/current/routing-feedback.md": ["Keep this note compact"]},
+            }
+        ),
+        encoding="utf-8",
+    )
+    context = PrimitiveContext(cwd=tmp_path, roots={"contracts": contracts, "payload": payload})
+
+    result = execute_primitive(
+        "payload.verify",
+        values={"target_root": str(target)},
+        arguments={"policy_root": "contracts", "policy_path": "payload.json", "payload_root": "payload"},
+        context=context,
+    )
+
+    assert result["target_root"] == str(target.resolve())
+    assert result["detected_version"] == 6
+    assert result["bootstrap_version"] == 7
+    assert {action["path"]: action["kind"] for action in result["actions"]}["AGENTS.md"] == "current"
+    assert any(
+        action["detail"] == "compatibility contract files: AGENTS.md, .agentic-workspace/memory/repo/manifest.toml"
+        for action in result["actions"]
+    )
+    assert any(action["detail"] == "collaboration-safe current-note guidance present" for action in result["actions"])
+
+
+def test_payload_verify_reports_policy_driven_drift(tmp_path: Path) -> None:
+    contracts = tmp_path / "contracts"
+    payload = tmp_path / "payload"
+    target = tmp_path / "target"
+    contracts.mkdir()
+    payload.mkdir()
+    target.mkdir()
+    (payload / ".agent-work").mkdir()
+    (payload / ".agent-work" / "legacy.txt").write_text("legacy", encoding="utf-8")
+    (payload / "forbidden.txt").write_text("bad", encoding="utf-8")
+    (contracts / "payload.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "agentic-workspace/payload-verification-policy/v1",
+                "package": "memory",
+                "bootstrap_version": 1,
+                "version_path": "VERSION.md",
+                "legacy_version_path": "legacy/VERSION.md",
+                "manifest_path": "manifest.toml",
+                "upgrade_source": {
+                    "path": "UPGRADE-SOURCE.toml",
+                    "legacy_path": "legacy/UPGRADE-SOURCE.toml",
+                    "allowed_source_types": ["git"],
+                    "required_fields": ["source_ref"],
+                    "date_fields": {},
+                    "integer_fields": [],
+                },
+                "payload_path_aliases": [],
+                "required_files": ["required.txt"],
+                "compatibility_contract_files": [],
+                "current_memory": {"prefix": "current/", "required": ["current/base.md"], "optional": []},
+                "forbidden_files": ["forbidden.txt"],
+                "forbidden_prefixes": [".agent-work/"],
+                "guidance_fragments": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+    context = PrimitiveContext(cwd=tmp_path, roots={"contracts": contracts, "payload": payload})
+
+    result = execute_primitive(
+        "payload.verify",
+        values={"target_root": str(target)},
+        arguments={"policy_root": "contracts", "policy_path": "payload.json", "payload_root": "payload"},
+        context=context,
+    )
+
+    details = {action["detail"] for action in result["actions"] if action["kind"] == "manual review"}
+    assert "payload version marker is missing or invalid" in details
+    assert "required payload file missing" in details
+    assert "forbidden file is present in the shipped payload" in details
+    assert "forbidden path prefix is present in the shipped payload" in details
+    assert "baseline current-memory note missing from shipped payload" in details
+
+
 def test_output_emit_supports_json_and_text(primitive_context: PrimitiveContext) -> None:
     payload = {
         "dry_run": True,

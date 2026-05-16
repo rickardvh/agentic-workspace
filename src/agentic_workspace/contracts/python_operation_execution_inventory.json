@@ -639,19 +639,19 @@
       "operation_contract": "operations/memory.verify-payload.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
-        "memory.verify-payload.load",
-        "payload verification policy execution",
-        "module-result text/json compatibility formatting"
+        "text-output runtime fallback through repo_memory_bootstrap.installer.verify_payload",
+        "module-result text compatibility formatting"
       ],
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "memory.verify-payload.process",
       "domain_runtime_primitive_refs": [
-        "memory.verify-payload.load"
+        "python.function.call"
       ],
+      "external_adapter_note": "The non-json branch still calls repo_memory_bootstrap.installer.verify_payload through python.function.call, so that branch is external-adapter debt and not portable primitive coverage.",
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still execute payload verification. The verification policy has been externalized to packages/memory/src/repo_memory_bootstrap/contracts/payload_verification.memory.json as the first migration step.",
-      "what_would_make_portable_later": "Add schema-backed codegen-owned primitives that execute payload_verification.memory.json checks for file presence, forbidden files/prefixes, version markers, TOML metadata, guidance fragments, and module-result assembly.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.verify-payload.load) remain explicit package-boundary calls. Payload verification truth is now declarative policy data, but execution remains package runtime debt until #1007's primitive executor migration is complete."
+      "runtime_boundary_reason": "JSON operation dataflow is generated and executes payload verification through codegen-owned path.target_root.resolve, payload.verify, and output.emit using package-owned payload_verification.memory.json. Text output remains a declared runtime fallback until its formatting is represented by portable rendering primitives.",
+      "what_would_make_portable_later": "Replace the non-json python.function.call fallback with schema-backed text rendering primitives or declare text output out of scope for target-independent parity.",
+      "generic_behavior_audit": "Classified as package-specific-judgment only for the remaining text-output fallback. JSON payload verification policy execution is no longer generic deterministic runtime debt: package truth lives in payload_verification.memory.json and codegen-owned payload.verify executes file presence, forbidden files/prefixes, version markers, TOML metadata, guidance fragments, and module-result assembly."
     },
     {
       "operation_id": "memory.status.report",

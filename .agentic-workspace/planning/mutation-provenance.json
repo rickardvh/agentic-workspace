@@ -2,46 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/execplans/python-planning-list-files-concrete-command.plan.json",
-      "sha256": "0501e6378f4d094d2fc9c564373bc614824bc0639daf6dfd0ac8e9579b161ffd",
-      "command": "agentic-planning record-recovery",
-      "reason": "Tightened active execplan fields for the #892 planning.list-files generated command slice after CLI scaffold creation.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T08:44:03+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-planning-list-files-concrete-command",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T08:47:07+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/archive/python-planning-list-files-concrete-command.plan.json",
-      "sha256": "5051e968df7a6b8e6a179317b7b5af442a9bc387c541777bad6837732652074d",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-planning-list-files-concrete-command",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T08:47:07+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
-      "sha256": "ed09716f3c42005d6f5a5f59b73169e050482c26868065f4d7a5600c1b1f61ac",
-      "command": "agentic-planning record-recovery",
-      "reason": "Updated #892 decomposition notes after completing memory.list-files and planning.list-files concrete generated command slices.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T08:47:58+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-generated-resource-primitives.plan.json",
-      "sha256": "c99997e1c6e5f642e6450c78adbafba744cbe0fe8f1b3cf25bc410fedf28c1d7",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-generated-resource-primitives",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T09:41:53+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/state.toml",
       "sha256": "d66e488d7b6967dc81b73daf615dfdf6d40bf77209a9adc6acf3a6eb3f0acfb4",
       "command": "agentic-planning new-plan",
@@ -1600,6 +1560,46 @@
       "reason": "archive execplan python-memory-payload-verification-ir",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-16T15:04:36+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-memory-payload-verify-primitive.plan.json",
+      "sha256": "2a3550fb8cd336975338261383833ac920e8713df5c2394f9e9596cfa16cfe70",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-memory-payload-verify-primitive",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T15:05:30+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "4c675e5b431e78061eab382e8e51f3497f1b97c51e3022abd34ec6f4c51d6557",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-memory-payload-verify-primitive",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T15:05:30+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-memory-payload-verify-primitive.plan.json",
+      "sha256": "288eb2862375101dc1cab26da4a2e428c7c41a662ec214138931eee130c6b5ee",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T15:05:38+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-memory-payload-verify-primitive",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T15:29:23+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/python-memory-payload-verify-primitive.plan.json",
+      "sha256": "438bcf62b77cc2ca5c3d65e687f50754fea0db17b3902ab42bff1b924ef574a4",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-memory-payload-verify-primitive",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T15:29:23+00:00"
     }
   ]
 }

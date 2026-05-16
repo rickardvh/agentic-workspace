@@ -19,9 +19,53 @@ def main() -> int:
             json.dumps({"skills": [{"id": "review", "path": "review/SKILL.md"}]}),
             encoding="utf-8",
         )
+        contracts_root = root / "contracts"
+        contracts_root.mkdir()
+        (package_root / "AGENTS.template.md").write_text("agent instructions", encoding="utf-8")
+        (package_root / ".agentic-workspace" / "memory").mkdir(parents=True)
+        (package_root / ".agentic-workspace" / "memory" / "VERSION.md").write_text("Version: 3\n", encoding="utf-8")
+        (package_root / ".agentic-workspace" / "memory" / "UPGRADE-SOURCE.toml").write_text(
+            'source_type = "git"\nsource_ref = "abc123"\n',
+            encoding="utf-8",
+        )
+        (package_root / ".agentic-workspace" / "memory" / "repo").mkdir(parents=True)
+        (package_root / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text("[notes]\n", encoding="utf-8")
+        (contracts_root / "payload.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": "agentic-workspace/payload-verification-policy/v1",
+                    "package": "memory",
+                    "bootstrap_version": 3,
+                    "version_path": ".agentic-workspace/memory/VERSION.md",
+                    "legacy_version_path": "memory/system/VERSION.md",
+                    "manifest_path": ".agentic-workspace/memory/repo/manifest.toml",
+                    "upgrade_source": {
+                        "path": ".agentic-workspace/memory/UPGRADE-SOURCE.toml",
+                        "legacy_path": "legacy/UPGRADE-SOURCE.toml",
+                        "allowed_source_types": ["git"],
+                        "required_fields": ["source_ref"],
+                        "date_fields": {},
+                        "integer_fields": [],
+                    },
+                    "payload_path_aliases": [{"source": "AGENTS.template.md", "target": "AGENTS.md"}],
+                    "required_files": [
+                        "AGENTS.md",
+                        ".agentic-workspace/memory/VERSION.md",
+                        ".agentic-workspace/memory/UPGRADE-SOURCE.toml",
+                        ".agentic-workspace/memory/repo/manifest.toml",
+                    ],
+                    "compatibility_contract_files": ["AGENTS.md"],
+                    "current_memory": {"prefix": ".agentic-workspace/memory/repo/current/", "required": [], "optional": []},
+                    "forbidden_files": [],
+                    "forbidden_prefixes": [],
+                    "guidance_fragments": {},
+                }
+            ),
+            encoding="utf-8",
+        )
         target = root / "target"
         target.mkdir()
-        context = PrimitiveContext(cwd=root, roots={"package": package_root})
+        context = PrimitiveContext(cwd=root, roots={"package": package_root, "contracts": contracts_root})
 
         target_root = execute_primitive(
             "path.target_root.resolve",
@@ -68,6 +112,19 @@ def main() -> int:
             context=context,
         )
         assert skill_payload["actions"] == [{"kind": "skill", "id": "review", "path": "review/SKILL.md"}]
+
+        verify_payload = execute_primitive(
+            "payload.verify",
+            values={"target_root": target_root},
+            arguments={"policy_root": "contracts", "policy_path": "payload.json", "payload_root": "package"},
+            context=context,
+        )
+        assert verify_payload["dry_run"] is True
+        assert verify_payload["bootstrap_version"] == 3
+        assert {action["path"] for action in verify_payload["actions"] if action["kind"] == "current"} >= {
+            "AGENTS.md",
+            ".agentic-workspace/memory/VERSION.md",
+        }
 
         emitted_json = execute_primitive(
             "output.emit",

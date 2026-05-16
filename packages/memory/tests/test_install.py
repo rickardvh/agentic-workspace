@@ -507,6 +507,7 @@ def test_payload_verification_policy_matches_installer_constants() -> None:
 
     assert policy["bootstrap_version"] == installer.BOOTSTRAP_VERSION
     assert Path(policy["version_path"]) == installer.VERSION_PATH
+    assert policy["legacy_version_path"] == "memory/system/VERSION.md"
     assert Path(policy["manifest_path"]) == installer.MANIFEST_PATH
     assert Path(policy["upgrade_source"]["path"]) == installer.UPGRADE_SOURCE_PATH
     assert Path(policy["upgrade_source"]["legacy_path"]) == installer.LEGACY_UPGRADE_SOURCE_PATH
@@ -514,6 +515,8 @@ def test_payload_verification_policy_matches_installer_constants() -> None:
     assert policy["upgrade_source"]["required_fields"] == ["source_ref"]
     assert policy["upgrade_source"]["date_fields"] == {"recorded_at": "YYYY-MM-DD"}
     assert policy["upgrade_source"]["integer_fields"] == ["recommended_upgrade_after_days"]
+    assert policy["payload_path_aliases"] == [{"source": "AGENTS.template.md", "target": "AGENTS.md"}]
+    assert policy["current_memory"]["prefix"] == ".agentic-workspace/memory/repo/current/"
     assert tuple(Path(path) for path in policy["required_files"]) == installer.PAYLOAD_REQUIRED_FILES
     assert tuple(Path(path) for path in policy["compatibility_contract_files"]) == installer.MEMORY_COMPATIBILITY_CONTRACT_FILES
     assert tuple(Path(path) for path in policy["current_memory"]["required"]) == installer.CURRENT_MEMORY_BASELINE

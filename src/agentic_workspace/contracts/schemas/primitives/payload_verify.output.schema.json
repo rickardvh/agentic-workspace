@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/primitives/payload_verify.output.schema.json",
+  "title": "payload.verify output",
+  "type": "object",
+  "required": [
+    "target_root",
+    "dry_run",
+    "mode",
+    "message",
+    "detected_version",
+    "bootstrap_version",
+    "actions"
+  ],
+  "properties": {
+    "target_root": {
+      "type": "string"
+    },
+    "dry_run": {
+      "const": true
+    },
+    "mode": {
+      "type": "string"
+    },
+    "message": {
+      "type": "string"
+    },
+    "detected_version": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "bootstrap_version": {
+      "type": "integer"
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "kind",
+          "path",
+          "detail",
+          "role",
+          "safety",
+          "source",
+          "category"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "safety": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}
