@@ -7179,20 +7179,6 @@
                 "implementation": "json_output_with_source_fallback"
               },
               {
-                "function": "_load_memory_bootstrap_doctor",
-                "implementation": "toml_table_lifecycle_json_with_source_fallback",
-                "relative_path": ".agentic-workspace/memory/repo/manifest.toml",
-                "table_name": "notes",
-                "relevance_field": "task_relevance",
-                "required_value": "required",
-                "optional_value": "optional",
-                "routing_only_field": "routing_only",
-                "message": "Doctor report",
-                "dry_run": true,
-                "detail_command": "agentic-memory doctor --target . --verbose --format json",
-                "unhealthy_detail": "memory manifest is not readable; run full doctor for remediation detail"
-              },
-              {
                 "function": "_load_memory_report",
                 "implementation": "toml_table_memory_report_json_with_source_fallback",
                 "relative_path": ".agentic-workspace/memory/repo/manifest.toml",
@@ -7662,6 +7648,9 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
+              "path.target_root.resolve",
+              "toml.table.counts",
+              "payload.assemble",
               "memory.bootstrap.doctor.load",
               "output.emit"
             ]

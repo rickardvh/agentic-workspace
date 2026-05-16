@@ -1,0 +1,282 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Route memory doctor through portable primitives",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Reduce memory.doctor non-verbose JSON from generated runtime override code to portable operation IR primitives.",
+    "hard_constraints": "Keep scope bounded to memory.doctor JSON non-verbose behavior. Preserve verbose/text fallback through explicit package-domain runtime. Do not hand-edit generated outputs.",
+    "agent_may_decide": "Reuse the codegen-owned toml.table.counts primitive and payload assembly pattern from memory.status.",
+    "escalate_when": "Doctor behavior requires memory package policy beyond deterministic target-root, TOML table counting, payload assembly, and JSON/text emission.",
+    "next_action": "Implement memory.doctor JSON non-verbose with portable primitives, regenerate outputs, validate, and close this slice.",
+    "proof_expectations": [
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+      "uv run pytest packages/memory/tests/test_report.py::test_memory_lifecycle_tiny_does_not_collect_full_status -q"
+    ],
+    "touched_scope": [
+      "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.doctor.report.json",
+      "src/agentic_workspace/contracts/command_package_ir.json",
+      "src/agentic_workspace/contracts/command_adapter_generation.json",
+      "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+      "scripts/check/check_generated_command_packages.py",
+      "generated/memory/python",
+      "generated/typescript/memory-cli",
+      ".agentic-workspace/planning/execplans/python-memory-doctor-runtime-reduction.plan.json",
+      ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+    ],
+    "completion_criteria": [
+      "memory.doctor JSON non-verbose no longer depends on the generated _load_memory_bootstrap_doctor TOML-table override; it executes through portable operation IR primitives with verbose/text fallback still explicit."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "Create a bounded plan for Route memory doctor through portable primitives."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Create a bounded plan for Route memory doctor through portable primitives.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "python-memory-doctor-runtime-reduction",
+      "status": "active",
+      "next_step": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+      "proof": "Fill in the narrowest command that proves the promoted work."
+    },
+    "scope": {
+      "touched": [
+        "Fill in the concrete files before implementation starts."
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Create a bounded plan for Route memory doctor through portable primitives.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Route memory doctor through portable primitives",
+    "inferred intended outcome": "Create a bounded plan for Route memory doctor through portable primitives.",
+    "chosen concrete what": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Fill in the concrete write scope before implementation starts.",
+    "max changed files": "Fill in an expected upper bound before implementation starts.",
+    "required validation commands": "Fill in the narrowest command that proves the promoted work.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Create a bounded plan for Route memory doctor through portable primitives.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "memory.doctor is mechanically identical to the just-completed memory.status primitive route and uses the same bounded write scope/proof.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-16T14:27:18+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "python-memory-doctor-runtime-reduction",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Fill in execution bounds, touched paths, and validation before implementation starts."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "Fill in the concrete files before implementation starts."
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "Fill in the narrowest command that proves the promoted work."
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Route memory doctor through portable primitives is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "memory.doctor non-verbose JSON was moved from a generated memory_runtime TOML-table override into portable operation IR using path.target_root.resolve, toml.table.counts, payload.assemble, and output.emit; verbose/text doctor still uses the explicit package runtime fallback.",
+    "scope touched": "memory.doctor operation contract, adapter/command-package/inventory contracts, generated memory/typescript projections, generated-package proof guard, and planning surfaces",
+    "changed surfaces": "generated memory doctor operation, generated memory runtime facade, generated TypeScript metadata, and python-operation execution inventory",
+    "validations run": "contract tooling; generated command packages; generated Python conformance; generated package Node/Docker/Docker-conformance; focused memory doctor test; ruff check",
+    "result for continuation": "memory.doctor JSON compact behavior is no longer generic deterministic runtime debt; continue #892 with the next safe runtime delegate reduction.",
+    "next step": "Select another bounded runtime delegate candidate."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "green",
+    "intent served": "yes for this bounded slice; #892 remains open",
+    "config compliance": "used uv run agentic-workspace, active execplan, delegation decision, and generated outputs from source contracts",
+    "misinterpretation risk": "low",
+    "follow-on decision": "continue #892 with another reducible runtime delegate"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "memory.doctor is mechanically identical to the just-completed memory.status primitive route and uses the same bounded write scope/proof.",
+    "expected savings": "none; local implementation is faster after the status slice",
+    "actual friction": "none",
+    "proof result": "pending",
+    "quality concern": "Keep scope to non-verbose JSON and preserve verbose/text fallback.",
+    "decomposition adjustment": "Record doctor reduction separately in the decomposition after proof."
+  },
+  "proof_report": {
+    "validation proof": "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run python scripts/check/check_generated_command_packages.py --docker --require-docker; uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker; uv run pytest packages/memory/tests/test_report.py::test_memory_lifecycle_tiny_does_not_collect_full_status -q; uv run ruff check scripts/check/check_generated_command_packages.py",
+    "proof achieved now": "memory.doctor JSON compact path executes through portable operation IR primitives and generated package proof is green",
+    "evidence for \"proof achieved\" state": "generated/memory/python/operations/memory.doctor.report.json contains toml.table.counts and payload.assemble; generated/memory/python/primitives/memory_runtime.py no longer contains a doctor JSON fast-path override."
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Route memory doctor through portable primitives.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "memory.doctor non-verbose JSON now uses schema-backed portable primitive IR while verbose/text fallback remains explicit.",
+    "unsolved intent passed to": "#892 continuation"
+  },
+  "execution_summary": {
+    "outcome delivered": "memory.doctor compact JSON runtime delegate reduction",
+    "validation confirmed": "full selected proof set passed",
+    "follow-on routed to": "#892 continuation",
+    "post-work posterity capture": "Record in python-generated-cli decomposition that memory.doctor compact JSON now uses portable toml.table.counts IR and no generated runtime fast path.",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "select another bounded runtime delegate candidate"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "The bounded memory.doctor JSON compact path moved to portable primitives, but the wider #892 runtime-delegate epic still has other domain-runtime and compatibility fallbacks.",
+    "evidence carried forward": "memory.doctor verbose/text fallback remains explicit package-domain debt.",
+    "reopen trigger": "Reopen only if memory.doctor compact JSON regresses to generated runtime override or package runtime import."
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-16: Scaffolded by agentic-planning new-plan.",
+    "2026-05-16: Recorded delegation decision route=keep-local."
+  ]
+}

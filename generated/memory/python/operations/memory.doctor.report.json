@@ -98,14 +98,153 @@
     "status": "representative",
     "steps": [
       {
-        "arguments": {},
-        "description": "Load the memory bootstrap doctor payload for the requested target.",
-        "id": "load_report",
+        "arguments": {
+          "must_be_dir": true,
+          "must_exist": true
+        },
+        "description": "Resolve the target root for target-local memory doctor checks.",
+        "id": "resolve_target_root",
+        "on_error": "fail",
+        "outputs": [
+          "target_root"
+        ],
+        "uses": "path.target_root.resolve",
+        "when": {
+          "all": [
+            {
+              "equals": "json",
+              "value": "format"
+            },
+            {
+              "equals": false,
+              "value": "verbose"
+            }
+          ]
+        }
+      },
+      {
+        "arguments": {
+          "base_value": "target_root",
+          "optional_value": "optional",
+          "path": ".agentic-workspace/memory/repo/manifest.toml",
+          "relevance_field": "task_relevance",
+          "required_value": "required",
+          "routing_only_field": "routing_only",
+          "table": "notes"
+        },
+        "description": "Count note records and relevance categories in the target memory manifest.",
+        "id": "count_manifest_notes",
+        "on_error": "fail",
+        "outputs": [
+          "table_counts",
+          "table_present",
+          "table_status"
+        ],
+        "uses": "toml.table.counts",
+        "when": {
+          "all": [
+            {
+              "equals": "json",
+              "value": "format"
+            },
+            {
+              "equals": false,
+              "value": "verbose"
+            }
+          ]
+        }
+      },
+      {
+        "arguments": {
+          "fields": {
+            "template": {
+              "action_count": {
+                "$exists_status": {
+                  "missing": 1,
+                  "present": 0,
+                  "value": "table_present"
+                }
+              },
+              "actions": {
+                "$exists_status": {
+                  "missing": [
+                    {
+                      "detail": "memory manifest is not readable; run full doctor for remediation detail",
+                      "kind": {
+                        "$value": "table_status"
+                      },
+                      "path": ".agentic-workspace/memory/repo/manifest.toml"
+                    }
+                  ],
+                  "present": [],
+                  "value": "table_present"
+                }
+              },
+              "active": {
+                "$value": "table_counts"
+              },
+              "bootstrap_version": null,
+              "detail_command": "agentic-memory doctor --target . --verbose --format json",
+              "detected_version": null,
+              "dry_run": true,
+              "health": {
+                "$exists_status": {
+                  "missing": "attention-needed",
+                  "present": "healthy",
+                  "value": "table_present"
+                }
+              },
+              "message": "Doctor report",
+              "mode": "",
+              "target_root": {
+                "$value": "target_root"
+              }
+            }
+          }
+        },
+        "description": "Assemble the compact doctor payload from primitive outputs.",
+        "id": "assemble_doctor",
         "on_error": "fail",
         "outputs": [
           "result"
         ],
-        "uses": "memory.bootstrap.doctor.load"
+        "uses": "payload.assemble",
+        "when": {
+          "all": [
+            {
+              "equals": "json",
+              "value": "format"
+            },
+            {
+              "equals": false,
+              "value": "verbose"
+            }
+          ]
+        }
+      },
+      {
+        "arguments": {},
+        "description": "Load the package-domain doctor report when verbose or text output is requested.",
+        "id": "load_verbose_or_text_doctor",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "memory.bootstrap.doctor.load",
+        "when": {
+          "not": {
+            "all": [
+              {
+                "equals": "json",
+                "value": "format"
+              },
+              {
+                "equals": false,
+                "value": "verbose"
+              }
+            ]
+          }
+        }
       },
       {
         "arguments": {},
@@ -118,7 +257,7 @@
         "uses": "output.emit"
       }
     ],
-    "summary": "Memory doctor executes generated operation IR through codegen-owned primitive dataflow while memory runtime supplies the bootstrap doctor payload source and text/json compatibility formatting."
+    "summary": "Memory doctor non-verbose JSON executes generated operation IR through codegen-owned portable primitives. Verbose/text doctor behavior remains package-domain source runtime."
   },
   "locality": {
     "network": "forbidden",
@@ -146,8 +285,23 @@
   "schema_version": "agentic-workspace/operation/v1",
   "steps": [
     {
-      "description": "Load package-local report payload.",
-      "id": "load_report",
+      "description": "Resolve the target root for target-local memory doctor checks.",
+      "id": "resolve_target_root",
+      "uses": "path.target_root.resolve"
+    },
+    {
+      "description": "Count note records and relevance categories in the target memory manifest.",
+      "id": "count_manifest_notes",
+      "uses": "toml.table.counts"
+    },
+    {
+      "description": "Assemble the compact doctor payload from primitive outputs.",
+      "id": "assemble_doctor",
+      "uses": "payload.assemble"
+    },
+    {
+      "description": "Load the package-domain doctor report when verbose or text output is requested.",
+      "id": "load_verbose_or_text_doctor",
       "uses": "memory.bootstrap.doctor.load"
     },
     {

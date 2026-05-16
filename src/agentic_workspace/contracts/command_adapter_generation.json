@@ -804,6 +804,9 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
+          "path.target_root.resolve",
+          "toml.table.counts",
+          "payload.assemble",
           "memory.bootstrap.doctor.load",
           "output.emit"
         ]

@@ -301,24 +301,10 @@ def _emit_memory_operation_output(values: dict[str, Any], arguments: dict[str, A
     return source_function(values, arguments, context)
 
 
-def _load_memory_bootstrap_doctor(values: dict[str, Any], arguments: dict[str, Any], context: Any) -> Any:
-    if str(values.get('format') or 'text') == 'json' and not values.get('verbose'):
-        return _tiny_lifecycle_payload_from_toml_table_counts(
-            target=values.get('target'),
-            relative_path='.agentic-workspace/memory/repo/manifest.toml',
-            table_name='notes',
-            relevance_field='task_relevance',
-            required_value='required',
-            optional_value='optional',
-            routing_only_field='routing_only',
-            message='Doctor report',
-            dry_run=True,
-            detail_command='agentic-memory doctor --target . --verbose --format json',
-            unhealthy_detail='memory manifest is not readable; run full doctor for remediation detail',
-        )
+def _load_memory_bootstrap_doctor(*args: Any, **kwargs: Any) -> Any:
     from repo_memory_bootstrap.runtime_primitives import _load_memory_bootstrap_doctor as source_function
 
-    return source_function(values, arguments, context)
+    return source_function(*args, **kwargs)
 
 
 def _load_memory_bootstrap_status(*args: Any, **kwargs: Any) -> Any:

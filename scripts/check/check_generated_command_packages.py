@@ -1619,23 +1619,14 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         memory_runtime_text = memory_runtime_facade.read_text(encoding="utf-8")
         if "isinstance(result, dict)" not in memory_runtime_text or "json.dumps(_serialise_value(values['result']), indent=2)" not in memory_runtime_text:
             errors.append("generated memory runtime facade must emit dict JSON through generated-local code before source fallback")
-        for function_name, message in (("_load_memory_bootstrap_doctor", "Doctor report"),):
-            function_marker = f"def {function_name}(values: dict[str, Any], arguments: dict[str, Any], context: Any) -> Any:"
+        for function_name in ("_load_memory_bootstrap_doctor", "_load_memory_bootstrap_status"):
+            function_marker = f"def {function_name}(*args: Any, **kwargs: Any) -> Any:"
             if function_marker not in memory_runtime_text:
-                errors.append(f"generated memory runtime facade must define {function_name} as a generated-local override")
+                errors.append(f"generated memory runtime facade must retain {function_name} source fallback for verbose/text behavior")
                 continue
             function_text = memory_runtime_text.split(function_marker, 1)[1].split("\ndef ", 1)[0]
-            if "_tiny_lifecycle_payload_from_toml_table_counts(" not in function_text or message not in function_text:
-                errors.append(f"generated memory runtime facade must build {function_name} JSON fast path through generated TOML-table primitives")
-            if f"from repo_memory_bootstrap.runtime_primitives import {function_name} as source_function" not in function_text:
-                errors.append(f"generated memory runtime facade must retain {function_name} source fallback for non-fast-path behavior")
-        status_function_marker = "def _load_memory_bootstrap_status(*args: Any, **kwargs: Any) -> Any:"
-        if status_function_marker not in memory_runtime_text:
-            errors.append("generated memory runtime facade must retain _load_memory_bootstrap_status source fallback for verbose/text behavior")
-        else:
-            status_function_text = memory_runtime_text.split(status_function_marker, 1)[1].split("\ndef ", 1)[0]
-            if "_tiny_lifecycle_payload_from_toml_table_counts(" in status_function_text:
-                errors.append("memory status JSON fast path must live in portable operation IR, not the generated memory runtime facade")
+            if "_tiny_lifecycle_payload_from_toml_table_counts(" in function_text:
+                errors.append(f"{function_name} JSON fast path must live in portable operation IR, not the generated memory runtime facade")
     if "_load_memory_promotion_report" in memory_runtime_text:
         errors.append("generated memory runtime facade must not keep the retired promotion-report runtime delegate")
     if "_tiny_memory_report_payload_from_toml_table_counts" not in memory_runtime_text:

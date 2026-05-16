@@ -2,70 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
-      "sha256": "11cd5fef89eb13dceee85856b4a3fab9a0ef854f3165972fab21324f2ee26d54",
-      "command": "agentic-planning record-recovery",
-      "reason": "Recorded the completed runtime export retirement slice in the epic decomposition before committing the #892 slice.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-15T21:27:50+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-generated-cli-honest-completion-gate.plan.json",
-      "sha256": "65dc867fc044390c1bf1c651795f2312c079c81ceb74bbef163ac5994d089f7f",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-generated-cli-honest-completion-gate",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T21:44:13+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "01e0e68928b5863b0591ae1cf2573644dd44ef9b19212e1622619a58c5b851f0",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-generated-cli-honest-completion-gate",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T21:44:13+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-generated-cli-honest-completion-gate.plan.json",
-      "sha256": "f4799a760544a68a8c9072712e8b02e7a74a173d4325631f6710bc85cd28c7e7",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=delegate-exploration",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T21:44:28+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-generated-cli-honest-completion-gate.plan.json",
-      "sha256": "ddedf19fe3f7efbe4b07e2ce555a93f6136ba0bb935411cffd8a176a98e87003",
-      "command": "agentic-planning record-recovery",
-      "reason": "Tightened the #892 honest completion gate execplan after scaffold creation, then implemented the bounded proof-gate slice.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-15T21:55:03+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-generated-cli-honest-completion-gate",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T21:56:45+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/archive/python-generated-cli-honest-completion-gate.plan.json",
-      "sha256": "1f58d7e808a7e265e246646949ba5387d538327847eca3bb76ae17d6bba48747",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-generated-cli-honest-completion-gate",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T21:56:45+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
-      "sha256": "61188adffa2a474d8333eca10b7ddb1deb35bd8d999031bd2c1ad625fed85c30",
-      "command": "agentic-planning record-recovery",
-      "reason": "Recorded the #892 honest completion gate demotion and continuation after the completion-gate slice.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-15T21:56:57+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/execplans/python-memory-list-skills-concrete-command.plan.json",
       "sha256": "01303dfd1aee046b1675e8903f2f78a995795030069f14907649f609c1fada7b",
       "command": "agentic-planning new-plan",
@@ -1600,6 +1536,70 @@
       "reason": "Recorded memory.status portable-IR reduction in the epic decomposition.",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-16T14:26:33+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-memory-doctor-runtime-reduction.plan.json",
+      "sha256": "09d37d7a7a5c05a9f10ace663640ec3dbda19861fadcdf0737a9bdbeddf50dc2",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-memory-doctor-runtime-reduction",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T14:27:08+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "6aa629890c6ee1018c8d798ac4e660db302e293c91a2af7d6461834978f958d2",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-memory-doctor-runtime-reduction",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T14:27:08+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-memory-doctor-runtime-reduction.plan.json",
+      "sha256": "451bb8160674a675141c52eb4e40cd8c346b3c5fee615a6b5fa1caa60295f8c3",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T14:27:18+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-memory-doctor-runtime-reduction.plan.json",
+      "sha256": "586bce31f27f982ab46ae506bd5c50349315af9b8a0865655d98c4da7aff9494",
+      "command": "agentic-planning record-recovery",
+      "reason": "Bound active #892 slice to memory.doctor runtime delegate reduction.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T14:27:38+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-memory-doctor-runtime-reduction.plan.json",
+      "sha256": "127394595d8cb68d6fd7e4c6e681caa78014544e9ca5feda0d69a040047a84e8",
+      "command": "agentic-planning record-recovery",
+      "reason": "Closed memory.doctor runtime delegate reduction plan after green proof; no focused execplan closeout field command exists.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T14:31:58+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-memory-doctor-runtime-reduction",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T14:31:58+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/python-memory-doctor-runtime-reduction.plan.json",
+      "sha256": "127394595d8cb68d6fd7e4c6e681caa78014544e9ca5feda0d69a040047a84e8",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-memory-doctor-runtime-reduction",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T14:31:58+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "7b1db49ab3e7b7bf82c1a100db0a4f7a6b1355bde6403a112eedbb292c1e1a79",
+      "command": "agentic-planning record-recovery",
+      "reason": "Recorded memory.doctor portable-IR reduction in the epic decomposition.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T14:33:14+00:00"
     }
   ]
 }
