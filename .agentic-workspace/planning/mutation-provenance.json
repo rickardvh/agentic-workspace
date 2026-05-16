@@ -2,14 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "fef91d6575eaa30ca6211329fbb347eddbdd388be3d5d63ae37d007122dd1fda",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-workspace-runtime-relocation",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T10:02:46+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/execplans/python-workspace-runtime-relocation.plan.json",
       "sha256": "3fb5364195241843bea6c8ed21455f4a8cf76739aa1daa8887f914b7492a23e7",
       "command": "agentic-planning delegation-decision",
@@ -1600,6 +1592,14 @@
       "reason": "Updated active P1 execplan after completing #975 stale parent decomposition gate slice.",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-16T18:29:53+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-planning-gates-dogfooding-p1.plan.json",
+      "sha256": "2c26fbfd80db67ac52649465516414f5b37d8f90c1a323a098981eae572b9c65",
+      "command": "agentic-planning record-recovery",
+      "reason": "Updated active P1 execplan after completing #970/#971 closeout trust gate slice.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T18:36:15+00:00"
     }
   ]
 }
