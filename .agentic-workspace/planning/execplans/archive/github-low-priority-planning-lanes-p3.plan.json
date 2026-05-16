@@ -34,16 +34,26 @@
     "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
     "next_action": "For dogfooding, use #595 to measure context burden and artifact footprint on one real host-repo slice; for SkillSpec work, start with #961 and encode proportionality/no-artifact-by-default semantics before generated skill follow-ons.",
     "proof_expectations": [
-      "Fill in the narrowest command that proves the promoted work."
+      "make test-workspace",
+      "make lint-workspace",
+      "make maintainer-surfaces"
     ],
     "touched_scope": [
-      "Fill in the concrete files before implementation starts."
+      "src/agentic_workspace/contracts/schemas/skill_spec.schema.json",
+      "src/agentic_workspace/contracts/skill_specs.json",
+      "src/agentic_workspace/contract_tooling.py",
+      "docs/reference/skill-spec.md",
+      ".agentic-workspace/skills/workspace-startup/SKILL.md",
+      "src/agentic_workspace/_payload/.agentic-workspace/skills/workspace-startup/SKILL.md",
+      "tests/test_contract_tooling.py",
+      "tests/test_workspace_start_preflight_cli.py",
+      "tests/test_workspace_skills_cli.py"
     ],
     "completion_criteria": [
       "Lower-priority planning lanes remain visible while future SkillSpec and dogfooding work proves proportionality: compact guidance should prevent over-producing reviews, Memory notes, execplans, or raw context for routine tasks."
     ],
-    "continuation_owner": "none",
-    "closeout_decision": "pending"
+    "continuation_owner": "GitHub #595 for real host-repo dogfooding; GitHub #962/#989 remain deferred codegen/plugin follow-ons.",
+    "closeout_decision": "archive-but-keep-lane-open"
   },
   "goal": [
     "Issue intake found these are low-priority parent lanes, pilots, downstream SkillSpec work, or previously deferred friction lanes; when promoted, they should harden context-reduction behavior through real dogfooding rather than expanding visible methodology."
@@ -60,13 +70,19 @@
     },
     "execution": {
       "milestone": "github-low-priority-planning-lanes-p3",
-      "status": "in-progress",
+      "status": "completed",
       "next_step": "For dogfooding, use #595 to measure context burden and artifact footprint on one real host-repo slice; for SkillSpec work, start with #961 and encode proportionality/no-artifact-by-default semantics before generated skill follow-ons.",
-      "proof": "Fill in the narrowest command that proves the promoted work."
+      "proof": "make test-workspace; make lint-workspace; make maintainer-surfaces"
     },
     "scope": {
       "touched": [
-        "Fill in the concrete files before implementation starts."
+        "src/agentic_workspace/contracts/schemas/skill_spec.schema.json",
+        "src/agentic_workspace/contracts/skill_specs.json",
+        ".agentic-workspace/skills/workspace-startup/SKILL.md",
+        "src/agentic_workspace/_payload/.agentic-workspace/skills/workspace-startup/SKILL.md",
+        "tests/test_contract_tooling.py",
+        "tests/test_workspace_start_preflight_cli.py",
+        "tests/test_workspace_skills_cli.py"
       ],
       "invariants": [
         "Preserve the planning contract and keep the work bounded to this plan."
@@ -145,7 +161,7 @@
   "references": [],
   "active_milestone": {
     "id": "github-low-priority-planning-lanes-p3",
-    "status": "in-progress",
+    "status": "completed",
     "scope": "Keep this execution thread bounded to the promoted TODO item.",
     "ready": "ready",
     "blocked": "none",
@@ -158,13 +174,23 @@
     "None."
   ],
   "touched_paths": [
-    "Fill in the concrete files before implementation starts."
+    "src/agentic_workspace/contracts/schemas/skill_spec.schema.json",
+    "src/agentic_workspace/contracts/skill_specs.json",
+    "src/agentic_workspace/contract_tooling.py",
+    "docs/reference/skill-spec.md",
+    ".agentic-workspace/skills/workspace-startup/SKILL.md",
+    "src/agentic_workspace/_payload/.agentic-workspace/skills/workspace-startup/SKILL.md",
+    "tests/test_contract_tooling.py",
+    "tests/test_workspace_start_preflight_cli.py",
+    "tests/test_workspace_skills_cli.py"
   ],
   "invariants": [
     "Preserve the planning contract and keep the work bounded to this plan."
   ],
   "validation_commands": [
-    "Fill in the narrowest command that proves the promoted work."
+    "make test-workspace",
+    "make lint-workspace",
+    "make maintainer-surfaces"
   ],
   "required_tools": [
     "None."
@@ -173,24 +199,24 @@
     "Lower-priority planning lanes remain visible while future SkillSpec and dogfooding work proves proportionality: compact guidance should prevent over-producing reviews, Memory notes, execplans, or raw context for routine tasks."
   ],
   "execution_run": {
-    "run status": "not-run-yet",
-    "executor": "",
+    "run status": "completed",
+    "executor": "Codex",
     "handoff source": "agentic-planning promote-to-plan",
-    "what happened": "execution has not started",
-    "scope touched": "none yet",
-    "changed surfaces": "none yet; execution has not changed files",
-    "validations run": "pending",
-    "result for continuation": "continue from this scaffolded execplan",
-    "next step": "For dogfooding, use #595 to measure context burden and artifact footprint on one real host-repo slice; for SkillSpec work, start with #961 and encode proportionality/no-artifact-by-default semantics before generated skill follow-ons."
+    "what happened": "Added a SkillSpec contract with startup/planning examples, CLI affordance metadata, generated reference docs, and a hand-authored startup-to-planning pilot skill.",
+    "scope touched": "contracts, reference docs, startup skills, payload copy, and focused tests",
+    "changed surfaces": "SkillSpec contract and startup skill pilot",
+    "validations run": "make test-workspace; make lint-workspace; make maintainer-surfaces",
+    "result for continuation": "#595 remains blocked on a real host-repo run; #962/#989 remain deferred codegen/plugin follow-ons.",
+    "next step": "Create PR linked to #961, #963, and #964; leave #595/#962/#989 open or deferred."
   },
   "finished_run_review": {
-    "review status": "pending",
-    "scope respected": "pending",
-    "proof status": "pending",
-    "intent served": "pending",
-    "config compliance": "pending",
-    "misinterpretation risk": "pending",
-    "follow-on decision": "pending"
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "partial: non-codegen SkillSpec and startup pilot slices completed",
+    "config compliance": "yes",
+    "misinterpretation risk": "low; real-host dogfooding and codegen follow-ons are explicitly not claimed",
+    "follow-on decision": "#595 real-host dogfooding remains open; #962/#989 remain deferred."
   },
   "delegation_outcome_feedback": {
     "route chosen": "keep-local",
@@ -202,23 +228,23 @@
     "decomposition adjustment": "none"
   },
   "proof_report": {
-    "validation proof": "pending",
-    "proof achieved now": "pending",
-    "evidence for \"proof achieved\" state": ""
+    "validation proof": "make test-workspace; make lint-workspace; make maintainer-surfaces",
+    "proof achieved now": "passed",
+    "evidence for \"proof achieved\" state": "Local validation passed after both P3 slices."
   },
   "intent_satisfaction": {
     "original intent": "Issue intake found these are low-priority parent lanes, pilots, downstream SkillSpec work, or previously deferred friction lanes; when promoted, they should harden context-reduction behavior through real dogfooding rather than expanding visible methodology.",
-    "was original intent fully satisfied?": "pending",
-    "evidence of intent satisfaction": "",
-    "unsolved intent passed to": "none yet"
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "Implemented and proved non-codegen SkillSpec contract, CLI affordance metadata, and startup-to-planning pilot slices for #961, #963, and #964.",
+    "unsolved intent passed to": "GitHub #595 still needs a real host-repo assurance run; generated skill/plugin follow-ons #962 and #989 remain deferred as codegen-related work."
   },
   "execution_summary": {
-    "outcome delivered": "not completed yet",
-    "validation confirmed": "pending",
-    "follow-on routed to": "none yet",
-    "post-work posterity capture": "pending",
-    "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "current milestone"
+    "outcome delivered": "SkillSpec contract baseline and startup-to-planning pilot",
+    "validation confirmed": "make test-workspace; make lint-workspace; make maintainer-surfaces",
+    "follow-on routed to": "#595, #962, #989",
+    "post-work posterity capture": "SkillSpec contract, docs, and tests",
+    "knowledge promoted (Memory/Docs/Config)": "src/agentic_workspace/contracts/skill_specs.json and docs/reference/skill-spec.md",
+    "resume from": "#595 if a real host repo is available, or #962/#989 only if codegen priority changes"
   },
   "durable_residue": {
     "status": "none",
@@ -229,23 +255,23 @@
     "retention after promotion": "retain"
   },
   "task_intent_promotion": {
-    "decision": "pending",
+    "decision": "do-not-promote",
     "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
-    "evidence source": "",
-    "target scope": "",
-    "proposed durable intent": "",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "none",
+    "proposed durable intent": "none yet",
     "confidence": "low",
-    "needs review": true,
-    "owner surface": ""
+    "needs review": "True",
+    "owner surface": "none"
   },
   "closure_check": {
-    "slice status": "pending",
-    "larger-intent status": "pending",
-    "closure decision": "pending",
-    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
-    "why this decision is honest": "",
-    "evidence carried forward": "",
-    "reopen trigger": ""
+    "closeout scope": "slice",
+    "slice status": "complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The bounded non-codegen P3 slice is complete, but the broader P3 lane still has intentionally deferred or externally blocked follow-ons.",
+    "evidence carried forward": "Commits de5a711e and 3279344b; make test-workspace; make lint-workspace; make maintainer-surfaces.",
+    "reopen trigger": "Run a real host-repo adaptive-assurance dogfood slice for #595 or intentionally promote codegen follow-ons #962/#989."
   },
   "improvement_signal_review": {
     "status": "pending",
@@ -259,16 +285,55 @@
   },
   "closeout_distillation": {
     "buckets": {
-      "discard": [],
-      "continuation": [],
+      "discard": [
+        {
+          "summary": "Command-by-command execution detail stays in the archived proof record.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#595, #962, #989",
+          "owner": "none",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
       "memory": [],
-      "config_check": [],
-      "docs": [],
+      "config_check": [
+        {
+          "summary": "src/agentic_workspace/contracts/skill_specs.json and docs/reference/skill-spec.md",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [
+        {
+          "summary": "src/agentic_workspace/contracts/skill_specs.json and docs/reference/skill-spec.md",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
       "issue_follow_up": []
     }
   },
   "drift_log": [
     "2026-05-16: Promoted from TODO direct-task shape into an execplan.",
     "2026-05-16: Recorded delegation decision route=keep-local."
-  ]
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Issue intake found these are low-priority parent lanes, pilots, downstream SkillSpec work, or previously deferred friction lanes; when promoted, they should harden context-reduction behavior through real dogfooding rather than expanding visible methodology.\nIntent satisfied: no\nArchive decision: archive-but-keep-lane-open\nProof: make test-workspace; make lint-workspace; make maintainer-surfaces\nChanged surfaces: SkillSpec contract and startup skill pilot\nDurable residue: none (none)\nMemory learning: none\nFollow-up: GitHub #595 still needs a real host-repo assurance run; generated skill/plugin follow-ons #962 and #989 remain deferred as codegen-related work."
+  }
 }

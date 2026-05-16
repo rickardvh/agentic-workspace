@@ -9,9 +9,7 @@ schema_version = "planning-state/v1"
 work_items = []
 
 [active]
-execplans = [
-  { id = "github-low-priority-planning-lanes-p3", maturity = "active", status = "active", priority = "P3", refs = "GitHub #595, #627, #960, #961, #962, #963, #964, #989", title = "Defer broader planning, dogfooding, and SkillSpec lanes", outcome = "Lower-priority planning lanes remain visible while future SkillSpec and dogfooding work proves proportionality: compact guidance should prevent over-producing reviews, Memory notes, execplans, or raw context for routine tasks.", reason = "Issue intake found these are low-priority parent lanes, pilots, downstream SkillSpec work, or previously deferred friction lanes; when promoted, they should harden context-reduction behavior through real dogfooding rather than expanding visible methodology.", suggested_first_slice = "For dogfooding, use #595 to measure context burden and artifact footprint on one real host-repo slice; for SkillSpec work, start with #961 and encode proportionality/no-artifact-by-default semantics before generated skill follow-ons.", path = ".agentic-workspace/planning/execplans/github-low-priority-planning-lanes-p3.plan.json" },
-]
+execplans = []
 
 [todo]
 active_items = []
