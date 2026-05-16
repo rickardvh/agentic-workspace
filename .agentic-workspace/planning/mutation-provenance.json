@@ -2,62 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-cli-src-executable-cleanup",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T20:03:30+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-codegen-intent-correction.plan.json",
-      "sha256": "ce3726db961c22b2c6ab512f421f6b161086fe3b06021fb87282e4020a43b8c9",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-codegen-intent-correction",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T20:21:17+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "753b50da2a4c31c51a23afeefb4f8f2a60f68a0652e2cb52eba3248bb450340f",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-codegen-intent-correction",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T20:21:17+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-codegen-intent-correction.plan.json",
-      "sha256": "b19fd4b2f2d7f318098b6c5ecaaf499bb876bc021383a768490fa1155f9874c2",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=keep-local",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T20:22:55+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-codegen-intent-correction.plan.json",
-      "sha256": "136f82cf83c949ff3f41faf0652e06fed606da3a855a0ae0087ac56e1fed0584",
-      "command": "agentic-planning record-recovery",
-      "reason": "Intent correction execplan filled after scaffold; manual edit kept to encode exact scope and proof before closeout.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T20:26:37+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
-      "sha256": "f8756c5e03d2f836fbf1bb7013349ef275e9ad7345a129ea6d439da999fcb93a",
-      "command": "agentic-planning record-recovery",
-      "reason": "Intent correction: demote false Python generated CLI completion and encode generated/python ownership invariant.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T20:26:37+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-codegen-intent-correction.plan.json",
-      "sha256": "019e1f5007b4a517f259dae3ba5b315491c28de1ece7f518608749f88f3f1abb",
-      "command": "agentic-planning record-recovery",
-      "reason": "Closeout fields updated for completed corrective intent slice before archiving.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T20:27:35+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/execplans/python-codegen-intent-correction.plan.json",
       "sha256": "8f223bc4655cc379055ed4fc19ce7dec5e9963d648cf897b919964cd7fde4308",
       "command": "agentic-planning record-recovery",
@@ -1600,6 +1544,62 @@
       "reason": "archive execplan python-memory-list-files-primitives",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-16T09:59:00+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-runtime-source-blocker-audit.plan.json",
+      "sha256": "876a98337c88f62a3c7f630ece6befc9f505ba35e605478d7f2d439295a42b60",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-runtime-source-blocker-audit",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T10:00:00+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "66ac1e276a8e21d565497a643c9900dc025d1cbe5357d144f02db91fa5a79a65",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-runtime-source-blocker-audit",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T10:00:00+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-runtime-source-blocker-audit.plan.json",
+      "sha256": "578e51aa92704adfe74fe29d456a171e44c3a7e285a8f00b19f2c7803464fed8",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T10:00:05+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-runtime-source-blocker-audit.plan.json",
+      "sha256": "23e25dab3c2d79533bd958286a3fe2f820366bb9837d86b5f9a628573bab1d81",
+      "command": "agentic-planning record-recovery",
+      "reason": "Recorded source runtime blocker audit findings, proof, continuation, and closeout.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T10:02:22+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "26414356be109e5a4ff9bc10ccc21db408cede12d5ba537167e8114f561e2bbd",
+      "command": "agentic-planning record-recovery",
+      "reason": "Recorded source runtime blocker transition order for #892.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T10:02:22+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-runtime-source-blocker-audit",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T10:02:31+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/python-runtime-source-blocker-audit.plan.json",
+      "sha256": "23e25dab3c2d79533bd958286a3fe2f820366bb9837d86b5f9a628573bab1d81",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-runtime-source-blocker-audit",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T10:02:31+00:00"
     }
   ]
 }

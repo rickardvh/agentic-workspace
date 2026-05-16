@@ -1,0 +1,302 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Python runtime source blocker audit",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Advance #892 by auditing the remaining source-owned runtime blockers and selecting the next safe generated-runtime transition slice.",
+    "hard_constraints": "Do not delete or relocate runtime source until generated outputs, command_package_ir bindings, package imports, tests, and package data prove the replacement boundary; do not claim full completion from an audit.",
+    "agent_may_decide": "Which blocker group is the next smallest implementation slice and what proof is required before source removal.",
+    "escalate_when": "A blocker requires broad product-runtime relocation across workspace, memory, and planning in a single slice or would leave installed console scripts broken.",
+    "next_action": "Classify direct imports of source runtime blockers, update #892 decomposition with the transition order, and promote the next executable relocation slice.",
+    "proof_expectations": [
+      "uv run agentic-workspace summary --target . --format json",
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "rg source runtime blocker imports"
+    ],
+    "touched_scope": [
+      ".agentic-workspace/planning/execplans/python-runtime-source-blocker-audit.plan.json",
+      ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      ".agentic-workspace/planning/state.toml",
+      ".agentic-workspace/planning/mutation-provenance.json"
+    ],
+    "completion_criteria": [
+      "Remaining source runtime blockers are classified by import owner and transition risk.",
+      "The #892 decomposition records the next safe implementation order.",
+      "A bounded follow-on implementation slice is promoted, or the audit records why promotion is blocked.",
+      "No full #892 completion claim is made from the audit alone."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-but-keep-lane-open"
+  },
+  "goal": [
+    "#892 source runtime blockers"
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Advance #892 by auditing the remaining source-owned runtime blockers and selecting the next safe generated-runtime transition slice.",
+      "constraints": "Do not delete or relocate runtime source until generated outputs, command_package_ir bindings, package imports, tests, and package data prove the replacement boundary; do not claim full completion from an audit.",
+      "latitude": "Which blocker group is the next smallest implementation slice and what proof is required before source removal.",
+      "escalation": "A blocker requires broad product-runtime relocation across workspace, memory, and planning in a single slice or would leave installed console scripts broken."
+    },
+    "execution": {
+      "milestone": "python-runtime-source-blocker-audit",
+      "status": "active",
+      "next_step": "Classify direct imports of source runtime blockers, update #892 decomposition with the transition order, and promote the next executable relocation slice.",
+      "proof": "Planning summary remains clean and generated package static proof still passes."
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/execplans/python-runtime-source-blocker-audit.plan.json",
+        ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/mutation-provenance.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#892 source runtime blockers",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+    "activation trigger": "Promote the next generated-runtime relocation slice."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Identified the remaining direct source-runtime import blockers and selected workspace generated-runtime relocation as the next safe implementation slice.",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "Planning summary and generated package static proof remain clean.",
+    "validation still needed": "No validation remains for this audit slice; implementation proof belongs to the promoted relocation slice.",
+    "next likely slice": "workspace generated-runtime relocation"
+  },
+  "intent_interpretation": {
+    "literal request": "Python runtime source blocker audit",
+    "inferred intended outcome": "#892 source runtime blockers",
+    "chosen concrete what": "Classify the remaining source runtime blocker imports and record the next generated-runtime relocation order.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "planning execplan, python-generated-cli decomposition, planning state, and mutation provenance.",
+    "max changed files": "Fill in an expected upper bound before implementation starts.",
+    "required validation commands": "uv run agentic-workspace summary --target . --format json; uv run python scripts/check/check_generated_command_packages.py",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Audit remaining #892 source runtime blockers and promote the next generated-runtime relocation slice.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "#892 source runtime blockers",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "This slice is an architectural dependency audit before deletion or relocation; it needs repo-wide import evidence and cannot be safely delegated as mechanical implementation yet.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-16T10:00:05+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "#892 source runtime blockers",
+      "label": "#892 source runtime blockers",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "python-runtime-source-blocker-audit",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Classify direct imports of source runtime blockers, update #892 decomposition with the transition order, and promote the next executable relocation slice."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/execplans/python-runtime-source-blocker-audit.plan.json",
+    ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/mutation-provenance.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run agentic-workspace summary --target . --format json",
+    "uv run python scripts/check/check_generated_command_packages.py"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Remaining source runtime blockers are classified by import owner and transition risk.",
+    "The #892 decomposition records the next safe implementation order.",
+    "A bounded follow-on implementation slice is promoted, or the audit records why promotion is blocked.",
+    "No full #892 completion claim is made from the audit alone."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Classified the direct imports that keep source runtime files blocking full #892 completion and recorded the transition order in the decomposition.",
+    "scope touched": "planning execplan, decomposition, state, and mutation provenance",
+    "changed surfaces": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json; .agentic-workspace/planning/execplans/python-runtime-source-blocker-audit.plan.json; planning state/provenance",
+    "validations run": "uv run agentic-workspace summary --target . --format json; uv run python scripts/check/check_generated_command_packages.py",
+    "result for continuation": "Promote workspace generated-runtime relocation next.",
+    "next step": "Close this audit slice and create the workspace generated-runtime relocation execplan."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "audit yes; larger #892 no",
+    "config compliance": "used uv run agentic-workspace and planning lifecycle commands",
+    "misinterpretation risk": "medium if audit is mistaken for implementation",
+    "follow-on decision": "archive-but-keep-lane-open"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "This slice is an architectural dependency audit before deletion or relocation; it needs repo-wide import evidence and cannot be safely delegated as mechanical implementation yet.",
+    "expected savings": "none until blockers are classified",
+    "actual friction": "none beyond broad import surface",
+    "proof result": "passed",
+    "quality concern": "Do not delete shipped source files until generated outputs and package entrypoints prove they are unused or replacement-owned.",
+    "decomposition adjustment": "Promote source-runtime blocker audit before attempting full #892 completion promotion."
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "passed",
+    "evidence for \"proof achieved\" state": "Planning summary clean and generated package static proof passed before the audit slice was closed."
+  },
+  "intent_satisfaction": {
+    "original intent": "#892 source runtime blockers",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "The audit identifies the remaining blocker groups and transition order; it does not remove the blockers.",
+    "unsolved intent passed to": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+  },
+  "execution_summary": {
+    "outcome delivered": "remaining source runtime blockers classified and next transition order recorded",
+    "validation confirmed": "passed",
+    "follow-on routed to": "workspace generated-runtime relocation",
+    "post-work posterity capture": "updated python-generated-cli decomposition notes",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "create or continue workspace generated-runtime relocation execplan"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "bounded slice complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "The audit only classifies blockers and records order; full #892 remains open.",
+    "evidence carried forward": "Direct imports show workspace generated outputs still depend on agentic_workspace.workspace_runtime_primitives, planning outputs still depend on repo_planning_bootstrap installer/runtime_projection, and memory outputs still depend on repo_memory_bootstrap installer/runtime_primitives.",
+    "reopen trigger": "Reopen if the selected transition order is invalidated by generated package proof or package import evidence."
+  },
+  "improvement_signal_review": {
+    "status": "completed",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        "Raw import listing details after classification."
+      ],
+      "continuation": [
+        "Promote workspace generated-runtime relocation as the next #892 implementation slice."
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-16: Scaffolded by agentic-planning new-plan.",
+    "2026-05-16: Recorded delegation decision route=keep-local."
+  ]
+}
