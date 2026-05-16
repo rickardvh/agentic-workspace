@@ -2,14 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/execplans/archive/python-workspace-facade-source-runtime-elimination.plan.json",
-      "sha256": "c4773bb427f94cdee165154deb7aca83a4b37e0d319e540d0526cb1ae8f7a016",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-workspace-facade-source-runtime-elimination",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T10:48:14+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/execplans/python-workspace-defaults-primitive-migration.plan.json",
       "sha256": "fc95b4af75d7772105f80cb0f0cba634fe3c76a05f8abbdba3999bf0ffe11df8",
       "command": "agentic-planning new-plan",
@@ -1600,6 +1592,14 @@
       "reason": "Updated active P2 execplan after completing #981 planning-intent-verification skill slice.",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-16T18:50:11+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-planning-workflow-observability-p2.plan.json",
+      "sha256": "392486ab82386bd091ef27ba724d244276c68c82a9965e82b09ef0ecce051382",
+      "command": "agentic-planning record-recovery",
+      "reason": "Updated active P2 execplan after completing #983 memory-consultation-and-residue skill slice.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T18:56:45+00:00"
     }
   ]
 }

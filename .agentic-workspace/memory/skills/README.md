@@ -14,6 +14,7 @@ The shipped core skills are:
 
 - `memory-hygiene`
 - `memory-capture`
+- `memory-consultation-and-residue`
 - `memory-upgrade`
 - `memory-refresh`
 - `memory-router`
@@ -23,6 +24,7 @@ Quick trigger guide:
 - `memory-router`: choose the smallest relevant memory note set for the current work
 - `memory-refresh`: refresh or tighten existing memory notes after changes
 - `memory-capture`: record new durable memory when a task exposed something worth keeping
+- `memory-consultation-and-residue`: classify consultation status, durable residue, and improvement-signal routing
 - `memory-hygiene`: prune, merge, de-duplicate, or sharpen existing memory
 - `memory-upgrade`: run the packaged memory upgrade flow for the repository
 

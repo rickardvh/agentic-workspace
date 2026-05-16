@@ -32,11 +32,13 @@
     "hard_constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
     "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
     "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
-    "next_action": "Implement the Memory or proof product-semantic skill surface while preserving the next-safe-action packet semantics.",
+    "next_action": "Implement the proof product-semantic skill surface while preserving the next-safe-action packet semantics.",
     "proof_expectations": [
       "uv run pytest tests/test_workspace_start_preflight_cli.py -q",
       "uv run pytest packages/planning/tests/test_skills_catalog.py -q",
-      "uv run pytest tests/test_workspace_skills_cli.py::test_skills_command_recommends_high_risk_workflow_decision_skills -q"
+      "uv run pytest tests/test_workspace_skills_cli.py::test_skills_command_recommends_high_risk_workflow_decision_skills -q",
+      "uv run pytest tests/test_workspace_skills_cli.py -q",
+      "uv run pytest packages/memory/tests/test_install.py::test_memory_contract_file_shortlist_is_explicit packages/memory/tests/test_install.py::test_payload_entries_do_not_include_todo_stub packages/memory/tests/test_install.py::test_payload_verification_policy_matches_installer_constants -q"
     ],
     "touched_scope": [
       "src/agentic_workspace/workspace_runtime_primitives.py",
@@ -48,6 +50,16 @@
       "packages/planning/skills/README.md",
       ".agentic-workspace/planning/skills/README.md",
       "packages/planning/tests/test_skills_catalog.py",
+      "packages/memory/bootstrap/.agentic-workspace/memory/skills/memory-consultation-and-residue/SKILL.md",
+      "packages/memory/bootstrap/.agentic-workspace/memory/skills/memory-consultation-and-residue/agents/openai.yaml",
+      "packages/memory/bootstrap/.agentic-workspace/memory/skills/REGISTRY.json",
+      "packages/memory/bootstrap/.agentic-workspace/memory/skills/README.md",
+      ".agentic-workspace/memory/skills/memory-consultation-and-residue/SKILL.md",
+      ".agentic-workspace/memory/skills/memory-consultation-and-residue/agents/openai.yaml",
+      ".agentic-workspace/memory/skills/REGISTRY.json",
+      ".agentic-workspace/memory/skills/README.md",
+      "packages/memory/src/repo_memory_bootstrap/_installer_shared.py",
+      "packages/memory/src/repo_memory_bootstrap/contracts/payload_verification.memory.json",
       "tests/test_workspace_skills_cli.py"
     ],
     "completion_criteria": [
@@ -72,8 +84,8 @@
     "execution": {
       "milestone": "github-planning-workflow-observability-p2",
       "status": "in-progress",
-      "next_step": "Implement the Memory or proof product-semantic skill surface while preserving the next-safe-action packet semantics.",
-      "proof": "uv run pytest tests/test_workspace_start_preflight_cli.py -q; uv run pytest packages/planning/tests/test_skills_catalog.py -q; uv run pytest tests/test_workspace_skills_cli.py::test_skills_command_recommends_high_risk_workflow_decision_skills -q"
+      "next_step": "Implement the proof product-semantic skill surface while preserving the next-safe-action packet semantics.",
+      "proof": "uv run pytest tests/test_workspace_start_preflight_cli.py -q; uv run pytest packages/planning/tests/test_skills_catalog.py -q; uv run pytest tests/test_workspace_skills_cli.py::test_skills_command_recommends_high_risk_workflow_decision_skills -q; uv run pytest tests/test_workspace_skills_cli.py -q; uv run pytest packages/memory/tests/test_install.py::test_memory_contract_file_shortlist_is_explicit packages/memory/tests/test_install.py::test_payload_entries_do_not_include_todo_stub packages/memory/tests/test_install.py::test_payload_verification_policy_matches_installer_constants -q"
     },
     "scope": {
       "touched": [
@@ -86,6 +98,16 @@
         "packages/planning/skills/README.md",
         ".agentic-workspace/planning/skills/README.md",
         "packages/planning/tests/test_skills_catalog.py",
+        "packages/memory/bootstrap/.agentic-workspace/memory/skills/memory-consultation-and-residue/SKILL.md",
+        "packages/memory/bootstrap/.agentic-workspace/memory/skills/memory-consultation-and-residue/agents/openai.yaml",
+        "packages/memory/bootstrap/.agentic-workspace/memory/skills/REGISTRY.json",
+        "packages/memory/bootstrap/.agentic-workspace/memory/skills/README.md",
+        ".agentic-workspace/memory/skills/memory-consultation-and-residue/SKILL.md",
+        ".agentic-workspace/memory/skills/memory-consultation-and-residue/agents/openai.yaml",
+        ".agentic-workspace/memory/skills/REGISTRY.json",
+        ".agentic-workspace/memory/skills/README.md",
+        "packages/memory/src/repo_memory_bootstrap/_installer_shared.py",
+        "packages/memory/src/repo_memory_bootstrap/contracts/payload_verification.memory.json",
         "tests/test_workspace_skills_cli.py"
       ],
       "invariants": [
@@ -172,7 +194,7 @@
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Implement the Memory or proof product-semantic skill surface while preserving the next-safe-action packet semantics."
+    "Implement the proof product-semantic skill surface while preserving the next-safe-action packet semantics."
   ],
   "blockers": [
     "None."
@@ -187,6 +209,16 @@
     "packages/planning/skills/README.md",
     ".agentic-workspace/planning/skills/README.md",
     "packages/planning/tests/test_skills_catalog.py",
+    "packages/memory/bootstrap/.agentic-workspace/memory/skills/memory-consultation-and-residue/SKILL.md",
+    "packages/memory/bootstrap/.agentic-workspace/memory/skills/memory-consultation-and-residue/agents/openai.yaml",
+    "packages/memory/bootstrap/.agentic-workspace/memory/skills/REGISTRY.json",
+    "packages/memory/bootstrap/.agentic-workspace/memory/skills/README.md",
+    ".agentic-workspace/memory/skills/memory-consultation-and-residue/SKILL.md",
+    ".agentic-workspace/memory/skills/memory-consultation-and-residue/agents/openai.yaml",
+    ".agentic-workspace/memory/skills/REGISTRY.json",
+    ".agentic-workspace/memory/skills/README.md",
+    "packages/memory/src/repo_memory_bootstrap/_installer_shared.py",
+    "packages/memory/src/repo_memory_bootstrap/contracts/payload_verification.memory.json",
     "tests/test_workspace_skills_cli.py"
   ],
   "invariants": [
@@ -195,7 +227,9 @@
   "validation_commands": [
     "uv run pytest tests/test_workspace_start_preflight_cli.py -q",
     "uv run pytest packages/planning/tests/test_skills_catalog.py -q",
-    "uv run pytest tests/test_workspace_skills_cli.py::test_skills_command_recommends_high_risk_workflow_decision_skills -q"
+    "uv run pytest tests/test_workspace_skills_cli.py::test_skills_command_recommends_high_risk_workflow_decision_skills -q",
+    "uv run pytest tests/test_workspace_skills_cli.py -q",
+    "uv run pytest packages/memory/tests/test_install.py::test_memory_contract_file_shortlist_is_explicit packages/memory/tests/test_install.py::test_payload_entries_do_not_include_todo_stub packages/memory/tests/test_install.py::test_payload_verification_policy_matches_installer_constants -q"
   ],
   "required_tools": [
     "None."
@@ -207,12 +241,12 @@
     "run status": "not-run-yet",
     "executor": "",
     "handoff source": "agentic-planning promote-to-plan",
-    "what happened": "#988 completed: start now exposes a compact next_safe_action packet derived from immediate_next_allowed_action, workflow_sufficiency, skill_routing, and memory_consult. #981 completed: package and installed planning skill catalogs now include planning-intent-verification.",
-    "scope touched": "src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_start_preflight_cli.py; planning skill catalogs and planning-intent-verification skill",
-    "changed surfaces": "startup routing packet projection; startup/preflight tests; planning skill registry/readme and skill routing tests",
-    "validations run": "uv run pytest tests/test_workspace_start_preflight_cli.py -q; uv run pytest packages/planning/tests/test_skills_catalog.py -q; uv run pytest tests/test_workspace_skills_cli.py::test_skills_command_recommends_high_risk_workflow_decision_skills -q",
-    "result for continuation": "continue P2 with Memory/proof skill surfaces and module-slot/transition follow-ons",
-    "next step": "Implement the Memory or proof product-semantic skill surface while preserving the next-safe-action packet semantics."
+    "what happened": "#988 completed: start exposes a compact next_safe_action packet. #981 completed: planning-intent-verification skill added. #983 completed: memory-consultation-and-residue skill added to installed core memory skills and package payload contract.",
+    "scope touched": "startup packet/tests; planning intent skill catalogs; memory consultation/residue core skill payload, registry, installer contract, and skill routing tests",
+    "changed surfaces": "startup routing packet projection; planning and memory skill catalogs; memory payload verification; workspace skill routing tests",
+    "validations run": "uv run pytest tests/test_workspace_start_preflight_cli.py -q; uv run pytest packages/planning/tests/test_skills_catalog.py -q; uv run pytest tests/test_workspace_skills_cli.py::test_skills_command_recommends_high_risk_workflow_decision_skills -q; uv run pytest tests/test_workspace_skills_cli.py -q; uv run pytest packages/memory/tests/test_install.py::test_memory_contract_file_shortlist_is_explicit packages/memory/tests/test_install.py::test_payload_entries_do_not_include_todo_stub packages/memory/tests/test_install.py::test_payload_verification_policy_matches_installer_constants -q",
+    "result for continuation": "continue P2 with #984 proof-selection skill, then #985/#986 SkillSpec gate and operating-loop/module-slot surfaces",
+    "next step": "Implement the proof product-semantic skill surface while preserving the next-safe-action packet semantics."
   },
   "finished_run_review": {
     "review status": "slice reviewed",
@@ -233,9 +267,9 @@
     "decomposition adjustment": "none"
   },
   "proof_report": {
-    "validation proof": "uv run pytest tests/test_workspace_start_preflight_cli.py -q; uv run pytest packages/planning/tests/test_skills_catalog.py -q; uv run pytest tests/test_workspace_skills_cli.py::test_skills_command_recommends_high_risk_workflow_decision_skills -q",
-    "proof achieved now": "#988 startup/preflight tests and #981 skill catalog/routing tests passed",
-    "evidence for \"proof achieved\" state": "Startup/preflight test file: 53 passed. Planning skill catalog: 2 passed. Skill recommendation case: 1 passed."
+    "validation proof": "uv run pytest tests/test_workspace_start_preflight_cli.py -q; uv run pytest packages/planning/tests/test_skills_catalog.py -q; uv run pytest tests/test_workspace_skills_cli.py::test_skills_command_recommends_high_risk_workflow_decision_skills -q; uv run pytest tests/test_workspace_skills_cli.py -q; uv run pytest packages/memory/tests/test_install.py::test_memory_contract_file_shortlist_is_explicit packages/memory/tests/test_install.py::test_payload_entries_do_not_include_todo_stub packages/memory/tests/test_install.py::test_payload_verification_policy_matches_installer_constants -q",
+    "proof achieved now": "#988 startup/preflight tests, #981 planning skill catalog/routing tests, and #983 memory skill routing/payload contract tests passed",
+    "evidence for \"proof achieved\" state": "Startup/preflight test file: 53 passed. Planning skill catalog: 2 passed. Skill recommendation case: 1 passed. Workspace skill CLI file: 17 passed. Memory payload contract subset: 3 passed."
   },
   "intent_satisfaction": {
     "original intent": "Medium-priority planning workflow issues are accepted but should remain behind immediate trust and recoverability failures; when promoted, success should be measured by fewer raw-file reads and fewer human corrections, not by adding more workflow prose.",
@@ -244,9 +278,9 @@
     "unsolved intent passed to": "active P2 execplan continuation"
   },
   "execution_summary": {
-    "outcome delivered": "#988 and #981 slices complete; P2 lane still in progress",
-    "validation confirmed": "startup/preflight and skill catalog/routing pytest passed",
-    "follow-on routed to": "#983/#984/#985/#986 in this execplan",
+    "outcome delivered": "#988, #981, and #983 slices complete; P2 lane still in progress",
+    "validation confirmed": "startup/preflight, planning skill catalog, workspace skill routing, and memory payload contract pytest passed",
+    "follow-on routed to": "#984/#985/#986 in this execplan",
     "post-work posterity capture": "updated execplan and mutation provenance",
     "knowledge promoted (Memory/Docs/Config)": "none",
     "resume from": "current milestone"
@@ -270,12 +304,12 @@
     "owner surface": ""
   },
   "closure_check": {
-    "slice status": "#988 and #981 complete; active milestone in progress",
+    "slice status": "#988, #981, and #983 complete; active milestone in progress",
     "larger-intent status": "open",
     "closure decision": "archive-but-keep-lane-open",
     "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
     "why this decision is honest": "",
-    "evidence carried forward": "start.next_safe_action carries next_safe_action, preferred_cli, module_slot, forbidden_actions, proof_required, completion_claim_allowed, memory_consultation_status, and no-CLI fallback. planning-intent-verification captures original/interpreted/parent intent, negative invariants, continuation owner, and completion-claim guardrails.",
+    "evidence carried forward": "start.next_safe_action carries compact action/proof/completion fields; planning-intent-verification captures parent intent and negative invariant checks; memory-consultation-and-residue captures memory_consultation_status, durable_residue_decision, and improvement_signal_status with no-write routing.",
     "reopen trigger": "If start/skill guidance diverges again from the compact next action semantics."
   },
   "improvement_signal_review": {

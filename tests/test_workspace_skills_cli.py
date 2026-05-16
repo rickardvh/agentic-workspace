@@ -280,6 +280,34 @@ def test_skills_command_recommends_memory_router_for_note_selection_task(tmp_pat
     assert payload["recommendations"][0]["source_kind"] == "installed-core-skills"
 
 
+def test_skills_command_recommends_memory_consultation_for_residue_routing(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "skills",
+                "--target",
+                str(target),
+                "--task",
+                "classify memory consultation status and durable residue decision after closeout",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["recommendations"][0]["id"] == "memory-consultation-and-residue"
+    assert payload["recommendations"][0]["source_kind"] == "installed-core-skills"
+
+
 def test_skills_command_recommends_review_skill_for_natural_review_request(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
