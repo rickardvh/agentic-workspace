@@ -3,78 +3,6 @@
   "entries": [
     {
       "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan dogfooding-generated-command-input-proof",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T20:44:20+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/dogfooding-closeout-live-plan-retention.plan.json",
-      "sha256": "c6261526ec4758e870b7c93e06f703c5d32ad03450fc4cb79ea265deec1854ce",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold dogfooding-closeout-live-plan-retention",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T20:45:38+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "f245b3bd6342a9861a70ec833795dd09123bb45f2dcd67b791eff41bc1c13af0",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold dogfooding-closeout-live-plan-retention",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T20:45:38+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/dogfooding-closeout-live-plan-retention.plan.json",
-      "sha256": "cda9cacf76cf8ac9f4ef7b48b533dcefd51d9d9e3dcb0c1f7bfa4fbadd22c8a2",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=delegate-exploration",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T20:45:54+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/dogfooding-closeout-live-plan-retention.plan.json",
-      "sha256": "acd91045d24cda87dd283a3ecac62df050e5dd9337de256ea9c4c031bcd54da9",
-      "command": "agentic-planning record-recovery",
-      "reason": "Created and maintained the active #969 dogfooding execplan for closeout retention fix",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-15T20:50:14+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/dogfooding-closeout-live-plan-retention.plan.json",
-      "sha256": "6ef37449e041325f8bd05357a255a44278563b8db1eb9847b4b339bbe83fb784",
-      "command": "agentic-planning record-recovery",
-      "reason": "Closed #969 dogfooding execplan after validation proof",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-15T20:51:06+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan dogfooding-closeout-live-plan-retention",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T20:51:13+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/archive/dogfooding-closeout-live-plan-retention.plan.json",
-      "sha256": "6ef37449e041325f8bd05357a255a44278563b8db1eb9847b4b339bbe83fb784",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan dogfooding-closeout-live-plan-retention",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T20:51:13+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-generated-entrypoint-source-import-retirement.plan.json",
-      "sha256": "b9ba28541a7ad045de2c5d5cac2f2c3e9099fd5a780c64cd9c07d1254e9cbef5",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-generated-entrypoint-source-import-retirement",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T20:59:33+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
       "sha256": "b1e0e57a16351ee65aa058af3df52e9e14507a5469f14ee8eee65b64ee42ec7d",
       "command": "agentic-planning new-plan",
       "reason": "create execplan scaffold python-generated-entrypoint-source-import-retirement",
@@ -1600,6 +1528,78 @@
       "reason": "Added primitive Docker conformance proof run after archive closeout",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-16T14:07:15+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-workspace-defaults-runtime-reduction.plan.json",
+      "sha256": "95fa01e3ff4fa7d9dfc9abec2f2b8480cca282e98109079ab8528bcc8993028c",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-workspace-defaults-runtime-reduction",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T14:08:07+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "f3fe2c7467f347bf7497a14d6247b85d5defc3868efee3e00f6ea2fe9be29e5a",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-workspace-defaults-runtime-reduction",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T14:08:07+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-workspace-defaults-runtime-reduction.plan.json",
+      "sha256": "bc906507dcadf8d476b4e663263c9f317c7f6ef81c8bb7e0956236d30a05eadb",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=delegate-exploration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T14:08:13+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-workspace-defaults-runtime-reduction.plan.json",
+      "sha256": "18705a9f549131b875645345444fd862aa220039c744ae21b136364329efdbd3",
+      "command": "agentic-planning record-recovery",
+      "reason": "Bound active defaults runtime reduction slice because planning CLI has no focused execplan field update command yet.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T14:11:52+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-workspace-defaults-runtime-reduction.plan.json",
+      "sha256": "016636cdddf2a30c7dfcd64a2f0ca7b1684ea695efbae979832b546a20c19ecb",
+      "command": "agentic-planning record-recovery",
+      "reason": "Completed defaults runtime reduction plan as a no-safe-route audit after archive-plan reported active milestone needed closeout status first.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T14:13:01+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-workspace-defaults-runtime-reduction.plan.json",
+      "sha256": "2ed6d4528e13b4617cdc3ded680c9d4a5b99d7b9509e544804cca517c8037372",
+      "command": "agentic-planning record-recovery",
+      "reason": "Filled required post-work posterity capture after archive-plan normalized closeout fields.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T14:13:19+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-workspace-defaults-runtime-reduction",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T14:13:27+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/python-workspace-defaults-runtime-reduction.plan.json",
+      "sha256": "2ed6d4528e13b4617cdc3ded680c9d4a5b99d7b9509e544804cca517c8037372",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-workspace-defaults-runtime-reduction",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T14:13:27+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "56879d247bbdce2bee5ad2e707b9e6692451fdf9e253efd179e1e4b9d02a0b23",
+      "command": "agentic-planning record-recovery",
+      "reason": "Recorded defaults.report no-safe-route audit in the epic decomposition after closing the bounded plan.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T14:14:48+00:00"
     }
   ]
 }
