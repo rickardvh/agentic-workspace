@@ -452,8 +452,18 @@
         "scripts/check/check_contract_tooling_surfaces.py"
       ],
       "notes": "Shared parser option groups are manifest-backed instead of duplicated in helper functions."
+    },
+    {
+      "area": "skill_specs",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/skill_specs.json",
+      "consumers": [
+        "hand-authored package skills",
+        "future generated skill renderers",
+        "tests/test_contract_tooling.py"
+      ],
+      "notes": "SkillSpec records define behavior, CLI affordances, interpreted output fields, owned surfaces, proportionality, fallback, proof, and closeout obligations without starting generated target work."
     }
   ]
 }
-
 

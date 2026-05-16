@@ -153,6 +153,12 @@
       "consumer": "scripts/check/check_contract_tooling_surfaces.py"
     },
     {
+      "contract": "skill_specs.json",
+      "schema": "skill_spec.schema.json",
+      "loader": "skill_specs_manifest",
+      "consumer": "tests/test_contract_tooling.py"
+    },
+    {
       "contract": "python_runtime_boundary.json",
       "schema": "python_runtime_boundary.schema.json",
       "loader": "python_runtime_boundary_manifest",
@@ -189,5 +195,4 @@
     "handwritten_model_boundary": "Handwritten dataclasses remain acceptable when they represent runtime execution state, live repo inspection, or adapted third-party package results rather than reusable contract shape."
   }
 }
-
 
