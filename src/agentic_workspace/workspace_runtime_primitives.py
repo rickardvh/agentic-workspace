@@ -9041,6 +9041,65 @@ def _tiny_adaptive_routing_payload(
     }
 
 
+def _next_safe_action_packet(
+    *,
+    immediate: dict[str, Any],
+    workflow_sufficiency: dict[str, Any] | None,
+    skill_routing: dict[str, Any] | None,
+    memory_consult: dict[str, Any] | None,
+) -> dict[str, Any]:
+    action = str(immediate.get("action", "") or "inspect-current-workflow-context")
+    command = str(immediate.get("command", "") or "")
+    read_first = [str(item) for item in _list_payload(immediate.get("read_first")) if str(item).strip()]
+    preferred_cli = command or (read_first[0] if read_first else "")
+    proof_hint = str(immediate.get("next_proof", "") or "")
+    decision = str((workflow_sufficiency or {}).get("decision", "") or "")
+    preferred_routes = (skill_routing or {}).get("preferred_routes", [])
+    skill = ""
+    if isinstance(preferred_routes, list):
+        for route in preferred_routes:
+            if isinstance(route, dict) and route.get("skill"):
+                skill = str(route.get("skill"))
+                break
+    if action.startswith(("create", "promote", "checkpoint", "update", "validate-planning", "continue-active-planning")):
+        module_slot = "planning"
+    elif "closeout" in action:
+        module_slot = "planning.closeout"
+    elif "proof" in action or "validation" in proof_hint:
+        module_slot = "workspace.proof"
+    elif "memory" in action:
+        module_slot = "memory"
+    else:
+        module_slot = "workspace"
+    forbidden_actions: list[str] = []
+    if action in {"create-prep-only-planning-state", "promote-or-create-active-execplan", "create-or-promote-active-execplan"}:
+        forbidden_actions.extend(["edit product source", "claim implementation complete"])
+    if action in {"continue-active-planning-record", "run summary"}:
+        forbidden_actions.extend(["open raw planning files before compact summary", "claim completion"])
+    if "closeout" in action:
+        forbidden_actions.append("claim completion before closeout trust is reconciled")
+    if decision in {"active-execplan-required", "planning-escalation-required", "implementation-owner-missing"}:
+        forbidden_actions.append("continue implementation without active planning ownership")
+    memory_status = str((memory_consult or {}).get("status", "unknown"))
+    return {
+        "kind": "agentic-workspace/next-safe-action/v1",
+        "next_safe_action": action,
+        "why": str(immediate.get("summary", "") or (workflow_sufficiency or {}).get("reason", "")),
+        "required_skill": skill,
+        "preferred_cli": preferred_cli,
+        "module_slot": module_slot,
+        "forbidden_actions": sorted(set(forbidden_actions)),
+        "proof_required": bool(
+            proof_hint
+            and proof_hint not in {"select proof after changed paths are known", "no file proof unless the task later becomes an edit"}
+        ),
+        "completion_claim_allowed": not forbidden_actions and action not in {"choose-smallest-workflow-shape"},
+        "memory_consultation_status": memory_status,
+        "fallback_if_cli_unavailable": "Use generated or documented workflow fallback for the same module slot; preserve forbidden actions and do not mutate managed state by hand.",
+        "source_fields": ["immediate_next_allowed_action", "workflow_sufficiency", "skill_routing", "memory_consult"],
+    }
+
+
 def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
     """Project startup context to the smallest schema-compatible first-contact answer."""
     immediate = copy.deepcopy(payload["immediate_next_allowed_action"])
@@ -9244,6 +9303,12 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         projected["startup_review"] = startup_review
     if "prep_only_handoff" in payload:
         projected["prep_only_handoff"] = _compact_start_prep_only_handoff(payload["prep_only_handoff"])
+    projected["next_safe_action"] = _next_safe_action_packet(
+        immediate=immediate,
+        workflow_sufficiency=payload.get("workflow_sufficiency"),
+        skill_routing=payload.get("skill_routing"),
+        memory_consult=payload.get("memory_consult"),
+    )
     return projected
 
 
@@ -10093,6 +10158,7 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "delegation_decision",
         "intent_acknowledgement",
         "workflow_sufficiency",
+        "next_safe_action",
         "health",
         "warnings_count",
         "needs_review_count",
@@ -10173,6 +10239,12 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str) -
             else 'agentic-workspace skills --target ./repo --task "<task>" --format json',
             "preferred_routes": preferred_routes,
         },
+        "next_safe_action": _next_safe_action_packet(
+            immediate=payload["immediate_next_allowed_action"],
+            workflow_sufficiency=payload.get("workflow_sufficiency"),
+            skill_routing=payload.get("skill_routing"),
+            memory_consult=payload.get("memory_consult"),
+        ),
         "drill_down": {
             "rule": "Use --select <field[,field...]> for exact fields; use --verbose only for broad diagnostics.",
             "examples": [

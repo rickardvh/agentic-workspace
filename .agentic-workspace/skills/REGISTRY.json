@@ -79,6 +79,103 @@
       }
     },
     {
+      "id": "workspace-proof-selection",
+      "path": "workspace-proof-selection/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "select and interpret proof for task, slice, lane, or epic completion claims",
+      "activation_hints": {
+        "verbs": ["prove", "validate", "verify", "classify", "select"],
+        "nouns": [
+          "proof selection",
+          "completion claim",
+          "validation evidence",
+          "negative proof",
+          "skipped tests",
+          "proof gap",
+          "claim level"
+        ],
+        "phrases": [
+          "proof selection",
+          "completion claim allowed",
+          "negative proof",
+          "passed with warning",
+          "proof gap",
+          "claim level",
+          "proof before completion"
+        ],
+        "when": [
+          "proof must match task, slice, lane, or epic scope",
+          "validation passed but completion may not be justified",
+          "skips, retries, warnings, crashes, or negative evidence need interpretation"
+        ]
+      }
+    },
+    {
+      "id": "workspace-transition-gates",
+      "path": "workspace-transition-gates/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "apply SkillSpec-backed gates to startup, planning, proof, memory, and closeout transitions",
+      "activation_hints": {
+        "verbs": ["gate", "transition", "route", "preserve", "fallback"],
+        "nouns": [
+          "SkillSpec",
+          "transition gate",
+          "allowed actions",
+          "forbidden actions",
+          "preferred CLI",
+          "interpreted fields",
+          "no-CLI fallback"
+        ],
+        "phrases": [
+          "SkillSpec-backed gate",
+          "transition gate",
+          "allowed actions",
+          "forbidden actions",
+          "preferred CLI",
+          "no-CLI fallback"
+        ],
+        "when": [
+          "moving between workspace, planning, proof, memory, or closeout",
+          "a transition needs explicit allowed and forbidden actions",
+          "CLI fallback must preserve the same guardrails"
+        ]
+      }
+    },
+    {
+      "id": "workspace-operating-loop",
+      "path": "workspace-operating-loop/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "apply the core operating loop and module slot contract across workspace, planning, proof, closeout, and memory",
+      "activation_hints": {
+        "verbs": ["orchestrate", "slot", "route", "own", "preserve"],
+        "nouns": [
+          "operating loop",
+          "module slot",
+          "module slot contract",
+          "workspace slot",
+          "planning slot",
+          "memory slot",
+          "direct answer"
+        ],
+        "phrases": [
+          "operating loop",
+          "module slot contract",
+          "module slot",
+          "answer directly no artifact",
+          "planning memory workspace loop",
+          "completion claim allowed"
+        ],
+        "when": [
+          "module ownership is unclear",
+          "a next-safe-action packet names a module slot",
+          "the agent may create an unnecessary artifact instead of answering directly"
+        ]
+      }
+    },
+    {
       "id": "workspace-setup-jumpstart",
       "path": "workspace-setup-jumpstart/SKILL.md",
       "scope": "bundled",

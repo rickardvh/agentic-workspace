@@ -17,6 +17,19 @@
       }
     },
     {
+      "id": "memory-consultation-and-residue",
+      "path": "memory-consultation-and-residue/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "classify memory consultation, durable residue, and improvement-signal routing",
+      "activation_hints": {
+        "verbs": ["consult", "classify", "route", "decide"],
+        "nouns": ["memory consultation", "durable residue", "improvement signal", "closeout residue"],
+        "phrases": ["memory consultation status", "durable residue decision", "improvement signal status", "closeout durable residue"],
+        "when": ["closeout residue routing", "explicit no-memory-write decision", "repeated correction or workflow friction"]
+      }
+    },
+    {
       "id": "memory-hygiene",
       "path": "memory-hygiene/SKILL.md",
       "scope": "bundled",

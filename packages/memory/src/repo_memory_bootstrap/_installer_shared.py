@@ -54,6 +54,8 @@ CORE_PAYLOAD_SKILL_FILES = (
     SHIPPED_SKILLS_ROOT / "REGISTRY.json",
     SHIPPED_SKILLS_ROOT / "memory-capture/SKILL.md",
     SHIPPED_SKILLS_ROOT / "memory-capture/agents/openai.yaml",
+    SHIPPED_SKILLS_ROOT / "memory-consultation-and-residue/SKILL.md",
+    SHIPPED_SKILLS_ROOT / "memory-consultation-and-residue/agents/openai.yaml",
     SHIPPED_SKILLS_ROOT / "memory-hygiene/SKILL.md",
     SHIPPED_SKILLS_ROOT / "memory-hygiene/agents/openai.yaml",
     SHIPPED_SKILLS_ROOT / "memory-upgrade/SKILL.md",

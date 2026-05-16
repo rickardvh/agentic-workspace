@@ -264,6 +264,11 @@
       "description": "Small decision record that says whether the current packet is enough for the next step or which exact detail field should be requested.",
       "additionalProperties": true
     },
+    "next_safe_action": {
+      "type": "object",
+      "description": "Compact next-safe-action packet derived from startup routing, including proof and completion-claim guardrails.",
+      "additionalProperties": true
+    },
     "planning_safety_gate": {
       "type": "object",
       "description": "Planning ownership guard for broad, high-assurance, decomposed, or scope-widened work.",

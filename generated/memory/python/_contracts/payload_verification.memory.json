@@ -54,6 +54,8 @@
     ".agentic-workspace/memory/skills/REGISTRY.json",
     ".agentic-workspace/memory/skills/memory-capture/SKILL.md",
     ".agentic-workspace/memory/skills/memory-capture/agents/openai.yaml",
+    ".agentic-workspace/memory/skills/memory-consultation-and-residue/SKILL.md",
+    ".agentic-workspace/memory/skills/memory-consultation-and-residue/agents/openai.yaml",
     ".agentic-workspace/memory/skills/memory-hygiene/SKILL.md",
     ".agentic-workspace/memory/skills/memory-hygiene/agents/openai.yaml",
     ".agentic-workspace/memory/skills/memory-upgrade/SKILL.md",

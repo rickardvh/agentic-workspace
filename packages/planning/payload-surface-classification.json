@@ -511,6 +511,13 @@
       "rationale": "High-assurance lifecycle steering helps skill-aware agents preserve intent, proof, delegation, and closeout across broad work without making skills mandatory for core planning."
     },
     {
+      "source_path": "packages/planning/skills/planning-intent-verification/SKILL.md",
+      "installed_path": ".agentic-workspace/planning/skills/planning-intent-verification/SKILL.md",
+      "classification": "config-enabled extension",
+      "owner": "planning skills extension",
+      "rationale": "Intent verification helps skill-aware agents preserve parent intent, negative invariants, and completion-claim boundaries, while core Planning remains usable through compact CLI fields."
+    },
+    {
       "source_path": "packages/planning/skills/planning-intake-upstream-task/SKILL.md",
       "installed_path": ".agentic-workspace/planning/skills/planning-intake-upstream-task/SKILL.md",
       "classification": "extraction candidate",

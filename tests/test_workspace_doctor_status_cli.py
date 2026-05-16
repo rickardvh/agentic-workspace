@@ -243,6 +243,18 @@ def test_doctor_json_exposes_standardised_summary_fields(monkeypatch, tmp_path: 
     _write((tmp_path / ".agentic-workspace" / "skills" / "workspace-startup" / "SKILL.md"), "# Workspace Startup\n")
     _write((tmp_path / ".agentic-workspace" / "skills" / "workspace-work-shape" / "SKILL.md"), "# Workspace Work Shape\n")
     _write(
+        (tmp_path / ".agentic-workspace" / "skills" / "workspace-proof-selection" / "SKILL.md"),
+        "# Workspace Proof Selection\n",
+    )
+    _write(
+        (tmp_path / ".agentic-workspace" / "skills" / "workspace-transition-gates" / "SKILL.md"),
+        "# Workspace Transition Gates\n",
+    )
+    _write(
+        (tmp_path / ".agentic-workspace" / "skills" / "workspace-operating-loop" / "SKILL.md"),
+        "# Workspace Operating Loop\n",
+    )
+    _write(
         (tmp_path / ".agentic-workspace" / "skills" / "workspace-setup-jumpstart" / "SKILL.md"),
         "# Workspace Setup Jumpstart\n",
     )

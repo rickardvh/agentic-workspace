@@ -28,6 +28,8 @@ For maintainers of this repository, `skills/` is the canonical source of truth. 
   - apply assurance and delegation posture before handing off or implementing planned work
 - `planning-high-assurance-lifecycle`
   - preserve intent, decomposition, assurance, delegation, proof, and closeout for broad or high-assurance planning work
+- `planning-intent-verification`
+  - verify original, interpreted, parent, and negative intent before decomposition, validation, or completion claims
 - `planning-closeout-trust`
   - close out planned work with proof, intent satisfaction, trust, and residue distillation
 - `planning-promote-review-findings`
@@ -37,4 +39,4 @@ For maintainers of this repository, `skills/` is the canonical source of truth. 
 - `planning-reporting`
   - report active planning state, proof expectations, and next-action guidance from the canonical summary JSON
 
-These bundled skills cover payload refresh, bounded planning execution, high-assurance lifecycle preservation, work decomposition, execplan tightening, assurance and delegation decisions, closeout trust, delegated planning workflow, review capture, review-to-plan promotion, and upstream-task intake.
+These bundled skills cover payload refresh, bounded planning execution, high-assurance lifecycle preservation, intent verification, work decomposition, execplan tightening, assurance and delegation decisions, closeout trust, delegated planning workflow, review capture, review-to-plan promotion, and upstream-task intake.

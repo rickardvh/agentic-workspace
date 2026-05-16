@@ -18,6 +18,9 @@ def test_skills_command_lists_registered_workspace_skills(tmp_path: Path, capsys
     skill_ids = {entry["id"] for entry in payload["skills"]}
     assert "workspace-startup" in skill_ids
     assert "workspace-setup-jumpstart" in skill_ids
+    assert "workspace-proof-selection" in skill_ids
+    assert "workspace-transition-gates" in skill_ids
+    assert "workspace-operating-loop" in skill_ids
     assert "planning-autopilot" in skill_ids
     assert "memory-router" in skill_ids
     assert "planning-reporting" in skill_ids
@@ -280,6 +283,34 @@ def test_skills_command_recommends_memory_router_for_note_selection_task(tmp_pat
     assert payload["recommendations"][0]["source_kind"] == "installed-core-skills"
 
 
+def test_skills_command_recommends_memory_consultation_for_residue_routing(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "skills",
+                "--target",
+                str(target),
+                "--task",
+                "classify memory consultation status and durable residue decision after closeout",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["recommendations"][0]["id"] == "memory-consultation-and-residue"
+    assert payload["recommendations"][0]["source_kind"] == "installed-core-skills"
+
+
 def test_skills_command_recommends_review_skill_for_natural_review_request(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
@@ -356,6 +387,10 @@ def test_skills_command_recommends_high_risk_workflow_decision_skills(tmp_path: 
         ("tighten a new execplan before coding", "planning-new-plan-tighten"),
         ("assurance classification and delegation posture before implementation", "planning-assurance-delegation"),
         ("high assurance planning lifecycle preserve intent satisfaction across a whole epic", "planning-high-assurance-lifecycle"),
+        ("verify parent intent and negative invariants before completion claim", "planning-intent-verification"),
+        ("select proof before completion claim allowed after passed with warning validation", "workspace-proof-selection"),
+        ("apply SkillSpec-backed transition gate with preferred CLI forbidden actions and no-CLI fallback", "workspace-transition-gates"),
+        ("use module slot contract for planning memory workspace operating loop without creating an artifact", "workspace-operating-loop"),
         ("closeout trust and residue distillation after implementation", "planning-closeout-trust"),
     ]
     for task, expected in cases:

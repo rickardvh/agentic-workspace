@@ -7,6 +7,9 @@
     ".agentic-workspace/skills/REGISTRY.json",
     ".agentic-workspace/skills/workspace-startup/SKILL.md",
     ".agentic-workspace/skills/workspace-work-shape/SKILL.md",
+    ".agentic-workspace/skills/workspace-proof-selection/SKILL.md",
+    ".agentic-workspace/skills/workspace-transition-gates/SKILL.md",
+    ".agentic-workspace/skills/workspace-operating-loop/SKILL.md",
     ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
     ".agentic-workspace/system-intent/WORKFLOW.md"
   ],

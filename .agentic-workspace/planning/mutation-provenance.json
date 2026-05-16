@@ -2,102 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/execplans/python-workspace-runtime-relocation.plan.json",
-      "sha256": "3fb5364195241843bea6c8ed21455f4a8cf76739aa1daa8887f914b7492a23e7",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=keep-local",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T10:02:51+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-workspace-runtime-relocation.plan.json",
-      "sha256": "67a152ee944a8b45a19777f439f8573f42d310a294fdff1a11ea750573b67963",
-      "command": "agentic-planning record-recovery",
-      "reason": "Tightened active #892 workspace runtime relocation plan after resuming autopilot work.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T10:29:03+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-workspace-runtime-relocation",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T10:42:42+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/archive/python-workspace-runtime-relocation.plan.json",
-      "sha256": "b95a2a84fe6af4991c21adc12f5284dc4a15f5ae35c203fecc25d0e050928739",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-workspace-runtime-relocation",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T10:42:42+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-workspace-facade-source-runtime-elimination.plan.json",
-      "sha256": "2cbd0884c914272ca28f96ca7c2b8f7554a2b6e66a9a4f60c8177b5cdeb25311",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-workspace-facade-source-runtime-elimination",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T10:43:32+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "0a331548136121314715d80690bbc8a391eb1f5811137f8af141daa48a32b8f4",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-workspace-facade-source-runtime-elimination",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T10:43:32+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-workspace-facade-source-runtime-elimination",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T10:48:14+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/archive/python-workspace-facade-source-runtime-elimination.plan.json",
-      "sha256": "c4773bb427f94cdee165154deb7aca83a4b37e0d319e540d0526cb1ae8f7a016",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-workspace-facade-source-runtime-elimination",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T10:48:14+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-workspace-defaults-primitive-migration.plan.json",
-      "sha256": "fc95b4af75d7772105f80cb0f0cba634fe3c76a05f8abbdba3999bf0ffe11df8",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-workspace-defaults-primitive-migration",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T10:48:46+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "17d076de9bc0ddf8f3919b91ae3634dc1a772d92372c3f8ece230b47218c8c71",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-workspace-defaults-primitive-migration",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T10:48:46+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-workspace-defaults-primitive-migration.plan.json",
-      "sha256": "2663b4cd1e60b7deb4782a955114359104d0480b95f8696cc4e4fee19d9c1471",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=keep-local",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T10:53:51+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-workspace-defaults-primitive-migration.plan.json",
-      "sha256": "d0cd7b2ee9d44b187eb2e06d898c4b30d1233c1aa48eef9733ca4518735acde9",
-      "command": "agentic-planning record-recovery",
-      "reason": "Manual execplan tightening after scaffold for #892 defaults primitive migration; synchronized projections and validation fields before closeout.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T10:57:56+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/execplans/python-workspace-defaults-primitive-migration.plan.json",
       "sha256": "1a9cbccfd5e76480202ea6146817311f1ab1c47220e8fbe8da5223d0cf098e9c",
       "command": "agentic-planning record-recovery",
@@ -1600,6 +1504,102 @@
       "reason": "Updated active P1 execplan after completing #970/#971 closeout trust gate slice.",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-16T18:36:15+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "cb70a68a14dc0153ae435b953da406568c2621e5c08b2f2d494e9403b9202d67",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan .agentic-workspace/planning/execplans/github-planning-gates-dogfooding-p1.plan.json",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T18:41:59+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/github-planning-gates-dogfooding-p1.plan.json",
+      "sha256": "e1dddf55ea64beebfdcb91aa4152a48fbb4121f85c7fa215076ab07dee6ebb64",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan .agentic-workspace/planning/execplans/github-planning-gates-dogfooding-p1.plan.json",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T18:41:59+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-planning-workflow-observability-p2.plan.json",
+      "sha256": "daa5b8e140db3fb2a215ff4b07d6c67db84d647c0e7291a714e12f075eb9033e",
+      "command": "agentic-planning promote-to-plan",
+      "reason": "promote planning item github-planning-workflow-observability-p2",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T18:42:14+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "50c2ca02641a22c3884032ae02d0570df5173cbdfb346923825fa7823bc16457",
+      "command": "agentic-planning promote-to-plan",
+      "reason": "promote planning item github-planning-workflow-observability-p2",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T18:42:14+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-planning-workflow-observability-p2.plan.json",
+      "sha256": "fe35821d3948d594d2db361e83d382b330d5f40b5c132919a38c2b2b2e681bc5",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T18:43:17+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-planning-workflow-observability-p2.plan.json",
+      "sha256": "7669739331b8ff126c5882f8fef0d8b412d6ce928bc61c35e2e7de9f6a5ccb8c",
+      "command": "agentic-planning record-recovery",
+      "reason": "Updated active P2 execplan after completing #988 next-safe-action packet slice.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T18:47:24+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-planning-workflow-observability-p2.plan.json",
+      "sha256": "4577d130d83155130f1a964563cc38a8f9a9f880f7d9faca33ad1a498b15cdb6",
+      "command": "agentic-planning record-recovery",
+      "reason": "Updated active P2 execplan after completing #981 planning-intent-verification skill slice.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T18:50:11+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-planning-workflow-observability-p2.plan.json",
+      "sha256": "392486ab82386bd091ef27ba724d244276c68c82a9965e82b09ef0ecce051382",
+      "command": "agentic-planning record-recovery",
+      "reason": "Updated active P2 execplan after completing #983 memory-consultation-and-residue skill slice.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T18:56:45+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-planning-workflow-observability-p2.plan.json",
+      "sha256": "dfd2984d0ad352a5a0e86fbcded26aff0f472feae3912c247002ababf16cd271",
+      "command": "agentic-planning record-recovery",
+      "reason": "Updated active P2 execplan after completing #984 workspace-proof-selection skill slice.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T19:03:01+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-planning-workflow-observability-p2.plan.json",
+      "sha256": "31b921a9863ee6375f4b2b9f79947762c0bfbf3e7af4ca0f17dc85413197be02",
+      "command": "agentic-planning record-recovery",
+      "reason": "Updated active P2 execplan after completing #985/#986 transition gate and operating-loop skill slice.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T19:07:19+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "46a3310ec90d4f957e3957f27173cc4875546d5abfb5ffe02fa2d5652c99408d",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan .agentic-workspace/planning/execplans/github-planning-workflow-observability-p2.plan.json",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T19:11:11+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/github-planning-workflow-observability-p2.plan.json",
+      "sha256": "8f063e248ce79107a5206f0656d391cffe868c6d2f01ab573e36d9bf02b4f2a8",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan .agentic-workspace/planning/execplans/github-planning-workflow-observability-p2.plan.json",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T19:11:11+00:00"
     }
   ]
 }
