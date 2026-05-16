@@ -50,12 +50,6 @@ def emit_planning_operation_output(*args: Any, **kwargs: Any) -> Any:
     return source_function(*args, **kwargs)
 
 
-def load_planning_list_files_operation(*args: Any, **kwargs: Any) -> Any:
-    from repo_planning_bootstrap.runtime_projection import load_planning_list_files_operation as source_function
-
-    return source_function(*args, **kwargs)
-
-
 def load_planning_reconcile_operation(*args: Any, **kwargs: Any) -> Any:
     from repo_planning_bootstrap.runtime_projection import load_planning_reconcile_operation as source_function
 
@@ -81,7 +75,6 @@ __all__ = [
     'apply_planning_promote_to_plan_operation',
     'apply_planning_record_recovery_operation',
     'emit_planning_operation_output',
-    'load_planning_list_files_operation',
     'load_planning_reconcile_operation',
     'load_planning_summary_operation',
     'render_planning_prompt_operation',

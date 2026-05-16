@@ -3,70 +3,6 @@
   "entries": [
     {
       "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
-      "sha256": "56c5fa0c451c43524920ba50e005e528e21b8414e967252ed3351386a71ea156",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=delegate-validation",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T10:10:03+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
-      "sha256": "2db6f0c9ec0bb4e0d20323ce7ea89db80dadc8484db5d12b9a14e44041fb784e",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=delegate-validation",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T10:12:41+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
-      "sha256": "b60a551b434fb38d89acc164fff8dc111e73f2be028c486e06c97351076c7642",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=delegate-validation",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T10:29:46+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
-      "sha256": "ae3377201b58bba64dc52920719996ace6de65004ea455b24b34fced83efb5b7",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=delegate-validation",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T10:38:31+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
-      "sha256": "c678659deb990fec135d2456c6407dd23058045733956a89d99fbdd0feec27f5",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=delegate-validation",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T10:51:29+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
-      "sha256": "1837af529168d60da1a3fba92f5952a9d5d33e409b2d00f767179ad46082e7e2",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=delegate-validation",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T11:03:21+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
-      "sha256": "0ca36d247ebafe822424363dbcca8671870bc5c29bd53f4eaa41d8c5b0817ab6",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=delegate-exploration",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T11:17:23+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
-      "sha256": "796cbbf41e9bcf057a484d4b46b828c962efaae113def108765ef58c986469de",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=keep-local",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T11:51:55+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-product-runtime-source-generation.plan.json",
       "sha256": "6ac94bb63a51d6f4d83c04dee0188cf38d07bf4452010b428f44dbc03e6d68ba",
       "command": "agentic-planning delegation-decision",
       "reason": "record delegation decision route=keep-local",
@@ -1600,6 +1536,70 @@
       "reason": "archive execplan python-planning-runtime-facade",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-16T12:19:44+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-prune-planning-list-files-runtime.plan.json",
+      "sha256": "39e3a6d5ae987d274d5b1366f8eccc555849503dc82f1ebaeb1734b97af59e2f",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-prune-planning-list-files-runtime",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T12:20:34+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "eff3f253bf4543d69d8740cb1d7afa38efd96fab261d339c6bb05ad8d675cc07",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-prune-planning-list-files-runtime",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T12:20:34+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-prune-planning-list-files-runtime.plan.json",
+      "sha256": "0cd44e23a1f336fe07238f641a4b9c174d555acb1ccb3fc8c220d7ba138ee412",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T12:20:39+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-prune-planning-list-files-runtime.plan.json",
+      "sha256": "8613fecf6408058ef0865de15698f656414b28c9d70aa2652d54cd911afe50ee",
+      "command": "agentic-planning record-recovery",
+      "reason": "Filled bounded execplan fields before implementation for #892 dead planning list-files runtime delegate pruning.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T12:22:28+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-prune-planning-list-files-runtime.plan.json",
+      "sha256": "0e244778cc2a8fe15ad9cb8e69f27f5e6ef65e0e1d12c3672310a86767de05d5",
+      "command": "agentic-planning record-recovery",
+      "reason": "Filled closeout fields after #892 dead planning list-files runtime delegate proof passed.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T12:24:17+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-prune-planning-list-files-runtime.plan.json",
+      "sha256": "33a4fd4198d0d898fe814dbbc25a58ff4dc8109368527339097b594fac1fb0d3",
+      "command": "agentic-planning record-recovery",
+      "reason": "Added stale-reference sweep validation command required by archive gate for #892 dead planning list-files delegate pruning.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T12:24:51+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-prune-planning-list-files-runtime",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T12:24:55+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/python-prune-planning-list-files-runtime.plan.json",
+      "sha256": "33a4fd4198d0d898fe814dbbc25a58ff4dc8109368527339097b594fac1fb0d3",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-prune-planning-list-files-runtime",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T12:24:55+00:00"
     }
   ]
 }

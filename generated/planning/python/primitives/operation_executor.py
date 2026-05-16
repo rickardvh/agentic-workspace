@@ -115,7 +115,6 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'planning.summary.load': _handle_planning_summary_load,
                 'planning.reconcile.load': _handle_planning_reconcile_load,
                 'output.emit': _handle_output_emit,
-                'planning.list-files.load': _handle_planning_list_files_load,
                 'planning.prompt.render': _handle_planning_prompt_render,
                 'planning.new-plan.apply': _handle_planning_new_plan_apply,
                 'planning.promote-to-plan.apply': _handle_planning_promote_to_plan_apply,
@@ -155,12 +154,6 @@ def _handle_output_emit(values: dict[str, Any], arguments: dict[str, Any], conte
     from .planning_runtime import emit_planning_operation_output
 
     return emit_planning_operation_output(values, arguments, context)
-
-
-def _handle_planning_list_files_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from .planning_runtime import load_planning_list_files_operation
-
-    return load_planning_list_files_operation(values, arguments, context)
 
 
 def _handle_planning_prompt_render(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:

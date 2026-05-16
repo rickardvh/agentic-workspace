@@ -1,0 +1,338 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Prune dead planning list-files runtime delegate",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Advance #892 by removing the dead generated planning operation-executor handler and facade delegate for planning.list-files.report, which already executes through a direct generated command module.",
+    "hard_constraints": "Do not change planning.list-files behavior. Do not claim #892 completion. Regenerate generated outputs from command_package_ir rather than hand-editing them.",
+    "agent_may_decide": "Exact static proof wording and narrow validation commands.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Remove planning.list-files.load handler wiring from command_package_ir, regenerate generated outputs, and prove the operation executor/facade no longer carry the dead delegate while the direct command remains present.",
+    "proof_expectations": [
+      "uv run python scripts/generate/generate_command_packages.py --check",
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "uv run ruff check scripts/check/check_generated_command_packages.py generated/planning/python/primitives/operation_executor.py generated/planning/python/primitives/planning_runtime.py",
+      "uv run python scripts/check/check_generated_command_packages.py --python-conformance"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/contracts/command_package_ir.json",
+      "generated/planning/python/primitives/operation_executor.py",
+      "generated/planning/python/primitives/planning_runtime.py",
+      "generated/planning/python/command_package.json",
+      "generated/typescript/planning-cli/src/commandPackage.ts",
+      "scripts/check/check_generated_command_packages.py",
+      ".agentic-workspace/planning/execplans/python-prune-planning-list-files-runtime.plan.json",
+      ".agentic-workspace/planning/state.toml",
+      ".agentic-workspace/planning/mutation-provenance.json"
+    ],
+    "completion_criteria": [
+      "planning.list-files.report remains excluded from generated/planning/python/primitives/operation_executor.py supported operation ids.",
+      "planning.list-files.load and load_planning_list_files_operation are absent from generated planning operation executor/facade.",
+      "generated/planning/python/commands/planning_list_files_report.py remains the direct generated command path.",
+      "The slice is archived as bounded runtime-debt reduction with #892 still open."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "Create a bounded plan for Prune dead planning list-files runtime delegate."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Remove dead planning list-files runtime delegate wiring now that planning.list-files.report executes through a direct generated command module.",
+      "constraints": "Behavior must remain unchanged; generated files must be regenerated; #892 remains open.",
+      "latitude": "Exact proof wording and narrow validation commands.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "python-prune-planning-list-files-runtime",
+      "status": "active",
+      "next_step": "Remove handler wiring, regenerate, validate absence of dead delegate and presence of direct command.",
+      "proof": "Generation freshness, static proof, ruff, and Python generated command conformance."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/contracts/command_package_ir.json",
+        "generated/planning/python/primitives/operation_executor.py",
+        "generated/planning/python/primitives/planning_runtime.py",
+        "generated/planning/python/command_package.json",
+        "generated/typescript/planning-cli/src/commandPackage.ts",
+        "scripts/check/check_generated_command_packages.py",
+        ".agentic-workspace/planning/execplans/python-prune-planning-list-files-runtime.plan.json",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/mutation-provenance.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#892 Python generated CLI completion without shipped module-owned executable runtime behavior.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+    "activation trigger": "Continue reducing live facade delegates and converting behavior into IR/codegen-owned primitives."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Keep going on #892.",
+    "inferred intended outcome": "Continue honest slice-by-slice removal of runtime debt toward Python generated CLI completion.",
+    "chosen concrete what": "Remove dead planning.list-files runtime handler/facade delegate after direct command generation made it unnecessary.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "command_package_ir, generated planning package metadata/executor/facade outputs, static proof check, and this plan/state/provenance.",
+    "max changed files": "about 9",
+    "required validation commands": "generation freshness, static generated package proof, ruff, and generated Python conformance.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Prune dead planning.list-files runtime delegate from generated operation executor/facade; direct generated command remains authoritative.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Remove dead planning.list-files runtime delegate wiring while preserving direct generated command behavior.",
+    "hard constraints": "No behavior change, regenerate generated files, no full #892 completion claim.",
+    "agent may decide locally": "Exact proof wording and narrow validation commands.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "Small mechanical generator/IR pruning slice; no token-saving implementation handoff needed, and previous worker audit already identified planning list-files as direct generated command residue.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-16T12:20:39+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "python-prune-planning-list-files-runtime",
+    "status": "completed",
+    "scope": "Dead planning.list-files operation-executor/facade delegate removal only.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Remove handler wiring, regenerate outputs, and validate direct command remains."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    "generated/planning/python/primitives/operation_executor.py",
+    "generated/planning/python/primitives/planning_runtime.py",
+    "generated/planning/python/command_package.json",
+    "generated/typescript/planning-cli/src/commandPackage.ts",
+    "scripts/check/check_generated_command_packages.py",
+    ".agentic-workspace/planning/execplans/python-prune-planning-list-files-runtime.plan.json",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/mutation-provenance.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run python scripts/generate/generate_command_packages.py --check",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run ruff check scripts/check/check_generated_command_packages.py generated/planning/python/primitives/operation_executor.py generated/planning/python/primitives/planning_runtime.py",
+    "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+    "rg -n \"planning\\.list-files\\.load|load_planning_list_files_operation\" generated/planning/python/primitives/operation_executor.py generated/planning/python/primitives/planning_runtime.py"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Prune dead planning list-files runtime delegate is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "codex keep-local",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Removed dead planning.list-files.load handler wiring from command_package_ir after planning.list-files.report moved to its direct generated command module; regenerated planning outputs removed load_planning_list_files_operation from the planning runtime facade.",
+    "scope touched": "command_package_ir handler wiring, generated planning operation executor/runtime facade metadata, generated TypeScript command package projection, static generated package proof, and planning records.",
+    "changed surfaces": "src/agentic_workspace/contracts/command_package_ir.json; generated/planning/python/primitives/operation_executor.py; generated/planning/python/primitives/planning_runtime.py; generated/planning/python/command_package.json; generated/typescript/planning-cli/src/commandPackage.ts; scripts/check/check_generated_command_packages.py; planning execplan/state/provenance",
+    "validations run": "generate --check; generated package static proof; ruff; Python conformance; full conformance with node; Docker conformance; defaults root_cli_authority; planning doctor",
+    "result for continuation": "#892 remains open; this removed one dead delegate but live planning, memory, and workspace facade delegates remain.",
+    "next step": "Continue converting live facade delegates into operation IR and codegen-owned primitives."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes; dead-handler pruning only",
+    "proof status": "passed",
+    "intent served": "partial progress toward #892, not full completion",
+    "config compliance": "used uv run agentic-workspace; recorded keep-local delegation decision; recovered manual plan edits through record-recovery",
+    "misinterpretation risk": "low; closeout explicitly says planning.list user behavior was unchanged",
+    "follow-on decision": "archive but keep lane open"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "Small mechanical generator/IR pruning slice; no token-saving implementation handoff needed, and previous worker audit already identified planning list-files as direct generated command residue.",
+    "expected savings": "none",
+    "actual friction": "AW objective drift misread planning.list-files as requested user behavior; closeout records that this was internal dead handler pruning.",
+    "proof result": "passed",
+    "quality concern": "none for this slice; facade delegates remain larger-lane debt",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "generate --check, static proof, ruff, Python conformance, node conformance, Docker conformance, root_cli_authority defaults, and planning doctor passed",
+    "proof achieved now": "planning.list-files.load and load_planning_list_files_operation are absent from generated planning operation executor/runtime facade while the direct generated command remains",
+    "evidence for \"proof achieved\" state": "scripts/check/check_generated_command_packages.py now guards against the dead handler/facade delegate and the direct command remains generated/planning/python/commands/planning_list_files_report.py"
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Prune dead planning list-files runtime delegate.",
+    "was original intent fully satisfied?": "false",
+    "evidence of intent satisfaction": "Dead planning.list-files runtime delegate was removed; direct generated command remains and proof passed.",
+    "unsolved intent passed to": "#892 remains open: live planning, memory, and workspace facade delegates still need conversion into operation IR and codegen-owned primitives."
+  },
+  "execution_summary": {
+    "outcome delivered": "Removed dead planning.list-files runtime delegate wiring; planning.list-files.report continues through its direct generated command module.",
+    "validation confirmed": "generate --check, generated package proof, ruff, conformance, Docker conformance, defaults root_cli_authority, and planning doctor passed.",
+    "follow-on routed to": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json and #892 continuation",
+    "post-work posterity capture": "Static guard in scripts/check/check_generated_command_packages.py",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "none",
+    "proposed durable intent": "none yet",
+    "confidence": "low",
+    "needs review": "True",
+    "owner surface": "none"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "Bounded dead-handler pruning completed without claiming full Python generated CLI completion.",
+    "evidence carried forward": "Generation check, static proof, ruff, conformance, Docker conformance, root_cli_authority defaults, and planning doctor passed.",
+    "reopen trigger": "planning.list-files.load or load_planning_list_files_operation reappears in generated planning operation executor or planning runtime facade."
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json and #892 continuation",
+          "owner": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "none",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-16: Scaffolded by agentic-planning new-plan.",
+    "2026-05-16: Recorded delegation decision route=keep-local."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Create a bounded plan for Prune dead planning list-files runtime delegate.\nIntent satisfied: false\nArchive decision: archive-but-keep-lane-open\nProof: generate --check, static proof, ruff, Python conformance, node conformance, Docker conformance, root_cli_authority defaults, and planning doctor passed\nChanged surfaces: src/agentic_workspace/contracts/command_package_ir.json; generated/planning/python/primitives/operation_executor.py; generated/planning/python/primitives/planning_runtime.py; generated/planning/python/command_package.json; generated/typescript/planning-cli/src/commandPackage.ts; scripts/check/check_generated_command_packages.py; planning execplan/state/provenance\nDurable residue: none (none)\nMemory learning: none\nFollow-up: #892 remains open: live planning, memory, and workspace facade delegates still need conversion into operation IR and codegen-owned primitives."
+  }
+}

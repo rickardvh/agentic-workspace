@@ -2248,12 +2248,6 @@ export const generatedCommandPackage = {
           "primitive": "output.emit"
         },
         {
-          "function": "load_planning_list_files_operation",
-          "handler": "runtime_handler",
-          "import_module": "repo_planning_bootstrap.runtime_projection",
-          "primitive": "planning.list-files.load"
-        },
-        {
           "function": "render_planning_prompt_operation",
           "handler": "runtime_handler",
           "import_module": "repo_planning_bootstrap.runtime_projection",

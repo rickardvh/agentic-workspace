@@ -4897,12 +4897,6 @@
               "import_module": "repo_planning_bootstrap.runtime_projection"
             },
             {
-              "primitive": "planning.list-files.load",
-              "handler": "runtime_handler",
-              "function": "load_planning_list_files_operation",
-              "import_module": "repo_planning_bootstrap.runtime_projection"
-            },
-            {
               "primitive": "planning.prompt.render",
               "handler": "runtime_handler",
               "function": "render_planning_prompt_operation",

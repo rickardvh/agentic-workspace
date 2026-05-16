@@ -1666,6 +1666,13 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
             errors.append(f"generated planning runtime facade is missing: {facade_path.relative_to(REPO_ROOT).as_posix()}")
     if "planning.list-files.report" in planning_operation_executor_text:
         errors.append("planning.list-files.report must be executed by its direct generated command module, not planning run_operation_ir")
+    if "planning.list-files.load" in planning_operation_executor_text:
+        errors.append("planning.list-files.load must not remain as dead handler wiring in planning run_operation_ir")
+    planning_runtime_text = (REPO_ROOT / "generated" / "planning" / "python" / "primitives" / "planning_runtime.py").read_text(
+        encoding="utf-8"
+    )
+    if "load_planning_list_files_operation" in planning_runtime_text:
+        errors.append("planning runtime facade must not keep the dead planning.list-files source delegate")
     for module_name in ("planning_doctor_report", "planning_report_report", "planning_status_report"):
         command_text = (REPO_ROOT / "generated" / "planning" / "python" / "commands" / f"{module_name}.py").read_text(
             encoding="utf-8"
