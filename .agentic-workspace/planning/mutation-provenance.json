@@ -5,46 +5,6 @@
       "path": ".agentic-workspace/planning/state.toml",
       "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
       "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-memory-list-skills-concrete-command",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T22:06:21+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/archive/python-memory-list-skills-concrete-command.plan.json",
-      "sha256": "9822cb60289dddededc65f08b08962425149953ad68ff30bd3ff832b9b9d0705",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-memory-list-skills-concrete-command",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T22:06:21+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-memory-list-files-concrete-command.plan.json",
-      "sha256": "705998f755ba541c1d8bfdbdd64664e25e2ce13df400ea18d34a3219d7b9e3c1",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-memory-list-files-concrete-command",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T22:06:58+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "78c97539592d567b84bad88fd8834a3a9c5cb8cd5ae7d14ff252141b9471f586",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-memory-list-files-concrete-command",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T22:06:58+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-memory-list-files-concrete-command.plan.json",
-      "sha256": "76bd49d6d448c262033a077fcee2696fafc6e3e01b3ae899fe6647790b5ff77e",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=keep-local",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T08:25:18+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
       "reason": "archive execplan python-memory-list-files-concrete-command",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-16T08:38:25+00:00"
@@ -1600,6 +1560,46 @@
       "reason": "archive execplan python-memory-report-runtime-reduction",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-16T14:47:07+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-memory-verify-payload-runtime-audit.plan.json",
+      "sha256": "c3c47ee7576637d6cae315aa81dd48322a4d6d6fc67a48943395691c99d71646",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-memory-verify-payload-runtime-audit",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T14:48:32+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "1b29f9b765cd0fd6ea8c53d5d45638c09458220ab41deb973653bbd410501965",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-memory-verify-payload-runtime-audit",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T14:48:32+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-memory-verify-payload-runtime-audit.plan.json",
+      "sha256": "64891bfd9c821802151d1bcc7ed7cf5261ef61516ad7e150e1ea867b0b3ed394",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=delegate-exploration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T14:48:47+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-memory-verify-payload-runtime-audit",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T14:53:06+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/python-memory-verify-payload-runtime-audit.plan.json",
+      "sha256": "cf18c37876f047d0dea0a2f6bdb18e063cbe0bd54b3bf5c31a147ab1bc54657c",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-memory-verify-payload-runtime-audit",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T14:53:06+00:00"
     }
   ]
 }
