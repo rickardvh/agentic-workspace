@@ -57,7 +57,7 @@
         "uses": "output.emit"
       }
     ],
-    "summary": "Memory report executes generated operation IR through codegen-owned primitive dataflow while memory runtime supplies report payload sources and text/json compatibility formatting."
+    "summary": "Memory report executes generated operation IR through codegen-owned primitive dataflow. The generated Python runtime projection builds the non-verbose JSON tiny report from manifest TOML counts and falls back to the package-domain report source for verbose/text behavior."
   },
   "locality": {
     "network": "forbidden",
@@ -95,6 +95,6 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Read-only agentic-memory report report.",
+  "summary": "Read-only agentic-memory report; non-verbose JSON uses generated manifest-count payload construction while verbose/text behavior remains on the explicit source fallback.",
   "writes": []
 }

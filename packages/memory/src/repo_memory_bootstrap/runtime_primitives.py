@@ -133,58 +133,6 @@ def _tiny_memory_lifecycle_payload(*, target: str | Path | None, command: str) -
     }
 
 
-def _tiny_memory_report_fast(*, target: str | Path | None) -> dict[str, object]:
-    target_root = resolve_target_root(target)
-    counts = _tiny_memory_manifest_counts(target_root=target_root)
-    health = "healthy" if counts["status"] == "present" else "attention-needed"
-    findings = []
-    if health != "healthy":
-        findings.append(
-            {
-                "severity": "warning",
-                "path": counts["path"],
-                "message": "Memory manifest is not readable; run full report for remediation detail.",
-            }
-        )
-    return {
-        "kind": "memory-module-report/v1",
-        "profile": "tiny",
-        "module": "memory",
-        "target_root": str(target_root),
-        "health": health,
-        "status": {
-            "detected_version": None,
-            "bootstrap_version": None,
-            "note_count": counts["note_count"],
-            "manifest_status": counts["status"],
-        },
-        "active": {
-            "note_count": counts["note_count"],
-            "manifest_note_count": counts["note_count"],
-            "required_count": counts["required_count"],
-            "optional_count": counts["optional_count"],
-            "routing_only_count": counts["routing_only_count"],
-        },
-        "habitual_pull": {
-            "status": "available" if counts["status"] == "present" else "unavailable",
-            "read_first": [".agentic-workspace/memory/repo/index.md"],
-            "do_not_bulk_read": True,
-        },
-        "promotion_pressure": {"status": "not-evaluated", "detail_command": "agentic-memory report --target . --verbose --format json"},
-        "trust": {"status": "not-evaluated", "detail_command": "agentic-memory report --target . --verbose --format json"},
-        "finding_count": len(findings),
-        "findings": findings,
-        "next_action": {
-            "summary": "No immediate memory action." if health == "healthy" else "Run full memory report for remediation detail.",
-            "commands": [] if health == "healthy" else ["agentic-memory report --target . --verbose --format json"],
-        },
-        "detail_commands": {
-            "full": "agentic-memory report --target . --verbose --format json",
-            "route": "agentic-memory route --target . --files <paths> --format json",
-        },
-    }
-
-
 def _tiny_route_report_payload(*, target: str | Path | None) -> dict[str, object]:
     target_root = resolve_target_root(target)
     feedback_path = target_root / ".agentic-workspace" / "memory" / "repo" / "current" / "routing-feedback.md"
@@ -283,8 +231,6 @@ def _load_memory_prompt(values: dict[str, Any], _arguments: dict[str, Any], _con
 
 
 def _load_memory_report(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> dict[str, object]:
-    if values.get("format") == "json" and (not values.get("verbose")):
-        return _tiny_memory_report_fast(target=values.get("target"))
     report = memory_report(target=values.get("target"))
     if not values.get("verbose"):
         return _tiny_memory_report(report)

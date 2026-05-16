@@ -1632,8 +1632,12 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
                 errors.append(f"generated memory runtime facade must build {function_name} JSON fast path through generated TOML-table primitives")
             if f"from repo_memory_bootstrap.runtime_primitives import {function_name} as source_function" not in function_text:
                 errors.append(f"generated memory runtime facade must retain {function_name} source fallback for non-fast-path behavior")
-        if "_load_memory_promotion_report" in memory_runtime_text:
-            errors.append("generated memory runtime facade must not keep the retired promotion-report runtime delegate")
+    if "_load_memory_promotion_report" in memory_runtime_text:
+        errors.append("generated memory runtime facade must not keep the retired promotion-report runtime delegate")
+    if "_tiny_memory_report_payload_from_toml_table_counts" not in memory_runtime_text:
+        errors.append("generated memory runtime facade must own the tiny memory report JSON payload projection")
+    if "_tiny_memory_report_fast" in memory_runtime_text:
+        errors.append("generated memory runtime facade must not import the source tiny memory report fast path")
     if "repo_memory_bootstrap._installer_paths" in memory_operation_executor_text:
         errors.append("memory operation IR executor must resolve package resources from generated target-local copies")
     if "_resolve_memory_target_root" in memory_operation_executor_text:

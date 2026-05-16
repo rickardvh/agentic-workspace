@@ -1098,19 +1098,33 @@ def _python_local_runtime_helper_block() -> str:
 
 def _python_local_runtime_toml_table_helper_block() -> str:
     return (
+        "class RepoDetectionError(ValueError):\n"
+        "    pass\n"
+        "\n\n"
+        "def _has_git_boundary(path: Path) -> bool:\n"
+        "    git_dir = path / '.git'\n"
+        "    return git_dir.is_dir() or git_dir.is_file()\n"
+        "\n\n"
         "def _resolve_repo_target_root(target: Any) -> Path:\n"
         "    explicit_target = target is not None\n"
         "    start = Path(str(target)).resolve() if explicit_target else Path.cwd().resolve()\n"
         "    if not start.exists():\n"
-        "        raise ValueError(f'Target does not exist: {start}')\n"
+        "        raise RepoDetectionError(f'Target does not exist: {start}')\n"
         "    if not start.is_dir():\n"
-        "        raise ValueError(f'Target must be a directory: {start}')\n"
+        "        raise RepoDetectionError(f'Target must be a directory: {start}')\n"
         "    if explicit_target:\n"
         "        return start\n"
         "    markers = ('pyproject.toml', 'package.json', 'Cargo.toml', '.hg')\n"
-        "    candidates = [candidate for candidate in [start, *start.parents] if any((candidate / marker).exists() for marker in markers)]\n"
+        "    candidates = [\n"
+        "        candidate\n"
+        "        for candidate in [start, *start.parents]\n"
+        "        if _has_git_boundary(candidate) or any((candidate / marker).exists() for marker in markers)\n"
+        "    ]\n"
         "    if not candidates:\n"
-        "        raise ValueError('Could not find a repository root from the current directory. Pass --target explicitly.')\n"
+        "        raise RepoDetectionError('Could not find a repository root from the current directory. Pass --target explicitly.')\n"
+        "    if len(candidates) > 1:\n"
+        "        roots = ', '.join(str(path) for path in candidates)\n"
+        "        raise RepoDetectionError(f'Ambiguous repository root detected ({roots}). Pass --target explicitly. Retry with --target .')\n"
         "    return candidates[0]\n"
         "\n\n"
         "def _toml_table_record_counts(\n"
@@ -1192,6 +1206,68 @@ def _python_local_runtime_toml_table_helper_block() -> str:
         "        'active': counts,\n"
         "        'detail_command': detail_command,\n"
         "    }\n"
+        "\n\n"
+        "def _tiny_memory_report_payload_from_toml_table_counts(\n"
+        "    *,\n"
+        "    target: Any,\n"
+        "    relative_path: str,\n"
+        "    table_name: str,\n"
+        "    relevance_field: str,\n"
+        "    required_value: str,\n"
+        "    optional_value: str,\n"
+        "    routing_only_field: str,\n"
+        "    detail_command: str,\n"
+        "    unhealthy_detail: str,\n"
+        ") -> dict[str, object]:\n"
+        "    target_root = _resolve_repo_target_root(target)\n"
+        "    counts = _toml_table_record_counts(\n"
+        "        target_root,\n"
+        "        relative_path=relative_path,\n"
+        "        table_name=table_name,\n"
+        "        relevance_field=relevance_field,\n"
+        "        required_value=required_value,\n"
+        "        optional_value=optional_value,\n"
+        "        routing_only_field=routing_only_field,\n"
+        "    )\n"
+        "    health = 'healthy' if counts['status'] == 'present' else 'attention-needed'\n"
+        "    findings = [] if health == 'healthy' else [{'severity': 'warning', 'path': counts['path'], 'message': unhealthy_detail}]\n"
+        "    return {\n"
+        "        'kind': 'memory-module-report/v1',\n"
+        "        'profile': 'tiny',\n"
+        "        'module': 'memory',\n"
+        "        'target_root': str(target_root),\n"
+        "        'health': health,\n"
+        "        'status': {\n"
+        "            'detected_version': None,\n"
+        "            'bootstrap_version': None,\n"
+        "            'note_count': counts['note_count'],\n"
+        "            'manifest_status': counts['status'],\n"
+        "        },\n"
+        "        'active': {\n"
+        "            'note_count': counts['note_count'],\n"
+        "            'manifest_note_count': counts['note_count'],\n"
+        "            'required_count': counts['required_count'],\n"
+        "            'optional_count': counts['optional_count'],\n"
+        "            'routing_only_count': counts['routing_only_count'],\n"
+        "        },\n"
+        "        'habitual_pull': {\n"
+        "            'status': 'available' if counts['status'] == 'present' else 'unavailable',\n"
+        "            'read_first': ['.agentic-workspace/memory/repo/index.md'],\n"
+        "            'do_not_bulk_read': True,\n"
+        "        },\n"
+        "        'promotion_pressure': {'status': 'not-evaluated', 'detail_command': detail_command},\n"
+        "        'trust': {'status': 'not-evaluated', 'detail_command': detail_command},\n"
+        "        'finding_count': len(findings),\n"
+        "        'findings': findings,\n"
+        "        'next_action': {\n"
+        "            'summary': 'No immediate memory action.' if health == 'healthy' else 'Run full memory report for remediation detail.',\n"
+        "            'commands': [] if health == 'healthy' else [detail_command],\n"
+        "        },\n"
+        "        'detail_commands': {\n"
+        "            'full': detail_command,\n"
+        "            'route': 'agentic-memory route --target . --files <paths> --format json',\n"
+        "        },\n"
+        "    }\n"
     )
 
 
@@ -1260,6 +1336,24 @@ def _python_local_runtime_generated_function(
             f"    from {source_import_module} import {function} as source_function\n\n"
             "    return source_function(values, arguments, context)\n"
         )
+    if implementation == "toml_table_memory_report_json_with_source_fallback":
+        return (
+            f"def {function}(values: dict[str, Any], arguments: dict[str, Any], context: Any) -> Any:\n"
+            "    if str(values.get('format') or 'text') == 'json' and not values.get('verbose'):\n"
+            "        return _tiny_memory_report_payload_from_toml_table_counts(\n"
+            "            target=values.get('target'),\n"
+            f"            relative_path={str(override['relative_path'])!r},\n"
+            f"            table_name={str(override['table_name'])!r},\n"
+            f"            relevance_field={str(override['relevance_field'])!r},\n"
+            f"            required_value={str(override.get('required_value', 'required')).lower()!r},\n"
+            f"            optional_value={str(override.get('optional_value', 'optional')).lower()!r},\n"
+            f"            routing_only_field={str(override['routing_only_field'])!r},\n"
+            f"            detail_command={str(override['detail_command'])!r},\n"
+            f"            unhealthy_detail={str(override['unhealthy_detail'])!r},\n"
+            "        )\n"
+            f"    from {source_import_module} import {function} as source_function\n\n"
+            "    return source_function(values, arguments, context)\n"
+        )
     raise ValueError(f"unsupported generated local runtime implementation: {implementation!r}")
 
 
@@ -1290,13 +1384,17 @@ def _python_local_runtime_binding_module(
     helper_parts: list[str] = []
     if overrides:
         helper_parts.append(_python_local_runtime_helper_block())
-    if "toml_table_lifecycle_json_with_source_fallback" in override_implementations:
+    if override_implementations.intersection(
+        {"toml_table_lifecycle_json_with_source_fallback", "toml_table_memory_report_json_with_source_fallback"}
+    ):
         helper_parts.append(_python_local_runtime_toml_table_helper_block())
     helper_block = "\n\n".join(helper_parts) + "\n\n" if helper_parts else ""
     helper_imports = ""
     if overrides:
         helper_imports = "import copy\nimport json\nfrom pathlib import Path\n"
-    if "toml_table_lifecycle_json_with_source_fallback" in override_implementations:
+    if override_implementations.intersection(
+        {"toml_table_lifecycle_json_with_source_fallback", "toml_table_memory_report_json_with_source_fallback"}
+    ):
         helper_imports = "import copy\nimport json\nimport tomllib\nfrom pathlib import Path\n"
     return (
         '"""Generated runtime binding facade.\n\n'

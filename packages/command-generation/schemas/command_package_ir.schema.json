@@ -436,7 +436,8 @@
                             "target_root_resolve",
                             "sectioned_payload_select",
                             "json_output_with_source_fallback",
-                            "toml_table_lifecycle_json_with_source_fallback"
+                            "toml_table_lifecycle_json_with_source_fallback",
+                            "toml_table_memory_report_json_with_source_fallback"
                           ]
                         },
                         "payload_value": {

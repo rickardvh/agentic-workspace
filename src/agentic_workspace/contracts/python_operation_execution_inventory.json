@@ -524,8 +524,8 @@
       "operation_contract": "operations/memory.report.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
-        "memory.report.load",
-        "module-result text/json compatibility formatting"
+        "memory.report.load verbose/text fallback",
+        "module-result text compatibility formatting"
       ],
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "memory.report.process",
@@ -533,9 +533,9 @@
         "memory.report.load"
       ],
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior.",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps; generated Python runtime projection owns the non-verbose JSON tiny report payload, while package-domain primitive fallback still owns verbose/text report behavior.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.report.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, and the generated Python runtime projection builds the non-verbose JSON tiny report from manifest TOML counts. The remaining memory.report.load fallback is still explicit package-domain debt for verbose/text behavior, not portable codegen completion."
     },
     {
       "operation_id": "memory.route-report.report",

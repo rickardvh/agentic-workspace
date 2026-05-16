@@ -7205,6 +7205,18 @@
                 "dry_run": false,
                 "detail_command": "agentic-memory status --target . --verbose --format json",
                 "unhealthy_detail": "memory manifest is not readable; run full doctor for remediation detail"
+              },
+              {
+                "function": "_load_memory_report",
+                "implementation": "toml_table_memory_report_json_with_source_fallback",
+                "relative_path": ".agentic-workspace/memory/repo/manifest.toml",
+                "table_name": "notes",
+                "relevance_field": "task_relevance",
+                "required_value": "required",
+                "optional_value": "optional",
+                "routing_only_field": "routing_only",
+                "detail_command": "agentic-memory report --target . --verbose --format json",
+                "unhealthy_detail": "Memory manifest is not readable; run full report for remediation detail."
               }
             ]
           }

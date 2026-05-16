@@ -114,19 +114,35 @@ def _tiny_sectioned_payload(payload: dict[str, Any], *, common_sections: list[st
     }
 
 
+class RepoDetectionError(ValueError):
+    pass
+
+
+def _has_git_boundary(path: Path) -> bool:
+    git_dir = path / '.git'
+    return git_dir.is_dir() or git_dir.is_file()
+
+
 def _resolve_repo_target_root(target: Any) -> Path:
     explicit_target = target is not None
     start = Path(str(target)).resolve() if explicit_target else Path.cwd().resolve()
     if not start.exists():
-        raise ValueError(f'Target does not exist: {start}')
+        raise RepoDetectionError(f'Target does not exist: {start}')
     if not start.is_dir():
-        raise ValueError(f'Target must be a directory: {start}')
+        raise RepoDetectionError(f'Target must be a directory: {start}')
     if explicit_target:
         return start
     markers = ('pyproject.toml', 'package.json', 'Cargo.toml', '.hg')
-    candidates = [candidate for candidate in [start, *start.parents] if any((candidate / marker).exists() for marker in markers)]
+    candidates = [
+        candidate
+        for candidate in [start, *start.parents]
+        if _has_git_boundary(candidate) or any((candidate / marker).exists() for marker in markers)
+    ]
     if not candidates:
-        raise ValueError('Could not find a repository root from the current directory. Pass --target explicitly.')
+        raise RepoDetectionError('Could not find a repository root from the current directory. Pass --target explicitly.')
+    if len(candidates) > 1:
+        roots = ', '.join(str(path) for path in candidates)
+        raise RepoDetectionError(f'Ambiguous repository root detected ({roots}). Pass --target explicitly. Retry with --target .')
     return candidates[0]
 
 
@@ -212,6 +228,69 @@ def _tiny_lifecycle_payload_from_toml_table_counts(
     }
 
 
+def _tiny_memory_report_payload_from_toml_table_counts(
+    *,
+    target: Any,
+    relative_path: str,
+    table_name: str,
+    relevance_field: str,
+    required_value: str,
+    optional_value: str,
+    routing_only_field: str,
+    detail_command: str,
+    unhealthy_detail: str,
+) -> dict[str, object]:
+    target_root = _resolve_repo_target_root(target)
+    counts = _toml_table_record_counts(
+        target_root,
+        relative_path=relative_path,
+        table_name=table_name,
+        relevance_field=relevance_field,
+        required_value=required_value,
+        optional_value=optional_value,
+        routing_only_field=routing_only_field,
+    )
+    health = 'healthy' if counts['status'] == 'present' else 'attention-needed'
+    findings = [] if health == 'healthy' else [{'severity': 'warning', 'path': counts['path'], 'message': unhealthy_detail}]
+    return {
+        'kind': 'memory-module-report/v1',
+        'profile': 'tiny',
+        'module': 'memory',
+        'target_root': str(target_root),
+        'health': health,
+        'status': {
+            'detected_version': None,
+            'bootstrap_version': None,
+            'note_count': counts['note_count'],
+            'manifest_status': counts['status'],
+        },
+        'active': {
+            'note_count': counts['note_count'],
+            'manifest_note_count': counts['note_count'],
+            'required_count': counts['required_count'],
+            'optional_count': counts['optional_count'],
+            'routing_only_count': counts['routing_only_count'],
+        },
+        'habitual_pull': {
+            'status': 'available' if counts['status'] == 'present' else 'unavailable',
+            'read_first': ['.agentic-workspace/memory/repo/index.md'],
+            'do_not_bulk_read': True,
+        },
+        'promotion_pressure': {'status': 'not-evaluated', 'detail_command': detail_command},
+        'trust': {'status': 'not-evaluated', 'detail_command': detail_command},
+        'finding_count': len(findings),
+        'findings': findings,
+        'next_action': {
+            'summary': 'No immediate memory action.' if health == 'healthy' else 'Run full memory report for remediation detail.',
+            'commands': [] if health == 'healthy' else [detail_command],
+        },
+        'detail_commands': {
+            'full': detail_command,
+            'route': 'agentic-memory route --target . --files <paths> --format json',
+        },
+    }
+
+
 def _emit_memory_operation_output(values: dict[str, Any], arguments: dict[str, Any], context: Any) -> Any:
     result = values['result']
     if str(values.get('format') or 'text') == 'json' and isinstance(result, dict):
@@ -274,10 +353,22 @@ def _load_memory_prompt(*args: Any, **kwargs: Any) -> Any:
     return source_function(*args, **kwargs)
 
 
-def _load_memory_report(*args: Any, **kwargs: Any) -> Any:
+def _load_memory_report(values: dict[str, Any], arguments: dict[str, Any], context: Any) -> Any:
+    if str(values.get('format') or 'text') == 'json' and not values.get('verbose'):
+        return _tiny_memory_report_payload_from_toml_table_counts(
+            target=values.get('target'),
+            relative_path='.agentic-workspace/memory/repo/manifest.toml',
+            table_name='notes',
+            relevance_field='task_relevance',
+            required_value='required',
+            optional_value='optional',
+            routing_only_field='routing_only',
+            detail_command='agentic-memory report --target . --verbose --format json',
+            unhealthy_detail='Memory manifest is not readable; run full report for remediation detail.',
+        )
     from repo_memory_bootstrap.runtime_primitives import _load_memory_report as source_function
 
-    return source_function(*args, **kwargs)
+    return source_function(values, arguments, context)
 
 
 def _load_memory_route_report(*args: Any, **kwargs: Any) -> Any:
