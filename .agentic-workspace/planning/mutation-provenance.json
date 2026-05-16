@@ -2,86 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "e6ca0d42dd98f6b751560a7795da48ab64e7857c553625c6ada5583f691c53c5",
-      "command": "agentic-planning record-recovery",
-      "reason": "Manual execplan edits narrowed and closed the #918 dogfooding slice after CLI scaffold creation.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-15T20:10:56+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "e6ca0d42dd98f6b751560a7795da48ab64e7857c553625c6ada5583f691c53c5",
-      "command": "agentic-planning record-recovery",
-      "reason": "Manual closeout fields prepared the #918 dogfooding slice for archive after validation.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-15T20:12:09+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "e6ca0d42dd98f6b751560a7795da48ab64e7857c553625c6ada5583f691c53c5",
-      "command": "agentic-planning record-recovery",
-      "reason": "Manual closeout used an accepted intent-satisfaction value while preserving broader dogfooding continuation.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-15T20:12:26+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan dogfooding-backlog-before-892",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T20:12:33+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/dogfooding-promote-to-plan-schema-validity.plan.json",
-      "sha256": "5ec942fcc190ed1f3781afeee0f2f8205ae8367eaa7e49559b2f962d827936e5",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold dogfooding-promote-to-plan-schema-validity",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T20:13:44+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "ba7da38173ae3718e76ffdaba02658fc0473c3694d9cd0cc6c8a4e526d9fa0d5",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold dogfooding-promote-to-plan-schema-validity",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T20:13:44+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/dogfooding-promote-to-plan-schema-validity.plan.json",
-      "sha256": "d03af1396957cfac3d7453ba40459f378e24ab9c0f4c936bfd682f03616a9d88",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=keep-local",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T20:14:46+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "ba7da38173ae3718e76ffdaba02658fc0473c3694d9cd0cc6c8a4e526d9fa0d5",
-      "command": "agentic-planning record-recovery",
-      "reason": "Manual execplan edits narrowed #967/#979 promote-to-plan dogfooding regression proof after CLI scaffold creation.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-15T20:17:05+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "ba7da38173ae3718e76ffdaba02658fc0473c3694d9cd0cc6c8a4e526d9fa0d5",
-      "command": "agentic-planning record-recovery",
-      "reason": "Manual closeout fields prepared the #967/#979 dogfooding slice for archive after validation.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-15T20:17:51+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan dogfooding-promote-to-plan-schema-validity",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-15T20:17:55+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/execplans/dogfooding-generated-command-input-proof.plan.json",
       "sha256": "4f62f986df92e275ba95c7ec4bff554a631571b5391a07a0572b9e4186b15c37",
       "command": "agentic-planning new-plan",
@@ -1600,6 +1520,86 @@
       "reason": "archive execplan python-memory-current-runtime-reduction",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-16T13:42:47+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-memory-prompt-runtime-reduction.plan.json",
+      "sha256": "2256e808f8390171a06af82b3cebe18d2e5285861ddd2d532fdbc269966913ad",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-memory-prompt-runtime-reduction",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T13:43:20+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "5d0378020786b0dce3336b966611003f3b2e7e1bce7576d9cb8446d86853ab8c",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-memory-prompt-runtime-reduction",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T13:43:20+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-memory-prompt-runtime-reduction.plan.json",
+      "sha256": "0a4f394fe1322885f63e59d6cd80d8338650eef4abde06573b23358d3ace137a",
+      "command": "agentic-planning record-recovery",
+      "reason": "Closed memory.prompt audit as no-safe generated-runtime reduction",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T13:45:51+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "7f68a5bddfbad47cecda821960c97aba9928c58ca709f65f37b4a1e0891ba782",
+      "command": "agentic-planning record-recovery",
+      "reason": "Carried memory.prompt no-safe-route audit into #892 decomposition",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T13:45:56+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-memory-prompt-runtime-reduction",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T13:45:56+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/python-memory-prompt-runtime-reduction.plan.json",
+      "sha256": "0a4f394fe1322885f63e59d6cd80d8338650eef4abde06573b23358d3ace137a",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-memory-prompt-runtime-reduction",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T13:45:56+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-memory-prompt-runtime-reduction.plan.json",
+      "sha256": "feac51915be4e775f5a9853ab1fe46b4cd68e2be8ef868ccba3e7ed18fe9c29d",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-memory-prompt-runtime-reduction",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T13:47:00+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "976c1d70badaab5e9bd8f83f462715df687543627e90eebf362d2a4e6b3a5c66",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-memory-prompt-runtime-reduction",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T13:47:00+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-memory-prompt-runtime-reduction",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T13:48:58+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/python-memory-prompt-runtime-reduction-2.plan.json",
+      "sha256": "8483e52706cbccecf48fcfb57750d35820c2a142473f172a88293dc170d756d1",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-memory-prompt-runtime-reduction",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T13:48:58+00:00"
     }
   ]
 }
