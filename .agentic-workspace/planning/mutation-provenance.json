@@ -2,78 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/execplans/python-generated-cli-completion-promotion.plan.json",
-      "sha256": "f81cc786f9dd3521c88afddd563373e0a491ae81690fb57502259f6f7a9e7a90",
-      "command": "agentic-planning record-recovery",
-      "reason": "Recorded proof-gate slice outcome before commit.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T17:11:15+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-generated-cli-completion-promotion.plan.json",
-      "sha256": "b418915f8ab8c9c3b7705bf87f4965d79eb981999363048676e167e573af38fb",
-      "command": "agentic-planning record-recovery",
-      "reason": "Recorded defaults.report runtime-consumed migration slice outcome before commit.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T17:20:23+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-generated-cli-completion-promotion.plan.json",
-      "sha256": "9823dbcbe96e0fff1473c264c42db70b3306b4697eee37a23c5f64628a48cd57",
-      "command": "agentic-planning record-recovery",
-      "reason": "Recorded config.report runtime-consumed migration slice outcome before commit.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T17:25:40+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-generated-cli-completion-promotion.plan.json",
-      "sha256": "75dfbe9ac1c972d00961ebd048333fad129c90d7b34eb6739026bdd12fb9d80d",
-      "command": "agentic-planning record-recovery",
-      "reason": "Recorded validated #892 status-report operation IR migration slice; no dedicated progress-update command exists for active execplan run fields.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T17:37:23+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-generated-cli-completion-promotion.plan.json",
-      "sha256": "d2bfbd50520874cfef0422d7931932a0bb2838462d5fa626bca261c2b1539bdb",
-      "command": "agentic-planning record-recovery",
-      "reason": "Recorded validated #892 planning doctor/report operation IR migration slice; no dedicated progress-update command exists for active execplan run fields.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T17:43:34+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-generated-cli-completion-promotion.plan.json",
-      "sha256": "b07d7ea66f98b5c3545c50f60a295b2a0b1ec80404302107c984fed7f0a4d9cc",
-      "command": "agentic-planning record-recovery",
-      "reason": "Recorded validated #892 memory report operation IR migration slice and #968 dogfooding follow-up; no dedicated progress-update command exists for active execplan run fields.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T17:50:01+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-generated-cli-completion-promotion.plan.json",
-      "sha256": "d34115397433472ecec933d43c3f54badf669b449b56b2388fc913bb338bf3b5",
-      "command": "agentic-planning record-recovery",
-      "reason": "Recorded validated #892 prompt operation IR migration slice; no dedicated progress-update command exists for active execplan run fields.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T17:55:44+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-generated-cli-completion-promotion.plan.json",
-      "sha256": "7be9ee4693653307840e7f7b41a9a6d7dcd78f4121b4190e5c416789159da8b7",
-      "command": "agentic-planning record-recovery",
-      "reason": "Marked active milestone complete after full #892 Python completion proof; no dedicated milestone-status command exists.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-14T18:06:51+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-generated-cli-completion-promotion",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-14T18:07:21+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/execplans/python-cli-src-executable-cleanup.plan.json",
       "sha256": "daf1304680ac2feee7adfd4b45322b1fc55d64fa13db3d01345a43484b059c01",
       "command": "agentic-planning new-plan",
@@ -1600,6 +1528,78 @@
       "reason": "Updated #892 decomposition notes after completing memory.list-files and planning.list-files concrete generated command slices.",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-16T08:47:58+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-generated-resource-primitives.plan.json",
+      "sha256": "c99997e1c6e5f642e6450c78adbafba744cbe0fe8f1b3cf25bc410fedf28c1d7",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-generated-resource-primitives",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T09:41:53+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "d66e488d7b6967dc81b73daf615dfdf6d40bf77209a9adc6acf3a6eb3f0acfb4",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold python-generated-resource-primitives",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T09:41:53+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-generated-resource-primitives.plan.json",
+      "sha256": "2a9ab954141e50fb634d8ac73d302ec794b739e4ee03bc74cd410512afb865cd",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T09:42:00+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-generated-resource-primitives.plan.json",
+      "sha256": "85508187d67bf79ab5cc8870b0fbf9432a8399665e5d78501787abdba00055f8",
+      "command": "agentic-planning record-recovery",
+      "reason": "Tightened active #892 primitive extraction execplan after CLI-created scaffold; corrected projection drift and false path-like wording before proof.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T09:45:53+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "d918c13e85498d92dba1e9849b7c4c0e8bde2978da757484f9e553b3aa4957d0",
+      "command": "agentic-planning record-recovery",
+      "reason": "Updated #892 decomposition notes with the generated resource primitive slice and remaining memory.list-files continuation boundary.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T09:49:00+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-generated-resource-primitives.plan.json",
+      "sha256": "fa3ee32f13a39077d8249ec5bf4530e22a3feebdb46817bc43c137175683e696",
+      "command": "agentic-planning record-recovery",
+      "reason": "Recorded proof, intent satisfaction, continuation, and closeout for the completed #892 generated resource primitive slice.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T09:49:54+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/python-generated-resource-primitives.plan.json",
+      "sha256": "4c827b7d244d34ad6aa5d024609de7450107d0cf6b28bbcbc9b04f17eafac2ac",
+      "command": "agentic-planning record-recovery",
+      "reason": "Added explicit post-archive resume cue requested by archive-plan validation.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T09:50:12+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-generated-resource-primitives",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T09:50:26+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/python-generated-resource-primitives.plan.json",
+      "sha256": "21d0cf9895b7eefc9367899bb6ab56dd8d21f1f4f18c677d9ebbc57e7947c656",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan python-generated-resource-primitives",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-16T09:50:26+00:00"
     }
   ]
 }

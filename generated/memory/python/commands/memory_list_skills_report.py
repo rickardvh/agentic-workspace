@@ -13,24 +13,14 @@ import json
 from pathlib import Path
 from typing import Any
 
+from ..primitives.resources import find_resource_root, read_json_object
+
 # DO NOT EDIT DIRECTLY.
 # Command behavior changes belong in src/agentic_workspace/contracts/command_package_ir.json and the referenced operation contract.
 # Regenerate with: uv run python scripts/generate/generate_command_packages.py
 
 
-def _skills_root() -> Path:
-    for parent in Path(__file__).resolve().parents:
-        for candidate in (parent / '_skills', parent / 'packages' / 'memory' / 'skills'):
-            if (candidate / 'REGISTRY.json').is_file():
-                return candidate
-    raise FileNotFoundError('Bundled memory skill registry is not available.')
-
-
-def _read_json_resource(root: Path, relative_path: str) -> dict[str, Any]:
-    payload = json.loads((root / relative_path).read_text(encoding='utf-8'))
-    if not isinstance(payload, dict):
-        raise RuntimeError(f'{relative_path} must parse to an object')
-    return payload
+SKILLS_ROOT_CANDIDATES = (('_skills', 'REGISTRY.json'), ('packages/memory/skills', 'REGISTRY.json'))
 
 
 def _action_for_skill(skill: dict[str, Any], skills_root: Path) -> dict[str, str]:
@@ -95,8 +85,8 @@ def _emit_output(payload: dict[str, Any], output_format: str) -> None:
 
 
 def run(args: argparse.Namespace) -> int:
-    skills_root = _skills_root()
-    registry = _read_json_resource(skills_root, 'REGISTRY.json')
+    skills_root = find_resource_root(__file__, SKILLS_ROOT_CANDIDATES)
+    registry = read_json_object(skills_root, 'REGISTRY.json')
     payload = _assemble_payload(registry, skills_root)
     _emit_output(payload, str(getattr(args, 'format', 'text') or 'text'))
     return 0

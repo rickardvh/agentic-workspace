@@ -1201,17 +1201,18 @@ def _validate_direct_generated_python_command_projection() -> list[str]:
             "_assemble_payload(target_root, _payload_root())",
         ),
         "memory.list-skills.report": (
-            "def _read_json_resource(",
+            "from ..primitives.resources import find_resource_root, read_json_object",
             "def _assemble_payload(",
             "def _emit_output(",
-            "_read_json_resource(skills_root, 'REGISTRY.json')",
+            "registry = read_json_object(skills_root, 'REGISTRY.json')",
         ),
         "planning.list-files.report": (
-            "def _payload_root(",
-            "def _skills_root(",
+            "from ..primitives.resources import emit_json_or_lines, find_resource_root, list_resource_files",
+            "payload_root = find_resource_root(__file__, PAYLOAD_ROOT_CANDIDATES)",
+            "skills_root = find_resource_root(__file__, SKILLS_ROOT_CANDIDATES)",
             "def _assemble_payload(",
-            "def _emit_output(",
-            "_assemble_payload(_payload_root(), _skills_root())",
+            "list_resource_files(payload_root)",
+            "emit_json_or_lines(payload, str(getattr(args, 'format', 'text') or 'text'), line_field='files')",
         ),
     }
     for operation_id, path in direct_commands.items():

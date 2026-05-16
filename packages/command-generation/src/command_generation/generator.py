@@ -319,9 +319,9 @@ def _python_planning_list_files_command_module(
             regenerate_command=regenerate_command,
         )
         + "import argparse\n"
-        "import json\n"
         "from pathlib import Path\n"
         "from typing import Any\n\n"
+        "from ..primitives.resources import emit_json_or_lines, find_resource_root, list_resource_files\n\n"
         "# DO NOT EDIT DIRECTLY.\n"
         f"# Command behavior changes belong in {source_path} and the referenced operation contract.\n"
         f"# Regenerate with: {regenerate_command}\n\n"
@@ -332,41 +332,21 @@ def _python_planning_list_files_command_module(
         "    'agentic-planning adopt --include-optional',\n"
         "    'agentic-planning upgrade --include-optional',\n"
         ")\n\n\n"
-        "def _payload_root() -> Path:\n"
-        "    for parent in Path(__file__).resolve().parents:\n"
-        "        for candidate in (parent / '_payload', parent / 'packages' / 'planning' / 'bootstrap'):\n"
-        "            if (candidate / 'AGENTS.template.md').is_file():\n"
-        "                return candidate\n"
-        "    raise FileNotFoundError('Planning payload directory is not available.')\n\n\n"
-        "def _skills_root() -> Path:\n"
-        "    for parent in Path(__file__).resolve().parents:\n"
-        "        for candidate in (parent / '_skills', parent / 'packages' / 'planning' / 'skills'):\n"
-        "            if (candidate / 'REGISTRY.json').is_file():\n"
-        "                return candidate\n"
-        "    raise FileNotFoundError('Planning skills directory is not available.')\n\n\n"
-        "def _resource_files(root: Path) -> list[str]:\n"
-        "    return [\n"
-        "        path.relative_to(root).as_posix()\n"
-        "        for path in sorted(root.rglob('*'))\n"
-        "        if path.is_file() and '__pycache__' not in path.parts and path.suffix != '.pyc'\n"
-        "    ]\n\n\n"
+        "PAYLOAD_ROOT_CANDIDATES = (('_payload', 'AGENTS.template.md'), ('packages/planning/bootstrap', 'AGENTS.template.md'))\n"
+        "SKILLS_ROOT_CANDIDATES = (('_skills', 'REGISTRY.json'), ('packages/planning/skills', 'REGISTRY.json'))\n\n\n"
         "def _assemble_payload(payload_root: Path, skills_root: Path) -> dict[str, Any]:\n"
         "    return {\n"
-        "        'files': _resource_files(payload_root),\n"
+        "        'files': list_resource_files(payload_root),\n"
         "        'default_files': list(DEFAULT_PAYLOAD_FILES),\n"
         "        'optional_files': list(OPTIONAL_PAYLOAD_FILES),\n"
-        "        'bundled_skill_files': _resource_files(skills_root),\n"
+        "        'bundled_skill_files': list_resource_files(skills_root),\n"
         "        'optional_enable_commands': list(OPTIONAL_ENABLE_COMMANDS),\n"
         "    }\n\n\n"
-        "def _emit_output(payload: dict[str, Any], output_format: str) -> None:\n"
-        "    if output_format == 'json':\n"
-        "        print(json.dumps(payload, indent=2))\n"
-        "        return\n"
-        "    for path in payload['files']:\n"
-        "        print(path)\n\n\n"
         "def run(args: argparse.Namespace) -> int:\n"
-        "    payload = _assemble_payload(_payload_root(), _skills_root())\n"
-        "    _emit_output(payload, str(getattr(args, 'format', 'text') or 'text'))\n"
+        "    payload_root = find_resource_root(__file__, PAYLOAD_ROOT_CANDIDATES)\n"
+        "    skills_root = find_resource_root(__file__, SKILLS_ROOT_CANDIDATES)\n"
+        "    payload = _assemble_payload(payload_root, skills_root)\n"
+        "    emit_json_or_lines(payload, str(getattr(args, 'format', 'text') or 'text'), line_field='files')\n"
         "    return 0\n"
     )
 
@@ -389,20 +369,11 @@ def _python_memory_list_skills_command_module(
         "import json\n"
         "from pathlib import Path\n"
         "from typing import Any\n\n"
+        "from ..primitives.resources import find_resource_root, read_json_object\n\n"
         "# DO NOT EDIT DIRECTLY.\n"
         f"# Command behavior changes belong in {source_path} and the referenced operation contract.\n"
         f"# Regenerate with: {regenerate_command}\n\n\n"
-        "def _skills_root() -> Path:\n"
-        "    for parent in Path(__file__).resolve().parents:\n"
-        "        for candidate in (parent / '_skills', parent / 'packages' / 'memory' / 'skills'):\n"
-        "            if (candidate / 'REGISTRY.json').is_file():\n"
-        "                return candidate\n"
-        "    raise FileNotFoundError('Bundled memory skill registry is not available.')\n\n\n"
-        "def _read_json_resource(root: Path, relative_path: str) -> dict[str, Any]:\n"
-        "    payload = json.loads((root / relative_path).read_text(encoding='utf-8'))\n"
-        "    if not isinstance(payload, dict):\n"
-        "        raise RuntimeError(f'{relative_path} must parse to an object')\n"
-        "    return payload\n\n\n"
+        "SKILLS_ROOT_CANDIDATES = (('_skills', 'REGISTRY.json'), ('packages/memory/skills', 'REGISTRY.json'))\n\n\n"
         "def _action_for_skill(skill: dict[str, Any], skills_root: Path) -> dict[str, str]:\n"
         "    skill_id = str(skill.get('id', '')).strip()\n"
         "    relative = Path(str(skill.get('path', '')).strip())\n"
@@ -459,8 +430,8 @@ def _python_memory_list_skills_command_module(
         "            f\"({action['detail']}; role={action['role']}; safety={action['safety']}; category={action['category']})\"\n"
         "        )\n\n\n"
         "def run(args: argparse.Namespace) -> int:\n"
-        "    skills_root = _skills_root()\n"
-        "    registry = _read_json_resource(skills_root, 'REGISTRY.json')\n"
+        "    skills_root = find_resource_root(__file__, SKILLS_ROOT_CANDIDATES)\n"
+        "    registry = read_json_object(skills_root, 'REGISTRY.json')\n"
         "    payload = _assemble_payload(registry, skills_root)\n"
         "    _emit_output(payload, str(getattr(args, 'format', 'text') or 'text'))\n"
         "    return 0\n"
@@ -722,6 +693,51 @@ def _python_primitives_module(*, source_path: str, regenerate_command: str) -> s
         '    "execute_primitive",\n'
         '    "run_operation_steps",\n'
         "]\n"
+    )
+
+
+def _python_resource_primitives_module(*, source_path: str, regenerate_command: str) -> str:
+    return (
+        '"""Generated target-local resource and output primitives.\n\n'
+        f"Source: {source_path}\n"
+        f"Regenerate with: {regenerate_command}\n"
+        '"""\n\n'
+        "from __future__ import annotations\n\n"
+        "import json\n"
+        "from pathlib import Path\n"
+        "from typing import Any, Iterable\n\n"
+        "# DO NOT EDIT DIRECTLY.\n"
+        "# Primitive behavior changes belong to command_generation's Python target renderer.\n"
+        f"# Regenerate with: {regenerate_command}\n\n\n"
+        "ResourceCandidate = tuple[str, str]\n\n\n"
+        "def find_resource_root(anchor_file: str, candidates: Iterable[ResourceCandidate]) -> Path:\n"
+        "    for parent in Path(anchor_file).resolve().parents:\n"
+        "        for relative_root, marker in candidates:\n"
+        "            candidate = parent.joinpath(*Path(relative_root).parts)\n"
+        "            if (candidate / marker).is_file():\n"
+        "                return candidate\n"
+        "    rendered = ', '.join(f'{root} with marker {marker}' for root, marker in candidates)\n"
+        "    raise FileNotFoundError(f'Resource root is not available for any candidate: {rendered}')\n\n\n"
+        "def list_resource_files(root: Path) -> list[str]:\n"
+        "    return [\n"
+        "        path.relative_to(root).as_posix()\n"
+        "        for path in sorted(root.rglob('*'))\n"
+        "        if path.is_file() and '__pycache__' not in path.parts and path.suffix != '.pyc'\n"
+        "    ]\n\n\n"
+        "def read_json_object(root: Path, relative_path: str) -> dict[str, Any]:\n"
+        "    payload = json.loads((root / relative_path).read_text(encoding='utf-8'))\n"
+        "    if not isinstance(payload, dict):\n"
+        "        raise RuntimeError(f'{relative_path} must parse to an object')\n"
+        "    return payload\n\n\n"
+        "def emit_json_or_lines(payload: dict[str, Any], output_format: str, *, line_field: str) -> None:\n"
+        "    if output_format == 'json':\n"
+        "        print(json.dumps(payload, indent=2))\n"
+        "        return\n"
+        "    lines = payload.get(line_field, [])\n"
+        "    if not isinstance(lines, list):\n"
+        "        raise RuntimeError(f'{line_field} must be a list for text emission')\n"
+        "    for line in lines:\n"
+        "        print(str(line))\n"
     )
 
 
@@ -1552,6 +1568,15 @@ def render_outputs(
                             GeneratedOutput(
                                 root / "primitives" / "__init__.py",
                                 _python_primitives_module(source_path=source_path, regenerate_command=regenerate_command),
+                            )
+                        )
+                        outputs.append(
+                            GeneratedOutput(
+                                root / "primitives" / "resources.py",
+                                _python_resource_primitives_module(
+                                    source_path=source_path,
+                                    regenerate_command=regenerate_command,
+                                ),
                             )
                         )
                     outputs.append(
