@@ -1,0 +1,328 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Reduce memory status text runtime fallback",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Audit whether memory.status.report non-verbose text can move from source runtime fallback to codegen-owned primitive IR without changing black-box status text behavior; route the prerequisite if the current primitive/data model is insufficient.",
+    "hard_constraints": "Preserve existing agentic-memory status --format text behavior; do not embed Memory installer policy in command-generation; do not broaden this slice to doctor/report/verify-payload; do not claim #892 completion from JSON-only status coverage.",
+    "agent_may_decide": "Stop this slice as a no-go audit when parity requires broader status/payload-entry IR, file the follow-up, and continue #892 with the next bounded lane.",
+    "escalate_when": "A better-looking fix requires changing black-box text output, moving Memory-specific policy into command-generation, or broadening beyond status text runtime debt.",
+    "next_action": "Archive this no-go audit after planning proof, then continue #892 through the routed #1008 prerequisite or the next safer runtime-debt lane.",
+    "proof_expectations": [
+      "uv run agentic-workspace summary --target . --verbose --format json",
+      "uv run agentic-workspace doctor --target . --modules planning --format json",
+      "rg \"memory status text runtime fallback|python-memory-status-text-runtime-reduction|#1008\" .agentic-workspace/planning"
+    ],
+    "touched_scope": [
+      ".agentic-workspace/planning/execplans/python-memory-status-text-runtime-reduction.plan.json",
+      ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      ".agentic-workspace/planning/state.toml",
+      ".agentic-workspace/planning/mutation-provenance.json"
+    ],
+    "completion_criteria": [
+      "The attempted status text runtime reduction is closed honestly as unsafe for this slice.",
+      "#1008 records the required declarative status/payload-entry IR work.",
+      "The decomposition carries the no-go finding forward for #892."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "Audit whether memory.status.report non-verbose text can move from source runtime fallback to codegen-owned primitive IR without changing black-box status text behavior."
+  ],
+  "non_goals": [
+    "Do not change status text output.",
+    "Do not move Memory installer policy into command-generation.",
+    "Do not broaden this slice to other Memory runtime fallback commands."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Audit whether memory.status.report non-verbose text can move from source runtime fallback to codegen-owned primitive IR without changing black-box status text behavior.",
+      "constraints": "Preserve status text parity and keep Memory-specific policy out of command-generation.",
+      "latitude": "Close as no-go and route a prerequisite if the current primitive/data model is insufficient.",
+      "escalation": "Escalate when a better-looking fix changes black-box output or broadens beyond status text runtime debt."
+    },
+    "execution": {
+      "milestone": "python-memory-status-text-runtime-reduction",
+      "status": "active",
+      "next_step": "Archive this no-go audit after planning proof, then continue #892 through the routed #1008 prerequisite or the next safer runtime-debt lane.",
+      "proof": "uv run agentic-workspace summary --target . --verbose --format json; uv run agentic-workspace doctor --target . --modules planning --format json; rg \"memory status text runtime fallback|python-memory-status-text-runtime-reduction|#1008\" .agentic-workspace/planning"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/execplans/python-memory-status-text-runtime-reduction.plan.json",
+        ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/mutation-provenance.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#892 Python generated CLI completion with source runtime debt reduced only when behavior is represented by declarative package IR plus codegen-owned primitives.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "#1008 and the python-generated-cli decomposition"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "https://github.com/rickardvh/agentic-workspace/issues/1008",
+    "activation trigger": "When memory.status.report text runtime fallback is revisited or before claiming #892 complete."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "A narrower prerequisite was identified before changing behavior: status text needs declarative payload-entry/status IR.",
+    "intentionally deferred": "#1008: model Memory status text output as declarative payload-entry IR.",
+    "discovered implications": "The current compact status JSON payload is too small for text parity; status text depends on installer-owned payload-entry expansion, layout detection, per-file action rows, obsolete-file checks, optional append status, version display, and InstallResult formatting.",
+    "proof achieved now": "delegated audit and issue routing",
+    "validation still needed": "Planning health proof before archiving this slice.",
+    "next likely slice": "promote #1008 or pick another runtime-debt lane that can be reduced without behavior drift."
+  },
+  "intent_interpretation": {
+    "literal request": "Reduce memory status text runtime fallback",
+    "inferred intended outcome": "Move status text behavior off source runtime only if existing behavior can be represented by declarative contracts and generic primitives.",
+    "chosen concrete what": "Close this as a no-go audit and route #1008 because the current primitive/data model cannot preserve text parity.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": ".agentic-workspace/planning/execplans/python-memory-status-text-runtime-reduction.plan.json; .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/mutation-provenance.json",
+    "max changed files": "4 planning files plus GitHub issue #1008",
+    "required validation commands": "uv run agentic-workspace summary --target . --verbose --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "Status text parity requires broader payload-entry/status IR rather than existing primitives.",
+    "escalate when boundary reached": "A correct fix requires changing text behavior or introducing Memory-specific policy in command-generation.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Audit memory.status.report text runtime fallback and avoid behavior drift.",
+    "hard constraints": "Preserve status text parity; keep Memory-specific policy out of command-generation.",
+    "agent may decide locally": "Close as no-go and route a prerequisite issue when current primitives are insufficient.",
+    "escalate when": "A correct fix requires changing black-box text output or broadening beyond status text runtime debt."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-16T15:33:26+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "python-memory-status-text-runtime-reduction",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive this no-go audit after planning proof, then continue #892 through the routed #1008 prerequisite or the next safer runtime-debt lane."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/execplans/python-memory-status-text-runtime-reduction.plan.json",
+    ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/mutation-provenance.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run agentic-workspace summary --target . --verbose --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "rg \"memory status text runtime fallback|python-memory-status-text-runtime-reduction|#1008\" .agentic-workspace/planning"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "The attempted status text runtime reduction is closed honestly as unsafe for this slice.",
+    "#1008 records the required declarative status/payload-entry IR work.",
+    "The decomposition carries the no-go finding forward for #892."
+  ],
+  "execution_run": {
+    "run status": "completed-no-go",
+    "executor": "Codex with sidecar worker audits",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Delegated audits found existing compact status JSON primitives cannot reproduce current status text output; #1008 was filed for declarative payload-entry/status IR rather than changing behavior in this slice.",
+    "scope touched": "planning closeout and decomposition only; no implementation files changed",
+    "changed surfaces": "execplan, planning state/provenance, python-generated-cli decomposition, GitHub issue #1008",
+    "validations run": "pending planning health proof",
+    "result for continuation": "continue #892 through #1008 or a safer runtime-debt lane",
+    "next step": "Archive this plan after proof and commit/push the planning slice."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; this slice did not change runtime behavior",
+    "proof status": "pending planning health proof",
+    "intent served": "partially; prevented false reduction and routed prerequisite",
+    "config compliance": "used uv run agentic-workspace and recorded delegation",
+    "misinterpretation risk": "low after no-go closeout",
+    "follow-on decision": "#1008 required before status text can leave source runtime"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "not skipped",
+    "expected savings": "Reuse existing workers for sidecar audit of memory status text data dependencies and validation surfaces while local owner maintains plan and implementation gate.",
+    "actual friction": "low; sidecar audits produced direct go/no-go and validation findings.",
+    "proof result": "Both workers agreed the compact status payload lacks the data needed for text parity.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "pending planning health proof",
+    "proof achieved now": "delegated audit plus #1008 issue routing",
+    "evidence for \"proof achieved\" state": "Workers identified missing text-parity data dependencies; #1008 created at https://github.com/rickardvh/agentic-workspace/issues/1008."
+  },
+  "intent_satisfaction": {
+    "original intent": "Reduce memory status text runtime fallback only when behavior can be generated from declarative IR and codegen-owned primitives.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "No behavior-changing runtime reduction was made because delegated audits showed current compact status payload cannot preserve text parity.",
+    "unsolved intent passed to": "#1008 declarative status/payload-entry IR; #892 remains open"
+  },
+  "execution_summary": {
+    "outcome delivered": "No-go audit completed and follow-up filed.",
+    "validation confirmed": "uv run agentic-workspace summary --target . --verbose --format json and uv run agentic-workspace doctor --target . --modules planning --format json reported clean planning health after recovery provenance.",
+    "follow-on routed to": "#1008",
+    "post-work posterity capture": "execplan and decomposition updated",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "Continue #892 by promoting #1008 or selecting the next bounded runtime-debt lane from python-generated-cli decomposition."
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "none",
+    "proposed durable intent": "none yet",
+    "confidence": "low",
+    "needs review": "True",
+    "owner surface": "none"
+  },
+  "closure_check": {
+    "slice status": "bounded slice complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "Changing status text now would either alter black-box output or put Memory policy in command-generation.",
+    "evidence carried forward": "#1008 filed; decomposition updated with the no-go finding.",
+    "reopen trigger": "Promote #1008 or a successor status text IR plan."
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [
+      "Missing text-mode conformance let status text fallback remain less visible than JSON fallback."
+    ],
+    "signals fixed": [],
+    "signals routed": [
+      "#1008"
+    ],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#1008",
+          "owner": "https://github.com/rickardvh/agentic-workspace/issues/1008",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "#1008",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-05-16: Scaffolded by agentic-planning new-plan.",
+    "2026-05-16: Recorded delegation decision route=delegate-exploration.",
+    "2026-05-16: Delegated audits found status text cannot safely move to current compact primitive IR; filed #1008 and closed this slice as no-go."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Reduce memory status text runtime fallback only when behavior can be generated from declarative IR and codegen-owned primitives.\nIntent satisfied: no\nArchive decision: archive-but-keep-lane-open\nProof: pending planning health proof\nChanged surfaces: execplan, planning state/provenance, python-generated-cli decomposition, GitHub issue #1008\nDurable residue: none (none)\nMemory learning: none\nFollow-up: #1008 declarative status/payload-entry IR; #892 remains open"
+  }
+}
