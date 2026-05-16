@@ -1096,6 +1096,105 @@ def _python_local_runtime_helper_block() -> str:
     )
 
 
+def _python_local_runtime_toml_table_helper_block() -> str:
+    return (
+        "def _resolve_repo_target_root(target: Any) -> Path:\n"
+        "    explicit_target = target is not None\n"
+        "    start = Path(str(target)).resolve() if explicit_target else Path.cwd().resolve()\n"
+        "    if not start.exists():\n"
+        "        raise ValueError(f'Target does not exist: {start}')\n"
+        "    if not start.is_dir():\n"
+        "        raise ValueError(f'Target must be a directory: {start}')\n"
+        "    if explicit_target:\n"
+        "        return start\n"
+        "    markers = ('pyproject.toml', 'package.json', 'Cargo.toml', '.hg')\n"
+        "    candidates = [candidate for candidate in [start, *start.parents] if any((candidate / marker).exists() for marker in markers)]\n"
+        "    if not candidates:\n"
+        "        raise ValueError('Could not find a repository root from the current directory. Pass --target explicitly.')\n"
+        "    return candidates[0]\n"
+        "\n\n"
+        "def _toml_table_record_counts(\n"
+        "    target_root: Path,\n"
+        "    *,\n"
+        "    relative_path: str,\n"
+        "    table_name: str,\n"
+        "    relevance_field: str,\n"
+        "    required_value: str,\n"
+        "    optional_value: str,\n"
+        "    routing_only_field: str,\n"
+        ") -> dict[str, object]:\n"
+        "    manifest_path = target_root / relative_path\n"
+        "    if not manifest_path.exists():\n"
+        "        return {'status': 'missing', 'note_count': 0, 'required_count': 0, 'optional_count': 0, 'routing_only_count': 0, 'path': relative_path}\n"
+        "    try:\n"
+        "        payload = tomllib.loads(manifest_path.read_text(encoding='utf-8'))\n"
+        "    except (OSError, tomllib.TOMLDecodeError):\n"
+        "        return {'status': 'invalid', 'note_count': 0, 'required_count': 0, 'optional_count': 0, 'routing_only_count': 0, 'path': relative_path}\n"
+        "    records = payload.get(table_name, {}) if isinstance(payload, dict) else {}\n"
+        "    record_values = list(records.values()) if isinstance(records, dict) else []\n"
+        "    required_count = 0\n"
+        "    optional_count = 0\n"
+        "    routing_only_count = 0\n"
+        "    for record in record_values:\n"
+        "        if not isinstance(record, dict):\n"
+        "            continue\n"
+        "        relevance = str(record.get(relevance_field, '')).strip().lower()\n"
+        "        if relevance == required_value:\n"
+        "            required_count += 1\n"
+        "        elif relevance == optional_value:\n"
+        "            optional_count += 1\n"
+        "        if bool(record.get(routing_only_field, False)):\n"
+        "            routing_only_count += 1\n"
+        "    return {\n"
+        "        'status': 'present',\n"
+        "        'note_count': len(record_values),\n"
+        "        'required_count': required_count,\n"
+        "        'optional_count': optional_count,\n"
+        "        'routing_only_count': routing_only_count,\n"
+        "        'path': relative_path,\n"
+        "    }\n"
+        "\n\n"
+        "def _tiny_lifecycle_payload_from_toml_table_counts(\n"
+        "    *,\n"
+        "    target: Any,\n"
+        "    relative_path: str,\n"
+        "    table_name: str,\n"
+        "    relevance_field: str,\n"
+        "    required_value: str,\n"
+        "    optional_value: str,\n"
+        "    routing_only_field: str,\n"
+        "    message: str,\n"
+        "    dry_run: bool,\n"
+        "    detail_command: str,\n"
+        "    unhealthy_detail: str,\n"
+        ") -> dict[str, object]:\n"
+        "    target_root = _resolve_repo_target_root(target)\n"
+        "    counts = _toml_table_record_counts(\n"
+        "        target_root,\n"
+        "        relative_path=relative_path,\n"
+        "        table_name=table_name,\n"
+        "        relevance_field=relevance_field,\n"
+        "        required_value=required_value,\n"
+        "        optional_value=optional_value,\n"
+        "        routing_only_field=routing_only_field,\n"
+        "    )\n"
+        "    health = 'healthy' if counts['status'] == 'present' else 'attention-needed'\n"
+        "    return {\n"
+        "        'target_root': str(target_root),\n"
+        "        'dry_run': dry_run,\n"
+        "        'mode': '',\n"
+        "        'message': message,\n"
+        "        'health': health,\n"
+        "        'detected_version': None,\n"
+        "        'bootstrap_version': None,\n"
+        "        'action_count': 0 if health == 'healthy' else 1,\n"
+        "        'actions': [] if health == 'healthy' else [{'kind': counts['status'], 'path': counts['path'], 'detail': unhealthy_detail}],\n"
+        "        'active': counts,\n"
+        "        'detail_command': detail_command,\n"
+        "    }\n"
+    )
+
+
 def _python_local_runtime_generated_function(
     function: str,
     override: dict[str, Any],
@@ -1141,6 +1240,26 @@ def _python_local_runtime_generated_function(
             f"    from {source_import_module} import {function} as source_function\n\n"
             "    return source_function(values, arguments, context)\n"
         )
+    if implementation == "toml_table_lifecycle_json_with_source_fallback":
+        return (
+            f"def {function}(values: dict[str, Any], arguments: dict[str, Any], context: Any) -> Any:\n"
+            "    if str(values.get('format') or 'text') == 'json' and not values.get('verbose'):\n"
+            "        return _tiny_lifecycle_payload_from_toml_table_counts(\n"
+            "            target=values.get('target'),\n"
+            f"            relative_path={str(override['relative_path'])!r},\n"
+            f"            table_name={str(override['table_name'])!r},\n"
+            f"            relevance_field={str(override['relevance_field'])!r},\n"
+            f"            required_value={str(override.get('required_value', 'required')).lower()!r},\n"
+            f"            optional_value={str(override.get('optional_value', 'optional')).lower()!r},\n"
+            f"            routing_only_field={str(override['routing_only_field'])!r},\n"
+            f"            message={str(override['message'])!r},\n"
+            f"            dry_run={bool(override.get('dry_run', False))!r},\n"
+            f"            detail_command={str(override['detail_command'])!r},\n"
+            f"            unhealthy_detail={str(override['unhealthy_detail'])!r},\n"
+            "        )\n"
+            f"    from {source_import_module} import {function} as source_function\n\n"
+            "    return source_function(values, arguments, context)\n"
+        )
     raise ValueError(f"unsupported generated local runtime implementation: {implementation!r}")
 
 
@@ -1167,8 +1286,18 @@ def _python_local_runtime_binding_module(
                 f"    from {source_import_module} import {function} as source_function\n\n"
                 "    return source_function(*args, **kwargs)\n"
             )
-    helper_block = _python_local_runtime_helper_block() + "\n\n" if overrides else ""
-    helper_imports = "import copy\nimport json\nfrom pathlib import Path\n" if overrides else ""
+    override_implementations = {str(override.get("implementation")) for override in overrides.values()}
+    helper_parts: list[str] = []
+    if overrides:
+        helper_parts.append(_python_local_runtime_helper_block())
+    if "toml_table_lifecycle_json_with_source_fallback" in override_implementations:
+        helper_parts.append(_python_local_runtime_toml_table_helper_block())
+    helper_block = "\n\n".join(helper_parts) + "\n\n" if helper_parts else ""
+    helper_imports = ""
+    if overrides:
+        helper_imports = "import copy\nimport json\nfrom pathlib import Path\n"
+    if "toml_table_lifecycle_json_with_source_fallback" in override_implementations:
+        helper_imports = "import copy\nimport json\nimport tomllib\nfrom pathlib import Path\n"
     return (
         '"""Generated runtime binding facade.\n\n'
         f"Source: {source_path}\n"

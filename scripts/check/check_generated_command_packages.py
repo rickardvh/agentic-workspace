@@ -1619,6 +1619,19 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         memory_runtime_text = memory_runtime_facade.read_text(encoding="utf-8")
         if "isinstance(result, dict)" not in memory_runtime_text or "json.dumps(_serialise_value(values['result']), indent=2)" not in memory_runtime_text:
             errors.append("generated memory runtime facade must emit dict JSON through generated-local code before source fallback")
+        for function_name, message in (
+            ("_load_memory_bootstrap_doctor", "Doctor report"),
+            ("_load_memory_bootstrap_status", "Status report"),
+        ):
+            function_marker = f"def {function_name}(values: dict[str, Any], arguments: dict[str, Any], context: Any) -> Any:"
+            if function_marker not in memory_runtime_text:
+                errors.append(f"generated memory runtime facade must define {function_name} as a generated-local override")
+                continue
+            function_text = memory_runtime_text.split(function_marker, 1)[1].split("\ndef ", 1)[0]
+            if "_tiny_lifecycle_payload_from_toml_table_counts(" not in function_text or message not in function_text:
+                errors.append(f"generated memory runtime facade must build {function_name} JSON fast path through generated TOML-table primitives")
+            if f"from repo_memory_bootstrap.runtime_primitives import {function_name} as source_function" not in function_text:
+                errors.append(f"generated memory runtime facade must retain {function_name} source fallback for non-fast-path behavior")
     if "repo_memory_bootstrap._installer_paths" in memory_operation_executor_text:
         errors.append("memory operation IR executor must resolve package resources from generated target-local copies")
     if "_resolve_memory_target_root" in memory_operation_executor_text:
