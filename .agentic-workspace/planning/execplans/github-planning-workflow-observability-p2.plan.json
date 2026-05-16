@@ -32,13 +32,23 @@
     "hard_constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
     "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
     "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
-    "next_action": "Implement the first product-semantic skill surface for intent, Memory, or proof while preserving the next-safe-action packet semantics.",
+    "next_action": "Implement the Memory or proof product-semantic skill surface while preserving the next-safe-action packet semantics.",
     "proof_expectations": [
-      "uv run pytest tests/test_workspace_start_preflight_cli.py -q"
+      "uv run pytest tests/test_workspace_start_preflight_cli.py -q",
+      "uv run pytest packages/planning/tests/test_skills_catalog.py -q",
+      "uv run pytest tests/test_workspace_skills_cli.py::test_skills_command_recommends_high_risk_workflow_decision_skills -q"
     ],
     "touched_scope": [
       "src/agentic_workspace/workspace_runtime_primitives.py",
-      "tests/test_workspace_start_preflight_cli.py"
+      "tests/test_workspace_start_preflight_cli.py",
+      "packages/planning/skills/planning-intent-verification/SKILL.md",
+      ".agentic-workspace/planning/skills/planning-intent-verification/SKILL.md",
+      "packages/planning/skills/REGISTRY.json",
+      ".agentic-workspace/planning/skills/REGISTRY.json",
+      "packages/planning/skills/README.md",
+      ".agentic-workspace/planning/skills/README.md",
+      "packages/planning/tests/test_skills_catalog.py",
+      "tests/test_workspace_skills_cli.py"
     ],
     "completion_criteria": [
       "Intent verification, Memory consultation, proof selection, SkillSpec gates, operating-loop slots, and next-safe-action packets reduce live context by answering what to read, what to skip, what proof is required, and whether an artifact is warranted."
@@ -62,13 +72,21 @@
     "execution": {
       "milestone": "github-planning-workflow-observability-p2",
       "status": "in-progress",
-      "next_step": "Implement the first product-semantic skill surface for intent, Memory, or proof while preserving the next-safe-action packet semantics.",
-      "proof": "uv run pytest tests/test_workspace_start_preflight_cli.py -q"
+      "next_step": "Implement the Memory or proof product-semantic skill surface while preserving the next-safe-action packet semantics.",
+      "proof": "uv run pytest tests/test_workspace_start_preflight_cli.py -q; uv run pytest packages/planning/tests/test_skills_catalog.py -q; uv run pytest tests/test_workspace_skills_cli.py::test_skills_command_recommends_high_risk_workflow_decision_skills -q"
     },
     "scope": {
       "touched": [
         "src/agentic_workspace/workspace_runtime_primitives.py",
-        "tests/test_workspace_start_preflight_cli.py"
+        "tests/test_workspace_start_preflight_cli.py",
+        "packages/planning/skills/planning-intent-verification/SKILL.md",
+        ".agentic-workspace/planning/skills/planning-intent-verification/SKILL.md",
+        "packages/planning/skills/REGISTRY.json",
+        ".agentic-workspace/planning/skills/REGISTRY.json",
+        "packages/planning/skills/README.md",
+        ".agentic-workspace/planning/skills/README.md",
+        "packages/planning/tests/test_skills_catalog.py",
+        "tests/test_workspace_skills_cli.py"
       ],
       "invariants": [
         "Preserve the planning contract and keep the work bounded to this plan."
@@ -96,7 +114,7 @@
   "intent_interpretation": {
     "literal request": "Github Planning Workflow Observability P2",
     "inferred intended outcome": "Medium-priority planning workflow issues are accepted but should remain behind immediate trust and recoverability failures; when promoted, success should be measured by fewer raw-file reads and fewer human corrections, not by adding more workflow prose.",
-    "chosen concrete what": "Implemented #988: a compact next_safe_action packet emitted by start and covered by routine triage, prep-only planning, and completion/closeout routing tests.",
+    "chosen concrete what": "Implemented #988 next_safe_action packet and #981 planning-intent-verification skill.",
     "interpretation distance": "low",
     "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
   },
@@ -119,7 +137,7 @@
     "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
     "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
     "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
-    "tiny resumability note": "#988 is complete; continue with product-semantic skills/observability slices under #981/#983/#984/#985/#986.",
+    "tiny resumability note": "#988 and #981 are complete; continue with Memory/proof skills and transition/operating-loop follow-ons.",
     "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
   },
   "delegated_judgment": {
@@ -154,20 +172,30 @@
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Implement the first product-semantic skill surface for intent, Memory, or proof while preserving the next-safe-action packet semantics."
+    "Implement the Memory or proof product-semantic skill surface while preserving the next-safe-action packet semantics."
   ],
   "blockers": [
     "None."
   ],
   "touched_paths": [
     "src/agentic_workspace/workspace_runtime_primitives.py",
-    "tests/test_workspace_start_preflight_cli.py"
+    "tests/test_workspace_start_preflight_cli.py",
+    "packages/planning/skills/planning-intent-verification/SKILL.md",
+    ".agentic-workspace/planning/skills/planning-intent-verification/SKILL.md",
+    "packages/planning/skills/REGISTRY.json",
+    ".agentic-workspace/planning/skills/REGISTRY.json",
+    "packages/planning/skills/README.md",
+    ".agentic-workspace/planning/skills/README.md",
+    "packages/planning/tests/test_skills_catalog.py",
+    "tests/test_workspace_skills_cli.py"
   ],
   "invariants": [
     "Preserve the planning contract and keep the work bounded to this plan."
   ],
   "validation_commands": [
-    "uv run pytest tests/test_workspace_start_preflight_cli.py -q"
+    "uv run pytest tests/test_workspace_start_preflight_cli.py -q",
+    "uv run pytest packages/planning/tests/test_skills_catalog.py -q",
+    "uv run pytest tests/test_workspace_skills_cli.py::test_skills_command_recommends_high_risk_workflow_decision_skills -q"
   ],
   "required_tools": [
     "None."
@@ -179,18 +207,18 @@
     "run status": "not-run-yet",
     "executor": "",
     "handoff source": "agentic-planning promote-to-plan",
-    "what happened": "#988 completed: start now exposes a compact next_safe_action packet derived from immediate_next_allowed_action, workflow_sufficiency, skill_routing, and memory_consult.",
-    "scope touched": "src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_start_preflight_cli.py",
-    "changed surfaces": "startup routing packet projection and startup/preflight tests",
-    "validations run": "uv run pytest tests/test_workspace_start_preflight_cli.py -q",
-    "result for continuation": "continue P2 with product-semantic skill surfaces and module-slot/transition follow-ons",
-    "next step": "Implement the first product-semantic skill surface for intent, Memory, or proof while preserving the next-safe-action packet semantics."
+    "what happened": "#988 completed: start now exposes a compact next_safe_action packet derived from immediate_next_allowed_action, workflow_sufficiency, skill_routing, and memory_consult. #981 completed: package and installed planning skill catalogs now include planning-intent-verification.",
+    "scope touched": "src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_start_preflight_cli.py; planning skill catalogs and planning-intent-verification skill",
+    "changed surfaces": "startup routing packet projection; startup/preflight tests; planning skill registry/readme and skill routing tests",
+    "validations run": "uv run pytest tests/test_workspace_start_preflight_cli.py -q; uv run pytest packages/planning/tests/test_skills_catalog.py -q; uv run pytest tests/test_workspace_skills_cli.py::test_skills_command_recommends_high_risk_workflow_decision_skills -q",
+    "result for continuation": "continue P2 with Memory/proof skill surfaces and module-slot/transition follow-ons",
+    "next step": "Implement the Memory or proof product-semantic skill surface while preserving the next-safe-action packet semantics."
   },
   "finished_run_review": {
     "review status": "slice reviewed",
     "scope respected": "yes; #988 touched startup packet projection and focused tests",
-    "proof status": "passed for #988 startup/preflight coverage",
-    "intent served": "#988 now gives agents one compact packet for next action, CLI, module slot, forbidden actions, proof/completion boundaries, Memory status, and fallback",
+    "proof status": "passed for #988 and #981 focused coverage",
+    "intent served": "#988 now gives agents one compact packet for next action, CLI, module slot, forbidden actions, proof/completion boundaries, Memory status, and fallback; #981 adds a package-owned skill for intent extraction, parent/larger intent, negative invariants, and completion-claim boundaries",
     "config compliance": "used AW start/implement context and recorded keep-local delegation decision",
     "misinterpretation risk": "low for #988; broader P2 remains open",
     "follow-on decision": "pending"
@@ -200,25 +228,25 @@
     "route skipped reason": "#988 is a narrow packet-shape slice with local runtime/tests; delegation would add coordination overhead.",
     "expected savings": "unknown",
     "actual friction": "pending",
-    "proof result": "passed for #988",
+    "proof result": "passed for #988 and #981",
     "quality concern": "none recorded",
     "decomposition adjustment": "none"
   },
   "proof_report": {
-    "validation proof": "uv run pytest tests/test_workspace_start_preflight_cli.py -q",
-    "proof achieved now": "#988 startup/preflight tests passed",
-    "evidence for \"proof achieved\" state": "Startup/preflight test file: 53 passed."
+    "validation proof": "uv run pytest tests/test_workspace_start_preflight_cli.py -q; uv run pytest packages/planning/tests/test_skills_catalog.py -q; uv run pytest tests/test_workspace_skills_cli.py::test_skills_command_recommends_high_risk_workflow_decision_skills -q",
+    "proof achieved now": "#988 startup/preflight tests and #981 skill catalog/routing tests passed",
+    "evidence for \"proof achieved\" state": "Startup/preflight test file: 53 passed. Planning skill catalog: 2 passed. Skill recommendation case: 1 passed."
   },
   "intent_satisfaction": {
     "original intent": "Medium-priority planning workflow issues are accepted but should remain behind immediate trust and recoverability failures; when promoted, success should be measured by fewer raw-file reads and fewer human corrections, not by adding more workflow prose.",
     "was original intent fully satisfied?": "partial",
-    "evidence of intent satisfaction": "#988 next-safe-action packet completed; #981/#983/#984/#985/#986 remain in the active P2 lane.",
+    "evidence of intent satisfaction": "#988 next-safe-action packet completed; #981 planning-intent-verification skill completed; #983/#984/#985/#986 remain in the active P2 lane.",
     "unsolved intent passed to": "active P2 execplan continuation"
   },
   "execution_summary": {
-    "outcome delivered": "#988 slice complete; P2 lane still in progress",
-    "validation confirmed": "startup/preflight pytest passed",
-    "follow-on routed to": "#981/#983/#984/#985/#986 in this execplan",
+    "outcome delivered": "#988 and #981 slices complete; P2 lane still in progress",
+    "validation confirmed": "startup/preflight and skill catalog/routing pytest passed",
+    "follow-on routed to": "#983/#984/#985/#986 in this execplan",
     "post-work posterity capture": "updated execplan and mutation provenance",
     "knowledge promoted (Memory/Docs/Config)": "none",
     "resume from": "current milestone"
@@ -242,12 +270,12 @@
     "owner surface": ""
   },
   "closure_check": {
-    "slice status": "#988 complete; active milestone in progress",
+    "slice status": "#988 and #981 complete; active milestone in progress",
     "larger-intent status": "open",
     "closure decision": "archive-but-keep-lane-open",
     "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
     "why this decision is honest": "",
-    "evidence carried forward": "start.next_safe_action carries next_safe_action, preferred_cli, module_slot, forbidden_actions, proof_required, completion_claim_allowed, memory_consultation_status, and no-CLI fallback.",
+    "evidence carried forward": "start.next_safe_action carries next_safe_action, preferred_cli, module_slot, forbidden_actions, proof_required, completion_claim_allowed, memory_consultation_status, and no-CLI fallback. planning-intent-verification captures original/interpreted/parent intent, negative invariants, continuation owner, and completion-claim guardrails.",
     "reopen trigger": "If start/skill guidance diverges again from the compact next action semantics."
   },
   "improvement_signal_review": {
@@ -273,6 +301,7 @@
   "drift_log": [
     "2026-05-16: Promoted from TODO direct-task shape into an execplan.",
     "2026-05-16: Recorded delegation decision route=keep-local.",
-    "2026-05-16: Completed #988 next-safe-action packet slice and carried remaining P2 work forward."
+    "2026-05-16: Completed #988 next-safe-action packet slice and carried remaining P2 work forward.",
+    "2026-05-16: Completed #981 planning-intent-verification skill slice and carried remaining P2 work forward."
   ]
 }

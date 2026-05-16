@@ -2,14 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-workspace-facade-source-runtime-elimination",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T10:48:14+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/execplans/archive/python-workspace-facade-source-runtime-elimination.plan.json",
       "sha256": "c4773bb427f94cdee165154deb7aca83a4b37e0d319e540d0526cb1ae8f7a016",
       "command": "agentic-planning archive-plan",
@@ -1600,6 +1592,14 @@
       "reason": "Updated active P2 execplan after completing #988 next-safe-action packet slice.",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-16T18:47:24+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-planning-workflow-observability-p2.plan.json",
+      "sha256": "4577d130d83155130f1a964563cc38a8f9a9f880f7d9faca33ad1a498b15cdb6",
+      "command": "agentic-planning record-recovery",
+      "reason": "Updated active P2 execplan after completing #981 planning-intent-verification skill slice.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-16T18:50:11+00:00"
     }
   ]
 }

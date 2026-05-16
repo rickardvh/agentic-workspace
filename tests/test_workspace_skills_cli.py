@@ -356,6 +356,7 @@ def test_skills_command_recommends_high_risk_workflow_decision_skills(tmp_path: 
         ("tighten a new execplan before coding", "planning-new-plan-tighten"),
         ("assurance classification and delegation posture before implementation", "planning-assurance-delegation"),
         ("high assurance planning lifecycle preserve intent satisfaction across a whole epic", "planning-high-assurance-lifecycle"),
+        ("verify parent intent and negative invariants before completion claim", "planning-intent-verification"),
         ("closeout trust and residue distillation after implementation", "planning-closeout-trust"),
     ]
     for task, expected in cases:

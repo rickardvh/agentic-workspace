@@ -144,6 +144,32 @@
       }
     },
     {
+      "id": "planning-intent-verification",
+      "path": "planning-intent-verification/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "verify original, interpreted, parent, and negative intent before decomposition, validation, or completion claims",
+      "activation_hints": {
+        "verbs": ["verify", "extract", "preserve", "compare", "validate", "close"],
+        "nouns": ["intent", "parent intent", "negative invariants", "completion claim", "continuation owner"],
+        "phrases": [
+          "intent verification",
+          "verify intent",
+          "parent intent",
+          "negative invariants",
+          "completion claim allowed",
+          "intent satisfaction",
+          "larger intent"
+        ],
+        "when": [
+          "work may satisfy a narrower proxy",
+          "parent lane or epic intent matters",
+          "negative invariants or non-goals must be preserved",
+          "before claiming planned work is complete"
+        ]
+      }
+    },
+    {
       "id": "planning-closeout-trust",
       "path": "planning-closeout-trust/SKILL.md",
       "scope": "bundled",
@@ -236,4 +262,3 @@
     }
   ]
 }
-
