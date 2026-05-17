@@ -1,0 +1,302 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Implement #1013 typed next_safe_action contract",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement GitHub #1013 by making startup `next_safe_action` a typed schema-backed packet.",
+    "hard_constraints": "Preserve existing startup behavior; do not redesign workflow routing or generate adapters in this slice.",
+    "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Add the typed packet schema, update packet construction, regenerate reference docs, and add validation tests.",
+    "proof_expectations": [
+      "Fill in the narrowest command that proves the promoted work."
+    ],
+    "touched_scope": [
+      "Fill in the concrete files before implementation starts."
+    ],
+    "completion_criteria": [
+      "Implement #1013 typed next_safe_action contract is implemented, validated, and closed out honestly."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "Create a bounded plan for Implement #1013 typed next_safe_action contract."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Create a bounded plan for Implement #1013 typed next_safe_action contract.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "github-1013-typed-next-safe-action",
+      "status": "completed",
+      "next_step": "Archive this completed execplan and continue with the next issue slice.",
+      "proof": "Focused startup/schema tests, schema reference check, and workspace lint passed."
+    },
+    "scope": {
+      "touched": [
+        "Fill in the concrete files before implementation starts."
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Create a bounded plan for Implement #1013 typed next_safe_action contract.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes",
+    "validation still needed": "rerun make test-workspace after closing active planning state",
+    "next likely slice": "continue with #1014"
+  },
+  "intent_interpretation": {
+    "literal request": "Implement #1013 typed next_safe_action contract",
+    "inferred intended outcome": "Create a bounded plan for Implement #1013 typed next_safe_action contract.",
+    "chosen concrete what": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Startup schema, startup packet construction, generated startup reference docs, and focused startup tests.",
+    "max changed files": "about four implementation/doc/test files plus planning state",
+    "required validation commands": "Focused startup/schema tests, schema reference check, make test-workspace, and make lint-workspace.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Create a bounded plan for Implement #1013 typed next_safe_action contract.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "pending",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "github-1013-typed-next-safe-action",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Fill in execution bounds, touched paths, and validation before implementation starts."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "docs/reference/startup-context.md",
+    "tests/test_workspace_start_preflight_cli.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_start_preflight_cli.py tests/test_schema_reference_docs.py::test_schema_reference_default_targets_cover_all_contract_schemas -q",
+    "uv run python scripts/generate/generate_schema_reference.py --schema src/agentic_workspace/contracts/schemas/startup_context.schema.json --check --check-annotations",
+    "make test-workspace",
+    "make lint-workspace"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Startup `next_safe_action` validates against a typed schema-backed contract.",
+    "Representative direct, planning-blocked, proof-required, and closeout-blocked packets include stable typed fields.",
+    "Generated reference docs expose the typed packet fields."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Added a typed schema-backed next_safe_action packet, updated startup packet construction, regenerated reference docs, and added representative validation tests.",
+    "scope touched": "Startup context schema, startup runtime primitives, generated startup reference docs, and focused startup/preflight tests.",
+    "changed surfaces": "src/agentic_workspace/contracts/schemas/startup_context.schema.json; src/agentic_workspace/workspace_runtime_primitives.py; docs/reference/startup-context.md; tests/test_workspace_start_preflight_cli.py",
+    "validations run": "57 focused startup/schema tests passed; schema reference check passed; workspace lint passed; make test-workspace will be rerun after closing this active planning state.",
+    "result for continuation": "Proceed to the remaining new issues as separate slices.",
+    "next step": "Archive this completed execplan and rerun full workspace validation."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "continue with #1014 and #1015 as separate slices"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "pending",
+    "route skipped reason": "pending",
+    "expected savings": "pending",
+    "actual friction": "pending",
+    "proof result": "pending",
+    "quality concern": "pending",
+    "decomposition adjustment": "pending"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_workspace_start_preflight_cli.py tests/test_schema_reference_docs.py::test_schema_reference_default_targets_cover_all_contract_schemas -q; uv run python scripts/generate/generate_schema_reference.py --schema src/agentic_workspace/contracts/schemas/startup_context.schema.json --check --check-annotations; make lint-workspace",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "57 focused startup/schema tests passed; schema reference check passed; workspace lint passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Implement #1013 typed next_safe_action contract.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Typed next_safe_action schema, runtime packet fields, generated docs, and focused startup/schema tests are implemented.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Typed next_safe_action packet contract implemented.",
+    "validation confirmed": "focused tests, schema reference check, and workspace lint passed",
+    "follow-on routed to": "#1014 and #1015",
+    "post-work posterity capture": "planning closeout",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "#1014 or #1015; #1013 is complete"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "none",
+    "proposed durable intent": "none yet",
+    "confidence": "low",
+    "needs review": "True",
+    "owner surface": "none"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "GitHub #1013 bounded slice is implemented and validated; remaining new issues have separate issue ownership.",
+    "evidence carried forward": "Typed packet schema/runtime/docs/tests changed; 57 focused tests passed; schema reference check passed; workspace lint passed.",
+    "reopen trigger": "Reopen if CI finds a startup next_safe_action schema/runtime regression."
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Scaffold placeholders and transient active-state validation noise.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Continue with #1014 and #1015 as separate slices.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-16: Scaffolded by agentic-planning new-plan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Create a bounded plan for Implement #1013 typed next_safe_action contract.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: uv run pytest tests/test_workspace_start_preflight_cli.py tests/test_schema_reference_docs.py::test_schema_reference_default_targets_cover_all_contract_schemas -q; uv run python scripts/generate/generate_schema_reference.py --schema src/agentic_workspace/contracts/schemas/startup_context.schema.json --check --check-annotations; make lint-workspace\nChanged surfaces: src/agentic_workspace/contracts/schemas/startup_context.schema.json; src/agentic_workspace/workspace_runtime_primitives.py; docs/reference/startup-context.md; tests/test_workspace_start_preflight_cli.py\nDurable residue: none (none)\nMemory learning: none\nFollow-up: #1014 and #1015"
+  }
+}

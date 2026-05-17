@@ -113,12 +113,58 @@ def test_contract_inventory_declares_owner_choice_model() -> None:
 def test_skill_specs_contract_models_startup_and_planning_behavior() -> None:
     manifest = contract_tooling.skill_specs_manifest()
     schema = contract_tooling.contract_schema("skill_spec.schema.json")
+    cli_manifest = contract_tooling.cli_commands_manifest()
 
     assert list(Draft202012Validator(schema).iter_errors(manifest)) == []
     assert manifest["rule"].startswith("Skills steer agent behavior")
 
     specs = {entry["id"]: entry for entry in manifest["specs"]}
     assert {"startup-router", "planning-autopilot"} <= specs.keys()
+    transition_gates = {entry["id"]: entry for entry in manifest["transition_gates"]}
+    module_slots = {entry["id"]: entry for entry in manifest["module_slots"]}
+    assert {
+        "startup-to-work",
+        "work-to-planning",
+        "work-to-proof",
+        "work-to-memory-residue",
+        "proof-to-closeout",
+    } == transition_gates.keys()
+    assert {"workspace", "planning", "planning.closeout", "workspace.proof", "memory"} == module_slots.keys()
+
+    required_gate_fields = {
+        "trigger",
+        "preferred_cli_or_report",
+        "interpreted_fields",
+        "allowed_actions",
+        "forbidden_actions",
+        "proof_obligations",
+        "closeout_obligations",
+        "fallback_when_cli_unavailable",
+        "generated_target_requirements",
+    }
+    for gate in transition_gates.values():
+        assert required_gate_fields <= gate.keys()
+        assert gate["preferred_cli_or_report"]
+        assert gate["fallback_when_cli_unavailable"]
+        assert gate["allowed_actions"]
+        assert gate["forbidden_actions"]
+        assert gate["interpreted_fields"]
+        assert gate["generated_target_requirements"]["must_preserve"]
+
+    required_slot_fields = {"owns", *(required_gate_fields - {"trigger"})}
+    for slot in module_slots.values():
+        assert required_slot_fields <= slot.keys()
+        assert slot["preferred_cli_or_report"]
+        assert slot["fallback_when_cli_unavailable"]
+        assert slot["allowed_actions"]
+        assert slot["forbidden_actions"]
+        assert slot["interpreted_fields"]
+        assert slot["generated_target_requirements"]["must_preserve"]
+
+    assert "next_safe_action" in " ".join(module_slots["workspace"]["interpreted_fields"])
+    assert "state.toml" in " ".join(module_slots["planning"]["forbidden_actions"])
+    assert "completion_claim_allowed" in transition_gates["proof-to-closeout"]["interpreted_fields"]
+    assert "durable_residue_decision" in transition_gates["work-to-memory-residue"]["interpreted_fields"]
 
     startup = specs["startup-router"]
     startup_command = startup["preferred_cli_commands"][0]
@@ -135,6 +181,37 @@ def test_skill_specs_contract_models_startup_and_planning_behavior() -> None:
     assert planning_commands["planning-delegation-decision"]["mutates_state"] is True
     assert any("Hand-edit planning state" in action for action in planning["forbidden_actions"])
     assert planning["generated_target_requirements"]["status"] == "contract-only"
+
+    def _command_registry() -> dict[str, dict[str, object]]:
+        registry: dict[str, dict[str, object]] = {}
+
+        def visit(command: dict[str, object], prefix: str = "") -> None:
+            name = str(command["name"])
+            ref = f"{prefix}.{name}" if prefix else name
+            registry[ref] = command
+            for subcommand in command.get("subcommands", []):
+                if isinstance(subcommand, dict):
+                    visit(subcommand, ref)
+
+        for command in cli_manifest["commands"]:
+            visit(command)
+        return registry
+
+    commands_by_ref = _command_registry()
+    for command_ref, command in commands_by_ref.items():
+        assert "mutates_state" in command, command_ref
+    for mutating_command_ref in {
+        "planning.archive-plan",
+        "planning.close-item",
+        "planning.record-recovery",
+    }:
+        assert commands_by_ref[mutating_command_ref]["mutates_state"] is True
+    for spec in manifest["specs"]:
+        for affordance in spec["preferred_cli_commands"]:
+            command_ref = affordance["command_ref"]
+            assert command_ref in commands_by_ref
+            assert affordance["command"].replace(" ", ".") == command_ref
+            assert affordance["mutates_state"] is commands_by_ref[command_ref]["mutates_state"]
 
 
 def test_agent_feedback_schema_validates_normalized_feedback_artifact() -> None:

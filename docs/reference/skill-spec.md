@@ -20,3 +20,5 @@ Package-owned semantic contract for skills that steer agent behavior while the C
 | `schema_version` | const `"agentic-workspace/skill-spec/v1"` | yes |  | Version marker for SkillSpec manifests. |  |  |
 | `rule` | string | yes |  | Operating rule that explains how SkillSpec relates skills, CLI commands, fallback guidance, and generated targets. |  |  |
 | `specs` | array of ref `#/$defs/spec` | yes |  | Ordered skill contracts that can be consumed by hand-authored skills, references, or later generators. |  |  |
+| `transition_gates` | array of ref `#/$defs/transition_gate` | yes |  | Structured SkillSpec-compatible transition gates that can be consumed without scraping skill prose. |  |  |
+| `module_slots` | array of ref `#/$defs/module_slot` | yes |  | Structured SkillSpec-compatible module ownership slots used by next-safe-action packets and operating-loop skills. |  |  |

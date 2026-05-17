@@ -6132,6 +6132,7 @@ def _memory_consult_payload(
         return {
             "kind": "agentic-workspace/memory-consult/v1",
             "status": "unavailable",
+            "consultation_state": "not-checked",
             "reason": "memory module is not importable",
             "read_first": [],
             "max_notes": 0,
@@ -6143,6 +6144,7 @@ def _memory_consult_payload(
         return {
             "kind": "agentic-workspace/memory-consult/v1",
             "status": "unavailable",
+            "consultation_state": "not-checked",
             "reason": f"memory report failed: {exc}",
             "read_first": [],
             "max_notes": 0,
@@ -6181,6 +6183,7 @@ def _memory_consult_payload(
     payload = {
         "kind": "agentic-workspace/memory-consult/v1",
         "status": consult_status,
+        "consultation_state": "checked-with-matches" if read_first else "checked-none",
         "source": "memory.habitual_pull",
         "why": habitual_pull.get("summary", ""),
         "read_first": read_first,
@@ -6198,8 +6201,13 @@ def _memory_consult_payload(
     }
     if compact:
         if consult_status != "recommended":
-            return {"kind": payload["kind"], "status": consult_status, "do_not_bulk_read": True}
-        keys = ("kind", "status", "read_first", "max_notes", "do_not_bulk_read")
+            return {
+                "kind": payload["kind"],
+                "status": consult_status,
+                "consultation_state": payload["consultation_state"],
+                "do_not_bulk_read": True,
+            }
+        keys = ("kind", "status", "consultation_state", "read_first", "max_notes", "do_not_bulk_read")
         keys = (*keys, "why", "selection_rule")
         return {key: payload[key] for key in keys if key in payload}
     return payload
@@ -6938,6 +6946,7 @@ def _report_closeout_trust_payload(
     def durable_residue_action(*, trust: str) -> dict[str, Any]:
         action = {
             "action": "route-durable-residue",
+            "visible_states": ["none-found", "capture", "route-to-owner", "dismissed"],
             "summary": "Review lower-trust closeout signals and route missing residue to planning, Memory, docs, checks, or issue follow-up."
             if trust == "lower-trust"
             else "If closeout produced reusable learning, route it to the narrowest durable owner; otherwise record no durable residue.",
@@ -9081,19 +9090,44 @@ def _next_safe_action_packet(
     if decision in {"active-execplan-required", "planning-escalation-required", "implementation-owner-missing"}:
         forbidden_actions.append("continue implementation without active planning ownership")
     memory_status = str((memory_consult or {}).get("status", "unknown"))
+    command_effect = "none"
+    if preferred_cli:
+        if "proof" in preferred_cli or "test" in preferred_cli or "lint" in preferred_cli:
+            command_effect = "validating"
+        elif any(token in preferred_cli for token in ("promote-to-plan", "new-plan", "archive-plan", "close-item", "delegation-decision")):
+            command_effect = "mutating"
+        elif any(token in preferred_cli for token in ("report", "summary", "status", "doctor", "start", "preflight", "skills")):
+            command_effect = "reporting"
+        else:
+            command_effect = "read-only"
+    closure_blockers = sorted(set(forbidden_actions))
+    continuation_owner_required = action in {
+        "inspect-closeout-trust-before-completion-answer",
+        "create-prep-only-planning-state",
+        "promote-or-create-active-execplan",
+        "create-or-promote-active-execplan",
+    }
+    allowed_next_actions = [action]
+    if preferred_cli:
+        allowed_next_actions.append("run-preferred-cli")
     return {
         "kind": "agentic-workspace/next-safe-action/v1",
         "next_safe_action": action,
         "why": str(immediate.get("summary", "") or (workflow_sufficiency or {}).get("reason", "")),
         "required_skill": skill,
         "preferred_cli": preferred_cli,
+        "preferred_cli_effect": command_effect,
+        "cli_availability": "unknown" if preferred_cli else "not-needed",
         "module_slot": module_slot,
+        "allowed_next_actions": allowed_next_actions,
         "forbidden_actions": sorted(set(forbidden_actions)),
         "proof_required": bool(
             proof_hint
             and proof_hint not in {"select proof after changed paths are known", "no file proof unless the task later becomes an edit"}
         ),
         "completion_claim_allowed": not forbidden_actions and action not in {"choose-smallest-workflow-shape"},
+        "closure_blockers": closure_blockers,
+        "continuation_owner_required": continuation_owner_required,
         "memory_consultation_status": memory_status,
         "fallback_if_cli_unavailable": "Use generated or documented workflow fallback for the same module slot; preserve forbidden actions and do not mutate managed state by hand.",
         "source_fields": ["immediate_next_allowed_action", "workflow_sufficiency", "skill_routing", "memory_consult"],
@@ -10057,7 +10091,28 @@ def _start_payload(
     if cli_compatibility["configured"]:
         payload["cli_compatibility"] = cli_compatibility
     normalized_paths = _normalize_changed_paths(changed_paths)
-    if normalized_paths:
+    if normalized_paths and not active_planning_present:
+        proof_payload = _proof_selection_for_changed_paths(
+            changed_paths=normalized_paths, target_root=target_root, include_durable_intent=False
+        )
+        proof_command = _command_with_cli_invoke(
+            command=f"agentic-workspace proof --changed {' '.join(normalized_paths)} --format json",
+            cli_invoke=config.cli_invoke,
+        )
+        payload["immediate_next_allowed_action"] = {
+            "action": "select-changed-path-proof",
+            "summary": "Changed paths are known. Run changed-path proof selection before claiming implementation is ready.",
+            "command": proof_command,
+            "run": proof_command,
+            "risk": "read-only proof routing",
+            "required_inputs": ["target repo", "changed path(s)"],
+            "next_proof": proof_command,
+            "read_first": [proof_command],
+            "open_execplan_only_when": startup_template["open_execplan_only_when"],
+        }
+        payload["proof"] = _compact_start_proof_payload(proof_payload)
+        payload["path_boundaries"] = [_boundary_warning_for_path(path) for path in normalized_paths]
+    elif normalized_paths:
         proof_payload = _proof_selection_for_changed_paths(
             changed_paths=normalized_paths, target_root=target_root, include_durable_intent=False
         )
@@ -10567,7 +10622,27 @@ def _start_tiny_payload_fast(
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
         }
     normalized_paths = _normalize_changed_paths(changed_paths)
-    if normalized_paths:
+    if normalized_paths and not active_planning_present:
+        proof_command = _command_with_cli_invoke(
+            command=f"agentic-workspace proof --changed {' '.join(normalized_paths)} --format json",
+            cli_invoke=config.cli_invoke,
+        )
+        payload["immediate_next_allowed_action"] = {
+            "action": "select-changed-path-proof",
+            "summary": "Changed paths are known. Run changed-path proof selection before claiming implementation is ready.",
+            "command": proof_command,
+            "run": proof_command,
+            "risk": "read-only proof routing",
+            "required_inputs": ["target repo", "changed path(s)"],
+            "next_proof": proof_command,
+            "read_first": [proof_command],
+            "open_execplan_only_when": startup_template["open_execplan_only_when"],
+        }
+        payload["proof"] = _proof_selection_for_changed_paths(
+            changed_paths=normalized_paths, target_root=target_root, include_durable_intent=False
+        )
+        payload["path_boundaries"] = [_boundary_warning_for_path(path) for path in normalized_paths]
+    elif normalized_paths:
         payload["proof"] = _proof_selection_for_changed_paths(
             changed_paths=normalized_paths, target_root=target_root, include_durable_intent=False
         )
@@ -10714,6 +10789,7 @@ def _tiny_memory_consult_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
     return {
         "kind": "agentic-workspace/memory-consult/v1",
         "status": "recommended",
+        "consultation_state": "checked-with-matches",
         "read_first": [".agentic-workspace/memory/repo/index.md"],
         "do_not_bulk_read": True,
         "why": "Start with the Memory index, then load only route-matched durable notes when the task or changed paths justify them.",

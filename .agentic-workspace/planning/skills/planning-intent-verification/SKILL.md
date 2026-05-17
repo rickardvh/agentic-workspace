@@ -7,6 +7,12 @@ description: Verify original, interpreted, parent, and negative intent before de
 
 Use this skill when work may satisfy a narrower proxy than the requested outcome, when a task references parent/lane/epic intent, when negative invariants or non-goals matter, or before claiming completion for planned work.
 
+## Primary Ownership
+
+This skill owns semantic intent satisfaction. It decides whether original, interpreted, parent/larger intent, non-goals, and negative invariants are satisfied, partially satisfied, deferred with owner, rejected, or still blocked.
+
+Route closeout mechanics to `planning-closeout-trust`, broad-work sequencing to `planning-high-assurance-lifecycle`, decomposition structure to `planning-decompose`, and compact state projection to `planning-reporting`.
+
 ## Route
 
 1. Inspect the cheapest structured surface first: `agentic-workspace start --target . --task "<task>" --format json`, `agentic-workspace summary --target . --format json`, or `agentic-workspace report --target ./repo --section closeout_trust --format json`.

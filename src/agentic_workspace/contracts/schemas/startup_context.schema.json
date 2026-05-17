@@ -265,9 +265,8 @@
       "additionalProperties": true
     },
     "next_safe_action": {
-      "type": "object",
-      "description": "Compact next-safe-action packet derived from startup routing, including proof and completion-claim guardrails.",
-      "additionalProperties": true
+      "$ref": "#/$defs/next_safe_action",
+      "description": "Compact next-safe-action packet derived from startup routing, including proof and completion-claim guardrails."
     },
     "planning_safety_gate": {
       "type": "object",
@@ -779,6 +778,140 @@
       },
       "additionalProperties": false,
       "description": "Skill routing details used by this contract."
+    },
+    "next_safe_action": {
+      "type": "object",
+      "required": [
+        "kind",
+        "next_safe_action",
+        "why",
+        "required_skill",
+        "preferred_cli",
+        "preferred_cli_effect",
+        "cli_availability",
+        "module_slot",
+        "allowed_next_actions",
+        "forbidden_actions",
+        "proof_required",
+        "completion_claim_allowed",
+        "closure_blockers",
+        "continuation_owner_required",
+        "memory_consultation_status",
+        "fallback_if_cli_unavailable",
+        "source_fields"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/next-safe-action/v1",
+          "description": "Discriminator for the next-safe-action packet."
+        },
+        "next_safe_action": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Stable action id that names the safest next step."
+        },
+        "why": {
+          "type": "string",
+          "description": "Human-readable reason for the selected next action."
+        },
+        "required_skill": {
+          "type": "string",
+          "description": "Recommended skill id, or empty string when no skill is required."
+        },
+        "preferred_cli": {
+          "type": "string",
+          "description": "Preferred CLI command for the next action, or empty string when the packet is only a decision."
+        },
+        "preferred_cli_effect": {
+          "enum": [
+            "none",
+            "read-only",
+            "mutating",
+            "validating",
+            "reporting"
+          ],
+          "description": "Effect class of the preferred CLI command."
+        },
+        "cli_availability": {
+          "enum": [
+            "available",
+            "not-needed",
+            "unknown",
+            "missing-warning",
+            "missing-blocking"
+          ],
+          "description": "How strongly the packet depends on an available CLI."
+        },
+        "module_slot": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Workspace module or sub-slot that owns the next action."
+        },
+        "allowed_next_actions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Actions allowed before the next wider context read or implementation step."
+        },
+        "forbidden_actions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Actions forbidden by this packet until a newer compact packet supersedes it."
+        },
+        "proof_required": {
+          "type": "boolean",
+          "description": "Whether proof is required before claiming the next action is complete."
+        },
+        "completion_claim_allowed": {
+          "type": "boolean",
+          "description": "Whether the packet permits claiming completion at the current claim level."
+        },
+        "closure_blockers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Reasons closure or completion claims are blocked."
+        },
+        "continuation_owner_required": {
+          "type": "boolean",
+          "description": "Whether unfinished intent needs an explicit continuation owner before closeout."
+        },
+        "memory_consultation_status": {
+          "type": "string",
+          "description": "Memory consultation or durable-residue status relevant to the next action."
+        },
+        "fallback_if_cli_unavailable": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Conservative fallback when the preferred CLI cannot be used."
+        },
+        "source_fields": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": [
+              "immediate_next_allowed_action",
+              "workflow_sufficiency",
+              "skill_routing",
+              "memory_consult",
+              "planning_safety_gate",
+              "proof",
+              "closeout_trust_inspection",
+              "continuation_state"
+            ]
+          },
+          "description": "Startup fields used to derive the packet."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Typed decision packet that tells agents what is safe next, which module or skill owns it, which CLI/fallback applies, and what cannot be claimed yet."
     }
   },
   "x-agentic-workspace-doc-role": "contract-reference"

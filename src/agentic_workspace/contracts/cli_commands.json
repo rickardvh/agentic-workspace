@@ -28,7 +28,8 @@
       ],
       "role": "module_delegation_front_door",
       "audience": "ordinary_host_repo",
-      "classification_note": "front door for declared module availability and install state"
+      "classification_note": "front door for declared module availability and install state",
+      "mutates_state": false
     },
     {
       "name": "summary",
@@ -78,7 +79,8 @@
       ],
       "role": "core_context_router",
       "audience": "ordinary_host_repo",
-      "classification_note": "compact active planning and handoff state"
+      "classification_note": "compact active planning and handoff state",
+      "mutates_state": false
     },
     {
       "name": "planning",
@@ -187,7 +189,8 @@
           ],
           "role": "core_context_router",
           "audience": "ordinary_host_repo",
-          "classification_note": "Planning mutation front door"
+          "classification_note": "Planning mutation front door",
+          "mutates_state": true
         },
         {
           "name": "promote-to-plan",
@@ -229,7 +232,8 @@
           ],
           "role": "core_context_router",
           "audience": "ordinary_host_repo",
-          "classification_note": "Planning mutation front door"
+          "classification_note": "Planning mutation front door",
+          "mutates_state": true
         },
         {
           "name": "archive-plan",
@@ -367,7 +371,8 @@
           ],
           "role": "core_context_router",
           "audience": "ordinary_host_repo",
-          "classification_note": "Planning closeout front door"
+          "classification_note": "Planning closeout front door",
+          "mutates_state": true
         },
         {
           "name": "close-item",
@@ -416,7 +421,8 @@
           ],
           "role": "core_context_router",
           "audience": "ordinary_host_repo",
-          "classification_note": "Planning generic closeout front door"
+          "classification_note": "Planning generic closeout front door",
+          "mutates_state": true
         },
         {
           "name": "create-review",
@@ -482,7 +488,8 @@
           ],
           "role": "core_context_router",
           "audience": "ordinary_host_repo",
-          "classification_note": "Planning review mutation front door"
+          "classification_note": "Planning review mutation front door",
+          "mutates_state": true
         },
         {
           "name": "delegation-decision",
@@ -580,7 +587,8 @@
           ],
           "role": "core_context_router",
           "audience": "ordinary_host_repo",
-          "classification_note": "Planning delegation decision front door"
+          "classification_note": "Planning delegation decision front door",
+          "mutates_state": true
         },
         {
           "name": "record-recovery",
@@ -625,7 +633,8 @@
           ],
           "role": "core_context_router",
           "audience": "ordinary_host_repo",
-          "classification_note": "Planning recovery provenance front door"
+          "classification_note": "Planning recovery provenance front door",
+          "mutates_state": true
         },
         {
           "name": "handoff",
@@ -644,7 +653,8 @@
           ],
           "role": "core_context_router",
           "audience": "ordinary_host_repo",
-          "classification_note": "Planning handoff front door"
+          "classification_note": "Planning handoff front door",
+          "mutates_state": false
         },
         {
           "name": "report",
@@ -671,12 +681,14 @@
           ],
           "role": "core_context_router",
           "audience": "ordinary_host_repo",
-          "classification_note": "Planning report front door"
+          "classification_note": "Planning report front door",
+          "mutates_state": false
         }
       ],
       "role": "core_context_router",
       "audience": "ordinary_host_repo",
-      "classification_note": "planning lifecycle help and schema-owned mutation guidance"
+      "classification_note": "planning lifecycle help and schema-owned mutation guidance",
+      "mutates_state": false
     },
     {
       "name": "memory",
@@ -731,7 +743,8 @@
           ],
           "role": "core_context_router",
           "audience": "ordinary_host_repo",
-          "classification_note": "Memory routing front door"
+          "classification_note": "Memory routing front door",
+          "mutates_state": false
         },
         {
           "name": "sync-memory",
@@ -768,7 +781,8 @@
           ],
           "role": "core_context_router",
           "audience": "ordinary_host_repo",
-          "classification_note": "Memory update front door"
+          "classification_note": "Memory update front door",
+          "mutates_state": true
         },
         {
           "name": "promotion-report",
@@ -816,7 +830,8 @@
           ],
           "role": "core_context_router",
           "audience": "ordinary_host_repo",
-          "classification_note": "Memory promotion front door"
+          "classification_note": "Memory promotion front door",
+          "mutates_state": false
         },
         {
           "name": "capture-note",
@@ -885,7 +900,8 @@
           ],
           "role": "core_context_router",
           "audience": "ordinary_host_repo",
-          "classification_note": "Memory capture front door"
+          "classification_note": "Memory capture front door",
+          "mutates_state": true
         },
         {
           "name": "report",
@@ -912,12 +928,14 @@
           ],
           "role": "core_context_router",
           "audience": "ordinary_host_repo",
-          "classification_note": "Memory report front door"
+          "classification_note": "Memory report front door",
+          "mutates_state": false
         }
       ],
       "role": "core_context_router",
       "audience": "ordinary_host_repo",
-      "classification_note": "memory lifecycle help and route guidance"
+      "classification_note": "memory lifecycle help and route guidance",
+      "mutates_state": false
     },
     {
       "name": "start",
@@ -967,7 +985,8 @@
       ],
       "role": "core_context_router",
       "audience": "ordinary_host_repo",
-      "classification_note": "ordinary first-contact startup context"
+      "classification_note": "ordinary first-contact startup context",
+      "mutates_state": false
     },
     {
       "name": "implement",
@@ -1024,7 +1043,8 @@
       ],
       "role": "core_context_router",
       "audience": "ordinary_host_repo",
-      "classification_note": "bounded implementer context over changed paths"
+      "classification_note": "bounded implementer context over changed paths",
+      "mutates_state": false
     },
     {
       "name": "defaults",
@@ -1058,7 +1078,8 @@
       ],
       "role": "core_context_router",
       "audience": "ordinary_host_repo",
-      "classification_note": "queryable default policy and routing contracts"
+      "classification_note": "queryable default policy and routing contracts",
+      "mutates_state": false
     },
     {
       "name": "proof",
@@ -1116,7 +1137,8 @@
       ],
       "role": "core_context_router",
       "audience": "ordinary_host_repo",
-      "classification_note": "changed-path proof routing and authority checks"
+      "classification_note": "changed-path proof routing and authority checks",
+      "mutates_state": false
     },
     {
       "name": "setup",
@@ -1126,7 +1148,8 @@
       ],
       "role": "reusable_host_repo_diagnostics",
       "audience": "advanced_host_repo",
-      "classification_note": "post-bootstrap setup findings and guidance"
+      "classification_note": "post-bootstrap setup findings and guidance",
+      "mutates_state": false
     },
     {
       "name": "ownership",
@@ -1159,7 +1182,8 @@
       ],
       "role": "core_context_router",
       "audience": "ordinary_host_repo",
-      "classification_note": "ownership and authority routing"
+      "classification_note": "ownership and authority routing",
+      "mutates_state": false
     },
     {
       "name": "config",
@@ -1193,7 +1217,8 @@
       ],
       "role": "core_context_router",
       "audience": "ordinary_host_repo",
-      "classification_note": "resolved repo and local configuration posture"
+      "classification_note": "resolved repo and local configuration posture",
+      "mutates_state": false
     },
     {
       "name": "system-intent",
@@ -1220,7 +1245,8 @@
       ],
       "role": "core_context_router",
       "audience": "ordinary_host_repo",
-      "classification_note": "compiled system-intent declaration and sync route"
+      "classification_note": "compiled system-intent declaration and sync route",
+      "mutates_state": false
     },
     {
       "name": "note-delegation-outcome",
@@ -1290,7 +1316,8 @@
       ],
       "role": "reusable_host_repo_diagnostics",
       "audience": "local_only",
-      "classification_note": "local-only delegation calibration record"
+      "classification_note": "local-only delegation calibration record",
+      "mutates_state": true
     },
     {
       "name": "skills",
@@ -1323,7 +1350,8 @@
       ],
       "role": "module_delegation_front_door",
       "audience": "ordinary_host_repo",
-      "classification_note": "registered package and repo skill routing"
+      "classification_note": "registered package and repo skill routing",
+      "mutates_state": false
     },
     {
       "name": "report",
@@ -1358,7 +1386,8 @@
       ],
       "role": "core_context_router",
       "audience": "ordinary_host_repo",
-      "classification_note": "combined compact workspace router and selected diagnostics"
+      "classification_note": "combined compact workspace router and selected diagnostics",
+      "mutates_state": false
     },
     {
       "name": "reconcile",
@@ -1393,7 +1422,8 @@
       ],
       "role": "reusable_host_repo_diagnostics",
       "audience": "advanced_host_repo",
-      "classification_note": "provider-agnostic external-work reconciliation"
+      "classification_note": "provider-agnostic external-work reconciliation",
+      "mutates_state": true
     },
     {
       "name": "external-intent",
@@ -1464,12 +1494,14 @@
           ],
           "role": "reusable_host_repo_diagnostics",
           "audience": "advanced_host_repo",
-          "classification_note": "optional GitHub adapter for provider-agnostic external evidence"
+          "classification_note": "optional GitHub adapter for provider-agnostic external evidence",
+          "mutates_state": true
         }
       ],
       "role": "reusable_host_repo_diagnostics",
       "audience": "advanced_host_repo",
-      "classification_note": "optional external evidence adapter front door"
+      "classification_note": "optional external evidence adapter front door",
+      "mutates_state": false
     },
     {
       "name": "preflight",
@@ -1511,7 +1543,8 @@
       ],
       "role": "core_context_router",
       "audience": "ordinary_host_repo",
-      "classification_note": "takeover-safe compact startup plus active state"
+      "classification_note": "takeover-safe compact startup plus active state",
+      "mutates_state": false
     },
     {
       "name": "install",
@@ -1521,7 +1554,8 @@
       ],
       "role": "core_lifecycle",
       "audience": "ordinary_host_repo",
-      "classification_note": "module install lifecycle mutation"
+      "classification_note": "module install lifecycle mutation",
+      "mutates_state": true
     },
     {
       "name": "init",
@@ -1531,7 +1565,8 @@
       ],
       "role": "core_lifecycle",
       "audience": "ordinary_host_repo",
-      "classification_note": "conservative bootstrap/adopt lifecycle mutation"
+      "classification_note": "conservative bootstrap/adopt lifecycle mutation",
+      "mutates_state": true
     },
     {
       "name": "prompt",
@@ -1563,7 +1598,8 @@
           ],
           "role": "core_lifecycle",
           "audience": "ordinary_host_repo",
-          "classification_note": "bootstrap handoff prompt renderer"
+          "classification_note": "bootstrap handoff prompt renderer",
+          "mutates_state": false
         },
         {
           "name": "upgrade",
@@ -1573,7 +1609,8 @@
           ],
           "role": "core_lifecycle",
           "audience": "ordinary_host_repo",
-          "classification_note": "upgrade handoff prompt renderer"
+          "classification_note": "upgrade handoff prompt renderer",
+          "mutates_state": false
         },
         {
           "name": "uninstall",
@@ -1583,12 +1620,14 @@
           ],
           "role": "core_lifecycle",
           "audience": "ordinary_host_repo",
-          "classification_note": "uninstall handoff prompt renderer"
+          "classification_note": "uninstall handoff prompt renderer",
+          "mutates_state": false
         }
       ],
       "role": "core_lifecycle",
       "audience": "ordinary_host_repo",
-      "classification_note": "lifecycle handoff prompt renderer"
+      "classification_note": "lifecycle handoff prompt renderer",
+      "mutates_state": false
     },
     {
       "name": "status",
@@ -1608,7 +1647,8 @@
       ],
       "role": "core_lifecycle",
       "audience": "ordinary_host_repo",
-      "classification_note": "read-only lifecycle health status"
+      "classification_note": "read-only lifecycle health status",
+      "mutates_state": false
     },
     {
       "name": "doctor",
@@ -1635,7 +1675,8 @@
       ],
       "role": "core_lifecycle",
       "audience": "ordinary_host_repo",
-      "classification_note": "read-only lifecycle drift diagnostics"
+      "classification_note": "read-only lifecycle drift diagnostics",
+      "mutates_state": false
     },
     {
       "name": "upgrade",
@@ -1656,7 +1697,8 @@
       ],
       "role": "core_lifecycle",
       "audience": "ordinary_host_repo",
-      "classification_note": "module upgrade lifecycle mutation"
+      "classification_note": "module upgrade lifecycle mutation",
+      "mutates_state": true
     },
     {
       "name": "uninstall",
@@ -1685,7 +1727,8 @@
       ],
       "role": "core_lifecycle",
       "audience": "ordinary_host_repo",
-      "classification_note": "conservative lifecycle removal mutation"
+      "classification_note": "conservative lifecycle removal mutation",
+      "mutates_state": true
     }
   ]
 }

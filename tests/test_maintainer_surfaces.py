@@ -110,6 +110,20 @@ def _write_generated_agent_surfaces(tmp_path: Path) -> None:
     _write(tmp_path / "tools" / "AGENT_ROUTING.md", render_module.render_routing(manifest))
 
 
+def test_workspace_workflow_is_projection_not_primary_authority() -> None:
+    for path in (
+        WORKSPACE_ROOT / ".agentic-workspace" / "WORKFLOW.md",
+        WORKSPACE_ROOT / "src" / "agentic_workspace" / "_payload" / ".agentic-workspace" / "WORKFLOW.md",
+    ):
+        text = path.read_text(encoding="utf-8")
+        assert "Fallback/projection workflow" in text
+        assert "do not treat it as an independent workflow authority" in text
+        assert "| Current next safe action | `next_safe_action`" in text
+        assert "| Workflow transition data | `transition_gates`" in text
+        assert "| Command surface facts | `src/agentic_workspace/contracts/cli_commands.json`" in text
+        assert "Mandatory CLI-first startup router" not in text
+
+
 def _write_planning_surfaces(tmp_path: Path) -> None:
     _write(
         tmp_path / "AGENTS.md",
