@@ -214,6 +214,31 @@ def test_skill_specs_contract_models_startup_and_planning_behavior() -> None:
             assert affordance["mutates_state"] is commands_by_ref[command_ref]["mutates_state"]
 
 
+def test_operational_affordance_roles_classify_first_contact_and_diagnostics() -> None:
+    manifest = contract_tooling.operational_affordance_roles_manifest()
+
+    command_roles = {entry["command"]: entry for entry in manifest["command_roles"]}
+    assert command_roles["start"]["role"] == "ordinary_first_contact"
+    assert command_roles["start"]["first_line"] is True
+    assert command_roles["implement --changed"]["role"] == "changed_path_first_contact"
+    assert command_roles["preflight"]["role"] == "recovery_takeover"
+    assert command_roles["preflight"]["first_line"] is False
+    assert command_roles["summary"]["role"] == "active_planning_state"
+    assert command_roles["WORKFLOW.md"]["role"] == "no_cli_fallback_projection"
+
+    warning_roles = {entry["warning_class"]: entry for entry in manifest["warning_roles"]}
+    assert warning_roles["planning_manual_mutation_unstamped"]["role"] == "external_manual_drift"
+    assert warning_roles["archive_missing_execution_summary"]["role"] == "source_boundary_fix_candidate"
+    assert "command-time closeout writer" in warning_roles["archive_missing_execution_summary"]["preferred_remedy"]
+
+    report_roles = {entry["section"]: entry for entry in manifest["report_section_roles"]}
+    assert report_roles["next_action"]["default_visibility"] == "first_line"
+    assert report_roles["report_profile.feature_tier"]["role"] == "inventory"
+    assert report_roles["report_profile.feature_tier"]["default_visibility"] == "selector_or_verbose"
+    assert report_roles["planning archives"]["role"] == "historical"
+    assert manifest["closeout_writer_direction"]["source_issue"] == "#1024"
+
+
 def test_agent_feedback_schema_validates_normalized_feedback_artifact() -> None:
     schema = contract_tooling.contract_schema("agent_feedback.schema.json")
     metadata = schema["x-agentic-workspace"]

@@ -1,0 +1,135 @@
+{
+  "schema_version": "agentic-workspace/operational-affordance-roles/v1",
+  "principle": "Ordinary outputs should expose one primary next action and keep diagnostics, history, and inventories behind selectors or verbose detail unless they change that action.",
+  "command_roles": [
+    {
+      "command": "start",
+      "role": "ordinary_first_contact",
+      "first_line": true,
+      "primary_next_action": "choose-smallest-workflow-shape"
+    },
+    {
+      "command": "implement --changed",
+      "role": "changed_path_first_contact",
+      "first_line": true,
+      "primary_next_action": "inspect changed paths and selected proof"
+    },
+    {
+      "command": "preflight",
+      "role": "recovery_takeover",
+      "first_line": false,
+      "primary_next_action": "recover compact takeover context"
+    },
+    {
+      "command": "summary",
+      "role": "active_planning_state",
+      "first_line": false,
+      "primary_next_action": "inspect active planning only when active work matters"
+    },
+    {
+      "command": "report",
+      "role": "diagnostic_router",
+      "first_line": false,
+      "primary_next_action": "route to current warning, action, or section"
+    },
+    {
+      "command": "defaults",
+      "role": "reference_detail",
+      "first_line": false,
+      "primary_next_action": "inspect static policy only by section"
+    },
+    {
+      "command": "config",
+      "role": "reference_detail",
+      "first_line": false,
+      "primary_next_action": "inspect resolved config only when posture matters"
+    },
+    {
+      "command": "skills",
+      "role": "task_behavior_routing",
+      "first_line": false,
+      "primary_next_action": "select task-specific behavioral guidance"
+    },
+    {
+      "command": "WORKFLOW.md",
+      "role": "no_cli_fallback_projection",
+      "first_line": false,
+      "primary_next_action": "preserve CLI next_safe_action when CLI is unavailable"
+    }
+  ],
+  "warning_roles": [
+    {
+      "warning_class": "planning_manual_mutation_unstamped",
+      "role": "external_manual_drift",
+      "preferred_remedy": "keep diagnostic; route repeated patterns to a command-owned writer"
+    },
+    {
+      "warning_class": "archive_missing_execution_summary",
+      "role": "source_boundary_fix_candidate",
+      "preferred_remedy": "move toward command-time closeout writer validation"
+    },
+    {
+      "warning_class": "payload_drift",
+      "role": "external_manual_drift",
+      "preferred_remedy": "keep diagnostic for source/payload mismatch"
+    },
+    {
+      "warning_class": "stale_completed_active_item",
+      "role": "historical_residue",
+      "preferred_remedy": "demote from first-line context and clean through lifecycle commands"
+    }
+  ],
+  "report_section_roles": [
+    {
+      "section": "next_action",
+      "role": "primary_action",
+      "default_visibility": "first_line"
+    },
+    {
+      "section": "warning_summary",
+      "role": "blocker",
+      "default_visibility": "first_line"
+    },
+    {
+      "section": "current_work",
+      "role": "owner",
+      "default_visibility": "first_line"
+    },
+    {
+      "section": "report_profile.ordinary_agent_path",
+      "role": "detail",
+      "default_visibility": "first_line"
+    },
+    {
+      "section": "report_profile.feature_tier",
+      "role": "inventory",
+      "default_visibility": "selector_or_verbose"
+    },
+    {
+      "section": "report_profile.config_enforcement",
+      "role": "diagnostic",
+      "default_visibility": "selector_or_verbose"
+    },
+    {
+      "section": "module_reports",
+      "role": "diagnostic",
+      "default_visibility": "selector_or_verbose"
+    },
+    {
+      "section": "planning archives",
+      "role": "historical",
+      "default_visibility": "selector_or_verbose"
+    },
+    {
+      "section": "planning reviews",
+      "role": "historical",
+      "default_visibility": "selector_or_verbose"
+    }
+  ],
+  "closeout_writer_direction": {
+    "ordinary_path": "command_owned_writer",
+    "candidate_command": "planning closeout",
+    "interim_owner": "planning archive-plan --prepare-closeout",
+    "source_issue": "#1024"
+  }
+}
