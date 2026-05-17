@@ -10404,6 +10404,9 @@ def _startup_skills_projection(
     skills_by_id = {
         str(skill.get("id", "")): skill for skill in skills_payload.get("skills", []) if isinstance(skill, dict) and skill.get("id")
     }
+    recommendations_by_id = {
+        str(item.get("id", "")): item for item in skills_payload.get("recommendations", []) if isinstance(item, dict) and item.get("id")
+    }
 
     required_id = str(next_safe_action.get("required_skill", "") or "")
     required: list[dict[str, Any]] = []
@@ -10426,13 +10429,16 @@ def _startup_skills_projection(
             skill_id = str(item.get("id", "") or "")
             if not skill_id or skill_id == required_id:
                 continue
+            skill = skills_by_id.get(skill_id, {})
+            recommendation = recommendations_by_id.get(skill_id, {})
+            reasons = _list_payload(item.get("reasons") or recommendation.get("reasons"))
+            reason = str(reasons[0]) if reasons else "task-match"
             recommended.append(
                 {
-                    key: item.get(key)
-                    for key in ("id", "path", "summary", "score")
-                    if item.get(key) not in ("", None)
+                    "id": skill_id,
+                    "path": str(item.get("path") or recommendation.get("path") or skill.get("path") or ""),
+                    "reasons": [reason[:40]],
                 }
-                | ({"reasons": item.get("reasons", [])[:2]} if item.get("reasons") else {})
             )
 
     catalog_command = _proof_command_for_target(
@@ -10446,7 +10452,7 @@ def _startup_skills_projection(
     return {
         "kind": "agentic-workspace/startup-skills-projection/v1",
         "status": "recommended" if (required or recommended) else "available",
-        "rule": "This is a compact startup projection over the skill registry; use the catalog command for the full skill list.",
+        "rule": "Compact skill projection; use catalog.command for the full list.",
         "required": required,
         "recommended": recommended,
         "catalog": {

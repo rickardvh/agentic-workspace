@@ -477,9 +477,7 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
     assert payload["skill_routing"]["query"].startswith('uv run agentic-workspace skills --target "')
     assert payload["skill_routing"]["query"].endswith('" --task "<task>" --format json')
     assert "planning-autopilot" not in {route["skill"] for route in payload["skill_routing"]["preferred_routes"]}
-    assert payload["skill_routing"]["available_advanced_route_command"].startswith(
-        'uv run agentic-workspace modules --target "'
-    )
+    assert payload["skill_routing"]["available_advanced_route_command"].startswith('uv run agentic-workspace modules --target "')
     assert payload["skill_routing"]["fallback_when_skills_unavailable_count"] == 3
     assert "compact CLI routers" in payload["skill_routing"]["fallback_detail"]
     assert payload["workflow_obligations"]["configured_count"] == 0
@@ -633,6 +631,9 @@ def test_start_default_returns_selector_first_router(tmp_path: Path, capsys) -> 
     assert "legacy=select/context" in profile
     assert _start_active_state(payload)["todo_active_count"] >= 0
     assert payload["skills"]["required"] or payload["skills"]["recommended"] or payload["skills"]["catalog"]["available"]
+    for recommendation in payload["skills"]["recommended"]:
+        assert recommendation["path"]
+        assert recommendation["reasons"]
     assert payload["skills"]["catalog"]["command"].startswith("agentic-workspace skills --target")
     assert "--target ./repo" not in payload["skills"]["catalog"]["command"]
     assert _start_task_context(payload)["implement_changed_command"] == (
