@@ -219,7 +219,7 @@ def test_planning_summary_warns_for_freehand_planning_artifacts(tmp_path: Path) 
 
     warnings = summary["planning_surface_health"]["warnings"]
     warning = next(warning for warning in warnings if warning["warning_class"] == "planning_artifact_freehand")
-    assert "new-plan" in warning["suggested_fix"]
+    assert "intake-artifact" in warning["suggested_fix"]
     assert summary["planning_surface_health"]["status"] == "not-clean"
 
 
@@ -234,7 +234,7 @@ def test_planning_summary_warns_for_noncanonical_records_directory(tmp_path: Pat
 
     warnings = summary["planning_surface_health"]["warnings"]
     warning = next(warning for warning in warnings if warning["warning_class"] == "planning_artifact_freehand")
-    assert ".agentic-workspace/planning/decompositions" in warning["message"]
+    assert "intake-artifact" in warning["message"]
     assert summary["planning_surface_health"]["status"] == "not-clean"
 
 

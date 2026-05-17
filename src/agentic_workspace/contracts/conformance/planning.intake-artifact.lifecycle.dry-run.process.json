@@ -1,0 +1,70 @@
+{
+  "schema_version": "agentic-workspace/conformance/v1",
+  "id": "planning.intake-artifact.lifecycle.dry-run.process",
+  "operation_id": "planning.intake-artifact.lifecycle",
+  "adapter": {
+    "kind": "process",
+    "command_template": [
+      "{agentic_planning_cli}",
+      "intake-artifact",
+      "--artifact",
+      "PLAN.md",
+      "--route",
+      "execplan",
+      "--id",
+      "plan-intake",
+      "--title",
+      "Plan Intake",
+      "--target",
+      ".",
+      "--dry-run",
+      "--format",
+      "json"
+    ],
+    "cwd": "fixture_root"
+  },
+  "fixtures": [
+    {
+      "id": "intake-artifact-dry-run",
+      "files": {
+        ".git/.keep": "",
+        "PLAN.md": "# Plan Intake\n\n- Task: move this freehand plan into Planning.\n"
+      }
+    }
+  ],
+  "expectations": {
+    "exit": {
+      "code": 0
+    },
+    "stdout": {
+      "format": "json",
+      "field_assertions": [
+        {
+          "path": [
+            "dry_run"
+          ],
+          "equals": true
+        }
+      ]
+    },
+    "stderr": {
+      "allow_non_empty": false
+    },
+    "filesystem": {
+      "allowed_write_paths": [],
+      "required_paths": [
+        ".git/.keep",
+        "PLAN.md"
+      ],
+      "forbidden_paths": [
+        ".agentic-workspace"
+      ]
+    },
+    "idempotency": {
+      "run_twice": true
+    },
+    "safety": {
+      "no_writes_outside_repo_root": true
+    }
+  }
+}

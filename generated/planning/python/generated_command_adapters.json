@@ -320,6 +320,38 @@
       },
       "status": "generated"
     },
+    "intake-artifact": {
+      "command": {
+        "command_manifest": "package:planning:cli",
+        "name": "intake-artifact",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-planning"
+      },
+      "conformance_refs": [
+        "planning.intake-artifact.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "planning.intake-artifact.cli",
+      "operation_id": "planning.intake-artifact.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.intake-artifact.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
     "list-files": {
       "command": {
         "command_manifest": "package:planning:cli",

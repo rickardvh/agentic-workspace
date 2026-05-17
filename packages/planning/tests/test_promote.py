@@ -11,6 +11,93 @@ _sys.path.insert(0, str(_Path(__file__).resolve().parent))
 from planning_test_support import *
 
 
+def test_intake_artifact_routes_freehand_markdown_to_queued_execplan(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(tmp_path / "DOC_CLEANUP_PLAN.md", "# Documentation Cleanup Plan\n\n- Continue later.\n")
+
+    assert (
+        planning_cli.main(
+            [
+                "intake-artifact",
+                "--artifact",
+                "DOC_CLEANUP_PLAN.md",
+                "--target",
+                str(tmp_path),
+                "--id",
+                "doc-cleanup",
+                "--title",
+                "Documentation Cleanup",
+                "--queue",
+                "--remove-source",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    record_path = tmp_path / ".agentic-workspace/planning/execplans/doc-cleanup.plan.json"
+    state = installer_mod._read_state_from_toml(tmp_path)
+    warnings = planning_summary(target=tmp_path, profile="compact")["planning_surface_health"]["warnings"]
+
+    assert payload["warnings"] == []
+    assert any(action["kind"] == "created" and action["path"].endswith("doc-cleanup.plan.json") for action in payload["actions"])
+    assert any(action["kind"] == "removed" and action["path"].endswith("DOC_CLEANUP_PLAN.md") for action in payload["actions"])
+    assert record_path.exists()
+    assert not (tmp_path / "DOC_CLEANUP_PLAN.md").exists()
+    assert state["todo"]["queued_items"][0]["id"] == "doc-cleanup"
+    assert "planning_artifact_freehand" not in {warning["warning_class"] for warning in warnings}
+
+
+def test_intake_artifact_routes_misplaced_decomposition_to_canonical_path(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    source_path = tmp_path / ".agentic-workspace/planning/planning-decomposition-shop.json"
+    _write(
+        source_path,
+        json.dumps(
+            {
+                "kind": "planning-decomposition/v1",
+                "title": "Shop",
+                "status": "shaping",
+                "larger_intended_outcome": "Build shop.",
+                "non_goals": [],
+                "candidate_lanes": [],
+                "proof_expectations": [],
+                "promotion_rule": "Promote ready lanes.",
+            },
+            indent=2,
+        ),
+    )
+
+    assert (
+        planning_cli.main(
+            [
+                "intake-artifact",
+                "--artifact",
+                ".agentic-workspace/planning/planning-decomposition-shop.json",
+                "--target",
+                str(tmp_path),
+                "--route",
+                "decomposition",
+                "--id",
+                "shop",
+                "--remove-source",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    canonical_path = tmp_path / ".agentic-workspace/planning/decompositions/shop.decomposition.json"
+    warnings = planning_summary(target=tmp_path, profile="compact")["planning_surface_health"]["warnings"]
+
+    assert payload["warnings"] == []
+    assert canonical_path.exists()
+    assert not source_path.exists()
+    assert "planning_decomposition_artifact_misplaced" not in {warning["warning_class"] for warning in warnings}
+
+
 def test_promote_todo_item_to_execplan_scaffolds_plan_and_updates_todo(tmp_path: Path) -> None:
     _write(
         tmp_path / ".agentic-workspace/planning/state.toml",

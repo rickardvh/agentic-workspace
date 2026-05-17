@@ -12,6 +12,7 @@ from repo_planning_bootstrap.installer import (
     format_actions,
     format_result_json,
     format_summary_json,
+    intake_planning_artifact,
     list_bundled_skill_files,
     list_default_payload_files,
     list_optional_payload_files,
@@ -67,6 +68,21 @@ def apply_planning_new_plan_operation(values: dict, _arguments: dict, _context):
         switch_active=bool(values.get("switch_active")),
         prep_only=bool(values.get("prep_only")),
         overwrite=bool(values.get("overwrite")),
+        dry_run=bool(values.get("dry_run")),
+    )
+
+
+def apply_planning_intake_artifact_operation(values: dict, _arguments: dict, _context):
+    return intake_planning_artifact(
+        artifact=str(values.get("artifact") or ""),
+        target=values.get("target"),
+        route=str(values.get("route") or "auto"),
+        artifact_id=str(values.get("id") or ""),
+        title=str(values.get("title") or ""),
+        activate=bool(values.get("activate")),
+        queue=bool(values.get("queue")),
+        switch_active=bool(values.get("switch_active")),
+        remove_source=bool(values.get("remove_source")),
         dry_run=bool(values.get("dry_run")),
     )
 

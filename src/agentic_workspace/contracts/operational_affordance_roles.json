@@ -170,8 +170,8 @@
     },
     {
       "warning_class": "planning_artifact_freehand",
-      "role": "missing_helper",
-      "preferred_remedy": "route common freehand artifact intake to focused follow-up #1033 before demoting this warning"
+      "role": "external_manual_drift",
+      "preferred_remedy": "use planning intake-artifact for common freehand artifact routing; keep this warning for artifacts the helper cannot classify or that remain outside canonical Planning surfaces"
     },
     {
       "warning_class": "roadmap_execution_drift",
@@ -306,7 +306,7 @@
     "source_issue": "#1031"
   },
   "source_boundary_review": {
-    "status": "remaining-followups-routed",
+    "status": "ready-to-close",
     "review_issue": "#1032",
     "reviewed_after": [
       "#1024",
@@ -314,13 +314,19 @@
       "PR #1030"
     ],
     "demoted_warning_classes": [
-      "archive_missing_execution_summary"
+      "archive_missing_execution_summary",
+      "planning_artifact_freehand"
     ],
     "retained_diagnostics": [
       {
         "warning_class": "planning_manual_mutation_unstamped",
         "role": "external/manual drift diagnostic",
         "trigger": "dirty managed Planning surfaces whose current hash is not covered by explicit recovery provenance"
+      },
+      {
+        "warning_class": "planning_artifact_freehand",
+        "role": "external/manual drift diagnostic",
+        "trigger": "freehand planning or handoff artifacts that have not been routed through planning intake-artifact"
       },
       {
         "warning_class": "planning_record_schema_drift",
@@ -332,10 +338,10 @@
       {
         "issue": "#1033",
         "warning_class": "planning_artifact_freehand",
-        "reason": "freehand durable Planning artifacts still need a command-owned intake helper before the warning can demote to external/manual drift only"
+        "reason": "implemented by planning intake-artifact; retained here as the child issue that closed the last identified helper gap"
       }
     ],
-    "closure_rule": "#1021 should remain open until remaining source_boundary_fix_candidate and missing_helper roles are either command-owned, demoted with evidence, or routed to focused child issues."
+    "closure_rule": "#1021 can close when this PR lands with closeout evidence options, provenance policy, source-boundary review, and planning intake-artifact available."
   },
   "closeout_writer_direction": {
     "ordinary_path": "command_owned_writer",

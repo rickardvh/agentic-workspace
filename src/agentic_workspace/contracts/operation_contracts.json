@@ -287,6 +287,12 @@
       "migration_status": "runtime-consumed"
     },
     {
+      "id": "planning.intake-artifact.lifecycle",
+      "path": "operations/planning.intake-artifact.lifecycle.json",
+      "command": "intake-artifact",
+      "migration_status": "runtime-consumed"
+    },
+    {
       "id": "planning.install.lifecycle",
       "path": "operations/planning.install.lifecycle.json",
       "command": "install",

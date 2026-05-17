@@ -237,7 +237,8 @@ def test_operational_affordance_roles_classify_first_contact_and_diagnostics() -
     assert "recovery-only drift diagnostic" in warning_roles["planning_manual_mutation_unstamped"]["preferred_remedy"]
     assert warning_roles["archive_missing_execution_summary"]["role"] == "diagnostic"
     assert "planning closeout evidence options" in warning_roles["archive_missing_execution_summary"]["preferred_remedy"]
-    assert "#1033" in warning_roles["planning_artifact_freehand"]["preferred_remedy"]
+    assert warning_roles["planning_artifact_freehand"]["role"] == "external_manual_drift"
+    assert "intake-artifact" in warning_roles["planning_artifact_freehand"]["preferred_remedy"]
 
     provenance_policy = manifest["provenance_policy"]
     assert provenance_policy["role"] == "transitional_recovery_aid"
@@ -247,8 +248,9 @@ def test_operational_affordance_roles_classify_first_contact_and_diagnostics() -
 
     source_boundary_review = manifest["source_boundary_review"]
     assert source_boundary_review["review_issue"] == "#1032"
-    assert source_boundary_review["status"] == "remaining-followups-routed"
+    assert source_boundary_review["status"] == "ready-to-close"
     assert "archive_missing_execution_summary" in source_boundary_review["demoted_warning_classes"]
+    assert "planning_artifact_freehand" in source_boundary_review["demoted_warning_classes"]
     assert any(item["issue"] == "#1033" for item in source_boundary_review["routed_followups"])
 
     report_roles = {entry["section"]: entry for entry in manifest["report_section_roles"]}
@@ -555,6 +557,7 @@ def test_command_package_ir_reuses_generated_adapter_truth() -> None:
         "planning.init.cli",
         "planning.install.cli",
         "planning.list-files.cli",
+        "planning.intake-artifact.cli",
         "planning.new-plan.cli",
         "planning.promote-to-plan.cli",
         "planning.prompt.cli",
@@ -1671,6 +1674,7 @@ def test_contract_tooling_check_reports_generated_adapter_status() -> None:
         "install",
         "list-files",
         "new-plan",
+        "intake-artifact",
         "promote-to-plan",
         "prompt",
         "reconcile",

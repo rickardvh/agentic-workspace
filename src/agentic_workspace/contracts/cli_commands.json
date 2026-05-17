@@ -236,6 +236,103 @@
           "mutates_state": true
         },
         {
+          "name": "intake-artifact",
+          "help": "Route a freehand planning artifact into a canonical Planning surface.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "artifact",
+              "flags": [
+                "--artifact"
+              ],
+              "required": true,
+              "help": "Freehand planning artifact path inside the target repository."
+            },
+            {
+              "name": "route",
+              "flags": [
+                "--route"
+              ],
+              "choices": [
+                "auto",
+                "execplan",
+                "decomposition"
+              ],
+              "default": "auto",
+              "help": "Canonical Planning surface to route the artifact into."
+            },
+            {
+              "name": "id",
+              "flags": [
+                "--id"
+              ],
+              "default": "",
+              "help": "Optional target id or slug for the canonical Planning surface."
+            },
+            {
+              "name": "title",
+              "flags": [
+                "--title"
+              ],
+              "default": "",
+              "help": "Optional title when routing to an execplan scaffold."
+            },
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path."
+            },
+            {
+              "name": "activate",
+              "flags": [
+                "--activate"
+              ],
+              "action": "store_true",
+              "help": "Register an execplan route in todo.active_items."
+            },
+            {
+              "name": "queue",
+              "flags": [
+                "--queue"
+              ],
+              "action": "store_true",
+              "help": "Register an execplan route in todo.queued_items."
+            },
+            {
+              "name": "switch_active",
+              "flags": [
+                "--switch-active"
+              ],
+              "action": "store_true",
+              "help": "When used with --activate, demote existing active items before registering the new active plan."
+            },
+            {
+              "name": "remove_source",
+              "flags": [
+                "--remove-source"
+              ],
+              "action": "store_true",
+              "help": "Remove the original artifact after successful canonical intake."
+            },
+            {
+              "name": "dry_run",
+              "flags": [
+                "--dry-run"
+              ],
+              "action": "store_true",
+              "help": "Show planned changes without mutating files."
+            }
+          ],
+          "role": "core_context_router",
+          "audience": "ordinary_host_repo",
+          "classification_note": "Planning freehand artifact intake front door",
+          "mutates_state": true
+        },
+        {
           "name": "archive-plan",
           "help": "Close a completed execplan or parent lane after distillation.",
           "uses_option_groups": [

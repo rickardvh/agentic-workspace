@@ -1487,6 +1487,161 @@ export const generatedCommandPackage = {
       "status": "generated"
     },
     {
+      "adapter_id": "planning.intake-artifact.cli",
+      "command": {
+        "manifest_ref": "package:planning:cli",
+        "name": "intake-artifact"
+      },
+      "conformance_refs": [
+        "planning.intake-artifact.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "interface": {
+        "help": "Route a freehand planning artifact into a canonical Planning surface.",
+        "name": "intake-artifact",
+        "options": [
+          {
+            "flags": [
+              "--artifact"
+            ],
+            "help": "Freehand planning artifact path inside the target repository.",
+            "name": "artifact",
+            "required": true
+          },
+          {
+            "choices": [
+              "auto",
+              "execplan",
+              "decomposition"
+            ],
+            "default": "auto",
+            "flags": [
+              "--route"
+            ],
+            "help": "Canonical Planning surface to route the artifact into.",
+            "name": "route"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--id"
+            ],
+            "help": "Optional target id or slug for the canonical Planning surface.",
+            "name": "id"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--title"
+            ],
+            "help": "Optional title when routing to an execplan scaffold.",
+            "name": "title"
+          },
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Target repository path. Defaults to the current directory.",
+            "name": "target"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--activate"
+            ],
+            "help": "Register an execplan route in todo.active_items.",
+            "name": "activate"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--queue"
+            ],
+            "help": "Register an execplan route in todo.queued_items.",
+            "name": "queue"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--switch-active"
+            ],
+            "help": "When used with --activate, demote existing active items before registering the new active plan.",
+            "name": "switch_active"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--remove-source"
+            ],
+            "help": "Remove the original artifact after successful canonical intake.",
+            "name": "remove_source"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--dry-run"
+            ],
+            "help": "Preview changes without writing files.",
+            "name": "dry_run"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "planning.intake-artifact.lifecycle",
+        "path": "operations/planning.intake-artifact.lifecycle.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "planning artifact routing policy",
+          "planning provenance updates",
+          "module result assembly"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.intake-artifact.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    {
       "adapter_id": "planning.promote-to-plan.cli",
       "command": {
         "manifest_ref": "package:planning:cli",
@@ -2462,6 +2617,12 @@ export const generatedCommandPackage = {
           "primitive": "planning.new-plan.apply"
         },
         {
+          "function": "apply_planning_intake_artifact_operation",
+          "handler": "runtime_handler",
+          "import_module": "repo_planning_bootstrap.runtime_projection",
+          "primitive": "planning.intake-artifact.apply"
+        },
+        {
           "function": "apply_planning_promote_to_plan_operation",
           "handler": "runtime_handler",
           "import_module": "repo_planning_bootstrap.runtime_projection",
@@ -2599,6 +2760,11 @@ export const generatedCommandPackage = {
           "name": "source"
         },
         {
+          "arg": "artifact",
+          "default": "",
+          "name": "artifact"
+        },
+        {
           "arg": "activate",
           "default": false,
           "name": "activate"
@@ -2622,6 +2788,11 @@ export const generatedCommandPackage = {
           "arg": "overwrite",
           "default": false,
           "name": "overwrite"
+        },
+        {
+          "arg": "remove_source",
+          "default": false,
+          "name": "remove_source"
         },
         {
           "arg": "item_id",
@@ -2811,6 +2982,7 @@ export const generatedCommandPackage = {
         "planning.handoff.report",
         "planning.init.lifecycle",
         "planning.install.lifecycle",
+        "planning.intake-artifact.lifecycle",
         "planning.new-plan.lifecycle",
         "planning.promote-to-plan.lifecycle",
         "planning.prompt.render",
