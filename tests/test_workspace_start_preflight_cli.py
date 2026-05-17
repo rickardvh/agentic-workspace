@@ -599,7 +599,8 @@ def test_start_changed_path_next_safe_action_marks_proof_required(tmp_path: Path
     _assert_next_safe_action_valid(packet)
     assert packet["proof_required"] is True
     assert packet["module_slot"] == "workspace.proof"
-    assert packet["preferred_cli_effect"] == "none"
+    assert packet["preferred_cli"] == "agentic-workspace proof --changed README.md --format json"
+    assert packet["preferred_cli_effect"] == "validating"
 
 
 def test_start_completion_question_requires_closeout_trust_when_followup_remains(tmp_path: Path, capsys) -> None:

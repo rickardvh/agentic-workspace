@@ -198,6 +198,14 @@ def test_skill_specs_contract_models_startup_and_planning_behavior() -> None:
         return registry
 
     commands_by_ref = _command_registry()
+    for command_ref, command in commands_by_ref.items():
+        assert "mutates_state" in command, command_ref
+    for mutating_command_ref in {
+        "planning.archive-plan",
+        "planning.close-item",
+        "planning.record-recovery",
+    }:
+        assert commands_by_ref[mutating_command_ref]["mutates_state"] is True
     for spec in manifest["specs"]:
         for affordance in spec["preferred_cli_commands"]:
             command_ref = affordance["command_ref"]

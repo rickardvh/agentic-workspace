@@ -10091,7 +10091,28 @@ def _start_payload(
     if cli_compatibility["configured"]:
         payload["cli_compatibility"] = cli_compatibility
     normalized_paths = _normalize_changed_paths(changed_paths)
-    if normalized_paths:
+    if normalized_paths and not active_planning_present:
+        proof_payload = _proof_selection_for_changed_paths(
+            changed_paths=normalized_paths, target_root=target_root, include_durable_intent=False
+        )
+        proof_command = _command_with_cli_invoke(
+            command=f"agentic-workspace proof --changed {' '.join(normalized_paths)} --format json",
+            cli_invoke=config.cli_invoke,
+        )
+        payload["immediate_next_allowed_action"] = {
+            "action": "select-changed-path-proof",
+            "summary": "Changed paths are known. Run changed-path proof selection before claiming implementation is ready.",
+            "command": proof_command,
+            "run": proof_command,
+            "risk": "read-only proof routing",
+            "required_inputs": ["target repo", "changed path(s)"],
+            "next_proof": proof_command,
+            "read_first": [proof_command],
+            "open_execplan_only_when": startup_template["open_execplan_only_when"],
+        }
+        payload["proof"] = _compact_start_proof_payload(proof_payload)
+        payload["path_boundaries"] = [_boundary_warning_for_path(path) for path in normalized_paths]
+    elif normalized_paths:
         proof_payload = _proof_selection_for_changed_paths(
             changed_paths=normalized_paths, target_root=target_root, include_durable_intent=False
         )
@@ -10601,7 +10622,27 @@ def _start_tiny_payload_fast(
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
         }
     normalized_paths = _normalize_changed_paths(changed_paths)
-    if normalized_paths:
+    if normalized_paths and not active_planning_present:
+        proof_command = _command_with_cli_invoke(
+            command=f"agentic-workspace proof --changed {' '.join(normalized_paths)} --format json",
+            cli_invoke=config.cli_invoke,
+        )
+        payload["immediate_next_allowed_action"] = {
+            "action": "select-changed-path-proof",
+            "summary": "Changed paths are known. Run changed-path proof selection before claiming implementation is ready.",
+            "command": proof_command,
+            "run": proof_command,
+            "risk": "read-only proof routing",
+            "required_inputs": ["target repo", "changed path(s)"],
+            "next_proof": proof_command,
+            "read_first": [proof_command],
+            "open_execplan_only_when": startup_template["open_execplan_only_when"],
+        }
+        payload["proof"] = _proof_selection_for_changed_paths(
+            changed_paths=normalized_paths, target_root=target_root, include_durable_intent=False
+        )
+        payload["path_boundaries"] = [_boundary_warning_for_path(path) for path in normalized_paths]
+    elif normalized_paths:
         payload["proof"] = _proof_selection_for_changed_paths(
             changed_paths=normalized_paths, target_root=target_root, include_durable_intent=False
         )
