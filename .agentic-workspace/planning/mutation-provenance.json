@@ -2,70 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/execplans/python-next-runtime-delegate-candidate.plan.json",
-      "sha256": "5ed7549a2114dc2e24d87427f52538581ab60169caf6b368815cbc791398d152",
-      "command": "agentic-planning record-recovery",
-      "reason": "Closed memory.status runtime delegate reduction plan after green proof; no focused execplan closeout field command exists.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T14:25:18+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-next-runtime-delegate-candidate",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T14:25:22+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/archive/python-next-runtime-delegate-candidate.plan.json",
-      "sha256": "5ed7549a2114dc2e24d87427f52538581ab60169caf6b368815cbc791398d152",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-next-runtime-delegate-candidate",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T14:25:22+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
-      "sha256": "94b25ae9a94a48f1d2993670a63e9df1339485e4433f7528cf33a9e515cfd3e5",
-      "command": "agentic-planning record-recovery",
-      "reason": "Recorded memory.status portable-IR reduction in the epic decomposition.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T14:26:33+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-memory-doctor-runtime-reduction.plan.json",
-      "sha256": "09d37d7a7a5c05a9f10ace663640ec3dbda19861fadcdf0737a9bdbeddf50dc2",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-memory-doctor-runtime-reduction",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T14:27:08+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "6aa629890c6ee1018c8d798ac4e660db302e293c91a2af7d6461834978f958d2",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-memory-doctor-runtime-reduction",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T14:27:08+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-memory-doctor-runtime-reduction.plan.json",
-      "sha256": "451bb8160674a675141c52eb4e40cd8c346b3c5fee615a6b5fa1caa60295f8c3",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=keep-local",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T14:27:18+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-memory-doctor-runtime-reduction.plan.json",
-      "sha256": "586bce31f27f982ab46ae506bd5c50349315af9b8a0865655d98c4da7aff9494",
-      "command": "agentic-planning record-recovery",
-      "reason": "Bound active #892 slice to memory.doctor runtime delegate reduction.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T14:27:38+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/execplans/python-memory-doctor-runtime-reduction.plan.json",
       "sha256": "127394595d8cb68d6fd7e4c6e681caa78014544e9ca5feda0d69a040047a84e8",
       "command": "agentic-planning record-recovery",
@@ -1600,6 +1536,70 @@
       "reason": "close out execplan ci-schema-reference-doc-refresh",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-17T19:12:30+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/startup-skills-recommended-reasons.plan.json",
+      "sha256": "a5d505cc5e657e5f817167a0e294b254476b3d41ff4c052531f24e56348504ee",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold startup-skills-recommended-reasons",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T19:14:14+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "99e656cc4f15e26bf97538005c3182800a631bdb366389fa397a92e6721f3359",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold startup-skills-recommended-reasons",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T19:14:14+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/startup-skills-recommended-reasons.plan.json",
+      "sha256": "65981609ae8d14603f04dd7532860fdf6adcdab98a5b6ba2d7170b789d3ca517",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T19:14:18+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "2825a103bb66f149fb0a5df4c54a27542a980a4b8f789ea801637c26cd080901",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan startup-skills-recommended-reasons",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T19:16:22+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/startup-skills-recommended-reasons.plan.json",
+      "sha256": "e58c14c8576b714250f705a56cb4750908bfbc7fa1651c3ede9bd497170b56d1",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan startup-skills-recommended-reasons",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T19:16:22+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "2825a103bb66f149fb0a5df4c54a27542a980a4b8f789ea801637c26cd080901",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan startup-skills-recommended-reasons",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T19:16:22+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/startup-skills-recommended-reasons.plan.json",
+      "sha256": "e58c14c8576b714250f705a56cb4750908bfbc7fa1651c3ede9bd497170b56d1",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan startup-skills-recommended-reasons",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T19:16:22+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/mutation-provenance.json",
+      "sha256": "811458ecda4295cb7b9650d1d10fa671f15be12dcbfa5b2f212d8db6e66970c7",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan startup-skills-recommended-reasons",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T19:16:22+00:00"
     }
   ]
 }
