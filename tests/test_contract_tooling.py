@@ -5,6 +5,7 @@ import copy
 import importlib.util
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -216,6 +217,8 @@ def test_skill_specs_contract_models_startup_and_planning_behavior() -> None:
 
 def test_operational_affordance_roles_classify_first_contact_and_diagnostics() -> None:
     manifest = contract_tooling.operational_affordance_roles_manifest()
+    schema = contract_tooling.contract_schema("operational_affordance_roles.schema.json")
+    assert list(Draft202012Validator(schema).iter_errors(manifest)) == []
 
     command_roles = {entry["command"]: entry for entry in manifest["command_roles"]}
     assert command_roles["start"]["role"] == "ordinary_first_contact"
@@ -227,6 +230,9 @@ def test_operational_affordance_roles_classify_first_contact_and_diagnostics() -
     assert command_roles["WORKFLOW.md"]["role"] == "no_cli_fallback_projection"
 
     warning_roles = {entry["warning_class"]: entry for entry in manifest["warning_roles"]}
+    checker_text = Path("packages/planning/scripts/check/check_planning_surfaces.py").read_text(encoding="utf-8")
+    checker_warning_classes = set(re.findall(r'WARNING_[A-Z0-9_]+ = "([^"]+)"', checker_text))
+    assert checker_warning_classes <= warning_roles.keys()
     assert warning_roles["planning_manual_mutation_unstamped"]["role"] == "external_manual_drift"
     assert warning_roles["archive_missing_execution_summary"]["role"] == "source_boundary_fix_candidate"
     assert "command-time closeout writer" in warning_roles["archive_missing_execution_summary"]["preferred_remedy"]

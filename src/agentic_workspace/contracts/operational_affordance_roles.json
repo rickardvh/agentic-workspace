@@ -59,6 +59,176 @@
   ],
   "warning_roles": [
     {
+      "warning_class": "todo_shape_drift",
+      "role": "source_boundary_fix_candidate",
+      "preferred_remedy": "prefer Planning CLI state writers and keep checker pressure until legacy TODO shapes disappear"
+    },
+    {
+      "warning_class": "todo_activation_overflow",
+      "role": "ambiguous_output",
+      "preferred_remedy": "route agents to a single active item through summary/start instead of exposing broad active queues"
+    },
+    {
+      "warning_class": "todo_missing_execplan_linkage",
+      "role": "source_boundary_fix_candidate",
+      "preferred_remedy": "require promotion/new-plan commands to create linked execplan surfaces"
+    },
+    {
+      "warning_class": "todo_plan_required_hint",
+      "role": "ambiguous_output",
+      "preferred_remedy": "make next_safe_action explicit about when planning ownership is required"
+    },
+    {
+      "warning_class": "todo_broken_surface_reference",
+      "role": "diagnostic",
+      "preferred_remedy": "keep diagnostic for stale or external/manual surface references"
+    },
+    {
+      "warning_class": "execplan_structure_drift",
+      "role": "source_boundary_fix_candidate",
+      "preferred_remedy": "prefer schema-backed execplan scaffolds and command-time validation"
+    },
+    {
+      "warning_class": "execplan_multiple_active_milestones",
+      "role": "source_boundary_fix_candidate",
+      "preferred_remedy": "refuse or normalize multiple active milestones in writer commands"
+    },
+    {
+      "warning_class": "execplan_immediate_next_action_drift",
+      "role": "ambiguous_output",
+      "preferred_remedy": "keep next action in canonical_core and generated projections synchronized"
+    },
+    {
+      "warning_class": "execplan_readiness_drift",
+      "role": "source_boundary_fix_candidate",
+      "preferred_remedy": "make readiness values command-owned and schema-validated"
+    },
+    {
+      "warning_class": "execplan_log_drift",
+      "role": "historical_residue",
+      "preferred_remedy": "demote execution chronology to archive/detail unless it changes continuation"
+    },
+    {
+      "warning_class": "execplan_notebook_drift",
+      "role": "obsolete_or_merge_candidate",
+      "preferred_remedy": "remove notebook-like residue from first-line execplans"
+    },
+    {
+      "warning_class": "execplan_under_specified",
+      "role": "missing_helper",
+      "preferred_remedy": "improve scaffolds or writer prompts so required proof/scope fields are filled earlier"
+    },
+    {
+      "warning_class": "execplan_closure_drift",
+      "role": "source_boundary_fix_candidate",
+      "preferred_remedy": "move ordinary closeout to a single command-owned writer"
+    },
+    {
+      "warning_class": "execplan_active_set_pressure",
+      "role": "historical_residue",
+      "preferred_remedy": "keep active planning state narrow and route closed work to archives"
+    },
+    {
+      "warning_class": "execplan_proof_drift",
+      "role": "source_boundary_fix_candidate",
+      "preferred_remedy": "make selected proof and achieved proof explicit in writer/closeout commands"
+    },
+    {
+      "warning_class": "execplan_intent_satisfaction_drift",
+      "role": "source_boundary_fix_candidate",
+      "preferred_remedy": "route intent satisfaction through closeout/intent-verification affordances"
+    },
+    {
+      "warning_class": "planning_record_schema_drift",
+      "role": "diagnostic",
+      "preferred_remedy": "keep diagnostic for schema drift in checked-in planning records"
+    },
+    {
+      "warning_class": "planning_evidence_schema_drift",
+      "role": "diagnostic",
+      "preferred_remedy": "keep diagnostic for external/manual evidence drift"
+    },
+    {
+      "warning_class": "execplan_foreign_pm_shape",
+      "role": "ambiguous_output",
+      "preferred_remedy": "route foreign project-management shapes through import/promotion helpers before use"
+    },
+    {
+      "warning_class": "planning_state_unsupported_activation_shape",
+      "role": "source_boundary_fix_candidate",
+      "preferred_remedy": "constrain Planning state activation shapes in CLI writers"
+    },
+    {
+      "warning_class": "planning_epic_artifact_unsupported",
+      "role": "missing_helper",
+      "preferred_remedy": "use decomposition records for epic-shaped work instead of freehand artifacts"
+    },
+    {
+      "warning_class": "planning_decomposition_artifact_misplaced",
+      "role": "source_boundary_fix_candidate",
+      "preferred_remedy": "route decomposition creation through package-owned paths"
+    },
+    {
+      "warning_class": "planning_artifact_freehand",
+      "role": "missing_helper",
+      "preferred_remedy": "add or use writer/scaffold helpers instead of freehand durable planning artifacts"
+    },
+    {
+      "warning_class": "roadmap_execution_drift",
+      "role": "historical_residue",
+      "preferred_remedy": "keep roadmap ideas out of active execution state until promoted"
+    },
+    {
+      "warning_class": "roadmap_missing_promotion_signal",
+      "role": "ambiguous_output",
+      "preferred_remedy": "require promotion triggers for candidate work"
+    },
+    {
+      "warning_class": "roadmap_missing_reopen_signal",
+      "role": "ambiguous_output",
+      "preferred_remedy": "require reopen triggers for retained historical/candidate work"
+    },
+    {
+      "warning_class": "roadmap_stale_candidate_pressure",
+      "role": "historical_residue",
+      "preferred_remedy": "demote stale candidates from first-line context and route by explicit review"
+    },
+    {
+      "warning_class": "promotion_linkage_drift",
+      "role": "source_boundary_fix_candidate",
+      "preferred_remedy": "make promotion commands preserve source item and execplan linkage"
+    },
+    {
+      "warning_class": "startup_policy_drift",
+      "role": "diagnostic",
+      "preferred_remedy": "keep diagnostic for generated/fallback startup guidance drift"
+    },
+    {
+      "warning_class": "workflow_policy_drift",
+      "role": "diagnostic",
+      "preferred_remedy": "keep diagnostic for workflow fallback projection drift"
+    },
+    {
+      "warning_class": "docs_surface_role_drift",
+      "role": "diagnostic",
+      "preferred_remedy": "keep diagnostic for documentation role/authority drift"
+    },
+    {
+      "warning_class": "generated_docs_drift",
+      "role": "external_manual_drift",
+      "preferred_remedy": "keep diagnostic for generated docs that drift from source"
+    },
+    {
+      "warning_class": "archive_accumulation_drift",
+      "role": "historical_residue",
+      "preferred_remedy": "keep archive volume behind selectors and route reusable residue out of archives"
+    },
+    {
+      "warning_class": "planning_memory_boundary_blur",
+      "role": "ambiguous_output",
+      "preferred_remedy": "route durable knowledge to Memory and active/future work to Planning"
+    },
+    {
       "warning_class": "planning_manual_mutation_unstamped",
       "role": "external_manual_drift",
       "preferred_remedy": "keep diagnostic; route repeated patterns to a command-owned writer"
