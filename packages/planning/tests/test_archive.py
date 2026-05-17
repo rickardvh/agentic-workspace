@@ -623,9 +623,53 @@ def test_planning_closeout_routes_partial_lane_residue_to_continuation(tmp_path:
     assert payload["warnings"] == []
     assert archived["closure_check"]["closeout scope"] == "lane"
     assert archived["closure_check"]["closure decision"] == "archive-but-keep-lane-open"
+    assert archived["intent_satisfaction"]["was original intent fully satisfied?"] == "no"
     assert archived["intent_satisfaction"]["unsolved intent passed to"] == ".agentic-workspace/planning/state.toml"
     assert archived["durable_residue"]["status"] == "planning"
     assert archived["closeout_distillation"]["buckets"]["continuation"][0]["owner"] == ".agentic-workspace/planning/state.toml"
+
+
+def test_planning_closeout_routes_deferred_owner_without_full_intent_satisfaction(tmp_path: Path, capsys) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="completed")
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    record["intent_continuity"]["this slice completes the larger intended outcome"] = "no"
+    installer_mod._write_execplan_record(record_path=record_path, record=record)
+
+    assert (
+        planning_cli.main(
+            [
+                "closeout",
+                "plan-alpha",
+                "--target",
+                str(tmp_path),
+                "--claim-level",
+                "lane",
+                "--intent-status",
+                "deferred-with-owner",
+                "--residue",
+                "planning",
+                "--residue-owner",
+                "GitHub #1021",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    archived = json.loads(
+        (tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json").read_text(encoding="utf-8")
+    )
+
+    assert payload["warnings"] == []
+    assert archived["closure_check"]["closeout scope"] == "lane"
+    assert archived["closure_check"]["closure decision"] == "archive-but-keep-lane-open"
+    assert archived["intent_satisfaction"]["was original intent fully satisfied?"] == "no"
+    assert archived["intent_satisfaction"]["unsolved intent passed to"] == "GitHub #1021"
+    assert archived["required_continuation"]["owner surface"] == "GitHub #1021"
+    assert archived["closeout_distillation"]["buckets"]["continuation"][0]["owner"] == "GitHub #1021"
 
 
 def test_planning_closeout_blocks_proxy_lane_archive_and_close(tmp_path: Path, capsys) -> None:

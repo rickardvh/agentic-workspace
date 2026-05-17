@@ -10367,7 +10367,7 @@ def closeout_execplan(
         return result
 
     closure_decision = "archive-and-close" if normalized_intent == "satisfied" else "archive-but-keep-lane-open"
-    intent_satisfied = "no" if normalized_intent == "unsatisfied" else "yes"
+    intent_satisfied = "yes" if normalized_intent == "satisfied" else "no"
     continuation_owner = residue_owner or ""
     if closure_decision == "archive-but-keep-lane-open" and not continuation_owner:
         continuation_owner = PLANNING_STATE_PATH.as_posix()
@@ -10411,7 +10411,9 @@ def closeout_execplan(
             required_continuation = _record_section_dict(record, "required_continuation") or {}
             required_continuation["required follow-on for the larger intended outcome"] = "yes"
             required_continuation["owner surface"] = continuation_owner
-            required_continuation.setdefault("activation trigger", "when the continuation owner promotes the next slice")
+            existing_activation_trigger = str(required_continuation.get("activation trigger", "")).strip().lower()
+            if existing_activation_trigger in {"", "none", "n/a"}:
+                required_continuation["activation trigger"] = "when the continuation owner promotes the next slice"
             record["required_continuation"] = required_continuation
         _write_execplan_record(record_path=record_path, record=record, render_markdown=plan_path != record_path)
         result.add("updated", record_path, "recorded closeout residue and proof inputs")

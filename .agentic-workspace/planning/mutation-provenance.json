@@ -2,78 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "526ff7330e1b29ddfff24abf9eaf38f93cbfbf3251a5277722c29a0da94d4da1",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-memory-json-output-primitive",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T12:25:51+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-memory-json-output-primitive.plan.json",
-      "sha256": "be51da018acd4d2263d205ca46137a20c5678c07f0a3ad4e0776f79d400902bd",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=keep-local",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T12:25:55+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-memory-json-output-primitive.plan.json",
-      "sha256": "038e072ac69749dcf6927622e586371ed42658e73c89aaca94780484d0069c24",
-      "command": "agentic-planning record-recovery",
-      "reason": "Filled bounded execplan and proof fields for #892 memory generated JSON output primitive slice.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T12:27:47+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-memory-json-output-primitive.plan.json",
-      "sha256": "ca82f1213fb189e013f5bd0663f678843dea39473c48138f3504aac59bff06c5",
-      "command": "agentic-planning record-recovery",
-      "reason": "Filled closeout fields after #892 memory generated JSON output primitive proof passed.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T12:28:18+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-memory-json-output-primitive",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T12:28:31+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/archive/python-memory-json-output-primitive.plan.json",
-      "sha256": "a0a14e131a11cf4570b5c997a06cbac61de39e8aa0961d9cf0906acb06bfe4cc",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-memory-json-output-primitive",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T12:28:31+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-planning-json-output-primitive.plan.json",
-      "sha256": "1e39aa89facd36868038de7bbe6c0f86f8ca1550e048ac8929fe9cea83a3f6db",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-planning-json-output-primitive",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T12:29:08+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "02228b696697acdb4e1765fb246f7f618675835d1dc2bc780ca1f6159113c37c",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-planning-json-output-primitive",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T12:29:08+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-planning-json-output-primitive.plan.json",
-      "sha256": "7fbd1f8f6f897cadab8a517d360348b805f476a3834f8a090dee860b66a85155",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=keep-local",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T12:29:12+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/execplans/python-planning-json-output-primitive.plan.json",
       "sha256": "f9b676e05b093b41301887780eacf48136dea33aec1120540465f2250ca2401f",
       "command": "agentic-planning record-recovery",
@@ -1600,6 +1528,78 @@
       "reason": "close out execplan github-1024-planning-closeout-writer",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-17T13:53:02+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-1028-intent-status-review-fix.plan.json",
+      "sha256": "2285bac1ffdfd838a6bd4acf36d7cb171878affdfd3c4bb92cd3f9e7904c2b1d",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold github-1028-intent-status-review-fix",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T14:56:37+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "1c712b25b0bb8926f23c0713679e01ee7f4f5598901510992c0b42672e094128",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold github-1028-intent-status-review-fix",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T14:56:37+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-1028-intent-status-review-fix.plan.json",
+      "sha256": "b93f48a54166dde8a66aad477bce6e2fd0734f46111f0b0dbb4bcad361f4acb2",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T14:59:10+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-1028-intent-status-review-fix.plan.json",
+      "sha256": "78181de6b8709e983504ae015617fb006e1f861deceb2ec8741d7884b248b728",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan github-1028-intent-status-review-fix",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T14:59:41+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "2825a103bb66f149fb0a5df4c54a27542a980a4b8f789ea801637c26cd080901",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan github-1028-intent-status-review-fix",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T15:01:13+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/github-1028-intent-status-review-fix.plan.json",
+      "sha256": "44c05c74b5d72acbd0217615774cf210cbb7ef2da44b38c6bf23e9c921b140bb",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan github-1028-intent-status-review-fix",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T15:01:13+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "2825a103bb66f149fb0a5df4c54a27542a980a4b8f789ea801637c26cd080901",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan github-1028-intent-status-review-fix",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T15:01:13+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/github-1028-intent-status-review-fix.plan.json",
+      "sha256": "44c05c74b5d72acbd0217615774cf210cbb7ef2da44b38c6bf23e9c921b140bb",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan github-1028-intent-status-review-fix",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T15:01:13+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/mutation-provenance.json",
+      "sha256": "27e39249977317ea0a8546827e96ec74f9ca497f7aaef1a55bae4957eb0d9042",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan github-1028-intent-status-review-fix",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T15:01:13+00:00"
     }
   ]
 }
