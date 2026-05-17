@@ -140,7 +140,8 @@
         "root console smoke proof executes at least one generated root command through the installed console path, not only through generated parser/help imports",
         "Full completion proof must distinguish generated-output placement from generated ownership; product-specific runtime files under generated/python must be produced by command-generation or explicitly inventoried as transitional generated-output debt.",
         "Full completion proof must distinguish portable codegen primitive execution from domain runtime primitives wrapped in IR.",
-        "Full completion proof must fail while shipped module source contains runtime primitive/projection modules that own generated CLI behavior."
+        "Full completion proof must fail while shipped module source contains runtime primitive/projection modules that own generated CLI behavior.",
+        "The compact Python completion blocker report must answer why current_state cannot honestly move to full-generated-cli-complete."
       ],
       "completion_gate": {
         "state": "pending",

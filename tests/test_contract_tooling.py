@@ -480,6 +480,7 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
     assert any("weak-agent-safe-adapter" in item for item in python_completion["proof_requirements"])
     assert any("generic deterministic operations" in item for item in python_completion["proof_requirements"])
     assert any("generated/python target output" in item for item in python_completion["proof_requirements"])
+    assert any("compact Python completion blocker report" in item for item in python_completion["proof_requirements"])
     assert runtime_binding["selected_model"] == "generated parser/help with process handoff to canonical Python CLI"
     assert "operation primitive implementation" in runtime_binding["runtime_owns"]
     assert "argv spelling and help rendering" in runtime_binding["target_projection_owns"]

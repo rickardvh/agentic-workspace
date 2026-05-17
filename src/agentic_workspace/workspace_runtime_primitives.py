@@ -6218,6 +6218,7 @@ def _rewrite_module_cli_commands(value: Any) -> Any:
     if isinstance(value, str):
         value = value.replace("agentic-planning reconcile ", "agentic-workspace reconcile ")
         value = value.replace("agentic-planning summary ", "agentic-workspace summary ")
+        value = value.replace("agentic-planning doctor ", "agentic-workspace doctor ")
         value = value.replace("agentic-planning ", "agentic-workspace planning ")
         value = value.replace("agentic-memory ", "agentic-workspace memory ")
         return value

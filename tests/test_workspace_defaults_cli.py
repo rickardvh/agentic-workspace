@@ -4,6 +4,26 @@ from __future__ import annotations
 from tests.workspace_cli_support import *
 
 
+def test_module_cli_command_rewrite_keeps_summary_and_doctor_on_workspace_front_door() -> None:
+    from agentic_workspace.workspace_runtime_primitives import _rewrite_module_cli_commands
+
+    payload = {
+        "proof": [
+            "agentic-planning summary --target . --format json",
+            "agentic-planning doctor --target . --modules planning --format json",
+            "agentic-planning promote-to-plan lane --target . --format json",
+        ]
+    }
+
+    assert _rewrite_module_cli_commands(payload) == {
+        "proof": [
+            "agentic-workspace summary --target . --format json",
+            "agentic-workspace doctor --target . --modules planning --format json",
+            "agentic-workspace planning promote-to-plan lane --target . --format json",
+        ]
+    }
+
+
 def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys) -> None:
     assert cli.main(["defaults", "--verbose", "--format", "json"]) == 0
 
