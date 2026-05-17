@@ -2,70 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "1605f8ad90c784cbe9d6294855164a4896f1e4d10ca7119d55913d240137e18f",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-memory-current-runtime-reduction",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T13:39:51+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-memory-current-runtime-reduction.plan.json",
-      "sha256": "bad7bd433af8d8d75f88c7fae768be25f53a3dda0fd8e381b3a3e898c0df2367",
-      "command": "agentic-planning record-recovery",
-      "reason": "Closed memory.current audit as no-safe generated-runtime reduction",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T13:42:38+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
-      "sha256": "1115bd39ecfb5dd32cdab93b26a8afe2192296d0bf86ee89df87bf4c4d80ce3c",
-      "command": "agentic-planning record-recovery",
-      "reason": "Carried memory.current no-safe-route audit into #892 decomposition",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T13:42:43+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-memory-current-runtime-reduction",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T13:42:47+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/archive/python-memory-current-runtime-reduction.plan.json",
-      "sha256": "bad7bd433af8d8d75f88c7fae768be25f53a3dda0fd8e381b3a3e898c0df2367",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-memory-current-runtime-reduction",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T13:42:47+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-memory-prompt-runtime-reduction.plan.json",
-      "sha256": "2256e808f8390171a06af82b3cebe18d2e5285861ddd2d532fdbc269966913ad",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-memory-prompt-runtime-reduction",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T13:43:20+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "5d0378020786b0dce3336b966611003f3b2e7e1bce7576d9cb8446d86853ab8c",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-memory-prompt-runtime-reduction",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T13:43:20+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-memory-prompt-runtime-reduction.plan.json",
-      "sha256": "0a4f394fe1322885f63e59d6cd80d8338650eef4abde06573b23358d3ace137a",
-      "command": "agentic-planning record-recovery",
-      "reason": "Closed memory.prompt audit as no-safe generated-runtime reduction",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T13:45:51+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
       "sha256": "7f68a5bddfbad47cecda821960c97aba9928c58ca709f65f37b4a1e0891ba782",
       "command": "agentic-planning record-recovery",
@@ -1600,6 +1536,70 @@
       "reason": "close out execplan github-1033-freehand-artifact-intake",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-17T16:36:41+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/pr-1030-ci-fix.plan.json",
+      "sha256": "c179f78a6bcab863bd2e724d9060ea3f8bdbf16802b578f26972d374c15d2f94",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold pr-1030-ci-fix",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T17:04:35+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "2bb948bd90146cf0c6cae1bdfccb5d92cc2446824472b98da42e31df26aed45c",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold pr-1030-ci-fix",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T17:04:35+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/pr-1030-ci-fix.plan.json",
+      "sha256": "0a6e784e1c2b79ba915d8b197985542c123da9265970e03328c04b852320ccf7",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T17:05:27+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "2825a103bb66f149fb0a5df4c54a27542a980a4b8f789ea801637c26cd080901",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan pr-1030-ci-fix",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T17:06:49+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/pr-1030-ci-fix.plan.json",
+      "sha256": "aa9a1d07609392a9d70ee093eb8060c8a60ee27598d4dc67e9a11d0c0921f1af",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan pr-1030-ci-fix",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T17:06:49+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "2825a103bb66f149fb0a5df4c54a27542a980a4b8f789ea801637c26cd080901",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan pr-1030-ci-fix",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T17:06:49+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/pr-1030-ci-fix.plan.json",
+      "sha256": "aa9a1d07609392a9d70ee093eb8060c8a60ee27598d4dc67e9a11d0c0921f1af",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan pr-1030-ci-fix",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T17:06:49+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/mutation-provenance.json",
+      "sha256": "3bd4714b6a56495ca102a0df56c3f93148112b4dc2938a13de4682d5be92ba53",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan pr-1030-ci-fix",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T17:06:49+00:00"
     }
   ]
 }
