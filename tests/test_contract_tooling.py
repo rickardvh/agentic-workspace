@@ -956,6 +956,30 @@ def test_operation_primitives_require_target_support_matrix(monkeypatch: pytest.
     assert any("schema-backed primitives missing implemented target support" in error for error in errors)
 
 
+def test_operation_primitives_classify_operation_step_tiers(monkeypatch: pytest.MonkeyPatch) -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
+    spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    registry = copy.deepcopy(module.operation_primitives_manifest())
+    by_id = {primitive["id"]: primitive for primitive in registry["primitives"]}
+
+    assert module._validate_operation_primitives(registry) == []
+    assert by_id["filesystem.glob"]["taxonomy_tier"] == "tier-1-portable-codegen"
+    assert by_id["workspace.root.resolve"]["taxonomy_tier"] == "tier-2-package-domain"
+    assert by_id["workspace.root.resolve"]["tier_owner"]
+    assert by_id["workspace.root.resolve"]["generic_behavior_audit"]
+
+    by_id["workspace.root.resolve"].pop("generic_behavior_audit")
+    monkeypatch.setattr(module, "operation_primitives_manifest", lambda: registry)
+
+    errors = module._validate_operation_primitives(registry)
+
+    assert any("tier-2 primitive workspace.root.resolve missing audit field" in error for error in errors)
+
+
 def test_python_operation_execution_inventory_tracks_direct_generated_memory_commands() -> None:
     inventory = contract_tooling.load_contract_json("python_operation_execution_inventory.json")
     entries = {entry["operation_id"]: entry for entry in inventory["entries"]}

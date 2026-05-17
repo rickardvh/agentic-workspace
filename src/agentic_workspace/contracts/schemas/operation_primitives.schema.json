@@ -179,6 +179,64 @@
       "additionalProperties": false,
       "description": "Rules that separate shared codegen primitives from module-specific primitive extensions."
     },
+    "primitive_taxonomy": {
+      "type": "object",
+      "required": [
+        "classification_rule",
+        "tier_definitions",
+        "tier_2_required_audit_fields",
+        "generic_behavior_rule"
+      ],
+      "properties": {
+        "classification_rule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tier_definitions": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "summary",
+              "blocks_full_python_completion"
+            ],
+            "properties": {
+              "id": {
+                "enum": [
+                  "tier-1-portable-codegen",
+                  "tier-2-package-domain",
+                  "tier-3-deferred-or-out-of-scope"
+                ]
+              },
+              "summary": {
+                "type": "string",
+                "minLength": 1
+              },
+              "blocks_full_python_completion": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "tier_2_required_audit_fields": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "generic_behavior_rule": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false,
+      "description": "Completion-tier taxonomy for primitive references used by operation contracts."
+    },
     "primitives": {
       "type": "array",
       "minItems": 1,
@@ -239,6 +297,34 @@
             "type": "string",
             "pattern": "^schemas/primitives/[a-z0-9_.-]+\\.schema\\.json$",
             "description": "Primitive-specific output schema for target-executor implementations."
+          },
+          "taxonomy_tier": {
+            "enum": [
+              "tier-1-portable-codegen",
+              "tier-2-package-domain",
+              "tier-3-deferred-or-out-of-scope"
+            ],
+            "description": "Completion-tier classification for operation-step references."
+          },
+          "tier_owner": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tier_reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "conformance_ref": {
+            "type": "string",
+            "minLength": 1
+          },
+          "migration_path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "generic_behavior_audit": {
+            "type": "string",
+            "minLength": 1
           }
         },
         "additionalProperties": false,

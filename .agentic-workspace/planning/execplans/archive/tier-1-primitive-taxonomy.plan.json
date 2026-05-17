@@ -1,0 +1,339 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Freeze portable primitive taxonomy",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "lane",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "required_continuation",
+      "iterative_follow_through",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane tier-1-primitive-taxonomy.",
+    "hard_constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "All operation steps are classified as Tier 1 portable codegen primitives, Tier 2 package-domain primitives or explicit debt, or Tier 3 deferred/out of completion scope. operation_primitives.json declares the taxonomy, schema backing, and Tier 2 owner/reason/conformance/migration/generic-behavior audit.",
+    "proof_expectations": [
+      "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+      "uv run pytest tests/test_contract_tooling.py -q",
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "uv run python packages/command-generation/tests/primitive_conformance.py"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/contracts/operation_primitives.json",
+      "src/agentic_workspace/contracts/schemas/operation_primitives.schema.json",
+      "scripts/check/check_contract_tooling_surfaces.py",
+      "tests/test_contract_tooling.py",
+      "packages/command-generation/src/command_generation/generated_package_loader.py",
+      ".agentic-workspace/planning/execplans/archive/tier-0-honest-gate.plan.json"
+    ],
+    "completion_criteria": [
+      "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+      "uv run pytest tests/test_contract_tooling.py -q",
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "uv run python packages/command-generation/tests/primitive_conformance.py"
+    ],
+    "continuation_owner": "#892 / tier-2-generated-target-layout",
+    "closeout_decision": "archive-but-keep-lane-open"
+  },
+  "goal": [
+    "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane tier-1-primitive-taxonomy."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane tier-1-primitive-taxonomy.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "tier-1-primitive-taxonomy",
+      "status": "completed",
+      "next_step": "All operation steps are classified as Tier 1 portable codegen primitives, Tier 2 package-domain primitives or explicit debt, or Tier 3 deferred/out of completion scope. operation_primitives.json declares the taxonomy, schema backing, and Tier 2 owner/reason/conformance/migration/generic-behavior audit.",
+      "proof": "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run pytest tests/test_contract_tooling.py -q; uv run python scripts/check/check_generated_command_packages.py; uv run python packages/command-generation/tests/primitive_conformance.py"
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/contracts/operation_primitives.json",
+        "src/agentic_workspace/contracts/schemas/operation_primitives.schema.json",
+        "scripts/check/check_contract_tooling_surfaces.py",
+        "tests/test_contract_tooling.py",
+        "packages/command-generation/src/command_generation/generated_package_loader.py",
+        ".agentic-workspace/planning/execplans/archive/tier-0-honest-gate.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#892 Python generated CLI completion remains open beyond Tier 1.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "#892 / tier-2-generated-target-layout"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "#892 / tier-2-generated-target-layout",
+    "activation trigger": "Promote tier-2-generated-target-layout."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Operation primitive refs now have schema-backed Tier 1/Tier 2/Tier 3 classification and Tier 2 audit fields.",
+    "intentionally deferred": "Generated target layout and later runtime-reduction tiers remain in #892.",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes",
+    "validation still needed": "Tier 2 and later #892 proof.",
+    "next likely slice": "tier-2-generated-target-layout"
+  },
+  "intent_interpretation": {
+    "literal request": "Freeze portable primitive taxonomy",
+    "inferred intended outcome": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane tier-1-primitive-taxonomy.",
+    "chosen concrete what": "All operation steps are classified as Tier 1 portable codegen primitives, Tier 2 package-domain primitives or explicit debt, or Tier 3 deferred/out of completion scope. operation_primitives.json declares the taxonomy, schema backing, and Tier 2 owner/reason/conformance/migration/generic-behavior audit.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "src/agentic_workspace/contracts/operation_primitives.json; src/agentic_workspace/contracts/schemas/operation_primitives.schema.json; scripts/check/check_contract_tooling_surfaces.py; tests/test_contract_tooling.py; packages/command-generation/src/command_generation/generated_package_loader.py; .agentic-workspace/planning/execplans/archive/tier-0-honest-gate.plan.json",
+    "max changed files": "6 plus planning metadata",
+    "required validation commands": "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run pytest tests/test_contract_tooling.py -q; uv run python scripts/check/check_generated_command_packages.py; uv run python packages/command-generation/tests/primitive_conformance.py",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "All operation steps are classified as Tier 1 portable codegen primitives, Tier 2 package-domain primitives or explicit debt, or Tier 3 deferred/out of completion scope. operation_primitives.json declares the taxonomy, schema backing, and Tier 2 owner/reason/conformance/migration/generic-behavior audit.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane tier-1-primitive-taxonomy.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-17T20:58:04+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "label": "decomposition lane tier-1-primitive-taxonomy",
+      "role": "intake",
+      "locator": "candidate_lanes[11]"
+    }
+  ],
+  "active_milestone": {
+    "id": "tier-1-primitive-taxonomy",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "All operation steps are classified as Tier 1 portable codegen primitives, Tier 2 package-domain primitives or explicit debt, or Tier 3 deferred/out of completion scope. operation_primitives.json declares the taxonomy, schema backing, and Tier 2 owner/reason/conformance/migration/generic-behavior audit."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/operation_primitives.json",
+    "src/agentic_workspace/contracts/schemas/operation_primitives.schema.json",
+    "scripts/check/check_contract_tooling_surfaces.py",
+    "tests/test_contract_tooling.py",
+    "packages/command-generation/src/command_generation/generated_package_loader.py",
+    ".agentic-workspace/planning/execplans/archive/tier-0-honest-gate.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run pytest tests/test_contract_tooling.py -q",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python packages/command-generation/tests/primitive_conformance.py"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run pytest tests/test_contract_tooling.py -q",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python packages/command-generation/tests/primitive_conformance.py"
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "",
+    "handoff source": "agentic-planning promote-to-plan decomposition lane",
+    "what happened": "Added primitive taxonomy contract/schema/check/test coverage and fixed a crash-prone generated package loader glob path found during validation.",
+    "scope touched": "Tier 1 primitive taxonomy, contract tooling proof, generated package loader crash fix, archive size guardrail cleanup.",
+    "changed surfaces": "src/agentic_workspace/contracts/operation_primitives.json; src/agentic_workspace/contracts/schemas/operation_primitives.schema.json; scripts/check/check_contract_tooling_surfaces.py; tests/test_contract_tooling.py; packages/command-generation/src/command_generation/generated_package_loader.py; .agentic-workspace/planning/execplans/archive/tier-0-honest-gate.plan.json",
+    "validations run": "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run pytest tests/test_contract_tooling.py -q; uv run python scripts/check/check_generated_command_packages.py; uv run python packages/command-generation/tests/primitive_conformance.py",
+    "result for continuation": "Tier 1 complete; continue #892 with Tier 2.",
+    "next step": "Promote tier-2-generated-target-layout."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes for Tier 1; larger #892 remains open",
+    "config compliance": "used planning-backed workflow and compact summary",
+    "misinterpretation risk": "low",
+    "follow-on decision": "#892 / tier-2-generated-target-layout"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "not skipped",
+    "expected savings": "Spark explorers inspect Tier 1 contract and Tier 2 layout surfaces while implementation remains local for cross-file consistency.",
+    "actual friction": "Delegated exploration was interrupted by crashes; local implementation carried the narrow cross-file contract change.",
+    "proof result": "passed",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run pytest tests/test_contract_tooling.py -q; uv run python scripts/check/check_generated_command_packages.py; uv run python packages/command-generation/tests/primitive_conformance.py",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Tier 1 validation commands passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane tier-1-primitive-taxonomy.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "Tier 1 primitive taxonomy is implemented: operation_primitives.json classifies operation step primitives into Tier 1 portable codegen and Tier 2 package-domain debt with schema/check/test coverage; full #892 remains open.",
+    "unsolved intent passed to": "#892 / tier-2-generated-target-layout"
+  },
+  "execution_summary": {
+    "outcome delivered": "Tier 1 primitive taxonomy implemented with schema/check/test proof; loader crash found during validation fixed.",
+    "validation confirmed": "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run pytest tests/test_contract_tooling.py -q; uv run python scripts/check/check_generated_command_packages.py; uv run python packages/command-generation/tests/primitive_conformance.py",
+    "follow-on routed to": "#892 / tier-2-generated-target-layout",
+    "post-work posterity capture": "archive closeout distillation",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "tier-2-generated-target-layout"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "none",
+    "proposed durable intent": "none yet",
+    "confidence": "low",
+    "needs review": "True",
+    "owner surface": "none"
+  },
+  "closure_check": {
+    "closeout scope": "lane",
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "Tier 1 is complete, but the larger #892 Python generated CLI lane still requires Tier 2 generated target layout and later runtime-reduction tiers.",
+    "evidence carried forward": "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run pytest tests/test_contract_tooling.py -q; uv run python scripts/check/check_generated_command_packages.py; uv run python packages/command-generation/tests/primitive_conformance.py",
+    "reopen trigger": "Promote tier-2-generated-target-layout for the next #892 continuation slice."
+  },
+  "improvement_signal_review": {
+    "status": "completed",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [
+      "Loader crash finding fixed and filed as #1043."
+    ],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "#892 / tier-2-generated-target-layout"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Continue #892 with tier-2-generated-target-layout.",
+          "owner": "#892 / tier-2-generated-target-layout",
+          "source": "closure_check"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-17: Scaffolded by agentic-planning promote-to-plan from decomposition lane tier-1-primitive-taxonomy.",
+    "2026-05-17: Recorded delegation decision route=delegate-exploration.",
+    "2026-05-17: Tier 1 completed and routed continuation to tier-2-generated-target-layout."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane tier-1-primitive-taxonomy.\nIntent satisfied: no\nArchive decision: archive-but-keep-lane-open\nProof: uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run pytest tests/test_contract_tooling.py -q; uv run python scripts/check/check_generated_command_packages.py; uv run python packages/command-generation/tests/primitive_conformance.py\nChanged surfaces: src/agentic_workspace/contracts/operation_primitives.json; src/agentic_workspace/contracts/schemas/operation_primitives.schema.json; scripts/check/check_contract_tooling_surfaces.py; tests/test_contract_tooling.py; packages/command-generation/src/command_generation/generated_package_loader.py; .agentic-workspace/planning/execplans/archive/tier-0-honest-gate.plan.json\nDurable residue: none (none)\nMemory learning: none\nFollow-up: #892 / tier-2-generated-target-layout"
+  }
+}

@@ -1,0 +1,283 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Restore tiny start payload budget",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Restore the selector-first start payload budget without weakening planning safety semantics.",
+    "hard_constraints": "Keep scope bounded to the default start payload projection and its focused tests; do not start Tier 3 work.",
+    "agent_may_decide": "Compact redundant projection detail when drill-down selectors or direct fields preserve the underlying safety information.",
+    "escalate_when": "The fix requires changing planning decisions, active execplan semantics, or unrelated startup routing behavior.",
+    "next_action": "Compact planning safety gate detail in the selector-first start context and validate the workspace tests.",
+    "proof_expectations": [
+      "uv run pytest tests/test_workspace_start_preflight_cli.py::test_start_tiny_profile_returns_first_contact_projection tests/test_workspace_start_preflight_cli.py::test_start_tiny_routes_config_posture_questions_to_tiny_config tests/test_workspace_implement_cli.py::test_implement_tiny_profile_returns_next_decision_without_diagnostics -q",
+      "make test-workspace"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "tests/test_workspace_start_preflight_cli.py"
+    ],
+    "completion_criteria": [
+      "Default selector-first start payload remains under the existing size budgets.",
+      "Planning safety gate context still exposes actionable status, decision, proof, and ownership fields.",
+      "The Tier 1/2 PR validation completes without carrying this blocker as hidden residue."
+    ],
+    "continuation_owner": "#892 / tier-3-memory-first",
+    "closeout_decision": "archive-but-keep-lane-open"
+  },
+  "goal": [
+    "Create a bounded plan for Restore tiny start payload budget."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Restore the selector-first start payload budget without weakening planning safety semantics.",
+      "constraints": "Keep scope bounded to the default start payload projection and its focused tests; do not start Tier 3 work.",
+      "latitude": "Compact redundant projection detail when drill-down selectors or direct fields preserve the underlying safety information.",
+      "escalation": "Escalate when the fix requires changing planning decisions, active execplan semantics, or unrelated startup routing behavior."
+    },
+    "execution": {
+      "milestone": "tiny-start-payload-budget",
+      "status": "active",
+      "next_step": "Compact planning safety gate detail in the selector-first start context and validate the workspace tests.",
+      "proof": "Focused start payload budget tests and make test-workspace pass."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "tests/test_workspace_start_preflight_cli.py"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Finish the Tier 1/2 #892 branch with honest validation and no hidden startup payload regression.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "#892 / tier-3-memory-first"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "#892 / tier-3-memory-first",
+    "activation trigger": "After Tier 1/2 PR lands and the next #892 slice is intentionally promoted."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Tier 1/2 #892 branch validation can complete without oversized tiny startup or implementer payloads.",
+    "intentionally deferred": "The larger #892 Python completion lane remains routed to tier-3-memory-first.",
+    "discovered implications": "Dogfooding issue #1044 tracks the fixed payload-budget regression.",
+    "proof achieved now": "Focused payload tests and make test-workspace pass.",
+    "validation still needed": "Full PR validation remains to be rerun after closeout.",
+    "next likely slice": "#892 / tier-3-memory-first"
+  },
+  "intent_interpretation": {
+    "literal request": "Restore tiny start payload budget",
+    "inferred intended outcome": "Remove the validation blocker discovered while finishing the Tier 1/2 #892 branch.",
+    "chosen concrete what": "Compact selector-first planning safety gate projection while preserving actionable fields.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_start_preflight_cli.py or tests/test_workspace_implement_cli.py only if a focused assertion is needed.",
+    "max changed files": "3",
+    "required validation commands": "uv run pytest tests/test_workspace_start_preflight_cli.py::test_start_tiny_profile_returns_first_contact_projection tests/test_workspace_start_preflight_cli.py::test_start_tiny_routes_config_posture_questions_to_tiny_config tests/test_workspace_implement_cli.py::test_implement_tiny_profile_returns_next_decision_without_diagnostics -q; make test-workspace",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue by compacting selector-first planning safety gate detail, then rerun the two focused budget tests and make test-workspace.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Restore the selector-first start payload budget without weakening planning safety semantics.",
+    "hard constraints": "Keep scope bounded to the default start payload projection and its focused tests; do not start Tier 3 work.",
+    "agent may decide locally": "Compact redundant projection detail when drill-down selectors or direct fields preserve the underlying safety information.",
+    "escalate when": "The fix requires changing planning decisions, active execplan semantics, or unrelated startup routing behavior."
+  },
+  "post_decomposition_delegation": {
+    "status": "not-needed",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "tiny-start-payload-budget",
+    "status": "completed",
+    "scope": "Compact selector-first start payload planning safety detail and validate the budget regression.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Compact selector-first planning safety gate detail in src/agentic_workspace/workspace_runtime_primitives.py."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "tests/test_workspace_start_preflight_cli.py",
+    "tests/test_workspace_implement_cli.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_start_preflight_cli.py::test_start_tiny_profile_returns_first_contact_projection tests/test_workspace_start_preflight_cli.py::test_start_tiny_routes_config_posture_questions_to_tiny_config tests/test_workspace_implement_cli.py::test_implement_tiny_profile_returns_next_decision_without_diagnostics tests/test_workspace_start_preflight_cli.py::test_implement_requires_delegation_decision_for_active_decomposed_lane -q",
+    "make test-workspace"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Default selector-first start payload remains under the existing size budgets.",
+    "Planning safety gate context still exposes actionable status, decision, proof, and ownership fields.",
+    "The Tier 1/2 PR validation completes without carrying this blocker as hidden residue."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Compacted blocked planning safety gate projection for selector-first start and tiny implementer payloads, preserving actionable fields while summarizing decomposition candidates.",
+    "scope touched": "src/agentic_workspace/workspace_runtime_primitives.py",
+    "changed surfaces": "Workspace startup and implementer context projections.",
+    "validations run": "uv run pytest tests/test_workspace_start_preflight_cli.py::test_start_tiny_profile_returns_first_contact_projection tests/test_workspace_start_preflight_cli.py::test_start_tiny_routes_config_posture_questions_to_tiny_config tests/test_workspace_implement_cli.py::test_implement_tiny_profile_returns_next_decision_without_diagnostics -q; uv run pytest tests/test_workspace_start_preflight_cli.py::test_implement_requires_delegation_decision_for_active_decomposed_lane ... -q; make test-workspace",
+    "result for continuation": "Return to Tier 1/2 PR validation; #892 remains open for tier-3-memory-first.",
+    "next step": "Run full PR validation, commit, push, and open the PR."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "focused and workspace proof passed",
+    "intent served": "yes",
+    "config compliance": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "#892 / tier-3-memory-first remains open"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "Small validation blocker with single-file implementation; delegation would add handoff overhead.",
+    "expected savings": "low",
+    "actual friction": "none",
+    "proof result": "focused and workspace tests passed",
+    "quality concern": "none after preserving delegation_decision_command in the compact gate",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_workspace_start_preflight_cli.py::test_start_tiny_profile_returns_first_contact_projection tests/test_workspace_start_preflight_cli.py::test_start_tiny_routes_config_posture_questions_to_tiny_config tests/test_workspace_implement_cli.py::test_implement_tiny_profile_returns_next_decision_without_diagnostics -q; focused delegation command guard test; make test-workspace",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Focused tests passed; make test-workspace reported [ok] workspace tests."
+  },
+  "intent_satisfaction": {
+    "original intent": "Restore the selector-first start payload budget without weakening planning safety semantics.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Tiny start and implementer budget tests pass while blocked planning gate action fields remain present.",
+    "unsolved intent passed to": "#892 / tier-3-memory-first"
+  },
+  "execution_summary": {
+    "outcome delivered": "Selector-first and tiny implementer planning safety gate projections are compact enough for existing budgets.",
+    "validation confirmed": "focused tests and make test-workspace pass",
+    "follow-on routed to": "#892 / tier-3-memory-first",
+    "post-work posterity capture": "Issue #1044 filed and fixed in this PR.",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "No work remains in this recovery slice; resume #892 at tier-3-memory-first after this PR lands."
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive closeout",
+    "target scope": "none",
+    "proposed durable intent": "none",
+    "confidence": "low",
+    "needs review": false,
+    "owner surface": "none"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "The validation blocker slice is complete, but the larger #892 Python completion lane still continues at tier-3-memory-first.",
+    "evidence carried forward": "Focused payload and delegation guard tests pass; make test-workspace passes; issue #1044 documents the fixed dogfooding finding.",
+    "reopen trigger": "A future tiny start or implementer payload reintroduces full decomposition candidate detail by default."
+  },
+  "improvement_signal_review": {
+    "status": "completed",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [
+      "#1044: Tiny startup and implementer projections embedded bulky planning gate decomposition details."
+    ],
+    "signals fixed": [
+      "#1044 fixed by compacting blocked planning gate projection while preserving actionable command fields."
+    ],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "#892 / tier-3-memory-first"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        "#1044 is filed and fixed by this branch; close via PR."
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-05-17: Scaffolded by agentic-planning new-plan."
+  ]
+}

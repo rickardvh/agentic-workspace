@@ -131,34 +131,66 @@
       "summary": "Run an explicitly allowed validation command.",
       "kind": "check",
       "portability": "target-executor",
-      "semantics": "Execute only a command declared by the operation or proof route and report structured exit/output data."
+      "semantics": "Execute only a command declared by the operation or proof route and report structured exit/output data.",
+      "taxonomy_tier": "tier-1-portable-codegen"
     },
     {
       "id": "delegation.outcome.append",
-      "summary": "Append a local-only delegation outcome record for future target-profile tuning."
+      "summary": "Append a local-only delegation outcome record for future target-profile tuning.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "command operation contract owner",
+      "tier_reason": "The primitive is named in operation IR but its portable executor semantics are not schema-backed yet.",
+      "conformance_ref": "contract tooling and generated command package checks",
+      "migration_path": "Add schema-backed semantics and executor conformance before promoting to Tier 1.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "external_intent.evidence.normalize",
-      "summary": "Normalize provider-specific issue data into provider-agnostic external intent evidence records."
+      "summary": "Normalize provider-specific issue data into provider-agnostic external intent evidence records.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "external provider adapter boundary",
+      "tier_reason": "Provider integration or checked callable adapter behavior is not portable target-executor logic.",
+      "conformance_ref": "operation inventory and generated command package checks",
+      "migration_path": "Split deterministic normalization or file writes into Tier 1 primitives only after provider-specific behavior has a stable contract.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "external_intent.evidence.write",
-      "summary": "Write provider-agnostic external intent evidence under the planning evidence surface."
+      "summary": "Write provider-agnostic external intent evidence under the planning evidence surface.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "external provider adapter boundary",
+      "tier_reason": "Provider integration or checked callable adapter behavior is not portable target-executor logic.",
+      "conformance_ref": "operation inventory and generated command package checks",
+      "migration_path": "Split deterministic normalization or file writes into Tier 1 primitives only after provider-specific behavior has a stable contract.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "external_intent.github.issues.list",
-      "summary": "Read GitHub issues through the optional gh CLI adapter."
+      "summary": "Read GitHub issues through the optional gh CLI adapter.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "external provider adapter boundary",
+      "tier_reason": "Provider integration or checked callable adapter behavior is not portable target-executor logic.",
+      "conformance_ref": "operation inventory and generated command package checks",
+      "migration_path": "Split deterministic normalization or file writes into Tier 1 primitives only after provider-specific behavior has a stable contract.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "external_intent.github.repo.resolve",
-      "summary": "Resolve a GitHub repository for optional external intent refresh from an explicit repo or local gh context."
+      "summary": "Resolve a GitHub repository for optional external intent refresh from an explicit repo or local gh context.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "external provider adapter boundary",
+      "tier_reason": "Provider integration or checked callable adapter behavior is not portable target-executor logic.",
+      "conformance_ref": "operation inventory and generated command package checks",
+      "migration_path": "Split deterministic normalization or file writes into Tier 1 primitives only after provider-specific behavior has a stable contract.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "filesystem.copy",
       "summary": "Copy a package resource or root-contained file to a root-contained destination.",
       "kind": "filesystem",
       "portability": "target-executor",
-      "semantics": "Copy bytes between declared roots without allowing path escape."
+      "semantics": "Copy bytes between declared roots without allowing path escape.",
+      "taxonomy_tier": "tier-1-portable-codegen"
     },
     {
       "id": "filesystem.exists",
@@ -167,7 +199,8 @@
       "portability": "target-executor",
       "semantics": "Return a boolean for a normalized path without escaping the operation root.",
       "input_schema_ref": "schemas/primitives/filesystem_exists.input.schema.json",
-      "output_schema_ref": "schemas/primitives/filesystem_exists.output.schema.json"
+      "output_schema_ref": "schemas/primitives/filesystem_exists.output.schema.json",
+      "taxonomy_tier": "tier-1-portable-codegen"
     },
     {
       "id": "filesystem.glob",
@@ -176,7 +209,8 @@
       "portability": "target-executor",
       "semantics": "Return sorted relative paths that match a non-escaping glob expression.",
       "input_schema_ref": "schemas/primitives/filesystem_glob.input.schema.json",
-      "output_schema_ref": "schemas/primitives/filesystem_glob.output.schema.json"
+      "output_schema_ref": "schemas/primitives/filesystem_glob.output.schema.json",
+      "taxonomy_tier": "tier-1-portable-codegen"
     },
     {
       "id": "filesystem.read",
@@ -185,25 +219,34 @@
       "portability": "target-executor",
       "semantics": "Read text from a normalized path after root containment checks.",
       "input_schema_ref": "schemas/primitives/filesystem_read.input.schema.json",
-      "output_schema_ref": "schemas/primitives/filesystem_read.output.schema.json"
+      "output_schema_ref": "schemas/primitives/filesystem_read.output.schema.json",
+      "taxonomy_tier": "tier-1-portable-codegen"
     },
     {
       "id": "filesystem.remove",
       "summary": "Remove a root-contained file when the operation allows the mutation.",
       "kind": "filesystem",
       "portability": "target-executor",
-      "semantics": "Remove a normalized root-contained path only when operation effects and guards permit removal."
+      "semantics": "Remove a normalized root-contained path only when operation effects and guards permit removal.",
+      "taxonomy_tier": "tier-1-portable-codegen"
     },
     {
       "id": "filesystem.write",
       "summary": "Write a UTF-8 text file within the operation root.",
       "kind": "filesystem",
       "portability": "target-executor",
-      "semantics": "Write text to a normalized path after root containment and operation effect checks."
+      "semantics": "Write text to a normalized path after root containment and operation effect checks.",
+      "taxonomy_tier": "tier-1-portable-codegen"
     },
     {
       "id": "implementer.context.assemble",
-      "summary": "Assemble bounded implementer context from changed paths, boundary markers, and proof selection."
+      "summary": "Assemble bounded implementer context from changed paths, boundary markers, and proof selection.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace package runtime boundary",
+      "tier_reason": "Workspace routing, live inspection, policy assembly, or agent-facing judgment remains package-domain behavior.",
+      "conformance_ref": "workspace tests plus generated command package checks",
+      "migration_path": "Extract deterministic file/data/schema/template/output portions into Tier 1 primitives after the package judgment boundary is separated.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "json.parse",
@@ -212,147 +255,288 @@
       "portability": "target-executor",
       "semantics": "Parse JSON using the target runtime's standard parser and fail the operation on invalid JSON.",
       "input_schema_ref": "schemas/primitives/json_parse.input.schema.json",
-      "output_schema_ref": "schemas/primitives/json_parse.output.schema.json"
+      "output_schema_ref": "schemas/primitives/json_parse.output.schema.json",
+      "taxonomy_tier": "tier-1-portable-codegen"
     },
     {
       "id": "json.write",
       "summary": "Serialize a structured value as stable JSON text.",
       "kind": "structured-data",
       "portability": "target-executor",
-      "semantics": "Emit deterministic UTF-8 JSON using the contract-selected formatting policy."
+      "semantics": "Emit deterministic UTF-8 JSON using the contract-selected formatting policy.",
+      "taxonomy_tier": "tier-1-portable-codegen"
     },
     {
       "id": "markdown.sections.parse",
       "summary": "Parse Markdown into heading-addressable sections.",
       "kind": "structured-data",
       "portability": "target-executor",
-      "semantics": "Build a conservative section map from Markdown headings without interpreting arbitrary Markdown syntax."
+      "semantics": "Build a conservative section map from Markdown headings without interpreting arbitrary Markdown syntax.",
+      "taxonomy_tier": "tier-1-portable-codegen"
     },
     {
       "id": "memory.bootstrap.doctor.load",
-      "summary": "Load package-local memory doctor diagnostics for a target repository."
+      "summary": "Load package-local memory doctor diagnostics for a target repository.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "memory package runtime boundary",
+      "tier_reason": "Memory bootstrap policy, note routing, lifecycle behavior, or compatibility formatting remains package-domain behavior.",
+      "conformance_ref": "memory package tests plus generated command package checks",
+      "migration_path": "Move deterministic payload, TOML, file, or output portions to Tier 1 primitives as contracts stabilize.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "memory.bootstrap.files.list",
-      "summary": "List packaged memory bootstrap files without mutating a target repository."
+      "summary": "List packaged memory bootstrap files without mutating a target repository.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "memory package runtime boundary",
+      "tier_reason": "Memory bootstrap policy, note routing, lifecycle behavior, or compatibility formatting remains package-domain behavior.",
+      "conformance_ref": "memory package tests plus generated command package checks",
+      "migration_path": "Move deterministic payload, TOML, file, or output portions to Tier 1 primitives as contracts stabilize.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "memory.bootstrap.skills.list",
-      "summary": "List packaged memory bootstrap lifecycle skills."
+      "summary": "List packaged memory bootstrap lifecycle skills.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "memory package runtime boundary",
+      "tier_reason": "Memory bootstrap policy, note routing, lifecycle behavior, or compatibility formatting remains package-domain behavior.",
+      "conformance_ref": "memory package tests plus generated command package checks",
+      "migration_path": "Move deterministic payload, TOML, file, or output portions to Tier 1 primitives as contracts stabilize.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "memory.bootstrap.status.load",
-      "summary": "Load package-local memory bootstrap status for a target repository."
+      "summary": "Load package-local memory bootstrap status for a target repository.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "memory package runtime boundary",
+      "tier_reason": "Memory bootstrap policy, note routing, lifecycle behavior, or compatibility formatting remains package-domain behavior.",
+      "conformance_ref": "memory package tests plus generated command package checks",
+      "migration_path": "Move deterministic payload, TOML, file, or output portions to Tier 1 primitives as contracts stabilize.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "memory.bootstrap.cleanup",
       "summary": "Remove package-local temporary Memory bootstrap workspace files.",
       "kind": "memory-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "memory package runtime boundary",
+      "tier_reason": "Memory bootstrap policy, note routing, lifecycle behavior, or compatibility formatting remains package-domain behavior.",
+      "conformance_ref": "memory package tests plus generated command package checks",
+      "migration_path": "Move deterministic payload, TOML, file, or output portions to Tier 1 primitives as contracts stabilize.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "memory.capture_note.load",
       "summary": "Load package-local Memory capture recommendations.",
       "kind": "memory-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "memory package runtime boundary",
+      "tier_reason": "Memory bootstrap policy, note routing, lifecycle behavior, or compatibility formatting remains package-domain behavior.",
+      "conformance_ref": "memory package tests plus generated command package checks",
+      "migration_path": "Move deterministic payload, TOML, file, or output portions to Tier 1 primitives as contracts stabilize.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "memory.current.load",
       "summary": "Load package-local legacy current-memory show or check result.",
       "kind": "memory-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "memory package runtime boundary",
+      "tier_reason": "Memory bootstrap policy, note routing, lifecycle behavior, or compatibility formatting remains package-domain behavior.",
+      "conformance_ref": "memory package tests plus generated command package checks",
+      "migration_path": "Move deterministic payload, TOML, file, or output portions to Tier 1 primitives as contracts stabilize.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "memory.front_door.dispatch",
       "summary": "Dispatch generated workspace memory front-door argv to the Memory module runtime boundary.",
       "kind": "memory-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "memory package runtime boundary",
+      "tier_reason": "Memory bootstrap policy, note routing, lifecycle behavior, or compatibility formatting remains package-domain behavior.",
+      "conformance_ref": "memory package tests plus generated command package checks",
+      "migration_path": "Move deterministic payload, TOML, file, or output portions to Tier 1 primitives as contracts stabilize.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "memory.install.apply",
       "summary": "Install or initialize package-local Memory bootstrap surfaces.",
       "kind": "memory-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "memory package runtime boundary",
+      "tier_reason": "Memory bootstrap policy, note routing, lifecycle behavior, or compatibility formatting remains package-domain behavior.",
+      "conformance_ref": "memory package tests plus generated command package checks",
+      "migration_path": "Move deterministic payload, TOML, file, or output portions to Tier 1 primitives as contracts stabilize.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "memory.init.apply",
       "summary": "Initialize package-local Memory bootstrap surfaces using install semantics.",
       "kind": "memory-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "memory package runtime boundary",
+      "tier_reason": "Memory bootstrap policy, note routing, lifecycle behavior, or compatibility formatting remains package-domain behavior.",
+      "conformance_ref": "memory package tests plus generated command package checks",
+      "migration_path": "Move deterministic payload, TOML, file, or output portions to Tier 1 primitives as contracts stabilize.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "memory.adopt.apply",
       "summary": "Adopt package-local Memory bootstrap surfaces in an existing repository.",
       "kind": "memory-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "memory package runtime boundary",
+      "tier_reason": "Memory bootstrap policy, note routing, lifecycle behavior, or compatibility formatting remains package-domain behavior.",
+      "conformance_ref": "memory package tests plus generated command package checks",
+      "migration_path": "Move deterministic payload, TOML, file, or output portions to Tier 1 primitives as contracts stabilize.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "memory.upgrade.apply",
       "summary": "Upgrade package-local Memory bootstrap surfaces.",
       "kind": "memory-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "memory package runtime boundary",
+      "tier_reason": "Memory bootstrap policy, note routing, lifecycle behavior, or compatibility formatting remains package-domain behavior.",
+      "conformance_ref": "memory package tests plus generated command package checks",
+      "migration_path": "Move deterministic payload, TOML, file, or output portions to Tier 1 primitives as contracts stabilize.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "memory.migrate_layout.apply",
       "summary": "Migrate package-local Memory bootstrap legacy layout surfaces.",
       "kind": "memory-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "memory package runtime boundary",
+      "tier_reason": "Memory bootstrap policy, note routing, lifecycle behavior, or compatibility formatting remains package-domain behavior.",
+      "conformance_ref": "memory package tests plus generated command package checks",
+      "migration_path": "Move deterministic payload, TOML, file, or output portions to Tier 1 primitives as contracts stabilize.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "memory.uninstall.apply",
       "summary": "Remove package-local Memory bootstrap surfaces conservatively.",
       "kind": "memory-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "memory package runtime boundary",
+      "tier_reason": "Memory bootstrap policy, note routing, lifecycle behavior, or compatibility formatting remains package-domain behavior.",
+      "conformance_ref": "memory package tests plus generated command package checks",
+      "migration_path": "Move deterministic payload, TOML, file, or output portions to Tier 1 primitives as contracts stabilize.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "memory.note.create",
       "summary": "Create or dry-run a package-local Memory note and manifest entry.",
       "kind": "memory-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "memory package runtime boundary",
+      "tier_reason": "Memory bootstrap policy, note routing, lifecycle behavior, or compatibility formatting remains package-domain behavior.",
+      "conformance_ref": "memory package tests plus generated command package checks",
+      "migration_path": "Move deterministic payload, TOML, file, or output portions to Tier 1 primitives as contracts stabilize.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "memory.prompt.render",
       "summary": "Render package-local Memory bootstrap prompt guidance.",
       "kind": "memory-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "memory package runtime boundary",
+      "tier_reason": "Memory bootstrap policy, note routing, lifecycle behavior, or compatibility formatting remains package-domain behavior.",
+      "conformance_ref": "memory package tests plus generated command package checks",
+      "migration_path": "Move deterministic payload, TOML, file, or output portions to Tier 1 primitives as contracts stabilize.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "memory.report.load",
-      "summary": "Load package-local memory report state for a target repository."
+      "summary": "Load package-local memory report state for a target repository.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "memory package runtime boundary",
+      "tier_reason": "Memory bootstrap policy, note routing, lifecycle behavior, or compatibility formatting remains package-domain behavior.",
+      "conformance_ref": "memory package tests plus generated command package checks",
+      "migration_path": "Move deterministic payload, TOML, file, or output portions to Tier 1 primitives as contracts stabilize.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "memory.route.load",
       "summary": "Load package-local Memory note routing recommendations.",
       "kind": "memory-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "memory package runtime boundary",
+      "tier_reason": "Memory bootstrap policy, note routing, lifecycle behavior, or compatibility formatting remains package-domain behavior.",
+      "conformance_ref": "memory package tests plus generated command package checks",
+      "migration_path": "Move deterministic payload, TOML, file, or output portions to Tier 1 primitives as contracts stabilize.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "memory.route_report.load",
-      "summary": "Load package-local memory routing aggregate report state."
+      "summary": "Load package-local memory routing aggregate report state.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "memory package runtime boundary",
+      "tier_reason": "Memory bootstrap policy, note routing, lifecycle behavior, or compatibility formatting remains package-domain behavior.",
+      "conformance_ref": "memory package tests plus generated command package checks",
+      "migration_path": "Move deterministic payload, TOML, file, or output portions to Tier 1 primitives as contracts stabilize.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "memory.route_review.load",
       "summary": "Load package-local Memory routing feedback review results.",
       "kind": "memory-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "memory package runtime boundary",
+      "tier_reason": "Memory bootstrap policy, note routing, lifecycle behavior, or compatibility formatting remains package-domain behavior.",
+      "conformance_ref": "memory package tests plus generated command package checks",
+      "migration_path": "Move deterministic payload, TOML, file, or output portions to Tier 1 primitives as contracts stabilize.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "memory.search.load",
       "summary": "Load package-local Memory note search results.",
       "kind": "memory-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "memory package runtime boundary",
+      "tier_reason": "Memory bootstrap policy, note routing, lifecycle behavior, or compatibility formatting remains package-domain behavior.",
+      "conformance_ref": "memory package tests plus generated command package checks",
+      "migration_path": "Move deterministic payload, TOML, file, or output portions to Tier 1 primitives as contracts stabilize.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "memory.verify-payload.load",
       "summary": "Load package-local Memory payload verification results.",
       "kind": "memory-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "memory package runtime boundary",
+      "tier_reason": "Memory bootstrap policy, note routing, lifecycle behavior, or compatibility formatting remains package-domain behavior.",
+      "conformance_ref": "memory package tests plus generated command package checks",
+      "migration_path": "Move deterministic payload, TOML, file, or output portions to Tier 1 primitives as contracts stabilize.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "memory.sync_memory.load",
       "summary": "Load package-local Memory synchronization suggestions.",
       "kind": "memory-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "memory package runtime boundary",
+      "tier_reason": "Memory bootstrap policy, note routing, lifecycle behavior, or compatibility formatting remains package-domain behavior.",
+      "conformance_ref": "memory package tests plus generated command package checks",
+      "migration_path": "Move deterministic payload, TOML, file, or output portions to Tier 1 primitives as contracts stabilize.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "output.emit",
@@ -361,19 +545,38 @@
       "portability": "target-executor",
       "semantics": "Emit either stable JSON or declared text from an already assembled structured payload.",
       "input_schema_ref": "schemas/primitives/output_emit.input.schema.json",
-      "output_schema_ref": "schemas/primitives/output_emit.output.schema.json"
+      "output_schema_ref": "schemas/primitives/output_emit.output.schema.json",
+      "taxonomy_tier": "tier-1-portable-codegen"
     },
     {
       "id": "output.fields.select",
-      "summary": "Select exact top-level or dotted JSON fields before rendering output."
+      "summary": "Select exact top-level or dotted JSON fields before rendering output.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "command operation contract owner",
+      "tier_reason": "The primitive is named in operation IR but its portable executor semantics are not schema-backed yet.",
+      "conformance_ref": "contract tooling and generated command package checks",
+      "migration_path": "Add schema-backed semantics and executor conformance before promoting to Tier 1.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "output.profile.select",
-      "summary": "Select the smallest requested output projection that preserves the operation's next decision."
+      "summary": "Select the smallest requested output projection that preserves the operation's next decision.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "command operation contract owner",
+      "tier_reason": "The primitive is named in operation IR but its portable executor semantics are not schema-backed yet.",
+      "conformance_ref": "contract tooling and generated command package checks",
+      "migration_path": "Add schema-backed semantics and executor conformance before promoting to Tier 1.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "ownership.answer.resolve",
-      "summary": "Resolve ownership, authority, concern, or path-specific boundary answers."
+      "summary": "Resolve ownership, authority, concern, or path-specific boundary answers.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace package runtime boundary",
+      "tier_reason": "Workspace routing, live inspection, policy assembly, or agent-facing judgment remains package-domain behavior.",
+      "conformance_ref": "workspace tests plus generated command package checks",
+      "migration_path": "Extract deterministic file/data/schema/template/output portions into Tier 1 primitives after the package judgment boundary is separated.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "path.target_root.resolve",
@@ -382,7 +585,8 @@
       "portability": "target-executor",
       "semantics": "Resolve the target input or current working directory into a normalized target root and reject path escape.",
       "input_schema_ref": "schemas/primitives/path_target_root_resolve.input.schema.json",
-      "output_schema_ref": "schemas/primitives/path_target_root_resolve.output.schema.json"
+      "output_schema_ref": "schemas/primitives/path_target_root_resolve.output.schema.json",
+      "taxonomy_tier": "tier-1-portable-codegen"
     },
     {
       "id": "payload.assemble",
@@ -391,7 +595,8 @@
       "portability": "target-executor",
       "semantics": "Build a JSON-serializable payload from declared step outputs and constants.",
       "input_schema_ref": "schemas/primitives/payload_assemble.input.schema.json",
-      "output_schema_ref": "schemas/primitives/payload_assemble.output.schema.json"
+      "output_schema_ref": "schemas/primitives/payload_assemble.output.schema.json",
+      "taxonomy_tier": "tier-1-portable-codegen"
     },
     {
       "id": "payload.verify",
@@ -400,255 +605,481 @@
       "portability": "target-executor",
       "semantics": "Read a schema-backed payload verification policy and inspect rooted payload files for declared version markers, required files, forbidden paths, manifest validity, upgrade-source metadata, and guidance fragments without package-specific executable policy.",
       "input_schema_ref": "schemas/primitives/payload_verify.input.schema.json",
-      "output_schema_ref": "schemas/primitives/payload_verify.output.schema.json"
+      "output_schema_ref": "schemas/primitives/payload_verify.output.schema.json",
+      "taxonomy_tier": "tier-1-portable-codegen"
     },
     {
       "id": "planning.adopt.apply",
       "summary": "Conservatively add planning bootstrap files to an existing repository.",
       "kind": "planning-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Planning policy, lifecycle state mutation, closeout, or installed-surface interpretation remains package-domain behavior.",
+      "conformance_ref": "planning package tests plus generated command package checks",
+      "migration_path": "Extract deterministic record/file/template portions into schema-backed Tier 1 primitives when the planning policy boundary is explicit.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "planning.archive-plan.apply",
       "summary": "Close a completed execplan or parent lane after distillation.",
       "kind": "planning-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Planning policy, lifecycle state mutation, closeout, or installed-surface interpretation remains package-domain behavior.",
+      "conformance_ref": "planning package tests plus generated command package checks",
+      "migration_path": "Extract deterministic record/file/template portions into schema-backed Tier 1 primitives when the planning policy boundary is explicit.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "planning.bootstrap.doctor.load",
-      "summary": "Load package-local planning doctor diagnostics for a target repository."
+      "summary": "Load package-local planning doctor diagnostics for a target repository.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Planning policy, lifecycle state mutation, closeout, or installed-surface interpretation remains package-domain behavior.",
+      "conformance_ref": "planning package tests plus generated command package checks",
+      "migration_path": "Extract deterministic record/file/template portions into schema-backed Tier 1 primitives when the planning policy boundary is explicit.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "planning.bootstrap.status.load",
-      "summary": "Load package-local planning bootstrap status for a target repository."
+      "summary": "Load package-local planning bootstrap status for a target repository.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Planning policy, lifecycle state mutation, closeout, or installed-surface interpretation remains package-domain behavior.",
+      "conformance_ref": "planning package tests plus generated command package checks",
+      "migration_path": "Extract deterministic record/file/template portions into schema-backed Tier 1 primitives when the planning policy boundary is explicit.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "planning.closeout.apply",
       "summary": "Close out a completed execplan through one command-owned Planning writer.",
       "kind": "planning-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Planning policy, lifecycle state mutation, closeout, or installed-surface interpretation remains package-domain behavior.",
+      "conformance_ref": "planning package tests plus generated command package checks",
+      "migration_path": "Extract deterministic record/file/template portions into schema-backed Tier 1 primitives when the planning policy boundary is explicit.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "planning.close-item.apply",
       "summary": "Apply package-local planning close-item lifecycle mutation for a target repository.",
       "kind": "planning-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Planning policy, lifecycle state mutation, closeout, or installed-surface interpretation remains package-domain behavior.",
+      "conformance_ref": "planning package tests plus generated command package checks",
+      "migration_path": "Extract deterministic record/file/template portions into schema-backed Tier 1 primitives when the planning policy boundary is explicit.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "planning.create-review.apply",
       "summary": "Apply package-local planning create-review lifecycle mutation for a target repository.",
       "kind": "planning-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Planning policy, lifecycle state mutation, closeout, or installed-surface interpretation remains package-domain behavior.",
+      "conformance_ref": "planning package tests plus generated command package checks",
+      "migration_path": "Extract deterministic record/file/template portions into schema-backed Tier 1 primitives when the planning policy boundary is explicit.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "planning.delegation-decision.apply",
       "summary": "Record the delegation route chosen for the active execplan.",
       "kind": "planning-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Planning policy, lifecycle state mutation, closeout, or installed-surface interpretation remains package-domain behavior.",
+      "conformance_ref": "planning package tests plus generated command package checks",
+      "migration_path": "Extract deterministic record/file/template portions into schema-backed Tier 1 primitives when the planning policy boundary is explicit.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "planning.front_door.dispatch",
       "summary": "Dispatch generated workspace planning front-door argv to the Planning module runtime boundary.",
       "kind": "planning-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Planning policy, lifecycle state mutation, closeout, or installed-surface interpretation remains package-domain behavior.",
+      "conformance_ref": "planning package tests plus generated command package checks",
+      "migration_path": "Extract deterministic record/file/template portions into schema-backed Tier 1 primitives when the planning policy boundary is explicit.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "planning.handoff.load",
       "summary": "Load package-local planning handoff payload for a target repository.",
       "kind": "planning-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Planning policy, lifecycle state mutation, closeout, or installed-surface interpretation remains package-domain behavior.",
+      "conformance_ref": "planning package tests plus generated command package checks",
+      "migration_path": "Extract deterministic record/file/template portions into schema-backed Tier 1 primitives when the planning policy boundary is explicit.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "planning.help.build",
-      "summary": "Build planning orientation guidance and lifecycle command affordances without mutating planning state."
+      "summary": "Build planning orientation guidance and lifecycle command affordances without mutating planning state.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Planning policy, lifecycle state mutation, closeout, or installed-surface interpretation remains package-domain behavior.",
+      "conformance_ref": "planning package tests plus generated command package checks",
+      "migration_path": "Extract deterministic record/file/template portions into schema-backed Tier 1 primitives when the planning policy boundary is explicit.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "planning.init.apply",
       "summary": "Initialise planning bootstrap files in a repository.",
       "kind": "planning-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Planning policy, lifecycle state mutation, closeout, or installed-surface interpretation remains package-domain behavior.",
+      "conformance_ref": "planning package tests plus generated command package checks",
+      "migration_path": "Extract deterministic record/file/template portions into schema-backed Tier 1 primitives when the planning policy boundary is explicit.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "planning.install.apply",
       "summary": "Install planning bootstrap files into a repository.",
       "kind": "planning-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Planning policy, lifecycle state mutation, closeout, or installed-surface interpretation remains package-domain behavior.",
+      "conformance_ref": "planning package tests plus generated command package checks",
+      "migration_path": "Extract deterministic record/file/template portions into schema-backed Tier 1 primitives when the planning policy boundary is explicit.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "planning.intake-artifact.apply",
       "summary": "Route a freehand planning artifact into a canonical Planning surface.",
       "kind": "planning-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Planning policy, lifecycle state mutation, closeout, or installed-surface interpretation remains package-domain behavior.",
+      "conformance_ref": "planning package tests plus generated command package checks",
+      "migration_path": "Extract deterministic record/file/template portions into schema-backed Tier 1 primitives when the planning policy boundary is explicit.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "planning.list-files.load",
       "summary": "Load package-local planning payload file inventory.",
       "kind": "planning-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Planning policy, lifecycle state mutation, closeout, or installed-surface interpretation remains package-domain behavior.",
+      "conformance_ref": "planning package tests plus generated command package checks",
+      "migration_path": "Extract deterministic record/file/template portions into schema-backed Tier 1 primitives when the planning policy boundary is explicit.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "planning.new-plan.apply",
       "summary": "Create a schema-valid execplan scaffold and optionally register it.",
       "kind": "planning-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Planning policy, lifecycle state mutation, closeout, or installed-surface interpretation remains package-domain behavior.",
+      "conformance_ref": "planning package tests plus generated command package checks",
+      "migration_path": "Extract deterministic record/file/template portions into schema-backed Tier 1 primitives when the planning policy boundary is explicit.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "planning.promote-to-plan.apply",
       "summary": "Promote a direct TODO item into an execplan scaffold.",
       "kind": "planning-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Planning policy, lifecycle state mutation, closeout, or installed-surface interpretation remains package-domain behavior.",
+      "conformance_ref": "planning package tests plus generated command package checks",
+      "migration_path": "Extract deterministic record/file/template portions into schema-backed Tier 1 primitives when the planning policy boundary is explicit.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "planning.prompt.render",
       "summary": "Render package-local planning prompt guidance for a selected bootstrap command.",
       "kind": "planning-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Planning policy, lifecycle state mutation, closeout, or installed-surface interpretation remains package-domain behavior.",
+      "conformance_ref": "planning package tests plus generated command package checks",
+      "migration_path": "Extract deterministic record/file/template portions into schema-backed Tier 1 primitives when the planning policy boundary is explicit.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "planning.reconcile.load",
-      "summary": "Load provider-agnostic planning reconciliation state when the planning module is installed."
+      "summary": "Load provider-agnostic planning reconciliation state when the planning module is installed.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Planning policy, lifecycle state mutation, closeout, or installed-surface interpretation remains package-domain behavior.",
+      "conformance_ref": "planning package tests plus generated command package checks",
+      "migration_path": "Extract deterministic record/file/template portions into schema-backed Tier 1 primitives when the planning policy boundary is explicit.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "planning.record-recovery.apply",
       "summary": "Bless an emergency manual repair to managed planning surfaces with explicit provenance.",
       "kind": "planning-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Planning policy, lifecycle state mutation, closeout, or installed-surface interpretation remains package-domain behavior.",
+      "conformance_ref": "planning package tests plus generated command package checks",
+      "migration_path": "Extract deterministic record/file/template portions into schema-backed Tier 1 primitives when the planning policy boundary is explicit.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "planning.report.load",
-      "summary": "Load package-local planning report state for a target repository."
+      "summary": "Load package-local planning report state for a target repository.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Planning policy, lifecycle state mutation, closeout, or installed-surface interpretation remains package-domain behavior.",
+      "conformance_ref": "planning package tests plus generated command package checks",
+      "migration_path": "Extract deterministic record/file/template portions into schema-backed Tier 1 primitives when the planning policy boundary is explicit.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "planning.summary.load",
-      "summary": "Load compact active planning summary when the planning module is installed."
+      "summary": "Load compact active planning summary when the planning module is installed.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Planning policy, lifecycle state mutation, closeout, or installed-surface interpretation remains package-domain behavior.",
+      "conformance_ref": "planning package tests plus generated command package checks",
+      "migration_path": "Extract deterministic record/file/template portions into schema-backed Tier 1 primitives when the planning policy boundary is explicit.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "planning.uninstall.apply",
       "summary": "Remove managed planning bootstrap files when they still match package content.",
       "kind": "planning-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Planning policy, lifecycle state mutation, closeout, or installed-surface interpretation remains package-domain behavior.",
+      "conformance_ref": "planning package tests plus generated command package checks",
+      "migration_path": "Extract deterministic record/file/template portions into schema-backed Tier 1 primitives when the planning policy boundary is explicit.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "planning.upgrade.apply",
       "summary": "Refresh package-managed planning helper surfaces.",
       "kind": "planning-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Planning policy, lifecycle state mutation, closeout, or installed-surface interpretation remains package-domain behavior.",
+      "conformance_ref": "planning package tests plus generated command package checks",
+      "migration_path": "Extract deterministic record/file/template portions into schema-backed Tier 1 primitives when the planning policy boundary is explicit.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "planning.verify-payload.load",
       "summary": "Load package-local planning payload verification result.",
       "kind": "planning-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Planning policy, lifecycle state mutation, closeout, or installed-surface interpretation remains package-domain behavior.",
+      "conformance_ref": "planning package tests plus generated command package checks",
+      "migration_path": "Extract deterministic record/file/template portions into schema-backed Tier 1 primitives when the planning policy boundary is explicit.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "preflight.context.assemble",
-      "summary": "Assemble startup defaults, resolved config, and active planning state into takeover-safe context."
+      "summary": "Assemble startup defaults, resolved config, and active planning state into takeover-safe context.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace package runtime boundary",
+      "tier_reason": "Workspace routing, live inspection, policy assembly, or agent-facing judgment remains package-domain behavior.",
+      "conformance_ref": "workspace tests plus generated command package checks",
+      "migration_path": "Extract deterministic file/data/schema/template/output portions into Tier 1 primitives after the package judgment boundary is separated.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "preflight.token.create",
-      "summary": "Create a fresh preflight token using the configured token policy."
+      "summary": "Create a fresh preflight token using the configured token policy.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "command operation contract owner",
+      "tier_reason": "The primitive is named in operation IR but its portable executor semantics are not schema-backed yet.",
+      "conformance_ref": "contract tooling and generated command package checks",
+      "migration_path": "Add schema-backed semantics and executor conformance before promoting to Tier 1.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "python.function.call",
       "summary": "Call a checked-in Python runtime function declared by operation IR.",
       "kind": "external-runtime",
       "portability": "external-adapter",
-      "semantics": "Resolve import module, function name, and keyword bindings only from checked-in operation artifacts; user input may supply values but never the callable target."
+      "semantics": "Resolve import module, function name, and keyword bindings only from checked-in operation artifacts; user input may supply values but never the callable target.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "external provider adapter boundary",
+      "tier_reason": "Provider integration or checked callable adapter behavior is not portable target-executor logic.",
+      "conformance_ref": "operation inventory and generated command package checks",
+      "migration_path": "Split deterministic normalization or file writes into Tier 1 primitives only after provider-specific behavior has a stable contract.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "prompt.render",
-      "summary": "Render a ready-to-paste lifecycle handoff prompt without mutating repo state."
+      "summary": "Render a ready-to-paste lifecycle handoff prompt without mutating repo state.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "command operation contract owner",
+      "tier_reason": "The primitive is named in operation IR but its portable executor semantics are not schema-backed yet.",
+      "conformance_ref": "contract tooling and generated command package checks",
+      "migration_path": "Add schema-backed semantics and executor conformance before promoting to Tier 1.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "proof.routes.resolve",
-      "summary": "Resolve canonical proof routes, current proof state, or changed-path proof recommendations."
+      "summary": "Resolve canonical proof routes, current proof state, or changed-path proof recommendations.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace package runtime boundary",
+      "tier_reason": "Workspace routing, live inspection, policy assembly, or agent-facing judgment remains package-domain behavior.",
+      "conformance_ref": "workspace tests plus generated command package checks",
+      "migration_path": "Extract deterministic file/data/schema/template/output portions into Tier 1 primitives after the package judgment boundary is separated.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "record.append",
       "summary": "Append an item to a structured record list.",
       "kind": "record",
       "portability": "target-executor",
-      "semantics": "Append one item to a declared list path after schema validation."
+      "semantics": "Append one item to a declared list path after schema validation.",
+      "taxonomy_tier": "tier-1-portable-codegen"
     },
     {
       "id": "record.delete",
       "summary": "Delete a field or list item from a structured record.",
       "kind": "record",
       "portability": "target-executor",
-      "semantics": "Remove only the declared path or matched item and return the updated record."
+      "semantics": "Remove only the declared path or matched item and return the updated record.",
+      "taxonomy_tier": "tier-1-portable-codegen"
     },
     {
       "id": "record.merge",
       "summary": "Merge structured records using a declared shallow merge policy.",
       "kind": "record",
       "portability": "target-executor",
-      "semantics": "Apply an operation-declared merge policy without target-specific conflict heuristics."
+      "semantics": "Apply an operation-declared merge policy without target-specific conflict heuristics.",
+      "taxonomy_tier": "tier-1-portable-codegen"
     },
     {
       "id": "record.normalize",
       "summary": "Normalize a structured record into its canonical contract shape.",
       "kind": "record",
       "portability": "target-executor",
-      "semantics": "Apply schema-backed defaults, sorting, and field projection declared by the operation."
+      "semantics": "Apply schema-backed defaults, sorting, and field projection declared by the operation.",
+      "taxonomy_tier": "tier-1-portable-codegen"
     },
     {
       "id": "record.select",
       "summary": "Select a field or dotted path from a structured record.",
       "kind": "record",
       "portability": "target-executor",
-      "semantics": "Return the value at a declared path or a missing-value signal according to operation policy."
+      "semantics": "Return the value at a declared path or a missing-value signal according to operation policy.",
+      "taxonomy_tier": "tier-1-portable-codegen"
     },
     {
       "id": "record.set",
       "summary": "Set a field or dotted path in a structured record.",
       "kind": "record",
       "portability": "target-executor",
-      "semantics": "Return an updated record with the declared path set to a contract-valid value."
+      "semantics": "Return an updated record with the declared path set to a contract-valid value.",
+      "taxonomy_tier": "tier-1-portable-codegen"
     },
     {
       "id": "schema.validate",
       "summary": "Validate a structured value against a JSON Schema.",
       "kind": "validation",
       "portability": "target-executor",
-      "semantics": "Evaluate the declared JSON Schema and surface validation errors as operation failures."
+      "semantics": "Evaluate the declared JSON Schema and surface validation errors as operation failures.",
+      "taxonomy_tier": "tier-1-portable-codegen"
     },
     {
       "id": "skills.registry.inspect",
-      "summary": "Inspect installed and repo-owned skill registries and optionally rank them for a task."
+      "summary": "Inspect installed and repo-owned skill registries and optionally rank them for a task.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace package runtime boundary",
+      "tier_reason": "Workspace routing, live inspection, policy assembly, or agent-facing judgment remains package-domain behavior.",
+      "conformance_ref": "workspace tests plus generated command package checks",
+      "migration_path": "Extract deterministic file/data/schema/template/output portions into Tier 1 primitives after the package judgment boundary is separated.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "startup.context.assemble",
-      "summary": "Assemble bounded startup context from preflight state, authority markers, and optional changed paths."
+      "summary": "Assemble bounded startup context from preflight state, authority markers, and optional changed paths.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace package runtime boundary",
+      "tier_reason": "Workspace routing, live inspection, policy assembly, or agent-facing judgment remains package-domain behavior.",
+      "conformance_ref": "workspace tests plus generated command package checks",
+      "migration_path": "Extract deterministic file/data/schema/template/output portions into Tier 1 primitives after the package judgment boundary is separated.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "system_intent.config.resolve",
-      "summary": "Resolve configured or autodetected system-intent source hints from workspace config."
+      "summary": "Resolve configured or autodetected system-intent source hints from workspace config.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "command operation contract owner",
+      "tier_reason": "The primitive is named in operation IR but its portable executor semantics are not schema-backed yet.",
+      "conformance_ref": "contract tooling and generated command package checks",
+      "migration_path": "Add schema-backed semantics and executor conformance before promoting to Tier 1.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "system_intent.mirror.read_or_create",
-      "summary": "Read the compiled system-intent declaration or create a conservative missing declaration shell."
+      "summary": "Read the compiled system-intent declaration or create a conservative missing declaration shell.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "command operation contract owner",
+      "tier_reason": "The primitive is named in operation IR but its portable executor semantics are not schema-backed yet.",
+      "conformance_ref": "contract tooling and generated command package checks",
+      "migration_path": "Add schema-backed semantics and executor conformance before promoting to Tier 1.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "system_intent.result.emit",
-      "summary": "Emit compiled system-intent declaration status and metadata in the requested format."
+      "summary": "Emit compiled system-intent declaration status and metadata in the requested format.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "command operation contract owner",
+      "tier_reason": "The primitive is named in operation IR but its portable executor semantics are not schema-backed yet.",
+      "conformance_ref": "contract tooling and generated command package checks",
+      "migration_path": "Add schema-backed semantics and executor conformance before promoting to Tier 1.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "system_intent.source_metadata.refresh",
-      "summary": "Refresh metadata for configured system-intent source hints without interpreting source prose."
+      "summary": "Refresh metadata for configured system-intent source hints without interpreting source prose.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "command operation contract owner",
+      "tier_reason": "The primitive is named in operation IR but its portable executor semantics are not schema-backed yet.",
+      "conformance_ref": "contract tooling and generated command package checks",
+      "migration_path": "Add schema-backed semantics and executor conformance before promoting to Tier 1.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "template.render",
       "summary": "Render a declared template from a structured value.",
       "kind": "rendering",
       "portability": "target-executor",
-      "semantics": "Render only named templates with structured inputs; do not execute arbitrary template code."
+      "semantics": "Render only named templates with structured inputs; do not execute arbitrary template code.",
+      "taxonomy_tier": "tier-1-portable-codegen"
     },
     {
       "id": "toml.parse",
       "summary": "Parse TOML text into a structured value.",
       "kind": "structured-data",
       "portability": "target-executor",
-      "semantics": "Parse TOML using the target runtime's declared TOML library and fail the operation on invalid TOML."
+      "semantics": "Parse TOML using the target runtime's declared TOML library and fail the operation on invalid TOML.",
+      "taxonomy_tier": "tier-1-portable-codegen"
     },
     {
       "id": "toml.table.counts",
@@ -657,64 +1088,166 @@
       "portability": "target-executor",
       "semantics": "Read one rooted TOML file, count records in a named table, and return deterministic category counts without interpreting package policy.",
       "input_schema_ref": "schemas/primitives/toml_table_counts.input.schema.json",
-      "output_schema_ref": "schemas/primitives/toml_table_counts.output.schema.json"
+      "output_schema_ref": "schemas/primitives/toml_table_counts.output.schema.json",
+      "taxonomy_tier": "tier-1-portable-codegen"
     },
     {
       "id": "toml.write",
       "summary": "Serialize a structured value as TOML text.",
       "kind": "structured-data",
       "portability": "target-executor",
-      "semantics": "Write deterministic TOML for the limited record shapes owned by package contracts."
+      "semantics": "Write deterministic TOML for the limited record shapes owned by package contracts.",
+      "taxonomy_tier": "tier-1-portable-codegen"
     },
     {
       "id": "usage.error",
-      "summary": "Stop with a user-facing usage error when operation preconditions are violated."
+      "summary": "Stop with a user-facing usage error when operation preconditions are violated.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "command operation contract owner",
+      "tier_reason": "The primitive is named in operation IR but its portable executor semantics are not schema-backed yet.",
+      "conformance_ref": "contract tooling and generated command package checks",
+      "migration_path": "Add schema-backed semantics and executor conformance before promoting to Tier 1.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "workspace.config.emit",
-      "summary": "Emit the resolved workspace config payload in the requested output format."
+      "summary": "Emit the resolved workspace config payload in the requested output format.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace package runtime boundary",
+      "tier_reason": "Workspace routing, live inspection, policy assembly, or agent-facing judgment remains package-domain behavior.",
+      "conformance_ref": "workspace tests plus generated command package checks",
+      "migration_path": "Extract deterministic file/data/schema/template/output portions into Tier 1 primitives after the package judgment boundary is separated.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "workspace.config.load",
-      "summary": "Load resolved workspace config layered over product defaults and local override state."
+      "summary": "Load resolved workspace config layered over product defaults and local override state.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace package runtime boundary",
+      "tier_reason": "Workspace routing, live inspection, policy assembly, or agent-facing judgment remains package-domain behavior.",
+      "conformance_ref": "workspace tests plus generated command package checks",
+      "migration_path": "Extract deterministic file/data/schema/template/output portions into Tier 1 primitives after the package judgment boundary is separated.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "workspace.defaults.load",
-      "summary": "Load compact startup defaults, route contracts, and generated policy answers."
+      "summary": "Load compact startup defaults, route contracts, and generated policy answers.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace package runtime boundary",
+      "tier_reason": "Workspace routing, live inspection, policy assembly, or agent-facing judgment remains package-domain behavior.",
+      "conformance_ref": "workspace tests plus generated command package checks",
+      "migration_path": "Extract deterministic file/data/schema/template/output portions into Tier 1 primitives after the package judgment boundary is separated.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "workspace.defaults.select",
-      "summary": "Select a requested defaults section when the operation supports compact section filtering."
+      "summary": "Select a requested defaults section when the operation supports compact section filtering.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace package runtime boundary",
+      "tier_reason": "Workspace routing, live inspection, policy assembly, or agent-facing judgment remains package-domain behavior.",
+      "conformance_ref": "workspace tests plus generated command package checks",
+      "migration_path": "Extract deterministic file/data/schema/template/output portions into Tier 1 primitives after the package judgment boundary is separated.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "workspace.lifecycle.apply",
-      "summary": "Apply lifecycle mutations for selected modules when the operation is not a dry run."
+      "summary": "Apply lifecycle mutations for selected modules when the operation is not a dry run.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace package runtime boundary",
+      "tier_reason": "Workspace routing, live inspection, policy assembly, or agent-facing judgment remains package-domain behavior.",
+      "conformance_ref": "workspace tests plus generated command package checks",
+      "migration_path": "Extract deterministic file/data/schema/template/output portions into Tier 1 primitives after the package judgment boundary is separated.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "workspace.lifecycle.plan",
-      "summary": "Plan lifecycle changes for selected modules without applying file mutations."
+      "summary": "Plan lifecycle changes for selected modules without applying file mutations.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace package runtime boundary",
+      "tier_reason": "Workspace routing, live inspection, policy assembly, or agent-facing judgment remains package-domain behavior.",
+      "conformance_ref": "workspace tests plus generated command package checks",
+      "migration_path": "Extract deterministic file/data/schema/template/output portions into Tier 1 primitives after the package judgment boundary is separated.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "workspace.modules.inspect",
-      "summary": "Inspect module descriptors and installed-module signals for the target repository."
+      "summary": "Inspect module descriptors and installed-module signals for the target repository.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace package runtime boundary",
+      "tier_reason": "Workspace routing, live inspection, policy assembly, or agent-facing judgment remains package-domain behavior.",
+      "conformance_ref": "workspace tests plus generated command package checks",
+      "migration_path": "Extract deterministic file/data/schema/template/output portions into Tier 1 primitives after the package judgment boundary is separated.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "workspace.report.assemble",
-      "summary": "Assemble combined workspace status, doctor, setup, or report payloads from module and workspace surfaces."
+      "summary": "Assemble combined workspace status, doctor, setup, or report payloads from module and workspace surfaces.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace package runtime boundary",
+      "tier_reason": "Workspace routing, live inspection, policy assembly, or agent-facing judgment remains package-domain behavior.",
+      "conformance_ref": "workspace tests plus generated command package checks",
+      "migration_path": "Extract deterministic file/data/schema/template/output portions into Tier 1 primitives after the package judgment boundary is separated.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "workspace.report.select",
-      "summary": "Select the compact report router profile, the full report profile, or one top-level report section."
+      "summary": "Select the compact report router profile, the full report profile, or one top-level report section.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace package runtime boundary",
+      "tier_reason": "Workspace routing, live inspection, policy assembly, or agent-facing judgment remains package-domain behavior.",
+      "conformance_ref": "workspace tests plus generated command package checks",
+      "migration_path": "Extract deterministic file/data/schema/template/output portions into Tier 1 primitives after the package judgment boundary is separated.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "workspace.root.resolve",
       "summary": "Resolve the effective workspace root from a target path or current working directory.",
       "kind": "workspace-runtime",
-      "portability": "domain-runtime"
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace package runtime boundary",
+      "tier_reason": "Workspace routing, live inspection, policy assembly, or agent-facing judgment remains package-domain behavior.",
+      "conformance_ref": "workspace tests plus generated command package checks",
+      "migration_path": "Extract deterministic file/data/schema/template/output portions into Tier 1 primitives after the package judgment boundary is separated.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
       "id": "workspace.selection.resolve",
-      "summary": "Resolve module selection options, presets, and configured defaults."
+      "summary": "Resolve module selection options, presets, and configured defaults.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace package runtime boundary",
+      "tier_reason": "Workspace routing, live inspection, policy assembly, or agent-facing judgment remains package-domain behavior.",
+      "conformance_ref": "workspace tests plus generated command package checks",
+      "migration_path": "Extract deterministic file/data/schema/template/output portions into Tier 1 primitives after the package judgment boundary is separated.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     }
-  ]
+  ],
+  "primitive_taxonomy": {
+    "classification_rule": "Every primitive referenced by operation contract steps must declare a completion tier. Tier 1 is portable codegen-owned target executor behavior, Tier 2 is explicit package-domain or external adapter debt, and Tier 3 is deferred or out of Python completion scope.",
+    "tier_definitions": [
+      {
+        "id": "tier-1-portable-codegen",
+        "summary": "Portable target-executor primitive implemented by command-generation-owned executors with schema-backed semantics before it counts as Python completion coverage.",
+        "blocks_full_python_completion": false
+      },
+      {
+        "id": "tier-2-package-domain",
+        "summary": "Package-domain, live inspection, mutation orchestration, provider integration, or external adapter primitive that may be invoked from operation IR but does not count as portable codegen completion.",
+        "blocks_full_python_completion": true
+      },
+      {
+        "id": "tier-3-deferred-or-out-of-scope",
+        "summary": "Primitive target or capability intentionally deferred or outside the current Python completion lane.",
+        "blocks_full_python_completion": false
+      }
+    ],
+    "tier_2_required_audit_fields": [
+      "tier_owner",
+      "tier_reason",
+      "conformance_ref",
+      "migration_path",
+      "generic_behavior_audit"
+    ],
+    "generic_behavior_rule": "A Tier 2 primitive may not hide deterministic file/data/schema/template/output behavior that belongs in Tier 1; generic_behavior_audit must say why the boundary is not portable yet."
+  }
 }
