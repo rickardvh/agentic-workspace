@@ -31,6 +31,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
         'planning.adopt.lifecycle',
         'planning.archive-plan.lifecycle',
         'planning.close-item.lifecycle',
+        'planning.closeout.lifecycle',
         'planning.create-review.lifecycle',
         'planning.delegation-decision.lifecycle',
         'planning.doctor.report',
@@ -100,6 +101,12 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'reopen_trigger': getattr(args, 'reopen_trigger', None),
                 'discard_summary': getattr(args, 'discard_summary', None),
                 'continuation_summary': getattr(args, 'continuation_summary', None),
+                'claim_level': getattr(args, 'claim_level', 'slice'),
+                'intent_status': getattr(args, 'intent_status', 'satisfied'),
+                'residue': getattr(args, 'residue', 'none'),
+                'proof_from': getattr(args, 'proof_from', 'last'),
+                'residue_owner': getattr(args, 'residue_owner', None),
+                'discard_archive': getattr(args, 'discard_archive', False),
                 'route': getattr(args, 'route', ''),
                 'skipped_reason': getattr(args, 'skipped_reason', ''),
                 'expected_savings': getattr(args, 'expected_savings', ''),
@@ -119,6 +126,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'planning.new-plan.apply': _handle_planning_new_plan_apply,
                 'planning.promote-to-plan.apply': _handle_planning_promote_to_plan_apply,
                 'planning.archive-plan.apply': _handle_planning_archive_plan_apply,
+                'planning.closeout.apply': _handle_planning_closeout_apply,
                 'planning.delegation-decision.apply': _handle_planning_delegation_decision_apply,
                 'planning.record-recovery.apply': _handle_planning_record_recovery_apply,
             },
@@ -181,6 +189,12 @@ def _handle_planning_archive_plan_apply(values: dict[str, Any], arguments: dict[
     from .planning_runtime import apply_planning_archive_plan_operation
 
     return apply_planning_archive_plan_operation(values, arguments, context)
+
+
+def _handle_planning_closeout_apply(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
+    from .planning_runtime import apply_planning_closeout_operation
+
+    return apply_planning_closeout_operation(values, arguments, context)
 
 
 def _handle_planning_delegation_decision_apply(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:

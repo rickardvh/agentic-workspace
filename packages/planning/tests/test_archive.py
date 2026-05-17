@@ -545,6 +545,204 @@ def test_archive_plan_prepare_closeout_handles_open_parent_lane(tmp_path: Path, 
     assert archived["closeout_distillation"]["buckets"]["continuation"][0]["owner"] == ".agentic-workspace/planning/state.toml"
 
 
+def test_planning_closeout_archives_direct_slice_without_manual_closeout_edits(tmp_path: Path, capsys) -> None:
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "plan-alpha", status = "completed", surface = ".agentic-workspace/planning/execplans/plan-alpha.plan.json" },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="completed")
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    record.pop("intent_satisfaction")
+    record.pop("closure_check")
+    record.pop("closeout_distillation", None)
+    installer_mod._write_execplan_record(record_path=record_path, record=record)
+
+    assert planning_cli.main(["closeout", "plan-alpha", "--target", str(tmp_path), "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    archived_record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json"
+    archived = json.loads(archived_record_path.read_text(encoding="utf-8"))
+
+    assert payload["warnings"] == []
+    assert any(action["kind"] == "updated" and "recorded closeout residue" in action["detail"] for action in payload["actions"])
+    assert any(action["kind"] == "archived" for action in payload["actions"])
+    assert any(action["kind"] == "next safe action" and "summary" in action["detail"] for action in payload["actions"])
+    assert not record_path.exists()
+    assert archived["closure_check"]["closure decision"] == "archive-and-close"
+    assert archived["intent_satisfaction"]["was original intent fully satisfied?"] == "yes"
+    assert archived["durable_residue"]["status"] == "none"
+
+
+def test_planning_closeout_routes_partial_lane_residue_to_continuation(tmp_path: Path, capsys) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="completed")
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    record["intent_continuity"]["this slice completes the larger intended outcome"] = "no"
+    record["required_continuation"] = {
+        "required follow-on for the larger intended outcome": "yes",
+        "owner surface": ".agentic-workspace/planning/state.toml",
+        "activation trigger": "next lane slice",
+    }
+    installer_mod._write_execplan_record(record_path=record_path, record=record)
+
+    assert (
+        planning_cli.main(
+            [
+                "closeout",
+                "plan-alpha",
+                "--target",
+                str(tmp_path),
+                "--claim-level",
+                "lane",
+                "--intent-status",
+                "partial",
+                "--residue",
+                "planning",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    archived = json.loads(
+        (tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json").read_text(encoding="utf-8")
+    )
+
+    assert payload["warnings"] == []
+    assert archived["closure_check"]["closeout scope"] == "lane"
+    assert archived["closure_check"]["closure decision"] == "archive-but-keep-lane-open"
+    assert archived["intent_satisfaction"]["was original intent fully satisfied?"] == "no"
+    assert archived["intent_satisfaction"]["unsolved intent passed to"] == ".agentic-workspace/planning/state.toml"
+    assert archived["durable_residue"]["status"] == "planning"
+    assert archived["closeout_distillation"]["buckets"]["continuation"][0]["owner"] == ".agentic-workspace/planning/state.toml"
+
+
+def test_planning_closeout_routes_deferred_owner_without_full_intent_satisfaction(tmp_path: Path, capsys) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="completed")
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    record["intent_continuity"]["this slice completes the larger intended outcome"] = "no"
+    installer_mod._write_execplan_record(record_path=record_path, record=record)
+
+    assert (
+        planning_cli.main(
+            [
+                "closeout",
+                "plan-alpha",
+                "--target",
+                str(tmp_path),
+                "--claim-level",
+                "lane",
+                "--intent-status",
+                "deferred-with-owner",
+                "--residue",
+                "planning",
+                "--residue-owner",
+                "GitHub #1021",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    archived = json.loads(
+        (tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json").read_text(encoding="utf-8")
+    )
+
+    assert payload["warnings"] == []
+    assert archived["closure_check"]["closeout scope"] == "lane"
+    assert archived["closure_check"]["closure decision"] == "archive-but-keep-lane-open"
+    assert archived["intent_satisfaction"]["was original intent fully satisfied?"] == "no"
+    assert archived["intent_satisfaction"]["unsolved intent passed to"] == "GitHub #1021"
+    assert archived["required_continuation"]["owner surface"] == "GitHub #1021"
+    assert archived["closeout_distillation"]["buckets"]["continuation"][0]["owner"] == "GitHub #1021"
+
+
+def test_planning_closeout_blocks_proxy_lane_archive_and_close(tmp_path: Path, capsys) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="completed")
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    record["intent_continuity"]["this slice completes the larger intended outcome"] = "no"
+    record["required_continuation"] = {
+        "required follow-on for the larger intended outcome": "yes",
+        "owner surface": ".agentic-workspace/planning/state.toml",
+        "activation trigger": "next lane slice",
+    }
+    installer_mod._write_execplan_record(record_path=record_path, record=record)
+
+    assert (
+        planning_cli.main(
+            [
+                "closeout",
+                "plan-alpha",
+                "--target",
+                str(tmp_path),
+                "--claim-level",
+                "lane",
+                "--intent-status",
+                "satisfied",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert any(warning["warning_class"] == "archive_larger_intent_proxy_closeout_blocked" for warning in payload["warnings"])
+    assert any(action["kind"] == "manual review" for action in payload["actions"])
+    assert record_path.exists()
+
+
+def test_planning_closeout_records_explicit_proof_and_issue_residue(tmp_path: Path, capsys) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="completed")
+
+    assert (
+        planning_cli.main(
+            [
+                "closeout",
+                "plan-alpha",
+                "--target",
+                str(tmp_path),
+                "--proof-from",
+                "uv run pytest packages/planning/tests/test_archive.py -q",
+                "--residue",
+                "issue",
+                "--residue-owner",
+                "GitHub #1021",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    archived = json.loads(
+        (tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json").read_text(encoding="utf-8")
+    )
+
+    assert archived["proof_report"]["validation proof"] == "uv run pytest packages/planning/tests/test_archive.py -q"
+    assert archived["durable_residue"]["status"] == "planning"
+    assert archived["durable_residue"]["canonical owner now"] == "GitHub #1021"
+
+
 def test_archive_plan_parent_lane_closeout_creates_schema_valid_record_without_active_plan(tmp_path: Path, capsys) -> None:
     _write(
         tmp_path / ".agentic-workspace/planning/state.toml",

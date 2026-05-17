@@ -416,6 +416,114 @@
           ]
         },
         {
+          "arguments": [
+            {
+              "help": "Execplan path, slug, or id to close out.",
+              "name": "plan",
+              "nargs": "?"
+            }
+          ],
+          "help": "Close out a completed execplan through one command-owned writer.",
+          "name": "closeout",
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "slice",
+                "lane",
+                "epic"
+              ],
+              "default": "slice",
+              "flags": [
+                "--claim-level"
+              ],
+              "help": "Scope claimed by this closeout.",
+              "name": "claim_level"
+            },
+            {
+              "choices": [
+                "satisfied",
+                "partial",
+                "unsatisfied",
+                "deferred-with-owner"
+              ],
+              "default": "satisfied",
+              "flags": [
+                "--intent-status"
+              ],
+              "help": "Intent result for the closeout claim.",
+              "name": "intent_status"
+            },
+            {
+              "choices": [
+                "none",
+                "memory",
+                "planning",
+                "docs",
+                "tests",
+                "contracts",
+                "issue",
+                "dismissed"
+              ],
+              "default": "none",
+              "flags": [
+                "--residue"
+              ],
+              "help": "Durable residue route for follow-up or learning.",
+              "name": "residue"
+            },
+            {
+              "default": "last",
+              "flags": [
+                "--proof-from"
+              ],
+              "help": "Use existing proof with 'last' or record the supplied proof command/text.",
+              "name": "proof_from"
+            },
+            {
+              "flags": [
+                "--residue-owner"
+              ],
+              "help": "Canonical owner for non-empty residue or deferred intent.",
+              "name": "residue_owner"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--dry-run"
+              ],
+              "help": "Show closeout actions without mutating files.",
+              "name": "dry_run"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--discard-archive"
+              ],
+              "help": "Do not retain the archived execplan record after cleanup.",
+              "name": "discard_archive"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            }
+          ]
+        },
+        {
           "help": "Close completed planning residue by id without hand-editing checked-in state.",
           "name": "close-item",
           "options": [

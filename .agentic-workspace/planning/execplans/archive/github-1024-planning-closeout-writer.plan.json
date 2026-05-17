@@ -1,0 +1,304 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Make Planning closeout a command-owned writer",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement #1024 by making ordinary Planning closeout a command-owned writer affordance.",
+    "hard_constraints": "Keep #1021 parent lane open; do not select deferred codegen backlog; preserve archive validation as the honesty gate.",
+    "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Archive this completed #1024 slice with planning closeout.",
+    "proof_expectations": [
+      "Focused closeout tests; test_contract_tooling; make test-planning; make test-workspace; make lint-planning; make lint-workspace; make maintainer-surfaces; generated package static/conformance checks; structured inventory."
+    ],
+    "touched_scope": [
+      "Planning closeout runtime and contracts; generated Planning/workspace command outputs; focused Planning/workspace/contract tests."
+    ],
+    "completion_criteria": [
+      "planning closeout command exists and owns common closeout state mutation",
+      "lane/epic proxy closure is blocked or routed as continuation",
+      "residue and proof inputs are structured and validated",
+      "workspace front door forwards closeout positionally"
+    ],
+    "continuation_owner": "#1021",
+    "closeout_decision": "archive-but-keep-lane-open"
+  },
+  "goal": [
+    "Implement #1024 as a narrow source-boundary slice: `planning closeout` writes structured closeout fields, routes residue/proof inputs, runs archive validation, and emits the next safe action."
+  ],
+  "non_goals": [
+    "Do not solve every external tracker integration.",
+    "Do not force Planning closeout for unplanned direct edits.",
+    "Do not reopen deferred codegen work."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Create a bounded plan for Make Planning closeout a command-owned writer.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "github-1024-planning-closeout-writer",
+      "status": "active",
+      "next_step": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+      "proof": "Fill in the narrowest command that proves the promoted work."
+    },
+    "scope": {
+      "touched": [
+        "Fill in the concrete files before implementation starts."
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#1021 source-boundary lane: subtract compensating machinery by enforcing write boundaries at the source.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "#1021"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "#1021",
+    "activation trigger": "after #1024 lands and the next source-boundary compensating machinery is selected"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Agents can close ordinary planned work through `agentic-workspace planning closeout` instead of hand-editing closeout fields.",
+    "intentionally deferred": "Remaining #1021 source-boundary slices after #1024.",
+    "discovered implications": "New lifecycle operations must be registered in operation, conformance, adapter, inventory, payload-classification, and generated command surfaces.",
+    "proof achieved now": "yes",
+    "validation still needed": "CI on PR",
+    "next likely slice": "Select the next non-codegen #1021 child or close parent if no compensating machinery remains."
+  },
+  "intent_interpretation": {
+    "literal request": "Make Planning closeout a command-owned writer",
+    "inferred intended outcome": "Create a bounded plan for Make Planning closeout a command-owned writer.",
+    "chosen concrete what": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Planning closeout runtime and contracts; generated Planning/workspace command outputs; focused Planning/workspace/contract tests.",
+    "max changed files": "Broad generated-output fanout is allowed only as regeneration from command_package_ir and command_adapter_generation sources.",
+    "required validation commands": "Focused closeout tests; test_contract_tooling; make test-planning; make test-workspace; make lint-planning; make lint-workspace; make maintainer-surfaces; generated package static/conformance checks; structured inventory.",
+    "ask-before-refactor threshold": "Any change outside the closeout writer/front-door/contract fanout.",
+    "stop before touching": "Deferred codegen backlog or unrelated Planning lifecycle commands."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "Closeout writer runtime, operation contracts, generated command outputs, and focused tests.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Archive complete; #1021 remains continuation owner.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Create a bounded plan for Make Planning closeout a command-owned writer.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "completed",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "Closeout writer changes are tightly coupled across Planning runtime, operation contracts, generated command surfaces, and focused tests; local execution keeps the source-boundary validation coherent.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-17T13:44:26+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "github-1024-planning-closeout-writer",
+    "status": "completed",
+    "scope": "#1024 Planning closeout writer slice",
+    "ready": "complete",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Run planning closeout for this completed slice."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "Planning closeout runtime and contracts; generated Planning/workspace command outputs; focused Planning/workspace/contract tests."
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "Focused closeout tests; test_contract_tooling; make test-planning; make test-workspace; make lint-planning; make lint-workspace; make maintainer-surfaces; generated package static/conformance checks; structured inventory."
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Make Planning closeout a command-owned writer is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "local",
+    "handoff source": "active execplan github-1024-planning-closeout-writer",
+    "what happened": "Added planning closeout as the primary command-owned writer for ordinary planned-work closeout; it records residue/proof inputs, uses archive validation, blocks dishonest proxy closure, and is exposed through the workspace front door.",
+    "scope touched": "Planning closeout runtime and contracts; generated Planning/workspace command outputs; focused Planning/workspace/contract tests.",
+    "changed surfaces": "Planning closeout runtime and contracts; generated Planning/workspace command outputs; focused Planning/workspace/contract tests.",
+    "validations run": "Focused closeout tests; test_contract_tooling; make test-planning; make test-workspace; make lint-planning; make lint-workspace; make maintainer-surfaces; generated package static/conformance checks; structured inventory.",
+    "result for continuation": "#1024 is complete; #1021 remains open for the next source-boundary slice.",
+    "next step": "Create PR linked to #1024 and #1021."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "satisfied",
+    "intent served": "yes for #1024; parent #1021 remains open",
+    "config compliance": "used AW start, active execplan, delegation decision, implement/proof routing, and package-owned Planning mutations",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive-but-keep-lane-open"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "Closeout writer changes are tightly coupled across Planning runtime, operation contracts, generated command surfaces, and focused tests.",
+    "expected savings": "low after implementation context is loaded",
+    "actual friction": "none beyond generated contract regeneration",
+    "proof result": "passed",
+    "quality concern": "generated and registry drift was caught and fixed",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "Focused closeout tests; test_contract_tooling; make test-planning; make test-workspace; make lint-planning; make lint-workspace; make maintainer-surfaces; generated package static/conformance checks; structured inventory.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "Focused closeout tests; test_contract_tooling; make test-planning; make test-workspace; make lint-planning; make lint-workspace; make maintainer-surfaces; generated package static/conformance checks; structured inventory."
+  },
+  "intent_satisfaction": {
+    "original intent": "Continue with the #1021 lane starting with #1024.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "#1024 now has a single command-owned closeout path with tests for direct closeout, partial lane continuation, proxy closeout blocking, residue routing, and workspace front-door forwarding.",
+    "unsolved intent passed to": "#1021"
+  },
+  "execution_summary": {
+    "outcome delivered": "Implemented Planning closeout writer and exposed it through generated Planning/workspace command surfaces.",
+    "validation confirmed": "Focused closeout tests; test_contract_tooling; make test-planning; make test-workspace; make lint-planning; make lint-workspace; make maintainer-surfaces; generated package static/conformance checks; structured inventory.",
+    "follow-on routed to": "#1021",
+    "post-work posterity capture": "archived execplan plus PR links to #1024/#1021",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "#1021 next slice after this PR"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed planning residue to #1021.",
+    "motivation worth preserving": "Future agents should continue from #1021 rather than rediscover this closeout residue.",
+    "canonical owner now": "#1021",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "#1021",
+    "proposed durable intent": "Future agents should continue from #1021 rather than rediscover this closeout residue.",
+    "confidence": "low",
+    "needs review": "True",
+    "owner surface": "#1021"
+  },
+  "closure_check": {
+    "closeout scope": "lane",
+    "slice status": "bounded slice complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status partial.",
+    "evidence carried forward": "planning closeout wrote structured closeout fields and archive validation accepted the result.",
+    "reopen trigger": "Reopen when #1021 activates a fresh bounded slice."
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#1021",
+          "owner": "#1021",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-17: Scaffolded by agentic-planning new-plan.",
+    "2026-05-17: Implemented and validated #1024; closeout distilled for archive-size guardrail."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "yes",
+    "decision": "route_to_planning",
+    "target": "#1021",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Continue with the #1021 lane starting with #1024.\nIntent satisfied: yes\nArchive decision: archive-but-keep-lane-open\nProof: Focused closeout tests; test_contract_tooling; make test-planning; make test-workspace; make lint-planning; make lint-workspace; make maintainer-surfaces; generated package static/conformance checks; structured inventory.\nChanged surfaces: Planning closeout runtime and contracts; generated Planning/workspace command outputs; focused Planning/workspace/contract tests.\nDurable residue: planning (#1021)\nMemory learning: route_to_planning\nFollow-up: #1021"
+  }
+}

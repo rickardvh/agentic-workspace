@@ -14,6 +14,7 @@ from __future__ import annotations
 from . import planning_adopt_lifecycle as _command_planning_adopt_lifecycle
 from . import planning_archive_plan_lifecycle as _command_planning_archive_plan_lifecycle
 from . import planning_close_item_lifecycle as _command_planning_close_item_lifecycle
+from . import planning_closeout_lifecycle as _command_planning_closeout_lifecycle
 from . import planning_create_review_lifecycle as _command_planning_create_review_lifecycle
 from . import planning_delegation_decision_lifecycle as _command_planning_delegation_decision_lifecycle
 from . import planning_doctor_report as _command_planning_doctor_report
@@ -38,6 +39,7 @@ GENERATED_COMMAND_HANDLERS = {
     'planning.adopt.lifecycle': _command_planning_adopt_lifecycle.run,
     'planning.archive-plan.lifecycle': _command_planning_archive_plan_lifecycle.run,
     'planning.close-item.lifecycle': _command_planning_close_item_lifecycle.run,
+    'planning.closeout.lifecycle': _command_planning_closeout_lifecycle.run,
     'planning.create-review.lifecycle': _command_planning_create_review_lifecycle.run,
     'planning.delegation-decision.lifecycle': _command_planning_delegation_decision_lifecycle.run,
     'planning.doctor.report': _command_planning_doctor_report.run,

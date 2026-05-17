@@ -298,6 +298,167 @@ export const generatedCommandPackage = {
       "status": "generated"
     },
     {
+      "adapter_id": "planning.closeout.cli",
+      "command": {
+        "manifest_ref": "package:planning:cli",
+        "name": "closeout"
+      },
+      "conformance_refs": [
+        "planning.closeout.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "interface": {
+        "arguments": [
+          {
+            "help": "Execplan path, slug, or id to close out.",
+            "name": "plan",
+            "nargs": "?"
+          }
+        ],
+        "help": "Close out a completed execplan through one command-owned writer.",
+        "name": "closeout",
+        "options": [
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Optional repository path.",
+            "name": "target"
+          },
+          {
+            "choices": [
+              "slice",
+              "lane",
+              "epic"
+            ],
+            "default": "slice",
+            "flags": [
+              "--claim-level"
+            ],
+            "help": "Scope claimed by this closeout.",
+            "name": "claim_level"
+          },
+          {
+            "choices": [
+              "satisfied",
+              "partial",
+              "unsatisfied",
+              "deferred-with-owner"
+            ],
+            "default": "satisfied",
+            "flags": [
+              "--intent-status"
+            ],
+            "help": "Intent result for the closeout claim.",
+            "name": "intent_status"
+          },
+          {
+            "choices": [
+              "none",
+              "memory",
+              "planning",
+              "docs",
+              "tests",
+              "contracts",
+              "issue",
+              "dismissed"
+            ],
+            "default": "none",
+            "flags": [
+              "--residue"
+            ],
+            "help": "Durable residue route for follow-up or learning.",
+            "name": "residue"
+          },
+          {
+            "default": "last",
+            "flags": [
+              "--proof-from"
+            ],
+            "help": "Use existing proof with 'last' or record the supplied proof command/text.",
+            "name": "proof_from"
+          },
+          {
+            "flags": [
+              "--residue-owner"
+            ],
+            "help": "Canonical owner for non-empty residue or deferred intent.",
+            "name": "residue_owner"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--dry-run"
+            ],
+            "help": "Show closeout actions without mutating files.",
+            "name": "dry_run"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--discard-archive"
+            ],
+            "help": "Do not retain the archived execplan record after cleanup.",
+            "name": "discard_archive"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "planning.closeout.lifecycle",
+        "path": "operations/planning.closeout.lifecycle.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "planning closeout policy",
+          "managed planning payload mutation",
+          "module result assembly"
+        ],
+        "target_specific": [
+          "parser library",
+          "package entrypoint wiring",
+          "help text layout",
+          "test container image"
+        ],
+        "universal": [
+          "command identity",
+          "operation reference",
+          "runtime primitive reference",
+          "effect hints",
+          "conformance refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.closeout.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
+    {
       "adapter_id": "planning.close-item.cli",
       "command": {
         "manifest_ref": "package:planning:cli",
@@ -2278,6 +2439,12 @@ export const generatedCommandPackage = {
           "primitive": "planning.archive-plan.apply"
         },
         {
+          "function": "apply_planning_closeout_operation",
+          "handler": "runtime_handler",
+          "import_module": "repo_planning_bootstrap.runtime_projection",
+          "primitive": "planning.closeout.apply"
+        },
+        {
           "function": "apply_planning_delegation_decision_operation",
           "handler": "runtime_handler",
           "import_module": "repo_planning_bootstrap.runtime_projection",
@@ -2502,6 +2669,36 @@ export const generatedCommandPackage = {
           "name": "continuation_summary"
         },
         {
+          "arg": "claim_level",
+          "default": "slice",
+          "name": "claim_level"
+        },
+        {
+          "arg": "intent_status",
+          "default": "satisfied",
+          "name": "intent_status"
+        },
+        {
+          "arg": "residue",
+          "default": "none",
+          "name": "residue"
+        },
+        {
+          "arg": "proof_from",
+          "default": "last",
+          "name": "proof_from"
+        },
+        {
+          "arg": "residue_owner",
+          "default": null,
+          "name": "residue_owner"
+        },
+        {
+          "arg": "discard_archive",
+          "default": false,
+          "name": "discard_archive"
+        },
+        {
           "arg": "route",
           "default": "",
           "name": "route"
@@ -2546,6 +2743,7 @@ export const generatedCommandPackage = {
       "supported_operation_ids": [
         "planning.adopt.lifecycle",
         "planning.archive-plan.lifecycle",
+        "planning.closeout.lifecycle",
         "planning.close-item.lifecycle",
         "planning.create-review.lifecycle",
         "planning.delegation-decision.lifecycle",

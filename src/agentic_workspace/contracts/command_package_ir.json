@@ -1144,6 +1144,114 @@
                 ]
               },
               {
+                "name": "closeout",
+                "help": "Close out a completed execplan through one command-owned writer.",
+                "options": [
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "claim_level",
+                    "flags": [
+                      "--claim-level"
+                    ],
+                    "choices": [
+                      "slice",
+                      "lane",
+                      "epic"
+                    ],
+                    "default": "slice",
+                    "help": "Scope claimed by this closeout."
+                  },
+                  {
+                    "name": "intent_status",
+                    "flags": [
+                      "--intent-status"
+                    ],
+                    "choices": [
+                      "satisfied",
+                      "partial",
+                      "unsatisfied",
+                      "deferred-with-owner"
+                    ],
+                    "default": "satisfied",
+                    "help": "Intent result for the closeout claim."
+                  },
+                  {
+                    "name": "residue",
+                    "flags": [
+                      "--residue"
+                    ],
+                    "choices": [
+                      "none",
+                      "memory",
+                      "planning",
+                      "docs",
+                      "tests",
+                      "contracts",
+                      "issue",
+                      "dismissed"
+                    ],
+                    "default": "none",
+                    "help": "Durable residue route for follow-up or learning."
+                  },
+                  {
+                    "name": "proof_from",
+                    "flags": [
+                      "--proof-from"
+                    ],
+                    "default": "last",
+                    "help": "Use existing proof with 'last' or record the supplied proof command/text."
+                  },
+                  {
+                    "name": "residue_owner",
+                    "flags": [
+                      "--residue-owner"
+                    ],
+                    "help": "Canonical owner for non-empty residue or deferred intent."
+                  },
+                  {
+                    "name": "dry_run",
+                    "flags": [
+                      "--dry-run"
+                    ],
+                    "action": "store_true",
+                    "help": "Show closeout actions without mutating files."
+                  },
+                  {
+                    "name": "discard_archive",
+                    "flags": [
+                      "--discard-archive"
+                    ],
+                    "action": "store_true",
+                    "help": "Do not retain the archived execplan record after cleanup."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
+                ],
+                "arguments": [
+                  {
+                    "name": "plan",
+                    "nargs": "?",
+                    "help": "Execplan path, slug, or id to close out."
+                  }
+                ]
+              },
+              {
                 "name": "close-item",
                 "help": "Close completed planning residue by id without hand-editing checked-in state.",
                 "options": [
@@ -4589,6 +4697,7 @@
           "supported_operation_ids": [
             "planning.adopt.lifecycle",
             "planning.archive-plan.lifecycle",
+            "planning.closeout.lifecycle",
             "planning.close-item.lifecycle",
             "planning.create-review.lifecycle",
             "planning.delegation-decision.lifecycle",
@@ -4820,6 +4929,36 @@
               "default": null
             },
             {
+              "name": "claim_level",
+              "arg": "claim_level",
+              "default": "slice"
+            },
+            {
+              "name": "intent_status",
+              "arg": "intent_status",
+              "default": "satisfied"
+            },
+            {
+              "name": "residue",
+              "arg": "residue",
+              "default": "none"
+            },
+            {
+              "name": "proof_from",
+              "arg": "proof_from",
+              "default": "last"
+            },
+            {
+              "name": "residue_owner",
+              "arg": "residue_owner",
+              "default": null
+            },
+            {
+              "name": "discard_archive",
+              "arg": "discard_archive",
+              "default": false
+            },
+            {
               "name": "route",
               "arg": "route",
               "default": ""
@@ -4924,6 +5063,12 @@
               "primitive": "planning.archive-plan.apply",
               "handler": "runtime_handler",
               "function": "apply_planning_archive_plan_operation",
+              "import_module": "repo_planning_bootstrap.runtime_projection"
+            },
+            {
+              "primitive": "planning.closeout.apply",
+              "function": "apply_planning_closeout_operation",
+              "handler": "runtime_handler",
               "import_module": "repo_planning_bootstrap.runtime_projection"
             },
             {
@@ -5255,6 +5400,167 @@
           },
           "conformance_refs": [
             "planning.archive-plan.lifecycle.dry-run.process"
+          ]
+        },
+        {
+          "adapter_id": "planning.closeout.cli",
+          "status": "generated",
+          "command": {
+            "manifest_ref": "package:planning:cli",
+            "name": "closeout"
+          },
+          "operation_ref": {
+            "id": "planning.closeout.lifecycle",
+            "path": "operations/planning.closeout.lifecycle.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "planning.closeout.apply",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": false,
+            "writes_repo_state": true,
+            "requires_preflight_gate": false
+          },
+          "interface": {
+            "name": "closeout",
+            "help": "Close out a completed execplan through one command-owned writer.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path."
+              },
+              {
+                "name": "claim_level",
+                "flags": [
+                  "--claim-level"
+                ],
+                "choices": [
+                  "slice",
+                  "lane",
+                  "epic"
+                ],
+                "default": "slice",
+                "help": "Scope claimed by this closeout."
+              },
+              {
+                "name": "intent_status",
+                "flags": [
+                  "--intent-status"
+                ],
+                "choices": [
+                  "satisfied",
+                  "partial",
+                  "unsatisfied",
+                  "deferred-with-owner"
+                ],
+                "default": "satisfied",
+                "help": "Intent result for the closeout claim."
+              },
+              {
+                "name": "residue",
+                "flags": [
+                  "--residue"
+                ],
+                "choices": [
+                  "none",
+                  "memory",
+                  "planning",
+                  "docs",
+                  "tests",
+                  "contracts",
+                  "issue",
+                  "dismissed"
+                ],
+                "default": "none",
+                "help": "Durable residue route for follow-up or learning."
+              },
+              {
+                "name": "proof_from",
+                "flags": [
+                  "--proof-from"
+                ],
+                "default": "last",
+                "help": "Use existing proof with 'last' or record the supplied proof command/text."
+              },
+              {
+                "name": "residue_owner",
+                "flags": [
+                  "--residue-owner"
+                ],
+                "help": "Canonical owner for non-empty residue or deferred intent."
+              },
+              {
+                "name": "dry_run",
+                "flags": [
+                  "--dry-run"
+                ],
+                "action": "store_true",
+                "help": "Show closeout actions without mutating files."
+              },
+              {
+                "name": "discard_archive",
+                "flags": [
+                  "--discard-archive"
+                ],
+                "action": "store_true",
+                "help": "Do not retain the archived execplan record after cleanup."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ],
+            "arguments": [
+              {
+                "name": "plan",
+                "nargs": "?",
+                "help": "Execplan path, slug, or id to close out."
+              }
+            ]
+          },
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "planning closeout policy",
+              "managed planning payload mutation",
+              "module result assembly"
+            ]
+          },
+          "conformance_refs": [
+            "planning.closeout.lifecycle.dry-run.process"
           ]
         },
         {

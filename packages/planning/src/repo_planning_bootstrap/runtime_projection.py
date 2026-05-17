@@ -7,6 +7,7 @@ from repo_planning_bootstrap._source import UpgradeSource, resolve_upgrade_sourc
 from repo_planning_bootstrap.installer import (
     archive_execplan,
     archive_parent_lane_closeout,
+    closeout_execplan,
     create_execplan_scaffold,
     format_actions,
     format_result_json,
@@ -109,6 +110,20 @@ def apply_planning_archive_plan_operation(values: dict, _arguments: dict, _conte
         discard_summary=values.get("discard_summary"),
         continuation_summary=values.get("continuation_summary"),
         retain_archive=bool(values.get("retain_archive")),
+    )
+
+
+def apply_planning_closeout_operation(values: dict, _arguments: dict, _context):
+    return closeout_execplan(
+        str(values.get("plan") or ""),
+        target=values.get("target"),
+        dry_run=bool(values.get("dry_run")),
+        claim_level=str(values.get("claim_level") or "slice"),
+        intent_status=str(values.get("intent_status") or "satisfied"),
+        residue=str(values.get("residue") or "none"),
+        proof_from=str(values.get("proof_from") or "last"),
+        residue_owner=values.get("residue_owner"),
+        retain_archive=not bool(values.get("discard_archive")),
     )
 
 

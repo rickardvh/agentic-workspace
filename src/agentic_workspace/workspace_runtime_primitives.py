@@ -1344,7 +1344,7 @@ def _planning_module_argv(args: argparse.Namespace) -> list[str]:
     argv = [command]
     if command == "promote-to-plan":
         argv.append(str(args.item_id))
-    elif command == "archive-plan" and getattr(args, "plan", None):
+    elif command in {"archive-plan", "closeout"} and getattr(args, "plan", None):
         argv.append(str(args.plan))
     elif command == "close-item" and getattr(args, "item", None):
         argv.append(str(args.item))
@@ -1377,6 +1377,11 @@ def _planning_module_argv(args: argparse.Namespace) -> list[str]:
         ("--reopen-trigger", "reopen_trigger"),
         ("--discard-summary", "discard_summary"),
         ("--continuation-summary", "continuation_summary"),
+        ("--claim-level", "claim_level"),
+        ("--intent-status", "intent_status"),
+        ("--residue", "residue"),
+        ("--proof-from", "proof_from"),
+        ("--residue-owner", "residue_owner"),
     ):
         _append_option(argv, option, getattr(args, attr, None))
     if command == "delegation-decision":
@@ -1392,6 +1397,7 @@ def _planning_module_argv(args: argparse.Namespace) -> list[str]:
         ("--apply-cleanup", "apply_cleanup"),
         ("--prepare-closeout", "prepare_closeout"),
         ("--retain-archive", "retain_archive"),
+        ("--discard-archive", "discard_archive"),
         ("--verbose", "verbose"),
     ):
         _append_flag(argv, option, bool(getattr(args, attr, False)))

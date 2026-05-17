@@ -531,6 +531,7 @@ def test_command_package_ir_reuses_generated_adapter_truth() -> None:
         "doctor.report.cli",
         "planning.adopt.cli",
         "planning.archive-plan.cli",
+        "planning.closeout.cli",
         "planning.close-item.cli",
         "planning.create-review.cli",
         "planning.delegation-decision.cli",
@@ -1646,6 +1647,7 @@ def test_contract_tooling_check_reports_generated_adapter_status() -> None:
     assert commands_by_program["agentic-planning"] == [
         "adopt",
         "archive-plan",
+        "closeout",
         "close-item",
         "create-review",
         "delegation-decision",

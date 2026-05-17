@@ -226,6 +226,12 @@
       "adapter_kind": "process"
     },
     {
+      "id": "planning.closeout.lifecycle.dry-run.process",
+      "operation_id": "planning.closeout.lifecycle",
+      "path": "conformance/planning.closeout.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "planning.close-item.process",
       "operation_id": "planning.close-item.lifecycle",
       "path": "conformance/planning.close-item.process.json",
