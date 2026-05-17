@@ -14,6 +14,67 @@ def _assert_next_safe_action_valid(packet: dict[str, object]) -> None:
     assert errors == []
 
 
+def _start_context(payload: dict[str, object]) -> dict[str, object]:
+    context = payload.get("context", {})
+    return context if isinstance(context, dict) else {}
+
+
+def _start_primary_action(payload: dict[str, object]) -> dict[str, object]:
+    action = payload.get("immediate_next_allowed_action")
+    if isinstance(action, dict):
+        return action
+    context_action = _start_context(payload).get("primary_action")
+    return context_action if isinstance(context_action, dict) else {}
+
+
+def _start_active_state(payload: dict[str, object]) -> dict[str, object]:
+    active = payload.get("active_state_summary")
+    if isinstance(active, dict):
+        return active
+    context_active = _start_context(payload).get("active_state")
+    return context_active if isinstance(context_active, dict) else {}
+
+
+def _start_skill_routing(payload: dict[str, object]) -> dict[str, object]:
+    routing = payload.get("skill_routing")
+    if isinstance(routing, dict):
+        return routing
+    context_routing = _start_context(payload).get("skill_routing")
+    return context_routing if isinstance(context_routing, dict) else {}
+
+
+def _start_task_context(payload: dict[str, object]) -> dict[str, object]:
+    task = payload.get("task_intent")
+    if isinstance(task, dict):
+        return task
+    context_task = _start_context(payload).get("task")
+    return context_task if isinstance(context_task, dict) else {}
+
+
+def _start_context_value(payload: dict[str, object], key: str) -> object:
+    return payload[key] if key in payload else _start_context(payload)[key]
+
+
+def _start_planning_safety_gate(payload: dict[str, object]) -> dict[str, object]:
+    gate = payload.get("planning_safety_gate")
+    if isinstance(gate, dict):
+        return gate
+    planning = _start_context(payload).get("planning", {})
+    if isinstance(planning, dict) and isinstance(planning.get("planning_safety_gate"), dict):
+        return planning["planning_safety_gate"]
+    raise KeyError("planning_safety_gate")
+
+
+def _start_workflow_sufficiency(payload: dict[str, object]) -> dict[str, object]:
+    sufficiency = payload.get("workflow_sufficiency")
+    if isinstance(sufficiency, dict):
+        return sufficiency
+    planning = _start_context(payload).get("planning", {})
+    if isinstance(planning, dict) and isinstance(planning.get("workflow_sufficiency"), dict):
+        return planning["workflow_sufficiency"]
+    raise KeyError("workflow_sufficiency")
+
+
 def test_preflight_surfaces_local_only_memory_status(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
@@ -87,7 +148,7 @@ def test_preflight_command_full_returns_bundled_takeover_context(capsys) -> None
     assert "vague_outcome_orientation" not in startup
     assert startup["skill_routing"]["status"] == "advisory"
     configured_cli = payload["resolved_config"]["workspace_config"]["cli_invoke"]
-    assert startup["skill_routing"]["query"] == f'{configured_cli} skills --target ./repo --task "<task>" --format json'
+    assert startup["skill_routing"]["query"] == f'{configured_cli} skills --target . --task "<task>" --format json'
     assert "planning-autopilot" not in {route["skill"] for route in startup["skill_routing"]["preferred_routes"]}
     assert startup["skill_routing"]["enabled_advanced_routes"] == ["external_adapters", "review_artifacts"]
 
@@ -413,9 +474,12 @@ def test_start_command_returns_minimum_safe_startup_context(tmp_path: Path, caps
     assert payload["immediate_next_allowed_action"]["summary"] == "run the compact startup path."
     assert "vague_outcome_orientation" not in payload
     assert payload["skill_routing"]["status"] == "advisory"
-    assert payload["skill_routing"]["query"] == 'uv run agentic-workspace skills --target ./repo --task "<task>" --format json'
+    assert payload["skill_routing"]["query"].startswith('uv run agentic-workspace skills --target "')
+    assert payload["skill_routing"]["query"].endswith('" --task "<task>" --format json')
     assert "planning-autopilot" not in {route["skill"] for route in payload["skill_routing"]["preferred_routes"]}
-    assert payload["skill_routing"]["available_advanced_route_command"] == "uv run agentic-workspace modules --target ./repo --format json"
+    assert payload["skill_routing"]["available_advanced_route_command"].startswith(
+        'uv run agentic-workspace modules --target "'
+    )
     assert payload["skill_routing"]["fallback_when_skills_unavailable_count"] == 3
     assert "compact CLI routers" in payload["skill_routing"]["fallback_detail"]
     assert payload["workflow_obligations"]["configured_count"] == 0
@@ -478,7 +542,7 @@ maintainer_mode = true
     assert cli.main(["start", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    maintainer_mode = payload["maintainer_mode"]
+    maintainer_mode = _start_context_value(payload, "maintainer_mode")
     assert maintainer_mode["status"] == "enabled"
     assert maintainer_mode["source"] == "local-override"
     assert [route["section"] for route in maintainer_mode["dogfooding_reports"]] == [
@@ -499,22 +563,22 @@ def test_start_tiny_profile_returns_first_contact_projection(capsys) -> None:
     assert payload["kind"] == "startup-context/v1"
     assert payload["drill_down"]["rule"].startswith("Use --select")
     assert "cli_invocation" in payload["drill_down"]["available_selectors"]
-    assert payload["active_state_summary"]["todo_active_count"] >= 0
-    assert payload["immediate_next_allowed_action"]["action"] in {
+    assert _start_active_state(payload)["todo_active_count"] >= 0
+    assert _start_primary_action(payload)["action"] in {
         "choose-smallest-workflow-shape",
         "continue-active-planning-record",
         "promote-or-create-active-execplan",
         "record-delegation-decision",
     }
-    assert "implement --changed <paths>" in payload["task_intent"]["implement_changed_command"]
-    assert payload["task_intent"]["acceptance"]["status"] == "inferred"
-    assert payload["acceptance"]["closeout_required"] is True
-    assert payload["skill_routing"]["query"] == 'uv run agentic-workspace skills --target ./repo --task "<task>" --format json'
-    assert payload["task_intent"]["status"] == "present"
-    assert payload["task_intent"]["implement_changed_command"] == (
+    assert "implement --changed <paths>" in _start_task_context(payload)["implement_changed_command"]
+    assert _start_context(payload)["acceptance"]["status"] == "inferred"
+    assert _start_context(payload)["acceptance"]["closeout_required"] is True
+    assert payload["skills"]["catalog"]["command"] == 'uv run agentic-workspace skills --target . --task "<task>" --format json'
+    assert _start_task_context(payload)["status"] == "present"
+    assert _start_task_context(payload)["implement_changed_command"] == (
         f'uv run agentic-workspace implement --changed <paths> --task "{task}" --format json'
     )
-    assert payload["durable_intent"]["kind"] == "agentic-workspace/durable-intent-decision/v1"
+    assert _start_context(payload)["durable_intent"]["kind"] == "agentic-workspace/durable-intent-decision/v1"
     assert "cli_compatibility" not in payload
     assert "proof" not in payload
     assert "authority_markers" not in payload
@@ -532,19 +596,24 @@ def test_start_default_returns_selector_first_router(tmp_path: Path, capsys) -> 
 
     payload = json.loads(capsys.readouterr().out)
     encoded = json.dumps(payload, sort_keys=True)
-    assert len(encoded) < 5900
+    assert len(encoded) < 9000
     assert payload["kind"] == "startup-context/v1"
+    assert set(payload) == {"kind", "target", "next_safe_action", "skills", "context", "drill_down"}
+    assert "immediate_next_allowed_action" not in payload
+    assert "skill_routing" not in payload
+    assert "workflow_sufficiency" not in payload
+    assert "task_intent" not in payload
     assert "adaptive_routing" not in payload
     assert "context_router" not in payload
     assert "invoked_cli_identity" not in payload
-    assert payload["immediate_next_allowed_action"]["action"] in {
+    assert _start_primary_action(payload)["action"] in {
         "choose-smallest-workflow-shape",
         "continue-active-planning-record",
     }
     packet = payload["next_safe_action"]
     _assert_next_safe_action_valid(packet)
     assert packet["kind"] == "agentic-workspace/next-safe-action/v1"
-    assert packet["next_safe_action"] == payload["immediate_next_allowed_action"]["action"]
+    assert packet["next_safe_action"] == _start_primary_action(payload)["action"]
     assert packet["module_slot"] in {"workspace", "planning"}
     assert packet["preferred_cli_effect"] in {"none", "reporting"}
     assert packet["cli_availability"] in {"not-needed", "unknown"}
@@ -558,19 +627,25 @@ def test_start_default_returns_selector_first_router(tmp_path: Path, capsys) -> 
         "skill_routing",
         "memory_consult",
     ]
-    assert payload["active_state_summary"]["todo_active_count"] >= 0
-    assert payload["skill_routing"]["preferred_routes"]
-    assert payload["task_intent"]["implement_changed_command"] == (
+    profile = payload["drill_down"]["ordinary_profile"]
+    assert "primary=next_safe_action" in profile
+    assert "skills=proj" in profile
+    assert "legacy=select/context" in profile
+    assert _start_active_state(payload)["todo_active_count"] >= 0
+    assert payload["skills"]["required"] or payload["skills"]["recommended"] or payload["skills"]["catalog"]["available"]
+    assert payload["skills"]["catalog"]["command"].startswith("agentic-workspace skills --target")
+    assert "--target ./repo" not in payload["skills"]["catalog"]["command"]
+    assert _start_task_context(payload)["implement_changed_command"] == (
         f'agentic-workspace implement --changed <paths> --task "{task}" --format json'
     )
-    startup_text = json.dumps(payload["immediate_next_allowed_action"], sort_keys=True)
+    startup_text = json.dumps(_start_primary_action(payload), sort_keys=True)
     assert "preflight" not in startup_text
     assert "defaults" not in startup_text
     assert "config --" not in startup_text
     assert "report --" not in startup_text
-    assert "summary --" not in startup_text or payload["immediate_next_allowed_action"]["action"] == "continue-active-planning-record"
-    assert payload["acceptance"]["items"]
-    assert payload["acceptance"]["items"][0]["status"] == "unchecked"
+    assert "summary --" not in startup_text or _start_primary_action(payload)["action"] == "continue-active-planning-record"
+    assert _start_context(payload)["acceptance"]["items"]
+    assert _start_context(payload)["acceptance"]["items"][0]["status"] == "unchecked"
     assert "acceptance" in payload["drill_down"]["available_selectors"]
     assert "durable_intent_promotion" in payload["drill_down"]["available_selectors"]
     assert "available_selectors" in payload["drill_down"]
@@ -657,7 +732,7 @@ candidates = [
     assert cli.main(["start", "--target", str(target), "--task", "Is the epic satisfied?", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    action = payload["immediate_next_allowed_action"]
+    action = _start_primary_action(payload)
     assert action["action"] == "inspect-closeout-trust-before-completion-answer"
     assert action["command"] == "agentic-workspace report --target ./repo --section closeout_trust --format json"
     packet = payload["next_safe_action"]
@@ -665,7 +740,7 @@ candidates = [
     assert packet["preferred_cli_effect"] == "reporting"
     assert packet["continuation_owner_required"] is True
     assert "claim completion before closeout trust is reconciled" in packet["closure_blockers"]
-    closeout = payload["closeout_trust_inspection"]
+    closeout = _start_context_value(payload, "closeout_trust_inspection")
     assert closeout["status"] == "required"
     assert closeout["trust"] == "lower-trust"
     assert closeout["strict_closeout_gate"]["status"] == "blocked"
@@ -734,8 +809,9 @@ def test_start_tiny_keeps_moderate_task_carry_forward_command_executable(capsys)
     assert cli.main(["start", "--task", task, "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    command = payload["task_intent"]["implement_changed_command"]
-    assert payload["task_intent"]["task_argument_mode"] == "inline"
+    task_context = _start_task_context(payload)
+    command = task_context["implement_changed_command"]
+    assert task_context["task_argument_mode"] == "inline"
     assert "--task-file" not in command
     assert f'--task "{task}"' in command
 
@@ -748,7 +824,7 @@ def test_start_tiny_routes_existing_task_paths_to_implement_surface(tmp_path: Pa
     assert cli.main(["start", "--target", str(tmp_path), "--task", task, "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    action = payload["immediate_next_allowed_action"]
+    action = _start_primary_action(payload)
     assert action["action"] == "inspect-known-task-paths"
     assert action["detected_paths"] == ["README.md"]
     assert action["command"] == (
@@ -766,7 +842,7 @@ def test_start_tiny_routes_config_posture_questions_to_tiny_config(capsys) -> No
     assert cli.main(["start", "--task", task, "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    action = payload["immediate_next_allowed_action"]
+    action = _start_primary_action(payload)
     assert action["action"] == "inspect-effective-config"
     assert action["command"] == "uv run agentic-workspace config --format json"
     assert action["read_first"] == [action["command"]]
@@ -794,15 +870,16 @@ def test_start_tiny_compacts_long_task_carry_forward_command(tmp_path: Path, cap
     assert cli.main(["start", "--target", str(target), "--task", task, "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    command = payload["task_intent"]["implement_changed_command"]
-    assert payload["task_intent"]["task_argument_mode"] == "task-file"
+    task_context = _start_task_context(payload)
+    command = task_context["implement_changed_command"]
+    assert task_context["task_argument_mode"] == "task-file"
     assert "--task-file .agentic-workspace/local/scratch/task-intent.txt" in command
     assert "--task " not in command
     assert task not in command
-    assert payload["task_intent"]["task_file"] == ".agentic-workspace/local/scratch/task-intent.txt"
-    assert "Write the original request once" in payload["task_intent"]["task_file_instruction"]
-    assert len(payload["task_intent"]["task_digest"]) == 16
-    assert payload["task_intent"]["task_text_length"] == len(task)
+    assert task_context["task_file"] == ".agentic-workspace/local/scratch/task-intent.txt"
+    assert "Write the original request once" in task_context["task_file_instruction"]
+    assert len(task_context["task_digest"]) == 16
+    assert task_context["task_text_length"] == len(task)
     assert len(json.dumps(payload, sort_keys=True)) < 8800
 
 
@@ -820,7 +897,7 @@ def test_start_tiny_routes_prep_only_handoff_to_planning_bridge(tmp_path: Path, 
     assert cli.main(["start", "--target", str(target), "--task", task, "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    action = payload["immediate_next_allowed_action"]
+    action = _start_primary_action(payload)
     assert action["action"] == "create-prep-only-planning-state"
     assert action["command"].startswith("agentic-workspace planning new-plan")
     assert "--prep-only" in action["command"]
@@ -834,7 +911,7 @@ def test_start_tiny_routes_prep_only_handoff_to_planning_bridge(tmp_path: Path, 
     assert {"edit product source", "claim implementation complete"} <= set(packet["forbidden_actions"])
     assert packet["proof_required"] is True
     assert "do not create product source" in action["summary"]
-    prep_only = payload["prep_only_handoff"]
+    prep_only = _start_context_value(payload, "prep_only_handoff")
     assert prep_only["first_command"].startswith("agentic-workspace planning new-plan")
     assert prep_only["reference_command"] == "agentic-workspace planning --format json"
     assert "--prep-only" in prep_only["preferred_mutation_command_template"]
@@ -846,7 +923,7 @@ def test_start_tiny_routes_prep_only_handoff_to_planning_bridge(tmp_path: Path, 
     assert ".agentic-workspace/planning/execplans/" in prep_only["allowed_write_scope"]
     assert "tests or fixtures" in prep_only["forbidden_until_implementation_requested"]
     assert "manual JSON polishing or ad hoc validation loops" in prep_only["forbidden_until_implementation_requested"]
-    assert len(json.dumps(payload, sort_keys=True)) < 8600
+    assert len(json.dumps(payload, sort_keys=True)) < 9500
 
 
 def test_start_tiny_routes_paraphrased_prep_only_handoff_to_planning_bridge(tmp_path: Path, capsys) -> None:
@@ -860,8 +937,8 @@ def test_start_tiny_routes_paraphrased_prep_only_handoff_to_planning_bridge(tmp_
     assert cli.main(["start", "--target", str(target), "--task", task, "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["immediate_next_allowed_action"]["action"] == "create-prep-only-planning-state"
-    assert payload["prep_only_handoff"]["status"] == "required"
+    assert _start_primary_action(payload)["action"] == "create-prep-only-planning-state"
+    assert _start_context_value(payload, "prep_only_handoff")["status"] == "required"
 
 
 def test_start_tiny_routes_groundwork_without_implementation_to_prep_only(tmp_path: Path, capsys) -> None:
@@ -875,7 +952,7 @@ def test_start_tiny_routes_groundwork_without_implementation_to_prep_only(tmp_pa
     assert cli.main(["start", "--target", str(target), "--task", task, "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    action = payload["immediate_next_allowed_action"]
+    action = _start_primary_action(payload)
     assert action["action"] == "create-prep-only-planning-state"
     assert action["command"].startswith("agentic-workspace planning new-plan")
     assert action["read_first"] == []
@@ -892,7 +969,7 @@ def test_start_tiny_routes_durable_plan_state_without_code_to_prep_only(tmp_path
     assert cli.main(["start", "--target", str(target), "--task", task, "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    action = payload["immediate_next_allowed_action"]
+    action = _start_primary_action(payload)
     assert action["action"] == "create-prep-only-planning-state"
     assert "--prep-only" in action["command"]
 
@@ -914,7 +991,7 @@ def test_start_tiny_respects_ask_first_clarification_mode(tmp_path: Path, capsys
     assert cli.main(["start", "--target", str(tmp_path), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    decision = payload["delegation_decision"]
+    decision = _start_context_value(payload, "delegation_decision")
     assert decision["decision"] == "ask-human"
     assert decision["required_next_action"] == "stop-and-ask-human"
     assert decision["manual_prompt"]["target"] == "human-or-external-strong-general-purpose-model"
@@ -954,7 +1031,7 @@ def test_start_tiny_surfaces_auto_delegation_safety_gate(tmp_path: Path, capsys)
     )
 
     payload = json.loads(capsys.readouterr().out)
-    config_effect = payload["delegation_decision"]["config_effect"]
+    config_effect = _start_context_value(payload, "delegation_decision")["config_effect"]
     assert config_effect["authority"] == "local-config"
     assert config_effect["source_path"] == ".agentic-workspace/config.local.toml"
     assert config_effect["configured_delegation_mode"] == "auto"
@@ -1001,7 +1078,7 @@ def test_start_tiny_prepares_manual_external_relay_for_early_epic_shaping(tmp_pa
         == 0
     )
 
-    decision = json.loads(capsys.readouterr().out)["delegation_decision"]
+    decision = _start_context_value(json.loads(capsys.readouterr().out), "delegation_decision")
     assert decision["required_next_action"] == "prepare-manual-handoff"
     effort = decision["effort_recommendation"]
     assert effort["orchestrator"] == "medium"
@@ -1140,7 +1217,7 @@ def test_start_surfaces_decomposed_active_work_delegation_candidates_and_auto_sk
         == 0
     )
 
-    decision = json.loads(capsys.readouterr().out)["delegation_decision"]
+    decision = _start_context_value(json.loads(capsys.readouterr().out), "delegation_decision")
     decomposition = decision["decomposition_delegation"]
     assert decomposition["status"] == "present"
     assert decomposition["candidates"][0]["lane_id"] == "validation-slice"
@@ -1216,7 +1293,7 @@ def test_start_decomposition_only_delegation_requires_lane_promotion_before_hand
         == 0
     )
 
-    decision = json.loads(capsys.readouterr().out)["delegation_decision"]
+    decision = _start_context_value(json.loads(capsys.readouterr().out), "delegation_decision")
     assert decision["decision"] == "suggest-delegation"
     assert decision["required_next_action"] == "select-or-promote-bounded-lane"
     assert decision["decomposition_delegation"]["status"] == "available-without-active-planning"
@@ -1277,11 +1354,11 @@ def test_start_blocks_decomposed_epic_without_active_execplan(tmp_path: Path, ca
     )
 
     payload = json.loads(capsys.readouterr().out)
-    gate = payload["planning_safety_gate"]
+    gate = _start_planning_safety_gate(payload)
     assert gate["status"] == "blocked"
     assert gate["delegation_decision_required"] is True
-    assert payload["workflow_sufficiency"]["decision"] == "active-execplan-required"
-    assert payload["immediate_next_allowed_action"]["command"].endswith(
+    assert _start_workflow_sufficiency(payload)["decision"] == "active-execplan-required"
+    assert _start_primary_action(payload)["command"].endswith(
         "agentic-workspace planning promote-to-plan --item-id safety-slice --target . --format json"
     )
 
@@ -1310,11 +1387,11 @@ def test_implement_flags_scope_growth_without_active_execplan(tmp_path: Path, ca
     )
 
     payload = json.loads(capsys.readouterr().out)
-    gate = payload["planning_safety_gate"]
+    gate = _start_planning_safety_gate(payload)
     assert gate["status"] == "escalation-required"
     assert gate["changed_path_classification"]["dirty_shape"] == "implementation-only"
     assert "generated artifacts changed with source or tests" in gate["changed_path_classification"]["scope_growth_reasons"]
-    assert payload["workflow_sufficiency"]["decision"] == "planning-escalation-required"
+    assert _start_workflow_sufficiency(payload)["decision"] == "planning-escalation-required"
     assert payload["next"]["action"] == "Create or promote an active execplan before continuing implementation."
 
 
@@ -1340,10 +1417,10 @@ def test_implement_distinguishes_planning_recovery_from_mixed_wip(tmp_path: Path
     )
 
     payload = json.loads(capsys.readouterr().out)
-    gate = payload["planning_safety_gate"]
+    gate = _start_planning_safety_gate(payload)
     assert gate["status"] == "violation"
     assert gate["changed_path_classification"]["dirty_shape"] == "planning-plus-implementation"
-    assert payload["workflow_sufficiency"]["decision"] == "implementation-owner-missing"
+    assert _start_workflow_sufficiency(payload)["decision"] == "implementation-owner-missing"
 
     assert (
         cli.main(
@@ -1413,11 +1490,11 @@ queued_items = []
     )
 
     payload = json.loads(capsys.readouterr().out)
-    gate = payload["planning_safety_gate"]
+    gate = _start_planning_safety_gate(payload)
     assert gate["status"] == "blocked"
     assert gate["decision"] == "delegation-decision-required"
     assert "planning delegation-decision" in gate["delegation_decision_command"]
-    assert payload["workflow_sufficiency"]["decision"] == "delegation-decision-required"
+    assert _start_workflow_sufficiency(payload)["decision"] == "delegation-decision-required"
 
     _write(
         plan_path,
@@ -1528,13 +1605,13 @@ queued_items = []
     )
 
     payload = json.loads(capsys.readouterr().out)
-    gate = payload["planning_safety_gate"]
+    gate = _start_planning_safety_gate(payload)
     assert gate["status"] == "blocked"
     assert gate["decision"] == "parent-decomposition-decision-required"
     assert gate["implementation_allowed"] is False
     assert gate["active_parent_decomposition_requirement"]["decomposition"].endswith("dogfood.decomposition.json")
     assert "skip decision" in " ".join(gate["active_parent_decomposition_requirement"]["required_before_implementation"])
-    assert payload["workflow_sufficiency"]["decision"] == "parent-decomposition-decision-required"
+    assert _start_workflow_sufficiency(payload)["decision"] == "parent-decomposition-decision-required"
 
     record = json.loads(decomposition_path.read_text(encoding="utf-8"))
     record["candidate_lanes"][0]["readiness"] = "promoted"
@@ -1659,11 +1736,11 @@ def test_start_task_surfaces_vague_outcome_orientation(tmp_path: Path, capsys) -
     )
 
     payload = json.loads(capsys.readouterr().out)
-    orientation = payload["vague_outcome_orientation"]
+    orientation = _start_context_value(payload, "vague_outcome_orientation")
     assert orientation["status"] == "applicable"
     assert "say you will proceed on that interpretation unless corrected" in orientation["answer_contract"]
     assert orientation["raw_read_rule"].startswith("Open raw .agentic-workspace files only after compact output")
-    assert "skill_routing" in payload
+    assert "skills" in payload
 
 
 def test_start_task_surfaces_stated_assumption_middle_path(tmp_path: Path, capsys) -> None:
@@ -1687,7 +1764,7 @@ def test_start_task_surfaces_stated_assumption_middle_path(tmp_path: Path, capsy
     )
 
     payload = json.loads(capsys.readouterr().out)
-    acknowledgement = payload["intent_acknowledgement"]
+    acknowledgement = _start_context_value(payload, "intent_acknowledgement")
     assert acknowledgement["decision"] == "proceed-with-stated-assumption"
     assert acknowledgement["fields"] == [
         "inferred_intent",
@@ -1767,12 +1844,12 @@ def test_startup_skillspec_pilot_keeps_direct_work_light_and_blocks_epic_work(tm
 
     epic = json.loads(capsys.readouterr().out)
     _assert_next_safe_action_valid(epic["next_safe_action"])
-    gate = epic["planning_safety_gate"]
+    gate = _start_planning_safety_gate(epic)
     assert gate["implementation_allowed"] is False
     assert gate["work_shape"] == "epic"
     assert gate["required_next_action"] == "promote-or-create-active-execplan"
     assert epic["next_safe_action"]["next_safe_action"] == "promote-or-create-active-execplan"
-    assert epic["skill_routing"]["preferred_routes"][0]["skill"] == "planning-reporting"
+    assert _start_skill_routing(epic)["preferred_routes"][0]["skill"] == "planning-reporting"
 
 
 def test_start_task_includes_compact_skill_recommendations(tmp_path: Path, capsys) -> None:
@@ -1798,11 +1875,10 @@ def test_start_task_includes_compact_skill_recommendations(tmp_path: Path, capsy
     )
 
     payload = json.loads(capsys.readouterr().out)
-    recommendations = payload["skill_routing"]["task_recommendations"]
-    assert recommendations["status"] == "recommended"
-    assert recommendations["top_recommendations"][0]["id"] == "planning-decompose"
-    assert recommendations["top_recommendations"][0]["path"] == ".agentic-workspace/planning/skills/planning-decompose/SKILL.md"
-    assert "reasons" not in recommendations["top_recommendations"][0]
+    assert payload["skills"]["status"] == "recommended"
+    assert payload["skills"]["required"][0]["id"] == "planning-decompose"
+    assert payload["skills"]["required"][0]["path"] == ".agentic-workspace/planning/skills/planning-decompose/SKILL.md"
+    assert payload["skills"]["catalog"]["total_count"] > 0
 
 
 def test_preflight_task_includes_skill_recommendations(tmp_path: Path, capsys) -> None:
@@ -1901,10 +1977,11 @@ def test_start_surfaces_preserved_agentic_workspace_absence_instructions(tmp_pat
     assert cli.main(["start", "--target", str(tmp_path), "--task", "Orient and fix README", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["startup_review"]["status"] == "attention"
-    assert payload["startup_review"]["items"][0]["path"] == "AGENTS.md"
-    assert "claim Agentic Workspace is absent" in payload["startup_review"]["items"][0]["issue"]
-    assert "reconcile stale no-workspace wording" in payload["startup_review"]["items"][0]["action"]
+    startup_review = _start_context_value(payload, "startup_review")
+    assert startup_review["status"] == "attention"
+    assert startup_review["items"][0]["path"] == "AGENTS.md"
+    assert "claim Agentic Workspace is absent" in startup_review["items"][0]["issue"]
+    assert "reconcile stale no-workspace wording" in startup_review["items"][0]["action"]
 
 
 def test_startup_discovery_sequence_for_generic_agents(tmp_path: Path, capsys) -> None:

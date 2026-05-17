@@ -5916,6 +5916,7 @@ def _operational_compression_payload(
     artifact_footprint = _artifact_footprint_by_class(target=report_payload.get("target"))
     generated_footprint = _generated_output_footprint(target=report_payload.get("target"))
     archive_retention = _archive_retention_policy(archived_distillation=archived_distillation, artifact_footprint=artifact_footprint)
+    output_shape_inventory = _ordinary_output_shape_inventory()
     closeout_trust = report_payload.get("closeout_trust", {})
     closeout_trust = closeout_trust if isinstance(closeout_trust, dict) else {}
     historical_reviews = closeout_trust.get("historical_review_artifacts", {})
@@ -5992,6 +5993,7 @@ def _operational_compression_payload(
         "artifact_footprint_by_class": artifact_footprint,
         "generated_output_footprint": generated_footprint,
         "archive_retention_policy": archive_retention,
+        "ordinary_output_shape_inventory": output_shape_inventory,
         "review_retention_policy": review_retention,
         "unresolved_external_work_routing": {
             "status": current_external_work.get("status", "unavailable") if isinstance(current_external_work, dict) else "unavailable",
@@ -6091,6 +6093,15 @@ def _operational_compression_payload(
                 "count": review_retention.get("candidate_count", 0),
             }
         )
+    if output_shape_inventory.get("remaining_count"):
+        advisory_signals.append(
+            {
+                "severity": "advisory",
+                "measure": "ordinary_output_shape_inventory",
+                "message": "Other ordinary outputs still need primary-decision-object compression slices.",
+                "count": output_shape_inventory.get("remaining_count", 0),
+            }
+        )
     return {
         "kind": "workspace-operational-compression/v1",
         "status": "attention" if advisory_signals else "measured",
@@ -6101,6 +6112,87 @@ def _operational_compression_payload(
         "hard_failures": [],
         "review_question": "Did this change remove, merge, compress, route, or background more repeated work than it added?",
         "section_command": "agentic-workspace report --target ./repo --section operational_compression --format json",
+    }
+
+
+def _ordinary_output_shape_inventory() -> dict[str, Any]:
+    outputs = [
+        {
+            "surface": "start",
+            "status": "proven",
+            "primary_decision": "next_safe_action",
+            "detail_route": "start --select <field> or --verbose",
+            "next_step": "keep regression tests guarding one startup primary action",
+        },
+        {
+            "surface": "implement",
+            "status": "needs-separate-slice",
+            "primary_decision": "safe implementation route for the changed paths and task",
+            "detail_route": "implement selector/detail output",
+            "next_step": "audit top-level action, routing, task, and proof fields for overlap",
+        },
+        {
+            "surface": "summary",
+            "status": "needs-separate-slice",
+            "primary_decision": "current planning state and recommended next action",
+            "detail_route": "summary views and verbose output",
+            "next_step": "collapse competing planning and continuation fields behind compact contracts",
+        },
+        {
+            "surface": "preflight",
+            "status": "needs-separate-slice",
+            "primary_decision": "whether takeover/recovery may proceed and the next gate",
+            "detail_route": "preflight selector/detail output",
+            "next_step": "separate gate/blocker fields from supporting diagnostics",
+        },
+        {
+            "surface": "report",
+            "status": "needs-separate-slice",
+            "primary_decision": "report next_action or maintenance-pressure router",
+            "detail_route": "report --section <section>",
+            "next_step": "keep default report as a router and audit first-line warning/action fields",
+        },
+        {
+            "surface": "proof",
+            "status": "needs-separate-slice",
+            "primary_decision": "selected proof command or proof blocker",
+            "detail_route": "proof selector/detail output",
+            "next_step": "ensure proof selection, blockers, and validation plans do not compete",
+        },
+        {
+            "surface": "planning report/summary",
+            "status": "needs-separate-slice",
+            "primary_decision": "active planning contract and continuation owner",
+            "detail_route": "planning summary/report views",
+            "next_step": "audit active/resumable/follow-through projections for duplicated decisions",
+        },
+        {
+            "surface": "memory report/promotion-report",
+            "status": "needs-separate-slice",
+            "primary_decision": "memory pull or promotion recommendation",
+            "detail_route": "memory report/promotion selectors",
+            "next_step": "separate ordinary memory pull from promotion/remediation diagnostics",
+        },
+    ]
+    remaining = [item for item in outputs if item["status"] != "proven"]
+    return {
+        "kind": "workspace-ordinary-output-shape-inventory/v1",
+        "status": "attention" if remaining else "measured",
+        "advisory_only": True,
+        "rule": "Use this as a follow-up inventory only; do not redesign all command outputs in one pass.",
+        "classification": [
+            "primary decision",
+            "supporting context",
+            "skill projection",
+            "proof/progress blocker",
+            "selector/detail",
+            "compatibility projection",
+            "verbose diagnostic",
+        ],
+        "remaining_count": len(remaining),
+        "proven_count": len(outputs) - len(remaining),
+        "outputs": outputs,
+        "recommended_grouping": "Create separate child slices for implement, summary/preflight, report/proof, planning, and memory.",
     }
 
 
@@ -9823,7 +9915,7 @@ def _start_payload(
             target_root=target_root, changed_paths=changed_paths, task_text=task_text, config=config, startup_template=startup_template
         )
         if profile is None:
-            return _selector_first_start_payload(payload, cli_invoke=config.cli_invoke)
+            return _selector_first_start_payload(payload, cli_invoke=config.cli_invoke, target_root=target_root)
         return payload
     descriptors = _module_operations()
     registry = _module_registry(descriptors=descriptors, target_root=target_root)
@@ -10273,47 +10365,153 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
     return discovered
 
 
-def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str) -> dict[str, Any]:
+def _skill_catalog_summary_from_payload(skills_payload: dict[str, Any]) -> dict[str, Any]:
+    skills = skills_payload.get("skills", [])
+    sources = skills_payload.get("sources", [])
+    counts_by_source_kind: dict[str, int] = {}
+    counts_by_owner: dict[str, int] = {}
+    if isinstance(skills, list):
+        for skill in skills:
+            if not isinstance(skill, dict):
+                continue
+            source_kind = str(skill.get("source_kind", "unknown") or "unknown")
+            owner = str(skill.get("owner", "unknown") or "unknown")
+            counts_by_source_kind[source_kind] = counts_by_source_kind.get(source_kind, 0) + 1
+            counts_by_owner[owner] = counts_by_owner.get(owner, 0) + 1
+    return {
+        "available": True,
+        "total_count": len(skills) if isinstance(skills, list) else 0,
+        "counts_by_source_kind": counts_by_source_kind,
+        "counts_by_owner": counts_by_owner,
+        "sources": [
+            {key: source.get(key) for key in ("name", "state") if isinstance(source, dict) and source.get(key) not in ("", None)}
+            for source in sources
+            if isinstance(source, dict)
+        ],
+        "warning_count": len(skills_payload.get("warnings", [])) if isinstance(skills_payload.get("warnings", []), list) else 0,
+    }
+
+
+def _startup_skills_projection(
+    *, payload: dict[str, Any], next_safe_action: dict[str, Any], target_root: Path | None, cli_invoke: str
+) -> dict[str, Any]:
     skill_routing = payload.get("skill_routing", {}) if isinstance(payload.get("skill_routing"), dict) else {}
     task_recommendations = skill_routing.get("task_recommendations", {}) if isinstance(skill_routing, dict) else {}
-    preferred_routes = list(skill_routing.get("preferred_routes", [])[:2]) if isinstance(skill_routing, dict) else []
-    if isinstance(task_recommendations, dict) and task_recommendations.get("top_recommendations"):
-        preferred_routes = [
-            {"task_shape": "current task", "skill": str(item.get("id", ""))}
-            for item in task_recommendations.get("top_recommendations", [])[:2]
-            if isinstance(item, dict) and item.get("id")
-        ]
+    task_text = payload.get("task_intent", {}).get("task") if isinstance(payload.get("task_intent"), dict) else None
+    if not task_text and isinstance(task_recommendations, dict):
+        task_text = task_recommendations.get("task")
+    skills_payload = _skills_payload(target_root=target_root, task_text=str(task_text) if task_text else None)
+    skills_by_id = {
+        str(skill.get("id", "")): skill for skill in skills_payload.get("skills", []) if isinstance(skill, dict) and skill.get("id")
+    }
+
+    required_id = str(next_safe_action.get("required_skill", "") or "")
+    required: list[dict[str, Any]] = []
+    if required_id:
+        skill = skills_by_id.get(required_id, {})
+        required.append(
+            {
+                "id": required_id,
+                **({"path": skill.get("path")} if skill.get("path") else {}),
+                **({"summary": skill.get("summary")} if skill.get("summary") else {}),
+                "reason": "required by next_safe_action.required_skill",
+            }
+        )
+
+    recommended: list[dict[str, Any]] = []
+    if isinstance(task_recommendations, dict):
+        for item in task_recommendations.get("top_recommendations", [])[:3]:
+            if not isinstance(item, dict):
+                continue
+            skill_id = str(item.get("id", "") or "")
+            if not skill_id or skill_id == required_id:
+                continue
+            recommended.append(
+                {
+                    key: item.get(key)
+                    for key in ("id", "path", "summary", "score")
+                    if item.get(key) not in ("", None)
+                }
+                | ({"reasons": item.get("reasons", [])[:2]} if item.get("reasons") else {})
+            )
+
+    catalog_command = _proof_command_for_target(
+        command='agentic-workspace skills --target ./repo --task "<task>" --format json',
+        target_root=target_root,
+    )
+    catalog_command = _command_with_cli_invoke(command=catalog_command, cli_invoke=cli_invoke)
+    if isinstance(task_recommendations, dict) and task_recommendations.get("command"):
+        catalog_command = str(task_recommendations["command"])
+
+    return {
+        "kind": "agentic-workspace/startup-skills-projection/v1",
+        "status": "recommended" if (required or recommended) else "available",
+        "rule": "This is a compact startup projection over the skill registry; use the catalog command for the full skill list.",
+        "required": required,
+        "recommended": recommended,
+        "catalog": {
+            **_skill_catalog_summary_from_payload(skills_payload),
+            "command": catalog_command,
+        },
+    }
+
+
+def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, target_root: Path | None = None) -> dict[str, Any]:
+    skill_routing = payload.get("skill_routing", {}) if isinstance(payload.get("skill_routing"), dict) else {}
+    next_safe_action = _next_safe_action_packet(
+        immediate=payload["immediate_next_allowed_action"],
+        workflow_sufficiency=payload.get("workflow_sufficiency"),
+        skill_routing=payload.get("skill_routing"),
+        memory_consult=payload.get("memory_consult"),
+    )
+    context: dict[str, Any] = {
+        "primary_action": payload["immediate_next_allowed_action"],
+        "active_state": payload["active_state_summary"],
+        "skill_routing": {
+            "status": skill_routing.get("status", "unknown") if isinstance(skill_routing, dict) else "unknown",
+            "query": skill_routing.get("query", "") if isinstance(skill_routing, dict) else "",
+            "preferred_routes": list(skill_routing.get("preferred_routes", [])[:2]) if isinstance(skill_routing, dict) else [],
+        },
+        "planning": {
+            "workflow_sufficiency": payload.get(
+                "workflow_sufficiency",
+                _workflow_sufficiency_payload(
+                    surface="start",
+                    decision="enough-for-first-contact-routing",
+                    reason="Use the next action and selectors; no raw workspace files are needed yet.",
+                ),
+            ),
+            **({"planning_safety_gate": payload["planning_safety_gate"]} if "planning_safety_gate" in payload else {}),
+        },
+        "memory": payload.get("memory_consult", {}),
+    }
+    if "task_intent" in payload:
+        task_intent = payload["task_intent"]
+        context["task"] = {
+            "status": task_intent.get("status", "unknown") if isinstance(task_intent, dict) else "unknown",
+            "carry_forward_rule": task_intent.get("carry_forward_rule", "") if isinstance(task_intent, dict) else "",
+            "requested_outcomes": task_intent.get("requested_outcomes", [])[:8] if isinstance(task_intent, dict) else [],
+            "implement_changed_command": task_intent.get("implement_changed_command") if isinstance(task_intent, dict) else None,
+            "task_argument_mode": task_intent.get("task_argument_mode") if isinstance(task_intent, dict) else None,
+        }
+        if isinstance(task_intent, dict) and "acceptance" in task_intent:
+            context["acceptance"] = _tiny_acceptance_payload(task_intent["acceptance"])
+        for optional_key in ("task_file", "task_file_instruction", "task_excerpt", "task_digest", "task_text_length"):
+            if isinstance(task_intent, dict) and optional_key in task_intent:
+                context["task"][optional_key] = task_intent[optional_key]
     selected: dict[str, Any] = {
         "kind": payload["kind"],
         "target": ".",
-        "immediate_next_allowed_action": payload["immediate_next_allowed_action"],
-        "active_state_summary": payload["active_state_summary"],
-        "workflow_sufficiency": payload.get(
-            "workflow_sufficiency",
-            _workflow_sufficiency_payload(
-                surface="start",
-                decision="enough-for-first-contact-routing",
-                reason="Use the next action and selectors; no raw workspace files are needed yet.",
-            ),
+        "next_safe_action": next_safe_action,
+        "skills": _startup_skills_projection(
+            payload=payload,
+            next_safe_action=next_safe_action,
+            target_root=target_root,
+            cli_invoke=cli_invoke,
         ),
-        **({"planning_safety_gate": payload["planning_safety_gate"]} if "planning_safety_gate" in payload else {}),
-        "skill_routing": {
-            "status": skill_routing.get("status", "unknown") if isinstance(skill_routing, dict) else "unknown",
-            "rule": skill_routing.get("rule", "Use listed skills only when directly relevant; otherwise proceed from the next action.")
-            if isinstance(skill_routing, dict)
-            else "Use listed skills only when directly relevant; otherwise proceed from the next action.",
-            "query": skill_routing.get("query", 'agentic-workspace skills --target ./repo --task "<task>" --format json')
-            if isinstance(skill_routing, dict)
-            else 'agentic-workspace skills --target ./repo --task "<task>" --format json',
-            "preferred_routes": preferred_routes,
-        },
-        "next_safe_action": _next_safe_action_packet(
-            immediate=payload["immediate_next_allowed_action"],
-            workflow_sufficiency=payload.get("workflow_sufficiency"),
-            skill_routing=payload.get("skill_routing"),
-            memory_consult=payload.get("memory_consult"),
-        ),
+        "context": context,
         "drill_down": {
+            "ordinary_profile": "primary=next_safe_action;skills=proj;legacy=select/context",
             "rule": "Use --select <field[,field...]> for exact fields; use --verbose only for broad diagnostics.",
             "examples": [
                 _command_with_cli_invoke(
@@ -10327,43 +10525,21 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str) -
             "available_selectors": _available_selectors_for_payload(payload),
         },
     }
-    if isinstance(task_recommendations, dict) and task_recommendations.get("status") == "recommended":
-        selected["skill_routing"]["task_recommendations"] = {
-            "status": task_recommendations.get("status", "recommended"),
-            "top_recommendations": [
-                {key: item.get(key) for key in ("id", "path", "score") if item.get(key) not in ("", None)}
-                for item in task_recommendations.get("top_recommendations", [])[:2]
-                if isinstance(item, dict)
-            ],
-        }
     if "task_intent" in payload:
         task_intent = payload["task_intent"]
-        selected["task_intent"] = {
-            "status": task_intent.get("status", "unknown") if isinstance(task_intent, dict) else "unknown",
-            "carry_forward_rule": task_intent.get("carry_forward_rule", "") if isinstance(task_intent, dict) else "",
-            "requested_outcomes": task_intent.get("requested_outcomes", [])[:8] if isinstance(task_intent, dict) else [],
-            "acceptance": _tiny_acceptance_payload(task_intent.get("acceptance", {})) if isinstance(task_intent, dict) else {},
-            "implement_changed_command": task_intent.get("implement_changed_command") if isinstance(task_intent, dict) else None,
-            "task_argument_mode": task_intent.get("task_argument_mode") if isinstance(task_intent, dict) else None,
-        }
-        for optional_key in ("task_file", "task_file_instruction", "task_excerpt", "task_digest", "task_text_length"):
-            if isinstance(task_intent, dict) and optional_key in task_intent:
-                selected["task_intent"][optional_key] = task_intent[optional_key]
-        if isinstance(task_intent, dict) and "acceptance" in task_intent:
-            selected["acceptance"] = _tiny_acceptance_payload(task_intent["acceptance"])
         if (
             isinstance(task_intent, dict)
             and isinstance(task_intent.get("promotion_guidance"), dict)
             and (task_intent["promotion_guidance"].get("status") == "candidate")
         ):
-            selected["durable_intent_promotion"] = _tiny_task_intent_promotion_guidance(task_intent["promotion_guidance"])
+            context["durable_intent_promotion"] = _tiny_task_intent_promotion_guidance(task_intent["promotion_guidance"])
     delegation = payload.get("delegation_decision", {})
     if isinstance(delegation, dict) and (
         delegation.get("decision") not in {"", None, "stay-local"}
         or delegation.get("delegation_candidates")
         or (isinstance(delegation.get("auto_delegation_audit"), dict) and delegation["auto_delegation_audit"].get("status") == "skipped")
     ):
-        selected["delegation_decision"] = delegation
+        context["delegation_decision"] = delegation
     cli_invocation = payload.get("cli_invocation", {})
     if isinstance(cli_invocation, dict) and cli_invocation.get("mismatch"):
         selected["cli_invocation"] = cli_invocation
@@ -10374,7 +10550,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str) -
     subsystem_intent = durable_intent.get("subsystem_intent", {}) if isinstance(durable_intent, dict) else {}
     matched_count = int(subsystem_intent.get("matched_count", 0) or 0) if isinstance(subsystem_intent, dict) else 0
     if isinstance(durable_intent, dict) and durable_intent.get("status") == "present" and matched_count:
-        selected["durable_intent"] = _tiny_durable_intent(durable_intent)
+        context["durable_intent"] = _tiny_durable_intent(durable_intent)
     for optional_key in (
         "proof",
         "path_boundaries",
@@ -10385,10 +10561,10 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str) -
         "intent_acknowledgement",
     ):
         if optional_key in payload:
-            selected[optional_key] = payload[optional_key]
+            context[optional_key] = payload[optional_key]
     maintainer_mode = payload.get("maintainer_mode", {})
     if isinstance(maintainer_mode, dict) and maintainer_mode.get("status") == "enabled":
-        selected["maintainer_mode"] = maintainer_mode
+        context["maintainer_mode"] = maintainer_mode
     return selected
 
 
@@ -15531,7 +15707,11 @@ def _startup_skill_routing_payload(
     task_text: str | None = None,
 ) -> dict[str, Any]:
     skill_command = _command_with_cli_invoke(
-        command='agentic-workspace skills --target ./repo --task "<task>" --format json', cli_invoke=cli_invoke
+        command=_proof_command_for_target(
+            command='agentic-workspace skills --target ./repo --task "<task>" --format json',
+            target_root=target_root,
+        ),
+        cli_invoke=cli_invoke,
     )
     core_routes = [
         {
@@ -15582,7 +15762,10 @@ def _startup_skill_routing_payload(
     if configured_features:
         payload["enabled_advanced_routes"] = [route["feature"] for route in advanced_routes]
     else:
-        payload["available_advanced_route_command"] = "agentic-workspace modules --target ./repo --format json"
+        payload["available_advanced_route_command"] = _proof_command_for_target(
+            command="agentic-workspace modules --target ./repo --format json",
+            target_root=target_root,
+        )
     task_recommendations = _task_skill_recommendations_payload(
         target_root=target_root, task_text=task_text, cli_invoke=cli_invoke, compact=compact
     )
@@ -15602,7 +15785,11 @@ def _task_skill_recommendations_payload(
     *, target_root: Path | None, task_text: str | None, cli_invoke: str, compact: bool = False
 ) -> dict[str, Any]:
     skill_command = _command_with_cli_invoke(
-        command='agentic-workspace skills --target ./repo --task "<task>" --format json', cli_invoke=cli_invoke
+        command=_proof_command_for_target(
+            command='agentic-workspace skills --target ./repo --task "<task>" --format json',
+            target_root=target_root,
+        ),
+        cli_invoke=cli_invoke,
     )
     if not task_text or not task_text.strip():
         return {
@@ -15629,9 +15816,14 @@ def _task_skill_recommendations_payload(
         "status": "recommended" if compact_items else "no-match",
         "task": task_text,
         "command": _command_with_cli_invoke(
-            command=f"agentic-workspace skills --target ./repo --task {_shell_quote(task_text)} --format json", cli_invoke=cli_invoke
+            command=_proof_command_for_target(
+                command=f"agentic-workspace skills --target ./repo --task {_shell_quote(task_text)} --format json",
+                target_root=target_root,
+            ),
+            cli_invoke=cli_invoke,
         ),
         "top_recommendations": compact_items,
+        "catalog_summary": _skill_catalog_summary_from_payload(skills_payload),
         "warning_count": len(skills_payload.get("warnings", [])) if isinstance(skills_payload.get("warnings", []), list) else 0,
     }
 

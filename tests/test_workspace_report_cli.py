@@ -730,6 +730,17 @@ def test_report_section_selector_returns_operational_compression_measures(tmp_pa
     assert generated_footprint["advisory_only"] is True
     assert generated_footprint["freshness"]["ordinary_report_runs_checks"] is False
     assert "Generated outputs are reproducible derived artifacts" in generated_footprint["guardrails"][0]
+    output_inventory = measures["ordinary_output_shape_inventory"]
+    assert output_inventory["kind"] == "workspace-ordinary-output-shape-inventory/v1"
+    assert output_inventory["advisory_only"] is True
+    assert output_inventory["remaining_count"] >= 1
+    assert "primary decision" in output_inventory["classification"]
+    inventory_by_surface = {entry["surface"]: entry for entry in output_inventory["outputs"]}
+    assert inventory_by_surface["start"]["status"] == "proven"
+    assert inventory_by_surface["start"]["primary_decision"] == "next_safe_action"
+    assert inventory_by_surface["implement"]["status"] == "needs-separate-slice"
+    assert inventory_by_surface["summary"]["status"] == "needs-separate-slice"
+    assert inventory_by_surface["planning report/summary"]["status"] == "needs-separate-slice"
     footprint = measures["artifact_footprint_by_class"]
     assert footprint["rule"].startswith("Footprint classes are advisory")
     classes = {entry["id"]: entry for entry in footprint["classes"]}

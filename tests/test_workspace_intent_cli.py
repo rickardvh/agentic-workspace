@@ -4,6 +4,19 @@ from __future__ import annotations
 from tests.workspace_cli_support import *
 
 
+def _start_context(payload: dict[str, object]) -> dict[str, object]:
+    context = payload.get("context", {})
+    return context if isinstance(context, dict) else {}
+
+
+def _start_durable_intent(payload: dict[str, object]) -> dict[str, object]:
+    durable_intent = payload.get("durable_intent")
+    if isinstance(durable_intent, dict):
+        return durable_intent
+    context_intent = _start_context(payload).get("durable_intent")
+    return context_intent if isinstance(context_intent, dict) else {}
+
+
 def test_system_intent_command_sync_refreshes_source_metadata_without_mechanical_extraction(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     (tmp_path / ".agentic-workspace").mkdir(exist_ok=True)
@@ -94,10 +107,11 @@ def test_start_surfaces_compact_durable_intent_for_task(capsys) -> None:
     assert cli.main(["start", "--target", ".", "--task", "planning closeout should preserve durable intent", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["durable_intent"]["kind"] == "agentic-workspace/durable-intent-decision/v1"
-    assert payload["durable_intent"]["subsystem_intent"]["surface"] == ".agentic-workspace/system-intent/subsystems.toml"
-    assert payload["durable_intent"]["subsystem_intent"]["ownership_registry"]["status"] == "present"
-    assert any(match["id"] == "planning" for match in payload["durable_intent"]["subsystem_intent"]["matches"])
+    durable_intent = _start_durable_intent(payload)
+    assert durable_intent["kind"] == "agentic-workspace/durable-intent-decision/v1"
+    assert durable_intent["subsystem_intent"]["surface"] == ".agentic-workspace/system-intent/subsystems.toml"
+    assert durable_intent["subsystem_intent"]["ownership_registry"]["status"] == "present"
+    assert any(match["id"] == "planning" for match in durable_intent["subsystem_intent"]["matches"])
 
 
 def test_start_matches_subsystem_intent_through_ownership_paths(capsys) -> None:
@@ -107,7 +121,7 @@ def test_start_matches_subsystem_intent_through_ownership_paths(capsys) -> None:
     )
 
     payload = json.loads(capsys.readouterr().out)
-    matches = payload["durable_intent"]["subsystem_intent"]["matches"]
+    matches = _start_durable_intent(payload)["subsystem_intent"]["matches"]
     planning_match = next(match for match in matches if match["id"] == "planning")
     assert planning_match["match_source"] == "ownership-path"
 
@@ -187,9 +201,10 @@ needs_review = false
     )
 
     payload = json.loads(capsys.readouterr().out)
-    matches = {match["id"] for match in payload["durable_intent"]["subsystem_intent"]["matches"]}
+    durable_intent = _start_durable_intent(payload)
+    matches = {match["id"] for match in durable_intent["subsystem_intent"]["matches"]}
     assert {"performance", "accessibility"} <= matches
-    assert payload["durable_intent"]["subsystem_intent"]["matched_count"] == 4
+    assert durable_intent["subsystem_intent"]["matched_count"] == 4
 
 
 def test_report_durable_intent_section_returns_compact_projection(capsys) -> None:

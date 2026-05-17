@@ -6,10 +6,7 @@
   "type": "object",
   "required": [
     "kind",
-    "target",
-    "active_state_summary",
-    "immediate_next_allowed_action",
-    "skill_routing"
+    "target"
   ],
   "properties": {
     "kind": {
@@ -267,6 +264,16 @@
     "next_safe_action": {
       "$ref": "#/$defs/next_safe_action",
       "description": "Compact next-safe-action packet derived from startup routing, including proof and completion-claim guardrails."
+    },
+    "skills": {
+      "type": "object",
+      "description": "Compact startup projection over skill routing, required skill, recommendations, and catalog drill-down.",
+      "additionalProperties": true
+    },
+    "context": {
+      "type": "object",
+      "description": "Supporting startup context for the primary next-safe-action decision, including compatibility projections for detail fields.",
+      "additionalProperties": true
     },
     "planning_safety_gate": {
       "type": "object",

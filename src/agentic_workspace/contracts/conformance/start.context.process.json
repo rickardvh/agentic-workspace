@@ -48,6 +48,7 @@
         },
         {
           "path": [
+            "context",
             "proof",
             "kind"
           ],
