@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import copy
 import importlib
 import io
 import json
@@ -2489,8 +2490,81 @@ def _run_primitive_conformance() -> int:
     return _run([_python_executable(), "packages/command-generation/tests/primitive_conformance.py"])
 
 
+def _python_completion_blockers_report(ir: dict[str, object]) -> dict[str, object]:
+    policy = ir.get("generation_policy", {}).get("python_cli_completion", {})
+    if not isinstance(policy, dict):
+        return {
+            "kind": "python-completion-blockers/v1",
+            "current_state": "missing",
+            "completion_gate_state": "missing",
+            "completion_claim_allowed": False,
+            "false_completion_claim_would_fail": True,
+            "blockers": ["command_package_ir.json generation_policy.python_cli_completion is missing or malformed"],
+            "blocker_count": 1,
+            "next_owner": "command_package_ir.json",
+        }
+
+    forced_full_ir = copy.deepcopy(ir)
+    forced_policy = forced_full_ir["generation_policy"]["python_cli_completion"]
+    forced_policy["current_state"] = "full-generated-cli-complete"
+    forced_policy.setdefault("completion_gate", {})["state"] = "satisfied"
+
+    blockers: list[str] = []
+    blockers.extend(_validate_python_cli_completion_policy(forced_policy))
+    blockers.extend(_validate_full_python_completion_runtime_ownership(forced_full_ir))
+    blockers.extend(_validate_full_python_completion_executable_ownership(forced_full_ir))
+    blockers.extend(_validate_python_runtime_projection_inventory(full_completion=True))
+    blockers.extend(_validate_python_operation_execution_inventory(forced_full_ir))
+
+    current_state = str(policy.get("current_state", ""))
+    gate = policy.get("completion_gate", {})
+    gate_state = str(gate.get("state", "")) if isinstance(gate, dict) else "malformed"
+    completion_claim_allowed = current_state == "full-generated-cli-complete" and gate_state == "satisfied" and not blockers
+    return {
+        "kind": "python-completion-blockers/v1",
+        "current_state": current_state,
+        "completion_gate_state": gate_state,
+        "completion_claim_allowed": completion_claim_allowed,
+        "false_completion_claim_would_fail": bool(blockers),
+        "blockers": blockers,
+        "blocker_count": len(blockers),
+        "next_owner": (
+            "promote the next #892 primitive/runtime migration slice"
+            if blockers
+            else "python_cli_completion may be promoted only with full proof rerun"
+        ),
+    }
+
+
+def _print_python_completion_blockers_report(report: dict[str, object], *, output_format: str) -> None:
+    if output_format == "json":
+        print(json.dumps(report, indent=2, sort_keys=True))
+        return
+
+    print(f"Python completion state: {report['current_state']} (gate: {report['completion_gate_state']})")
+    print(f"Completion claim allowed: {str(report['completion_claim_allowed']).lower()}")
+    blockers = report.get("blockers", [])
+    if not isinstance(blockers, list) or not blockers:
+        print("Blockers: none")
+        return
+    print("Blockers:")
+    for blocker in blockers:
+        print(f"- {blocker}")
+
+
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Check generated command package outputs.")
+    parser.add_argument(
+        "--python-completion-blockers",
+        action="store_true",
+        help="Print the compact blocker report for Python full generated CLI completion.",
+    )
+    parser.add_argument(
+        "--format",
+        choices=["text", "json"],
+        default="text",
+        help="Output format for report modes.",
+    )
     parser.add_argument(
         "--docker",
         action="store_true",
@@ -2556,6 +2630,14 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
+    if args.python_completion_blockers:
+        ir = load_workspace_command_package_ir(repo_root=REPO_ROOT)
+        _print_python_completion_blockers_report(
+            _python_completion_blockers_report(ir),
+            output_format=str(args.format),
+        )
+        return 0
+
     generator = REPO_ROOT / "scripts" / "generate" / "generate_command_packages.py"
     freshness = _run([_python_executable(), str(generator), "--check"])
     if freshness:

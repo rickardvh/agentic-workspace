@@ -144,9 +144,9 @@
     {
       "id": "tier-0-honest-gate",
       "title": "Stabilize the honest Python completion gate",
-      "readiness": "deferred",
+      "readiness": "promoted",
       "outcome": "False Python completion claims fail while generated commands import package runtime helpers, generated operation executors call package-owned runtime for generic deterministic behavior, package source still owns parser/dispatch/executable runtime envelopes, or the operation inventory has unresolved generic deterministic debt. The compact blockers report answers what blocks Python completion now.",
-      "owner_surface": "src/agentic_workspace/contracts/command_package_ir.json, src/agentic_workspace/contracts/python_operation_execution_inventory.json, scripts/check/check_generated_command_packages.py, tests/test_generated_command_package_proof_runner.py, and tests/test_contract_tooling.py",
+      "owner_surface": ".agentic-workspace/planning/execplans/tier-0-honest-gate.plan.json",
       "proof": "uv run python scripts/check/check_generated_command_packages.py; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q",
       "depends_on": [],
       "parallel_with": []

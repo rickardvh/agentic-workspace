@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import copy
 import importlib.util
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -137,6 +138,34 @@ def test_current_python_completion_state_is_not_full_while_runtime_source_remain
 
     assert ir["generation_policy"]["python_cli_completion"]["current_state"] == "product-runtime-source-generation-incomplete"
     assert ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] == "pending"
+
+
+def test_python_completion_blocker_report_names_current_false_claim_blockers() -> None:
+    checker = _load_checker()
+    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+
+    report = checker._python_completion_blockers_report(ir)
+
+    assert report["kind"] == "python-completion-blockers/v1"
+    assert report["current_state"] == "product-runtime-source-generation-incomplete"
+    assert report["completion_gate_state"] == "pending"
+    assert report["completion_claim_allowed"] is False
+    assert report["false_completion_claim_would_fail"] is True
+    blockers = "\n".join(report["blockers"])
+    assert "generated CLI runtime/lifecycle behavior" in blockers
+    assert "generated runtime facades still delegate to package-owned runtime helpers" in blockers
+
+
+def test_python_completion_blocker_report_has_json_cli_mode(capsys) -> None:
+    checker = _load_checker()
+
+    status = checker.main(["--python-completion-blockers", "--format", "json"])
+
+    assert status == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "python-completion-blockers/v1"
+    assert payload["completion_claim_allowed"] is False
+    assert payload["blocker_count"] == len(payload["blockers"])
 
 
 def test_memory_list_commands_are_direct_generated_python_projections() -> None:
