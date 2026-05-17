@@ -55,6 +55,7 @@
           "local-cache",
           "reconstructable-external-snapshot",
           "historical-audit-distillation",
+          "recovery-diagnostic",
           "removable-duplicate",
           "diagnostic-fixture",
           "platform-tooling"
@@ -127,6 +128,7 @@
               "local-cache",
               "reconstructable-external-snapshot",
               "historical-audit-distillation",
+              "recovery-diagnostic",
               "removable-duplicate",
               "diagnostic-fixture",
               "platform-tooling"

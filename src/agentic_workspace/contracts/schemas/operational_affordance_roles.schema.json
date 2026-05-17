@@ -10,6 +10,8 @@
     "command_roles",
     "warning_roles",
     "report_section_roles",
+    "provenance_policy",
+    "source_boundary_review",
     "closeout_writer_direction"
   ],
   "properties": {
@@ -45,6 +47,150 @@
         "$ref": "#/$defs/report_section_role"
       },
       "description": "Report section classifications by next-action value and default visibility."
+    },
+    "provenance_policy": {
+      "type": "object",
+      "description": "Current product role for Planning mutation provenance.",
+      "required": [
+        "surface",
+        "role",
+        "normal_operation_rule",
+        "recovery_rule",
+        "warning_scope",
+        "exit_condition",
+        "source_issue"
+      ],
+      "properties": {
+        "surface": {
+          "const": ".agentic-workspace/planning/mutation-provenance.json"
+        },
+        "role": {
+          "enum": [
+            "normal_operation_evidence",
+            "exceptional_recovery_evidence",
+            "transitional_recovery_aid",
+            "removal_candidate"
+          ]
+        },
+        "normal_operation_rule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recovery_rule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "warning_scope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "exit_condition": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_issue": {
+          "pattern": "^#[0-9]+$",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "source_boundary_review": {
+      "type": "object",
+      "description": "Post-closeout-writer review result for remaining compensating detectors.",
+      "required": [
+        "status",
+        "review_issue",
+        "reviewed_after",
+        "demoted_warning_classes",
+        "retained_diagnostics",
+        "routed_followups",
+        "closure_rule"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "remaining-followups-routed",
+            "ready-to-close",
+            "blocked"
+          ]
+        },
+        "review_issue": {
+          "pattern": "^#[0-9]+$",
+          "type": "string"
+        },
+        "reviewed_after": {
+          "type": "array",
+          "items": {
+            "pattern": "^(#|PR #)[0-9]+$",
+            "type": "string"
+          }
+        },
+        "demoted_warning_classes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "retained_diagnostics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "warning_class",
+              "role",
+              "trigger"
+            ],
+            "properties": {
+              "warning_class": {
+                "type": "string",
+                "minLength": 1
+              },
+              "role": {
+                "type": "string",
+                "minLength": 1
+              },
+              "trigger": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "routed_followups": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "issue",
+              "warning_class",
+              "reason"
+            ],
+            "properties": {
+              "issue": {
+                "pattern": "^#[0-9]+$",
+                "type": "string"
+              },
+              "warning_class": {
+                "type": "string",
+                "minLength": 1
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "closure_rule": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
     },
     "closeout_writer_direction": {
       "type": "object",

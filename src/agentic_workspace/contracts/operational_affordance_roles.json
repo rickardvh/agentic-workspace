@@ -171,7 +171,7 @@
     {
       "warning_class": "planning_artifact_freehand",
       "role": "missing_helper",
-      "preferred_remedy": "add or use writer/scaffold helpers instead of freehand durable planning artifacts"
+      "preferred_remedy": "route common freehand artifact intake to focused follow-up #1033 before demoting this warning"
     },
     {
       "warning_class": "roadmap_execution_drift",
@@ -231,12 +231,12 @@
     {
       "warning_class": "planning_manual_mutation_unstamped",
       "role": "external_manual_drift",
-      "preferred_remedy": "keep diagnostic; route repeated patterns to a command-owned writer"
+      "preferred_remedy": "keep as recovery-only drift diagnostic; routine command-owned mutations should prove validity through schema, command output, and normal git diff rather than manual ledger repair"
     },
     {
       "warning_class": "archive_missing_execution_summary",
-      "role": "source_boundary_fix_candidate",
-      "preferred_remedy": "move toward command-time closeout writer validation"
+      "role": "diagnostic",
+      "preferred_remedy": "retain as archive/manual-drift diagnostic; ordinary active-run completion is now owned by planning closeout evidence options from #1029"
     },
     {
       "warning_class": "payload_drift",
@@ -296,10 +296,51 @@
       "default_visibility": "selector_or_verbose"
     }
   ],
+  "provenance_policy": {
+    "surface": ".agentic-workspace/planning/mutation-provenance.json",
+    "role": "transitional_recovery_aid",
+    "normal_operation_rule": "Normal Planning CLI mutations may update this surface while the transition is active, but callers should not treat the ledger as the proof that a routine mutation is legitimate; schema validation, command output, and git diff are the ordinary evidence.",
+    "recovery_rule": "record-recovery is the expected explicit writer for emergency/manual repair and should carry the reason for the exceptional mutation.",
+    "warning_scope": "planning_manual_mutation_unstamped is scoped to external/manual dirty planning surfaces, not to routine command-created state that has already passed command-time validation.",
+    "exit_condition": "When common Planning state edits have command-owned writers and checker warnings point only at external/manual drift, this surface can be reduced to recovery-only detail or removed from normal-operation expectations.",
+    "source_issue": "#1031"
+  },
+  "source_boundary_review": {
+    "status": "remaining-followups-routed",
+    "review_issue": "#1032",
+    "reviewed_after": [
+      "#1024",
+      "#1029",
+      "PR #1030"
+    ],
+    "demoted_warning_classes": [
+      "archive_missing_execution_summary"
+    ],
+    "retained_diagnostics": [
+      {
+        "warning_class": "planning_manual_mutation_unstamped",
+        "role": "external/manual drift diagnostic",
+        "trigger": "dirty managed Planning surfaces whose current hash is not covered by explicit recovery provenance"
+      },
+      {
+        "warning_class": "planning_record_schema_drift",
+        "role": "schema diagnostic",
+        "trigger": "checked-in Planning records that cannot validate against their canonical schema"
+      }
+    ],
+    "routed_followups": [
+      {
+        "issue": "#1033",
+        "warning_class": "planning_artifact_freehand",
+        "reason": "freehand durable Planning artifacts still need a command-owned intake helper before the warning can demote to external/manual drift only"
+      }
+    ],
+    "closure_rule": "#1021 should remain open until remaining source_boundary_fix_candidate and missing_helper roles are either command-owned, demoted with evidence, or routed to focused child issues."
+  },
   "closeout_writer_direction": {
     "ordinary_path": "command_owned_writer",
     "candidate_command": "planning closeout",
-    "interim_owner": "planning archive-plan --prepare-closeout",
-    "source_issue": "#1024"
+    "interim_owner": "planning closeout --proof-from <proof> plus finish-run evidence options",
+    "source_issue": "#1029"
   }
 }

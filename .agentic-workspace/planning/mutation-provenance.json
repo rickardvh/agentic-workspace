@@ -2,70 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/execplans/python-memory-report-json-runtime-reduction.plan.json",
-      "sha256": "2fcf8fa7795e603ea6ea4d4f22edda74a3a4047f503498ef1a2f3c7c8d7b35cf",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-memory-report-json-runtime-reduction",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T13:17:19+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "c4d9d953553ec9bfabb37bb150a678e452f88bcdd19716e9f0201d7c85a5df49",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-memory-report-json-runtime-reduction",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T13:17:19+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-memory-report-json-runtime-reduction.plan.json",
-      "sha256": "add28bdf52b2c1067722c55c70f94b7f31b54993c24f8c1e94a9016dc02ec0c9",
-      "command": "agentic-planning record-recovery",
-      "reason": "Tightened #892 memory.report JSON delegate reduction plan before implementation",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T13:19:31+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-memory-report-json-runtime-reduction.plan.json",
-      "sha256": "dcec951524a7f80927afcace2b0b92d77c9446f6745143da687f005b4cb314f5",
-      "command": "agentic-planning record-recovery",
-      "reason": "Corrected stale-reference proof to preserve explicit memory.report.load verbose/text fallback",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T13:22:53+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-memory-report-json-runtime-reduction.plan.json",
-      "sha256": "6d07c6f9512a13108b0159622be93e0ae9a5d137feb2c2a6bb99986600d021dd",
-      "command": "agentic-planning record-recovery",
-      "reason": "Closed memory.report JSON runtime delegate reduction proof and continuation",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T13:30:12+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
-      "sha256": "1f8ab32865f7361f5190b675cf76bec910bcec17d569325398f22b4227788dc8",
-      "command": "agentic-planning record-recovery",
-      "reason": "Carried memory.report JSON generated-runtime slice result into #892 decomposition",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T13:30:18+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-memory-report-json-runtime-reduction",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T13:30:22+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/archive/python-memory-report-json-runtime-reduction.plan.json",
-      "sha256": "6d07c6f9512a13108b0159622be93e0ae9a5d137feb2c2a6bb99986600d021dd",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-memory-report-json-runtime-reduction",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T13:30:22+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/execplans/python-memory-route-report-json-runtime-reduction.plan.json",
       "sha256": "a90dee6e44b585eaa5447feb00965fec4e2892069e2bd0d3e12f9221548ba666",
       "command": "agentic-planning new-plan",
@@ -1600,6 +1536,70 @@
       "reason": "close out execplan github-1030-closeout-evidence-review",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-17T15:30:16+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-1021-new-child-issues.plan.json",
+      "sha256": "bbbc091877401fb8e5d8284819c433c6753e178e37abab32d87333eb90523b6a",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold github-1021-new-child-issues",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T16:13:25+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "a2d47546b71b9fad39e2707227e59eac98f79e5353387d0243bbd70dbd4f8ea7",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold github-1021-new-child-issues",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T16:13:25+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-1021-new-child-issues.plan.json",
+      "sha256": "9b7cecc7855973140ab532725841edf490f726a3946033f4265c92668db6e1ed",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T16:13:37+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "2825a103bb66f149fb0a5df4c54a27542a980a4b8f789ea801637c26cd080901",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan github-1021-new-child-issues",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T16:18:18+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/github-1021-new-child-issues.plan.json",
+      "sha256": "042accca11d23d0750414ec0f0d9b4392cdf885d3fd9c47a93b8027946e06551",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan github-1021-new-child-issues",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T16:18:18+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "2825a103bb66f149fb0a5df4c54a27542a980a4b8f789ea801637c26cd080901",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan github-1021-new-child-issues",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T16:18:18+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/github-1021-new-child-issues.plan.json",
+      "sha256": "042accca11d23d0750414ec0f0d9b4392cdf885d3fd9c47a93b8027946e06551",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan github-1021-new-child-issues",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T16:18:18+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/mutation-provenance.json",
+      "sha256": "d285f2d2fbb2f61eaa5d3ec4e05524978a714fba9f42e752e79b00ee54698986",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan github-1021-new-child-issues",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T16:18:18+00:00"
     }
   ]
 }

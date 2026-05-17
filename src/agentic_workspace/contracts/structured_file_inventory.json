@@ -296,9 +296,9 @@
       "schema_or_validator": "planning surface checker recovery provenance validation",
       "editable_by_agents": false,
       "generated": false,
-      "notes": "Recovery provenance is written by planning record-recovery and checked by planning surface validation.",
-      "storage_class": "source-of-truth",
-      "checked_in_justification": "Canonical checked-in structured audit state used by planning validation and recovery policy."
+      "notes": "Transitional recovery provenance. Normal command-owned Planning mutations should be judged by schema validation, command output, and git diff; record-recovery is the explicit writer for emergency/manual repair.",
+      "storage_class": "recovery-diagnostic",
+      "checked_in_justification": "Checked-in recovery evidence used to distinguish exceptional manual repair from ordinary command-owned mutation while source-boundary gaps are being retired."
     },
     {
       "pattern": ".agentic-workspace/planning/schemas/*.schema.json",
@@ -1193,9 +1193,9 @@
     "local-cache",
     "reconstructable-external-snapshot",
     "historical-audit-distillation",
+    "recovery-diagnostic",
     "removable-duplicate",
     "diagnostic-fixture",
     "platform-tooling"
   ]
 }
-
