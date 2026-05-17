@@ -1600,6 +1600,22 @@
       "reason": "archive execplan github-1021-1026-affordance-boundary-batch",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-17T10:40:14+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "9da0a9e4b63bb01e7fb4edd38ec11623a69a35479839e8969b1167635e853407",
+      "command": "agentic-planning record-recovery",
+      "reason": "Integrated user-provided #892 tiered remaining-work plan into the Python generated CLI decomposition.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-17T11:19:30+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "469d3dcc2e32fc310992c6f195aad5546ed987f1f5c0245f2974f6b1e6e67a78",
+      "command": "agentic-planning record-recovery",
+      "reason": "Integrated user-provided #892 tiered remaining-work plan into schema-valid Python generated CLI decomposition lanes.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-17T11:23:17+00:00"
     }
   ]
 }

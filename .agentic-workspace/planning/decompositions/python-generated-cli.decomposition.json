@@ -140,6 +140,105 @@
         "python-product-runtime-source-generation"
       ],
       "parallel_with": []
+    },
+    {
+      "id": "tier-0-honest-gate",
+      "title": "Stabilize the honest Python completion gate",
+      "readiness": "deferred",
+      "outcome": "False Python completion claims fail while generated commands import package runtime helpers, generated operation executors call package-owned runtime for generic deterministic behavior, package source still owns parser/dispatch/executable runtime envelopes, or the operation inventory has unresolved generic deterministic debt. The compact blockers report answers what blocks Python completion now.",
+      "owner_surface": "src/agentic_workspace/contracts/command_package_ir.json, src/agentic_workspace/contracts/python_operation_execution_inventory.json, scripts/check/check_generated_command_packages.py, tests/test_generated_command_package_proof_runner.py, and tests/test_contract_tooling.py",
+      "proof": "uv run python scripts/check/check_generated_command_packages.py; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q",
+      "depends_on": [],
+      "parallel_with": []
+    },
+    {
+      "id": "tier-1-primitive-taxonomy",
+      "title": "Freeze portable primitive taxonomy",
+      "readiness": "deferred",
+      "outcome": "All operation steps are classified as Tier 1 portable codegen primitives, Tier 2 package-domain primitives or explicit debt, or Tier 3 deferred/out of completion scope. operation_primitives.json declares the taxonomy, schema backing, and Tier 2 owner/reason/conformance/migration/generic-behavior audit.",
+      "owner_surface": "src/agentic_workspace/contracts/operation_primitives.json, operation primitive schemas, src/agentic_workspace/contracts/python_operation_execution_inventory.json, packages/command-generation/tests/primitive_conformance.py, and scripts/check/check_generated_command_packages.py",
+      "proof": "uv run python scripts/check/check_generated_command_packages.py; uv run python packages/command-generation/tests/primitive_conformance.py",
+      "depends_on": [
+        "tier-0-honest-gate"
+      ],
+      "parallel_with": []
+    },
+    {
+      "id": "tier-2-generated-target-layout",
+      "title": "Lock generated target layout",
+      "readiness": "deferred",
+      "outcome": "generated/<package>/python is the only visible generated Python target output with cli.py, commands/, primitives/, operations/, and resources or contracts where needed; legacy generated/python/*-cli/generated_cli_package output is removed or explicitly transitional.",
+      "owner_surface": "scripts/generate/generate_command_packages.py, generated/<package>/python, package force-include configuration, scripts/check/check_structured_file_inventory.py, and packaging tests",
+      "proof": "uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run pytest tests/test_workspace_packaging.py packages/memory/tests/test_packaging.py packages/planning/tests/test_packaging.py -q",
+      "depends_on": [
+        "tier-0-honest-gate",
+        "tier-1-primitive-taxonomy"
+      ],
+      "parallel_with": []
+    },
+    {
+      "id": "tier-3-memory-first",
+      "title": "Finish Memory first",
+      "readiness": "deferred",
+      "outcome": "Memory is completed before Workspace or Planning. Tier 3A converts read-only report JSON and non-verbose paths to portable primitives where practical, including #1008 for memory.status text and payload-entry/status IR; Tier 3B handles lifecycle commands through managed-payload and mutation-planning primitives where practical, leaving apply/mutation safety as explicit domain runtime until modeled.",
+      "owner_surface": "packages/memory contracts and fixtures, generated/memory/python, src/agentic_workspace/contracts/python_operation_execution_inventory.json, packages/command-generation primitive executors, and #1008",
+      "proof": "make test-memory; make lint-memory; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
+      "depends_on": [
+        "tier-0-honest-gate",
+        "tier-1-primitive-taxonomy",
+        "tier-2-generated-target-layout"
+      ],
+      "parallel_with": []
+    },
+    {
+      "id": "tier-4-workspace-next",
+      "title": "Reduce Workspace runtime surface",
+      "readiness": "deferred",
+      "outcome": "Workspace is converted after Memory proves the pattern. Read-only and report-like commands are prioritized before routing and policy commands; generic deterministic Workspace behavior leaves workspace_runtime_primitives.py, while live inspection and routing judgment remain explicit Tier 2 debt.",
+      "owner_surface": "workspace command contracts, generated/workspace/python, src/agentic_workspace/contracts/python_operation_execution_inventory.json, workspace tests, and workspace lint target",
+      "proof": "make test-workspace; make lint-workspace; uv run pytest tests/test_workspace_cli_blackbox.py tests/test_workspace_config_cli.py tests/test_workspace_defaults_cli.py -q",
+      "depends_on": [
+        "tier-3-memory-first"
+      ],
+      "parallel_with": []
+    },
+    {
+      "id": "tier-5-planning-last",
+      "title": "Reduce Planning runtime surface",
+      "readiness": "deferred",
+      "outcome": "Planning is converted after Memory and Workspace prove the primitive set. Low-risk read-only reports move first; mutation/lifecycle commands separate deterministic file/data edits, package-domain planning judgment, and safety/refusal gates, with closeout/intent behavior remaining explicit domain runtime until #973/#974 mature.",
+      "owner_surface": "packages/planning contracts and fixtures, generated/planning/python, src/agentic_workspace/contracts/python_operation_execution_inventory.json, planning tests, and planning lint target",
+      "proof": "make test-planning; make lint-planning; uv run pytest packages/planning/tests -q",
+      "depends_on": [
+        "tier-4-workspace-next"
+      ],
+      "parallel_with": []
+    },
+    {
+      "id": "tier-6-final-python-completion-promotion",
+      "title": "Promote Python completion only after inventory proof",
+      "readiness": "deferred",
+      "outcome": "Python is promoted only when generated/<package>/python is the only shipped Python executable projection, command-generation has no package-specific runtime behavior, package source has no parser/help/dispatch/executable CLI ownership, every generated operation is portable-codegen-primitive-executed or an explicit accepted package-domain primitive with non-portability proof, no Tier 2 primitive hides generic deterministic behavior, and source/installed/Docker conformance pass.",
+      "owner_surface": "src/agentic_workspace/contracts/command_package_ir.json, src/agentic_workspace/contracts/python_operation_execution_inventory.json, generated/<package>/python, scripts/check/check_generated_command_packages.py, scripts/generate/generate_command_packages.py, and package test/lint targets",
+      "proof": "uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; make test-workspace; make test-memory; make test-planning; make lint-workspace; make lint-memory; make lint-planning; uv build",
+      "depends_on": [
+        "tier-3-memory-first",
+        "tier-4-workspace-next",
+        "tier-5-planning-last"
+      ],
+      "parallel_with": []
+    },
+    {
+      "id": "tier-7-command-generation-extraction-readiness",
+      "title": "Prepare command-generation extraction",
+      "readiness": "deferred",
+      "outcome": "After honest Python completion, command-generation is made extraction-ready: no agentic_workspace imports, no memory/planning/workspace product constants, no package-specific primitive code, no dependency on repo-local generated paths, clean fixture-package examples, and independent primitive execution and target rendering tests.",
+      "owner_surface": "packages/command-generation/schemas, packages/command-generation/primitives, packages/command-generation/python/primitives, packages/command-generation/typescript/primitives, packages/command-generation/generator, packages/command-generation/conformance, and command-generation tests",
+      "proof": "Independent command-generation tests and extraction-readiness audit pass after Tier 6 promotion.",
+      "depends_on": [
+        "tier-6-final-python-completion-promotion"
+      ],
+      "parallel_with": []
     }
   ],
   "dependency_assumptions": [
