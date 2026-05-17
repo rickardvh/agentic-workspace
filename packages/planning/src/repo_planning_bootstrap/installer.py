@@ -74,6 +74,19 @@ ARCHIVE_CLOSEOUT_VALUE_HINT = (
     "for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. "
     "Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields."
 )
+PLANNING_CLOSEOUT_CLAIM_LEVELS = {"slice", "lane", "epic"}
+PLANNING_CLOSEOUT_INTENT_STATUSES = {"satisfied", "partial", "unsatisfied", "deferred-with-owner"}
+PLANNING_CLOSEOUT_RESIDUE_STATUSES = {"none", "memory", "planning", "docs", "tests", "contracts", "issue", "dismissed"}
+PLANNING_CLOSEOUT_RESIDUE_MAP = {
+    "none": ("none", "archive"),
+    "dismissed": ("evidence_only", "archive"),
+    "memory": ("memory", "Memory"),
+    "planning": ("planning", PLANNING_STATE_PATH.as_posix()),
+    "docs": ("docs", "docs"),
+    "tests": ("check", "tests"),
+    "contracts": ("contract", "contracts"),
+    "issue": ("planning", "issue follow-up"),
+}
 PLANNING_STATE_ROLE_FIELDS = (
     "decision_owner",
     "strategy_role",
@@ -9966,7 +9979,7 @@ def _prepare_execplan_closeout(
         )
         return False
     slice_status = existing_slice_status or "completed"
-    larger_status = existing_larger_status or ("open" if normalized_closure == "archive-but-keep-lane-open" else "closed")
+    larger_status = "open" if normalized_closure == "archive-but-keep-lane-open" else (existing_larger_status or "closed")
     routed_unsolved_intent = continuation_owner if normalized_closure == "archive-but-keep-lane-open" else "none"
     original_intent = (
         existing_intent_satisfaction.get("original intent")
@@ -10305,6 +10318,131 @@ def archive_parent_lane_closeout(
         command="agentic-planning archive-plan --parent-lane-closeout",
         reason=f"close parent lane {parent_id}",
     )
+    return result
+
+
+def closeout_execplan(
+    plan: str,
+    *,
+    target: str | Path | None = None,
+    dry_run: bool = False,
+    claim_level: str = "slice",
+    intent_status: str = "satisfied",
+    residue: str = "none",
+    proof_from: str = "last",
+    residue_owner: str | None = None,
+    retain_archive: bool = True,
+) -> InstallResult:
+    target_root = resolve_target_root(target)
+    result = InstallResult(target_root=target_root, message=f"Close out execplan '{plan}'", dry_run=dry_run)
+    normalized_claim = claim_level.strip().lower()
+    normalized_intent = intent_status.strip().lower()
+    normalized_residue = residue.strip().lower()
+    if normalized_claim not in PLANNING_CLOSEOUT_CLAIM_LEVELS:
+        result.add("manual review", target_root / PLANNING_STATE_PATH, "--claim-level must be one of slice, lane, or epic")
+        return result
+    if normalized_intent not in PLANNING_CLOSEOUT_INTENT_STATUSES:
+        result.add(
+            "manual review",
+            target_root / PLANNING_STATE_PATH,
+            "--intent-status must be one of satisfied, partial, unsatisfied, or deferred-with-owner",
+        )
+        return result
+    if normalized_residue not in PLANNING_CLOSEOUT_RESIDUE_STATUSES:
+        result.add(
+            "manual review",
+            target_root / PLANNING_STATE_PATH,
+            "--residue must be one of none, memory, planning, docs, tests, contracts, issue, or dismissed",
+        )
+        return result
+
+    plan_path = _resolve_execplan_path(target_root, plan)
+    if plan_path is None:
+        result.add("manual review", target_root / PLANNING_STATE_PATH, f"execplan '{plan}' was not found")
+        return result
+    record_path = _canonical_execplan_record_path(plan_path)
+    record = _load_execplan_record(plan_path)
+    if record is None:
+        result.add("manual review", record_path, "planning closeout requires a canonical .plan.json record")
+        return result
+
+    closure_decision = "archive-and-close" if normalized_intent == "satisfied" else "archive-but-keep-lane-open"
+    intent_satisfied = "no" if normalized_intent == "unsatisfied" else "yes"
+    continuation_owner = residue_owner or ""
+    if closure_decision == "archive-but-keep-lane-open" and not continuation_owner:
+        continuation_owner = PLANNING_STATE_PATH.as_posix()
+
+    if not dry_run:
+        status, default_owner = PLANNING_CLOSEOUT_RESIDUE_MAP[normalized_residue]
+        owner = residue_owner or default_owner
+        record["durable_residue"] = {
+            "status": status,
+            "learned constraint": (
+                "No future-relevant learning was identified beyond the closeout evidence."
+                if status in EXECPLAN_DURABLE_RESIDUE_OWNERLESS_STATUSES
+                else f"Closeout routed {normalized_residue} residue to {owner}."
+            ),
+            "motivation worth preserving": (
+                "Closeout reviewed durable residue and found no live follow-up."
+                if status in EXECPLAN_DURABLE_RESIDUE_OWNERLESS_STATUSES
+                else f"Future agents should continue from {owner} rather than rediscover this closeout residue."
+            ),
+            "canonical owner now": owner,
+            "promotion trigger": "none"
+            if status in EXECPLAN_DURABLE_RESIDUE_OWNERLESS_STATUSES
+            else "when the routed closeout residue is acted on",
+            "retention after promotion": "retain",
+        }
+        if proof_from.strip() and proof_from.strip().lower() != "last":
+            proof = proof_from.strip()
+            record["proof_report"] = {
+                "validation proof": proof,
+                "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+                'evidence for "proof achieved" state': proof,
+            }
+            execution_run = _record_section_dict(record, "execution_run") or {}
+            execution_run["validations run"] = proof
+            record["execution_run"] = execution_run
+        if closure_decision == "archive-but-keep-lane-open":
+            intent_continuity = _record_section_dict(record, "intent_continuity") or {}
+            intent_continuity["this slice completes the larger intended outcome"] = "no"
+            intent_continuity["continuation surface"] = continuation_owner
+            record["intent_continuity"] = intent_continuity
+            required_continuation = _record_section_dict(record, "required_continuation") or {}
+            required_continuation["required follow-on for the larger intended outcome"] = "yes"
+            required_continuation["owner surface"] = continuation_owner
+            required_continuation.setdefault("activation trigger", "when the continuation owner promotes the next slice")
+            record["required_continuation"] = required_continuation
+        _write_execplan_record(record_path=record_path, record=record, render_markdown=plan_path != record_path)
+        result.add("updated", record_path, "recorded closeout residue and proof inputs")
+
+    archive_result = archive_execplan(
+        plan,
+        target=target_root,
+        dry_run=dry_run,
+        apply_cleanup=True,
+        prepare_closeout=True,
+        closure_decision=closure_decision,
+        intent_satisfied=intent_satisfied,
+        unsolved_intent=continuation_owner if closure_decision == "archive-but-keep-lane-open" else None,
+        closure_reason=f"planning closeout accepted a {normalized_claim} claim with intent-status {normalized_intent}.",
+        closure_evidence="planning closeout wrote structured closeout fields and archive validation accepted the result.",
+        reopen_trigger=(
+            f"Reopen when {continuation_owner} activates a fresh bounded slice."
+            if closure_decision == "archive-but-keep-lane-open"
+            else "None unless new evidence shows the closeout was incomplete."
+        ),
+        retain_archive=retain_archive,
+    )
+    result.actions.extend(archive_result.actions)
+    result.warnings.extend(archive_result.warnings)
+    blocked = bool(result.warnings) or any(action.kind == "manual review" for action in result.actions)
+    if blocked:
+        result.add("next safe action", record_path, "resolve the reported closeout blocker, then rerun planning closeout")
+    else:
+        result.add("next safe action", target_root / PLANNING_STATE_PATH, "agentic-planning summary --target . --format json")
+    if not dry_run:
+        _stamp_result_action_mutations(result, command="agentic-planning closeout", reason=f"close out execplan {plan}")
     return result
 
 

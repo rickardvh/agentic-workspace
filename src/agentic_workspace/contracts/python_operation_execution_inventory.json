@@ -779,6 +779,27 @@
       "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.archive-plan.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
     },
     {
+      "operation_id": "planning.closeout.lifecycle",
+      "program": "agentic-planning",
+      "command": "closeout",
+      "generated_transport": "generated/planning/python/cli.py",
+      "operation_contract": "operations/planning.closeout.lifecycle.json",
+      "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "planning.closeout.apply",
+        "module-result text/json compatibility formatting"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "planning.closeout.lifecycle.dry-run.process",
+      "domain_runtime_primitive_refs": [
+        "planning.closeout.apply"
+      ],
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but Planning closeout policy, archive validation, residue routing, and provenance updates remain package-specific runtime behavior.",
+      "what_would_make_portable_later": "Replace the package-domain closeout primitive with schema-backed codegen-owned primitives once closeout policy is deterministic file/data/template/schema/output work rather than Planning lifecycle judgment.",
+      "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.closeout.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+    },
+    {
       "operation_id": "planning.close-item.lifecycle",
       "program": "agentic-planning",
       "command": "close-item",
@@ -1516,4 +1537,3 @@
   ],
   "completion_rule": "Python completion can be claimed only when every generated Python operation is inventoried as portable-codegen-primitive-executed, domain-runtime-primitive-via-ir, or accepted-hand-owned-runtime-primitive; domain-runtime-primitive-via-ir and accepted-hand-owned-runtime-primitive entries are transitional unless their audit proves they do not hide generic deterministic runtime debt."
 }
-

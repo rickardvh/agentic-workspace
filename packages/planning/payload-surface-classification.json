@@ -126,6 +126,20 @@
       "rationale": "The planning wheel force-includes generated operation resource data as private runtime import data; the canonical source remains the operation contract and generator."
     },
     {
+      "source_path": "generated/planning/python/operations/planning.closeout.lifecycle.json",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/operations/planning.closeout.lifecycle.json",
+      "classification": "maintainer/development only",
+      "owner": "generated operation projection",
+      "rationale": "The planning wheel force-includes generated operation resource data as private runtime import data; the canonical source remains the operation contract and generator."
+    },
+    {
+      "source_path": "generated/planning/python/commands/planning_closeout_lifecycle.py",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/commands/planning_closeout_lifecycle.py",
+      "classification": "maintainer/development only",
+      "owner": "generated command projection",
+      "rationale": "The planning wheel force-includes generated command dispatch modules as private runtime import data; the canonical source remains command-package IR and generator."
+    },
+    {
       "source_path": "generated/planning/python/operations/planning.close-item.lifecycle.json",
       "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/operations/planning.close-item.lifecycle.json",
       "classification": "maintainer/development only",

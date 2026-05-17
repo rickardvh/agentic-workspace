@@ -423,6 +423,12 @@
       "summary": "Load package-local planning bootstrap status for a target repository."
     },
     {
+      "id": "planning.closeout.apply",
+      "summary": "Close out a completed execplan through one command-owned Planning writer.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
+    },
+    {
       "id": "planning.close-item.apply",
       "summary": "Apply package-local planning close-item lifecycle mutation for a target repository.",
       "kind": "planning-runtime",

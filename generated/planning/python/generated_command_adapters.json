@@ -96,6 +96,38 @@
       },
       "status": "generated"
     },
+    "closeout": {
+      "command": {
+        "command_manifest": "package:planning:cli",
+        "name": "closeout",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-planning"
+      },
+      "conformance_refs": [
+        "planning.closeout.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "planning.closeout.cli",
+      "operation_id": "planning.closeout.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.closeout.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
     "create-review": {
       "command": {
         "command_manifest": "package:planning:cli",

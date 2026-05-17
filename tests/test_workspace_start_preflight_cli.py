@@ -1594,6 +1594,31 @@ def test_planning_delegation_decision_front_door_keeps_plan_option() -> None:
     assert argv[argv.index("--plan") + 1] == "plan-alpha"
 
 
+def test_planning_closeout_front_door_forwards_plan_positionally() -> None:
+    args = argparse.Namespace(
+        planning_command="closeout",
+        plan="plan-alpha",
+        target=".",
+        claim_level="lane",
+        intent_status="partial",
+        residue="planning",
+        proof_from="last",
+        residue_owner=".agentic-workspace/planning/state.toml",
+        dry_run=True,
+        discard_archive=False,
+        format="json",
+    )
+
+    argv = cli._planning_module_argv(args)
+
+    assert argv[:2] == ["closeout", "plan-alpha"]
+    assert "--plan" not in argv
+    assert argv[argv.index("--claim-level") + 1] == "lane"
+    assert argv[argv.index("--intent-status") + 1] == "partial"
+    assert argv[argv.index("--residue") + 1] == "planning"
+    assert argv[argv.index("--residue-owner") + 1] == ".agentic-workspace/planning/state.toml"
+
+
 def test_planning_close_item_front_door_forwards_item_positionally() -> None:
     args = argparse.Namespace(
         planning_command="close-item",
