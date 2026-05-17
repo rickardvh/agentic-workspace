@@ -396,6 +396,108 @@ export const generatedCommandPackage = {
             ]
           },
           {
+            "help": "Route a freehand planning artifact into a canonical Planning surface.",
+            "name": "intake-artifact",
+            "options": [
+              {
+                "flags": [
+                  "--artifact"
+                ],
+                "help": "Freehand planning artifact path inside the target repository.",
+                "name": "artifact",
+                "required": true
+              },
+              {
+                "choices": [
+                  "auto",
+                  "execplan",
+                  "decomposition"
+                ],
+                "default": "auto",
+                "flags": [
+                  "--route"
+                ],
+                "help": "Canonical Planning surface to route the artifact into.",
+                "name": "route"
+              },
+              {
+                "default": "",
+                "flags": [
+                  "--id"
+                ],
+                "help": "Optional target id or slug for the canonical Planning surface.",
+                "name": "id"
+              },
+              {
+                "default": "",
+                "flags": [
+                  "--title"
+                ],
+                "help": "Optional title when routing to an execplan scaffold.",
+                "name": "title"
+              },
+              {
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path.",
+                "name": "target"
+              },
+              {
+                "action": "store_true",
+                "flags": [
+                  "--activate"
+                ],
+                "help": "Register an execplan route in todo.active_items.",
+                "name": "activate"
+              },
+              {
+                "action": "store_true",
+                "flags": [
+                  "--queue"
+                ],
+                "help": "Register an execplan route in todo.queued_items.",
+                "name": "queue"
+              },
+              {
+                "action": "store_true",
+                "flags": [
+                  "--switch-active"
+                ],
+                "help": "When used with --activate, demote existing active items before registering the new active plan.",
+                "name": "switch_active"
+              },
+              {
+                "action": "store_true",
+                "flags": [
+                  "--remove-source"
+                ],
+                "help": "Remove the original artifact after successful canonical intake.",
+                "name": "remove_source"
+              },
+              {
+                "action": "store_true",
+                "flags": [
+                  "--dry-run"
+                ],
+                "help": "Show planned changes without mutating files.",
+                "name": "dry_run"
+              },
+              {
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "flags": [
+                  "--format"
+                ],
+                "help": "Output format.",
+                "name": "format"
+              }
+            ]
+          },
+          {
             "help": "Close a completed execplan or parent lane after distillation.",
             "name": "archive-plan",
             "options": [
@@ -616,6 +718,41 @@ export const generatedCommandPackage = {
                 ],
                 "help": "Canonical owner for non-empty residue or deferred intent.",
                 "name": "residue_owner"
+              },
+              {
+                "flags": [
+                  "--what-happened"
+                ],
+                "help": "Finished-run summary to write when the execplan still has placeholder execution evidence.",
+                "name": "what_happened"
+              },
+              {
+                "flags": [
+                  "--scope-touched"
+                ],
+                "help": "Concrete scope touched by the finished run.",
+                "name": "scope_touched"
+              },
+              {
+                "flags": [
+                  "--changed-surfaces"
+                ],
+                "help": "Concrete files or surfaces changed by the finished run.",
+                "name": "changed_surfaces"
+              },
+              {
+                "flags": [
+                  "--review-summary"
+                ],
+                "help": "Closeout review summary for scope and intent reconciliation.",
+                "name": "review_summary"
+              },
+              {
+                "flags": [
+                  "--outcome-summary"
+                ],
+                "help": "Outcome delivered summary for the finished run.",
+                "name": "outcome_summary"
               },
               {
                 "action": "store_true",

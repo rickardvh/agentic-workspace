@@ -666,9 +666,9 @@ def _freehand_planning_artifact_warnings(*, repo_root: Path) -> list[PlanningWar
                 _render_path(path),
                 (
                     "This looks like freehand planning or handoff state outside the canonical planning surfaces. "
-                    "Use `agentic-workspace planning --format json` and its `durable_state_bridge` route; prefer "
-                    "`agentic-planning new-plan --id <id> --title <title> --target . --activate --format json` "
-                    "or `.agentic-workspace/planning/decompositions/*.decomposition.json` for epic shaping."
+                    "Use `agentic-planning intake-artifact --artifact <path> --route auto --id <id> --target . "
+                    "--remove-source --format json` to route common artifacts into canonical Planning surfaces; "
+                    "keep this warning for external/manual artifacts the helper cannot safely classify."
                 ),
             )
         )

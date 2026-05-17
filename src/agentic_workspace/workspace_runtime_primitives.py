@@ -1354,6 +1354,7 @@ def _planning_module_argv(args: argparse.Namespace) -> list[str]:
         ("--id", "id"),
         ("--title", "title"),
         ("--source", "source"),
+        ("--artifact", "artifact"),
         ("--target", "target"),
         ("--plan-slug", "plan_slug"),
         ("--scope", "scope"),
@@ -1382,6 +1383,11 @@ def _planning_module_argv(args: argparse.Namespace) -> list[str]:
         ("--residue", "residue"),
         ("--proof-from", "proof_from"),
         ("--residue-owner", "residue_owner"),
+        ("--what-happened", "what_happened"),
+        ("--scope-touched", "scope_touched"),
+        ("--changed-surfaces", "changed_surfaces"),
+        ("--review-summary", "review_summary"),
+        ("--outcome-summary", "outcome_summary"),
     ):
         _append_option(argv, option, getattr(args, attr, None))
     if command == "delegation-decision":
@@ -1392,6 +1398,7 @@ def _planning_module_argv(args: argparse.Namespace) -> list[str]:
         ("--switch-active", "switch_active"),
         ("--prep-only", "prep_only"),
         ("--overwrite", "overwrite"),
+        ("--remove-source", "remove_source"),
         ("--dry-run", "dry_run"),
         ("--render-markdown", "render_markdown"),
         ("--apply-cleanup", "apply_cleanup"),

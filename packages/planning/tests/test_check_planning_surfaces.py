@@ -1538,7 +1538,7 @@ def test_checker_warns_for_freehand_planning_artifacts(tmp_path: Path) -> None:
 
     freehand = [warning for warning in warnings if warning.warning_class == "planning_artifact_freehand"]
     assert len(freehand) == 2
-    assert all("durable_state_bridge" in warning.message for warning in freehand)
+    assert all("intake-artifact" in warning.message for warning in freehand)
 
 
 def test_checker_warns_for_noncanonical_planning_records_directory(tmp_path: Path) -> None:
@@ -1552,7 +1552,7 @@ def test_checker_warns_for_noncanonical_planning_records_directory(tmp_path: Pat
 
     freehand = [warning for warning in warnings if warning.warning_class == "planning_artifact_freehand"]
     assert len(freehand) == 1
-    assert ".agentic-workspace/planning/decompositions" in freehand[0].message
+    assert "intake-artifact" in freehand[0].message
 
 
 def test_check_planning_surfaces_warns_for_unstamped_dirty_managed_mutations(tmp_path: Path) -> None:

@@ -21,6 +21,7 @@ from . import planning_doctor_report as _command_planning_doctor_report
 from . import planning_handoff_report as _command_planning_handoff_report
 from . import planning_init_lifecycle as _command_planning_init_lifecycle
 from . import planning_install_lifecycle as _command_planning_install_lifecycle
+from . import planning_intake_artifact_lifecycle as _command_planning_intake_artifact_lifecycle
 from . import planning_list_files_report as _command_planning_list_files_report
 from . import planning_new_plan_lifecycle as _command_planning_new_plan_lifecycle
 from . import planning_promote_to_plan_lifecycle as _command_planning_promote_to_plan_lifecycle
@@ -46,6 +47,7 @@ GENERATED_COMMAND_HANDLERS = {
     'planning.handoff.report': _command_planning_handoff_report.run,
     'planning.init.lifecycle': _command_planning_init_lifecycle.run,
     'planning.install.lifecycle': _command_planning_install_lifecycle.run,
+    'planning.intake-artifact.lifecycle': _command_planning_intake_artifact_lifecycle.run,
     'planning.list-files.report': _command_planning_list_files_report.run,
     'planning.new-plan.lifecycle': _command_planning_new_plan_lifecycle.run,
     'planning.promote-to-plan.lifecycle': _command_planning_promote_to_plan_lifecycle.run,

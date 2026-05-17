@@ -1,16 +1,16 @@
 {
   "schema_version": "agentic-workspace/operation/v1",
-  "id": "planning.closeout.lifecycle",
+  "id": "planning.intake-artifact.lifecycle",
   "command_surface": {
     "program": "agentic-planning",
-    "command": "closeout",
+    "command": "intake-artifact",
     "format_option": "format"
   },
-  "summary": "Close out a completed execplan through one command-owned writer.",
+  "summary": "Route a freehand planning artifact into a canonical Planning surface.",
   "classification": "lifecycle-mutation",
   "inputs": [
     {
-      "name": "plan",
+      "name": "artifact",
       "source": "cli-option",
       "required": true
     },
@@ -20,62 +20,42 @@
       "required": false
     },
     {
-      "name": "claim_level",
+      "name": "route",
       "source": "cli-option",
       "required": false
     },
     {
-      "name": "intent_status",
+      "name": "id",
       "source": "cli-option",
       "required": false
     },
     {
-      "name": "residue",
+      "name": "title",
       "source": "cli-option",
       "required": false
     },
     {
-      "name": "proof_from",
+      "name": "activate",
       "source": "cli-option",
       "required": false
     },
     {
-      "name": "residue_owner",
+      "name": "queue",
       "source": "cli-option",
       "required": false
     },
     {
-      "name": "what_happened",
+      "name": "switch_active",
       "source": "cli-option",
       "required": false
     },
     {
-      "name": "scope_touched",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "changed_surfaces",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "review_summary",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "outcome_summary",
+      "name": "remove_source",
       "source": "cli-option",
       "required": false
     },
     {
       "name": "dry_run",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "discard_archive",
       "source": "cli-option",
       "required": false
     },
@@ -96,28 +76,28 @@
     "requires_preflight_gate": false
   },
   "locality": {
-    "requires_repo": false,
+    "requires_repo": true,
     "network": "forbidden",
     "outside_repo_writes": "forbidden"
   },
   "reads": [
     {
-      "surface": "target repository Planning execplan and state",
+      "surface": "freehand planning artifact",
       "required": true
     }
   ],
   "writes": [
     {
       "surface": ".agentic-workspace/planning/",
-      "required": false,
+      "required": true,
       "when": "not a dry run"
     }
   ],
   "steps": [
     {
       "id": "apply_lifecycle_operation",
-      "uses": "planning.closeout.apply",
-      "description": "Write structured closeout fields and run archive validation."
+      "uses": "planning.intake-artifact.apply",
+      "description": "Route the source artifact into a canonical Planning record or refuse with a concrete next action."
     },
     {
       "id": "emit_output",
@@ -127,22 +107,22 @@
   ],
   "guards": [
     "Respect dry-run mode by avoiding writes.",
-    "Use planning closeout as the primary closeout writer instead of hand-editing closeout fields.",
-    "Lane or epic closeout must preserve unresolved parent intent as an explicit continuation."
+    "Only read or remove artifacts inside the target repository.",
+    "Do not guess when route-specific validation fails."
   ],
   "proof": [
     "operation contract validates against operation.schema.json",
-    "generated closeout dry-run process conformance passes"
+    "generated intake-artifact dry-run process conformance passes"
   ],
   "migration_status": "runtime-consumed",
   "ir_plan": {
     "status": "representative",
-    "summary": "Planning closeout executes generated operation IR through codegen-owned dataflow while the planning module owns closeout policy.",
+    "summary": "Planning intake-artifact executes generated operation IR through codegen-owned dataflow while the planning module owns artifact routing policy.",
     "steps": [
       {
         "id": "apply_lifecycle_operation",
-        "uses": "planning.closeout.apply",
-        "description": "Write structured closeout fields and run archive validation.",
+        "uses": "planning.intake-artifact.apply",
+        "description": "Route the source artifact into a canonical Planning record or refuse with a concrete next action.",
         "arguments": {},
         "outputs": [
           "result"

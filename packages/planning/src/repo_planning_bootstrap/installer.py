@@ -9090,6 +9090,8 @@ def create_execplan_scaffold(
         if source_text:
             state_item["refs"] = [source_text]
         items.append(state_item)
+        if bucket == "queued_items":
+            queued_items = items
         todo[bucket] = items
         todo["queued_items"] = queued_items
         todo.setdefault("active_items", [])
@@ -9145,6 +9147,165 @@ def _new_plan_tightening_checklist(*, prep_only: bool) -> str:
         "before implementation, tighten scaffold fields: goal, non_goals, intent_continuity, execution_bounds, "
         "touched_paths, validation_commands, completion_criteria, and adaptive_assurance when risk or scope requires it"
     )
+
+
+def _resolve_repo_relative_file(target_root: Path, value: str) -> Path | None:
+    raw = value.strip()
+    if not raw:
+        return None
+    path = Path(raw)
+    if not path.is_absolute():
+        path = target_root / path
+    try:
+        resolved = path.resolve()
+        target_resolved = target_root.resolve()
+    except OSError:
+        return None
+    try:
+        resolved.relative_to(target_resolved)
+    except ValueError:
+        return None
+    return resolved
+
+
+def _title_from_artifact(path: Path) -> str:
+    if path.suffix.lower() == ".json":
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+            payload = {}
+        if isinstance(payload, dict):
+            for key in ("title", "name", "id"):
+                value = str(payload.get(key, "")).strip()
+                if value:
+                    return value
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if stripped.startswith("#"):
+                return stripped.lstrip("#").strip()
+    except (OSError, UnicodeDecodeError):
+        pass
+    return _title_from_slug(path.stem)
+
+
+def _canonical_decomposition_path(target_root: Path, artifact_path: Path, artifact_id: str) -> Path:
+    slug = _slugify(artifact_id or artifact_path.stem.removesuffix(".decomposition"))
+    return target_root / PLANNING_MANAGED_ROOT / "decompositions" / f"{slug}.decomposition.json"
+
+
+def _looks_like_decomposition_record(path: Path) -> bool:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        payload = {}
+    if isinstance(payload, dict):
+        if payload.get("kind") == "planning-decomposition/v1":
+            return True
+        if {"candidate_lanes", "larger_intended_outcome", "promotion_rule"}.intersection(payload):
+            return True
+    lowered_name = path.name.lower()
+    return "decomposition" in lowered_name and "planning" in lowered_name
+
+
+def intake_planning_artifact(
+    *,
+    artifact: str,
+    target: str | Path | None = None,
+    route: str = "auto",
+    artifact_id: str = "",
+    title: str = "",
+    activate: bool = False,
+    queue: bool = False,
+    switch_active: bool = False,
+    remove_source: bool = False,
+    dry_run: bool = False,
+) -> InstallResult:
+    target_root = resolve_target_root(target)
+    result = InstallResult(target_root=target_root, message="Intake freehand planning artifact", dry_run=dry_run)
+    artifact_path = _resolve_repo_relative_file(target_root, artifact)
+    if artifact_path is None:
+        result.add("manual review", target_root / PLANNING_STATE_PATH, "--artifact must name a file inside the target repository")
+        return result
+    if not artifact_path.exists() or not artifact_path.is_file():
+        result.add("manual review", artifact_path, "artifact was not found or is not a file")
+        return result
+
+    normalized_route = route.strip().lower() or "auto"
+    if normalized_route not in {"auto", "execplan", "decomposition"}:
+        result.add("manual review", artifact_path, "--route must be one of auto, execplan, or decomposition")
+        return result
+    if normalized_route == "auto":
+        normalized_route = "decomposition" if _looks_like_decomposition_record(artifact_path) else "execplan"
+
+    source_ref = artifact_path.relative_to(target_root).as_posix()
+    if normalized_route == "execplan":
+        plan_id = _slugify(artifact_id or artifact_path.stem)
+        plan_title = title.strip() or _title_from_artifact(artifact_path)
+        routed = create_execplan_scaffold(
+            plan_id=plan_id,
+            title=plan_title,
+            source=source_ref,
+            target=target_root,
+            activate=activate,
+            queue=queue,
+            switch_active=switch_active,
+            dry_run=dry_run,
+        )
+        result.actions.extend(routed.actions)
+        result.warnings.extend(routed.warnings)
+        blocked = bool(routed.warnings) or any(action.kind == "manual review" for action in routed.actions)
+        if blocked:
+            result.add("next safe action", artifact_path, "resolve the execplan intake blocker, then rerun planning intake-artifact")
+            return result
+        if remove_source:
+            if dry_run:
+                result.add("would remove", artifact_path, "remove source artifact after canonical execplan intake")
+            else:
+                artifact_path.unlink()
+                result.add("removed", artifact_path, "removed source artifact after canonical execplan intake")
+        result.add("next safe action", target_root / PLANNING_STATE_PATH, "agentic-planning summary --target . --format json")
+        return result
+
+    try:
+        payload = json.loads(artifact_path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        result.add("manual review", artifact_path, f"decomposition intake requires valid JSON: {exc}")
+        return result
+    if not isinstance(payload, dict) or payload.get("kind") != "planning-decomposition/v1":
+        result.add(
+            "manual review",
+            artifact_path,
+            "decomposition intake requires a schema-ready planning-decomposition/v1 record; use --route execplan for looser artifacts",
+        )
+        return result
+    destination = _canonical_decomposition_path(target_root, artifact_path, artifact_id or str(payload.get("id", "")))
+    if destination.exists():
+        result.add("manual review", destination, "canonical decomposition target already exists")
+        return result
+    findings = _json_schema_findings(payload=payload, schema_path=DECOMPOSITION_RECORD_SCHEMA_PATH)
+    if findings:
+        result.add("manual review", artifact_path, f"decomposition does not validate: {'; '.join(findings)}")
+        return result
+    if dry_run:
+        result.add("would create", destination, "canonical planning-decomposition/v1 record")
+        if remove_source and destination != artifact_path:
+            result.add("would remove", artifact_path, "remove source artifact after canonical decomposition intake")
+        return result
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    result.add("created", destination, "canonical planning-decomposition/v1 record")
+    if remove_source and destination != artifact_path:
+        artifact_path.unlink()
+        result.add("removed", artifact_path, "removed source artifact after canonical decomposition intake")
+    _stamp_result_planning_mutations(
+        result,
+        paths=[destination],
+        command="agentic-planning intake-artifact",
+        reason=f"intake planning artifact {source_ref}",
+    )
+    result.add("next safe action", target_root / PLANNING_STATE_PATH, "agentic-planning summary --target . --format json")
+    return result
 
 
 def _active_execplan_record_path_from_state(target_root: Path) -> Path | None:
@@ -10332,6 +10493,11 @@ def closeout_execplan(
     proof_from: str = "last",
     residue_owner: str | None = None,
     retain_archive: bool = True,
+    what_happened: str | None = None,
+    scope_touched: str | None = None,
+    changed_surfaces: str | None = None,
+    review_summary: str | None = None,
+    outcome_summary: str | None = None,
 ) -> InstallResult:
     target_root = resolve_target_root(target)
     result = InstallResult(target_root=target_root, message=f"Close out execplan '{plan}'", dry_run=dry_run)
@@ -10372,9 +10538,167 @@ def closeout_execplan(
     if closure_decision == "archive-but-keep-lane-open" and not continuation_owner:
         continuation_owner = PLANNING_STATE_PATH.as_posix()
 
+    placeholder_values = {
+        "",
+        "pending",
+        "todo",
+        "tbd",
+        "none yet",
+        "current milestone",
+        "execution has not started",
+        "pending delegated execution.",
+        "none yet; execution has not changed files.",
+        "not completed yet",
+        "last proof selected by closeout",
+        "planning closeout completed the run metadata and archive preconditions",
+        "bounded closeout scope",
+        ".agentic-workspace/planning/",
+        "bounded closeout accepted",
+    }
+
+    def clean(value: Any) -> str:
+        return str(value or "").strip()
+
+    def is_placeholder(value: Any) -> bool:
+        return clean(value).lower() in placeholder_values
+
+    def provided(value: str | None) -> str:
+        return clean(value)
+
+    proof_request = clean(proof_from)
+    proof_report = _record_section_dict(record, "proof_report") or {}
+    existing_proof = clean(proof_report.get("validation proof"))
+    if proof_request and proof_request.lower() != "last":
+        proof = proof_request
+        proof_source = "explicit"
+    elif existing_proof and not is_placeholder(existing_proof):
+        proof = existing_proof
+        proof_source = "existing"
+    else:
+        result.warnings.append(
+            {
+                "warning_class": "closeout_missing_proof",
+                "path": record_path.relative_to(target_root).as_posix(),
+                "message": "planning closeout --proof-from last requires an existing non-placeholder proof_report.validation proof.",
+                "suggested_fix": "Rerun closeout with --proof-from <proof command or evidence>, or record real proof before using --proof-from last.",
+            }
+        )
+        result.add("manual review", record_path, "planning closeout needs explicit proof; --proof-from last found no existing proof")
+        result.add("next safe action", record_path, "rerun planning closeout with --proof-from <proof command or evidence>")
+        return result
+
+    execution_run = _record_section_dict(record, "execution_run") or {}
+    finished_run_review = _record_section_dict(record, "finished_run_review") or {}
+    execution_summary = _record_section_dict(record, "execution_summary") or {}
+    run_evidence_inputs = {
+        "what happened": provided(what_happened),
+        "scope touched": provided(scope_touched),
+        "changed surfaces": provided(changed_surfaces),
+    }
+    run_evidence_sources = {
+        "what happened": "what_happened",
+        "scope touched": "scope_touched",
+        "changed surfaces": "changed_surfaces",
+    }
+    missing_run_evidence = [
+        field for field, option_value in run_evidence_inputs.items() if not option_value and is_placeholder(execution_run.get(field))
+    ]
+    if not provided(review_summary) and is_placeholder(finished_run_review.get("scope respected")):
+        missing_run_evidence.append("review summary")
+        run_evidence_sources["review summary"] = "review_summary"
+    if not provided(outcome_summary) and is_placeholder(execution_summary.get("outcome delivered")):
+        missing_run_evidence.append("outcome summary")
+        run_evidence_sources["outcome summary"] = "outcome_summary"
+    if missing_run_evidence:
+        option_list = ", ".join(f"--{run_evidence_sources[field].replace('_', '-')}" for field in missing_run_evidence)
+        result.warnings.append(
+            {
+                "warning_class": "closeout_missing_finish_run_evidence",
+                "path": record_path.relative_to(target_root).as_posix(),
+                "message": f"planning closeout needs real finish-run evidence for: {', '.join(missing_run_evidence)}.",
+                "suggested_fix": f"Rerun closeout with {option_list}, or record non-placeholder execution_run evidence first.",
+            }
+        )
+        result.add(
+            "manual review", record_path, f"planning closeout needs non-placeholder finish-run evidence: {', '.join(missing_run_evidence)}"
+        )
+        result.add("next safe action", record_path, "rerun planning closeout with explicit finish-run evidence options")
+        return result
+
+    status, default_owner = PLANNING_CLOSEOUT_RESIDUE_MAP[normalized_residue]
+    owner = residue_owner or default_owner
+
     if not dry_run:
-        status, default_owner = PLANNING_CLOSEOUT_RESIDUE_MAP[normalized_residue]
-        owner = residue_owner or default_owner
+        active_milestone = _record_section_dict(record, "active_milestone") or {}
+        active_milestone["status"] = "completed"
+        active_milestone.setdefault("ready", "ready")
+        active_milestone["blocked"] = "none"
+        record["active_milestone"] = active_milestone
+        execution_run["run status"] = "completed"
+        if is_placeholder(execution_run.get("executor")):
+            execution_run["executor"] = "agentic-planning closeout"
+        if run_evidence_inputs["what happened"]:
+            execution_run["what happened"] = run_evidence_inputs["what happened"]
+        if run_evidence_inputs["scope touched"]:
+            execution_run["scope touched"] = run_evidence_inputs["scope touched"]
+        if run_evidence_inputs["changed surfaces"]:
+            execution_run["changed surfaces"] = run_evidence_inputs["changed surfaces"]
+        execution_run["validations run"] = proof
+        execution_run["result for continuation"] = (
+            f"continue from {continuation_owner}" if closure_decision == "archive-but-keep-lane-open" else "bounded closeout complete"
+        )
+        execution_run["next step"] = (
+            f"promote the next bounded slice from {continuation_owner}"
+            if closure_decision == "archive-but-keep-lane-open"
+            else "archive this execplan"
+        )
+        record["execution_run"] = execution_run
+        finished_run_review["review status"] = "complete"
+        if provided(review_summary):
+            finished_run_review["scope respected"] = provided(review_summary)
+        elif is_placeholder(finished_run_review.get("scope respected")):
+            finished_run_review["scope respected"] = "yes; closeout accepted the bounded claim."
+        finished_run_review["proof status"] = "passed"
+        finished_run_review["intent served"] = (
+            "yes" if normalized_intent == "satisfied" else f"no; intent-status={normalized_intent} keeps continuation explicit."
+        )
+        if is_placeholder(finished_run_review.get("config compliance")):
+            finished_run_review["config compliance"] = "used planning closeout command-owned writer"
+        if is_placeholder(finished_run_review.get("misinterpretation risk")):
+            finished_run_review["misinterpretation risk"] = "low"
+        finished_run_review["follow-on decision"] = continuation_owner if closure_decision == "archive-but-keep-lane-open" else "none"
+        record["finished_run_review"] = finished_run_review
+        if provided(outcome_summary):
+            execution_summary["outcome delivered"] = provided(outcome_summary)
+        elif is_placeholder(execution_summary.get("outcome delivered")):
+            execution_summary["outcome delivered"] = (
+                "closeout accepted the finished run evidence"
+                if normalized_intent == "satisfied"
+                else f"closeout recorded {normalized_intent} continuation from finished run evidence"
+            )
+        execution_summary["validation confirmed"] = proof
+        execution_summary["follow-on routed to"] = continuation_owner if closure_decision == "archive-but-keep-lane-open" else "none"
+        if is_placeholder(execution_summary.get("post-work posterity capture")):
+            execution_summary["post-work posterity capture"] = "archive closeout distillation"
+        if is_placeholder(execution_summary.get("knowledge promoted (Memory/Docs/Config)")):
+            execution_summary["knowledge promoted (Memory/Docs/Config)"] = "none"
+        execution_summary["resume from"] = continuation_owner if closure_decision == "archive-but-keep-lane-open" else "archive"
+        record["execution_summary"] = execution_summary
+        closure_check = _record_section_dict(record, "closure_check") or {}
+        closure_check["closeout scope"] = normalized_claim
+        closure_check["slice status"] = "completed"
+        closure_check["larger-intent status"] = "open" if closure_decision == "archive-but-keep-lane-open" else "closed"
+        closure_check["closure decision"] = closure_decision
+        closure_check["why this decision is honest"] = (
+            f"planning closeout accepted a {normalized_claim} claim with intent-status {normalized_intent}."
+        )
+        closure_check["evidence carried forward"] = proof
+        closure_check["reopen trigger"] = (
+            f"Reopen when {continuation_owner} activates a fresh bounded slice."
+            if closure_decision == "archive-but-keep-lane-open"
+            else "None unless new evidence shows the closeout was incomplete."
+        )
+        record["closure_check"] = closure_check
         record["durable_residue"] = {
             "status": status,
             "learned constraint": (
@@ -10393,16 +10717,14 @@ def closeout_execplan(
             else "when the routed closeout residue is acted on",
             "retention after promotion": "retain",
         }
-        if proof_from.strip() and proof_from.strip().lower() != "last":
-            proof = proof_from.strip()
+        if proof and proof_source == "explicit":
             record["proof_report"] = {
                 "validation proof": proof,
                 "proof achieved now": "yes; planning closeout recorded explicit proof input.",
                 'evidence for "proof achieved" state': proof,
             }
-            execution_run = _record_section_dict(record, "execution_run") or {}
-            execution_run["validations run"] = proof
-            record["execution_run"] = execution_run
+        elif proof and proof_source == "existing":
+            record["proof_report"] = proof_report
         if closure_decision == "archive-but-keep-lane-open":
             intent_continuity = _record_section_dict(record, "intent_continuity") or {}
             intent_continuity["this slice completes the larger intended outcome"] = "no"
@@ -10427,8 +10749,9 @@ def closeout_execplan(
         closure_decision=closure_decision,
         intent_satisfied=intent_satisfied,
         unsolved_intent=continuation_owner if closure_decision == "archive-but-keep-lane-open" else None,
+        intent_evidence=proof,
         closure_reason=f"planning closeout accepted a {normalized_claim} claim with intent-status {normalized_intent}.",
-        closure_evidence="planning closeout wrote structured closeout fields and archive validation accepted the result.",
+        closure_evidence=proof,
         reopen_trigger=(
             f"Reopen when {continuation_owner} activates a fresh bounded slice."
             if closure_decision == "archive-but-keep-lane-open"
@@ -11660,12 +11983,12 @@ def _warning_remediation(warning_class: str) -> str | None:
         ),
         "planning_memory_boundary_blur": "Move durable technical facts into memory or canonical docs, then leave planning surfaces lean.",
         "planning_decomposition_artifact_misplaced": (
-            "Move the record to `.agentic-workspace/planning/decompositions/<id>.decomposition.json` or recreate it from "
-            "`TEMPLATE.decomposition.json`, then rerun `agentic-workspace summary --target . --format json`."
+            "Run `agentic-planning intake-artifact --artifact <path> --route decomposition --id <id> --target . "
+            "--remove-source --format json` or recreate it from `TEMPLATE.decomposition.json`."
         ),
         "planning_artifact_freehand": (
-            "Replace the freehand artifact with `agentic-planning new-plan --id <id> --title <title> --target . "
-            "--activate --format json` or a schema-backed decomposition record, then rerun `agentic-workspace summary --target . --format json`."
+            "Run `agentic-planning intake-artifact --artifact <path> --route auto --id <id> --target . "
+            "--remove-source --format json` to route the artifact or refuse with a concrete next action."
         ),
         "startup_policy_drift": "Restore the minimal startup order in AGENTS, quickstart, and manifest.",
     }.get(warning_class)

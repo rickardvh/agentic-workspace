@@ -16,6 +16,22 @@ Classifies first-contact commands, advisory warnings, and report sections by nex
 | `command_roles` | array of ref `#/$defs/command_role` | yes |  | Command role classifications for ordinary startup, changed-path startup, recovery, diagnostics, reference detail, and fallback projection. |  |  |
 | `warning_roles` | array of ref `#/$defs/warning_role` | yes |  | Advisory warning classifications by root cause and preferred remedy. |  |  |
 | `report_section_roles` | array of ref `#/$defs/report_section_role` | yes |  | Report section classifications by next-action value and default visibility. |  |  |
+| `provenance_policy` | object | yes |  | Current product role for Planning mutation provenance. |  |  |
+| `provenance_policy.surface` | const `".agentic-workspace/planning/mutation-provenance.json"` | yes |  | Planning-managed provenance file whose role is classified by this policy. |  |  |
+| `provenance_policy.role` | enum `"normal_operation_evidence"`, `"exceptional_recovery_evidence"`, `"transitional_recovery_aid"`, `"removal_candidate"` | yes |  | Current operational classification for the provenance file. |  |  |
+| `provenance_policy.normal_operation_rule` | string | yes |  | Rule for how normal command-owned planning mutations should treat provenance evidence. |  |  |
+| `provenance_policy.recovery_rule` | string | yes |  | Rule for how takeover or recovery workflows should use provenance evidence. |  |  |
+| `provenance_policy.warning_scope` | string | yes |  | Warning class or diagnostic scope that provenance evidence is allowed to support. |  |  |
+| `provenance_policy.exit_condition` | string | yes |  | Condition under which the transitional provenance policy can be retired or changed. |  |  |
+| `provenance_policy.source_issue` | string | yes |  | Issue that records the provenance-policy decision. |  |  |
+| `source_boundary_review` | object | yes |  | Post-closeout-writer review result for remaining compensating detectors. |  |  |
+| `source_boundary_review.status` | enum `"remaining-followups-routed"`, `"ready-to-close"`, `"blocked"` | yes |  | Current review status for the source-boundary warning lane. |  |  |
+| `source_boundary_review.review_issue` | string | yes |  | Issue that owns the source-boundary review. |  |  |
+| `source_boundary_review.reviewed_after` | array of string | yes |  | Issues or PRs whose landed work was included in the review. |  |  |
+| `source_boundary_review.demoted_warning_classes` | array of string | yes |  | Warning classes that are no longer treated as active helper gaps after review. |  |  |
+| `source_boundary_review.retained_diagnostics` | array of object | yes |  | Diagnostics intentionally retained after review, with their trigger and role. |  |  |
+| `source_boundary_review.routed_followups` | array of object | yes |  | Follow-up issues opened or identified for unresolved warning classes. |  |  |
+| `source_boundary_review.closure_rule` | string | yes |  | Condition that determines when the parent source-boundary lane can close. |  |  |
 | `closeout_writer_direction` | object | yes |  | Current and intended ownership for ordinary Planning closeout writing. |  |  |
 | `closeout_writer_direction.ordinary_path` | const `"command_owned_writer"` | yes |  | Direction that ordinary closeout should be performed by a command-owned writer. |  |  |
 | `closeout_writer_direction.candidate_command` | string | yes |  | Candidate future command or affordance that should own ordinary closeout writing. |  |  |

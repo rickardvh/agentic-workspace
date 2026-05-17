@@ -1000,6 +1000,108 @@
                 ]
               },
               {
+                "name": "intake-artifact",
+                "help": "Route a freehand planning artifact into a canonical Planning surface.",
+                "options": [
+                  {
+                    "name": "artifact",
+                    "flags": [
+                      "--artifact"
+                    ],
+                    "required": true,
+                    "help": "Freehand planning artifact path inside the target repository."
+                  },
+                  {
+                    "name": "route",
+                    "flags": [
+                      "--route"
+                    ],
+                    "choices": [
+                      "auto",
+                      "execplan",
+                      "decomposition"
+                    ],
+                    "default": "auto",
+                    "help": "Canonical Planning surface to route the artifact into."
+                  },
+                  {
+                    "name": "id",
+                    "flags": [
+                      "--id"
+                    ],
+                    "default": "",
+                    "help": "Optional target id or slug for the canonical Planning surface."
+                  },
+                  {
+                    "name": "title",
+                    "flags": [
+                      "--title"
+                    ],
+                    "default": "",
+                    "help": "Optional title when routing to an execplan scaffold."
+                  },
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "activate",
+                    "flags": [
+                      "--activate"
+                    ],
+                    "action": "store_true",
+                    "help": "Register an execplan route in todo.active_items."
+                  },
+                  {
+                    "name": "queue",
+                    "flags": [
+                      "--queue"
+                    ],
+                    "action": "store_true",
+                    "help": "Register an execplan route in todo.queued_items."
+                  },
+                  {
+                    "name": "switch_active",
+                    "flags": [
+                      "--switch-active"
+                    ],
+                    "action": "store_true",
+                    "help": "When used with --activate, demote existing active items before registering the new active plan."
+                  },
+                  {
+                    "name": "remove_source",
+                    "flags": [
+                      "--remove-source"
+                    ],
+                    "action": "store_true",
+                    "help": "Remove the original artifact after successful canonical intake."
+                  },
+                  {
+                    "name": "dry_run",
+                    "flags": [
+                      "--dry-run"
+                    ],
+                    "action": "store_true",
+                    "help": "Show planned changes without mutating files."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
+                ]
+              },
+              {
                 "name": "archive-plan",
                 "help": "Close a completed execplan or parent lane after distillation.",
                 "options": [
@@ -1213,6 +1315,41 @@
                       "--residue-owner"
                     ],
                     "help": "Canonical owner for non-empty residue or deferred intent."
+                  },
+                  {
+                    "name": "what_happened",
+                    "flags": [
+                      "--what-happened"
+                    ],
+                    "help": "Finished-run summary to write when the execplan still has placeholder execution evidence."
+                  },
+                  {
+                    "name": "scope_touched",
+                    "flags": [
+                      "--scope-touched"
+                    ],
+                    "help": "Concrete scope touched by the finished run."
+                  },
+                  {
+                    "name": "changed_surfaces",
+                    "flags": [
+                      "--changed-surfaces"
+                    ],
+                    "help": "Concrete files or surfaces changed by the finished run."
+                  },
+                  {
+                    "name": "review_summary",
+                    "flags": [
+                      "--review-summary"
+                    ],
+                    "help": "Closeout review summary for scope and intent reconciliation."
+                  },
+                  {
+                    "name": "outcome_summary",
+                    "flags": [
+                      "--outcome-summary"
+                    ],
+                    "help": "Outcome delivered summary for the finished run."
                   },
                   {
                     "name": "dry_run",
@@ -4705,6 +4842,7 @@
             "planning.handoff.report",
             "planning.init.lifecycle",
             "planning.install.lifecycle",
+            "planning.intake-artifact.lifecycle",
             "planning.new-plan.lifecycle",
             "planning.promote-to-plan.lifecycle",
             "planning.prompt.render",
@@ -4824,6 +4962,11 @@
               "default": ""
             },
             {
+              "name": "artifact",
+              "arg": "artifact",
+              "default": ""
+            },
+            {
               "name": "activate",
               "arg": "activate",
               "default": false
@@ -4846,6 +4989,11 @@
             {
               "name": "overwrite",
               "arg": "overwrite",
+              "default": false
+            },
+            {
+              "name": "remove_source",
+              "arg": "remove_source",
               "default": false
             },
             {
@@ -4954,6 +5102,31 @@
               "default": null
             },
             {
+              "name": "what_happened",
+              "arg": "what_happened",
+              "default": null
+            },
+            {
+              "name": "scope_touched",
+              "arg": "scope_touched",
+              "default": null
+            },
+            {
+              "name": "changed_surfaces",
+              "arg": "changed_surfaces",
+              "default": null
+            },
+            {
+              "name": "review_summary",
+              "arg": "review_summary",
+              "default": null
+            },
+            {
+              "name": "outcome_summary",
+              "arg": "outcome_summary",
+              "default": null
+            },
+            {
               "name": "discard_archive",
               "arg": "discard_archive",
               "default": false
@@ -5051,6 +5224,12 @@
               "primitive": "planning.new-plan.apply",
               "handler": "runtime_handler",
               "function": "apply_planning_new_plan_operation",
+              "import_module": "repo_planning_bootstrap.runtime_projection"
+            },
+            {
+              "primitive": "planning.intake-artifact.apply",
+              "handler": "runtime_handler",
+              "function": "apply_planning_intake_artifact_operation",
               "import_module": "repo_planning_bootstrap.runtime_projection"
             },
             {
@@ -5501,6 +5680,41 @@
                   "--residue-owner"
                 ],
                 "help": "Canonical owner for non-empty residue or deferred intent."
+              },
+              {
+                "name": "what_happened",
+                "flags": [
+                  "--what-happened"
+                ],
+                "help": "Finished-run summary to write when the execplan still has placeholder execution evidence."
+              },
+              {
+                "name": "scope_touched",
+                "flags": [
+                  "--scope-touched"
+                ],
+                "help": "Concrete scope touched by the finished run."
+              },
+              {
+                "name": "changed_surfaces",
+                "flags": [
+                  "--changed-surfaces"
+                ],
+                "help": "Concrete files or surfaces changed by the finished run."
+              },
+              {
+                "name": "review_summary",
+                "flags": [
+                  "--review-summary"
+                ],
+                "help": "Closeout review summary for scope and intent reconciliation."
+              },
+              {
+                "name": "outcome_summary",
+                "flags": [
+                  "--outcome-summary"
+                ],
+                "help": "Outcome delivered summary for the finished run."
               },
               {
                 "name": "dry_run",
@@ -6554,6 +6768,161 @@
           },
           "conformance_refs": [
             "planning.new-plan.lifecycle.dry-run.process"
+          ]
+        },
+        {
+          "adapter_id": "planning.intake-artifact.cli",
+          "status": "generated",
+          "command": {
+            "manifest_ref": "package:planning:cli",
+            "name": "intake-artifact"
+          },
+          "operation_ref": {
+            "id": "planning.intake-artifact.lifecycle",
+            "path": "operations/planning.intake-artifact.lifecycle.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "planning.intake-artifact.apply",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": false,
+            "writes_repo_state": true,
+            "requires_preflight_gate": false
+          },
+          "interface": {
+            "name": "intake-artifact",
+            "help": "Route a freehand planning artifact into a canonical Planning surface.",
+            "options": [
+              {
+                "name": "artifact",
+                "flags": [
+                  "--artifact"
+                ],
+                "required": true,
+                "help": "Freehand planning artifact path inside the target repository."
+              },
+              {
+                "name": "route",
+                "flags": [
+                  "--route"
+                ],
+                "choices": [
+                  "auto",
+                  "execplan",
+                  "decomposition"
+                ],
+                "default": "auto",
+                "help": "Canonical Planning surface to route the artifact into."
+              },
+              {
+                "name": "id",
+                "flags": [
+                  "--id"
+                ],
+                "default": "",
+                "help": "Optional target id or slug for the canonical Planning surface."
+              },
+              {
+                "name": "title",
+                "flags": [
+                  "--title"
+                ],
+                "default": "",
+                "help": "Optional title when routing to an execplan scaffold."
+              },
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "activate",
+                "flags": [
+                  "--activate"
+                ],
+                "action": "store_true",
+                "help": "Register an execplan route in todo.active_items."
+              },
+              {
+                "name": "queue",
+                "flags": [
+                  "--queue"
+                ],
+                "action": "store_true",
+                "help": "Register an execplan route in todo.queued_items."
+              },
+              {
+                "name": "switch_active",
+                "flags": [
+                  "--switch-active"
+                ],
+                "action": "store_true",
+                "help": "When used with --activate, demote existing active items before registering the new active plan."
+              },
+              {
+                "name": "remove_source",
+                "flags": [
+                  "--remove-source"
+                ],
+                "action": "store_true",
+                "help": "Remove the original artifact after successful canonical intake."
+              },
+              {
+                "name": "dry_run",
+                "flags": [
+                  "--dry-run"
+                ],
+                "action": "store_true",
+                "help": "Preview changes without writing files."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "planning artifact routing policy",
+              "planning provenance updates",
+              "module result assembly"
+            ]
+          },
+          "conformance_refs": [
+            "planning.intake-artifact.lifecycle.dry-run.process"
           ]
         },
         {

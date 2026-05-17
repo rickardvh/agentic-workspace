@@ -12,6 +12,7 @@ from repo_planning_bootstrap.installer import (
     format_actions,
     format_result_json,
     format_summary_json,
+    intake_planning_artifact,
     list_bundled_skill_files,
     list_default_payload_files,
     list_optional_payload_files,
@@ -71,6 +72,21 @@ def apply_planning_new_plan_operation(values: dict, _arguments: dict, _context):
     )
 
 
+def apply_planning_intake_artifact_operation(values: dict, _arguments: dict, _context):
+    return intake_planning_artifact(
+        artifact=str(values.get("artifact") or ""),
+        target=values.get("target"),
+        route=str(values.get("route") or "auto"),
+        artifact_id=str(values.get("id") or ""),
+        title=str(values.get("title") or ""),
+        activate=bool(values.get("activate")),
+        queue=bool(values.get("queue")),
+        switch_active=bool(values.get("switch_active")),
+        remove_source=bool(values.get("remove_source")),
+        dry_run=bool(values.get("dry_run")),
+    )
+
+
 def apply_planning_promote_to_plan_operation(values: dict, _arguments: dict, _context):
     return promote_todo_item_to_execplan(
         str(values.get("item_id") or ""),
@@ -124,6 +140,11 @@ def apply_planning_closeout_operation(values: dict, _arguments: dict, _context):
         proof_from=str(values.get("proof_from") or "last"),
         residue_owner=values.get("residue_owner"),
         retain_archive=not bool(values.get("discard_archive")),
+        what_happened=values.get("what_happened"),
+        scope_touched=values.get("scope_touched"),
+        changed_surfaces=values.get("changed_surfaces"),
+        review_summary=values.get("review_summary"),
+        outcome_summary=values.get("outcome_summary"),
     )
 
 

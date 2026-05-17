@@ -38,6 +38,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
         'planning.handoff.report',
         'planning.init.lifecycle',
         'planning.install.lifecycle',
+        'planning.intake-artifact.lifecycle',
         'planning.new-plan.lifecycle',
         'planning.promote-to-plan.lifecycle',
         'planning.prompt.render',
@@ -80,11 +81,13 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'include_optional': getattr(args, 'include_optional', False),
                 'id': getattr(args, 'id', ''),
                 'source': getattr(args, 'source', ''),
+                'artifact': getattr(args, 'artifact', ''),
                 'activate': getattr(args, 'activate', False),
                 'queue': getattr(args, 'queue', False),
                 'switch_active': getattr(args, 'switch_active', False),
                 'prep_only': getattr(args, 'prep_only', False),
                 'overwrite': getattr(args, 'overwrite', False),
+                'remove_source': getattr(args, 'remove_source', False),
                 'item_id': getattr(args, 'item_id', ''),
                 'plan_slug': getattr(args, 'plan_slug', None),
                 'plan': getattr(args, 'plan', None),
@@ -106,6 +109,11 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'residue': getattr(args, 'residue', 'none'),
                 'proof_from': getattr(args, 'proof_from', 'last'),
                 'residue_owner': getattr(args, 'residue_owner', None),
+                'what_happened': getattr(args, 'what_happened', None),
+                'scope_touched': getattr(args, 'scope_touched', None),
+                'changed_surfaces': getattr(args, 'changed_surfaces', None),
+                'review_summary': getattr(args, 'review_summary', None),
+                'outcome_summary': getattr(args, 'outcome_summary', None),
                 'discard_archive': getattr(args, 'discard_archive', False),
                 'route': getattr(args, 'route', ''),
                 'skipped_reason': getattr(args, 'skipped_reason', ''),
@@ -124,6 +132,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'output.emit': _handle_output_emit,
                 'planning.prompt.render': _handle_planning_prompt_render,
                 'planning.new-plan.apply': _handle_planning_new_plan_apply,
+                'planning.intake-artifact.apply': _handle_planning_intake_artifact_apply,
                 'planning.promote-to-plan.apply': _handle_planning_promote_to_plan_apply,
                 'planning.archive-plan.apply': _handle_planning_archive_plan_apply,
                 'planning.closeout.apply': _handle_planning_closeout_apply,
@@ -177,6 +186,12 @@ def _handle_planning_new_plan_apply(values: dict[str, Any], arguments: dict[str,
     from .planning_runtime import apply_planning_new_plan_operation
 
     return apply_planning_new_plan_operation(values, arguments, context)
+
+
+def _handle_planning_intake_artifact_apply(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
+    from .planning_runtime import apply_planning_intake_artifact_operation
+
+    return apply_planning_intake_artifact_operation(values, arguments, context)
 
 
 def _handle_planning_promote_to_plan_apply(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:

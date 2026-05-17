@@ -131,6 +131,12 @@ def apply_planning_delegation_decision_operation(*args: Any, **kwargs: Any) -> A
     return source_function(*args, **kwargs)
 
 
+def apply_planning_intake_artifact_operation(*args: Any, **kwargs: Any) -> Any:
+    from repo_planning_bootstrap.runtime_projection import apply_planning_intake_artifact_operation as source_function
+
+    return source_function(*args, **kwargs)
+
+
 def apply_planning_new_plan_operation(*args: Any, **kwargs: Any) -> Any:
     from repo_planning_bootstrap.runtime_projection import apply_planning_new_plan_operation as source_function
 
@@ -181,6 +187,7 @@ __all__ = [
     'apply_planning_archive_plan_operation',
     'apply_planning_closeout_operation',
     'apply_planning_delegation_decision_operation',
+    'apply_planning_intake_artifact_operation',
     'apply_planning_new_plan_operation',
     'apply_planning_promote_to_plan_operation',
     'apply_planning_record_recovery_operation',

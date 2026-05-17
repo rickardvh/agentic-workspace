@@ -280,6 +280,12 @@
       "adapter_kind": "process"
     },
     {
+      "id": "planning.intake-artifact.lifecycle.dry-run.process",
+      "operation_id": "planning.intake-artifact.lifecycle",
+      "path": "conformance/planning.intake-artifact.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "planning.list-files.process",
       "operation_id": "planning.list-files.report",
       "path": "conformance/planning.list-files.process.json",

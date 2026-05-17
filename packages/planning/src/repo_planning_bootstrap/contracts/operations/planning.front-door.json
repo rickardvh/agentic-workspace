@@ -11,6 +11,7 @@
       "create-review",
       "delegation-decision",
       "handoff",
+      "intake-artifact",
       "new-plan",
       "promote-to-plan",
       "record-recovery"

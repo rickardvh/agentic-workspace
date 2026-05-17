@@ -1,0 +1,294 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Implement new #1021 child issues",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Create a bounded plan for Implement new #1021 child issues.",
+    "hard_constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "proof_expectations": [
+      "Fill in the narrowest command that proves the promoted work."
+    ],
+    "touched_scope": [
+      "Fill in the concrete files before implementation starts."
+    ],
+    "completion_criteria": [
+      "Implement new #1021 child issues is implemented, validated, and closed out honestly."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "Create a bounded plan for Implement new #1021 child issues."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Create a bounded plan for Implement new #1021 child issues.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "github-1021-new-child-issues",
+      "status": "active",
+      "next_step": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+      "proof": "Fill in the narrowest command that proves the promoted work."
+    },
+    "scope": {
+      "touched": [
+        "Fill in the concrete files before implementation starts."
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Create a bounded plan for Implement new #1021 child issues.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Implement new #1021 child issues",
+    "inferred intended outcome": "Create a bounded plan for Implement new #1021 child issues.",
+    "chosen concrete what": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Fill in the concrete write scope before implementation starts.",
+    "max changed files": "Fill in an expected upper bound before implementation starts.",
+    "required validation commands": "Fill in the narrowest command that proves the promoted work.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Create a bounded plan for Implement new #1021 child issues.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "New #1021 child batch is a tightly coupled provenance/checker/product-boundary slice on the current PR branch; keeping it local preserves issue-to-diff traceability.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-17T16:13:37+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "github-1021-new-child-issues",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Fill in execution bounds, touched paths, and validation before implementation starts."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "Fill in the concrete files before implementation starts."
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "Fill in the narrowest command that proves the promoted work."
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Implement new #1021 child issues is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "ingested new #1021 child issues #1031 and #1032, created follow-up #1033 for the remaining freehand-artifact helper gap, encoded the mutation provenance role as a transitional recovery aid, demoted archive_missing_execution_summary after closeout evidence options landed, and added contract tests for the review result.",
+    "scope touched": "operational affordance role contract, structured file inventory classification, contract schemas, and contract tooling tests.",
+    "changed surfaces": "src/agentic_workspace/contracts/operational_affordance_roles.json; src/agentic_workspace/contracts/schemas/operational_affordance_roles.schema.json; src/agentic_workspace/contracts/structured_file_inventory.json; src/agentic_workspace/contracts/schemas/structured_file_inventory.schema.json; tests/test_contract_tooling.py; .agentic-workspace/planning/",
+    "validations run": "uv run pytest tests/test_contract_tooling.py::test_operational_affordance_roles_classify_first_contact_and_diagnostics tests/test_structured_file_inventory.py -q; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python scripts/check/check_planning_surfaces.py; make lint-workspace",
+    "result for continuation": "bounded closeout complete",
+    "next step": "archive this execplan"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; #1031 now has an explicit provenance policy, #1032 has an evidence-backed remaining-detector answer, and #1033 routes the unresolved helper gap.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "New #1021 child batch is a tightly coupled provenance/checker/product-boundary slice on the current PR branch; keeping it local preserves issue-to-diff traceability.",
+    "expected savings": "unknown",
+    "actual friction": "pending",
+    "proof result": "pending",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_contract_tooling.py::test_operational_affordance_roles_classify_first_contact_and_diagnostics tests/test_structured_file_inventory.py -q; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python scripts/check/check_planning_surfaces.py; make lint-workspace",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "uv run pytest tests/test_contract_tooling.py::test_operational_affordance_roles_classify_first_contact_and_diagnostics tests/test_structured_file_inventory.py -q; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python scripts/check/check_planning_surfaces.py; make lint-workspace"
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Implement new #1021 child issues.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "uv run pytest tests/test_contract_tooling.py::test_operational_affordance_roles_classify_first_contact_and_diagnostics tests/test_structured_file_inventory.py -q; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python scripts/check/check_planning_surfaces.py; make lint-workspace",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "new #1021 child issues were ingested and implemented as contract-backed source-boundary review updates with focused follow-up routing.",
+    "validation confirmed": "uv run pytest tests/test_contract_tooling.py::test_operational_affordance_roles_classify_first_contact_and_diagnostics tests/test_structured_file_inventory.py -q; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python scripts/check/check_planning_surfaces.py; make lint-workspace",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "knowledge promoted (memory/docs/config)": "none",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed issue residue to GitHub #1033.",
+    "motivation worth preserving": "Future agents should continue from GitHub #1033 rather than rediscover this closeout residue.",
+    "canonical owner now": "GitHub #1033",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "GitHub #1033",
+    "proposed durable intent": "Future agents should continue from GitHub #1033 rather than rediscover this closeout residue.",
+    "confidence": "low",
+    "needs review": "True",
+    "owner surface": "GitHub #1033"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": "uv run pytest tests/test_contract_tooling.py::test_operational_affordance_roles_classify_first_contact_and_diagnostics tests/test_structured_file_inventory.py -q; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python scripts/check/check_planning_surfaces.py; make lint-workspace",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "improvement_signal_review": {
+    "status": "pending",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-17: Scaffolded by agentic-planning new-plan.",
+    "2026-05-17: Recorded delegation decision route=keep-local."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "yes",
+    "decision": "route_to_planning",
+    "target": "GitHub #1033",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Create a bounded plan for Implement new #1021 child issues.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: uv run pytest tests/test_contract_tooling.py::test_operational_affordance_roles_classify_first_contact_and_diagnostics tests/test_structured_file_inventory.py -q; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python scripts/check/check_planning_surfaces.py; make lint-workspace\nChanged surfaces: src/agentic_workspace/contracts/operational_affordance_roles.json; src/agentic_workspace/contracts/schemas/operational_affordance_roles.schema.json; src/agentic_workspace/contracts/structured_file_inventory.json; src/agentic_workspace/contracts/schemas/structured_file_inventory.schema.json; tests/test_contract_tooling.py; .agentic-workspace/planning/\nDurable residue: planning (GitHub #1033)\nMemory learning: route_to_planning\nFollow-up: none"
+  }
+}

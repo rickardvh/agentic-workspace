@@ -475,6 +475,12 @@
       "portability": "domain-runtime"
     },
     {
+      "id": "planning.intake-artifact.apply",
+      "summary": "Route a freehand planning artifact into a canonical Planning surface.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime"
+    },
+    {
       "id": "planning.list-files.load",
       "summary": "Load package-local planning payload file inventory.",
       "kind": "planning-runtime",
