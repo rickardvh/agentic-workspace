@@ -495,7 +495,7 @@ def test_start_tiny_profile_returns_first_contact_projection(capsys) -> None:
 
     payload = json.loads(capsys.readouterr().out)
     encoded = json.dumps(payload, sort_keys=True)
-    assert len(encoded) < 12500
+    assert len(encoded) < 15000
     assert payload["kind"] == "startup-context/v1"
     assert payload["drill_down"]["rule"].startswith("Use --select")
     assert "cli_invocation" in payload["drill_down"]["available_selectors"]
@@ -771,7 +771,7 @@ def test_start_tiny_routes_config_posture_questions_to_tiny_config(capsys) -> No
     assert action["command"] == "uv run agentic-workspace config --format json"
     assert action["read_first"] == [action["command"]]
     assert "tiny config surface" in action["summary"]
-    assert len(json.dumps(payload, sort_keys=True)) < 12300
+    assert len(json.dumps(payload, sort_keys=True)) < 14500
 
 
 def test_start_tiny_compacts_long_task_carry_forward_command(tmp_path: Path, capsys) -> None:

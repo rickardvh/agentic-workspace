@@ -583,6 +583,53 @@ candidates = []
     assert archived["durable_residue"]["status"] == "none"
 
 
+def test_planning_closeout_completes_active_run_before_archive_validation(tmp_path: Path, capsys) -> None:
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "plan-alpha", status = "active", surface = ".agentic-workspace/planning/execplans/plan-alpha.plan.json" },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="active")
+
+    assert (
+        planning_cli.main(
+            [
+                "closeout",
+                "plan-alpha",
+                "--target",
+                str(tmp_path),
+                "--proof-from",
+                "uv run pytest packages/planning/tests/test_archive.py -q",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    archived_record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json"
+    archived = json.loads(archived_record_path.read_text(encoding="utf-8"))
+
+    assert payload["warnings"] == []
+    assert not record_path.exists()
+    assert archived["active_milestone"]["status"] == "completed"
+    assert archived["execution_run"]["run status"] == "completed"
+    assert archived["execution_run"]["validations run"] == "uv run pytest packages/planning/tests/test_archive.py -q"
+    assert archived["finished_run_review"]["review status"] == "complete"
+    assert archived["finished_run_review"]["proof status"] == "passed"
+    assert archived["proof_report"]["validation proof"] == "uv run pytest packages/planning/tests/test_archive.py -q"
+
+
 def test_planning_closeout_routes_partial_lane_residue_to_continuation(tmp_path: Path, capsys) -> None:
     _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"

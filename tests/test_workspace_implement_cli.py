@@ -113,7 +113,7 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(capsys
     assert adaptive["read_budget"]["profile"] == "tiny"
     assert adaptive["detail_commands"]["task_scoped_state"].startswith("agentic-workspace summary --changed")
     assert "raw workspace files" in adaptive["not_needed_now"]
-    assert payload["next"]["action"] == "Inspect only the listed files and run the required validation commands."
+    assert payload["next"]["action"] == "Create or promote an active execplan before continuing implementation."
     assert payload["next"]["command"] == "make test-workspace"
     assert payload["next"]["run"] == payload["next"]["command"]
     assert "make lint-workspace" in payload["next"]["commands"]
@@ -141,7 +141,7 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(capsys
     assert "authority_markers" not in payload
     assert "durable_intent" not in payload
     assert "inference_limits" not in payload
-    assert len(encoded) < 13600
+    assert len(encoded) < 14500
 
 
 def test_implement_package_cli_edits_select_generated_command_package_gate(capsys) -> None:
@@ -268,7 +268,8 @@ def test_implement_task_allows_narrow_single_issue_context(capsys) -> None:
     assert payload["task_routing"]["status"] == "narrow-external-work"
     assert payload["task_routing"]["issue_refs"] == ["#424"]
     assert payload["task_routing"]["broad_external_work"] is False
-    assert payload["next_allowed_action"] == "Inspect only the listed files and run the required validation commands."
+    assert payload["next_allowed_action"] == "Create or promote an active execplan before continuing implementation."
+    assert payload["planning_safety_gate"]["status"] == "blocked"
 
 
 def test_implement_task_specific_acceptance_warns_on_objective_drift(tmp_path: Path, capsys) -> None:

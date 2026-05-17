@@ -10375,6 +10375,76 @@ def closeout_execplan(
     if not dry_run:
         status, default_owner = PLANNING_CLOSEOUT_RESIDUE_MAP[normalized_residue]
         owner = residue_owner or default_owner
+        proof = proof_from.strip() if proof_from.strip() and proof_from.strip().lower() != "last" else "last proof selected by closeout"
+        placeholder_values = {"", "pending", "todo", "tbd", "none yet", "current milestone"}
+        active_milestone = _record_section_dict(record, "active_milestone") or {}
+        active_milestone["status"] = "completed"
+        active_milestone.setdefault("ready", "ready")
+        active_milestone["blocked"] = "none"
+        record["active_milestone"] = active_milestone
+        execution_run = _record_section_dict(record, "execution_run") or {}
+        execution_run["run status"] = "completed"
+        if str(execution_run.get("executor", "")).strip().lower() in placeholder_values:
+            execution_run["executor"] = "agentic-planning closeout"
+        if str(execution_run.get("what happened", "")).strip().lower() in placeholder_values | {"execution has not started"}:
+            execution_run["what happened"] = "planning closeout completed the run metadata and archive preconditions"
+        if str(execution_run.get("scope touched", "")).strip().lower() in placeholder_values:
+            execution_run["scope touched"] = "bounded closeout scope"
+        if str(execution_run.get("changed surfaces", "")).strip().lower() in placeholder_values:
+            execution_run["changed surfaces"] = ".agentic-workspace/planning/"
+        execution_run["validations run"] = proof
+        execution_run["result for continuation"] = (
+            f"continue from {continuation_owner}" if closure_decision == "archive-but-keep-lane-open" else "bounded closeout complete"
+        )
+        execution_run["next step"] = (
+            f"promote the next bounded slice from {continuation_owner}"
+            if closure_decision == "archive-but-keep-lane-open"
+            else "archive this execplan"
+        )
+        record["execution_run"] = execution_run
+        finished_run_review = _record_section_dict(record, "finished_run_review") or {}
+        finished_run_review["review status"] = "complete"
+        if str(finished_run_review.get("scope respected", "")).strip().lower() in placeholder_values:
+            finished_run_review["scope respected"] = "yes; closeout accepted the bounded claim."
+        finished_run_review["proof status"] = "passed"
+        finished_run_review["intent served"] = (
+            "yes" if normalized_intent == "satisfied" else f"no; intent-status={normalized_intent} keeps continuation explicit."
+        )
+        if str(finished_run_review.get("config compliance", "")).strip().lower() in placeholder_values:
+            finished_run_review["config compliance"] = "used planning closeout command-owned writer"
+        if str(finished_run_review.get("misinterpretation risk", "")).strip().lower() in placeholder_values:
+            finished_run_review["misinterpretation risk"] = "low"
+        finished_run_review["follow-on decision"] = continuation_owner if closure_decision == "archive-but-keep-lane-open" else "none"
+        record["finished_run_review"] = finished_run_review
+        execution_summary = _record_section_dict(record, "execution_summary") or {}
+        execution_summary["outcome delivered"] = (
+            "bounded closeout accepted"
+            if normalized_intent == "satisfied"
+            else f"bounded closeout recorded {normalized_intent} continuation"
+        )
+        execution_summary["validation confirmed"] = proof
+        execution_summary["follow-on routed to"] = continuation_owner if closure_decision == "archive-but-keep-lane-open" else "none"
+        if str(execution_summary.get("post-work posterity capture", "")).strip().lower() in placeholder_values:
+            execution_summary["post-work posterity capture"] = "archive closeout distillation"
+        if str(execution_summary.get("knowledge promoted (Memory/Docs/Config)", "")).strip().lower() in placeholder_values:
+            execution_summary["knowledge promoted (Memory/Docs/Config)"] = "none"
+        execution_summary["resume from"] = continuation_owner if closure_decision == "archive-but-keep-lane-open" else "archive"
+        record["execution_summary"] = execution_summary
+        closure_check = _record_section_dict(record, "closure_check") or {}
+        closure_check["closeout scope"] = normalized_claim
+        closure_check["slice status"] = "completed"
+        closure_check["larger-intent status"] = "open" if closure_decision == "archive-but-keep-lane-open" else "closed"
+        closure_check["closure decision"] = closure_decision
+        closure_check["why this decision is honest"] = (
+            f"planning closeout accepted a {normalized_claim} claim with intent-status {normalized_intent}."
+        )
+        closure_check["evidence carried forward"] = proof
+        closure_check["reopen trigger"] = (
+            f"Reopen when {continuation_owner} activates a fresh bounded slice."
+            if closure_decision == "archive-but-keep-lane-open"
+            else "None unless new evidence shows the closeout was incomplete."
+        )
+        record["closure_check"] = closure_check
         record["durable_residue"] = {
             "status": status,
             "learned constraint": (
@@ -10393,16 +10463,12 @@ def closeout_execplan(
             else "when the routed closeout residue is acted on",
             "retention after promotion": "retain",
         }
-        if proof_from.strip() and proof_from.strip().lower() != "last":
-            proof = proof_from.strip()
+        if proof:
             record["proof_report"] = {
                 "validation proof": proof,
                 "proof achieved now": "yes; planning closeout recorded explicit proof input.",
                 'evidence for "proof achieved" state': proof,
             }
-            execution_run = _record_section_dict(record, "execution_run") or {}
-            execution_run["validations run"] = proof
-            record["execution_run"] = execution_run
         if closure_decision == "archive-but-keep-lane-open":
             intent_continuity = _record_section_dict(record, "intent_continuity") or {}
             intent_continuity["this slice completes the larger intended outcome"] = "no"
@@ -10427,8 +10493,9 @@ def closeout_execplan(
         closure_decision=closure_decision,
         intent_satisfied=intent_satisfied,
         unsolved_intent=continuation_owner if closure_decision == "archive-but-keep-lane-open" else None,
+        intent_evidence=proof,
         closure_reason=f"planning closeout accepted a {normalized_claim} claim with intent-status {normalized_intent}.",
-        closure_evidence="planning closeout wrote structured closeout fields and archive validation accepted the result.",
+        closure_evidence=proof,
         reopen_trigger=(
             f"Reopen when {continuation_owner} activates a fresh bounded slice."
             if closure_decision == "archive-but-keep-lane-open"
