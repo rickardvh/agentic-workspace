@@ -2,46 +2,6 @@
   "kind": "planning-mutation-provenance/v1",
   "entries": [
     {
-      "path": ".agentic-workspace/planning/execplans/python-memory-runtime-facade.plan.json",
-      "sha256": "717374042ae9968cafd27e517ca661851744db5d8fc08eb13f58039a8f576531",
-      "command": "agentic-planning delegation-decision",
-      "reason": "record delegation decision route=keep-local",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T12:05:12+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-memory-runtime-facade.plan.json",
-      "sha256": "b4f1d4a1be8ca9f0211c298d35cd75a7a03c6f845f76b16fe92392f7284ff2ee",
-      "command": "agentic-planning record-recovery",
-      "reason": "Completed #892 memory runtime facade slice and recorded proof before close-item archive.",
-      "mode": "manual-recovery",
-      "recorded_at": "2026-05-16T12:08:37+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/state.toml",
-      "sha256": "8b634c0d006a9f3e3d3b89e6a2e70341a39d31709226206be26ce470c214eb8f",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-memory-runtime-facade",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T12:08:41+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/archive/python-memory-runtime-facade.plan.json",
-      "sha256": "b4f1d4a1be8ca9f0211c298d35cd75a7a03c6f845f76b16fe92392f7284ff2ee",
-      "command": "agentic-planning archive-plan",
-      "reason": "archive execplan python-memory-runtime-facade",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T12:08:41+00:00"
-    },
-    {
-      "path": ".agentic-workspace/planning/execplans/python-planning-runtime-facade.plan.json",
-      "sha256": "ebe55ab7b87f7f0c3af695ba06b3b5cc6c77644ab8b7e5fcbdb4c6dd4196f75b",
-      "command": "agentic-planning new-plan",
-      "reason": "create execplan scaffold python-planning-runtime-facade",
-      "mode": "cli-mutation",
-      "recorded_at": "2026-05-16T12:10:14+00:00"
-    },
-    {
       "path": ".agentic-workspace/planning/state.toml",
       "sha256": "d0dd1302538b83c81abf7ddc3a53a7c2a889565142b2d350ae7a0f82678e622c",
       "command": "agentic-planning new-plan",
@@ -1600,6 +1560,46 @@
       "reason": "archive execplan github-1019-planning-skill-boundaries",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-16T21:57:44+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-1021-1026-affordance-boundary-batch.plan.json",
+      "sha256": "bc4bcd0bd43f3166ad0a328cdbf38bb893bb642645c24ff3cc6b2c37e7fc4066",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold github-1021-1026-affordance-boundary-batch",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T10:35:31+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "672589bca65663a54dd4125e7cb30dd0a1ab9a6cc55ef223c9d2eaf067e8114c",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold github-1021-1026-affordance-boundary-batch",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T10:35:31+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-1021-1026-affordance-boundary-batch.plan.json",
+      "sha256": "701f8045914903056054e23dc39999acc83e166b8107789bfb9993501b3d3bee",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T10:37:50+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "2825a103bb66f149fb0a5df4c54a27542a980a4b8f789ea801637c26cd080901",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan github-1021-1026-affordance-boundary-batch",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T10:40:14+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/github-1021-1026-affordance-boundary-batch.plan.json",
+      "sha256": "f2e7561679d3bdff740f2393362b529cb4115096858833cc2534631845d5bb49",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan github-1021-1026-affordance-boundary-batch",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T10:40:14+00:00"
     }
   ]
 }

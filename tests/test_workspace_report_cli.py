@@ -257,9 +257,15 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert payload["report_profile"]["full_profile_cost"]["classification"] == "deep-audit"
     assert payload["report_profile"]["full_profile_cost"]["expected_cost"] == "high"
     assert payload["report_profile"]["context_router"]["first_view"] == "start"
-    assert payload["report_profile"]["config_enforcement"]["detail_section"] == "config_enforcement"
-    assert payload["report_profile"]["config_effect_audit"]["detail_section"] == "config_effect_audit"
-    assert payload["report_profile"]["config_effect_audit"]["warning_count"] == 0
+    assert payload["report_profile"]["detail_sections"]["config_enforcement"].endswith(
+        "agentic-workspace report --target ./repo --section config_enforcement --format json"
+    )
+    assert payload["report_profile"]["detail_sections"]["config_effect_audit"].endswith(
+        "agentic-workspace report --target ./repo --section config_effect_audit --format json"
+    )
+    assert payload["report_profile"]["detail_sections"]["feature_tier"].endswith("agentic-workspace modules --target ./repo --format json")
+    assert "config_enforcement" not in payload["report_profile"]
+    assert "config_effect_audit" not in payload["report_profile"]
     assert payload["report_profile"]["decision_grade_fields"][0] == "health"
     ordinary_path = payload["report_profile"]["ordinary_agent_path"]
     assert ordinary_path["entry_command"] == "agentic-workspace start --target ./repo --format json"
@@ -279,10 +285,8 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     guard = payload["report_profile"]["router_shape_guard"]
     assert guard["status"] == "active"
     assert len(payload) <= guard["max_top_level_fields"]
-    assert payload["report_profile"]["feature_tier"]["active"]["id"] == "full"
-    assert "available_tiers" not in payload["report_profile"]["feature_tier"]
-
-    assert "report_profile.feature_tier" in payload["report_profile"]["decision_grade_fields"]
+    assert "feature_tier" not in payload["report_profile"]
+    assert "report_profile.feature_tier" not in payload["report_profile"]["decision_grade_fields"]
     assert len(payload["warning_summary"]["sample"]) <= guard["warning_sample_limit"]
     for section in guard["high_volume_sections_excluded"]:
         assert section not in payload
@@ -290,7 +294,6 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert "module_reports" not in payload
     assert "reports" not in payload
     assert "maintenance_pressure" not in payload
-    assert payload["report_profile"]["feature_tier"]["advanced_policy"]["enabled_features"] == []
     assert "operational_compression" not in payload
     assert "closeout_trust" not in payload
     assert "external_work_delta" not in payload

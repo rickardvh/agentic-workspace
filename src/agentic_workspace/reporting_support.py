@@ -381,27 +381,24 @@ def report_router_payload(
     profile_payload = dict(payload.get("report_profile", report_profile_payload(context_router=context_router, cli_invoke=cli_invoke)))
     profile_payload = _compact_report_profile(profile_payload)
     profile_payload["ordinary_agent_path"] = _ordinary_agent_path_payload(payload=payload, findings=findings, cli_invoke=cli_invoke)
-    profile_payload["config_enforcement"] = _report_router_config_enforcement(payload.get("config_enforcement", {}))
-    profile_payload["config_effect_audit"] = _report_router_config_effect_audit(payload.get("config_effect_audit", {}))
-    full_feature_tier = dict(payload.get("feature_tier", {})) if isinstance(payload.get("feature_tier"), dict) else {}
-    advanced_policy = (
-        dict(full_feature_tier.get("advanced_policy", {})) if isinstance(full_feature_tier.get("advanced_policy"), dict) else {}
-    )
-    advanced_policy.pop("available_features", None)
-    profile_payload["feature_tier"] = {
-        key: value for key, value in full_feature_tier.items() if key not in {"available_tiers", "available_module_profiles"}
+    profile_payload["detail_sections"] = {
+        "config_enforcement": _command_with_cli_invoke(
+            "agentic-workspace report --target ./repo --section config_enforcement --format json", cli_invoke=cli_invoke
+        ),
+        "config_effect_audit": _command_with_cli_invoke(
+            "agentic-workspace report --target ./repo --section config_effect_audit --format json", cli_invoke=cli_invoke
+        ),
+        "feature_tier": _command_with_cli_invoke("agentic-workspace modules --target ./repo --format json", cli_invoke=cli_invoke),
     }
-    if advanced_policy:
-        profile_payload["feature_tier"]["advanced_policy"] = advanced_policy
     decision_grade_fields = list(profile_payload.get("decision_grade_fields", []))
     if "report_profile.ordinary_agent_path" not in decision_grade_fields:
         decision_grade_fields.append("report_profile.ordinary_agent_path")
-    if "report_profile.feature_tier" not in decision_grade_fields:
-        decision_grade_fields.append("report_profile.feature_tier")
     maintainer_mode_value = payload.get("maintainer_mode", {})
     if isinstance(maintainer_mode_value, dict) and maintainer_mode_value.get("status") == "enabled":
         if "maintainer_mode" not in decision_grade_fields:
             decision_grade_fields.append("maintainer_mode")
+    full_feature_tier = payload.get("feature_tier", {})
+    advanced_policy = full_feature_tier.get("advanced_policy", {}) if isinstance(full_feature_tier, dict) else {}
     enabled_advanced_features = set(advanced_policy.get("enabled_features", []) if isinstance(advanced_policy, dict) else [])
     maintenance_pressure_value = payload.get("maintenance_pressure", {})
     maintenance_pressure_status = str(maintenance_pressure_value.get("status", "")) if isinstance(maintenance_pressure_value, dict) else ""

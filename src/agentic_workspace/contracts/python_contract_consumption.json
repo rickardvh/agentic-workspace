@@ -159,6 +159,12 @@
       "consumer": "tests/test_contract_tooling.py"
     },
     {
+      "contract": "operational_affordance_roles.json",
+      "schema": "operational_affordance_roles.schema.json",
+      "loader": "operational_affordance_roles_manifest",
+      "consumer": "tests/test_contract_tooling.py"
+    },
+    {
       "contract": "python_runtime_boundary.json",
       "schema": "python_runtime_boundary.schema.json",
       "loader": "python_runtime_boundary_manifest",
@@ -195,4 +201,3 @@
     "handwritten_model_boundary": "Handwritten dataclasses remain acceptable when they represent runtime execution state, live repo inspection, or adapted third-party package results rather than reusable contract shape."
   }
 }
-

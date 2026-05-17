@@ -125,6 +125,10 @@ def cli_commands_manifest() -> dict[str, Any]:
     return load_validated_contract_json("cli_commands.json", "cli_commands.schema.json")
 
 
+def operational_affordance_roles_manifest() -> dict[str, Any]:
+    return load_validated_contract_json("operational_affordance_roles.json", "operational_affordance_roles.schema.json")
+
+
 def cli_option_groups_manifest() -> dict[str, Any]:
     return load_validated_contract_json("cli_option_groups.json", "cli_option_groups.schema.json")
 

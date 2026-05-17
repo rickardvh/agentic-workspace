@@ -563,6 +563,12 @@ def test_start_default_returns_selector_first_router(tmp_path: Path, capsys) -> 
     assert payload["task_intent"]["implement_changed_command"] == (
         f'agentic-workspace implement --changed <paths> --task "{task}" --format json'
     )
+    startup_text = json.dumps(payload["immediate_next_allowed_action"], sort_keys=True)
+    assert "preflight" not in startup_text
+    assert "defaults" not in startup_text
+    assert "config --" not in startup_text
+    assert "report --" not in startup_text
+    assert "summary --" not in startup_text or payload["immediate_next_allowed_action"]["action"] == "continue-active-planning-record"
     assert payload["acceptance"]["items"]
     assert payload["acceptance"]["items"][0]["status"] == "unchecked"
     assert "acceptance" in payload["drill_down"]["available_selectors"]
