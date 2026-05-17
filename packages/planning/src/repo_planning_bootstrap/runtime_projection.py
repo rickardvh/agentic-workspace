@@ -124,6 +124,11 @@ def apply_planning_closeout_operation(values: dict, _arguments: dict, _context):
         proof_from=str(values.get("proof_from") or "last"),
         residue_owner=values.get("residue_owner"),
         retain_archive=not bool(values.get("discard_archive")),
+        what_happened=values.get("what_happened"),
+        scope_touched=values.get("scope_touched"),
+        changed_surfaces=values.get("changed_surfaces"),
+        review_summary=values.get("review_summary"),
+        outcome_summary=values.get("outcome_summary"),
     )
 
 

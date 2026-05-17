@@ -446,6 +446,41 @@
               "help": "Canonical owner for non-empty residue or deferred intent."
             },
             {
+              "name": "what_happened",
+              "flags": [
+                "--what-happened"
+              ],
+              "help": "Finished-run summary to write when the execplan still has placeholder execution evidence."
+            },
+            {
+              "name": "scope_touched",
+              "flags": [
+                "--scope-touched"
+              ],
+              "help": "Concrete scope touched by the finished run."
+            },
+            {
+              "name": "changed_surfaces",
+              "flags": [
+                "--changed-surfaces"
+              ],
+              "help": "Concrete files or surfaces changed by the finished run."
+            },
+            {
+              "name": "review_summary",
+              "flags": [
+                "--review-summary"
+              ],
+              "help": "Closeout review summary for scope and intent reconciliation."
+            },
+            {
+              "name": "outcome_summary",
+              "flags": [
+                "--outcome-summary"
+              ],
+              "help": "Outcome delivered summary for the finished run."
+            },
+            {
               "name": "dry_run",
               "flags": [
                 "--dry-run"

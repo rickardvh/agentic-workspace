@@ -275,6 +275,41 @@
           "name": "residue_owner"
         },
         {
+          "flags": [
+            "--what-happened"
+          ],
+          "help": "Finished-run summary to write when the execplan still has placeholder execution evidence.",
+          "name": "what_happened"
+        },
+        {
+          "flags": [
+            "--scope-touched"
+          ],
+          "help": "Concrete scope touched by the finished run.",
+          "name": "scope_touched"
+        },
+        {
+          "flags": [
+            "--changed-surfaces"
+          ],
+          "help": "Concrete files or surfaces changed by the finished run.",
+          "name": "changed_surfaces"
+        },
+        {
+          "flags": [
+            "--review-summary"
+          ],
+          "help": "Closeout review summary for scope and intent reconciliation.",
+          "name": "review_summary"
+        },
+        {
+          "flags": [
+            "--outcome-summary"
+          ],
+          "help": "Outcome delivered summary for the finished run.",
+          "name": "outcome_summary"
+        },
+        {
           "action": "store_true",
           "flags": [
             "--dry-run"

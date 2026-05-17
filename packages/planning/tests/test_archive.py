@@ -610,6 +610,16 @@ candidates = []
                 str(tmp_path),
                 "--proof-from",
                 "uv run pytest packages/planning/tests/test_archive.py -q",
+                "--what-happened",
+                "implemented the closeout writer and generated command plumbing.",
+                "--scope-touched",
+                "packages/planning closeout writer and generated command contracts",
+                "--changed-surfaces",
+                "packages/planning/src/repo_planning_bootstrap/installer.py; generated command contracts",
+                "--review-summary",
+                "yes; closeout evidence matches the bounded implementation scope.",
+                "--outcome-summary",
+                "closeout writer records real finish-run evidence before archiving.",
                 "--format",
                 "json",
             ]
@@ -625,9 +635,110 @@ candidates = []
     assert archived["active_milestone"]["status"] == "completed"
     assert archived["execution_run"]["run status"] == "completed"
     assert archived["execution_run"]["validations run"] == "uv run pytest packages/planning/tests/test_archive.py -q"
+    assert archived["execution_run"]["what happened"] == "implemented the closeout writer and generated command plumbing."
+    assert archived["execution_run"]["changed surfaces"] == (
+        "packages/planning/src/repo_planning_bootstrap/installer.py; generated command contracts"
+    )
     assert archived["finished_run_review"]["review status"] == "complete"
+    assert archived["finished_run_review"]["scope respected"] == "yes; closeout evidence matches the bounded implementation scope."
     assert archived["finished_run_review"]["proof status"] == "passed"
+    assert archived["execution_summary"]["outcome delivered"] == "closeout writer records real finish-run evidence before archiving."
     assert archived["proof_report"]["validation proof"] == "uv run pytest packages/planning/tests/test_archive.py -q"
+
+
+def test_planning_closeout_blocks_last_proof_without_existing_proof(tmp_path: Path, capsys) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="active")
+
+    assert planning_cli.main(["closeout", "plan-alpha", "--target", str(tmp_path), "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert any(warning["warning_class"] == "closeout_missing_proof" for warning in payload["warnings"])
+    assert any(
+        action["kind"] == "manual review" and "--proof-from last found no existing proof" in action["detail"]
+        for action in payload["actions"]
+    )
+    assert record_path.exists()
+
+
+def test_planning_closeout_preserves_existing_last_proof(tmp_path: Path, capsys) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="active")
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    record["proof_report"] = {
+        "validation proof": "uv run pytest packages/planning/tests/test_archive.py::test_existing_proof -q",
+        "proof achieved now": "yes; test proof was already recorded by the runner.",
+        'evidence for "proof achieved" state': "pytest output was captured before closeout.",
+    }
+    installer_mod._write_execplan_record(record_path=record_path, record=record)
+
+    assert (
+        planning_cli.main(
+            [
+                "closeout",
+                "plan-alpha",
+                "--target",
+                str(tmp_path),
+                "--what-happened",
+                "completed the active closeout slice after validation.",
+                "--scope-touched",
+                "packages/planning/tests/test_archive.py",
+                "--changed-surfaces",
+                "packages/planning/tests/test_archive.py",
+                "--review-summary",
+                "yes; preserved existing proof and reviewed closeout fields.",
+                "--outcome-summary",
+                "active closeout archived with preserved validation proof.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    archived = json.loads(
+        (tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json").read_text(encoding="utf-8")
+    )
+
+    assert payload["warnings"] == []
+    assert archived["proof_report"] == {
+        "validation proof": "uv run pytest packages/planning/tests/test_archive.py::test_existing_proof -q",
+        "proof achieved now": "yes; test proof was already recorded by the runner.",
+        'evidence for "proof achieved" state': "pytest output was captured before closeout.",
+    }
+    assert archived["execution_run"]["validations run"] == "uv run pytest packages/planning/tests/test_archive.py::test_existing_proof -q"
+
+
+def test_planning_closeout_blocks_placeholder_finish_run_evidence(tmp_path: Path, capsys) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="active")
+
+    assert (
+        planning_cli.main(
+            [
+                "closeout",
+                "plan-alpha",
+                "--target",
+                str(tmp_path),
+                "--proof-from",
+                "uv run pytest packages/planning/tests/test_archive.py -q",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+
+    assert any(warning["warning_class"] == "closeout_missing_finish_run_evidence" for warning in payload["warnings"])
+    assert any(action["kind"] == "manual review" and "finish-run evidence" in action["detail"] for action in payload["actions"])
+    assert record["execution_run"]["what happened"] == "execution has not started"
+    assert record["execution_run"]["changed surfaces"] == "none yet; execution has not changed files"
+    assert record["execution_summary"]["outcome delivered"] == "not completed yet"
 
 
 def test_planning_closeout_routes_partial_lane_residue_to_continuation(tmp_path: Path, capsys) -> None:

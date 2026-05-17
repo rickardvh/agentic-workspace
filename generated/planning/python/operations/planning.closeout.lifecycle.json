@@ -55,6 +55,31 @@
       "source": "cli-option"
     },
     {
+      "name": "what_happened",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "scope_touched",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "changed_surfaces",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "review_summary",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "outcome_summary",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
       "name": "dry_run",
       "required": false,
       "source": "cli-option"

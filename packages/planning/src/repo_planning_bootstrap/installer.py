@@ -10332,6 +10332,11 @@ def closeout_execplan(
     proof_from: str = "last",
     residue_owner: str | None = None,
     retain_archive: bool = True,
+    what_happened: str | None = None,
+    scope_touched: str | None = None,
+    changed_surfaces: str | None = None,
+    review_summary: str | None = None,
+    outcome_summary: str | None = None,
 ) -> InstallResult:
     target_root = resolve_target_root(target)
     result = InstallResult(target_root=target_root, message=f"Close out execplan '{plan}'", dry_run=dry_run)
@@ -10372,26 +10377,111 @@ def closeout_execplan(
     if closure_decision == "archive-but-keep-lane-open" and not continuation_owner:
         continuation_owner = PLANNING_STATE_PATH.as_posix()
 
+    placeholder_values = {
+        "",
+        "pending",
+        "todo",
+        "tbd",
+        "none yet",
+        "current milestone",
+        "execution has not started",
+        "pending delegated execution.",
+        "none yet; execution has not changed files.",
+        "not completed yet",
+        "last proof selected by closeout",
+        "planning closeout completed the run metadata and archive preconditions",
+        "bounded closeout scope",
+        ".agentic-workspace/planning/",
+        "bounded closeout accepted",
+    }
+
+    def clean(value: Any) -> str:
+        return str(value or "").strip()
+
+    def is_placeholder(value: Any) -> bool:
+        return clean(value).lower() in placeholder_values
+
+    def provided(value: str | None) -> str:
+        return clean(value)
+
+    proof_request = clean(proof_from)
+    proof_report = _record_section_dict(record, "proof_report") or {}
+    existing_proof = clean(proof_report.get("validation proof"))
+    if proof_request and proof_request.lower() != "last":
+        proof = proof_request
+        proof_source = "explicit"
+    elif existing_proof and not is_placeholder(existing_proof):
+        proof = existing_proof
+        proof_source = "existing"
+    else:
+        result.warnings.append(
+            {
+                "warning_class": "closeout_missing_proof",
+                "path": record_path.relative_to(target_root).as_posix(),
+                "message": "planning closeout --proof-from last requires an existing non-placeholder proof_report.validation proof.",
+                "suggested_fix": "Rerun closeout with --proof-from <proof command or evidence>, or record real proof before using --proof-from last.",
+            }
+        )
+        result.add("manual review", record_path, "planning closeout needs explicit proof; --proof-from last found no existing proof")
+        result.add("next safe action", record_path, "rerun planning closeout with --proof-from <proof command or evidence>")
+        return result
+
+    execution_run = _record_section_dict(record, "execution_run") or {}
+    finished_run_review = _record_section_dict(record, "finished_run_review") or {}
+    execution_summary = _record_section_dict(record, "execution_summary") or {}
+    run_evidence_inputs = {
+        "what happened": provided(what_happened),
+        "scope touched": provided(scope_touched),
+        "changed surfaces": provided(changed_surfaces),
+    }
+    run_evidence_sources = {
+        "what happened": "what_happened",
+        "scope touched": "scope_touched",
+        "changed surfaces": "changed_surfaces",
+    }
+    missing_run_evidence = [
+        field for field, option_value in run_evidence_inputs.items() if not option_value and is_placeholder(execution_run.get(field))
+    ]
+    if not provided(review_summary) and is_placeholder(finished_run_review.get("scope respected")):
+        missing_run_evidence.append("review summary")
+        run_evidence_sources["review summary"] = "review_summary"
+    if not provided(outcome_summary) and is_placeholder(execution_summary.get("outcome delivered")):
+        missing_run_evidence.append("outcome summary")
+        run_evidence_sources["outcome summary"] = "outcome_summary"
+    if missing_run_evidence:
+        option_list = ", ".join(f"--{run_evidence_sources[field].replace('_', '-')}" for field in missing_run_evidence)
+        result.warnings.append(
+            {
+                "warning_class": "closeout_missing_finish_run_evidence",
+                "path": record_path.relative_to(target_root).as_posix(),
+                "message": f"planning closeout needs real finish-run evidence for: {', '.join(missing_run_evidence)}.",
+                "suggested_fix": f"Rerun closeout with {option_list}, or record non-placeholder execution_run evidence first.",
+            }
+        )
+        result.add(
+            "manual review", record_path, f"planning closeout needs non-placeholder finish-run evidence: {', '.join(missing_run_evidence)}"
+        )
+        result.add("next safe action", record_path, "rerun planning closeout with explicit finish-run evidence options")
+        return result
+
+    status, default_owner = PLANNING_CLOSEOUT_RESIDUE_MAP[normalized_residue]
+    owner = residue_owner or default_owner
+
     if not dry_run:
-        status, default_owner = PLANNING_CLOSEOUT_RESIDUE_MAP[normalized_residue]
-        owner = residue_owner or default_owner
-        proof = proof_from.strip() if proof_from.strip() and proof_from.strip().lower() != "last" else "last proof selected by closeout"
-        placeholder_values = {"", "pending", "todo", "tbd", "none yet", "current milestone"}
         active_milestone = _record_section_dict(record, "active_milestone") or {}
         active_milestone["status"] = "completed"
         active_milestone.setdefault("ready", "ready")
         active_milestone["blocked"] = "none"
         record["active_milestone"] = active_milestone
-        execution_run = _record_section_dict(record, "execution_run") or {}
         execution_run["run status"] = "completed"
-        if str(execution_run.get("executor", "")).strip().lower() in placeholder_values:
+        if is_placeholder(execution_run.get("executor")):
             execution_run["executor"] = "agentic-planning closeout"
-        if str(execution_run.get("what happened", "")).strip().lower() in placeholder_values | {"execution has not started"}:
-            execution_run["what happened"] = "planning closeout completed the run metadata and archive preconditions"
-        if str(execution_run.get("scope touched", "")).strip().lower() in placeholder_values:
-            execution_run["scope touched"] = "bounded closeout scope"
-        if str(execution_run.get("changed surfaces", "")).strip().lower() in placeholder_values:
-            execution_run["changed surfaces"] = ".agentic-workspace/planning/"
+        if run_evidence_inputs["what happened"]:
+            execution_run["what happened"] = run_evidence_inputs["what happened"]
+        if run_evidence_inputs["scope touched"]:
+            execution_run["scope touched"] = run_evidence_inputs["scope touched"]
+        if run_evidence_inputs["changed surfaces"]:
+            execution_run["changed surfaces"] = run_evidence_inputs["changed surfaces"]
         execution_run["validations run"] = proof
         execution_run["result for continuation"] = (
             f"continue from {continuation_owner}" if closure_decision == "archive-but-keep-lane-open" else "bounded closeout complete"
@@ -10402,31 +10492,34 @@ def closeout_execplan(
             else "archive this execplan"
         )
         record["execution_run"] = execution_run
-        finished_run_review = _record_section_dict(record, "finished_run_review") or {}
         finished_run_review["review status"] = "complete"
-        if str(finished_run_review.get("scope respected", "")).strip().lower() in placeholder_values:
+        if provided(review_summary):
+            finished_run_review["scope respected"] = provided(review_summary)
+        elif is_placeholder(finished_run_review.get("scope respected")):
             finished_run_review["scope respected"] = "yes; closeout accepted the bounded claim."
         finished_run_review["proof status"] = "passed"
         finished_run_review["intent served"] = (
             "yes" if normalized_intent == "satisfied" else f"no; intent-status={normalized_intent} keeps continuation explicit."
         )
-        if str(finished_run_review.get("config compliance", "")).strip().lower() in placeholder_values:
+        if is_placeholder(finished_run_review.get("config compliance")):
             finished_run_review["config compliance"] = "used planning closeout command-owned writer"
-        if str(finished_run_review.get("misinterpretation risk", "")).strip().lower() in placeholder_values:
+        if is_placeholder(finished_run_review.get("misinterpretation risk")):
             finished_run_review["misinterpretation risk"] = "low"
         finished_run_review["follow-on decision"] = continuation_owner if closure_decision == "archive-but-keep-lane-open" else "none"
         record["finished_run_review"] = finished_run_review
-        execution_summary = _record_section_dict(record, "execution_summary") or {}
-        execution_summary["outcome delivered"] = (
-            "bounded closeout accepted"
-            if normalized_intent == "satisfied"
-            else f"bounded closeout recorded {normalized_intent} continuation"
-        )
+        if provided(outcome_summary):
+            execution_summary["outcome delivered"] = provided(outcome_summary)
+        elif is_placeholder(execution_summary.get("outcome delivered")):
+            execution_summary["outcome delivered"] = (
+                "closeout accepted the finished run evidence"
+                if normalized_intent == "satisfied"
+                else f"closeout recorded {normalized_intent} continuation from finished run evidence"
+            )
         execution_summary["validation confirmed"] = proof
         execution_summary["follow-on routed to"] = continuation_owner if closure_decision == "archive-but-keep-lane-open" else "none"
-        if str(execution_summary.get("post-work posterity capture", "")).strip().lower() in placeholder_values:
+        if is_placeholder(execution_summary.get("post-work posterity capture")):
             execution_summary["post-work posterity capture"] = "archive closeout distillation"
-        if str(execution_summary.get("knowledge promoted (Memory/Docs/Config)", "")).strip().lower() in placeholder_values:
+        if is_placeholder(execution_summary.get("knowledge promoted (Memory/Docs/Config)")):
             execution_summary["knowledge promoted (Memory/Docs/Config)"] = "none"
         execution_summary["resume from"] = continuation_owner if closure_decision == "archive-but-keep-lane-open" else "archive"
         record["execution_summary"] = execution_summary
@@ -10463,12 +10556,14 @@ def closeout_execplan(
             else "when the routed closeout residue is acted on",
             "retention after promotion": "retain",
         }
-        if proof:
+        if proof and proof_source == "explicit":
             record["proof_report"] = {
                 "validation proof": proof,
                 "proof achieved now": "yes; planning closeout recorded explicit proof input.",
                 'evidence for "proof achieved" state': proof,
             }
+        elif proof and proof_source == "existing":
+            record["proof_report"] = proof_report
         if closure_decision == "archive-but-keep-lane-open":
             intent_continuity = _record_section_dict(record, "intent_continuity") or {}
             intent_continuity["this slice completes the larger intended outcome"] = "no"

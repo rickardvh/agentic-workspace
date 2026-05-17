@@ -1382,6 +1382,11 @@ def _planning_module_argv(args: argparse.Namespace) -> list[str]:
         ("--residue", "residue"),
         ("--proof-from", "proof_from"),
         ("--residue-owner", "residue_owner"),
+        ("--what-happened", "what_happened"),
+        ("--scope-touched", "scope_touched"),
+        ("--changed-surfaces", "changed_surfaces"),
+        ("--review-summary", "review_summary"),
+        ("--outcome-summary", "outcome_summary"),
     ):
         _append_option(argv, option, getattr(args, attr, None))
     if command == "delegation-decision":

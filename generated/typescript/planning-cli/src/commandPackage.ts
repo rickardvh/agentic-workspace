@@ -392,6 +392,41 @@ export const generatedCommandPackage = {
             "name": "residue_owner"
           },
           {
+            "flags": [
+              "--what-happened"
+            ],
+            "help": "Finished-run summary to write when the execplan still has placeholder execution evidence.",
+            "name": "what_happened"
+          },
+          {
+            "flags": [
+              "--scope-touched"
+            ],
+            "help": "Concrete scope touched by the finished run.",
+            "name": "scope_touched"
+          },
+          {
+            "flags": [
+              "--changed-surfaces"
+            ],
+            "help": "Concrete files or surfaces changed by the finished run.",
+            "name": "changed_surfaces"
+          },
+          {
+            "flags": [
+              "--review-summary"
+            ],
+            "help": "Closeout review summary for scope and intent reconciliation.",
+            "name": "review_summary"
+          },
+          {
+            "flags": [
+              "--outcome-summary"
+            ],
+            "help": "Outcome delivered summary for the finished run.",
+            "name": "outcome_summary"
+          },
+          {
             "action": "store_true",
             "flags": [
               "--dry-run"
@@ -2692,6 +2727,31 @@ export const generatedCommandPackage = {
           "arg": "residue_owner",
           "default": null,
           "name": "residue_owner"
+        },
+        {
+          "arg": "what_happened",
+          "default": null,
+          "name": "what_happened"
+        },
+        {
+          "arg": "scope_touched",
+          "default": null,
+          "name": "scope_touched"
+        },
+        {
+          "arg": "changed_surfaces",
+          "default": null,
+          "name": "changed_surfaces"
+        },
+        {
+          "arg": "review_summary",
+          "default": null,
+          "name": "review_summary"
+        },
+        {
+          "arg": "outcome_summary",
+          "default": null,
+          "name": "outcome_summary"
         },
         {
           "arg": "discard_archive",
