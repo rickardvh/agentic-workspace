@@ -59,7 +59,7 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `feature_tier` | object | no |  | Resolved feature tier and package footprint for the target repository. |  |  |
 | `context_router` | object | no |  | Available compact context-router views and when to use each one. |  |  |
 | `adaptive_routing` | object | no |  | Machine-readable need classification, read budget, and escalation detail commands for this startup packet. |  |  |
-| `active_state_summary` | object | yes |  | Small active-work projection used to decide whether raw planning state needs to be opened. |  |  |
+| `active_state_summary` | object | no |  | Small active-work projection used to decide whether raw planning state needs to be opened. |  |  |
 | `active_state_summary.todo_active_count` | integer | yes |  | Todo active count numeric value used by this contract. |  |  |
 | `active_state_summary.active_execplan` | string \| null | yes |  | Active execplan contract value used by this contract. |  |  |
 | `active_state_summary.planning_status` | string | yes |  | Planning status text value used by this contract. |  |  |
@@ -69,7 +69,7 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `package_boundary.warning` | string \| null | yes |  | Warning contract value used by this contract. |  |  |
 | `package_boundary.package_root` | string | no |  | Package root text value used by this contract. |  |  |
 | `authority_markers` | array of ref `#/$defs/authority_marker` | no |  | Authority markers relevant to startup, ownership, and safe editing. |  |  |
-| `immediate_next_allowed_action` | object | yes |  | Next bounded action the agent may take without reading broader surfaces. |  |  |
+| `immediate_next_allowed_action` | object | no |  | Next bounded action the agent may take without reading broader surfaces. |  |  |
 | `immediate_next_allowed_action.action` | string | yes |  | Action text value used by this contract. |  |  |
 | `immediate_next_allowed_action.summary` | string | yes |  | Short human-readable summary for this entry. |  |  |
 | `immediate_next_allowed_action.command` | string \| null | yes |  | Command string or command name used by this contract. |  |  |
@@ -98,6 +98,8 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `next_safe_action.memory_consultation_status` | string | yes |  | Memory consultation or durable-residue status relevant to the next action. |  |  |
 | `next_safe_action.fallback_if_cli_unavailable` | string | yes |  | Conservative fallback when the preferred CLI cannot be used. |  |  |
 | `next_safe_action.source_fields` | array of enum `"immediate_next_allowed_action"`, `"workflow_sufficiency"`, `"skill_routing"`, `"memory_consult"`, `"planning_safety_gate"`, `"proof"`, `"closeout_trust_inspection"`, `"continuation_state"` | yes |  | Startup fields used to derive the packet. |  |  |
+| `skills` | object | no |  | Compact startup projection over skill routing, required skill, recommendations, and catalog drill-down. |  |  |
+| `context` | object | no |  | Supporting startup context for the primary next-safe-action decision, including compatibility projections for detail fields. |  |  |
 | `planning_safety_gate` | object | no |  | Planning ownership guard for broad, high-assurance, decomposed, or scope-widened work. |  |  |
 | `continuation_state` | object | no |  | Compact continuation-state contract for preserving only unfinished or handoff-relevant work, not historical residue. |  |  |
 | `authority_hierarchy` | object | no |  | Authority and promotion-path guidance for deciding which repo surfaces are current instruction, durable memory, future work, or historical audit. |  |  |
@@ -112,7 +114,7 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `durable_intent_promotion` | object | no |  | Guidance for promoting non-finishable task intent into durable memory, docs, subsystem intent, or system intent. |  |  |
 | `intent_acknowledgement` | object | no |  | Guidance for the middle path between silent inference and clarification halt: state inferred intent, first slice, non-goals, and correction point before non-direct work. |  |  |
 | `durable_intent` | object | no |  | Compact durable task, subsystem, and system intent pressure to consider before implementation. |  |  |
-| `skill_routing` | ref `#/$defs/skill_routing` | yes |  | Skill-discovery route and fallback guidance for task-specific instructions. |  |  |
+| `skill_routing` | ref `#/$defs/skill_routing` | no |  | Skill-discovery route and fallback guidance for task-specific instructions. |  |  |
 | `skill_routing.status` | string | yes |  | Current lifecycle, readiness, or health state. |  |  |
 | `skill_routing.rule` | string | yes |  | Policy rule that explains this contract behavior. |  |  |
 | `skill_routing.query` | string | yes |  | Query text value used by this contract. |  |  |
