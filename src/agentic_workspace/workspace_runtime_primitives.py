@@ -9918,6 +9918,43 @@ def _is_narrow_repair_task(task_text: str | None) -> bool:
     )
 
 
+def _is_routine_review_comment_repair_task(task_text: str | None) -> bool:
+    normalized = " ".join((task_text or "").lower().split())
+    if not normalized:
+        return False
+    review_terms = (
+        "pr comment",
+        "pr review",
+        "pull request comment",
+        "pull request review",
+        "review comment",
+        "address the comment",
+        "address comment",
+        "review feedback",
+        "comment on the pr",
+        "comment on pr",
+        "routine pr-comment",
+        "routine pr comment",
+    )
+    repair_terms = (
+        "address",
+        "fix",
+        "repair",
+        "respond",
+        "resolve",
+        "review-comment",
+        "review comment",
+        "pr-comment",
+        "pr comment",
+    )
+    broad_terms = ("epic", "lane", "roadmap", "decompose", "multiple milestones", "all comments", "all review comments")
+    return (
+        any((term in normalized for term in review_terms))
+        and any((term in normalized for term in repair_terms))
+        and not any((term in normalized for term in broad_terms))
+    )
+
+
 def _completion_closeout_inspection_payload(*, target_root: Path, config: WorkspaceConfig, task_text: str | None) -> dict[str, Any]:
     command = _command_with_cli_invoke(
         command="agentic-workspace report --target ./repo --section closeout_trust --format json", cli_invoke=config.cli_invoke
@@ -10631,6 +10668,7 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
         "changed_path_classification",
         "active_delegation_requirement",
         "active_parent_decomposition_requirement",
+        "repair_route",
     ):
         if key in gate:
             compact[key] = gate[key]
@@ -12134,6 +12172,27 @@ def _planning_safety_path_classification(changed_paths: list[str]) -> dict[str, 
     }
 
 
+def _allow_routine_repair_memory_feedback_path(path_classification: dict[str, Any]) -> dict[str, Any]:
+    implementation_paths = [str(path) for path in path_classification.get("implementation_paths", []) if isinstance(path, str) and path]
+    memory_feedback_paths = [path for path in implementation_paths if path == ".agentic-workspace/memory/repo/current/routing-feedback.md"]
+    if not memory_feedback_paths:
+        return path_classification
+    primary_paths = [path for path in implementation_paths if path not in memory_feedback_paths]
+    primary_roots = sorted({path.split("/", 1)[0] for path in primary_paths if path})
+    scope_growth_reasons = [str(reason) for reason in path_classification.get("scope_growth_reasons", []) if str(reason)]
+    if len(primary_roots) <= 2 and scope_growth_reasons == ["multiple top-level implementation surfaces"]:
+        return {
+            **path_classification,
+            "surface_roots": primary_roots,
+            "surface_root_count": len(primary_roots),
+            "scope_growth_detected": False,
+            "scope_growth_reasons": [],
+            "ancillary_paths": memory_feedback_paths,
+            "ancillary_rule": "Routine PR review-comment repairs may carry the dedicated Memory routing-feedback note without forcing an execplan.",
+        }
+    return path_classification
+
+
 def _planning_safety_promotion_command(*, config: WorkspaceConfig, decomposition_delegation: dict[str, Any], task_text: str | None) -> str:
     candidates = decomposition_delegation.get("candidates", []) if isinstance(decomposition_delegation, dict) else []
     if isinstance(candidates, list) and candidates:
@@ -12307,7 +12366,16 @@ def _planning_safety_gate_payload(
     normalized_task = " ".join((task_text or "").lower().split())
     completion_status_question = _is_completion_status_task(task_text) and (not changed_paths)
     routine_issue_intake = _is_routine_issue_intake_task(task_text) and (not changed_paths)
-    narrow_repair_task = _is_narrow_repair_task(task_text)
+    routine_review_comment_repair = _is_routine_review_comment_repair_task(task_text)
+    single_issue_changed_path_followthrough = (
+        len(issue_refs) == 1
+        and bool(changed_paths)
+        and not _task_requests_roadmap_or_decomposition(task_text)
+        and not any((term in normalized_task for term in ("all issues", "multiple issues", "batch", "epic", "lane")))
+    )
+    if routine_review_comment_repair or single_issue_changed_path_followthrough:
+        path_classification = _allow_routine_repair_memory_feedback_path(path_classification)
+    narrow_repair_task = _is_narrow_repair_task(task_text) or routine_review_comment_repair or single_issue_changed_path_followthrough
     roadmap_or_decomposition_requested = _task_requests_roadmap_or_decomposition(task_text)
     high_assurance_requires_plan = proof_burden == "high" and not narrow_repair_task and not routine_issue_intake
     external_implementation_without_changed_paths = (
@@ -12420,8 +12488,11 @@ def _planning_safety_gate_payload(
         "issue_refs": issue_refs,
         "repair_route": {
             "status": "direct-no-plan-ok" if narrow_repair_task and workflow_sufficient else "not-applicable",
+            "routine_review_comment_repair": routine_review_comment_repair,
+            "single_issue_changed_path_followthrough": single_issue_changed_path_followthrough,
             "fit_criteria": [
                 "CI, docs, schema-reference, proof, or tiny validation repair",
+                "routine PR review-comment response with bounded changed paths",
                 "one or two touched surfaces",
                 "no parent intent change",
                 "obvious proof command",

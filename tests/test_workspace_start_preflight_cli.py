@@ -1422,6 +1422,74 @@ def test_implement_flags_scope_growth_without_active_execplan(tmp_path: Path, ca
     assert payload["next"]["action"] == "Create or promote an active execplan before continuing implementation."
 
 
+def test_implement_allows_routine_pr_comment_repair_without_plan_scaffold(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "tests/test_workspace_start_preflight_cli.py",
+                ".agentic-workspace/memory/repo/current/routing-feedback.md",
+                "--task",
+                "Address PR #1057 review comment",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    gate = _start_planning_safety_gate(payload)
+    assert gate["status"] == "clear"
+    assert gate["decision"] == "direct-work-allowed"
+    assert gate["implementation_allowed"] is True
+    assert gate["repair_route"]["status"] == "direct-no-plan-ok"
+    assert gate["repair_route"]["routine_review_comment_repair"] is True
+    assert gate["changed_path_classification"]["scope_growth_detected"] is False
+    assert gate["changed_path_classification"]["ancillary_paths"] == [".agentic-workspace/memory/repo/current/routing-feedback.md"]
+    assert _start_workflow_sufficiency(payload)["decision"] == "enough-for-bounded-implementation"
+    assert payload["next"]["action"] != "Create or promote an active execplan before continuing implementation."
+
+
+def test_implement_allows_single_issue_followthrough_with_memory_feedback_note(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "tests/test_workspace_start_preflight_cli.py",
+                ".agentic-workspace/memory/repo/current/routing-feedback.md",
+                "--task",
+                "Do #1058 as well",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    gate = _start_planning_safety_gate(payload)
+    assert gate["status"] == "clear"
+    assert gate["decision"] == "direct-work-allowed"
+    assert gate["implementation_allowed"] is True
+    assert gate["repair_route"]["status"] == "direct-no-plan-ok"
+    assert gate["repair_route"]["single_issue_changed_path_followthrough"] is True
+    assert gate["changed_path_classification"]["ancillary_paths"] == [".agentic-workspace/memory/repo/current/routing-feedback.md"]
+    assert _start_workflow_sufficiency(payload)["decision"] == "enough-for-bounded-implementation"
+
+
 def test_implement_distinguishes_planning_recovery_from_mixed_wip(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
 
