@@ -12444,7 +12444,21 @@ def _looks_like_conceptual_slash_phrase(value: str) -> bool:
     if Path(value).suffix:
         return False
     parts = [part for part in value.split("/") if part]
-    return len(parts) > 1 and any(len(part) > 1 and part.isupper() for part in parts)
+    if len(parts) <= 1:
+        return False
+    if any(len(part) > 1 and part.isupper() for part in parts):
+        return True
+    conceptual_terms = {
+        "checks",
+        "contracts",
+        "docs",
+        "reports",
+        "schemas",
+        "skills",
+        "tests",
+        "tools",
+    }
+    return len(parts) >= 3 and all(part.lower() in conceptual_terms for part in parts)
 
 
 def _execplan_missing_reference_warnings(*, target_root: Path, plan_path: Path, record: dict[str, Any]) -> list[dict[str, str]]:

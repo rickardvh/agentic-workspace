@@ -1904,6 +1904,86 @@
       "reason": "Removed completed P1 candidates #1046 and #1050 from branch planning state while keeping #1035 open for non-start ordinary outputs.",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-18T15:39:47+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/fix-1056-prose-path-reference.plan.json",
+      "sha256": "d2de446ece6151dba2b636913a47c2175f9e56cf219c82dc205d13aca09140b4",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold fix-1056-prose-path-reference",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T18:41:35+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "930fb65b69c497c5591ce76193335a0fc93f4f933c6d7ffc1af248cfbaeced90",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold fix-1056-prose-path-reference",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T18:41:35+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/fix-1056-prose-path-reference.plan.json",
+      "sha256": "9e92def2d0b8d3072813e3fd33a28d09ce4083dd371ddaaca17d6d0400a11653",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T18:43:21+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "a13864d29ae61d3f7d60729f84dfae29c8dc8fcad6a93a5fbf0019fccbc11be5",
+      "command": "agentic-planning record-recovery",
+      "reason": "Marked #1056 implemented by the current branch and recorded dogfooding review before closeout.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-18T18:44:11+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/fix-1056-prose-path-reference.plan.json",
+      "sha256": "2dc13cb512814d1ae4cc85f7118b4dc87aae9420ee5fe288dd6166e59bc085cd",
+      "command": "agentic-planning record-recovery",
+      "reason": "Marked #1056 implemented by the current branch and recorded dogfooding review before closeout.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-18T18:44:11+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "3bbdfd9f69a3011a05a38b3d28122c6cfc204fd38fac9e3534bf2ea067e12e4f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan fix-1056-prose-path-reference",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T18:44:24+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/fix-1056-prose-path-reference.plan.json",
+      "sha256": "8a02957656b9f62faf9422204a6964dab75a0c095b3f0b7be98a11b4e4489297",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan fix-1056-prose-path-reference",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T18:44:24+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "3bbdfd9f69a3011a05a38b3d28122c6cfc204fd38fac9e3534bf2ea067e12e4f",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan fix-1056-prose-path-reference",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T18:44:24+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/fix-1056-prose-path-reference.plan.json",
+      "sha256": "8a02957656b9f62faf9422204a6964dab75a0c095b3f0b7be98a11b4e4489297",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan fix-1056-prose-path-reference",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T18:44:24+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/mutation-provenance.json",
+      "sha256": "f508f0c055f2300b37dca31635f2c24cba9454b99fa593a362c4ffab6cad0877",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan fix-1056-prose-path-reference",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T18:44:24+00:00"
     }
   ]
 }

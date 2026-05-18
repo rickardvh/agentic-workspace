@@ -1246,6 +1246,23 @@ def test_planning_summary_ignores_conceptual_slash_phrases_in_execplan_next_acti
     )
 
 
+def test_planning_summary_ignores_slash_separated_category_phrases_in_execplan_next_action(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(plan_path)
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["immediate_next_action"] = ["Harden focused tests/contracts/docs before closeout."]
+    installer_mod._write_execplan_record(record_path=plan_path, record=record)
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+    warnings = summary["planning_surface_health"]["warnings"]
+
+    assert not any(
+        warning["warning_class"] == "execplan_missing_file_reference" and "tests/contracts/docs" in warning["message"]
+        for warning in warnings
+    )
+
+
 def test_planning_summary_warns_when_non_prep_plan_keeps_prep_only_residue(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
