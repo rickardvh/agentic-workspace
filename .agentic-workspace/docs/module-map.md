@@ -34,13 +34,13 @@ Use Planning when work needs to survive a session, branch, handoff, or non-obvio
 Preferred command:
 
 ```bash
-agentic-workspace summary --target . --format json
+agentic-planning summary --target . --format json
 ```
 
 Compatibility alias:
 
 ```bash
-agentic-workspace summary --target . --format json
+agentic-planning summary --target . --format json
 ```
 
 ## Memory
@@ -57,13 +57,13 @@ Use Memory when future work should not rediscover a stable fact, constraint, or 
 Preferred command:
 
 ```bash
-agentic-workspace memory report --target . --format json
+agentic-memory report --target . --format json
 ```
 
 Compatibility alias:
 
 ```bash
-agentic-workspace memory report --target . --format json
+agentic-memory report --target . --format json
 ```
 
 ## Generated References

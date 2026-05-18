@@ -88,6 +88,26 @@ Config treatment
 Last seen
 2026-04-23 during issue #263 lane closeout
 
+### Friction: dogfooding-feedback-left-in-chat
+
+Observed recurrences
+- 2026-05-18: Dogfooding feedback was initially reported in chat without immediately creating/updating issues or routing improvement pressure through Memory; user corrected that this should be routine, not one-off, and that needing a chat correction is itself a procedural problem in AW.
+
+Keep now
+- Keep one compact recurrence because the behavior is a repeated workflow expectation and a procedural defect in normal AW use, not a single product fix.
+
+Promote when
+- Promote if another dogfooding report lacks explicit issue, Memory, planning, or dismissal routing.
+
+Most likely remediation
+- validation
+
+Config treatment
+- promote; proactive improvement posture means repeated dogfooding pressure should become durable routing evidence or stronger workflow support.
+
+Last seen
+2026-05-18 during dogfooding feedback routing after PR #1045
+
 ## Verification
 
 - Repeated friction can be preserved without opening an issue immediately.
@@ -101,4 +121,4 @@ Last seen
 
 ## Last confirmed
 
-2026-04-23 during issue #263 lane closeout
+2026-05-18 during dogfooding feedback routing after PR #1045

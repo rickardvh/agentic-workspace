@@ -1,0 +1,308 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Apply memory lifecycle upgrade",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Apply the safe memory lifecycle upgrade requested in chat on 2026-05-18.",
+    "hard_constraints": "Keep scope bounded to AW-managed memory/workspace payload surfaces and planning evidence for this upgrade.",
+    "agent_may_decide": "Run the lifecycle apply command, inspect generated changes, validate with doctor and focused inventory/planning checks, and route dogfooding residue.",
+    "escalate_when": "The upgrade wants to touch product source outside .agentic-workspace managed surfaces, requires review-blocked changes, or validation cannot prove the lifecycle state is healthy.",
+    "next_action": "Run the memory lifecycle upgrade apply command, then verify with doctor and changed-path checks.",
+    "proof_expectations": [
+      "uv run agentic-workspace doctor --target . --modules memory --format json",
+      "uv run agentic-workspace doctor --target . --modules planning --format json",
+      "uv run python scripts/check/check_structured_file_inventory.py --quiet-success"
+    ],
+    "touched_scope": [
+      ".agentic-workspace/memory/**",
+      ".agentic-workspace/WORKFLOW.md",
+      ".agentic-workspace/OWNERSHIP.toml",
+      ".agentic-workspace/docs/module-map.md",
+      ".agentic-workspace/skills/**",
+      ".agentic-workspace/planning/execplans/apply-memory-lifecycle-upgrade.plan.json",
+      ".agentic-workspace/planning/state.toml",
+      ".agentic-workspace/planning/mutation-provenance.json"
+    ],
+    "completion_criteria": [
+      "Memory lifecycle upgrade is applied.",
+      "Memory doctor no longer reports a safe memory lifecycle repair for this target.",
+      "Planning/check inventory validation remains clean.",
+      "Any dogfooding friction discovered during the upgrade is routed."
+    ],
+    "continuation_owner": "#1051 for wording/product friction; otherwise none for this requested apply task",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "Apply the memory lifecycle upgrade requested in chat on 2026-05-18."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Apply the safe memory lifecycle upgrade requested in chat on 2026-05-18.",
+      "constraints": "Keep scope bounded to AW-managed memory/workspace payload surfaces and planning evidence for this upgrade.",
+      "latitude": "Run the lifecycle apply command, inspect generated changes, validate with doctor and focused inventory/planning checks, and route dogfooding residue.",
+      "escalation": "The upgrade wants to touch product source outside .agentic-workspace managed surfaces, requires review-blocked changes, or validation cannot prove the lifecycle state is healthy."
+    },
+    "execution": {
+      "milestone": "apply-memory-lifecycle-upgrade",
+      "status": "active",
+      "next_step": "Run the memory lifecycle upgrade apply command, then verify with doctor and changed-path checks.",
+      "proof": "uv run agentic-workspace doctor --target . --modules memory --format json plus planning doctor and structured inventory check."
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/memory/**",
+        ".agentic-workspace/WORKFLOW.md",
+        ".agentic-workspace/OWNERSHIP.toml",
+        ".agentic-workspace/docs/module-map.md",
+        ".agentic-workspace/skills/**",
+        ".agentic-workspace/planning/execplans/apply-memory-lifecycle-upgrade.plan.json",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/mutation-provenance.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Apply the memory lifecycle upgrade requested in chat on 2026-05-18.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Apply the upgrade",
+    "inferred intended outcome": "Apply the safe memory lifecycle upgrade that was identified by memory doctor/dry-run.",
+    "chosen concrete what": "Run uv run agentic-workspace upgrade --target . --module memory --format json, inspect the managed-surface diff, and validate with doctor plus focused checks.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": ".agentic-workspace memory/workspace managed payload surfaces and the active planning artifact/state needed to record this bounded mutation.",
+    "max changed files": "Up to the dry-run affected managed surfaces plus this plan/state/provenance.",
+    "required validation commands": "uv run agentic-workspace doctor --target . --modules memory --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_structured_file_inventory.py --quiet-success.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Apply memory lifecycle upgrade, inspect managed-surface diff, validate memory/planning doctors and structured inventory, then close this bounded plan.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Apply the safe memory lifecycle upgrade requested in chat on 2026-05-18.",
+    "hard constraints": "Keep scope bounded to AW-managed memory/workspace payload surfaces and planning evidence for this upgrade.",
+    "agent may decide locally": "Run the lifecycle apply command, inspect generated changes, validate with doctor and focused inventory/planning checks, and route dogfooding residue.",
+    "escalate when": "The upgrade wants to touch product source outside .agentic-workspace managed surfaces, requires review-blocked changes, or validation cannot prove the lifecycle state is healthy."
+  },
+  "post_decomposition_delegation": {
+    "status": "pending",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "chat request: Apply the upgrade",
+      "label": "Apply memory lifecycle upgrade request",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "apply-memory-lifecycle-upgrade",
+    "status": "completed",
+    "scope": "Apply the memory lifecycle upgrade and validate the managed payload state.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Run uv run agentic-workspace upgrade --target . --module memory --format json."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/memory/**",
+    ".agentic-workspace/WORKFLOW.md",
+    ".agentic-workspace/OWNERSHIP.toml",
+    ".agentic-workspace/docs/module-map.md",
+    ".agentic-workspace/skills/**",
+    ".agentic-workspace/planning/execplans/apply-memory-lifecycle-upgrade.plan.json",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/mutation-provenance.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run agentic-workspace doctor --target . --modules memory --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Memory lifecycle upgrade is applied.",
+    "Memory doctor no longer reports a safe memory lifecycle repair for this target.",
+    "Planning/check inventory validation remains clean.",
+    "Any dogfooding friction discovered during the upgrade is routed."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Applied uv run agentic-workspace upgrade --target . --module memory --format json.",
+    "scope touched": "AW-managed memory/workspace payload surfaces plus planning evidence for this bounded upgrade.",
+    "changed surfaces": ".agentic-workspace managed memory/workspace payload files, memory templates, and planning provenance/state.",
+    "validations run": "uv run agentic-workspace doctor --target . --modules memory --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_structured_file_inventory.py --quiet-success.",
+    "result for continuation": "requested lifecycle upgrade complete",
+    "next step": "none for this bounded upgrade"
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes; changes are AW-managed lifecycle payload/planning evidence surfaces",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used uv run agentic-workspace entrypoint and lifecycle commands",
+    "misinterpretation risk": "low",
+    "follow-on decision": "#1051 already tracks the confusing upgrade wording dogfooding issue"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "pending",
+    "route skipped reason": "pending",
+    "expected savings": "pending",
+    "actual friction": "pending",
+    "proof result": "pending",
+    "quality concern": "pending",
+    "decomposition adjustment": "pending"
+  },
+  "proof_report": {
+    "validation proof": "memory doctor healthy; planning doctor healthy; structured file inventory passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "All proof commands completed with exit code 0 after applying the upgrade."
+  },
+  "intent_satisfaction": {
+    "original intent": "Apply the memory lifecycle upgrade requested in chat on 2026-05-18.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Memory lifecycle upgrade command applied successfully and subsequent memory doctor had health=healthy with no repair_actions.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "memory lifecycle upgrade applied",
+    "validation confirmed": "memory doctor, planning doctor, and structured inventory passed",
+    "follow-on routed to": "#1051 for upgrade wording friction",
+    "post-work posterity capture": "planning closeout plus #1051 dogfooding route",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "No continuation for this bounded upgrade; use #1051 for the already-routed wording friction."
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "The requested action was only to apply the upgrade, and the lifecycle and planning checks are clean afterward.",
+    "evidence carried forward": "Memory doctor health=healthy with no repair_actions; planning doctor health=healthy; structured inventory check passed.",
+    "reopen trigger": "A later doctor run reports new lifecycle repair/manual review actions."
+  },
+  "improvement_signal_review": {
+    "status": "completed",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [
+      "#1051 tracks confusion caused by calling managed payload sync an upgrade when the CLI is running from source."
+    ],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-18: Scaffolded by agentic-planning new-plan."
+  ]
+}

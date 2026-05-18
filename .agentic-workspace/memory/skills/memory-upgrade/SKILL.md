@@ -1,6 +1,6 @@
 ---
 name: memory-upgrade
-description: Upgrade the checked-in Memory scaffold for this repository. Use when the user asks to upgrade memory and the agent should run the workspace upgrade flow without broad repo exploration.
+description: Upgrade the checked-in agentic-memory scaffold for this repository. Use when the user asks to upgrade memory or upgrade agentic-memory and the agent should run the packaged upgrade flow with the recorded source, without broad repo exploration.
 ---
 
 # Memory Upgrade
@@ -14,8 +14,9 @@ When invoked, run the packaged upgrade flow for the current repo and stop there 
 ## Workflow
 
 1. Run the packaged upgrade flow for the current repository:
-   - prefer `agentic-workspace upgrade --target <repo> --modules memory`
-   - if the root workspace command cannot run, stop and report that package-local Memory debugging is required
+   - prefer `agentic-memory upgrade --target <repo>` when the CLI is already installed and on `PATH`
+   - otherwise, use the recorded source with a runner such as `uvx --from <recorded-source> agentic-memory upgrade --target <repo>`
+   - if `uvx` is unavailable, fall back to `pipx run --spec <recorded-source> agentic-memory upgrade --target <repo>`
 2. Let the tool resolve the installation source from `.agentic-workspace/memory/UPGRADE-SOURCE.toml`.
 3. Report manual-review items only when the tool leaves repo-owned files untouched.
 4. Verify with the packaged checks that are relevant to the repo.

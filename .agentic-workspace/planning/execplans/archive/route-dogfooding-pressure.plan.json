@@ -1,0 +1,313 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Route dogfooding pressure into issues and memory",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Route the recent dogfooding feedback into durable issues and Memory pressure.",
+    "hard_constraints": "Create or update narrow GitHub issues for actionable dogfooding findings and update only the relevant Memory routing note; do not implement product fixes in this slice.",
+    "agent_may_decide": "Choose issue-vs-memory ownership, avoid duplicate issues, and keep the memory update compact.",
+    "escalate_when": "A finding is ambiguous product direction, needs prioritization, or would require changing package behavior instead of routing evidence.",
+    "next_action": "Create or update GitHub issues for the concrete findings, update Memory routing guidance, refresh external intent, and validate memory/planning health.",
+    "proof_expectations": [
+      "gh issue list/search plus created/updated issue URLs",
+      "uv run agentic-workspace external-intent refresh-github --target . --state all --storage cache --format json",
+      "uv run agentic-workspace reconcile --format json",
+      "uv run agentic-workspace memory doctor --target . --format json",
+      "uv run agentic-workspace doctor --target . --modules planning --format json"
+    ],
+    "touched_scope": [
+      ".agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md",
+      ".agentic-workspace/memory/repo/manifest.toml",
+      ".agentic-workspace/planning/execplans/route-dogfooding-pressure.plan.json"
+    ],
+    "completion_criteria": [
+      "Concrete dogfooding findings are routed to existing or new GitHub issues.",
+      "The recurring instruction to route dogfooding pressure is captured in Memory.",
+      "External intent is refreshed and planning/memory health is checked."
+    ],
+    "continuation_owner": "created/updated issues and Memory routing note",
+    "closeout_decision": "archive-but-keep-lane-open"
+  },
+  "goal": [
+    "Create a bounded plan for Route dogfooding pressure into issues and memory."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Route the recent dogfooding feedback into durable issues and Memory pressure.",
+      "constraints": "Create or update narrow GitHub issues for actionable dogfooding findings and update only the relevant Memory routing note; do not implement product fixes in this slice.",
+      "latitude": "Choose issue-vs-memory ownership, avoid duplicate issues, and keep the memory update compact.",
+      "escalation": "Escalate when a finding is ambiguous product direction, needs prioritization, or would require changing package behavior instead of routing evidence."
+    },
+    "execution": {
+      "milestone": "route-dogfooding-pressure",
+      "status": "active",
+      "next_step": "Create/update issues, update Memory routing guidance, refresh external intent, and validate memory/planning health.",
+      "proof": "Created/updated issue URLs plus external-intent refresh/reconcile and memory/planning doctor outputs."
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md",
+        ".agentic-workspace/memory/repo/manifest.toml",
+        ".agentic-workspace/planning/execplans/route-dogfooding-pressure.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Make routine dogfooding feedback route into durable owners without waiting for a one-off reminder.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "created/updated GitHub issues and Memory routing note"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "created/updated GitHub issues",
+    "activation trigger": "When one of the routed issues is selected for implementation."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Dogfooding feedback from PR #1045 is now routed to issues, Memory, and planning evidence instead of remaining chat-only.",
+    "intentionally deferred": "Implementing the routed product/workflow fixes.",
+    "discovered implications": "Routine dogfooding reflection should include smoothness gaps, improvement suggestions, AW-help gaps, and unused-feature retrospection.",
+    "proof achieved now": "Issues #1046-#1050 created, #1035 updated, Memory notes updated, external intent refreshed, reconcile run, and memory/planning health checked.",
+    "validation still needed": "Memory doctor reports an unrelated safe memory lifecycle upgrade is available; not applied in this slice.",
+    "next likely slice": "Select one of #1046-#1050 or #1035 when ready."
+  },
+  "intent_interpretation": {
+    "literal request": "Create or update issues; always route routine dogfooding; use Memory for improvement pressure.",
+    "inferred intended outcome": "Turn the dogfooding report into durable follow-up owners and capture the repeated routing expectation.",
+    "chosen concrete what": "Create/update GitHub issues for actionable findings and update dogfooding Memory routing.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": ".agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md; .agentic-workspace/memory/repo/manifest.toml; .agentic-workspace/planning/execplans/route-dogfooding-pressure.plan.json; planning archive/provenance at closeout.",
+    "max changed files": "5",
+    "required validation commands": "uv run agentic-workspace memory doctor --target . --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace external-intent refresh-github --target . --state all --storage cache --format json; uv run agentic-workspace reconcile --format json",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue by creating/updating GitHub issues for dogfooding findings and updating the dogfooding feedback Memory note.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Route the recent dogfooding feedback into durable issues and Memory pressure.",
+    "hard constraints": "Create or update narrow GitHub issues for actionable dogfooding findings and update only the relevant Memory routing note; do not implement product fixes in this slice.",
+    "agent may decide locally": "Choose issue-vs-memory ownership, avoid duplicate issues, and keep the memory update compact.",
+    "escalate when": "A finding is ambiguous product direction, needs prioritization, or would require changing package behavior instead of routing evidence."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "Routing dogfooding feedback requires issue ownership judgment and a compact Memory update; delegation would add coordination overhead.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-18T10:08:30+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "route-dogfooding-pressure",
+    "status": "completed",
+    "scope": "Route dogfooding findings into durable owners.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Create/update GitHub issues and update dogfooding feedback Memory routing."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md",
+    ".agentic-workspace/memory/repo/manifest.toml"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run agentic-workspace memory doctor --target . --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run agentic-workspace external-intent refresh-github --target . --state all --storage cache --format json",
+    "uv run agentic-workspace reconcile --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Concrete dogfooding findings are routed to existing or new GitHub issues.",
+    "The recurring instruction to route dogfooding pressure is captured in Memory.",
+    "External intent is refreshed and planning/memory health is checked."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Created dogfooding follow-up issues, updated #1035 with the start over-routing finding, and captured the routine dogfooding reflection/routing contract in Memory.",
+    "scope touched": ".agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md; .agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md; GitHub issues #1035 and #1046-#1050",
+    "changed surfaces": "Memory runbooks, external issue tracker, planning state/provenance.",
+    "validations run": "uv run agentic-workspace external-intent refresh-github --target . --state all --storage cache --format json; uv run agentic-workspace reconcile --format json; uv run agentic-workspace memory report --target . --format json; uv run agentic-workspace doctor --target . --modules memory --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "result for continuation": "Follow-up work is owned by #1035 and #1046-#1050; Memory owns the recurring routine.",
+    "next step": "Archive this routing plan."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "passed with unrelated memory lifecycle upgrade noted",
+    "intent served": "yes",
+    "config compliance": "used planning-backed workflow, GitHub issue helper, external-intent refresh, and Memory routing",
+    "misinterpretation risk": "corrected by user clarification and captured in Memory",
+    "follow-on decision": "#1035 and #1046-#1050"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "Routing dogfooding feedback requires issue ownership judgment and a compact Memory update; delegation would add coordination overhead.",
+    "expected savings": "low",
+    "actual friction": "none",
+    "proof result": "passed",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "Created issues #1046-#1050; updated #1035; refreshed external intent; reconcile ran; memory report healthy; planning doctor healthy.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Issue URLs returned by gh; memory report health=healthy; planning doctor health=healthy; external intent refreshed at 2026-05-18T10:11:57+00:00."
+  },
+  "intent_satisfaction": {
+    "original intent": "Create or update issues and route routine dogfooding pressure through Memory where appropriate.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Created or updated issues for concrete findings and updated Memory to make the full dogfooding reflection/routing contract routine.",
+    "unsolved intent passed to": "#1035; #1046; #1047; #1048; #1049; #1050"
+  },
+  "execution_summary": {
+    "outcome delivered": "Dogfooding findings routed to issues and Memory; routine dogfooding reflection contract captured.",
+    "validation confirmed": "external-intent refresh/reconcile, memory report, planning doctor",
+    "follow-on routed to": "#1035; #1046; #1047; #1048; #1049; #1050",
+    "post-work posterity capture": "Memory runbooks updated and issue tracker refreshed.",
+    "knowledge promoted (Memory/Docs/Config)": ".agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md and recurring-friction-ledger.md",
+    "resume from": "No active routing work remains; select a routed issue when ready."
+  },
+  "durable_residue": {
+    "status": "memory",
+    "learned constraint": "Routine dogfooding feedback must include smoothness gaps, possible improvements even when things work, AW-help gaps, and unused-feature retrospection, with concrete signals routed.",
+    "motivation worth preserving": "Avoid chat-only dogfooding reports and make Memory a central improvement-pressure owner when appropriate.",
+    "canonical owner now": ".agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md",
+    "promotion trigger": "If this routine needs enforcement beyond Memory, promote to checks, closeout prompts, or product workflow issue #1050.",
+    "retention after promotion": "shrink"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "Memory runbook update and issue #1050",
+    "target scope": "none",
+    "proposed durable intent": "none",
+    "confidence": "low",
+    "needs review": false,
+    "owner surface": "none"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "The routing slice is complete, but the routed issues remain open for implementation.",
+    "evidence carried forward": "Issues #1046-#1050 created, #1035 updated, Memory runbooks updated, external intent refreshed and reconciled.",
+    "reopen trigger": "A dogfooding report again stops without issue/Memory/planning/dismissal routing."
+  },
+  "improvement_signal_review": {
+    "status": "routed",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [
+      "Dogfooding report initially stopped at chat-only reporting.",
+      "Planning provenance history preservation friction.",
+      "Proof selection missed schema reference docs for schema changes.",
+      "Small CI/doc repair slices have heavy scaffold closeout burden.",
+      "CI check inspection is noisy and post-push checks can race.",
+      "start can over-emphasize next roadmap lane for narrow follow-up tasks."
+    ],
+    "signals fixed": [
+      "Routine dogfooding reflection/routing contract captured in Memory."
+    ],
+    "signals routed": [
+      "#1050 for first-class routine dogfooding reflection routing.",
+      "#1046 for provenance history preservation.",
+      "#1047 for schema reference proof selection.",
+      "#1048 for compact repair-plan scaffolds.",
+      "#1049 for CI check inspection and rerun timing.",
+      "#1035 updated for start primary-decision over-routing."
+    ],
+    "signals dismissed": [
+      "No weak or duplicate signal dismissed; all concrete signals were routed."
+    ],
+    "next owner": "#1035; #1046; #1047; #1048; #1049; #1050"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        "One-off command transcript details discarded; issue and Memory owners carry durable signal."
+      ],
+      "continuation": [],
+      "memory": [
+        ".agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md captures the full routine reflection contract.",
+        ".agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md records the repeated chat-only dogfooding report failure mode."
+      ],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        "#1035 updated; #1046, #1047, #1048, #1049, and #1050 created."
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-05-18: Scaffolded by agentic-planning new-plan.",
+    "2026-05-18: Recorded delegation decision route=keep-local."
+  ]
+}

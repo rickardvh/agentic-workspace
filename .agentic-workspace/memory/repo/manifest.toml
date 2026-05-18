@@ -14,36 +14,11 @@ task_board_globs = ["TODO.md", "tasks/**", ".github/issues/**"]
 core_doc_globs = ["README.md", "docs/**/*.md", "CONTRIBUTING.md", ".github/**/*.md"]
 core_doc_exclude_globs = ["AGENTS.md", ".agentic-workspace/memory/repo/**/*.md", ".agentic-workspace/memory/**/*.md"]
 forbid_core_docs_depend_on_memory = false
-# Recommended audience conventions for planner-agnostic routing:
-# - agent_bootstrap
-# - human_operator
-# - shared_invariant
-# Existing repos may keep their current audience values; these labels are guidance only.
-# Optional improvement-pressure fields:
-# - summary = "compact routing or durable-fact summary"
-# - applies_to = ["paths, subsystems, commands, or surfaces this note covers"]
-# - use_when = ["when an agent should load or apply this note"]
-# - evidence = ["source files, checks, commits, or docs that ground this note"]
-# - memory_role = "durable_truth" | "improvement_signal"
-# - symptom_of = "workflow_friction" | "guidance_drift" | "missing_guardrail" | "architecture_friction" | "operator_complexity"
-# - preferred_remediation = "docs" | "skill" | "script" | "test" | "validation" | "refactor" | "code"
-# - improvement_candidate = true
-# - improvement_note = "short advisory hint"
-# - elimination_target = "shrink" | "promote" | "automate" | "refactor_away"
-# - promotion_target = "stronger canonical owner, if known"
-# - promotion_trigger = "signal that should move this note to the stronger owner"
-# - retention_after_promotion = "retain" | "shrink" | "stub" | "delete"
-# - retention_justification = "short reason the note should remain despite being an improvement signal"
-# - config_treatment = "promote" | "cleanup" | "retain" | "no_action"
-# - config_note = "short note describing which current config rule or posture shaped that treatment, or explicitly that current config does not materially change it"
-# Existing `routes_from`, `stale_when`, and `related_validations` fields also act as
-# the first evidence-backed trust anchors for durable notes: they say what currently
-# grounds the note and what should make it questionable or stale when repo evidence changes.
-# These fields are advisory only; existing manifests remain valid without them.
-# Optional structured durable facts live under [durable_facts."<id>"].
-# Use them only for compact facts that save rediscovery without requiring a prose note read.
-# Required fields: summary, owner, authority_class, route_keys or touched_surfaces,
-# evidence, promotion, demotion_or_expiry, and status.
+
+# Bootstrap payload policy:
+# - ship repo-memory structure, directory READMEs, machine-readable manifests, and starter templates;
+# - do not ship repo-specific notes, runbooks, decisions, or repo-local skills;
+# - target repositories create their own durable memory notes from local evidence.
 
 [notes.".agentic-workspace/memory/repo/index.md"]
 note_type = "routing"
@@ -53,386 +28,56 @@ audience = "human+agent"
 canonicality = "agent_only"
 task_relevance = "required"
 subsystems = ["memory-system"]
-surfaces = ["decision", "runtime", "api", "retrieval", "tests", "architecture"]
+surfaces = ["routing"]
 routes_from = ["AGENTS.md", ".agentic-workspace/memory/repo/**/*.md"]
 stale_when = [".agentic-workspace/memory/repo/**/*.md"]
 routing_only = true
 high_level = true
 
-[notes.".agentic-workspace/memory/repo/current/routing-feedback.md"]
-note_type = "routing-feedback"
-canonical_home = ".agentic-workspace/memory/repo/current/routing-feedback.md"
-authority = "advisory"
-audience = "agent"
-canonicality = "agent_only"
-task_relevance = "optional"
-subsystems = ["memory-system", "routing"]
-surfaces = []
-routes_from = []
-stale_when = []
-# Use this note only for compact routing calibration:
-# concrete missed-note or over-routing cases worth revisiting after manifest or index changes.
-
-[notes.".agentic-workspace/memory/repo/domains/example-runtime-boundary.md"]
+[notes.".agentic-workspace/memory/repo/domains/README.md"]
 note_type = "domain"
-canonical_home = ".agentic-workspace/memory/repo/domains/example-runtime-boundary.md"
+canonical_home = ".agentic-workspace/memory/repo/domains/README.md"
 authority = "advisory"
-audience = "human+agent"
-canonicality = "agent_only"
-task_relevance = "optional"
-subsystems = ["starter-example", "runtime"]
-surfaces = ["runtime", "architecture"]
-routes_from = [".agentic-workspace/memory/repo/index.md", "bootstrap/**/*.md"]
-stale_when = [".agentic-workspace/memory/repo/index.md", "bootstrap/**/*.md"]
-
-[notes.".agentic-workspace/memory/repo/invariants/example-response-contract.md"]
-note_type = "invariant"
-canonical_home = ".agentic-workspace/memory/repo/invariants/example-response-contract.md"
-authority = "advisory"
-audience = "human+agent"
-canonicality = "agent_only"
-task_relevance = "optional"
-subsystems = ["starter-example", "api"]
-surfaces = ["api", "tests"]
-routes_from = [".agentic-workspace/memory/repo/index.md", "bootstrap/**/*.md"]
-stale_when = [".agentic-workspace/memory/repo/index.md", "bootstrap/**/*.md"]
-
-[notes.".agentic-workspace/memory/repo/runbooks/example-release-check.md"]
-note_type = "runbook"
-canonical_home = ".agentic-workspace/memory/repo/runbooks/example-release-check.md"
-authority = "advisory"
-audience = "human+agent"
-canonicality = "agent_only"
-task_relevance = "optional"
-subsystems = ["starter-example", "operations"]
-surfaces = ["runtime", "tests"]
-routes_from = [".agentic-workspace/memory/repo/index.md", "bootstrap/**/*.md"]
-stale_when = [".agentic-workspace/memory/repo/index.md", "bootstrap/**/*.md"]
-
-[notes.".agentic-workspace/memory/repo/decisions/example-cli-selection.md"]
-note_type = "decision"
-canonical_home = ".agentic-workspace/memory/repo/decisions/example-cli-selection.md"
-authority = "advisory"
-audience = "human+agent"
-canonicality = "agent_only"
-task_relevance = "optional"
-subsystems = ["starter-example", "tooling"]
-surfaces = ["architecture"]
-routes_from = [".agentic-workspace/memory/repo/index.md", "bootstrap/**/*.md"]
-stale_when = [".agentic-workspace/memory/repo/index.md", "bootstrap/**/*.md"]
-
-[notes.".agentic-workspace/memory/repo/domains/memory-package-context.md"]
-note_type = "domain"
-canonical_home = ".agentic-workspace/memory/repo/domains/memory-package-context.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
-task_relevance = "optional"
-subsystems = ["memory-package", "orchestration"]
-surfaces = ["architecture", "runtime"]
-routes_from = ["packages/memory/**", "packages/memory/README.md"]
-stale_when = ["packages/memory/**"]
-memory_role = "durable_truth"
-
-[notes.".agentic-workspace/memory/repo/domains/planning-package-context.md"]
-note_type = "domain"
-canonical_home = ".agentic-workspace/memory/repo/domains/planning-package-context.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
-task_relevance = "optional"
-subsystems = ["planning-package", "orchestration"]
-surfaces = ["architecture", "decision"]
-routes_from = ["packages/planning/**", "packages/planning/README.md"]
-stale_when = ["packages/planning/**"]
-memory_role = "durable_truth"
-
-[notes.".agentic-workspace/memory/repo/domains/vague-prompt-domain-understanding.md"]
-note_type = "domain"
-canonical_home = ".agentic-workspace/memory/repo/domains/vague-prompt-domain-understanding.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
-task_relevance = "optional"
-subsystems = ["memory-system", "planning", "routing"]
-surfaces = ["decision", "routing"]
-routes_from = [
-  ".agentic-workspace/docs/compact-contract-profile.md",
-  ".agentic-workspace/docs/reporting-contract.md",
-  ".agentic-workspace/docs/ownership-authority-contract.md",
-  ".agentic-workspace/docs/proof-surfaces-contract.md",
-  ".agentic-workspace/docs/delegation-posture-contract.md",
-  "src/agentic_workspace/cli.py",
-]
-stale_when = [
-  ".agentic-workspace/docs/compact-contract-profile.md",
-  ".agentic-workspace/docs/reporting-contract.md",
-  ".agentic-workspace/docs/ownership-authority-contract.md",
-  ".agentic-workspace/docs/proof-surfaces-contract.md",
-  ".agentic-workspace/docs/delegation-posture-contract.md",
-  "src/agentic_workspace/cli.py",
-]
-memory_role = "durable_truth"
-
-[notes.".agentic-workspace/memory/repo/runbooks/package-context-inspection.md"]
-note_type = "runbook"
-canonical_home = ".agentic-workspace/memory/repo/runbooks/package-context-inspection.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
-task_relevance = "optional"
-subsystems = ["memory-package", "planning-package", "orchestration"]
-surfaces = ["runtime"]
-routes_from = ["packages/memory/**", "packages/planning/**"]
-stale_when = ["packages/memory/**", "packages/planning/**"]
-memory_role = "durable_truth"
-
-[notes.".agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md"]
-note_type = "runbook"
-canonical_home = ".agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
-task_relevance = "optional"
-subsystems = ["memory-system", "planning"]
-surfaces = ["review", "routing"]
-routes_from = [
-  "docs/maintainer/contributor-playbook.md",
-  "docs/maintainer/lazy-discovery-measurements.md",
-  ".agentic-workspace/memory/repo/runbooks/dogfooding-usage-ledger.md",
-]
-stale_when = [
-  "docs/maintainer/contributor-playbook.md",
-  "docs/maintainer/lazy-discovery-measurements.md",
-  ".agentic-workspace/memory/repo/runbooks/dogfooding-usage-ledger.md",
-]
-memory_role = "durable_truth"
-
-[notes.".agentic-workspace/memory/repo/runbooks/dogfooding-usage-ledger.md"]
-note_type = "runbook"
-canonical_home = ".agentic-workspace/memory/repo/runbooks/dogfooding-usage-ledger.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
-task_relevance = "optional"
-subsystems = ["memory-system", "planning"]
-surfaces = ["review", "architecture"]
-routes_from = [".agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md", "docs/maintainer/lazy-discovery-measurements.md"]
-stale_when = [".agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md", "docs/maintainer/lazy-discovery-measurements.md"]
-memory_role = "durable_truth"
-
-[notes.".agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md"]
-note_type = "runbook"
-canonical_home = ".agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
-task_relevance = "optional"
-subsystems = ["memory-system", "planning"]
-surfaces = ["review", "architecture", "tests"]
-routes_from = [
-  ".agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md",
-  ".agentic-workspace/memory/repo/runbooks/dogfooding-usage-ledger.md",
-  ".agentic-workspace/memory/repo/mistakes/recurring-failures.md",
-]
-stale_when = [
-  ".agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md",
-  ".agentic-workspace/memory/repo/runbooks/dogfooding-usage-ledger.md",
-  ".agentic-workspace/memory/repo/mistakes/recurring-failures.md",
-]
-memory_role = "improvement_signal"
-symptom_of = "workflow_friction"
-preferred_remediation = "validation"
-improvement_candidate = true
-improvement_note = "When the same friction class repeats, route it into planning or the strongest fitting docs, test, validation, automation, or code change instead of letting the signal reset."
-elimination_target = "promote"
-config_treatment = "promote"
-config_note = "Use current repo or local config to decide whether repeated friction should promote into planning or stronger enforcement instead of remaining weak evidence."
-
-[notes.".agentic-workspace/memory/repo/decisions/recurring-friction-ledger.md"]
-note_type = "decision"
-canonical_home = ".agentic-workspace/memory/repo/decisions/recurring-friction-ledger.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
-task_relevance = "optional"
-subsystems = ["memory-system", "planning"]
-surfaces = ["decision", "review"]
-routes_from = [
-  ".agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md",
-  ".agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md",
-  ".agentic-workspace/memory/repo/runbooks/dogfooding-usage-ledger.md",
-]
-stale_when = [
-  ".agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md",
-  ".agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md",
-  ".agentic-workspace/memory/repo/runbooks/dogfooding-usage-ledger.md",
-]
-memory_role = "durable_truth"
-
-[notes.".agentic-workspace/memory/repo/runbooks/vague-instruction-failure-capture.md"]
-note_type = "runbook"
-canonical_home = ".agentic-workspace/memory/repo/runbooks/vague-instruction-failure-capture.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
-task_relevance = "optional"
-subsystems = ["memory-system", "planning", "routing"]
-surfaces = ["review", "routing"]
-routes_from = [
-  ".agentic-workspace/docs/compact-contract-profile.md",
-  ".agentic-workspace/docs/reporting-contract.md",
-  ".agentic-workspace/docs/ownership-authority-contract.md",
-  ".agentic-workspace/docs/proof-surfaces-contract.md",
-  ".agentic-workspace/docs/delegation-posture-contract.md",
-  ".agentic-workspace/memory/repo/runbooks/dogfooding-usage-ledger.md",
-]
-stale_when = [
-  ".agentic-workspace/docs/compact-contract-profile.md",
-  ".agentic-workspace/docs/reporting-contract.md",
-  ".agentic-workspace/docs/ownership-authority-contract.md",
-  ".agentic-workspace/docs/proof-surfaces-contract.md",
-  ".agentic-workspace/docs/delegation-posture-contract.md",
-  ".agentic-workspace/memory/repo/runbooks/dogfooding-usage-ledger.md",
-]
-memory_role = "improvement_signal"
-symptom_of = "guidance_drift"
-preferred_remediation = "docs"
-improvement_candidate = true
-improvement_note = "If repeated vague prompts keep requiring the same clarification, capture the missing domain knowledge or promote it into canonical docs."
-elimination_target = "promote"
-config_treatment = "promote"
-config_note = "Current workspace posture still prefers promoting repeated clarification pressure into canonical docs rather than retaining a growing assistive note."
-
-[notes.".agentic-workspace/memory/repo/decisions/installed-system-consolidation-2026-04-05.md"]
-note_type = "decision"
-canonical_home = ".agentic-workspace/memory/repo/decisions/installed-system-consolidation-2026-04-05.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
-task_relevance = "optional"
-subsystems = ["orchestration", "validation"]
-surfaces = ["decision", "architecture"]
-routes_from = ["AGENTS.md", "README.md", "Makefile", ".github/workflows/**/*.yml"]
-stale_when = ["AGENTS.md", "README.md", "Makefile", ".github/workflows/**/*.yml"]
-memory_role = "durable_truth"
-
-[notes.".agentic-workspace/memory/repo/decisions/path-consolidation-agentic-workspace-2026-04-05.md"]
-note_type = "decision"
-canonical_home = ".agentic-workspace/memory/repo/decisions/path-consolidation-agentic-workspace-2026-04-05.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
-task_relevance = "optional"
-subsystems = ["orchestration", "packaging"]
-surfaces = ["decision", "architecture"]
-routes_from = ["packages/memory/**", "packages/planning/**", "README.md", "Makefile"]
-stale_when = ["packages/memory/**", "packages/planning/**", "README.md", "Makefile"]
-memory_role = "durable_truth"
-
-[notes.".agentic-workspace/memory/repo/decisions/foundation-stability-2026-04-05.md"]
-note_type = "decision"
-canonical_home = ".agentic-workspace/memory/repo/decisions/foundation-stability-2026-04-05.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
-task_relevance = "optional"
-subsystems = ["planning", "orchestration"]
-surfaces = ["decision", "architecture"]
-routes_from = [".agentic-workspace/planning/execplans/archive/**/*.md", "README.md", "AGENTS.md"]
-stale_when = [".agentic-workspace/planning/execplans/archive/**/*.md", "README.md", "AGENTS.md"]
-memory_role = "durable_truth"
-
-[notes.".agentic-workspace/memory/repo/decisions/workspace-orchestrator-ownership-ledger-2026-04-05.md"]
-note_type = "decision"
-canonical_home = ".agentic-workspace/memory/repo/decisions/workspace-orchestrator-ownership-ledger-2026-04-05.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
-task_relevance = "optional"
-subsystems = ["orchestration", "planning", "memory-system"]
-surfaces = ["decision", "architecture"]
-routes_from = ["AGENTS.md", ".agentic-workspace/**/*.md", ".agentic-workspace/OWNERSHIP.toml", "packages/**"]
-stale_when = ["AGENTS.md", ".agentic-workspace/**/*.md", ".agentic-workspace/OWNERSHIP.toml", "packages/**"]
-memory_role = "durable_truth"
-
-[notes.".agentic-workspace/memory/repo/decisions/mature-repo-jumpstart-seed-candidates-2026-04-14.md"]
-note_type = "decision"
-canonical_home = ".agentic-workspace/memory/repo/decisions/mature-repo-jumpstart-seed-candidates-2026-04-14.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
-task_relevance = "optional"
-subsystems = ["planning", "memory-system"]
-surfaces = ["decision", "architecture"]
-routes_from = [
-  ".agentic-workspace/docs/delegation-posture-contract.md",
-  ".agentic-workspace/docs/capability-aware-execution.md",
-  ".agentic-workspace/docs/reporting-contract.md",
-]
-stale_when = [
-  ".agentic-workspace/docs/delegation-posture-contract.md",
-  ".agentic-workspace/docs/capability-aware-execution.md",
-  ".agentic-workspace/docs/reporting-contract.md",
-]
-memory_role = "durable_truth"
-
-[notes.".agentic-workspace/memory/WORKFLOW.md"]
-note_type = "workflow-policy"
-canonical_home = ".agentic-workspace/memory/WORKFLOW.md"
-authority = "canonical"
 audience = "human+agent"
 canonicality = "agent_only"
 task_relevance = "optional"
 subsystems = ["memory-system"]
-surfaces = []
-routes_from = ["AGENTS.md", ".agentic-workspace/memory/repo/index.md", ".agentic-workspace/memory/repo/manifest.toml", ".agentic-workspace/memory/**/*.md"]
-stale_when = ["AGENTS.md", ".agentic-workspace/memory/repo/index.md", ".agentic-workspace/memory/repo/manifest.toml", "bootstrap/AGENTS.md"]
-related_validations = ["agentic-workspace doctor --target ./repo --format json"]
-memory_role = "durable_truth"
+surfaces = ["architecture", "routing"]
+routes_from = [".agentic-workspace/memory/repo/index.md"]
+stale_when = [".agentic-workspace/memory/repo/index.md"]
 
-[notes.".agentic-workspace/memory/VERSION.md"]
-note_type = "version-marker"
-canonical_home = ".agentic-workspace/memory/VERSION.md"
-authority = "canonical"
-audience = "agent"
-canonicality = "agent_only"
-task_relevance = "optional"
-subsystems = ["installer", "payload"]
-surfaces = ["api"]
-routes_from = ["src/**/*.py", "pyproject.toml"]
-stale_when = ["src/**/*.py", "pyproject.toml", "bootstrap/.agentic-workspace/memory/VERSION.md"]
-
-[notes.".agentic-workspace/memory/repo/mistakes/recurring-failures.md"]
-note_type = "recurring-failures"
-canonical_home = ".agentic-workspace/memory/repo/mistakes/recurring-failures.md"
-authority = "canonical"
+[notes.".agentic-workspace/memory/repo/invariants/README.md"]
+note_type = "invariant"
+canonical_home = ".agentic-workspace/memory/repo/invariants/README.md"
+authority = "advisory"
 audience = "human+agent"
 canonicality = "agent_only"
 task_relevance = "optional"
-subsystems = ["memory-system", "planning"]
-surfaces = ["tests", "architecture", "planning-summary"]
-routes_from = ["tests/**/*.py", "scripts/check/**/*.py", ".agentic-workspace/planning/state.toml"]
-stale_when = ["tests/**/*.py", "scripts/check/**/*.py", "packages/planning/src/repo_planning_bootstrap/installer.py"]
-related_validations = ["agentic-workspace doctor --target ./repo --format json"]
-memory_role = "improvement_signal"
-symptom_of = "missing_guardrail"
-preferred_remediation = "test"
-improvement_candidate = true
-improvement_note = "Prefer regression tests, validation, or compact readiness output before growing this note."
-elimination_target = "shrink"
-config_treatment = "promote"
-config_note = "Current repo posture favors executable planning guardrails for broad work before retaining this as long-term passive memory."
+subsystems = ["memory-system"]
+surfaces = ["contracts", "architecture"]
+routes_from = [".agentic-workspace/memory/repo/index.md"]
+stale_when = [".agentic-workspace/memory/repo/index.md"]
 
-[durable_facts."memory-owner-boundary"]
-summary = "Memory owns durable rediscovery-saving repo facts, not active sequencing, backlog state, or workflow policy."
-owner = "memory"
-authority_class = "canonical"
-route_keys = ["memory", "planning", "workflow-policy"]
-touched_surfaces = [".agentic-workspace/memory/**", ".agentic-workspace/planning/**", "AGENTS.md"]
-evidence = [".agentic-workspace/memory/WORKFLOW.md", ".agentic-workspace/memory/repo/index.md", ".agentic-workspace/memory/repo/manifest.toml"]
-promotion = "Promote to canonical repo docs if this boundary must guide humans outside Memory routing."
-demotion_or_expiry = "Remove or demote if the boundary stops reducing routed note reads or becomes enforced elsewhere."
-status = "active"
-config_treatment = "promote"
-config_note = "Current repo and local config both favor stronger executable guardrails over leaving recurring failure prevention as passive note residue."
+[notes.".agentic-workspace/memory/repo/runbooks/README.md"]
+note_type = "runbook"
+canonical_home = ".agentic-workspace/memory/repo/runbooks/README.md"
+authority = "advisory"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["memory-system"]
+surfaces = ["operations", "routing"]
+routes_from = [".agentic-workspace/memory/repo/index.md"]
+stale_when = [".agentic-workspace/memory/repo/index.md"]
+
+[notes.".agentic-workspace/memory/repo/decisions/README.md"]
+note_type = "decision"
+canonical_home = ".agentic-workspace/memory/repo/decisions/README.md"
+authority = "advisory"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["memory-system"]
+surfaces = ["architecture", "decision"]
+routes_from = [".agentic-workspace/memory/repo/index.md"]
+stale_when = [".agentic-workspace/memory/repo/index.md"]
