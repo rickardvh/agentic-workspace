@@ -2220,6 +2220,7 @@ export const generatedCommandPackage = {
             "name": "task"
           },
           {
+            "action": "extend",
             "default": [],
             "flags": [
               "--changed"

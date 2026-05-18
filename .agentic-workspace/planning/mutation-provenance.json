@@ -1712,6 +1712,70 @@
       "reason": "final proof wording cleanup after selected proof passed",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-18T14:13:47+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/issue-1052-1053-dogfood-fixes.plan.json",
+      "sha256": "7086c921f856045141a78acc9df43e52a075d19f0685f6835260b3a631d8e961",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold issue-1052-1053-dogfood-fixes",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T14:56:17+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "6c3364b9df7b583c1fd639e082bc4413cc61e0eb585ae1bd609b21fcc277d41e",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold issue-1052-1053-dogfood-fixes",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T14:56:17+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/issue-1052-1053-dogfood-fixes.plan.json",
+      "sha256": "865585a5a764e486e03e998d32f93f542793e35c439fad6122a03cf671aa8c08",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T15:08:59+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "25502734785b224e4307760581895e29da95d27614387361ed3fa8bb832d790d",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan issue-1052-1053-dogfood-fixes",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T15:12:03+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/issue-1052-1053-dogfood-fixes.plan.json",
+      "sha256": "a9d4e83950bc611c04ea48fe46d62ed4b0cce4f2d0baa0c9e2b3b463cb9621a3",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan issue-1052-1053-dogfood-fixes",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T15:12:03+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "25502734785b224e4307760581895e29da95d27614387361ed3fa8bb832d790d",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan issue-1052-1053-dogfood-fixes",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T15:12:03+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/issue-1052-1053-dogfood-fixes.plan.json",
+      "sha256": "a9d4e83950bc611c04ea48fe46d62ed4b0cce4f2d0baa0c9e2b3b463cb9621a3",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan issue-1052-1053-dogfood-fixes",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T15:12:03+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/mutation-provenance.json",
+      "sha256": "9551e246f5d61b284bd84303f72f9650dbbbe06f8375a9c6851e53fc596b1afb",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan issue-1052-1053-dogfood-fixes",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T15:12:03+00:00"
     }
   ]
 }

@@ -73,6 +73,7 @@
           "name": "task"
         },
         {
+          "action": "extend",
           "default": [],
           "flags": [
             "--changed"
@@ -1302,6 +1303,7 @@
           "name": "target"
         },
         {
+          "action": "extend",
           "default": [],
           "flags": [
             "--changed"
@@ -1363,6 +1365,7 @@
           "name": "target"
         },
         {
+          "action": "extend",
           "default": [],
           "flags": [
             "--changed"
@@ -1491,6 +1494,7 @@
           "name": "current"
         },
         {
+          "action": "extend",
           "default": [],
           "flags": [
             "--changed"

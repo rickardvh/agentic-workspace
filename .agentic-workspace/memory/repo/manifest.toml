@@ -81,3 +81,15 @@ subsystems = ["memory-system"]
 surfaces = ["architecture", "decision"]
 routes_from = [".agentic-workspace/memory/repo/index.md"]
 stale_when = [".agentic-workspace/memory/repo/index.md"]
+
+[notes.".agentic-workspace/memory/repo/current/routing-feedback.md"]
+note_type = "current"
+canonical_home = ".agentic-workspace/memory/repo/current/routing-feedback.md"
+authority = "advisory"
+audience = "agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["memory-system", "workspace"]
+surfaces = ["routing", "dogfooding"]
+routes_from = [".agentic-workspace/memory/repo/index.md", ".agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md"]
+stale_when = [".agentic-workspace/memory/repo/index.md", ".agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md"]

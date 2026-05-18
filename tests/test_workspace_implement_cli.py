@@ -4,10 +4,9 @@ from __future__ import annotations
 from tests.workspace_cli_support import *
 
 
-def test_implement_command_returns_bounded_context_and_boundary_warnings(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
+def _write_empty_planning_state(target_root: Path) -> None:
     _write(
-        tmp_path / ".agentic-workspace/planning/state.toml",
+        target_root / ".agentic-workspace/planning/state.toml",
         """
 kind = "agentic-planning-state"
 schema_version = "planning-state/v1"
@@ -21,6 +20,11 @@ lanes = []
 candidates = []
 """,
     )
+
+
+def test_implement_command_returns_bounded_context_and_boundary_warnings(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
 
     assert (
         cli.main(
@@ -89,11 +93,17 @@ candidates = []
     assert payload["planning_safety_gate"]["decision"] == "planning-escalation-required"
 
 
-def test_implement_tiny_profile_returns_next_decision_without_diagnostics(capsys) -> None:
+def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "Makefile", "test-workspace:\n\tpytest tests\n\nlint-workspace:\n\truff check src tests\n")
+
     assert (
         cli.main(
             [
                 "implement",
+                "--target",
+                str(tmp_path),
                 "--changed",
                 "generated/workspace/python/cli.py",
                 "--task",
@@ -142,6 +152,39 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(capsys
     assert "durable_intent" not in payload
     assert "inference_limits" not in payload
     assert len(encoded) < 14500
+
+
+def test_implement_accumulates_repeated_changed_flags(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "--changed",
+                "tests/test_workspace_implement_cli.py",
+                "--verbose",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["changed_paths"] == [
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "tests/test_workspace_implement_cli.py",
+    ]
+    assert payload["proof"]["changed_paths"] == [
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "tests/test_workspace_implement_cli.py",
+    ]
 
 
 def test_implement_package_cli_edits_select_generated_command_package_gate(capsys) -> None:
@@ -261,8 +304,11 @@ def test_implement_task_routes_broad_issue_ingestion_to_planning(tmp_path: Path,
     assert payload["handoff_requirements"]["stop_when"][0] == ("task routing status is needs-planning for broad external-work ingestion")
 
 
-def test_implement_task_allows_narrow_single_issue_context(capsys) -> None:
-    assert cli.main(["implement", "--task", "implement issue #424", "--verbose", "--format", "json"]) == 0
+def test_implement_task_allows_narrow_single_issue_context(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+
+    assert cli.main(["implement", "--target", str(tmp_path), "--task", "implement issue #424", "--verbose", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["task_routing"]["status"] == "narrow-external-work"
@@ -270,6 +316,59 @@ def test_implement_task_allows_narrow_single_issue_context(capsys) -> None:
     assert payload["task_routing"]["broad_external_work"] is False
     assert payload["next_allowed_action"] == "Create or promote an active execplan before continuing implementation."
     assert payload["planning_safety_gate"]["status"] == "blocked"
+
+
+def test_implement_with_explicit_target_ignores_checkout_active_plan(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    active_checkout = tmp_path / "active-checkout"
+    isolated_target = tmp_path / "isolated-target"
+    active_checkout.mkdir()
+    isolated_target.mkdir()
+    _init_git_repo(active_checkout)
+    _init_git_repo(isolated_target)
+    _write_empty_planning_state(isolated_target)
+    _write(
+        active_checkout / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "live-plan", status = "active", maturity = "active", surface = ".agentic-workspace/planning/execplans/live-plan.plan.json" }
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write(
+        active_checkout / ".agentic-workspace/planning/execplans/live-plan.plan.json",
+        '{"schema_version":"execplan/v1","id":"live-plan","status":"active"}\n',
+    )
+    monkeypatch.chdir(active_checkout)
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(isolated_target),
+                "--task",
+                "implement issue #424",
+                "--verbose",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["task_routing"]["status"] == "narrow-external-work"
+    assert payload["planning_safety_gate"]["status"] == "blocked"
+    assert payload["next_allowed_action"] == "Create or promote an active execplan before continuing implementation."
 
 
 def test_implement_task_specific_acceptance_warns_on_objective_drift(tmp_path: Path, capsys) -> None:

@@ -135,6 +135,34 @@ def test_proof_changed_selector_returns_path_based_validation_lane(capsys) -> No
     assert any(item.startswith("Relevant durable intent may add proof") for item in answer["escalate_when"])
 
 
+def test_proof_accumulates_repeated_changed_flags(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "--changed",
+                "tests/test_workspace_proof_cli.py",
+                "--verbose",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["answer"]["changed_paths"] == [
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "tests/test_workspace_proof_cli.py",
+    ]
+
+
 def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
     assert (
         cli.main(
