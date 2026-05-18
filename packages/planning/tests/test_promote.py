@@ -830,6 +830,58 @@ def test_planning_cli_new_plan_creates_valid_active_scaffold(tmp_path: Path, cap
     assert summary["execplans"]["active_execplans"][0]["path"].endswith("plan-alpha.plan.json")
 
 
+def test_planning_cli_mutation_provenance_preserves_prior_entries(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    provenance_path = tmp_path / ".agentic-workspace" / "planning" / "mutation-provenance.json"
+    provenance_path.write_text(
+        json.dumps(
+            {
+                "kind": "planning-mutation-provenance/v1",
+                "entries": [
+                    {
+                        "path": f".agentic-workspace/planning/execplans/old-{index}.plan.json",
+                        "sha256": f"sha-{index}",
+                        "command": "agentic-planning archive-plan",
+                        "reason": "historical mutation",
+                        "mode": "cli-mutation",
+                        "recorded_at": "2026-05-01T00:00:00+00:00",
+                    }
+                    for index in range(205)
+                ],
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    assert (
+        planning_cli.main(
+            [
+                "new-plan",
+                "--id",
+                "Plan Alpha",
+                "--title",
+                "Plan Alpha",
+                "--target",
+                str(tmp_path),
+                "--activate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    payload = json.loads(provenance_path.read_text(encoding="utf-8"))
+    paths = [entry["path"] for entry in payload["entries"]]
+    assert ".agentic-workspace/planning/execplans/old-0.plan.json" in paths
+    assert ".agentic-workspace/planning/execplans/old-204.plan.json" in paths
+    assert ".agentic-workspace/planning/execplans/plan-alpha.plan.json" in paths
+    assert len(payload["entries"]) >= 207
+
+
 def test_planning_cli_new_plan_activate_refuses_implicit_active_switch(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
     _write(

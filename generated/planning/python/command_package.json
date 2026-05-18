@@ -2214,6 +2214,7 @@
             "name": "task"
           },
           {
+            "action": "extend",
             "default": [],
             "flags": [
               "--changed"

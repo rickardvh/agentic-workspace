@@ -1253,6 +1253,17 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
                     "do not validate generated JSON with ad hoc shell snippets; use summary or package checks",
                 ],
             },
+            "narrow_repair_route": {
+                "use_when": "CI, docs, schema-reference, proof, or tiny validation repair has one or two touched surfaces, no parent-intent change, and obvious proof.",
+                "preferred_shape": "direct/no-plan with changed-path proof selection",
+                "proof_first_command": f"agentic-workspace proof{target_arg} --changed <paths> --format json",
+                "create_plan_when": [
+                    "scope grows beyond the narrow repair",
+                    "the repair changes parent intent or roadmap state",
+                    "continuation must survive beyond the PR or CI result",
+                ],
+                "closeout_rule": "Record exact proof and owner when a plan exists; do not clean broad scaffold placeholders for work that should have stayed direct.",
+            },
             "after_write": summary_command,
         },
         "rules": [
@@ -2430,6 +2441,22 @@ def _repair_recovery_taxonomy_payload() -> dict[str, Any]:
             "repeated": "ask whether the wrong path can be removed, merged, scaffolded, or made obvious",
             "human_confirmed": "route to issue, planning, config/check, docs, or agent aid with provenance",
             "preferred_remedies": ["remove_or_merge_wrong_path", "affordance", "scaffold", "writer_helper", "agent_aid", "regression_test"],
+        },
+        "pr_check_inspection": {
+            "status": "source-checkout-maintainer-guidance",
+            "default_summary_fields": [
+                "failing check or job name",
+                "failing command or inferred local reproduction command",
+                "exact error lines",
+                "run URL",
+                "artifact or log pointer for deeper detail",
+            ],
+            "verbose_only": ["unrelated passing-job tail content", "full mixed log snippets"],
+            "post_push_attach_delay": {
+                "state": "pending_attach",
+                "rule": "Immediately missing checks after push are neither success nor failure; use bounded retry/backoff before asking for manual sleep/retry.",
+            },
+            "surface_boundary": "Treat gh-fix-ci helpers as source-checkout maintainer tooling unless a target repo explicitly installs or advertises a reusable diagnostic.",
         },
         "operational_affordance_rule": "Repair output should show current fault summary, one primary safe next action when possible, resolved command, risk, dry-run/apply distinction, proof_after, and do_not guidance.",
     }
@@ -4536,16 +4563,20 @@ def _module_safe_lifecycle_repair_action(*, report: dict[str, Any], target_root:
         "severity": "warning",
         "owner": module,
         "safe_to_apply": True,
-        "risk": "low; applies safe module-managed lifecycle changes reported by doctor",
+        "risk": "low; syncs target-repo module-managed payload surfaces reported by doctor; it does not upgrade the Python package being executed",
         "command": command,
         "run": command,
         "dry_run": dry_run,
         "proof_after": proof_after,
         "affected_surfaces": affected_surfaces,
-        "current_fault_summary": f"{module} doctor found safe module-managed lifecycle changes that are not applied.",
+        "current_fault_summary": (
+            f"{module} doctor found target-repo managed payload surfaces that are stale relative to the current module payload. "
+            "This is a payload sync, not a Python package upgrade."
+        ),
         "do_not": [
             "Do not hand-author module-managed payload files when module upgrade can recreate them.",
             "Do not treat safe module payload repairs as proof that unrelated repo-owned content may be overwritten.",
+            "Do not interpret this as dependency or executable-source drift when invoked_cli_identity.source_class is source-checkout.",
         ],
         "recurrence": "first_seen",
         "improvement_signal_candidate": {
@@ -9790,6 +9821,84 @@ def _is_completion_status_task(task_text: str | None) -> bool:
     )
 
 
+def _is_routine_issue_intake_task(task_text: str | None) -> bool:
+    normalized = " ".join((task_text or "").lower().split())
+    if not normalized:
+        return False
+    issue_terms = ("issue", "issues", "github", "tracker", "ticket", "tickets", "external work", "external-work")
+    intake_terms = (
+        "ingest",
+        "intake",
+        "import",
+        "sync",
+        "triage",
+        "prioritise",
+        "prioritize",
+        "prioritization",
+        "prioritisation",
+        "label",
+        "labels",
+    )
+    implementation_terms = (
+        "implement",
+        "fix",
+        "build",
+        "code",
+        "change product source",
+        "open a pr",
+        "create a pr",
+        "pull request",
+        "merge",
+    )
+    return (
+        any((term in normalized for term in issue_terms))
+        and any((term in normalized for term in intake_terms))
+        and not any((term in normalized for term in implementation_terms))
+    )
+
+
+def _task_requests_roadmap_or_decomposition(task_text: str | None) -> bool:
+    normalized = " ".join((task_text or "").lower().split())
+    if not normalized:
+        return False
+    route_terms = (
+        "roadmap",
+        "next milestone",
+        "next lane",
+        "promote",
+        "promotion",
+        "promote-to-plan",
+        "continue the lane",
+        "continue lane",
+        "continue the epic",
+        "continue epic",
+        "epic",
+        "lane",
+        "decomposition",
+        "decompose",
+        "decomposed",
+        "delegate",
+        "delegation",
+        "worker",
+        "handoff",
+    )
+    return any((term in normalized for term in route_terms))
+
+
+def _is_narrow_repair_task(task_text: str | None) -> bool:
+    normalized = " ".join((task_text or "").lower().split())
+    if not normalized:
+        return False
+    repair_terms = ("fix ci", "ci check", "ci checks", "failing check", "repair", "rerun", "docs fix", "doc fix")
+    narrow_terms = ("narrow", "small", "tiny", "schema-reference", "schema reference", "proof", "validation", "docs", "ci")
+    broad_terms = ("epic", "lane", "roadmap", "architecture", "decompose", "multiple milestones")
+    return (
+        any((term in normalized for term in repair_terms))
+        and any((term in normalized for term in narrow_terms))
+        and not any((term in normalized for term in broad_terms))
+    )
+
+
 def _completion_closeout_inspection_payload(*, target_root: Path, config: WorkspaceConfig, task_text: str | None) -> dict[str, Any]:
     command = _command_with_cli_invoke(
         command="agentic-workspace report --target ./repo --section closeout_trust --format json", cli_invoke=config.cli_invoke
@@ -12144,14 +12253,29 @@ def _planning_safety_gate_payload(
     issue_refs = sorted(set(re.findall("#\\d+", task_text or "")))
     normalized_task = " ".join((task_text or "").lower().split())
     completion_status_question = _is_completion_status_task(task_text) and (not changed_paths)
-    high_assurance_requires_plan = proof_burden == "high" and work_shape not in {"bounded", "narrow"}
-    broad_or_high_assurance = not completion_status_question and (
-        work_shape in {"lane", "epic"}
-        or high_assurance_requires_plan
-        or len(issue_refs) > 1
-        or any((term in normalized_task for term in ("epic", "high-assurance", "dogfooding issues")))
+    routine_issue_intake = _is_routine_issue_intake_task(task_text) and (not changed_paths)
+    narrow_repair_task = _is_narrow_repair_task(task_text)
+    roadmap_or_decomposition_requested = _task_requests_roadmap_or_decomposition(task_text)
+    high_assurance_requires_plan = proof_burden == "high" and not narrow_repair_task and not routine_issue_intake
+    external_implementation_without_changed_paths = (
+        bool(issue_refs)
+        and not changed_paths
+        and any((term in normalized_task for term in ("implement", "fix", "build", "code")))
+        and not routine_issue_intake
+        and not narrow_repair_task
     )
-    decomposition_pressure = decomposition_status in {"present", "available-without-active-planning"}
+    broad_or_high_assurance = not completion_status_question and (
+        (work_shape in {"lane", "epic"} and not routine_issue_intake and not narrow_repair_task)
+        or high_assurance_requires_plan
+        or external_implementation_without_changed_paths
+        or (len(issue_refs) > 1 and not routine_issue_intake and not narrow_repair_task)
+        or (not narrow_repair_task and any((term in normalized_task for term in ("epic", "high-assurance", "dogfooding issues"))))
+    )
+    decomposition_pressure = (
+        decomposition_status in {"present", "available-without-active-planning"}
+        and roadmap_or_decomposition_requested
+        and work_shape in {"lane", "epic"}
+    )
     promotion_command = _planning_safety_promotion_command(
         config=config,
         decomposition_delegation=decomposition_delegation if isinstance(decomposition_delegation, dict) else {},
@@ -12241,6 +12365,17 @@ def _planning_safety_gate_payload(
         "work_shape": work_shape or "unknown",
         "proof_burden": proof_burden or "unknown",
         "issue_refs": issue_refs,
+        "repair_route": {
+            "status": "direct-no-plan-ok" if narrow_repair_task and workflow_sufficient else "not-applicable",
+            "fit_criteria": [
+                "CI, docs, schema-reference, proof, or tiny validation repair",
+                "one or two touched surfaces",
+                "no parent intent change",
+                "obvious proof command",
+                "no durable continuation except the PR or CI result",
+            ],
+            "rule": "Narrow repair work can stay direct when changed-path proof is obvious; create a normal execplan if scope grows or parent intent changes.",
+        },
         "decomposition": {"status": decomposition_status or "unknown", "candidate_count": len(candidates), "candidates": candidates},
         "changed_path_classification": path_classification,
         "promotion_command": promotion_command,
@@ -19449,6 +19584,44 @@ def _proof_selection_for_changed_paths(
             }
         )
     selected_lanes.extend(subsystem_lanes)
+    schema_reference_paths = [
+        path
+        for path in changed_paths
+        if path.startswith("src/agentic_workspace/contracts/schemas/") and path.endswith((".json", ".schema.json"))
+    ]
+    planning_schema_reference_paths = [
+        path
+        for path in changed_paths
+        if path.startswith("packages/planning/src/repo_planning_bootstrap/contracts/schemas/") and path.endswith((".json", ".schema.json"))
+    ]
+    if schema_reference_paths:
+        selected_lanes.append(
+            {
+                "id": "schema_reference_docs",
+                "when": "changed workspace contract schema can affect generated docs/reference/*.md output",
+                "enough_proof": ["make schema-reference-docs"],
+                "proof_kind": "surface-check",
+                "proof_responsibility": "local-closeout",
+                "execution_mode": "parallel-ok",
+                "ci_relationship": "CI may repeat schema reference checks; local proof should catch stale generated reference docs before PR.",
+                "recovery_signal": "Schema metadata changes should prove generated reference docs directly instead of waiting for broad CI wrappers to teach the missing rule.",
+                "matched_paths": schema_reference_paths,
+            }
+        )
+    if planning_schema_reference_paths:
+        selected_lanes.append(
+            {
+                "id": "planning_schema_reference_docs",
+                "when": "changed Planning package schema can affect package schema reference or check-planning freshness",
+                "enough_proof": ["make check-planning"],
+                "proof_kind": "surface-check",
+                "proof_responsibility": "local-closeout",
+                "execution_mode": "parallel-ok",
+                "ci_relationship": "Planning CI may repeat package checks; local proof should include the package wrapper that owns schema-reference freshness.",
+                "recovery_signal": "Planning package schema changes should not rely on unrelated tests alone; use the package wrapper that owns reference-doc freshness.",
+                "matched_paths": planning_schema_reference_paths,
+            }
+        )
     planning_assurance = _active_planning_assurance_for_proof(target_root=target_root)
     configured_profiles = {profile.id: profile for profile in (config.assurance.proof_profiles if config is not None else ())}
     concern_lanes: list[dict[str, Any]] = []
@@ -19707,6 +19880,20 @@ def _proof_selection_for_changed_paths(
                 "emit executable commands only when the target exposes the required capability",
                 "emit manual verification instructions when executable proof is unavailable",
             ],
+            "anti_rationalization_gates": [
+                {
+                    "red_flag": "Tests passed, so completion is claimable.",
+                    "use_instead": "Record proof execution evidence, reconcile requested intent, and use completion/closeout options before claiming done.",
+                },
+                {
+                    "red_flag": "The local slice works, so the parent lane or epic is closed.",
+                    "use_instead": "Keep parent intent open unless closeout fields and continuation owner explicitly prove it is satisfied.",
+                },
+                {
+                    "red_flag": "A skill wording change is only prose.",
+                    "use_instead": "Name the behavior the skill steers and run the CLI or contract proof that shows routing, allowed actions, or completion claims still behave correctly.",
+                },
+            ],
         },
         "target_proof_capabilities": target_capabilities,
         "learned_route_hints": learned_route_hints,
@@ -19731,6 +19918,7 @@ def _proof_selection_for_changed_paths(
                 "recovery_signal": lane.get("recovery_signal", ""),
                 **({"proof_profile": lane["proof_profile"]} if lane.get("proof_profile") else {}),
                 **({"review_aids": lane["review_aids"]} if lane.get("review_aids") else {}),
+                **({"matched_paths": lane["matched_paths"]} if lane.get("matched_paths") else {}),
                 **({"subsystem": lane["subsystem"]} if lane.get("subsystem") else {}),
                 **({"weak_agent_safe_routing": lane["weak_agent_safe_routing"]} if lane.get("weak_agent_safe_routing") else {}),
             }
@@ -19851,6 +20039,9 @@ def _proof_selection_for_changed_paths(
     direct_cli_review = _direct_cli_edit_review_for_changed_paths(changed_paths)
     if direct_cli_review["changed_paths"]:
         proof_selection["direct_cli_edit_review"] = direct_cli_review
+    skill_behavior_review = _skill_behavior_impact_review_for_changed_paths(changed_paths)
+    if skill_behavior_review["changed_paths"]:
+        proof_selection["skill_behavior_impact_review"] = skill_behavior_review
     cli_authority_review = _cli_authority_review_for_changed_paths(changed_paths)
     if cli_authority_review["changed_paths"]:
         proof_selection["cli_authority_review"] = cli_authority_review
@@ -19940,6 +20131,51 @@ def _direct_cli_edit_review_for_changed_paths(changed_paths: list[str]) -> dict[
         ],
         "proof_hint": "When direct CLI edits accompany interface changes, include command-package IR/generator proof or split the runtime fix from definition work.",
         "recovery_signal": "Use proof output to decide whether the edit is allowed runtime work; route interface or generated-surface changes back to command contracts, command-package IR, and generated outputs.",
+    }
+
+
+def _skill_behavior_impact_review_for_changed_paths(changed_paths: list[str]) -> dict[str, Any]:
+    skill_paths = [
+        path
+        for path in changed_paths
+        if path.endswith("/SKILL.md")
+        or path.startswith("packages/planning/skills/")
+        or path.startswith("packages/memory/skills/")
+        or path == "src/agentic_workspace/contracts/skill_specs.json"
+        or path == "src/agentic_workspace/contracts/schemas/skill_spec.schema.json"
+    ]
+    high_impact = [
+        path
+        for path in skill_paths
+        if any(
+            marker in path
+            for marker in (
+                "operating",
+                "startup",
+                "proof",
+                "closeout",
+                "memory",
+                "planning",
+                "source",
+                "skill_specs",
+                "skill_spec",
+            )
+        )
+    ]
+    return {
+        "kind": "skill-behavior-impact-review/v1",
+        "changed_paths": skill_paths,
+        "status": "behavior-evidence-required" if high_impact else "wording-review" if skill_paths else "not-applicable",
+        "high_impact_paths": high_impact,
+        "required_answers": [
+            "What behavior is this skill meant to steer?",
+            "Which command or output proves the route still works?",
+            "Does the change affect required vs recommended skill routing?",
+            "Does it affect allowed/forbidden actions or completion claims?",
+            "Does it stay aligned with SkillSpec, next_safe_action, or CLI affordance metadata?",
+        ],
+        "proof_hint": "For high-impact skill changes, include focused startup/proof/closeout or contract tests that exercise the behavior, not only a prose diff.",
+        "rule": "Skill wording that affects startup, proof, closeout, Memory, Planning, or source-boundary behavior is behavior-shaping product surface.",
     }
 
 

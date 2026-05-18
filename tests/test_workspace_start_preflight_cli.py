@@ -1853,6 +1853,88 @@ def test_startup_skillspec_pilot_keeps_direct_work_light_and_blocks_epic_work(tm
     assert _start_skill_routing(epic)["preferred_routes"][0]["skill"] == "planning-reporting"
 
 
+def test_start_does_not_promote_unrelated_roadmap_for_lifecycle_task(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--preset", "planning", "--format", "json"]) == 0
+    capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = [
+  { id = "tier-3-memory-first", maturity = "candidate", status = "accepted", priority = "P1", refs = "GitHub #1", title = "Finish Memory first", outcome = "Continue the Memory roadmap.", reason = "Roadmap continuation exists.", promotion_signal = "Promote when roadmap work is requested.", suggested_first_slice = "Pick the next memory slice." },
+]
+""",
+    )
+
+    assert cli.main(["start", "--target", str(target), "--task", "Apply the memory lifecycle upgrade", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    _assert_next_safe_action_valid(payload["next_safe_action"])
+    assert payload["next_safe_action"]["next_safe_action"] == "choose-smallest-workflow-shape"
+    assert "planning_safety_gate" not in payload["context"]["planning"]
+    assert "tier-3-memory-first" not in payload["next_safe_action"].get("preferred_cli", "")
+
+
+def test_start_routine_issue_intake_uses_skill_without_execplan(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--preset", "full", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["start", "--target", str(target), "--task", "Ingest and prioritize issues", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    _assert_next_safe_action_valid(payload["next_safe_action"])
+    assert payload["next_safe_action"]["next_safe_action"] == "choose-smallest-workflow-shape"
+    assert "planning_safety_gate" not in payload["context"]["planning"]
+    skill_ids = {
+        item["id"]
+        for item in [*payload["skills"]["required"], *payload["skills"]["recommended"]]
+        if isinstance(item, dict) and item.get("id")
+    }
+    assert "planning-intake-upstream-task" in skill_ids
+
+
+def test_start_narrow_ci_repair_stays_direct_without_execplan(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(target),
+                "--task",
+                "Fix CI checks for a narrow schema-reference docs repair",
+                "--changed",
+                "src/agentic_workspace/contracts/schemas/operation_primitives.schema.json",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    _assert_next_safe_action_valid(payload["next_safe_action"])
+    assert "planning_safety_gate" not in payload["context"]["planning"]
+    assert payload["next_safe_action"]["next_safe_action"] == "select-changed-path-proof"
+
+
 def test_start_task_includes_compact_skill_recommendations(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

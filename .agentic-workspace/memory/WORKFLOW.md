@@ -74,11 +74,11 @@ Keep it concise, repo-agnostic, and non-procedural.
 
 ## Starter templates
 
-- Use `.agentic-workspace/memory/repo/templates/memory-note-template.md` for a general durable note or improvement-signal note.
-- Use `.agentic-workspace/memory/repo/templates/invariant-template.md` when the primary home is a must-remain-true contract.
-- Use `.agentic-workspace/memory/repo/templates/runbook-template.md` when the primary home is a durable operator procedure.
+- Use `.agentic-workspace/memory/repo/templates/memory-note.template.md` for a general durable note or improvement-signal note.
+- Use `.agentic-workspace/memory/repo/templates/invariant.template.md` when the primary home is a must-remain-true contract.
+- Use `.agentic-workspace/memory/repo/templates/runbook.template.md` when the primary home is a durable operator procedure.
 - Treat the templates as starter shape only; adapt them to the repo and keep the first real note smaller than the template when possible.
-- When replacing the shipped starter examples, prefer the matching template over copying old example prose forward.
+- When writing the first repo-specific note for a class, prefer the matching template over copying old example prose forward.
 
 ## Improvement metadata quick reference
 
@@ -91,7 +91,7 @@ Keep it concise, repo-agnostic, and non-procedural.
 - `retention_justification` is the fallback when a note remains justified even though it is also an improvement signal.
 - Closeout-derived notes should also name `source_closeout`, `promotion_target`, `promotion_trigger`, and `retention_after_promotion` when those are known.
 - Use `summary`, `applies_to`, `use_when`, and `evidence` in the manifest for routine note routing; leave note prose for the durable explanation an agent cannot infer from metadata.
-- Use the quick reminder in `.agentic-workspace/memory/repo/templates/memory-note-template.md` when you are writing the note itself and the fuller workflow below when deciding how to route follow-through.
+- Use the quick reminder in `.agentic-workspace/memory/repo/templates/memory-note.template.md` when you are writing the note itself and the fuller workflow below when deciding how to route follow-through.
 
 ## Canonical-doc boundary
 

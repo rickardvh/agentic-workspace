@@ -71,6 +71,19 @@ Local dogfooding evaluation procedure for recording which surfaces are actually 
 - Outsider-legibility note:
 - Self-hosting-bias note:
 
+## Entries
+
+- Task class: issue implementation plus PR/CI closeout
+- Goal: fix #1052 and #1053 on one branch and preserve routine dogfooding feedback
+- Surface used first: `agentic-workspace start`, then `implement --changed` once touched paths were known
+- Surface skipped: reusable cheaper agent delegation
+- Choice reason: the fix was narrow after issue inspection, and AW's own delegation decision recommended staying local for the lane-sized proof burden
+- Skip reason: parallel delegation would have added coordination cost without a disjoint write scope
+- Friction or cost note: the Memory index routed routing-quality calibration to `current/routing-feedback.md`, but that file was missing; the issue was fixed directly by adding the note and manifest entry
+- Follow-up: treat missing routed memory notes as direct memory hygiene fixes when they block routine dogfooding capture
+- Outsider-legibility note: a fresh agent following the index would hit the same missing file unless this note exists
+- Self-hosting-bias note: local familiarity made it easy to continue without the missing note, so preserving the signal in Memory matters
+
 ## Verification
 
 - The ledger shows repeated choice patterns that can be reviewed later.

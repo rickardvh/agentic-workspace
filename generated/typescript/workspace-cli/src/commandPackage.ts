@@ -145,6 +145,7 @@ export const generatedCommandPackage = {
             "name": "task"
           },
           {
+            "action": "extend",
             "default": [],
             "flags": [
               "--changed"
@@ -1530,6 +1531,7 @@ export const generatedCommandPackage = {
             "name": "target"
           },
           {
+            "action": "extend",
             "default": [],
             "flags": [
               "--changed"
@@ -1646,6 +1648,7 @@ export const generatedCommandPackage = {
             "name": "target"
           },
           {
+            "action": "extend",
             "default": [],
             "flags": [
               "--changed"
@@ -1881,6 +1884,7 @@ export const generatedCommandPackage = {
             "name": "current"
           },
           {
+            "action": "extend",
             "default": [],
             "flags": [
               "--changed"

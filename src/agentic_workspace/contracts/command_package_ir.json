@@ -753,6 +753,7 @@
                 "flags": [
                   "--changed"
                 ],
+                "action": "extend",
                 "nargs": "*",
                 "default": [],
                 "help": "Optional changed paths used to scope compact summary output."
@@ -2138,6 +2139,7 @@
                 "flags": [
                   "--changed"
                 ],
+                "action": "extend",
                 "nargs": "*",
                 "default": [],
                 "help": "Optional repo-relative changed paths used to include a proof recommendation."
@@ -2254,6 +2256,7 @@
                 "flags": [
                   "--changed"
                 ],
+                "action": "extend",
                 "nargs": "*",
                 "default": [],
                 "help": "Repo-relative changed paths used to select inspect scope, boundary warnings, and proof commands."
@@ -2489,6 +2492,7 @@
                 "flags": [
                   "--changed"
                 ],
+                "action": "extend",
                 "nargs": "*",
                 "default": [],
                 "help": "Return required proof commands for the provided repo-relative changed paths."
@@ -7500,6 +7504,7 @@
                 "flags": [
                   "--changed"
                 ],
+                "action": "extend",
                 "nargs": "*",
                 "default": [],
                 "help": "Optional changed paths used to scope compact summary output."
