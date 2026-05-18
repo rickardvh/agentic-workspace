@@ -8603,60 +8603,79 @@ def _tiny_preflight_payload_fast(
             },
             "inspect": durable_intent.get("inspect", ""),
         }
+    detail_commands = {
+        "full_takeover": f"{config.cli_invoke} preflight --target . --verbose --format json",
+        "active_state": f"{config.cli_invoke} preflight --target . --active-only --verbose --format json",
+        "startup": f'{config.cli_invoke} start --target . --task "<task>" --format json',
+        "config": f"{config.cli_invoke} config --target . --format json",
+        "summary": f"{config.cli_invoke} summary --target . --format json",
+    }
+    next_action = {
+        "action": "recover-orientation",
+        "summary": "Use the compact recovery routes below; request full takeover context only if active state or obligations are unclear.",
+        "command": f'{config.cli_invoke} start --target . --task "<task>" --format json',
+        "run": f'{config.cli_invoke} start --target . --task "<task>" --format json',
+        "risk": "read-only recovery routing",
+        "required_inputs": ["current task"],
+        "next_proof": "select proof after changed paths are known",
+    }
     return {
         "kind": "preflight-response/v1",
         "mode": "tiny-takeover-router",
         "target": target_root.as_posix(),
         "issued_at": issued_at,
         "preflight_token": preflight_token,
-        "timestamp_hint": "Use this compact answer to recover orientation; request full takeover context only when needed.",
-        "branch_workflow_posture": {
-            key: value
-            for key, value in _branch_workflow_posture_payload(target_root=target_root).items()
-            if key
-            in {
-                "status",
-                "current_branch",
-                "default_branch",
-                "risk",
-                "recommended_next_action",
-                "upstream_divergence",
-                "shared_state_mutation_risk",
-            }
+        "next": next_action,
+        "context": {
+            "timestamp_hint": "Use this compact answer to recover orientation; request full takeover context only when needed.",
+            "branch_workflow_posture": {
+                key: value
+                for key, value in _branch_workflow_posture_payload(target_root=target_root).items()
+                if key
+                in {
+                    "status",
+                    "current_branch",
+                    "default_branch",
+                    "risk",
+                    "recommended_next_action",
+                    "upstream_divergence",
+                    "shared_state_mutation_risk",
+                }
+            },
+            "local_memory": {
+                key: value for key, value in _local_memory_payload(config=config).items() if key in {"status", "path", "rule"}
+            },
+            "workflow_obligations": {
+                "status": "not-evaluated",
+                "match_count": 0,
+                "detail_command": f"{config.cli_invoke} preflight --verbose --format json",
+            },
+            "closeout_obligations": {
+                "status": "present",
+                "activation_rule": "closeout obligations apply after implementation or lane closeout",
+                "detail_command": f"{config.cli_invoke} report --target ./repo --section closeout_trust --format json",
+            },
+            "operating_posture": _operating_posture_payload(config=config, surface="preflight", compact=True),
+            "durable_intent": durable_intent,
+            "active_state_summary": {
+                "todo_active_count": int(active_summary.get("todo_active_count", 0) or 0),
+                "active_execplan_count": active_execplan_count,
+                "planning_status": active_summary.get("planning_status", "unavailable"),
+            },
         },
-        "local_memory": {key: value for key, value in _local_memory_payload(config=config).items() if key in {"status", "path", "rule"}},
-        "workflow_obligations": {
-            "status": "not-evaluated",
-            "match_count": 0,
-            "detail_command": f"{config.cli_invoke} preflight --verbose --format json",
-        },
-        "closeout_obligations": {
-            "status": "present",
-            "activation_rule": "closeout obligations apply after implementation or lane closeout",
-            "detail_command": f"{config.cli_invoke} report --target ./repo --section closeout_trust --format json",
-        },
-        "operating_posture": _operating_posture_payload(config=config, surface="preflight", compact=True),
-        "durable_intent": durable_intent,
-        "active_state_summary": {
-            "todo_active_count": int(active_summary.get("todo_active_count", 0) or 0),
-            "active_execplan_count": active_execplan_count,
-            "planning_status": active_summary.get("planning_status", "unavailable"),
-        },
-        "immediate_next_allowed_action": {
-            "action": "recover-orientation",
-            "summary": "Use the compact recovery routes below; request full takeover context only if active state or obligations are unclear.",
-            "command": f'{config.cli_invoke} start --target . --task "<task>" --format json',
-            "run": f'{config.cli_invoke} start --target . --task "<task>" --format json',
-            "risk": "read-only recovery routing",
-            "required_inputs": ["current task"],
-            "next_proof": "select proof after changed paths are known",
-        },
-        "detail_commands": {
-            "full_takeover": f"{config.cli_invoke} preflight --target . --verbose --format json",
-            "active_state": f"{config.cli_invoke} preflight --target . --active-only --verbose --format json",
-            "startup": f'{config.cli_invoke} start --target . --task "<task>" --format json',
-            "config": f"{config.cli_invoke} config --target . --format json",
-            "summary": f"{config.cli_invoke} summary --target . --format json",
+        "drill_down": {
+            "ordinary_profile": "primary=next;context=recovery state;detail=verbose or selectors",
+            "detail_commands": detail_commands,
+            "available_selectors": [
+                "next",
+                "context.active_state_summary",
+                "context.branch_workflow_posture",
+                "context.local_memory",
+                "context.workflow_obligations",
+                "context.closeout_obligations",
+                "context.operating_posture",
+                "context.durable_intent",
+            ],
         },
     }
 
@@ -10446,6 +10465,17 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "proof",
         "next",
         "scope",
+        "context",
+        "context.task_intent",
+        "context.acceptance",
+        "context.durable_intent_promotion",
+        "context.delegation_decision",
+        "context.intent_acknowledgement",
+        "context.workflow_sufficiency",
+        "context.routing",
+        "context.acceptance_reconciliation",
+        "context.objective_drift",
+        "context.detail_commands",
         "routing",
         "acceptance_reconciliation",
         "objective_drift",
@@ -10454,6 +10484,11 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "drill_down",
     ]
     selectors = [selector for selector in preferred if selector in payload]
+    drill_down = payload.get("drill_down")
+    if isinstance(drill_down, dict):
+        selectors.extend(
+            selector for selector in drill_down.get("available_selectors", []) if isinstance(selector, str) and selector not in selectors
+        )
     if selectors:
         return selectors
     discovered: list[str] = []
@@ -11866,24 +11901,6 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     projected = {
         "kind": "implementer-context-tiny/v1",
         "target": payload.get("target"),
-        "workflow_sufficiency": payload.get("workflow_sufficiency"),
-        "adaptive_routing": _tiny_adaptive_routing_payload(
-            surface="implement",
-            current_need="changed-path-next-action" if payload.get("changed_paths") else "unknown-scope-routing",
-            why_this_packet="Tiny implement returns only the next action, changed-path scope, proof commands, reconciliation checks, and escalation pointers.",
-            detail_commands=detail_commands,
-            when_to_escalate=[
-                "changed paths are missing or wrong",
-                "proof commands are insufficient",
-                "objective drift is warning",
-                "delegation or planning routing changes the next action",
-            ],
-            not_needed_now=[
-                "package boundary detail when there are no warnings",
-                "full execution posture unless delegation is selected",
-                "raw workspace files",
-            ],
-        ),
         "next": {
             "action": next_action,
             "summary": next_action,
@@ -11892,11 +11909,6 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "commands": proof_commands if isinstance(proof_commands, list) else [],
             "status": payload.get("orientation", {}).get("status", "unknown"),
             "ask_human_only_if": "scope, authority, risk, or intent is genuinely blocked after inspecting the listed paths",
-        },
-        "scope": {
-            "changed_paths": payload.get("changed_paths", []),
-            "inspect_files": payload.get("inspect_files", []),
-            "warnings": path_warnings,
         },
         "proof": {
             "kind": payload.get("proof", {}).get("kind", "proof-selection/v1")
@@ -11908,31 +11920,72 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             else {},
             "detail_command": "agentic-workspace proof --verbose --changed <paths> --format json",
         },
-        "task_intent": {
-            "status": payload.get("task_intent", {}).get("status", "absent") if isinstance(payload.get("task_intent"), dict) else "absent",
-            "requested_outcomes": payload.get("task_intent", {}).get("requested_outcomes", [])
-            if isinstance(payload.get("task_intent"), dict)
-            else [],
+        "context": {
+            "workflow_sufficiency": payload.get("workflow_sufficiency"),
+            "adaptive_routing": _tiny_adaptive_routing_payload(
+                surface="implement",
+                current_need="changed-path-next-action" if payload.get("changed_paths") else "unknown-scope-routing",
+                why_this_packet="Tiny implement returns one primary next action, with scoped proof and diagnostics behind context selectors.",
+                detail_commands=detail_commands,
+                when_to_escalate=[
+                    "changed paths are missing or wrong",
+                    "proof commands are insufficient",
+                    "objective drift is warning",
+                    "delegation or planning routing changes the next action",
+                ],
+                not_needed_now=[
+                    "package boundary detail when there are no warnings",
+                    "full execution posture unless delegation is selected",
+                    "raw workspace files",
+                ],
+            ),
+            "scope": {
+                "changed_paths": payload.get("changed_paths", []),
+                "inspect_files": payload.get("inspect_files", []),
+                "warnings": path_warnings,
+            },
+            "task_intent": {
+                "status": payload.get("task_intent", {}).get("status", "absent")
+                if isinstance(payload.get("task_intent"), dict)
+                else "absent",
+                "requested_outcomes": payload.get("task_intent", {}).get("requested_outcomes", [])
+                if isinstance(payload.get("task_intent"), dict)
+                else [],
+            },
+            "acceptance": _tiny_acceptance_payload(payload.get("acceptance", {})),
+            "acceptance_reconciliation": _tiny_acceptance_reconciliation(payload.get("acceptance_reconciliation", {})),
+            "objective_drift": _tiny_objective_drift(payload.get("objective_drift", {})),
+            "durable_intent_promotion": _tiny_task_intent_promotion_guidance(payload.get("durable_intent_promotion", {})),
+            "routing": {
+                "task_status": task_routing.get("status") if isinstance(task_routing, dict) else None,
+                "work_shape": capability.get("work_shape"),
+                "proof_burden": capability.get("proof_burden"),
+                "delegation_recommendation": runtime_resolution.get("recommendation"),
+                "planning_safety": planning_safety_gate.get("status") if isinstance(planning_safety_gate, dict) else None,
+            },
+            "delegation_decision": _compact_start_delegation_decision(execution_posture.get("delegation_decision", {})),
         },
-        "acceptance": _tiny_acceptance_payload(payload.get("acceptance", {})),
-        "acceptance_reconciliation": _tiny_acceptance_reconciliation(payload.get("acceptance_reconciliation", {})),
-        "objective_drift": _tiny_objective_drift(payload.get("objective_drift", {})),
-        "durable_intent_promotion": _tiny_task_intent_promotion_guidance(payload.get("durable_intent_promotion", {})),
-        "routing": {
-            "task_status": task_routing.get("status") if isinstance(task_routing, dict) else None,
-            "work_shape": capability.get("work_shape"),
-            "proof_burden": capability.get("proof_burden"),
-            "delegation_recommendation": runtime_resolution.get("recommendation"),
-            "planning_safety": planning_safety_gate.get("status") if isinstance(planning_safety_gate, dict) else None,
+        "drill_down": {
+            "ordinary_profile": "primary=next;proof=summary;context=selector-backed diagnostics",
+            "detail_command": detail_commands["full_context"],
+            "detail_commands": detail_commands,
+            "available_selectors": [
+                "next",
+                "proof",
+                "context.scope",
+                "context.workflow_sufficiency",
+                "context.acceptance",
+                "context.acceptance_reconciliation",
+                "context.objective_drift",
+                "context.delegation_decision",
+                "context.routing",
+            ],
         },
-        "delegation_decision": _compact_start_delegation_decision(execution_posture.get("delegation_decision", {})),
-        "detail_command": detail_commands["full_context"],
-        "detail_commands": detail_commands,
     }
     if isinstance(planning_safety_gate, dict):
-        projected["planning_safety_gate"] = _selector_first_planning_safety_gate(planning_safety_gate)
+        projected["context"]["planning_safety_gate"] = _selector_first_planning_safety_gate(planning_safety_gate)
     if isinstance(intent_acknowledgement, dict) and intent_acknowledgement.get("decision") == "proceed-with-stated-assumption":
-        projected["intent_acknowledgement"] = {
+        projected["context"]["intent_acknowledgement"] = {
             "decision": intent_acknowledgement.get("decision"),
             "fields": intent_acknowledgement.get("before_editing", []),
             "proceed_unless_corrected": True,

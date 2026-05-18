@@ -1984,6 +1984,46 @@
       "reason": "close out execplan fix-1056-prose-path-reference",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-18T18:44:24+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/finish-1035-ordinary-output-slices.plan.json",
+      "sha256": "4477419d75b6c32792a80888b23534d2ca314f1020c0c359b4b3a2b42d112f62",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold finish-1035-ordinary-output-slices",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T18:48:46+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "d84f52477645c9a1839118adc72811632aebe875fa6978172132130bbe7c31c8",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold finish-1035-ordinary-output-slices",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T18:48:46+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/finish-1035-ordinary-output-slices.plan.json",
+      "sha256": "a131c96ff7820eaa5e19b1e5c805101a659bdfe7e2ef43e417d2bb07cf57500c",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T18:49:49+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "3bbdfd9f69a3011a05a38b3d28122c6cfc204fd38fac9e3534bf2ea067e12e4f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan finish-1035-ordinary-output-slices",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T19:17:04+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/finish-1035-ordinary-output-slices.plan.json",
+      "sha256": "96301c2cf45bcec42c8f52dff10cab347fd451ed7399edd1ac206f9f9d11f63b",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan finish-1035-ordinary-output-slices",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T19:17:04+00:00"
     }
   ]
 }

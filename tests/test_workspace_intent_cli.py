@@ -130,9 +130,10 @@ def test_preflight_surfaces_compact_durable_intent_for_task(capsys) -> None:
     assert cli.main(["preflight", "--target", ".", "--task", "memory routing should preserve durable context", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["durable_intent"]["status"] == "present"
-    assert payload["durable_intent"]["subsystem_intent"]["matched_count"] >= 1
-    assert payload["durable_intent"]["inspect"] == "agentic-workspace report --target ./repo --section durable_intent --format json"
+    durable_intent = payload.get("durable_intent", payload.get("context", {}).get("durable_intent"))
+    assert durable_intent["status"] == "present"
+    assert durable_intent["subsystem_intent"]["matched_count"] >= 1
+    assert durable_intent["inspect"] == "agentic-workspace report --target ./repo --section durable_intent --format json"
 
 
 def test_start_matches_durable_intent_across_decision_pressure_types(tmp_path: Path, capsys) -> None:

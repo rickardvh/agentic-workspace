@@ -1,0 +1,380 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Finish #1035 ordinary output slices",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Complete the remaining GitHub #1035 ordinary-output slices on branch codex/implement-p1-candidates, one output at a time.",
+    "hard_constraints": "Keep scope bounded to ordinary JSON output compression and regression tests for implement, summary, preflight, proof, report, Planning report/summary, and Memory report/promotion-report. Preserve selector/verbose detail and do not hide blockers, proof requirements, required skills, or continuation owners.",
+    "agent_may_decide": "The smallest compatible payload reshaping and tests needed per command, while stopping if a command requires broader schema migration.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Implement and validate the remaining #1035 outputs one at a time, starting with implement --format json.",
+    "proof_expectations": [
+      "For each slice, add or run a focused regression asserting one primary decision/action object and bounded top-level fields.",
+      "Run the relevant command test module after each slice.",
+      "Before closeout run make test-workspace, make test-planning, make test-memory, and the AW planning health checks if all touched modules require it."
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "src/agentic_workspace/reporting_support.py",
+      "packages/planning/src/repo_planning_bootstrap/installer.py",
+      "packages/memory/src/repo_memory_bootstrap/runtime_primitives.py",
+      "packages/memory/src/repo_memory_bootstrap/installer.py",
+      "tests/test_workspace_start_preflight_cli.py",
+      "tests/test_workspace_summary_cli.py",
+      "packages/planning/tests/test_summary.py",
+      "packages/planning/tests/test_installer.py",
+      "packages/memory/tests/test_report.py",
+      ".agentic-workspace/planning/state.toml",
+      ".agentic-workspace/planning/mutation-provenance.json",
+      ".agentic-workspace/planning/execplans/finish-1035-ordinary-output-slices.plan.json"
+    ],
+    "completion_criteria": [
+      "Each remaining #1035 ordinary output has one primary decision/action object or an explicit equivalent primary status.",
+      "Top-level allowlist regressions prevent reintroducing competing decision fields.",
+      "Selector or verbose routes preserve detailed diagnostics.",
+      "#1035 can be closed honestly after validation."
+    ],
+    "continuation_owner": "none; GitHub #1035 is closable by this branch",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "GitHub #1035"
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Complete the remaining GitHub #1035 ordinary-output slices on branch codex/implement-p1-candidates, one output at a time.",
+      "constraints": "Keep scope bounded to ordinary JSON output compression and regression tests for implement, summary, preflight, proof, report, Planning report/summary, and Memory report/promotion-report. Preserve selector/verbose detail and do not hide blockers, proof requirements, required skills, or continuation owners.",
+      "latitude": "The smallest compatible payload reshaping and tests needed per command, while stopping if a command requires broader schema migration.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "finish-1035-ordinary-output-slices",
+      "status": "active",
+      "next_step": "Implement and validate the remaining #1035 outputs one at a time, starting with implement --format json.",
+      "proof": "Focused per-command regressions, then module-level workspace/planning/memory tests."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "src/agentic_workspace/reporting_support.py",
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/memory/src/repo_memory_bootstrap/runtime_primitives.py",
+        "packages/memory/src/repo_memory_bootstrap/installer.py",
+        "tests/test_workspace_start_preflight_cli.py",
+        "tests/test_workspace_summary_cli.py",
+        "packages/planning/tests/test_summary.py",
+        "packages/planning/tests/test_installer.py",
+        "packages/memory/tests/test_report.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/mutation-provenance.json",
+        ".agentic-workspace/planning/execplans/finish-1035-ordinary-output-slices.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "All ordinary outputs in #1035 are organized around one primary decision object with detail behind selectors or verbose output.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Ordinary implement, preflight, report, and memory promotion-report JSON now expose one primary action/status with diagnostics behind context or drill-down; summary, proof, Planning report, and Memory report have explicit ordinary-profile regressions.",
+    "intentionally deferred": "No #1035 slice is deferred.",
+    "discovered implications": "Selector help needed nested context hints after implement diagnostics moved under context; report text rendering needed to read router context; promotion-report no-candidate markers should not look like required action.",
+    "proof achieved now": "complete",
+    "validation still needed": "none for this slice",
+    "next likely slice": "none; close #1035 after PR review and CI"
+  },
+  "intent_interpretation": {
+    "literal request": "Implement all remaining #1035 slices on this branch, one at a time.",
+    "inferred intended outcome": "Finish the #1035 ordinary-output compression lane after the startup slice already landed.",
+    "chosen concrete what": "Progress through implement, summary, preflight, proof, report, Planning, and Memory ordinary outputs with focused allowlist/primary-action regressions.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Workspace output builders/tests, Planning tiny report/summary builders/tests, Memory tiny report/promotion-report builders/tests, and Planning state/provenance/active plan surfaces.",
+    "max changed files": "About 15 files across workspace, planning, memory, and plan state.",
+    "required validation commands": "Focused tests after each output slice; final make test-workspace, make test-planning, make test-memory, lint targets as needed, plus AW planning health.",
+    "ask-before-refactor threshold": "Ask before changing command semantics, removing selectors/verbose data, or forcing a breaking schema migration.",
+    "stop before touching": "Generated command runtime, unrelated codegen lanes, unrelated P2/P3 roadmap items, or non-ordinary host-repo behavior."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue #1035 one output at a time; current order is implement, summary, preflight, proof, report, Planning report/summary, Memory report/promotion-report.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Complete the remaining GitHub #1035 ordinary-output slices on branch codex/implement-p1-candidates, one output at a time.",
+    "hard constraints": "Keep scope bounded to ordinary JSON output compression and regression tests for implement, summary, preflight, proof, report, Planning report/summary, and Memory report/promotion-report. Preserve selector/verbose detail and do not hide blockers, proof requirements, required skills, or continuation owners.",
+    "agent may decide locally": "The smallest compatible payload reshaping and tests needed per command, while stopping if a command requires broader schema migration.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "The user requested one-at-a-time implementation on this branch; the first step is local output-shape inspection and focused tests, with no independent write scope worth delegating yet.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-18T18:49:49+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "GitHub #1035",
+      "label": "GitHub #1035",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "finish-1035-ordinary-output-slices",
+    "status": "completed",
+    "scope": "Finish the remaining #1035 ordinary-output slices without expanding beyond output shape and regression proof.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Implement and validate implement --format json first, then move to the next #1035 output slice."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "src/agentic_workspace/reporting_support.py",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    "packages/memory/src/repo_memory_bootstrap/runtime_primitives.py",
+    "packages/memory/src/repo_memory_bootstrap/installer.py",
+    "tests/test_workspace_start_preflight_cli.py",
+    "tests/test_workspace_summary_cli.py",
+    "packages/planning/tests/test_summary.py",
+    "packages/planning/tests/test_installer.py",
+    "packages/memory/tests/test_report.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/mutation-provenance.json",
+    ".agentic-workspace/planning/execplans/finish-1035-ordinary-output-slices.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "Focused per-command regressions after each slice.",
+    "make test-workspace",
+    "make test-planning",
+    "make test-memory",
+    "uv run agentic-workspace summary --target . --select planning_surface_health,roadmap --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Each remaining #1035 ordinary output has one primary decision/action object or an explicit equivalent primary status.",
+    "Top-level allowlist regressions prevent reintroducing competing decision fields.",
+    "Selector or verbose routes preserve detailed diagnostics.",
+    "#1035 can be closed honestly after validation."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Implemented all remaining #1035 ordinary-output slices one at a time. Implement, preflight, report, and memory promotion-report were reshaped; summary/proof/planning report/memory report were locked with focused ordinary-profile regressions where their existing shape was already primary-status/primary-action oriented.",
+    "scope touched": "workspace runtime/reporting/output code, workspace CLI tests, Planning tiny report tests, Memory runtime/report tests, and this active plan.",
+    "changed surfaces": "src/agentic_workspace/workspace_runtime_primitives.py; src/agentic_workspace/reporting_support.py; src/agentic_workspace/workspace_output.py; tests/test_workspace_*.py; tests/test_workspace_intent_cli.py; packages/planning/tests/test_summary.py; packages/memory/src/repo_memory_bootstrap/runtime_primitives.py; packages/memory/tests/test_report.py; planning state/provenance/execplan.",
+    "validations run": "Focused 29-test ordinary-output suite; tests/test_workspace_report_cli.py + packages/memory/tests/test_report.py + planning tiny report test; tests/test_workspace_start_preflight_cli.py + tests/test_workspace_proof_cli.py + tests/test_workspace_implement_cli.py + tests/test_workspace_summary_cli.py; make test-workspace; make lint-workspace; make test-planning; make lint-planning; make test-memory; make lint-memory.",
+    "result for continuation": "No remaining #1035 implementation slice.",
+    "next step": "Update PR body to close #1035, commit, push, and verify CI."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes; changes stayed within ordinary output shape and regression tests",
+    "proof status": "passed",
+    "intent served": "yes; all named remaining #1035 ordinary outputs are implemented or regression-locked",
+    "config compliance": "passed; AW workflow, planning, and proof commands were used",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none for #1035"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "The user requested one-at-a-time implementation on this branch; the first step is local output-shape inspection and focused tests, with no independent write scope worth delegating yet.",
+    "expected savings": "unknown",
+    "actual friction": "No independent write scope was worth delegating once the output-shape changes had to be sequenced one at a time across shared helpers and tests.",
+    "proof result": "passed",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "make test-workspace; make lint-workspace; make test-planning; make lint-planning; make test-memory; make lint-memory",
+    "proof achieved now": "complete",
+    "evidence for \"proof achieved\" state": "All required commands passed after one workspace test update for the preflight context move."
+  },
+  "intent_satisfaction": {
+    "original intent": "GitHub #1035",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "All named #1035 ordinary JSON surfaces were reshaped or locked with regressions and package proof passed.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "All remaining #1035 ordinary-output slices completed.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "this closeout record",
+    "knowledge promoted (Memory/Docs/Config)": "none; implementation-local lessons are captured in tests and closeout, not durable Memory",
+    "resume from": "PR/CI closeout"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "closeout review",
+    "target scope": "#1035 output-shape lane",
+    "proposed durable intent": "No new durable intent; regressions encode the reusable behavior.",
+    "confidence": "medium",
+    "needs review": "False",
+    "owner surface": "tests"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "bounded slice complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "This branch completes the remaining #1035 ordinary-output slices without deferred implementation.",
+    "evidence carried forward": "make test-workspace; make lint-workspace; make test-planning; make lint-planning; make test-memory; make lint-memory",
+    "reopen trigger": "A remaining ordinary AW output exposes competing top-level action or decision fields without selector/verbose routing."
+  },
+  "improvement_signal_review": {
+    "status": "signals_fixed",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [
+      "Implement selector help did not advertise nested context selectors after diagnostics moved under context.",
+      "Report text rendering still expected router fields at top level after JSON compression.",
+      "Memory promotion-report treated the no-candidates informational marker as a required action."
+    ],
+    "signals fixed": [
+      "Available-selector discovery now includes drill_down advertised selectors.",
+      "Report text rendering merges router context for human-readable output.",
+      "Memory promotion-report reports no-promotion-action when only no-candidate markers are present."
+    ],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Per-slice scratch probing and obsolete pending status.",
+          "owner": "discard",
+          "source": "archive-plan --prepare-closeout"
+        }
+      ],
+      "continuation": [],
+      "memory": [
+        {
+          "summary": "none; implementation-local lessons are captured in tests and closeout, not durable Memory",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "none; implementation-local lessons are captured in tests and closeout, not durable Memory",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-18: Scaffolded by agentic-planning new-plan.",
+    "2026-05-18: Recorded delegation decision route=keep-local."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: GitHub #1035\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: make test-workspace; make lint-workspace; make test-planning; make lint-planning; make test-memory; make lint-memory\nChanged surfaces: src/agentic_workspace/workspace_runtime_primitives.py; src/agentic_workspace/reporting_support.py; src/agentic_workspace/workspace_output.py; tests/test_workspace_*.py; tests/test_workspace_intent_cli.py; packages/planning/tests/test_summary.py; packages/memory/src/repo_memory_bootstrap/runtime_primitives.py; packages/memory/tests/test_report.py; planning state/provenance/execplan.\nDurable residue: none (none)\nMemory learning: none\nFollow-up: none"
+  }
+}

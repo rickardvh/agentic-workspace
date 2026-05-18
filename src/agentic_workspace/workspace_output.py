@@ -79,6 +79,9 @@ def _emit_lifecycle_text(payload: dict[str, Any]) -> None:
 
 
 def _emit_report_text(payload: dict[str, Any]) -> None:
+    context = payload.get("context")
+    if isinstance(context, dict):
+        payload = {**context, **payload}
     output_contract = payload.get("output_contract", {})
     bias = output_contract.get("optimization_bias")
     bias_source = output_contract.get("optimization_bias_source")

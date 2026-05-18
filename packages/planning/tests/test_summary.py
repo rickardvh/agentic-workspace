@@ -440,6 +440,19 @@ def test_planning_tiny_report_uses_fast_summary_path(tmp_path: Path, monkeypatch
 
     assert report["kind"] == "planning-module-report/v1"
     assert report["profile"] == "tiny"
+    assert set(report) <= {
+        "kind",
+        "profile",
+        "module",
+        "target_root",
+        "health",
+        "status",
+        "active",
+        "finding_count",
+        "findings",
+        "next_action",
+        "detail_commands",
+    }
     assert report["status"]["active_todo_count"] == 0
 
 
