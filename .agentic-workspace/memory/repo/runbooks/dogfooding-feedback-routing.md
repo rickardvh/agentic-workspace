@@ -50,6 +50,15 @@ When asked for dogfooding feedback, report all of the following and route each c
 
 Routing owners may be issue follow-up, Memory improvement pressure, planning, docs, tests/checks/contracts, direct implementation, or explicit dismissal. Do not stop at a chat-only report when the signal is concrete enough to preserve. If the user has to remind the agent to route dogfooding pressure through Memory, record that as evidence that AW's normal procedure is still incomplete.
 
+## Routine Routing Examples
+
+Use these examples as the minimum shape for a compact dogfooding reflection closeout:
+
+- Routed issue signal: a repeated command or workflow gap that should become product work routes to a GitHub issue or planning candidate with evidence.
+- Memory-or-docs candidate: a durable procedure lesson routes to Memory, or a stable contract clarification routes to docs/checks/contracts.
+- Dismissed signal: weak, duplicate, or monorepo-only friction is marked dismissed with a reason instead of left as chat residue.
+- No-signal-found case: after checking smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more, record `no_signal_found` rather than leaving the review `not_checked`.
+
 ## Categories
 
 Classify each signal into exactly one primary bucket first:

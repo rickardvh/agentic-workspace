@@ -138,8 +138,19 @@ def test_promote_todo_item_to_execplan_scaffolds_plan_and_updates_todo(tmp_path:
     assert record["context_budget"]["tiny resumability note"] == "sketch the first implementation step."
     assert record["execution_run"]["run status"] == "not-run-yet"
     assert record["finished_run_review"]["review status"] == "pending"
+    assert record["improvement_signal_review"]["status"] == "not_checked"
+    assert "no_signal_found" in record["improvement_signal_review"]["accepted statuses"]
     assert record["improvement_signal_review"]["source"] == "operating_posture"
-    assert "reported-only/routed" in record["improvement_signal_review"]["guidance"]
+    assert "smoothness/helpfulness gaps" in record["improvement_signal_review"]["guidance"]
+    assert record["improvement_signal_review"]["owner classes"] == [
+        "issue",
+        "Memory",
+        "Planning",
+        "docs/checks/contracts",
+        "direct fix",
+        "dismissed with reason",
+    ]
+    assert record["improvement_signal_review"]["ordinary output cap"] == 3
     assert record["delegated_judgment"]["requested outcome"] == "this thread needs a bounded execution contract."
     assert installer_mod.planning_record_schema_findings(record_path) == []
     assert "Surface: .agentic-workspace/planning/execplans/direct-item.md" in todo_text
@@ -880,6 +891,163 @@ def test_planning_cli_mutation_provenance_preserves_prior_entries(tmp_path: Path
     assert ".agentic-workspace/planning/execplans/old-204.plan.json" in paths
     assert ".agentic-workspace/planning/execplans/plan-alpha.plan.json" in paths
     assert len(payload["entries"]) >= 207
+
+
+def test_planning_cli_mutation_provenance_preserves_prior_entries_across_routine_commands(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    provenance_path = tmp_path / ".agentic-workspace" / "planning" / "mutation-provenance.json"
+    sentinel_entry = {
+        "path": ".agentic-workspace/planning/execplans/historical.plan.json",
+        "sha256": "historical-sha",
+        "command": "agentic-planning archive-plan",
+        "reason": "historical mutation",
+        "mode": "cli-mutation",
+        "recorded_at": "2026-05-01T00:00:00+00:00",
+    }
+    provenance_path.write_text(
+        json.dumps({"kind": "planning-mutation-provenance/v1", "entries": [sentinel_entry]}, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    def assert_sentinel_preserved() -> None:
+        payload = json.loads(provenance_path.read_text(encoding="utf-8"))
+        assert sentinel_entry in payload["entries"]
+
+    assert (
+        planning_cli.main(
+            [
+                "new-plan",
+                "--id",
+                "Plan Alpha",
+                "--title",
+                "Plan Alpha",
+                "--target",
+                str(tmp_path),
+                "--activate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    assert_sentinel_preserved()
+
+    assert (
+        planning_cli.main(
+            [
+                "delegation-decision",
+                "--target",
+                str(tmp_path),
+                "--route",
+                "keep-local",
+                "--skipped-reason",
+                "bounded provenance preservation test",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    assert_sentinel_preserved()
+
+    assert (
+        planning_cli.main(
+            [
+                "closeout",
+                "plan-alpha",
+                "--target",
+                str(tmp_path),
+                "--proof-from",
+                "pytest provenance preservation",
+                "--what-happened",
+                "proved routine mutation provenance preservation",
+                "--scope-touched",
+                ".agentic-workspace/planning",
+                "--changed-surfaces",
+                "planning mutation provenance",
+                "--review-summary",
+                "scope stayed inside planning provenance",
+                "--outcome-summary",
+                "routine provenance entries were preserved",
+                "--residue",
+                "none",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    assert_sentinel_preserved()
+
+    assert (
+        planning_cli.main(
+            [
+                "new-plan",
+                "--id",
+                "Plan Beta",
+                "--title",
+                "Plan Beta",
+                "--target",
+                str(tmp_path),
+                "--activate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    assert_sentinel_preserved()
+
+    assert (
+        planning_cli.main(
+            [
+                "archive-plan",
+                "plan-beta",
+                "--target",
+                str(tmp_path),
+                "--prepare-closeout",
+                "--apply-cleanup",
+                "--closure-decision",
+                "archive-and-close",
+                "--intent-satisfied",
+                "yes",
+                "--intent-evidence",
+                "pytest provenance preservation",
+                "--closure-reason",
+                "archive command provenance preservation test",
+                "--closure-evidence",
+                "pytest provenance preservation",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    assert_sentinel_preserved()
+
+    assert (
+        planning_cli.main(
+            [
+                "record-recovery",
+                "--target",
+                str(tmp_path),
+                "--path",
+                ".agentic-workspace/planning/state.toml",
+                "--reason",
+                "pytest provenance preservation",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    assert_sentinel_preserved()
 
 
 def test_planning_cli_new_plan_activate_refuses_implicit_active_switch(tmp_path: Path, capsys) -> None:

@@ -1776,6 +1776,134 @@
       "reason": "close out execplan issue-1052-1053-dogfood-fixes",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-18T15:12:03+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "c2f98e2f76867395b8b8773a35e3dd05c5528e61b25f7ea97faafa985c4a8608",
+      "command": "agentic-planning record-recovery",
+      "reason": "Manual upstream issue intake: added prioritized roadmap candidates for open GitHub issues #1034 and above after reconcile showed them missing from checked-in planning state.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-18T15:22:35+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "af46a56fd4cdd00367bd6df70712f7300e2bba63ddb7cf23bccc7da83cbe0b3f",
+      "command": "agentic-planning record-recovery",
+      "reason": "Repair schema after upstream issue intake: roadmap candidate item status must use next/deferred/active/blocked, not candidate.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-18T15:23:04+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8633ee43378710b62ec3a8c66ea13d8c0d50eb46d3a5358a0df2042783d848d3",
+      "command": "agentic-planning record-recovery",
+      "reason": "Add dogfooding follow-up #1055 from the issue-ingestion task as a P2 roadmap candidate so refreshed external intent remains represented.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-18T15:24:54+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/p1-workflow-trust-bundle.plan.json",
+      "sha256": "999c3ec92e46827aeeedc8e120493a1fbdf2b5222adf538eb58288ad71469ae8",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold p1-workflow-trust-bundle",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T15:27:33+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "3d5b1558eeb7acaa090fcd49646dc123f6db4312bcb0648a9dd3f9c4a6d9b01f",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold p1-workflow-trust-bundle",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T15:27:33+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/p1-workflow-trust-bundle.plan.json",
+      "sha256": "14daf916c393a268dc8c39fd897c4ef3377ce7aa5c97639cb8120638381640fb",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T15:29:16+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+      "sha256": "b118391850c48c860402e574b7818601c07c7333a74ab56eaf599a913fbbcbd2",
+      "command": "agentic-planning record-recovery",
+      "reason": "Intentional P1 implementation updated managed planning template and active plan closeout contract; changes were validated by focused tests before stamping.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-18T15:37:37+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/p1-workflow-trust-bundle.plan.json",
+      "sha256": "ee69f76c6d9a80191ed8ff1f915405f49bb6fe9a912edae6ed584f69cd059652",
+      "command": "agentic-planning record-recovery",
+      "reason": "Intentional P1 implementation updated managed planning template and active plan closeout contract; changes were validated by focused tests before stamping.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-18T15:37:37+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "e862b8e4da245cf9d21a77a179fdddbffba9508ff0a70c66a89821e201430dbd",
+      "command": "agentic-planning record-recovery",
+      "reason": "Routed dogfooding follow-up #1056 into roadmap candidates after filing the issue during P1 closeout.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-18T15:38:37+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/p1-workflow-trust-bundle.plan.json",
+      "sha256": "11ea9938eef10484099a2832948e941695b792aa767d844b914336a552ea43f3",
+      "command": "agentic-planning record-recovery",
+      "reason": "Recorded P1 dogfooding signal routing to GitHub #1056 before closeout.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-18T15:38:56+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "013c42280871ba504862d0809776afa1bc57005b1c28911a352d0d522b78b430",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan p1-workflow-trust-bundle",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T15:39:06+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/p1-workflow-trust-bundle.plan.json",
+      "sha256": "844fbe6326c95c10783b8b9ea44e533990a683ea33d3b706edaa1c6d46d165f3",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan p1-workflow-trust-bundle",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T15:39:06+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "013c42280871ba504862d0809776afa1bc57005b1c28911a352d0d522b78b430",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan p1-workflow-trust-bundle",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T15:39:06+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/p1-workflow-trust-bundle.plan.json",
+      "sha256": "844fbe6326c95c10783b8b9ea44e533990a683ea33d3b706edaa1c6d46d165f3",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan p1-workflow-trust-bundle",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T15:39:06+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/mutation-provenance.json",
+      "sha256": "2dc462d1e464f20be1af8dfcc469dfbac70a000196f78baa43e3032c2f0fa891",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan p1-workflow-trust-bundle",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T15:39:06+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "dae6088eba80e622836219f3b4032dd58de1af0a141b1ef43d86322c82e371d0",
+      "command": "agentic-planning record-recovery",
+      "reason": "Removed completed P1 candidates #1046 and #1050 from branch planning state while keeping #1035 open for non-start ordinary outputs.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-18T15:39:47+00:00"
     }
   ]
 }

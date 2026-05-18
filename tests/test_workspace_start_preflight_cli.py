@@ -597,13 +597,19 @@ def test_start_default_returns_selector_first_router(tmp_path: Path, capsys) -> 
     assert len(encoded) < 9000
     assert payload["kind"] == "startup-context/v1"
     assert set(payload) == {"kind", "target", "next_safe_action", "skills", "context", "drill_down"}
-    assert "immediate_next_allowed_action" not in payload
-    assert "skill_routing" not in payload
-    assert "workflow_sufficiency" not in payload
-    assert "task_intent" not in payload
-    assert "adaptive_routing" not in payload
-    assert "context_router" not in payload
-    assert "invoked_cli_identity" not in payload
+    competing_top_level_decision_fields = {
+        "immediate_next_allowed_action",
+        "skill_routing",
+        "workflow_sufficiency",
+        "task_intent",
+        "acceptance",
+        "planning_safety_gate",
+        "delegation_decision",
+        "adaptive_routing",
+        "context_router",
+        "invoked_cli_identity",
+    }
+    assert competing_top_level_decision_fields.isdisjoint(payload)
     assert _start_primary_action(payload)["action"] in {
         "choose-smallest-workflow-shape",
         "continue-active-planning-record",

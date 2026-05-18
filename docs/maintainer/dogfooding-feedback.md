@@ -29,8 +29,12 @@ Preferred destinations:
 - roadmap state when it is a deferred product direction
 - memory when the durable lesson should survive the current slice
 - canonical docs when the answer is a clearer stable contract rather than a new work item
+- direct implementation when the fix is narrow and blocks or materially cheapens the current proof
+- explicit dismissal when the signal is weak, duplicate, or monorepo-only
 
 Do not leave meaningful product feedback in chat-only residue.
+
+Closeout records should distinguish `not_checked` from `no_signal_found`. If concrete signals are present, route each to issue follow-up, Memory, Planning, docs/checks/contracts, direct fix, or dismissed-with-reason before claiming the reflection is complete.
 
 Use `agentic-workspace defaults --section improvement_intake --format json` as the compact router before treating setup findings, dogfooding feedback, review findings, validation friction, or Memory improvement-signal notes as separate mechanisms. The underlying artifacts stay useful evidence, but the first question is shared: admit, dismiss, or route the signal to a durable owner.
 

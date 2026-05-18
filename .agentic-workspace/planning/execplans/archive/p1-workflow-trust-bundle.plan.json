@@ -1,0 +1,338 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Implement P1 workflow trust bundle",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement the open P1 workflow-trust candidates #1035, #1046, and #1050 on branch codex/implement-p1-candidates.",
+    "hard_constraints": "Keep scope bounded to ordinary startup output hardening, Planning mutation provenance preservation coverage, and routine dogfooding signal routing. Do not rewrite all ordinary outputs in this slice.",
+    "agent_may_decide": "Whether a P1 item is already implemented and only needs acceptance hardening, narrow docs/contracts, tests, or planning closeout updates.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Harden tests and contracts for the three P1 issues, then run focused validation and close out the active plan honestly.",
+    "proof_expectations": [
+      "python -m pytest tests/test_workspace_start_preflight_cli.py packages/planning/tests/test_promote.py packages/planning/tests/test_summary.py tests/test_maintainer_surfaces.py",
+      "uv run agentic-workspace summary --target . --select planning_surface_health,roadmap --format json",
+      "uv run agentic-workspace implement --changed <changed paths> --task \"Implement P1 on a new branch\" --format json"
+    ],
+    "touched_scope": [
+      "tests/test_workspace_start_preflight_cli.py",
+      "packages/planning/tests/test_promote.py",
+      "packages/planning/tests/test_summary.py",
+      "packages/planning/src/repo_planning_bootstrap/installer.py",
+      ".agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+      "docs/maintainer/dogfooding-feedback.md",
+      ".agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md",
+      "tools/skills/self-improvement-dogfooding/SKILL.md",
+      ".agentic-workspace/planning/state.toml",
+      ".agentic-workspace/planning/mutation-provenance.json",
+      ".agentic-workspace/planning/execplans/p1-workflow-trust-bundle.plan.json"
+    ],
+    "completion_criteria": [
+      "Implement P1 workflow trust bundle is implemented, validated, and closed out honestly."
+    ],
+    "continuation_owner": "#1035 for non-start ordinary output slices plus roadmap candidates for remaining P2/P3 work",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "Create a bounded plan for Implement P1 workflow trust bundle."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Implement the open P1 workflow-trust candidates #1035, #1046, and #1050 on branch codex/implement-p1-candidates.",
+      "constraints": "Keep scope bounded to ordinary startup output hardening, Planning mutation provenance preservation coverage, and routine dogfooding signal routing. Do not rewrite all ordinary outputs in this slice.",
+      "latitude": "Whether a P1 item is already implemented and only needs acceptance hardening, narrow docs/contracts, tests, or planning closeout updates.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "p1-workflow-trust-bundle",
+      "status": "active",
+      "next_step": "Harden tests and contracts for the three P1 issues, then run focused validation and close out the active plan honestly.",
+      "proof": "Focused pytest targets plus AW planning health and implement --changed gate."
+    },
+    "scope": {
+      "touched": [
+        "tests/test_workspace_start_preflight_cli.py",
+        "packages/planning/tests/test_promote.py",
+        "packages/planning/tests/test_summary.py",
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        ".agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+        "docs/maintainer/dogfooding-feedback.md",
+        ".agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md",
+        "tools/skills/self-improvement-dogfooding/SKILL.md",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/mutation-provenance.json",
+        ".agentic-workspace/planning/execplans/p1-workflow-trust-bundle.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "P1 workflow trust improvements for ordinary startup, Planning provenance, and routine dogfooding routing are implemented with durable proof.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "GitHub #1035 and GitHub #1056"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "GitHub #1035 and GitHub #1056",
+    "activation trigger": "After the startup-only slice is proven, promote separate ordinary-output slices for summary/report/preflight/proof/module reports."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Implement P1 on a new branch",
+    "inferred intended outcome": "Implement the P1 candidates currently tracked in planning state: #1035, #1046, and #1050.",
+    "chosen concrete what": "Startup output acceptance hardening, provenance preservation coverage across routine Planning mutations, and dogfooding routing status/owner hardening.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Startup CLI tests/runtime if needed, Planning bootstrap/tests/templates, dogfooding routing docs/skill/memory surfaces, and Planning state/provenance for this active plan.",
+    "max changed files": "About 12 files, excluding generated cache and test artifacts.",
+    "required validation commands": "python -m pytest tests/test_workspace_start_preflight_cli.py packages/planning/tests/test_promote.py packages/planning/tests/test_summary.py tests/test_maintainer_surfaces.py; uv run agentic-workspace summary --target . --select planning_surface_health,roadmap --format json; uv run agentic-workspace implement --changed <changed paths> --task \"Implement P1 on a new branch\" --format json",
+    "ask-before-refactor threshold": "Ask before redesigning non-start ordinary outputs or changing the long-term provenance policy from #1031.",
+    "stop before touching": "Unrelated P2/P3 backlog, non-start ordinary output rewrites, broad Memory behavior, or GitHub issue closure without proof."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue the P1 acceptance-hardening pass for #1035/#1046/#1050 and prove it with focused pytest plus AW planning gates.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement the open P1 workflow-trust candidates #1035, #1046, and #1050 on branch codex/implement-p1-candidates.",
+    "hard constraints": "Keep scope bounded to ordinary startup output hardening, Planning mutation provenance preservation coverage, and routine dogfooding signal routing. Do not rewrite all ordinary outputs in this slice.",
+    "agent may decide locally": "Whether a P1 item is already implemented and only needs acceptance hardening, narrow docs/contracts, tests, or planning closeout updates.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "P1 bundle is bounded to local workflow output, provenance, and dogfooding routing changes; no independent subtask has clear token savings after existing context was loaded.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-18T15:29:16+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "p1-workflow-trust-bundle",
+    "status": "completed",
+    "scope": "Implement the P1 workflow trust bundle for #1035, #1046, and #1050 without expanding into all ordinary outputs.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Harden tests and contracts for the three P1 issues, then run focused validation and close out the active plan honestly."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "tests/test_workspace_start_preflight_cli.py",
+    "packages/planning/tests/test_promote.py",
+    "packages/planning/tests/test_summary.py",
+    "packages/planning/src/repo_planning_bootstrap/installer.py",
+    ".agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+    "docs/maintainer/dogfooding-feedback.md",
+    ".agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md",
+    "tools/skills/self-improvement-dogfooding/SKILL.md",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/mutation-provenance.json",
+    ".agentic-workspace/planning/execplans/p1-workflow-trust-bundle.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "python -m pytest tests/test_workspace_start_preflight_cli.py packages/planning/tests/test_promote.py packages/planning/tests/test_summary.py tests/test_maintainer_surfaces.py",
+    "uv run agentic-workspace summary --target . --select planning_surface_health,roadmap --format json",
+    "uv run agentic-workspace implement --changed <changed paths> --task \"Implement P1 on a new branch\" --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Implement P1 workflow trust bundle is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Implemented P1 acceptance hardening for startup decision output, Planning mutation provenance preservation, and routine dogfooding signal routing.",
+    "scope touched": "workspace startup tests, Planning provenance/template/tests, dogfooding docs and Memory runbook, active planning state",
+    "changed surfaces": "tests/test_workspace_start_preflight_cli.py; packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/bootstrap/.agentic-workspace/planning/execplans/TEMPLATE.plan.json; .agentic-workspace/planning/execplans/TEMPLATE.plan.json; packages/planning/tests/test_promote.py; packages/planning/tests/test_summary.py; docs/maintainer/dogfooding-feedback.md; .agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md; tests/test_maintainer_surfaces.py",
+    "validations run": "make maintainer-surfaces; make test-planning; make lint-planning; make test-workspace; make lint-workspace; uv run agentic-workspace summary --target . --select planning_surface_health,roadmap --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "result for continuation": "continue from GitHub #1035 and GitHub #1056",
+    "next step": "promote the next bounded slice from GitHub #1035 and GitHub #1056"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Scope stayed within P1 workflow trust surfaces; #1035 remains owner for ordinary outputs beyond startup.",
+    "proof status": "passed",
+    "intent served": "no; intent-status=partial keeps continuation explicit.",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "GitHub #1035 and GitHub #1056"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "P1 bundle is bounded to local workflow output, provenance, and dogfooding routing changes; no independent subtask has clear token savings after existing context was loaded.",
+    "expected savings": "unknown",
+    "actual friction": "pending",
+    "proof result": "pending",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "make maintainer-surfaces; make test-planning; make lint-planning; make test-workspace; make lint-workspace; uv run agentic-workspace summary --target . --select planning_surface_health,roadmap --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "make maintainer-surfaces; make test-planning; make lint-planning; make test-workspace; make lint-workspace; uv run agentic-workspace summary --target . --select planning_surface_health,roadmap --format json; uv run agentic-workspace doctor --target . --modules planning --format json"
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Implement P1 workflow trust bundle.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "make maintainer-surfaces; make test-planning; make lint-planning; make test-workspace; make lint-workspace; uv run agentic-workspace summary --target . --select planning_surface_health,roadmap --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "unsolved intent passed to": "GitHub #1035 and GitHub #1056"
+  },
+  "execution_summary": {
+    "outcome delivered": "P1 startup/provenance/dogfooding routing slice implemented and validated; follow-up #1056 routed.",
+    "validation confirmed": "make maintainer-surfaces; make test-planning; make lint-planning; make test-workspace; make lint-workspace; uv run agentic-workspace summary --target . --select planning_surface_health,roadmap --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "follow-on routed to": "GitHub #1035 and GitHub #1056",
+    "post-work posterity capture": "archive closeout distillation",
+    "knowledge promoted (memory/docs/config)": "none",
+    "resume from": "GitHub #1035 and GitHub #1056",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed issue residue to GitHub #1035 and GitHub #1056.",
+    "motivation worth preserving": "Future agents should continue from GitHub #1035 and GitHub #1056 rather than rediscover this closeout residue.",
+    "canonical owner now": "GitHub #1035 and GitHub #1056",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "GitHub #1035 and GitHub #1056",
+    "proposed durable intent": "Future agents should continue from GitHub #1035 and GitHub #1056 rather than rediscover this closeout residue.",
+    "confidence": "low",
+    "needs review": "True",
+    "owner surface": "GitHub #1035 and GitHub #1056"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status partial.",
+    "evidence carried forward": "make maintainer-surfaces; make test-planning; make lint-planning; make test-workspace; make lint-workspace; uv run agentic-workspace summary --target . --select planning_surface_health,roadmap --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "reopen trigger": "Reopen when GitHub #1035 and GitHub #1056 activates a fresh bounded slice."
+  },
+  "improvement_signal_review": {
+    "status": "signals_routed",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [
+      "Planning health treated slash-separated category prose as a missing path reference during closeout."
+    ],
+    "signals fixed": [],
+    "signals routed": [
+      "Filed GitHub #1056 and added roadmap candidate github-1056-slash-category-path-warning."
+    ],
+    "signals dismissed": [],
+    "next owner": "GitHub #1056"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "GitHub #1035 and GitHub #1056",
+          "owner": "GitHub #1035 and GitHub #1056",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-18: Scaffolded by agentic-planning new-plan.",
+    "2026-05-18: Recorded delegation decision route=keep-local."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "yes",
+    "decision": "route_to_planning",
+    "target": "GitHub #1035 and GitHub #1056",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Create a bounded plan for Implement P1 workflow trust bundle.\nIntent satisfied: no\nArchive decision: archive-but-keep-lane-open\nProof: make maintainer-surfaces; make test-planning; make lint-planning; make test-workspace; make lint-workspace; uv run agentic-workspace summary --target . --select planning_surface_health,roadmap --format json; uv run agentic-workspace doctor --target . --modules planning --format json\nChanged surfaces: tests/test_workspace_start_preflight_cli.py; packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/bootstrap/.agentic-workspace/planning/execplans/TEMPLATE.plan.json; .agentic-workspace/planning/execplans/TEMPLATE.plan.json; packages/planning/tests/test_promote.py; packages/planning/tests/test_summary.py; docs/maintainer/dogfooding-feedback.md; .agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md; tests/test_maintainer_surfaces.py\nDurable residue: planning (GitHub #1035 and GitHub #1056)\nMemory learning: route_to_planning\nFollow-up: GitHub #1035 and GitHub #1056"
+  }
+}

@@ -13049,12 +13049,16 @@ def _build_execplan_record_from_todo_item(
             "reopen trigger": "",
         },
         "improvement_signal_review": {
-            "status": "pending",
+            "status": "not_checked",
+            "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
             "guidance": (
-                "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; "
-                "keep this compact and evidence-backed."
+                "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, "
+                "and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly "
+                "split, or mark no_signal_found after checking."
             ),
             "source": "operating_posture",
+            "owner classes": ["issue", "Memory", "Planning", "docs/checks/contracts", "direct fix", "dismissed with reason"],
+            "ordinary output cap": 3,
             "signals found": [],
             "signals fixed": [],
             "signals routed": [],

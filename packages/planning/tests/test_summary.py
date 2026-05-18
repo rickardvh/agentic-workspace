@@ -33,8 +33,13 @@ def test_execplan_template_surfaces_archive_closeout_terminal_values() -> None:
     assert template["post_decomposition_delegation"]["status"] == "pending"
     assert "delegate-exploration" in template["post_decomposition_delegation"]["route candidates"]
     assert "actual friction" in template["delegation_outcome_feedback"]
+    assert template["improvement_signal_review"]["status"] == "not_checked"
+    assert "no_signal_found" in template["improvement_signal_review"]["accepted statuses"]
     assert template["improvement_signal_review"]["source"] == "operating_posture"
-    assert "reported-only/routed" in template["improvement_signal_review"]["guidance"]
+    assert "smoothness/helpfulness gaps" in template["improvement_signal_review"]["guidance"]
+    assert "Memory" in template["improvement_signal_review"]["owner classes"]
+    assert "dismissed with reason" in template["improvement_signal_review"]["owner classes"]
+    assert template["improvement_signal_review"]["ordinary output cap"] == 3
 
 
 def test_planning_record_schema_rejects_unknown_execplan_fields(tmp_path: Path) -> None:
