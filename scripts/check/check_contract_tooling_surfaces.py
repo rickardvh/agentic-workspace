@@ -377,6 +377,35 @@ def _validate_operation_primitives(payload: dict[str, object]) -> list[str]:
             for required_target in ("python", "typescript", "bash", "powershell"):
                 if required_target not in support_targets:
                     errors.append(f"operation_primitives.json target_support_matrix missing target {required_target}")
+    taxonomy = payload.get("primitive_taxonomy")
+    tier_2_required_fields = {
+        "tier_owner",
+        "tier_reason",
+        "conformance_ref",
+        "migration_path",
+        "generic_behavior_audit",
+    }
+    if not isinstance(taxonomy, dict):
+        errors.append("operation_primitives.json must declare primitive_taxonomy")
+    else:
+        definitions = taxonomy.get("tier_definitions")
+        if not isinstance(definitions, list):
+            errors.append("operation_primitives.json primitive_taxonomy must declare tier_definitions")
+        else:
+            defined_tiers = {str(item.get("id")) for item in definitions if isinstance(item, dict)}
+            missing_tiers = {
+                "tier-1-portable-codegen",
+                "tier-2-package-domain",
+                "tier-3-deferred-or-out-of-scope",
+            } - defined_tiers
+            if missing_tiers:
+                errors.append("operation_primitives.json primitive_taxonomy missing tier(s): " + ", ".join(sorted(missing_tiers)))
+        required_fields = taxonomy.get("tier_2_required_audit_fields")
+        if set(required_fields or []) != tier_2_required_fields:
+            errors.append(
+                "operation_primitives.json primitive_taxonomy tier_2_required_audit_fields must be: "
+                + ", ".join(sorted(tier_2_required_fields))
+            )
     primitives = payload.get("primitives")
     if not isinstance(primitives, list) or not primitives:
         errors.append("operation_primitives.json must contain at least one primitive")
@@ -402,6 +431,19 @@ def _validate_operation_primitives(payload: dict[str, object]) -> list[str]:
                 target_executor_kinds.add(kind)
             if not isinstance(primitive.get("semantics"), str) or not str(primitive.get("semantics")).strip():
                 errors.append(f"target-executor primitive {primitive_id} must declare semantics")
+        taxonomy_tier = primitive.get("taxonomy_tier")
+        if taxonomy_tier not in {
+            "tier-1-portable-codegen",
+            "tier-2-package-domain",
+            "tier-3-deferred-or-out-of-scope",
+        }:
+            errors.append(f"primitive {primitive_id} missing valid taxonomy_tier")
+        if primitive.get("portability") == "target-executor" and taxonomy_tier != "tier-1-portable-codegen":
+            errors.append(f"target-executor primitive {primitive_id} must be classified tier-1-portable-codegen")
+        if taxonomy_tier == "tier-2-package-domain":
+            missing_audit = sorted(field for field in tier_2_required_fields if not str(primitive.get(field, "")).strip())
+            if missing_audit:
+                errors.append(f"tier-2 primitive {primitive_id} missing audit field(s): " + ", ".join(missing_audit))
     required_target_executor_kinds = {
         "filesystem",
         "structured-data",
@@ -435,6 +477,37 @@ def _validate_operation_primitives(payload: dict[str, object]) -> list[str]:
             missing_support = sorted(schema_backed_primitives - implemented_target_primitives)
             if missing_support:
                 errors.append("operation_primitives.json schema-backed primitives missing implemented target support: " + ", ".join(missing_support))
+    operation_step_primitives: set[str] = set()
+    for operation_ref in operation_contracts_manifest()["operations"]:
+        try:
+            operation = operation_manifest(str(operation_ref.get("path", "")))
+        except Exception as exc:  # pragma: no cover - checker reports the loaded path
+            errors.append(f"operation {operation_ref.get('id')} failed primitive taxonomy load: {exc}")
+            continue
+        for step in operation.get("steps", []):
+            if isinstance(step, dict) and isinstance(step.get("uses"), str):
+                operation_step_primitives.add(step["uses"])
+        ir_plan = operation.get("ir_plan", {})
+        if isinstance(ir_plan, dict):
+            for step in ir_plan.get("steps", []):
+                if isinstance(step, dict) and isinstance(step.get("uses"), str):
+                    operation_step_primitives.add(step["uses"])
+    missing_classification = sorted(primitive for primitive in operation_step_primitives if primitive not in seen_ids)
+    if missing_classification:
+        errors.append("operation steps reference primitives missing from operation_primitives.json: " + ", ".join(missing_classification))
+    tiered_primitives = {
+        str(primitive["id"]): str(primitive.get("taxonomy_tier"))
+        for primitive in primitives
+        if isinstance(primitive, dict) and isinstance(primitive.get("id"), str)
+    }
+    unclassified_steps = sorted(
+        primitive
+        for primitive in operation_step_primitives
+        if tiered_primitives.get(primitive)
+        not in {"tier-1-portable-codegen", "tier-2-package-domain", "tier-3-deferred-or-out-of-scope"}
+    )
+    if unclassified_steps:
+        errors.append("operation step primitives missing valid taxonomy_tier: " + ", ".join(unclassified_steps))
     return errors
 
 
@@ -2073,7 +2146,6 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
 
 
 

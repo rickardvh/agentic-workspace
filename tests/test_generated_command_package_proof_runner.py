@@ -666,6 +666,23 @@ def test_static_generated_package_proof_rejects_missing_runtime_projection_inven
     assert any("missing runtime projection entries" in error for error in errors)
 
 
+def test_static_generated_package_proof_rejects_legacy_generated_python_package_dirs(monkeypatch, tmp_path: Path) -> None:
+    checker = _load_checker()
+    generated_python = tmp_path / "generated" / "python" / "workspace-cli" / "legacy_package"
+    generated_python.mkdir(parents=True)
+    for package in ("workspace", "planning", "memory"):
+        package_root = tmp_path / "generated" / package / "python"
+        package_root.mkdir(parents=True)
+        (package_root / "cli.py").write_text("", encoding="utf-8")
+        for directory in ("commands", "operations", "primitives"):
+            (package_root / directory).mkdir()
+    monkeypatch.setattr(checker, "REPO_ROOT", tmp_path)
+
+    errors = checker._validate_generated_python_target_layout()
+
+    assert any("legacy generated Python package directories" in error for error in errors)
+
+
 def test_static_generated_package_proof_rejects_full_completion_with_transitional_runtime_projection_debt(monkeypatch) -> None:
     checker = _load_checker()
     original_manifest = checker.python_runtime_projection_inventory_manifest

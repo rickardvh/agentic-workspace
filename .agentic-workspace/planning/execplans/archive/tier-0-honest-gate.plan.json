@@ -258,9 +258,9 @@
     "decomposition adjustment": "none"
   },
   "proof_report": {
-    "validation proof": "uv run python scripts/check/check_generated_command_packages.py; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q; uv run python scripts/check/run_generated_command_package_proof.py --all; make test-workspace; make lint-workspace; uv run agentic-workspace summary --target . --verbose --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "validation proof": "generated package proof; focused tests; full proof runner; workspace tests/lint; planning summary and doctor",
     "proof achieved now": "yes; planning closeout recorded explicit proof input.",
-    "evidence for \"proof achieved\" state": "uv run python scripts/check/check_generated_command_packages.py; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q; uv run python scripts/check/run_generated_command_package_proof.py --all; make test-workspace; make lint-workspace; uv run agentic-workspace summary --target . --verbose --format json; uv run agentic-workspace doctor --target . --modules planning --format json"
+    "evidence for \"proof achieved\" state": "Tier 0 proof commands passed; exact command list is retained in validation_commands."
   },
   "intent_satisfaction": {
     "original intent": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane tier-0-honest-gate.",
@@ -305,14 +305,14 @@
     "reopen trigger": "Promote tier-1-primitive-taxonomy or another #892 follow-on tier when selected."
   },
   "improvement_signal_review": {
-    "status": "pending",
+    "status": "completed",
     "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
     "source": "operating_posture",
     "signals found": [],
     "signals fixed": [],
     "signals routed": [],
     "signals dismissed": [],
-    "next owner": ""
+    "next owner": "#892 / tier-1-primitive-taxonomy"
   },
   "closeout_distillation": {
     "buckets": {
@@ -359,6 +359,6 @@
     "status": "generated",
     "source": "archive-plan --prepare-closeout",
     "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
-    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Tier 0 honest Python completion gate for #892.\nIntent satisfied: yes for Tier 0; no for the larger #892 Python completion lane.\nArchive decision: archive-but-keep-lane-open\nProof: uv run python scripts/check/check_generated_command_packages.py; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q; uv run python scripts/check/run_generated_command_package_proof.py --all; make test-workspace; make lint-workspace; uv run agentic-workspace summary --target . --verbose --format json; uv run agentic-workspace doctor --target . --modules planning --format json\nChanged surfaces: scripts/check/check_generated_command_packages.py; src/agentic_workspace/contracts/command_package_ir.json; src/agentic_workspace/workspace_runtime_primitives.py; tests/test_contract_tooling.py; tests/test_generated_command_package_proof_runner.py; tests/test_workspace_defaults_cli.py; .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json; .agentic-workspace/planning/execplans/archive/tier-0-honest-gate.plan.json; .agentic-workspace/planning/mutation-provenance.json\nDurable residue: planning (#892 / tier-1-primitive-taxonomy)\nMemory learning: route_to_planning\nFollow-up: #892 / tier-1-primitive-taxonomy"
+    "text": "Intent: Tier 0 honest Python completion gate for #892.\nTier 0 satisfied: yes.\nLarger #892 lane satisfied: no; archive-but-keep-lane-open.\nProof: generated package proof, focused tests, full proof runner, workspace tests/lint, planning summary, planning doctor.\nChanged surfaces: checker, command package IR, workspace runtime rewrite, focused tests, decomposition, archive/provenance.\nDurable residue and follow-up: #892 / tier-1-primitive-taxonomy."
   }
 }

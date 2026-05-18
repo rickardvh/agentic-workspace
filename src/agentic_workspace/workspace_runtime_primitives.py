@@ -10463,6 +10463,51 @@ def _startup_skills_projection(
     }
 
 
+def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
+    if not isinstance(gate, dict):
+        return {}
+    compact: dict[str, Any] = {
+        "kind": gate.get("kind"),
+        "status": gate.get("status"),
+        "decision": gate.get("decision"),
+        "workflow_sufficient": gate.get("workflow_sufficient"),
+        "reason": gate.get("reason"),
+        "required_next_action": gate.get("required_next_action"),
+        "active_planning_present": gate.get("active_planning_present"),
+        "work_shape": gate.get("work_shape"),
+        "proof_burden": gate.get("proof_burden"),
+        "issue_refs": gate.get("issue_refs", []),
+        "promotion_command": gate.get("promotion_command"),
+        "delegation_decision_command": gate.get("delegation_decision_command"),
+        "new_plan_command": gate.get("new_plan_command"),
+        "implementation_allowed": gate.get("implementation_allowed"),
+        "delegation_decision_required": gate.get("delegation_decision_required"),
+    }
+    for key in (
+        "changed_path_classification",
+        "active_delegation_requirement",
+        "active_parent_decomposition_requirement",
+    ):
+        if key in gate:
+            compact[key] = gate[key]
+    decomposition = gate.get("decomposition")
+    if isinstance(decomposition, dict):
+        candidates = decomposition.get("candidates", [])
+        top_candidate = candidates[0] if isinstance(candidates, list) and candidates else {}
+        compact["decomposition"] = {
+            "status": decomposition.get("status"),
+            "candidate_count": decomposition.get("candidate_count", len(candidates) if isinstance(candidates, list) else 0),
+            "top_candidate": {
+                "lane_id": top_candidate.get("lane_id"),
+                "title": top_candidate.get("title"),
+                "route_candidate": top_candidate.get("route_candidate"),
+            }
+            if isinstance(top_candidate, dict) and top_candidate
+            else {},
+        }
+    return {key: value for key, value in compact.items() if value is not None}
+
+
 def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, target_root: Path | None = None) -> dict[str, Any]:
     skill_routing = payload.get("skill_routing", {}) if isinstance(payload.get("skill_routing"), dict) else {}
     next_safe_action = _next_safe_action_packet(
@@ -10488,7 +10533,11 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
                     reason="Use the next action and selectors; no raw workspace files are needed yet.",
                 ),
             ),
-            **({"planning_safety_gate": payload["planning_safety_gate"]} if "planning_safety_gate" in payload else {}),
+            **(
+                {"planning_safety_gate": _selector_first_planning_safety_gate(payload["planning_safety_gate"])}
+                if "planning_safety_gate" in payload
+                else {}
+            ),
         },
         "memory": payload.get("memory_consult", {}),
     }
@@ -11772,21 +11821,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "detail_commands": detail_commands,
     }
     if isinstance(planning_safety_gate, dict):
-        projected["planning_safety_gate"] = (
-            planning_safety_gate
-            if planning_safety_gate.get("workflow_sufficient") is False
-            else {
-                "kind": planning_safety_gate.get("kind"),
-                "status": planning_safety_gate.get("status"),
-                "decision": planning_safety_gate.get("decision"),
-                "workflow_sufficient": planning_safety_gate.get("workflow_sufficient"),
-                "required_next_action": planning_safety_gate.get("required_next_action"),
-                "active_planning_present": planning_safety_gate.get("active_planning_present"),
-                "active_parent_decomposition_requirement": planning_safety_gate.get("active_parent_decomposition_requirement", {}),
-                "implementation_allowed": planning_safety_gate.get("implementation_allowed"),
-                "changed_path_classification": planning_safety_gate.get("changed_path_classification", {}),
-            }
-        )
+        projected["planning_safety_gate"] = _selector_first_planning_safety_gate(planning_safety_gate)
     if isinstance(intent_acknowledgement, dict) and intent_acknowledgement.get("decision") == "proceed-with-stated-assumption":
         projected["intent_acknowledgement"] = {
             "decision": intent_acknowledgement.get("decision"),

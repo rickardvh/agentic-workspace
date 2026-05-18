@@ -1608,6 +1608,214 @@
       "reason": "Post-PR review cleanup: archive closeout fields were corrected to remove scaffold placeholders and honestly route #892 continuation to tier-1-primitive-taxonomy.",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-17T20:19:39+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/tier-1-primitive-taxonomy.plan.json",
+      "sha256": "57f31d6c506b91ee7dbe43f07b61af59a1ec6728ecec35c198770b3434d37666",
+      "command": "agentic-planning promote-to-plan",
+      "reason": "promote decomposition lane tier-1-primitive-taxonomy",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T20:41:21+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "039d24e0fd7fd233a42e6c96e46c13318c914aaa620a47195cc1570c303168d1",
+      "command": "agentic-planning promote-to-plan",
+      "reason": "promote decomposition lane tier-1-primitive-taxonomy",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T20:41:21+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "20924bd5cf110df66c502f580af77146bcabf922c1352f199862a6e8eea89aa4",
+      "command": "agentic-planning promote-to-plan",
+      "reason": "promote decomposition lane tier-1-primitive-taxonomy",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T20:41:21+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/tier-1-primitive-taxonomy.plan.json",
+      "sha256": "926a15be9cd89c16a8dc6a3a2f9d5a36392a6a00ebfedb25edd75c12dded3997",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=delegate-exploration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T20:58:04+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "2825a103bb66f149fb0a5df4c54a27542a980a4b8f789ea801637c26cd080901",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan tier-1-primitive-taxonomy",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T21:24:05+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/tier-1-primitive-taxonomy.plan.json",
+      "sha256": "f265d8a9fd99b6b5ca6eb305afb615c53e458c9450093133a0907d2f5607bce9",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan tier-1-primitive-taxonomy",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T21:24:05+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/tier-2-generated-target-layout.plan.json",
+      "sha256": "80ed4782342cd194233825898575f61774ec187586bb09e6e5418a3a2b3bd238",
+      "command": "agentic-planning promote-to-plan",
+      "reason": "promote decomposition lane tier-2-generated-target-layout",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T21:24:11+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "fd285b4d6f81e0a180fea65193a273645f8fc163282c1be326a479370ec561f9",
+      "command": "agentic-planning promote-to-plan",
+      "reason": "promote decomposition lane tier-2-generated-target-layout",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T21:24:11+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "sha256": "60ea117f49f5353875505b56951ea071678d4b895ceed4416851d02158614623",
+      "command": "agentic-planning promote-to-plan",
+      "reason": "promote decomposition lane tier-2-generated-target-layout",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T21:24:11+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/tier-2-generated-target-layout.plan.json",
+      "sha256": "9f51dc593168502aacd3ffc6bf9402bc6206f2d69a2d3013409cfee6e6b3dba1",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=delegate-exploration",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T21:24:19+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "2825a103bb66f149fb0a5df4c54a27542a980a4b8f789ea801637c26cd080901",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan tier-2-generated-target-layout",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T21:31:46+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/tier-2-generated-target-layout.plan.json",
+      "sha256": "a1041591ef4144918acaaa09a652f31af206502bd801bef09bd2eaf31de83733",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan tier-2-generated-target-layout",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T21:31:46+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/tier-0-honest-gate.plan.json",
+      "sha256": "aa1952d3d6c4f6ed43eb880565fabc5ec209ef686cd4b86e0602e918464aa55f",
+      "command": "agentic-planning record-recovery",
+      "reason": "Tier 2 proof required compacting oversized Tier 0 archive generated_closeout/proof prose so structured file inventory guardrails pass.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-17T21:33:23+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/tiny-start-payload-budget.plan.json",
+      "sha256": "7ac98aaeb53e07e0efa9853dbb5a92441a3557da149b6b00889e5090733ad874",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold tiny-start-payload-budget",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T21:36:23+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "bd3592e911b45012c78cb97a612f4935e60ee667a6c768b163738eb24e97b84d",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold tiny-start-payload-budget",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T21:36:23+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "2825a103bb66f149fb0a5df4c54a27542a980a4b8f789ea801637c26cd080901",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan tiny-start-payload-budget",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T21:45:05+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/tiny-start-payload-budget.plan.json",
+      "sha256": "e8d84a2f77c2abc53693d97b480cc46d8d853207252d9621dca4fce8aa0b9d35",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan tiny-start-payload-budget",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-17T21:45:05+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/tier-1-primitive-taxonomy.plan.json",
+      "sha256": "b0989f9341f25adc0beb6f1c16cea6897d4754bfbcf3c63f55094aa465f829d2",
+      "command": "agentic-planning record-recovery",
+      "reason": "Post-archive cleanup: replace residual pending delegation/improvement fields with completed proof and #1043 routing.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-17T21:48:53+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/tier-2-generated-target-layout.plan.json",
+      "sha256": "95b80834f0e99ca55b6c67d91fe24e724b7f7a0b19218eadd9cd8abb21f6aafa",
+      "command": "agentic-planning record-recovery",
+      "reason": "Post-archive cleanup: replace residual pending delegation/task-intent fields with completed proof and no-promotion decision.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-17T21:48:57+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/tiny-start-payload-budget.plan.json",
+      "sha256": "d5880050f1f3087f478f47fc367c69d3f7c19e20e7bd9fe58c903df9856b45db",
+      "command": "agentic-planning record-recovery",
+      "reason": "Post-archive cleanup: mark delegation not needed, record no-promotion decision, and add focused delegation guard proof command.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-17T21:49:01+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/tier-0-honest-gate.plan.json",
+      "sha256": "1c65c192c5d68414f047924aa664bd2dd9b516fbc785bab57144194d30f426df",
+      "command": "agentic-planning record-recovery",
+      "reason": "Post-archive cleanup: mark improvement review complete and route next owner to #892 / tier-1-primitive-taxonomy.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-17T21:49:40+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/fix-pr-1045-ci.plan.json",
+      "sha256": "e7e60b7a68e76a1d05429c8918a84b1e63123140c6a7a8dd53a6d15ef7fb2c6c",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold fix-pr-1045-ci",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T09:55:07+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "db61af3b2bc3d75ca74c77deeecd83f08352b9fb9261d40233f51ad2ebcb2dce",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold fix-pr-1045-ci",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T09:55:07+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/fix-pr-1045-ci.plan.json",
+      "sha256": "c694d0e51e3f6d3c584276065ae31c1c3715c22cef29d6f05e97e8aa0d97795d",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T09:57:31+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "2825a103bb66f149fb0a5df4c54a27542a980a4b8f789ea801637c26cd080901",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan fix-pr-1045-ci",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T09:58:49+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/fix-pr-1045-ci.plan.json",
+      "sha256": "27fae3a655704ec6c18f2b9fae72121ad3c2a740de46cfe26f97777ea69e38e4",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan fix-pr-1045-ci",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T09:58:49+00:00"
     }
   ]
 }

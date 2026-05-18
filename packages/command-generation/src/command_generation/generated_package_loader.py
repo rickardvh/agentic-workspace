@@ -143,15 +143,26 @@ def _candidate_generated_package_dirs() -> list[Path]:
     for parent in Path(__file__).resolve().parents:
         generated_root = parent / "generated"
         if generated_root.is_dir():
-            candidates.extend(sorted(generated_root.glob("*/python")))
-            candidates.extend(sorted((generated_root / "python").glob("*/generated_cli_package")))
+            for child in sorted(generated_root.iterdir()):
+                python_dir = child / "python"
+                if python_dir.is_dir():
+                    candidates.append(python_dir)
+            legacy_root = generated_root / "python"
+            if legacy_root.is_dir():
+                for child in sorted(legacy_root.iterdir()):
+                    legacy_package = child / "generated_cli_package"
+                    if legacy_package.is_dir():
+                        candidates.append(legacy_package)
     for path_entry in sys.path:
         if not path_entry:
             continue
         root = Path(path_entry)
         if not root.is_dir():
             continue
-        candidates.extend(sorted(root.glob("*/_generated_cli_package_impl")))
+        for child in sorted(root.iterdir()):
+            generated_impl = child / "_generated_cli_package_impl"
+            if generated_impl.is_dir():
+                candidates.append(generated_impl)
     seen: set[Path] = set()
     unique: list[Path] = []
     for candidate in candidates:

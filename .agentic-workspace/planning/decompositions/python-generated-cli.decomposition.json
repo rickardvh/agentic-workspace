@@ -154,9 +154,9 @@
     {
       "id": "tier-1-primitive-taxonomy",
       "title": "Freeze portable primitive taxonomy",
-      "readiness": "deferred",
+      "readiness": "promoted",
       "outcome": "All operation steps are classified as Tier 1 portable codegen primitives, Tier 2 package-domain primitives or explicit debt, or Tier 3 deferred/out of completion scope. operation_primitives.json declares the taxonomy, schema backing, and Tier 2 owner/reason/conformance/migration/generic-behavior audit.",
-      "owner_surface": "src/agentic_workspace/contracts/operation_primitives.json, operation primitive schemas, src/agentic_workspace/contracts/python_operation_execution_inventory.json, packages/command-generation/tests/primitive_conformance.py, and scripts/check/check_generated_command_packages.py",
+      "owner_surface": ".agentic-workspace/planning/execplans/tier-1-primitive-taxonomy.plan.json",
       "proof": "uv run python scripts/check/check_generated_command_packages.py; uv run python packages/command-generation/tests/primitive_conformance.py",
       "depends_on": [
         "tier-0-honest-gate"
@@ -166,9 +166,9 @@
     {
       "id": "tier-2-generated-target-layout",
       "title": "Lock generated target layout",
-      "readiness": "deferred",
+      "readiness": "promoted",
       "outcome": "generated/<package>/python is the only visible generated Python target output with cli.py, commands/, primitives/, operations/, and resources or contracts where needed; legacy generated/python/*-cli/generated_cli_package output is removed or explicitly transitional.",
-      "owner_surface": "scripts/generate/generate_command_packages.py, generated/<package>/python, package force-include configuration, scripts/check/check_structured_file_inventory.py, and packaging tests",
+      "owner_surface": ".agentic-workspace/planning/execplans/tier-2-generated-target-layout.plan.json",
       "proof": "uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run pytest tests/test_workspace_packaging.py packages/memory/tests/test_packaging.py packages/planning/tests/test_packaging.py -q",
       "depends_on": [
         "tier-0-honest-gate",

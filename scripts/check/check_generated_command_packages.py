@@ -1875,6 +1875,30 @@ def _validate_no_legacy_generated_adapter_runtime_import(*, relative_path: str, 
     return errors
 
 
+def _validate_generated_python_target_layout() -> list[str]:
+    errors: list[str] = []
+    generated_python_root = REPO_ROOT / "generated" / "python"
+    if generated_python_root.is_dir():
+        legacy_dirs = sorted(path.name for path in generated_python_root.iterdir() if path.is_dir())
+        if legacy_dirs:
+            errors.append(
+                "generated/python must contain only shared Python proof support files; legacy generated Python "
+                "package directories must live under generated/<package>/python: "
+                + ", ".join(legacy_dirs)
+            )
+    for package_name in ("workspace", "planning", "memory"):
+        package_root = REPO_ROOT / "generated" / package_name / "python"
+        if not package_root.is_dir():
+            errors.append(f"generated/{package_name}/python is missing")
+            continue
+        for directory_name in ("commands", "operations", "primitives"):
+            if not (package_root / directory_name).is_dir():
+                errors.append(f"generated/{package_name}/python/{directory_name} is missing")
+        if not (package_root / "cli.py").is_file():
+            errors.append(f"generated/{package_name}/python/cli.py is missing")
+    return errors
+
+
 def _validate_generated_python_commands_absent_from_handwritten_parsers() -> list[str]:
     errors: list[str] = []
     for package_id in ("root-workspace", "planning-bootstrap", "memory-bootstrap"):
@@ -2347,6 +2371,7 @@ def _validate_static_surfaces() -> list[str]:
                 errors.append(f"{relative_path} does not route generated Python adapters through generated command modules")
         errors.extend(_validate_python_shipped_source_executable_retirement())
         errors.extend(_validate_python_runtime_handler_boundary())
+        errors.extend(_validate_generated_python_target_layout())
         errors.extend(_validate_direct_generated_python_command_projection())
         errors.extend(_validate_generated_python_commands_absent_from_handwritten_parsers())
         errors.extend(_validate_generated_cli_compatibility_vocabulary())
