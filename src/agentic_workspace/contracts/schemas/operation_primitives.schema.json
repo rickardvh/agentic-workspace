@@ -190,7 +190,8 @@
       "properties": {
         "classification_rule": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Rule used to classify each primitive into a completion tier."
         },
         "tier_definitions": {
           "type": "array",
@@ -219,7 +220,8 @@
               }
             },
             "additionalProperties": false
-          }
+          },
+          "description": "Completion tiers that separate portable codegen primitives, package-domain primitives, and deferred or out-of-scope debt."
         },
         "tier_2_required_audit_fields": {
           "type": "array",
@@ -227,11 +229,13 @@
           "items": {
             "type": "string",
             "minLength": 1
-          }
+          },
+          "description": "Audit fields that every Tier 2 package-domain primitive must carry."
         },
         "generic_behavior_rule": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Rule preventing generic deterministic behavior from being hidden behind package-domain primitive classification."
         }
       },
       "additionalProperties": false,

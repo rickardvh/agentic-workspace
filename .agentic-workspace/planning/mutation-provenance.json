@@ -1776,6 +1776,46 @@
       "reason": "Post-archive cleanup: mark improvement review complete and route next owner to #892 / tier-1-primitive-taxonomy.",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-17T21:49:40+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/fix-pr-1045-ci.plan.json",
+      "sha256": "e7e60b7a68e76a1d05429c8918a84b1e63123140c6a7a8dd53a6d15ef7fb2c6c",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold fix-pr-1045-ci",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T09:55:07+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "db61af3b2bc3d75ca74c77deeecd83f08352b9fb9261d40233f51ad2ebcb2dce",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold fix-pr-1045-ci",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T09:55:07+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/fix-pr-1045-ci.plan.json",
+      "sha256": "c694d0e51e3f6d3c584276065ae31c1c3715c22cef29d6f05e97e8aa0d97795d",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T09:57:31+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "2825a103bb66f149fb0a5df4c54a27542a980a4b8f789ea801637c26cd080901",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan fix-pr-1045-ci",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T09:58:49+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/fix-pr-1045-ci.plan.json",
+      "sha256": "27fae3a655704ec6c18f2b9fae72121ad3c2a740de46cfe26f97777ea69e38e4",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan fix-pr-1045-ci",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T09:58:49+00:00"
     }
   ]
 }

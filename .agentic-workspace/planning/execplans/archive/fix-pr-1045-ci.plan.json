@@ -1,0 +1,288 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Fix PR 1045 CI checks",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Fix the failing PR #1045 planning CI check.",
+    "hard_constraints": "Keep scope bounded to schema reference documentation failures reported by CI; do not start the next #892 tier.",
+    "agent_may_decide": "Add missing schema descriptions, regenerate reference docs, and run the failing planning check plus focused schema validation.",
+    "escalate_when": "CI logs reveal an unrelated failure outside schema reference docs or the fix requires changing operation primitive semantics.",
+    "next_action": "Add missing operation primitive taxonomy schema descriptions and regenerate schema reference docs.",
+    "proof_expectations": [
+      "make schema-reference-docs",
+      "make check-planning"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/contracts/schemas/operation_primitives.schema.json",
+      "docs/reference/operation-primitives.md"
+    ],
+    "completion_criteria": [
+      "PR #1045 planning CI no longer fails schema reference docs.",
+      "Operation primitive taxonomy schema fields have descriptions.",
+      "Generated reference docs are current."
+    ],
+    "continuation_owner": "#892 / tier-3-memory-first",
+    "closeout_decision": "archive-but-keep-lane-open"
+  },
+  "goal": [
+    "Create a bounded plan for Fix PR 1045 CI checks."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Fix the failing PR #1045 planning CI check.",
+      "constraints": "Keep scope bounded to schema reference documentation failures reported by CI; do not start the next #892 tier.",
+      "latitude": "Add missing schema descriptions, regenerate reference docs, and run the failing planning check plus focused schema validation.",
+      "escalation": "Escalate when CI logs reveal an unrelated failure outside schema reference docs or the fix requires changing operation primitive semantics."
+    },
+    "execution": {
+      "milestone": "fix-pr-1045-ci",
+      "status": "active",
+      "next_step": "Add missing operation primitive taxonomy schema descriptions and regenerate schema reference docs.",
+      "proof": "make schema-reference-docs; make check-planning"
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/contracts/schemas/operation_primitives.schema.json",
+        "docs/reference/operation-primitives.md"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Land PR #1045 with CI passing while #892 remains routed to tier-3-memory-first.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "#892 / tier-3-memory-first"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "#892 / tier-3-memory-first",
+    "activation trigger": "After PR #1045 lands."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "PR #1045 planning CI can pass schema reference docs.",
+    "intentionally deferred": "The larger #892 Python completion lane remains routed to tier-3-memory-first.",
+    "discovered implications": "CI enforces descriptions for newly exposed schema reference fields.",
+    "proof achieved now": "make schema-reference-docs, make check-planning, contract tooling, structured inventory, ruff, and maintainer surfaces pass.",
+    "validation still needed": "Push the fix and let GitHub Actions rerun.",
+    "next likely slice": "#892 / tier-3-memory-first after PR #1045 lands"
+  },
+  "intent_interpretation": {
+    "literal request": "Fix CI checks",
+    "inferred intended outcome": "Fix failing PR #1045 GitHub Actions checks.",
+    "chosen concrete what": "Resolve schema reference documentation failures for operation primitive taxonomy fields.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "src/agentic_workspace/contracts/schemas/operation_primitives.schema.json; docs/reference/operation-primitives.md; planning closeout files.",
+    "max changed files": "5",
+    "required validation commands": "make schema-reference-docs; make check-planning; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue by adding missing schema descriptions, regenerating docs, and rerunning make check-planning.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Fix the failing PR #1045 planning CI check.",
+    "hard constraints": "Keep scope bounded to schema reference documentation failures reported by CI; do not start the next #892 tier.",
+    "agent may decide locally": "Add missing schema descriptions, regenerate reference docs, and run the failing planning check plus focused schema validation.",
+    "escalate when": "CI logs reveal an unrelated failure outside schema reference docs or the fix requires changing operation primitive semantics."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "CI failure is a narrow schema-reference docs repair with two implementation files; delegation would add handoff overhead.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-18T09:57:31+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "fix-pr-1045-ci",
+    "status": "completed",
+    "scope": "Fix schema reference documentation CI failure for PR #1045.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Add missing schema descriptions and regenerate schema reference docs."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/schemas/operation_primitives.schema.json",
+    "docs/reference/operation-primitives.md"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "make schema-reference-docs",
+    "make check-planning",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "PR #1045 planning CI no longer fails schema reference docs.",
+    "Operation primitive taxonomy schema fields have descriptions.",
+    "Generated reference docs are current."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Added missing primitive_taxonomy schema field descriptions and regenerated docs/reference/operation-primitives.md.",
+    "scope touched": "src/agentic_workspace/contracts/schemas/operation_primitives.schema.json; docs/reference/operation-primitives.md",
+    "changed surfaces": "Schema reference docs and operation primitives schema metadata.",
+    "validations run": "make schema-reference-docs; make check-planning; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make maintainer-surfaces",
+    "result for continuation": "Commit and push the CI fix to PR #1045; #892 remains routed to tier-3-memory-first.",
+    "next step": "Push and recheck PR checks."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "passed locally",
+    "intent served": "yes for CI fix; larger #892 remains open",
+    "config compliance": "used planning-backed workflow and CI log evidence",
+    "misinterpretation risk": "low",
+    "follow-on decision": "#892 / tier-3-memory-first"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "CI failure is a narrow schema-reference docs repair with two implementation files; delegation would add handoff overhead.",
+    "expected savings": "low",
+    "actual friction": "none",
+    "proof result": "passed",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "make schema-reference-docs; make check-planning; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make maintainer-surfaces",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "All listed local validation commands passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "Fix failing CI checks for PR #1045.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The exact failed CI target make check-planning passes locally after schema descriptions and regenerated docs.",
+    "unsolved intent passed to": "#892 / tier-3-memory-first"
+  },
+  "execution_summary": {
+    "outcome delivered": "Schema reference docs CI failure fixed for PR #1045.",
+    "validation confirmed": "local failing CI command and supporting checks pass",
+    "follow-on routed to": "#892 / tier-3-memory-first",
+    "post-work posterity capture": "archive closeout",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "No work remains in this CI-fix slice after push; wait for PR #1045 checks."
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "CI fix closeout",
+    "target scope": "none",
+    "proposed durable intent": "none",
+    "confidence": "low",
+    "needs review": false,
+    "owner surface": "none"
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "The CI-fix slice is complete locally, while #892 remains open for tier-3-memory-first.",
+    "evidence carried forward": "The exact failed CI target make check-planning passes locally; schema reference docs are current.",
+    "reopen trigger": "PR #1045 GitHub Actions reports a remaining or new failure."
+  },
+  "improvement_signal_review": {
+    "status": "completed",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [
+      "CI reported missing descriptions for primitive_taxonomy schema reference fields."
+    ],
+    "signals fixed": [
+      "Added descriptions and regenerated docs/reference/operation-primitives.md."
+    ],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "#892 / tier-3-memory-first"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [
+        "docs/reference/operation-primitives.md regenerated from schema."
+      ],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-18: Scaffolded by agentic-planning new-plan.",
+    "2026-05-18: Recorded delegation decision route=keep-local."
+  ]
+}

@@ -25,4 +25,9 @@ Registry of implementation primitives referenced by operation contracts.
 | `primitive_extension_boundary.module_extension_rule` | string | yes |  | Rule for keeping module-specific primitives explicit as domain-runtime extensions. |  |  |
 | `primitive_extension_boundary.target_support_rule` | string | yes |  | Rule requiring each generated target to implement shared primitives or visibly report unsupported/deferred behavior. |  |  |
 | `primitive_extension_boundary.target_support_matrix` | array of object | yes |  | Target support or explicit unsupported reporting for shared primitives and module/domain-runtime extensions. |  |  |
+| `primitive_taxonomy` | object | no |  | Completion-tier taxonomy for primitive references used by operation contracts. |  |  |
+| `primitive_taxonomy.classification_rule` | string | yes |  | Rule used to classify each primitive into a completion tier. |  |  |
+| `primitive_taxonomy.tier_definitions` | array of object | yes |  | Completion tiers that separate portable codegen primitives, package-domain primitives, and deferred or out-of-scope debt. |  |  |
+| `primitive_taxonomy.tier_2_required_audit_fields` | array of string | yes |  | Audit fields that every Tier 2 package-domain primitive must carry. |  |  |
+| `primitive_taxonomy.generic_behavior_rule` | string | yes |  | Rule preventing generic deterministic behavior from being hidden behind package-domain primitive classification. |  |  |
 | `primitives` | array of object | yes |  | Ordered primitives entries used by this contract. |  |  |
