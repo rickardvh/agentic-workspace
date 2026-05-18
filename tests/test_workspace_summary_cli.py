@@ -59,6 +59,23 @@ candidates = [
     assert payload["schema"]["schema_version"] == "planning-summary-tiny-schema/v1"
     assert payload["schema"]["select_command"] == "agentic-workspace summary --select <field.path> --format json"
     assert payload["schema"]["verbose_command"] == "agentic-workspace summary --verbose --format json"
+    assert set(payload) <= {
+        "kind",
+        "profile",
+        "schema",
+        "target_root",
+        "todo",
+        "execplans",
+        "planning_surface_health",
+        "execution_readiness",
+        "current_execution_pressure",
+        "decomposition",
+        "roadmap",
+        "detail_commands",
+        "available_selectors",
+        "warning_count",
+        "memory_consult",
+    }
     assert "candidate_lanes" not in payload["roadmap"]
 
 

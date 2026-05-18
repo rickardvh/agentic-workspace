@@ -11,6 +11,7 @@ Compact record of ordinary AW routing friction that should influence future memo
 ## Current Signals
 
 - 2026-05-18: The repo memory index routed "calibrating routing quality" to this file, but the file was missing. The fix is to keep this note present so agents can capture routing friction without falling back to chat-only reporting.
+- 2026-05-18: PR #1057 review-comment handling exposed planning-gate friction: `start` allowed a bounded direct fix, but `implement --changed` later required creating an active execplan, and the scaffold introduced placeholders that needed cleanup before closeout. #1058 implemented the direct proof-only path for bounded routine PR review-comment repairs; use normal execplans only when scope grows or parent intent changes.
 
 ## Review Trigger
 

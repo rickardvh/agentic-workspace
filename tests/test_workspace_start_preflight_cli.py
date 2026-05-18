@@ -19,6 +19,19 @@ def _start_context(payload: dict[str, object]) -> dict[str, object]:
     return context if isinstance(context, dict) else {}
 
 
+def _preflight_context(payload: dict[str, object]) -> dict[str, object]:
+    context = payload.get("context", {})
+    return context if isinstance(context, dict) else payload
+
+
+def _preflight_next(payload: dict[str, object]) -> dict[str, object]:
+    next_action = payload.get("next")
+    if isinstance(next_action, dict):
+        return next_action
+    legacy = payload.get("immediate_next_allowed_action")
+    return legacy if isinstance(legacy, dict) else {}
+
+
 def _start_primary_action(payload: dict[str, object]) -> dict[str, object]:
     action = payload.get("immediate_next_allowed_action")
     if isinstance(action, dict):
@@ -59,6 +72,9 @@ def _start_planning_safety_gate(payload: dict[str, object]) -> dict[str, object]
     gate = payload.get("planning_safety_gate")
     if isinstance(gate, dict):
         return gate
+    context_gate = _start_context(payload).get("planning_safety_gate")
+    if isinstance(context_gate, dict):
+        return context_gate
     planning = _start_context(payload).get("planning", {})
     if isinstance(planning, dict) and isinstance(planning.get("planning_safety_gate"), dict):
         return planning["planning_safety_gate"]
@@ -69,6 +85,9 @@ def _start_workflow_sufficiency(payload: dict[str, object]) -> dict[str, object]
     sufficiency = payload.get("workflow_sufficiency")
     if isinstance(sufficiency, dict):
         return sufficiency
+    context_sufficiency = _start_context(payload).get("workflow_sufficiency")
+    if isinstance(context_sufficiency, dict):
+        return context_sufficiency
     planning = _start_context(payload).get("planning", {})
     if isinstance(planning, dict) and isinstance(planning.get("workflow_sufficiency"), dict):
         return planning["workflow_sufficiency"]
@@ -165,10 +184,11 @@ def test_preflight_default_returns_tiny_takeover_router(capsys) -> None:
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "preflight-response/v1"
     assert payload["mode"] == "tiny-takeover-router"
-    assert "active_state_summary" in payload
+    assert set(payload) <= {"kind", "mode", "target", "issued_at", "preflight_token", "next", "context", "drill_down"}
+    assert "active_state_summary" in _preflight_context(payload)
     assert "startup_guidance" not in payload
-    assert payload["immediate_next_allowed_action"]["action"] == "recover-orientation"
-    assert payload["detail_commands"]["full_takeover"].endswith("preflight --target . --verbose --format json")
+    assert _preflight_next(payload)["action"] == "recover-orientation"
+    assert payload["drill_down"]["detail_commands"]["full_takeover"].endswith("preflight --target . --verbose --format json")
 
 
 def test_preflight_command_with_target_argument(tmp_path: Path, capsys) -> None:
@@ -597,13 +617,19 @@ def test_start_default_returns_selector_first_router(tmp_path: Path, capsys) -> 
     assert len(encoded) < 9000
     assert payload["kind"] == "startup-context/v1"
     assert set(payload) == {"kind", "target", "next_safe_action", "skills", "context", "drill_down"}
-    assert "immediate_next_allowed_action" not in payload
-    assert "skill_routing" not in payload
-    assert "workflow_sufficiency" not in payload
-    assert "task_intent" not in payload
-    assert "adaptive_routing" not in payload
-    assert "context_router" not in payload
-    assert "invoked_cli_identity" not in payload
+    competing_top_level_decision_fields = {
+        "immediate_next_allowed_action",
+        "skill_routing",
+        "workflow_sufficiency",
+        "task_intent",
+        "acceptance",
+        "planning_safety_gate",
+        "delegation_decision",
+        "adaptive_routing",
+        "context_router",
+        "invoked_cli_identity",
+    }
+    assert competing_top_level_decision_fields.isdisjoint(payload)
     assert _start_primary_action(payload)["action"] in {
         "choose-smallest-workflow-shape",
         "continue-active-planning-record",
@@ -1396,6 +1422,74 @@ def test_implement_flags_scope_growth_without_active_execplan(tmp_path: Path, ca
     assert payload["next"]["action"] == "Create or promote an active execplan before continuing implementation."
 
 
+def test_implement_allows_routine_pr_comment_repair_without_plan_scaffold(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "tests/test_workspace_start_preflight_cli.py",
+                ".agentic-workspace/memory/repo/current/routing-feedback.md",
+                "--task",
+                "Address PR #1057 review comment",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    gate = _start_planning_safety_gate(payload)
+    assert gate["status"] == "clear"
+    assert gate["decision"] == "direct-work-allowed"
+    assert gate["implementation_allowed"] is True
+    assert gate["repair_route"]["status"] == "direct-no-plan-ok"
+    assert gate["repair_route"]["routine_review_comment_repair"] is True
+    assert gate["changed_path_classification"]["scope_growth_detected"] is False
+    assert gate["changed_path_classification"]["ancillary_paths"] == [".agentic-workspace/memory/repo/current/routing-feedback.md"]
+    assert _start_workflow_sufficiency(payload)["decision"] == "enough-for-bounded-implementation"
+    assert payload["next"]["action"] != "Create or promote an active execplan before continuing implementation."
+
+
+def test_implement_allows_single_issue_followthrough_with_memory_feedback_note(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "tests/test_workspace_start_preflight_cli.py",
+                ".agentic-workspace/memory/repo/current/routing-feedback.md",
+                "--task",
+                "Do #1058 as well",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    gate = _start_planning_safety_gate(payload)
+    assert gate["status"] == "clear"
+    assert gate["decision"] == "direct-work-allowed"
+    assert gate["implementation_allowed"] is True
+    assert gate["repair_route"]["status"] == "direct-no-plan-ok"
+    assert gate["repair_route"]["single_issue_changed_path_followthrough"] is True
+    assert gate["changed_path_classification"]["ancillary_paths"] == [".agentic-workspace/memory/repo/current/routing-feedback.md"]
+    assert _start_workflow_sufficiency(payload)["decision"] == "enough-for-bounded-implementation"
+
+
 def test_implement_distinguishes_planning_recovery_from_mixed_wip(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
 
@@ -1440,7 +1534,7 @@ def test_implement_distinguishes_planning_recovery_from_mixed_wip(tmp_path: Path
         )
         == 0
     )
-    planning_only = json.loads(capsys.readouterr().out)["planning_safety_gate"]
+    planning_only = _start_planning_safety_gate(json.loads(capsys.readouterr().out))
     assert planning_only["status"] == "clear"
     assert planning_only["changed_path_classification"]["dirty_shape"] == "planning-only"
 
@@ -1522,7 +1616,7 @@ queued_items = []
         )
         == 0
     )
-    recorded = json.loads(capsys.readouterr().out)["planning_safety_gate"]
+    recorded = _start_planning_safety_gate(json.loads(capsys.readouterr().out))
     assert recorded["status"] == "satisfied"
 
 
@@ -1633,7 +1727,7 @@ queued_items = []
         )
         == 0
     )
-    resolved = json.loads(capsys.readouterr().out)["planning_safety_gate"]
+    resolved = _start_planning_safety_gate(json.loads(capsys.readouterr().out))
     assert resolved["status"] == "satisfied"
     assert resolved["active_parent_decomposition_requirement"]["status"] == "parent-decomposition-resolved"
 

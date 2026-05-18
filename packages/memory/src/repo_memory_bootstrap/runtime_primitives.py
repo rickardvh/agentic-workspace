@@ -58,6 +58,86 @@ def _compact_result_dict(result, *, detail_command: str) -> dict[str, object]:
     }
 
 
+def _compact_promotion_report(result, *, requested_mode: object = None) -> dict[str, object]:
+    payload = result.to_dict()
+    actions = payload.get("actions", [])
+    action_count = len(actions) if isinstance(actions, list) else 0
+    compact_actions: list[dict[str, object]] = []
+    if isinstance(actions, list):
+        for action in actions[:5]:
+            if isinstance(action, dict):
+                compact_actions.append(
+                    {
+                        key: action.get(key)
+                        for key in ("kind", "path", "detail", "category", "remediation_kind", "memory_action")
+                        if action.get(key) not in (None, "")
+                    }
+                )
+    no_candidate_actions = bool(
+        action_count
+        and all(
+            isinstance(action, dict) and str(action.get("detail", "")).startswith("no promotion or elimination candidates found")
+            for action in actions
+        )
+    )
+    command = "agentic-memory promotion-report --target . --mode remediation --format json"
+    next_action = (
+        {
+            "action": "no-promotion-action",
+            "summary": "No promotion or elimination candidates found.",
+            "command": None,
+            "run": None,
+            "required": False,
+        }
+        if no_candidate_actions
+        else {
+            "action": "review-promotion-candidates",
+            "summary": "Review memory promotion or elimination candidates before changing durable memory or docs.",
+            "command": command,
+            "run": command,
+            "required": True,
+        }
+        if action_count
+        else {
+            "action": "no-promotion-action",
+            "summary": "No promotion or elimination candidates found.",
+            "command": None,
+            "run": None,
+            "required": False,
+        }
+    )
+    return {
+        "kind": "memory-promotion-report/v1",
+        "target_root": payload.get("target_root", ""),
+        "dry_run": payload.get("dry_run", False),
+        "mode": requested_mode or payload.get("mode", ""),
+        "message": payload.get("message", ""),
+        "next_action": next_action,
+        "context": {
+            "action_count": action_count,
+            "actions": compact_actions,
+            "detected_version": payload.get("detected_version"),
+            "bootstrap_version": payload.get("bootstrap_version"),
+            "route_summary": payload.get("route_summary", {}),
+            "missing_note_hint": payload.get("missing_note_hint", ""),
+            "review_summary": payload.get("review_summary", {}),
+            "sync_summary": payload.get("sync_summary", {}),
+        },
+        "drill_down": {
+            "ordinary_profile": "primary=next_action;context=compact promotion state",
+            "detail_command": command,
+            "available_selectors": [
+                "next_action",
+                "context.action_count",
+                "context.actions",
+                "context.route_summary",
+                "context.review_summary",
+                "context.sync_summary",
+            ],
+        },
+    }
+
+
 def _tiny_memory_manifest_counts(*, target_root: Path) -> dict[str, object]:
     manifest_path = target_root / MANIFEST_PATH
     if not manifest_path.exists():
@@ -324,6 +404,9 @@ def _emit_memory_operation_output(values: dict[str, Any], _arguments: dict[str, 
         print(str(result))
         return
     if output_format == "json":
+        if values.get("operation_id") == "memory.promotion-report.report" and not values.get("verbose"):
+            print(json.dumps(_compact_promotion_report(result, requested_mode=values.get("mode")), indent=2))
+            return
         if isinstance(result, dict):
             print(json.dumps(result, indent=2))
             return

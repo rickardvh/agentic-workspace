@@ -471,7 +471,49 @@ def report_router_payload(
     router_payload["surface_value_guardrail"]["prefer"] = router_payload["surface_value_guardrail"]["prefer"][:3]
     if "maintenance_pressure" in enabled_advanced_features or maintenance_pressure_relevant:
         router_payload["maintenance_pressure"] = _report_router_maintenance_pressure(payload.get("maintenance_pressure", {}))
-    return _localize_command_fields(router_payload, cli_invoke=cli_invoke)
+    compact_payload = {
+        "kind": router_payload["kind"],
+        "schema": router_payload["schema"],
+        "command": router_payload["command"],
+        "target": router_payload["target"],
+        "health": router_payload["health"],
+        "next_action": router_payload["next_action"],
+        "context": {
+            key: value
+            for key, value in router_payload.items()
+            if key
+            not in {
+                "kind",
+                "schema",
+                "command",
+                "target",
+                "health",
+                "next_action",
+                "section_hints",
+                "deeper_detail",
+            }
+        },
+        "drill_down": {
+            "ordinary_profile": "primary=next_action;health=status;context=selector-backed router state",
+            "section_hints": router_payload["section_hints"],
+            "deeper_detail": router_payload["deeper_detail"],
+            "available_selectors": [
+                "next_action",
+                "health",
+                "context.report_profile",
+                "context.current_work",
+                "context.memory_consult",
+                "context.warning_summary",
+                "context.execution_shape",
+                "context.improvement_intake",
+                "context.external_work_reconciliation",
+                "context.surface_value_guardrail",
+                "drill_down.section_hints",
+                "drill_down.deeper_detail",
+            ],
+        },
+    }
+    return _localize_command_fields(compact_payload, cli_invoke=cli_invoke)
 
 
 def _compact_report_profile(value: dict[str, Any]) -> dict[str, Any]:
