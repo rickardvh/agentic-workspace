@@ -8126,6 +8126,12 @@ def _closeout_distillation_buckets(*, record: dict[str, Any], explicit: dict[str
     if "doc" in combined_learning:
         buckets["docs"].append({"summary": knowledge or posterity, "owner": "docs", "source": "execution_summary"})
 
+    improvement_review = _record_section_value(record, "improvement_signal_review") or {}
+    for item in _improvement_signal_review_distillation_items(improvement_review):
+        bucket = item.pop("bucket", "discard")
+        if bucket in buckets:
+            buckets[bucket].append(item)
+
     for ref in [] if buckets["issue_follow_up"] else (_record_section_references(record, "references") or []):
         role = str(ref.get("role", "")).lower()
         if "follow" in role or "issue" in str(ref.get("kind", "")).lower():
@@ -8146,6 +8152,68 @@ def _closeout_distillation_buckets(*, record: dict[str, Any], explicit: dict[str
             }
         )
     return {bucket: _dedupe_distillation_items(items) for bucket, items in buckets.items()}
+
+
+def _improvement_signal_review_distillation_items(review: dict[str, Any]) -> list[dict[str, str]]:
+    status = str(review.get("status", "")).strip().lower()
+    items: list[dict[str, str]] = []
+    for key in ("signals routed", "signals fixed"):
+        raw_items = review.get(key, [])
+        if not isinstance(raw_items, list):
+            continue
+        for raw in raw_items:
+            normalized = _normalize_improvement_signal_item(raw, source=f"improvement_signal_review.{key}")
+            if normalized is not None:
+                items.append(normalized)
+    raw_dismissed = review.get("signals dismissed", [])
+    if isinstance(raw_dismissed, list):
+        for raw in raw_dismissed:
+            normalized = _normalize_improvement_signal_item(
+                raw, source="improvement_signal_review.signals dismissed", default_bucket="discard"
+            )
+            if normalized is not None:
+                items.append(normalized)
+    if status == "no_signal_found" and not items:
+        items.append(
+            {
+                "bucket": "discard",
+                "summary": "Improvement signal review was checked and no signal was found.",
+                "owner": "none",
+                "source": "improvement_signal_review.status",
+            }
+        )
+    return items
+
+
+def _normalize_improvement_signal_item(raw: Any, *, source: str, default_bucket: str | None = None) -> dict[str, str] | None:
+    if isinstance(raw, str):
+        summary = raw.strip()
+        owner = ""
+    elif isinstance(raw, dict):
+        summary = str(raw.get("summary") or raw.get("signal") or raw.get("symptom") or raw.get("detail") or "").strip()
+        owner = str(raw.get("owner") or raw.get("owner class") or raw.get("destination") or raw.get("target") or "").strip()
+    else:
+        return None
+    if not summary:
+        return None
+    owner_lower = owner.lower()
+    if default_bucket is not None:
+        bucket = default_bucket
+    elif "memory" in owner_lower:
+        bucket = "memory"
+    elif "doc" in owner_lower:
+        bucket = "docs"
+    elif any(marker in owner_lower for marker in ("issue", "github", "#")):
+        bucket = "issue_follow_up"
+    elif any(marker in owner_lower for marker in ("check", "contract", "test", "config")):
+        bucket = "config_check"
+    elif "planning" in owner_lower:
+        bucket = "continuation"
+    elif "direct fix" in owner_lower:
+        bucket = "config_check"
+    else:
+        bucket = "discard"
+    return {"bucket": bucket, "summary": summary, "owner": owner, "source": source}
 
 
 def _normalize_distillation_items(raw_items: list[Any]) -> list[dict[str, str]]:

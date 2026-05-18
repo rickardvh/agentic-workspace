@@ -896,22 +896,29 @@ def test_planning_cli_mutation_provenance_preserves_prior_entries(tmp_path: Path
 def test_planning_cli_mutation_provenance_preserves_prior_entries_across_routine_commands(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
     provenance_path = tmp_path / ".agentic-workspace" / "planning" / "mutation-provenance.json"
-    sentinel_entry = {
-        "path": ".agentic-workspace/planning/execplans/historical.plan.json",
-        "sha256": "historical-sha",
-        "command": "agentic-planning archive-plan",
-        "reason": "historical mutation",
-        "mode": "cli-mutation",
-        "recorded_at": "2026-05-01T00:00:00+00:00",
-    }
+    prior_entries = [
+        {
+            "path": f".agentic-workspace/planning/execplans/historical-{index}.plan.json",
+            "sha256": f"historical-sha-{index}",
+            "command": "agentic-planning archive-plan",
+            "reason": "historical mutation",
+            "mode": "cli-mutation",
+            "recorded_at": "2026-05-01T00:00:00+00:00",
+        }
+        for index in range(205)
+    ]
     provenance_path.write_text(
-        json.dumps({"kind": "planning-mutation-provenance/v1", "entries": [sentinel_entry]}, indent=2) + "\n",
+        json.dumps({"kind": "planning-mutation-provenance/v1", "entries": prior_entries}, indent=2) + "\n",
         encoding="utf-8",
     )
 
-    def assert_sentinel_preserved() -> None:
+    def assert_prior_entries_preserved() -> None:
         payload = json.loads(provenance_path.read_text(encoding="utf-8"))
-        assert sentinel_entry in payload["entries"]
+        assert not payload.get("compaction")
+        assert payload["entries"][: len(prior_entries)] == prior_entries
+        paths = {entry["path"] for entry in payload["entries"]}
+        assert ".agentic-workspace/planning/execplans/historical-0.plan.json" in paths
+        assert ".agentic-workspace/planning/execplans/historical-204.plan.json" in paths
 
     assert (
         planning_cli.main(
@@ -931,7 +938,7 @@ def test_planning_cli_mutation_provenance_preserves_prior_entries_across_routine
         == 0
     )
     capsys.readouterr()
-    assert_sentinel_preserved()
+    assert_prior_entries_preserved()
 
     assert (
         planning_cli.main(
@@ -950,7 +957,7 @@ def test_planning_cli_mutation_provenance_preserves_prior_entries_across_routine
         == 0
     )
     capsys.readouterr()
-    assert_sentinel_preserved()
+    assert_prior_entries_preserved()
 
     assert (
         planning_cli.main(
@@ -980,7 +987,7 @@ def test_planning_cli_mutation_provenance_preserves_prior_entries_across_routine
         == 0
     )
     capsys.readouterr()
-    assert_sentinel_preserved()
+    assert_prior_entries_preserved()
 
     assert (
         planning_cli.main(
@@ -1000,7 +1007,7 @@ def test_planning_cli_mutation_provenance_preserves_prior_entries_across_routine
         == 0
     )
     capsys.readouterr()
-    assert_sentinel_preserved()
+    assert_prior_entries_preserved()
 
     assert (
         planning_cli.main(
@@ -1028,7 +1035,7 @@ def test_planning_cli_mutation_provenance_preserves_prior_entries_across_routine
         == 0
     )
     capsys.readouterr()
-    assert_sentinel_preserved()
+    assert_prior_entries_preserved()
 
     assert (
         planning_cli.main(
@@ -1047,7 +1054,105 @@ def test_planning_cli_mutation_provenance_preserves_prior_entries_across_routine
         == 0
     )
     capsys.readouterr()
-    assert_sentinel_preserved()
+    assert_prior_entries_preserved()
+
+
+def test_archive_prepare_closeout_routes_improvement_signal_review_states(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    record_path = tmp_path / ".agentic-workspace/planning/execplans/signal-closeout.plan.json"
+    _write_execplan_record(record_path, item_id="signal-closeout", status="completed")
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    record["execution_summary"]["knowledge promoted (Memory/Docs/Config)"] = "none"
+    record["improvement_signal_review"] = {
+        "status": "signals_routed",
+        "signals found": [{"summary": "PR review comments need behavior-level dogfooding evidence.", "owner": "issue"}],
+        "signals routed": [
+            {"summary": "Create follow-up issue for repeated review evidence gaps.", "owner": "issue"},
+            {"summary": "Capture reusable dogfooding routing lesson.", "owner": "Memory"},
+            {"summary": "Document closeout reflection routing examples.", "owner": "docs/checks/contracts"},
+        ],
+        "signals dismissed": [
+            {"summary": "One-off local terminal timeout after a deliberately broad suite.", "owner": "dismissed with reason"}
+        ],
+    }
+    _write(record_path, json.dumps(record, indent=2) + "\n")
+
+    assert (
+        planning_cli.main(
+            [
+                "archive-plan",
+                "signal-closeout",
+                "--target",
+                str(tmp_path),
+                "--prepare-closeout",
+                "--dry-run",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    details = [action["detail"] for action in payload["actions"]]
+    patch_detail = next(detail for detail in details if detail.startswith("prepared closeout patch: "))
+    closeout_patch = json.loads(patch_detail.removeprefix("prepared closeout patch: "))
+    buckets = closeout_patch["closeout_distillation"]["buckets"]
+    assert {
+        "summary": "Create follow-up issue for repeated review evidence gaps.",
+        "source": "improvement_signal_review.signals routed",
+        "owner": "issue",
+    } in buckets["issue_follow_up"]
+    assert {
+        "summary": "Capture reusable dogfooding routing lesson.",
+        "source": "improvement_signal_review.signals routed",
+        "owner": "Memory",
+    } in buckets["memory"]
+    assert {
+        "summary": "Document closeout reflection routing examples.",
+        "source": "improvement_signal_review.signals routed",
+        "owner": "docs/checks/contracts",
+    } in buckets["docs"]
+    assert {
+        "summary": "One-off local terminal timeout after a deliberately broad suite.",
+        "source": "improvement_signal_review.signals dismissed",
+        "owner": "dismissed with reason",
+    } in buckets["discard"]
+
+    record["improvement_signal_review"] = {
+        "status": "no_signal_found",
+        "signals found": [],
+        "signals routed": [],
+        "signals dismissed": [],
+    }
+    _write(record_path, json.dumps(record, indent=2) + "\n")
+
+    assert (
+        planning_cli.main(
+            [
+                "archive-plan",
+                "signal-closeout",
+                "--target",
+                str(tmp_path),
+                "--prepare-closeout",
+                "--dry-run",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    details = [action["detail"] for action in payload["actions"]]
+    patch_detail = next(detail for detail in details if detail.startswith("prepared closeout patch: "))
+    closeout_patch = json.loads(patch_detail.removeprefix("prepared closeout patch: "))
+    buckets = closeout_patch["closeout_distillation"]["buckets"]
+    assert {
+        "summary": "Improvement signal review was checked and no signal was found.",
+        "source": "improvement_signal_review.status",
+        "owner": "none",
+    } in buckets["discard"]
 
 
 def test_planning_cli_new_plan_activate_refuses_implicit_active_switch(tmp_path: Path, capsys) -> None:

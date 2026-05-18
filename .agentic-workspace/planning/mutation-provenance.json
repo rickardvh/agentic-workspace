@@ -2024,6 +2024,70 @@
       "reason": "archive execplan finish-1035-ordinary-output-slices",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-18T19:17:04+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/address-pr-1057-review.plan.json",
+      "sha256": "acfdfd99506face2c00df66a769c86c66b3072c7bc7f86e6144e4c1739991355",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold address-pr-1057-review",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T20:36:41+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "42d78a50af779e979ec1d396ecda49e384823658c8d1656dbcd8d549c1663479",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold address-pr-1057-review",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T20:36:41+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/address-pr-1057-review.plan.json",
+      "sha256": "1db8b68475d018d9ad8a3d737933ba7adef950a88646e1cf01d59bb6b01c19ef",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T20:39:06+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "3bbdfd9f69a3011a05a38b3d28122c6cfc204fd38fac9e3534bf2ea067e12e4f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan address-pr-1057-review",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T20:41:56+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/address-pr-1057-review.plan.json",
+      "sha256": "c3c410ab9ee1b38533b77ab96036ff9479705e6b47c44f4196dfbd5a62cd30f1",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan address-pr-1057-review",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T20:41:56+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "3bbdfd9f69a3011a05a38b3d28122c6cfc204fd38fac9e3534bf2ea067e12e4f",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan address-pr-1057-review",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T20:41:56+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/address-pr-1057-review.plan.json",
+      "sha256": "c3c410ab9ee1b38533b77ab96036ff9479705e6b47c44f4196dfbd5a62cd30f1",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan address-pr-1057-review",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T20:41:56+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/mutation-provenance.json",
+      "sha256": "4385250e9bb02d570d162bfae3ce03480b2adfcc45ee1ebbf65033ba2ddeb972",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan address-pr-1057-review",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T20:41:56+00:00"
     }
   ]
 }
