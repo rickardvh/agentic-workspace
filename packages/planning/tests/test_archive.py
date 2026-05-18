@@ -110,6 +110,7 @@ def test_archive_execplan_blocks_missing_execution_summary(tmp_path: Path) -> No
     assert any(
         action.kind == "manual review" and action.path == plan_path and "Execution Summary" in action.detail for action in result.actions
     )
+    assert any("agentic-planning closeout" in action.detail for action in result.actions)
 
 
 def test_archive_execplan_requires_post_work_posterity_capture(tmp_path: Path) -> None:
@@ -644,6 +645,13 @@ candidates = []
     assert archived["finished_run_review"]["proof status"] == "passed"
     assert archived["execution_summary"]["outcome delivered"] == "closeout writer records real finish-run evidence before archiving."
     assert archived["proof_report"]["validation proof"] == "uv run pytest packages/planning/tests/test_archive.py -q"
+    options = {option["id"]: option for option in payload["completion_options"]}
+    assert options["claim-slice-complete"]["allowed"] is True
+    assert options["close-larger-intent"]["allowed"] is True
+    assert options["keep-larger-intent-open"]["allowed"] is False
+    assert any(
+        action["kind"] == "dogfooding reflection" and "issues, Memory, planning" in action["detail"] for action in payload["actions"]
+    )
 
 
 def test_planning_closeout_blocks_last_proof_without_existing_proof(tmp_path: Path, capsys) -> None:
@@ -655,6 +663,7 @@ def test_planning_closeout_blocks_last_proof_without_existing_proof(tmp_path: Pa
     payload = json.loads(capsys.readouterr().out)
 
     assert any(warning["warning_class"] == "closeout_missing_proof" for warning in payload["warnings"])
+    assert "completion_options" not in payload
     assert any(
         action["kind"] == "manual review" and "--proof-from last found no existing proof" in action["detail"]
         for action in payload["actions"]
@@ -785,6 +794,11 @@ def test_planning_closeout_routes_partial_lane_residue_to_continuation(tmp_path:
     assert archived["intent_satisfaction"]["unsolved intent passed to"] == ".agentic-workspace/planning/state.toml"
     assert archived["durable_residue"]["status"] == "planning"
     assert archived["closeout_distillation"]["buckets"]["continuation"][0]["owner"] == ".agentic-workspace/planning/state.toml"
+    options = {option["id"]: option for option in payload["completion_options"]}
+    assert options["claim-slice-complete"]["allowed"] is True
+    assert options["keep-larger-intent-open"]["allowed"] is True
+    assert options["keep-larger-intent-open"]["owner"] == ".agentic-workspace/planning/state.toml"
+    assert options["close-larger-intent"]["allowed"] is False
 
 
 def test_planning_closeout_routes_deferred_owner_without_full_intent_satisfaction(tmp_path: Path, capsys) -> None:

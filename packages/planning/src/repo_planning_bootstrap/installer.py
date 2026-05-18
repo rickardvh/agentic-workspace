@@ -330,6 +330,7 @@ class InstallResult:
     bootstrap_version: str = __version__
     actions: list[Action] = field(default_factory=list)
     warnings: list[dict[str, str]] = field(default_factory=list)
+    completion_options: list[dict[str, Any]] = field(default_factory=list)
 
     def add(self, kind: str, path: Path, detail: str) -> None:
         self.actions.append(Action(kind=kind, path=path, detail=detail))
@@ -432,7 +433,7 @@ def _record_planning_mutation_provenance(
         existing = _load_mutation_provenance(target_root)
         entries = [entry for entry in existing.get("entries", []) if isinstance(entry, dict)]
         entries.extend(new_entries)
-        payload = {"kind": "planning-mutation-provenance/v1", "entries": entries[-200:]}
+        payload = {"kind": "planning-mutation-provenance/v1", "entries": entries}
         return _write_mutation_provenance_payload(target_root, payload)
 
 
@@ -10762,10 +10763,52 @@ def closeout_execplan(
     result.actions.extend(archive_result.actions)
     result.warnings.extend(archive_result.warnings)
     blocked = bool(result.warnings) or any(action.kind == "manual review" for action in result.actions)
+    result.completion_options.extend(
+        [
+            {
+                "id": "resolve-closeout-blocker",
+                "allowed": blocked,
+                "command": f"agentic-planning closeout {plan} --proof-from <proof> --what-happened <summary> --scope-touched <paths> --changed-surfaces <surfaces>",
+                "why": "closeout warnings or manual-review actions are present" if blocked else "no closeout blocker is present",
+            },
+            {
+                "id": "claim-slice-complete",
+                "allowed": not blocked,
+                "command": "",
+                "why": "slice proof, finish-run evidence, and archive preconditions were recorded"
+                if not blocked
+                else "slice completion is blocked until closeout evidence is repaired",
+            },
+            {
+                "id": "keep-larger-intent-open",
+                "allowed": closure_decision == "archive-but-keep-lane-open" and not blocked,
+                "owner": continuation_owner if closure_decision == "archive-but-keep-lane-open" else "",
+                "why": "intent-status keeps continuation explicit"
+                if closure_decision == "archive-but-keep-lane-open"
+                else "larger intent was marked satisfied",
+            },
+            {
+                "id": "close-larger-intent",
+                "allowed": closure_decision == "archive-and-close" and not blocked,
+                "why": "intent-status satisfied was recorded"
+                if closure_decision == "archive-and-close"
+                else "parent or larger intent remains open",
+            },
+        ]
+    )
     if blocked:
         result.add("next safe action", record_path, "resolve the reported closeout blocker, then rerun planning closeout")
     else:
         result.add("next safe action", target_root / PLANNING_STATE_PATH, "agentic-planning summary --target . --format json")
+        result.add(
+            "dogfooding reflection",
+            record_path,
+            (
+                "Before final handoff, route any concrete AW smoothness/helpfulness gaps, better-way signals, "
+                "unused-feature reflections, or recurring improvement pressure to issues, Memory, planning, "
+                "docs/checks/contracts, direct implementation, or explicit dismissal."
+            ),
+        )
     if not dry_run:
         _stamp_result_action_mutations(result, command="agentic-planning closeout", reason=f"close out execplan {plan}")
     return result
@@ -11048,7 +11091,11 @@ def archive_execplan(
                 "message": "Completed execplan is missing an explicit delivered-outcome summary.",
             }
         )
-        result.add("manual review", plan_path, "fill `Execution Summary` with the delivered outcome before archiving")
+        result.add(
+            "manual review",
+            plan_path,
+            "run `agentic-planning closeout <plan> --what-happened ... --outcome-summary ...` or fill `Execution Summary` with the delivered outcome before archiving",
+        )
         return result
     if not validation_confirmed or validation_confirmed.lower() in {"pending", "tbd", "todo"}:
         result.warnings.append(
@@ -11058,7 +11105,11 @@ def archive_execplan(
                 "message": "Completed execplan is missing an explicit validation summary.",
             }
         )
-        result.add("manual review", plan_path, "fill `Execution Summary` with the validation confirmation before archiving")
+        result.add(
+            "manual review",
+            plan_path,
+            "run `agentic-planning closeout <plan> --proof-from ...` or fill `Execution Summary` with the validation confirmation before archiving",
+        )
         return result
     if not follow_on_routed_to or follow_on_routed_to.lower() in {"pending", "tbd", "todo", "none yet"}:
         result.warnings.append(
@@ -11068,7 +11119,11 @@ def archive_execplan(
                 "message": "Completed execplan is missing an explicit follow-on routing summary.",
             }
         )
-        result.add("manual review", plan_path, "fill `Execution Summary` with the follow-on routing before archiving")
+        result.add(
+            "manual review",
+            plan_path,
+            "run `agentic-planning closeout <plan> --residue ... --residue-owner ...` or fill `Execution Summary` with the follow-on routing before archiving",
+        )
         return result
     if not post_work_posterity_capture or post_work_posterity_capture.lower() in {"pending", "tbd", "todo", "none yet"}:
         result.warnings.append(
@@ -11084,7 +11139,7 @@ def archive_execplan(
         result.add(
             "manual review",
             plan_path,
-            "fill `Execution Summary` with what should survive this slice and where it belongs before archiving",
+            "run `agentic-planning closeout <plan> --residue ... --residue-owner ...` or fill `Execution Summary` with what should survive this slice and where it belongs before archiving",
         )
         return result
     if not resume_from or resume_from.lower() in {"pending", "tbd", "todo", "current milestone"}:
@@ -11095,7 +11150,11 @@ def archive_execplan(
                 "message": "Completed execplan is missing an explicit resume cue.",
             }
         )
-        result.add("manual review", plan_path, "fill `Execution Summary` with the post-archive resume cue before archiving")
+        result.add(
+            "manual review",
+            plan_path,
+            "run `agentic-planning closeout <plan> --outcome-summary ...` or fill `Execution Summary` with the post-archive resume cue before archiving",
+        )
         return result
     if not validation_proof or not proof_achieved_now or not proof_evidence:
         result.warnings.append(
@@ -11105,7 +11164,11 @@ def archive_execplan(
                 "message": "Completed execplan is missing a complete proof report.",
             }
         )
-        result.add("manual review", plan_path, "fill `Proof Report` with validation proof and evidence before archiving")
+        result.add(
+            "manual review",
+            plan_path,
+            "run `agentic-planning closeout <plan> --proof-from ...` or fill `Proof Report` with validation proof and evidence before archiving",
+        )
         return result
     if not original_intent or fully_satisfied not in {"yes", "true", "no", "false"} or not satisfaction_evidence:
         result.warnings.append(
@@ -11668,6 +11731,8 @@ def format_result_json(result: InstallResult) -> str:
         "actions": [{"kind": action.kind, "path": str(action.path), "detail": action.detail} for action in result.actions],
         "warnings": result.warnings,
     }
+    if result.completion_options:
+        payload["completion_options"] = result.completion_options
     if result.dry_run:
         payload["lifecycle_plan"] = _lifecycle_plan_payload(result)
     return json.dumps(payload, ensure_ascii=False, indent=2)

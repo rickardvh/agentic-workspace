@@ -1600,6 +1600,118 @@
       "reason": "archive execplan ingest-prioritise-issues",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-18T13:43:26+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-workflow-primary-decision-p0.plan.json",
+      "sha256": "16e3c7522fd1d6b461bb21d97fbfe3a1b7802c2c16cecbc79dae484bf3a5be3a",
+      "command": "agentic-planning promote-to-plan",
+      "reason": "promote planning item github-workflow-primary-decision-p0",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T13:46:04+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "202885f5224a0a33f1c2af7cfafc451898c07334b634a8b430f6d7eecf2beca0",
+      "command": "agentic-planning promote-to-plan",
+      "reason": "promote planning item github-workflow-primary-decision-p0",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T13:46:04+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-workflow-primary-decision-p0.plan.json",
+      "sha256": "f7944900d692457011903be9cb80f5c77b36449735bfeb33eaa1c340f2dfe03b",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T13:51:22+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-workflow-primary-decision-p0.plan.json",
+      "sha256": "c3d2fd89b94ed8579ccb8da1cbe48f8aafb3d6d17cfae09f453e69d349b1e2e1",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan github-workflow-primary-decision-p0",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T14:07:52+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/github-workflow-primary-decision-p0.plan.json",
+      "sha256": "c3d2fd89b94ed8579ccb8da1cbe48f8aafb3d6d17cfae09f453e69d349b1e2e1",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan github-workflow-primary-decision-p0",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T14:07:52+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "a9b5dc5038c2ee9e7bdbef826743a413df7f9446f0e1985bf77aa91de9eaff15",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan github-workflow-primary-decision-p0",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T14:07:52+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "e5f98c04c30f1e55b669c3b0014f1532956f99d9f4368d383c17a98ff88fa9ab",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan github-workflow-primary-decision-p0",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T14:08:36+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/github-workflow-primary-decision-p0.plan.json",
+      "sha256": "59ef529fe63727662dbcdcd072301342d1b7fc9fd31c3121b3b4317223ff4cfa",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan github-workflow-primary-decision-p0",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T14:08:36+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "e5f98c04c30f1e55b669c3b0014f1532956f99d9f4368d383c17a98ff88fa9ab",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan github-workflow-primary-decision-p0",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T14:08:36+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/github-workflow-primary-decision-p0.plan.json",
+      "sha256": "59ef529fe63727662dbcdcd072301342d1b7fc9fd31c3121b3b4317223ff4cfa",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan github-workflow-primary-decision-p0",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T14:08:36+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/mutation-provenance.json",
+      "sha256": "1768339610c83aa938b4e599affd5e496b50addd71090a84f4d3a4306514b14e",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan github-workflow-primary-decision-p0",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T14:08:36+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/github-workflow-primary-decision-p0.plan.json",
+      "sha256": "33e42d901aec5d5b67afe3bd7c8d206f487dbbe9b069ddf2c13fc87663573108",
+      "command": "agentic-planning record-recovery",
+      "reason": "post-archive proof evidence update after make test-workspace passed",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-18T14:12:42+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "88e1664e4a325b8822cd66bd8d37e4b75b536550bd2bde3f908e244ca11b58bd",
+      "command": "agentic-planning record-recovery",
+      "reason": "remove implemented P0/P1/P2 candidates and keep P3/P4 continuation state after closeout",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-18T14:13:10+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/github-workflow-primary-decision-p0.plan.json",
+      "sha256": "308cd65f4567dee1f7b55176926cdcb6119238c3193b3442f516b56ca26b3794",
+      "command": "agentic-planning record-recovery",
+      "reason": "final proof wording cleanup after selected proof passed",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-18T14:13:47+00:00"
     }
   ]
 }

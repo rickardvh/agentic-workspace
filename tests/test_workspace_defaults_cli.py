@@ -1226,3 +1226,6 @@ def test_defaults_repair_recovery_section_reports_fault_taxonomy(capsys) -> None
     ]
     assert "repeated" in answer["recurrence_to_improvement"]
     assert "proof_after" in answer["repair_action_shape"]["required_fields"]
+    assert answer["pr_check_inspection"]["post_push_attach_delay"]["state"] == "pending_attach"
+    assert "exact error lines" in answer["pr_check_inspection"]["default_summary_fields"]
+    assert "source-checkout maintainer tooling" in answer["pr_check_inspection"]["surface_boundary"]

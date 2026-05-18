@@ -1,0 +1,317 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Implement P2 And Higher Roadmap Candidates",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "lane",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "required_continuation",
+      "iterative_follow_through",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement the accepted P0, P1, and P2 roadmap candidates in order on this branch.",
+    "hard_constraints": "Keep P3/P4 candidates open; do not start codegen-deferred work; preserve proof and planning closeout honesty.",
+    "agent_may_decide": "Use direct implementation where candidates are tightly coupled, but keep checked-in state concrete and remove implemented candidates from first-line roadmap state.",
+    "escalate_when": "A fix requires redesigning generated command packages, live GitHub Actions tooling, or lower-priority P3/P4 work.",
+    "next_action": "Archive this P2-and-higher implementation slice and continue only from the remaining P3/P4 candidates.",
+    "proof_expectations": [
+      "focused P0/P1/P2 tests; make test-workspace; make lint-workspace; make test-planning; make lint-planning"
+    ],
+    "touched_scope": [
+      "workspace runtime/tests",
+      "planning closeout/provenance/tests",
+      "planning state"
+    ],
+    "completion_criteria": [
+      "P0/P1/P2 candidates implemented; P3/P4 remain open."
+    ],
+    "continuation_owner": ".agentic-workspace/planning/state.toml candidates github-skill-generation-low and github-codegen-deferred-p4",
+    "closeout_decision": "archive-but-keep-lane-open"
+  },
+  "goal": [
+    "Implement the accepted P0, P1, and P2 roadmap candidates in order on this branch."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Implement the accepted P0, P1, and P2 roadmap candidates in order on this branch.",
+      "constraints": "Keep P3/P4 candidates open; do not start codegen-deferred work; preserve proof and planning closeout honesty.",
+      "latitude": "Use direct implementation where candidates are tightly coupled, but keep checked-in state concrete and remove implemented candidates from first-line roadmap state.",
+      "escalation": "A fix requires redesigning generated command packages, live GitHub Actions tooling, or lower-priority P3/P4 work."
+    },
+    "execution": {
+      "milestone": "p2-and-higher-roadmap-candidates",
+      "status": "completed",
+      "next_step": "Archive this P2-and-higher implementation slice and continue only from the remaining P3/P4 candidates.",
+      "proof": "focused P0/P1/P2 tests; make test-workspace; make lint-workspace; make test-planning; make lint-planning"
+    },
+    "scope": {
+      "touched": [
+        "workspace runtime/tests",
+        "planning closeout/provenance/tests",
+        "planning state"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Finish the prioritized workflow-trust roadmap while leaving lower-priority P3/P4 candidates available for later selection.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml candidates github-skill-generation-low and github-codegen-deferred-p4"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml candidates github-skill-generation-low and github-codegen-deferred-p4",
+    "activation trigger": "when P3/P4 roadmap work is explicitly selected"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "P0/P1/P2 workflow-trust candidates implemented.",
+    "intentionally deferred": "P3/P4 candidates remain in state.toml.",
+    "discovered implications": "Active plans affect workspace tests; archive before full workspace proof.",
+    "proof achieved now": "focused P0/P1/P2 tests; make test-workspace; make lint-workspace; make test-planning; make lint-planning",
+    "validation still needed": "none for this P2-and-higher slice",
+    "next likely slice": "P3/P4 only if selected."
+  },
+  "intent_interpretation": {
+    "literal request": "Implement P2 and higher priority in order on a new branch.",
+    "inferred intended outcome": "Implement the accepted P0, P1, and P2 roadmap candidates in order on this branch.",
+    "chosen concrete what": "Implemented the P0, P1, and P2 roadmap candidates for first-contact routing, source-checkout payload wording, planning provenance/closeout ergonomics, routine dogfooding routing, proof/skill gates, and narrow CI repair guidance.",
+    "interpretation distance": "low",
+    "review guidance": "Review that P0/P1/P2 candidates were removed from roadmap state and P3/P4 remain open."
+  },
+  "execution_bounds": {
+    "allowed paths": "workspace runtime/tests; planning closeout/provenance/tests; planning state",
+    "max changed files": "bounded implementation/test/planning-state set",
+    "required validation commands": "focused P0/P1/P2 tests; make test-workspace; make lint-workspace; make test-planning; make lint-planning",
+    "ask-before-refactor threshold": "Ask before P3/P4 or generated-command-package work.",
+    "stop before touching": "Deferred codegen/P3/P4 work."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "P0/P1/P2 implementation and closeout.",
+    "recoverable later": "P3/P4 roadmap candidates.",
+    "externalize before shift": "archive this plan and keep state candidates.",
+    "tiny resumability note": "Full selected proof passed after archive.",
+    "context-shift triggers": "proof failure or P3/P4 selection."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement P2 and higher candidates.",
+    "hard constraints": "Leave P3/P4 open.",
+    "agent may decide locally": "Bounded fixes and tests.",
+    "escalate when": "P3/P4/codegen scope is needed."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "Remaining P1/P2 implementation is tightly coupled across runtime routing, planning closeout, proof selection, and focused tests; splitting now would add merge and context overhead.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-18T13:51:22+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "p2-and-higher-roadmap-candidates",
+    "status": "completed",
+    "scope": "Accepted roadmap candidates P0, P1, and P2.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Archive the active plan, run make test-workspace, then commit."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "workspace runtime/tests",
+    "planning closeout/provenance/tests",
+    "planning state"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "focused P0/P1/P2 tests; make test-workspace; make lint-workspace; make test-planning; make lint-planning"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Startup/doctor/lifecycle guidance stops presenting unrelated roadmap promotion or package-upgrade wording as the apparent primary route for narrow tasks."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning promote-to-plan",
+    "what happened": "Implemented P0/P1/P2 roadmap candidates for first-contact routing, payload wording, planning provenance/closeout, dogfooding routing, proof/skill gates, and repair guidance.",
+    "scope touched": "workspace runtime/tests; planning closeout/provenance/tests; planning state",
+    "changed surfaces": "workspace runtime/proof/defaults; planning closeout/provenance/state",
+    "validations run": "focused P0/P1/P2 tests; make test-workspace; make lint-workspace; make test-planning; make lint-planning",
+    "result for continuation": "continue from .agentic-workspace/planning/state.toml candidates github-skill-generation-low and github-codegen-deferred-p4",
+    "next step": "promote the next bounded slice from .agentic-workspace/planning/state.toml candidates github-skill-generation-low and github-codegen-deferred-p4"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; P0/P1/P2 candidates were implemented and removed from roadmap state while P3/P4 remain open.",
+    "proof status": "passed",
+    "intent served": "no; intent-status=partial keeps continuation explicit.",
+    "config compliance": "used AW start/implement/proof and checked-in Planning state.",
+    "misinterpretation risk": "low; remaining candidates are explicitly lower priority.",
+    "follow-on decision": ".agentic-workspace/planning/state.toml candidates github-skill-generation-low and github-codegen-deferred-p4"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "Remaining P1/P2 implementation is tightly coupled across runtime routing, planning closeout, proof selection, and focused tests; splitting now would add merge and context overhead.",
+    "expected savings": "unknown",
+    "actual friction": "#1053 and #1052 filed for changed-path flag and active-plan proof-order friction.",
+    "proof result": "selected proof passed",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "focused P0/P1/P2 tests; make test-workspace; make lint-workspace; make test-planning; make lint-planning",
+    "proof achieved now": "yes; selected workspace and planning proof passed after archiving active planning state.",
+    "evidence for \"proof achieved\" state": "focused P0/P1/P2 tests; make test-workspace; make lint-workspace; make test-planning; make lint-planning"
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement the accepted P0, P1, and P2 roadmap candidates in order on this branch.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "focused P0/P1/P2 tests; make test-workspace; make lint-workspace; make test-planning; make lint-planning",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml candidates github-skill-generation-low and github-codegen-deferred-p4"
+  },
+  "execution_summary": {
+    "outcome delivered": "P2-and-higher roadmap slice implemented with lower-priority candidates retained for future selection.",
+    "validation confirmed": "focused P0/P1/P2 tests; make test-workspace; make lint-workspace; make test-planning; make lint-planning",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml candidates github-skill-generation-low and github-codegen-deferred-p4",
+    "post-work posterity capture": "archive closeout; P3/P4 remain in state.toml",
+    "knowledge promoted (memory/docs/config)": "runtime/defaults/closeout guidance",
+    "resume from": ".agentic-workspace/planning/state.toml candidates github-skill-generation-low and github-codegen-deferred-p4",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed planning residue to .agentic-workspace/planning/state.toml candidates github-skill-generation-low and github-codegen-deferred-p4.",
+    "motivation worth preserving": "Future agents should continue from .agentic-workspace/planning/state.toml candidates github-skill-generation-low and github-codegen-deferred-p4 rather than rediscover this closeout residue.",
+    "canonical owner now": ".agentic-workspace/planning/state.toml candidates github-skill-generation-low and github-codegen-deferred-p4",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": ".agentic-workspace/planning/state.toml candidates github-skill-generation-low and github-codegen-deferred-p4",
+    "proposed durable intent": "Future agents should continue from .agentic-workspace/planning/state.toml candidates github-skill-generation-low and github-codegen-deferred-p4 rather than rediscover this closeout residue.",
+    "confidence": "low",
+    "needs review": "True",
+    "owner surface": ".agentic-workspace/planning/state.toml candidates github-skill-generation-low and github-codegen-deferred-p4"
+  },
+  "closure_check": {
+    "closeout scope": "lane",
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "planning closeout accepted a lane claim with intent-status partial.",
+    "evidence carried forward": "focused P0/P1/P2 tests; make test-workspace; make lint-workspace; make test-planning; make lint-planning",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml candidates github-skill-generation-low and github-codegen-deferred-p4 activates a fresh bounded slice."
+  },
+  "improvement_signal_review": {
+    "status": "checked",
+    "guidance": "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; keep this compact and evidence-backed.",
+    "source": "operating_posture",
+    "signals found": [
+      "implement repeated --changed flags retained only last path in tiny output",
+      "active planning state affects workspace tests"
+    ],
+    "signals fixed": [
+      "planning mutation provenance preservation"
+    ],
+    "signals routed": [
+      "#1053 tracks repeated --changed flag truncation in implement tiny output.",
+      "#1052 tracks workspace tests depending on live active planning state."
+    ],
+    "signals dismissed": [],
+    "next owner": "P3/P4 state candidates"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": ".agentic-workspace/planning/state.toml candidates github-skill-generation-low and github-codegen-deferred-p4",
+          "owner": ".agentic-workspace/planning/state.toml candidates github-skill-generation-low and github-codegen-deferred-p4",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-18: Promoted from TODO direct-task shape into an execplan.",
+    "2026-05-18: Recorded delegation decision route=keep-local.",
+    "2026-05-18: Tightened plan to reflect implemented P0/P1/P2 roadmap scope before closeout.",
+    "2026-05-18: Updated archived proof after make test-workspace passed with active plan archived.",
+    "2026-05-18: Dogfooding follow-ups filed as #1052 and #1053."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "yes",
+    "decision": "route_to_planning",
+    "target": ".agentic-workspace/planning/state.toml candidates github-skill-generation-low and github-codegen-deferred-p4",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Implement the accepted P0, P1, and P2 roadmap candidates in order on this branch.\nIntent satisfied: no\nArchive decision: archive-but-keep-lane-open\nProof: focused P0/P1/P2 tests; make test-workspace; make lint-workspace; make test-planning; make lint-planning\nChanged surfaces: workspace runtime/proof/defaults; planning closeout/provenance/state\nDurable residue: planning (.agentic-workspace/planning/state.toml candidates github-skill-generation-low and github-codegen-deferred-p4)\nMemory learning: route_to_planning\nFollow-up: .agentic-workspace/planning/state.toml candidates github-skill-generation-low and github-codegen-deferred-p4"
+  }
+}

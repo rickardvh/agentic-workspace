@@ -180,6 +180,9 @@ def test_doctor_promotes_safe_module_lifecycle_repairs_for_missing_memory_templa
     repair = next(action for action in doctor_payload["repair_actions"] if action["id"] == "apply-safe-memory-lifecycle-repair")
     assert repair["safe_to_apply"] is True
     assert "--module memory" in repair["command"]
+    assert "payload sync" in repair["current_fault_summary"]
+    assert "not a Python package upgrade" in repair["current_fault_summary"]
+    assert "source-checkout" in " ".join(repair["do_not"])
     assert any(surface.endswith("memory/repo/templates/memory-note.template.md") for surface in repair["affected_surfaces"])
     assert doctor_payload["repair_plan"]["status"] == "safe-action-available"
 

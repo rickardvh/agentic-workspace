@@ -1130,6 +1130,76 @@ def test_proof_changed_selector_does_not_escalate_review_only_cross_lane_changes
     assert not answer["escalate_when"] or not answer["escalate_when"][0].startswith("changed paths span multiple validation lanes")
 
 
+def test_proof_changed_selector_includes_schema_reference_docs_for_workspace_schema(capsys) -> None:
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--changed",
+                "src/agentic_workspace/contracts/schemas/operation_primitives.schema.json",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    lane_ids = [lane["id"] for lane in answer["selected_lanes"]]
+    assert "contract_tooling" in lane_ids
+    assert "schema_reference_docs" in lane_ids
+    assert "make schema-reference-docs" in answer["required_commands"]
+    schema_lane = next(lane for lane in answer["selected_lanes"] if lane["id"] == "schema_reference_docs")
+    assert schema_lane["matched_paths"] == ["src/agentic_workspace/contracts/schemas/operation_primitives.schema.json"]
+    assert "generated docs/reference" in schema_lane["when"]
+
+
+def test_proof_changed_selector_includes_planning_schema_reference_wrapper(capsys) -> None:
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--changed",
+                "packages/planning/src/repo_planning_bootstrap/contracts/schemas/planning-execplan.schema.json",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    lane_ids = [lane["id"] for lane in answer["selected_lanes"]]
+    assert "planning_package" in lane_ids
+    assert "planning_schema_reference_docs" in lane_ids
+    assert "make check-planning" in answer["required_commands"]
+
+
+def test_proof_changed_selector_flags_high_impact_skill_behavior_evidence(capsys) -> None:
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--changed",
+                "packages/planning/skills/planning-closeout-trust/SKILL.md",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    review = answer["skill_behavior_impact_review"]
+    assert review["status"] == "behavior-evidence-required"
+    assert review["high_impact_paths"] == ["packages/planning/skills/planning-closeout-trust/SKILL.md"]
+    assert "What behavior is this skill meant to steer?" in review["required_answers"]
+    assert "Tests passed, so completion is claimable." in json.dumps(answer["proof_strategy"]["anti_rationalization_gates"])
+
+
 def test_proof_tiny_readme_profile_keeps_docs_only_validation_light(capsys) -> None:
     assert cli.main(["proof", "--changed", "README.md", "--format", "json"]) == 0
 
