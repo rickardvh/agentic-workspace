@@ -19,6 +19,22 @@ def test_memory_report_defaults_to_tiny_profile(tmp_path: Path, capsys) -> None:
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "tiny"
+    assert set(payload) <= {
+        "kind",
+        "profile",
+        "module",
+        "target_root",
+        "health",
+        "status",
+        "active",
+        "habitual_pull",
+        "promotion_pressure",
+        "trust",
+        "finding_count",
+        "findings",
+        "next_action",
+        "detail_commands",
+    }
     assert "state_model" not in payload
     assert payload["detail_commands"]["full"] == "agentic-memory report --target . --verbose --format json"
 
@@ -38,6 +54,30 @@ def test_memory_report_tiny_does_not_build_full_report(tmp_path: Path, monkeypat
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"] == "tiny"
     assert payload["active"]["note_count"] >= 1
+
+
+def test_memory_promotion_report_defaults_to_primary_next_action(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+
+    assert cli.main(["promotion-report", "--target", str(target), "--mode", "remediation", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "memory-promotion-report/v1"
+    assert set(payload) <= {
+        "kind",
+        "target_root",
+        "dry_run",
+        "mode",
+        "message",
+        "next_action",
+        "context",
+        "drill_down",
+    }
+    assert payload["next_action"]["action"] in {"review-promotion-candidates", "no-promotion-action"}
+    assert isinstance(payload["context"]["action_count"], int)
+    assert payload["drill_down"]["detail_command"] == "agentic-memory promotion-report --target . --mode remediation --format json"
 
 
 def test_memory_lifecycle_status_defaults_to_tiny_actions(tmp_path: Path, capsys) -> None:

@@ -4,6 +4,16 @@ from __future__ import annotations
 from tests.workspace_cli_support import *
 
 
+def _report_context(payload: dict[str, object]) -> dict[str, object]:
+    context = payload.get("context")
+    return context if isinstance(context, dict) else payload
+
+
+def _report_drill_down(payload: dict[str, object]) -> dict[str, object]:
+    drill_down = payload.get("drill_down")
+    return drill_down if isinstance(drill_down, dict) else payload
+
+
 def test_report_surfaces_config_ownership_drift_diagnostic(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
@@ -224,7 +234,7 @@ maintainer_mode = true
     assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    maintainer_mode = payload["maintainer_mode"]
+    maintainer_mode = _report_context(payload)["maintainer_mode"]
     assert maintainer_mode["status"] == "enabled"
     assert maintainer_mode["source"] == "local-override"
     assert maintainer_mode["preferred_local_config"] == ".agentic-workspace/config.local.toml"
@@ -236,7 +246,7 @@ maintainer_mode = true
     assert maintainer_mode["primary_next_action"]["command"] == (
         "agentic-workspace report --target ./repo --section improvement_intake --format json"
     )
-    assert "maintainer_mode" in payload["report_profile"]["decision_grade_fields"]
+    assert "maintainer_mode" in _report_context(payload)["report_profile"]["decision_grade_fields"]
 
 
 def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path, capsys) -> None:
@@ -249,25 +259,28 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
+    context = _report_context(payload)
+    drill_down = _report_drill_down(payload)
     assert payload["kind"] == "workspace-report-router/v1"
     assert payload["schema"]["full_profile_command"] == "agentic-workspace report --target ./repo --verbose --format json"
     assert payload["schema"]["section_command"] == "agentic-workspace report --target ./repo --section <section> --format json"
-    assert payload["report_profile"]["default_profile"] == "router"
-    assert payload["report_profile"]["full_profile"] == "full"
-    assert payload["report_profile"]["full_profile_cost"]["classification"] == "deep-audit"
-    assert payload["report_profile"]["full_profile_cost"]["expected_cost"] == "high"
-    assert payload["report_profile"]["context_router"]["first_view"] == "start"
-    assert payload["report_profile"]["detail_sections"]["config_enforcement"].endswith(
+    assert set(payload) <= {"kind", "schema", "command", "target", "health", "next_action", "context", "drill_down"}
+    assert context["report_profile"]["default_profile"] == "router"
+    assert context["report_profile"]["full_profile"] == "full"
+    assert context["report_profile"]["full_profile_cost"]["classification"] == "deep-audit"
+    assert context["report_profile"]["full_profile_cost"]["expected_cost"] == "high"
+    assert context["report_profile"]["context_router"]["first_view"] == "start"
+    assert context["report_profile"]["detail_sections"]["config_enforcement"].endswith(
         "agentic-workspace report --target ./repo --section config_enforcement --format json"
     )
-    assert payload["report_profile"]["detail_sections"]["config_effect_audit"].endswith(
+    assert context["report_profile"]["detail_sections"]["config_effect_audit"].endswith(
         "agentic-workspace report --target ./repo --section config_effect_audit --format json"
     )
-    assert payload["report_profile"]["detail_sections"]["feature_tier"].endswith("agentic-workspace modules --target ./repo --format json")
-    assert "config_enforcement" not in payload["report_profile"]
-    assert "config_effect_audit" not in payload["report_profile"]
-    assert payload["report_profile"]["decision_grade_fields"][0] == "health"
-    ordinary_path = payload["report_profile"]["ordinary_agent_path"]
+    assert context["report_profile"]["detail_sections"]["feature_tier"].endswith("agentic-workspace modules --target ./repo --format json")
+    assert "config_enforcement" not in context["report_profile"]
+    assert "config_effect_audit" not in context["report_profile"]
+    assert context["report_profile"]["decision_grade_fields"][0] == "health"
+    ordinary_path = context["report_profile"]["ordinary_agent_path"]
     assert ordinary_path["entry_command"] == "agentic-workspace start --target ./repo --format json"
     assert ordinary_path["current_work_command"] == "agentic-workspace summary --format json"
     assert ordinary_path["proof_command"] == "agentic-workspace proof --target ./repo --changed <paths> --format json"
@@ -281,13 +294,13 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
         "hand-authored-durable-artifact",
     }
     assert recovery["recover_by_default"] == "agentic-workspace start --target ./repo --format json"
-    assert "report_profile.ordinary_agent_path" in payload["report_profile"]["decision_grade_fields"]
-    guard = payload["report_profile"]["router_shape_guard"]
+    assert "report_profile.ordinary_agent_path" in context["report_profile"]["decision_grade_fields"]
+    guard = context["report_profile"]["router_shape_guard"]
     assert guard["status"] == "active"
     assert len(payload) <= guard["max_top_level_fields"]
-    assert "feature_tier" not in payload["report_profile"]
-    assert "report_profile.feature_tier" not in payload["report_profile"]["decision_grade_fields"]
-    assert len(payload["warning_summary"]["sample"]) <= guard["warning_sample_limit"]
+    assert "feature_tier" not in context["report_profile"]
+    assert "report_profile.feature_tier" not in context["report_profile"]["decision_grade_fields"]
+    assert len(context["warning_summary"]["sample"]) <= guard["warning_sample_limit"]
     for section in guard["high_volume_sections_excluded"]:
         assert section not in payload
     assert payload["health"] == "healthy"
@@ -297,11 +310,11 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert "operational_compression" not in payload
     assert "closeout_trust" not in payload
     assert "external_work_delta" not in payload
-    assert payload["operating_posture"]["surface"] == "report"
-    assert payload["operating_posture"]["closeout_nudge"]["field"] == "improvement_signal_review"
-    assert payload["execution_shape"]["task_shape_recommender"]["status"] == "available"
-    assert payload["execution_shape"]["narrow_work_fast_path"]["status"] == "blessed"
-    intake = payload["improvement_intake"]
+    assert context["operating_posture"]["surface"] == "report"
+    assert context["operating_posture"]["closeout_nudge"]["field"] == "improvement_signal_review"
+    assert context["execution_shape"]["task_shape_recommender"]["status"] == "available"
+    assert context["execution_shape"]["narrow_work_fast_path"]["status"] == "blessed"
+    intake = context["improvement_intake"]
     assert intake["kind"] == "workspace-improvement-intake/v1"
     assert intake["role"] == "router-not-backlog"
     assert intake["detail_section"] == "improvement_intake"
@@ -315,13 +328,13 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
         "repair_recurrence",
     ]
     assert "dogfooding_friction" not in json.dumps(intake, sort_keys=True)
-    assert "improvement_intake" in payload["report_profile"]["decision_grade_fields"]
-    reconciliation = payload["external_work_reconciliation"]
+    assert "improvement_intake" in context["report_profile"]["decision_grade_fields"]
+    reconciliation = context["external_work_reconciliation"]
     assert reconciliation["kind"] == "planning-external-work-reconciliation/v1"
-    assert "external_work_reconciliation" in payload["report_profile"]["decision_grade_fields"]
-    assert payload["surface_value_guardrail"]["first_contact_budget"]["status"] == "active"
-    assert payload["deeper_detail"]["high_volume_sections"][0]["section"] == "module_reports"
-    section_hints = {item["section"]: item for item in payload["section_hints"]}
+    assert "external_work_reconciliation" in context["report_profile"]["decision_grade_fields"]
+    assert context["surface_value_guardrail"]["first_contact_budget"]["status"] == "active"
+    assert drill_down["deeper_detail"]["high_volume_sections"][0]["section"] == "module_reports"
+    section_hints = {item["section"]: item for item in drill_down["section_hints"]}
     assert section_hints["module_reports"]["volume"] == "high"
     assert "compact router field" in section_hints["module_reports"]["why_now"]
     assert "maintenance_pressure" not in section_hints
@@ -374,7 +387,7 @@ def test_report_tiny_profile_alias_returns_router(tmp_path: Path, capsys) -> Non
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "workspace-report-router/v1"
-    assert payload["report_profile"]["default_profile"] == "router"
+    assert _report_context(payload)["report_profile"]["default_profile"] == "router"
     assert "module_reports" not in payload
 
 
@@ -424,16 +437,17 @@ def test_report_router_uses_resolved_cli_invoke_for_copyable_commands(tmp_path: 
     assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
+    context = _report_context(payload)
     assert payload["schema"]["full_profile_command"] == "uv run agentic-workspace report --target ./repo --verbose --format json"
-    assert payload["report_profile"]["default_command"] == "uv run agentic-workspace report --target ./repo --format json"
-    ordinary_path = payload["report_profile"]["ordinary_agent_path"]
+    assert context["report_profile"]["default_command"] == "uv run agentic-workspace report --target ./repo --format json"
+    ordinary_path = context["report_profile"]["ordinary_agent_path"]
     assert ordinary_path["entry_command"] == "uv run agentic-workspace start --target ./repo --format json"
     assert ordinary_path["state_command"] == "uv run agentic-workspace report --target ./repo --format json"
     assert ordinary_path["current_work_command"] == "uv run agentic-workspace summary --format json"
     assert ordinary_path["proof_command"] == "uv run agentic-workspace proof --target ./repo --changed <paths> --format json"
     recovery = ordinary_path["off_happy_path_recovery"]
     assert recovery["recover_by_default"] == "uv run agentic-workspace start --target ./repo --format json"
-    assert payload["section_hints"][0]["command"].startswith("uv run agentic-workspace report ")
+    assert _report_drill_down(payload)["section_hints"][0]["command"].startswith("uv run agentic-workspace report ")
     if "maintenance_pressure" in payload:
         assert payload["maintenance_pressure"]["subcategories"][0]["section_command"].startswith("uv run agentic-workspace report ")
 
@@ -561,7 +575,7 @@ def test_report_improvement_intake_keeps_dogfooding_source_checkout_only(tmp_pat
     assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    intake = payload["improvement_intake"]
+    intake = _report_context(payload)["improvement_intake"]
     assert intake["audience_boundary"]["status"] == "source-checkout"
     assert intake["subtypes"] == [
         "setup_finding",

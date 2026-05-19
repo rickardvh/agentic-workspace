@@ -390,6 +390,28 @@ def test_self_improvement_skill_requires_durable_residue_routing_before_closeout
     assert "Memory note template's closeout-derived residue fields" in skill_text
 
 
+def test_dogfooding_routing_runbook_covers_routed_dismissed_and_no_signal_cases() -> None:
+    text = (WORKSPACE_ROOT / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "dogfooding-feedback-routing.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "Routine Routing Examples" in text
+    assert "Routed issue signal" in text
+    assert "Memory-or-docs candidate" in text
+    assert "Dismissed signal" in text
+    assert "No-signal-found case" in text
+    assert "`no_signal_found`" in text
+    assert "`not_checked`" in text
+
+
+def test_dogfooding_feedback_doc_distinguishes_not_checked_from_no_signal_found() -> None:
+    text = (WORKSPACE_ROOT / "docs" / "maintainer" / "dogfooding-feedback.md").read_text(encoding="utf-8")
+
+    assert "`not_checked`" in text
+    assert "`no_signal_found`" in text
+    assert "issue follow-up, Memory, Planning, docs/checks/contracts, direct fix, or dismissed-with-reason" in text
+
+
 def test_self_improvement_skill_uses_constrained_prose_shape() -> None:
     skill_text = (WORKSPACE_ROOT / "tools" / "skills" / "self-improvement-dogfooding" / "SKILL.md").read_text(
         encoding="utf-8",

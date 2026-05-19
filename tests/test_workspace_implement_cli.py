@@ -22,6 +22,11 @@ candidates = []
     )
 
 
+def _implement_context(payload: dict[str, object]) -> dict[str, object]:
+    context = payload.get("context")
+    return context if isinstance(context, dict) else payload
+
+
 def test_implement_command_returns_bounded_context_and_boundary_warnings(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
@@ -116,9 +121,11 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     )
 
     payload = json.loads(capsys.readouterr().out)
+    context = _implement_context(payload)
     encoded = json.dumps(payload)
     assert payload["kind"] == "implementer-context-tiny/v1"
-    adaptive = payload["adaptive_routing"]
+    assert set(payload) <= {"kind", "target", "next", "proof", "context", "drill_down"}
+    adaptive = context["adaptive_routing"]
     assert adaptive["current_need"] == "changed-path-next-action"
     assert adaptive["read_budget"]["profile"] == "tiny"
     assert adaptive["detail_commands"]["task_scoped_state"].startswith("agentic-workspace summary --changed")
@@ -127,12 +134,12 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     assert payload["next"]["command"] == "make test-workspace"
     assert payload["next"]["run"] == payload["next"]["command"]
     assert "make lint-workspace" in payload["next"]["commands"]
-    assert payload["scope"]["inspect_files"] == ["generated/workspace/python/cli.py"]
+    assert context["scope"]["inspect_files"] == ["generated/workspace/python/cli.py"]
     assert "make test-workspace" in payload["proof"]["required_commands"]
     assert "uv run python scripts/check/check_generated_command_packages.py" in payload["proof"]["required_commands"]
     assert payload["proof"]["acceptance_guidance"]["status"] == "present"
-    assert payload["routing"]["work_shape"] == "bounded"
-    acknowledgement = payload["intent_acknowledgement"]
+    assert context["routing"]["work_shape"] == "bounded"
+    acknowledgement = context["intent_acknowledgement"]
     assert acknowledgement["decision"] == "proceed-with-stated-assumption"
     assert acknowledgement["fields"] == [
         "inferred_intent",
@@ -141,12 +148,12 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
         "correction_point",
     ]
     assert acknowledgement["proceed_unless_corrected"] is True
-    assert payload["delegation_decision"]["status"] == "evaluated"
-    assert payload["delegation_decision"]["mode"] in {"suggest", "auto"}
-    assert payload["acceptance_reconciliation"]["task_text_available"] is True
-    assert payload["acceptance"]["status"] == "inferred"
-    assert payload["acceptance"]["closeout_required"] is True
-    assert payload["objective_drift"]["status"] in {"clear", "not-enough-explicit-outcomes"}
+    assert context["delegation_decision"]["status"] == "evaluated"
+    assert context["delegation_decision"]["mode"] in {"suggest", "auto"}
+    assert context["acceptance_reconciliation"]["task_text_available"] is True
+    assert context["acceptance"]["status"] == "inferred"
+    assert context["acceptance"]["closeout_required"] is True
+    assert context["objective_drift"]["status"] in {"clear", "not-enough-explicit-outcomes"}
     assert "package_boundary" not in payload
     assert "authority_markers" not in payload
     assert "durable_intent" not in payload
@@ -269,13 +276,14 @@ def test_implement_task_file_preserves_task_intent_for_acceptance_checks(tmp_pat
     )
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["acceptance"]["items"][0]["id"] == "A1"
-    assert "normalize_whitespace" in payload["acceptance"]["items"][0]["expectation"]
+    context = _implement_context(payload)
+    assert context["acceptance"]["items"][0]["id"] == "A1"
+    assert "normalize_whitespace" in context["acceptance"]["items"][0]["expectation"]
     assert payload["proof"]["acceptance_guidance"]["acceptance_item_count"] >= 2
-    assert payload["acceptance_reconciliation"]["task_text_available"] is True
-    assert payload["acceptance_reconciliation"]["requested_outcomes"] == ["normalize_whitespace", "sentence_summary"]
-    assert payload["acceptance_reconciliation"]["acceptance_item_count"] >= 2
-    assert payload["objective_drift"]["missing_from_changed_surface"] == ["normalize_whitespace", "sentence_summary"]
+    assert context["acceptance_reconciliation"]["task_text_available"] is True
+    assert context["acceptance_reconciliation"]["requested_outcomes"] == ["normalize_whitespace", "sentence_summary"]
+    assert context["acceptance_reconciliation"]["acceptance_item_count"] >= 2
+    assert context["objective_drift"]["missing_from_changed_surface"] == ["normalize_whitespace", "sentence_summary"]
 
 
 def test_implement_task_routes_broad_issue_ingestion_to_planning(tmp_path: Path, capsys) -> None:
@@ -427,7 +435,7 @@ def test_implement_objective_drift_accepts_explicit_deleted_outcome(tmp_path: Pa
     )
 
     payload = json.loads(capsys.readouterr().out)
-    drift = payload["objective_drift"]
+    drift = _implement_context(payload)["objective_drift"]
     assert drift["status"] == "clear"
     assert drift["requested_outcomes"] == ["llms.txt"]
     assert drift["removed_or_retired_outcomes"] == ["llms.txt"]
@@ -455,7 +463,7 @@ def test_implement_objective_drift_keeps_missing_path_without_removal_intent(tmp
     )
 
     payload = json.loads(capsys.readouterr().out)
-    drift = payload["objective_drift"]
+    drift = _implement_context(payload)["objective_drift"]
     assert drift["status"] == "warning"
     assert drift["removed_or_retired_outcomes"] == []
     assert drift["missing_from_changed_surface"] == ["llms.txt"]
@@ -590,7 +598,7 @@ def test_implement_auto_delegation_exposes_bounded_slice_handoff(tmp_path: Path,
     )
 
     payload = json.loads(capsys.readouterr().out)
-    decision = payload["delegation_decision"]
+    decision = _implement_context(payload)["delegation_decision"]
     assert decision["decision"] == "delegate-bounded-slice"
     assert decision["target"] == "mini"
     assert decision["required_next_action"] == "execute-when-safe"
@@ -680,7 +688,8 @@ def test_implement_epic_decomposition_prefers_reusable_worker_over_manual_relay(
         == 0
     )
 
-    decision = json.loads(capsys.readouterr().out)["delegation_decision"]
+    payload = json.loads(capsys.readouterr().out)
+    decision = _implement_context(payload)["delegation_decision"]
     assert decision["decision"] == "suggest-delegation"
     assert decision["target"] == "reusable-worker"
     assert decision["required_next_action"] == "select-or-promote-bounded-lane"
@@ -740,7 +749,8 @@ def test_implement_suppresses_manual_external_relay_for_code_local_changed_paths
         == 0
     )
 
-    decision = json.loads(capsys.readouterr().out)["delegation_decision"]
+    payload = json.loads(capsys.readouterr().out)
+    decision = _implement_context(payload)["delegation_decision"]
     assert decision["decision"] == "stay-local"
     assert decision["required_next_action"] == "continue-local"
     assert decision["effort_recommendation"]["orchestrator"] == "medium"
@@ -789,7 +799,7 @@ def test_implement_supports_selector_drilldown(tmp_path: Path, capsys) -> None:
                 "--task",
                 "Implement bounded text helper behavior",
                 "--select",
-                "delegation_decision.required_next_action,delegation_decision.delegation_next_step.must_report_if_not_run,delegation_decision.effort_recommendation.cost_posture",
+                "context.delegation_decision.required_next_action,context.delegation_decision.delegation_next_step.must_report_if_not_run,context.delegation_decision.effort_recommendation.cost_posture",
                 "--format",
                 "json",
             ]
@@ -801,9 +811,9 @@ def test_implement_supports_selector_drilldown(tmp_path: Path, capsys) -> None:
     assert payload["kind"] == "agentic-workspace/selected-output/v1"
     assert "missing" not in payload
     assert "available_selectors" not in payload
-    assert payload["values"]["delegation_decision.required_next_action"] == "execute-when-safe"
-    assert payload["values"]["delegation_decision.delegation_next_step.must_report_if_not_run"] is True
-    assert payload["values"]["delegation_decision.effort_recommendation.cost_posture"] == "save-tokens-where-safe"
+    assert payload["values"]["context.delegation_decision.required_next_action"] == "execute-when-safe"
+    assert payload["values"]["context.delegation_decision.delegation_next_step.must_report_if_not_run"] is True
+    assert payload["values"]["context.delegation_decision.effort_recommendation.cost_posture"] == "save-tokens-where-safe"
 
 
 def test_implement_selector_reports_available_fields_for_missing_selector(tmp_path: Path, capsys) -> None:
@@ -828,7 +838,7 @@ def test_implement_selector_reports_available_fields_for_missing_selector(tmp_pa
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["missing"] == ["does_not_exist"]
-    assert "delegation_decision" in payload["available_selectors"]
+    assert "context.delegation_decision" in payload["available_selectors"]
     assert "next" in payload["available_selectors"]
-    assert "scope" in payload["available_selectors"]
+    assert "context.scope" in payload["available_selectors"]
     assert "proof" in payload["available_selectors"]

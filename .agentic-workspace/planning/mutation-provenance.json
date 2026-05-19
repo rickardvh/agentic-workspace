@@ -1776,6 +1776,318 @@
       "reason": "close out execplan issue-1052-1053-dogfood-fixes",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-18T15:12:03+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "c2f98e2f76867395b8b8773a35e3dd05c5528e61b25f7ea97faafa985c4a8608",
+      "command": "agentic-planning record-recovery",
+      "reason": "Manual upstream issue intake: added prioritized roadmap candidates for open GitHub issues #1034 and above after reconcile showed them missing from checked-in planning state.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-18T15:22:35+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "af46a56fd4cdd00367bd6df70712f7300e2bba63ddb7cf23bccc7da83cbe0b3f",
+      "command": "agentic-planning record-recovery",
+      "reason": "Repair schema after upstream issue intake: roadmap candidate item status must use next/deferred/active/blocked, not candidate.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-18T15:23:04+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "8633ee43378710b62ec3a8c66ea13d8c0d50eb46d3a5358a0df2042783d848d3",
+      "command": "agentic-planning record-recovery",
+      "reason": "Add dogfooding follow-up #1055 from the issue-ingestion task as a P2 roadmap candidate so refreshed external intent remains represented.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-18T15:24:54+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/p1-workflow-trust-bundle.plan.json",
+      "sha256": "999c3ec92e46827aeeedc8e120493a1fbdf2b5222adf538eb58288ad71469ae8",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold p1-workflow-trust-bundle",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T15:27:33+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "3d5b1558eeb7acaa090fcd49646dc123f6db4312bcb0648a9dd3f9c4a6d9b01f",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold p1-workflow-trust-bundle",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T15:27:33+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/p1-workflow-trust-bundle.plan.json",
+      "sha256": "14daf916c393a268dc8c39fd897c4ef3377ce7aa5c97639cb8120638381640fb",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T15:29:16+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+      "sha256": "b118391850c48c860402e574b7818601c07c7333a74ab56eaf599a913fbbcbd2",
+      "command": "agentic-planning record-recovery",
+      "reason": "Intentional P1 implementation updated managed planning template and active plan closeout contract; changes were validated by focused tests before stamping.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-18T15:37:37+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/p1-workflow-trust-bundle.plan.json",
+      "sha256": "ee69f76c6d9a80191ed8ff1f915405f49bb6fe9a912edae6ed584f69cd059652",
+      "command": "agentic-planning record-recovery",
+      "reason": "Intentional P1 implementation updated managed planning template and active plan closeout contract; changes were validated by focused tests before stamping.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-18T15:37:37+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "e862b8e4da245cf9d21a77a179fdddbffba9508ff0a70c66a89821e201430dbd",
+      "command": "agentic-planning record-recovery",
+      "reason": "Routed dogfooding follow-up #1056 into roadmap candidates after filing the issue during P1 closeout.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-18T15:38:37+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/p1-workflow-trust-bundle.plan.json",
+      "sha256": "11ea9938eef10484099a2832948e941695b792aa767d844b914336a552ea43f3",
+      "command": "agentic-planning record-recovery",
+      "reason": "Recorded P1 dogfooding signal routing to GitHub #1056 before closeout.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-18T15:38:56+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "013c42280871ba504862d0809776afa1bc57005b1c28911a352d0d522b78b430",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan p1-workflow-trust-bundle",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T15:39:06+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/p1-workflow-trust-bundle.plan.json",
+      "sha256": "844fbe6326c95c10783b8b9ea44e533990a683ea33d3b706edaa1c6d46d165f3",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan p1-workflow-trust-bundle",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T15:39:06+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "013c42280871ba504862d0809776afa1bc57005b1c28911a352d0d522b78b430",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan p1-workflow-trust-bundle",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T15:39:06+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/p1-workflow-trust-bundle.plan.json",
+      "sha256": "844fbe6326c95c10783b8b9ea44e533990a683ea33d3b706edaa1c6d46d165f3",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan p1-workflow-trust-bundle",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T15:39:06+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/mutation-provenance.json",
+      "sha256": "2dc462d1e464f20be1af8dfcc469dfbac70a000196f78baa43e3032c2f0fa891",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan p1-workflow-trust-bundle",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T15:39:06+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "dae6088eba80e622836219f3b4032dd58de1af0a141b1ef43d86322c82e371d0",
+      "command": "agentic-planning record-recovery",
+      "reason": "Removed completed P1 candidates #1046 and #1050 from branch planning state while keeping #1035 open for non-start ordinary outputs.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-18T15:39:47+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/fix-1056-prose-path-reference.plan.json",
+      "sha256": "d2de446ece6151dba2b636913a47c2175f9e56cf219c82dc205d13aca09140b4",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold fix-1056-prose-path-reference",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T18:41:35+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "930fb65b69c497c5591ce76193335a0fc93f4f933c6d7ffc1af248cfbaeced90",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold fix-1056-prose-path-reference",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T18:41:35+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/fix-1056-prose-path-reference.plan.json",
+      "sha256": "9e92def2d0b8d3072813e3fd33a28d09ce4083dd371ddaaca17d6d0400a11653",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T18:43:21+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "a13864d29ae61d3f7d60729f84dfae29c8dc8fcad6a93a5fbf0019fccbc11be5",
+      "command": "agentic-planning record-recovery",
+      "reason": "Marked #1056 implemented by the current branch and recorded dogfooding review before closeout.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-18T18:44:11+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/fix-1056-prose-path-reference.plan.json",
+      "sha256": "2dc13cb512814d1ae4cc85f7118b4dc87aae9420ee5fe288dd6166e59bc085cd",
+      "command": "agentic-planning record-recovery",
+      "reason": "Marked #1056 implemented by the current branch and recorded dogfooding review before closeout.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-18T18:44:11+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "3bbdfd9f69a3011a05a38b3d28122c6cfc204fd38fac9e3534bf2ea067e12e4f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan fix-1056-prose-path-reference",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T18:44:24+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/fix-1056-prose-path-reference.plan.json",
+      "sha256": "8a02957656b9f62faf9422204a6964dab75a0c095b3f0b7be98a11b4e4489297",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan fix-1056-prose-path-reference",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T18:44:24+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "3bbdfd9f69a3011a05a38b3d28122c6cfc204fd38fac9e3534bf2ea067e12e4f",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan fix-1056-prose-path-reference",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T18:44:24+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/fix-1056-prose-path-reference.plan.json",
+      "sha256": "8a02957656b9f62faf9422204a6964dab75a0c095b3f0b7be98a11b4e4489297",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan fix-1056-prose-path-reference",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T18:44:24+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/mutation-provenance.json",
+      "sha256": "f508f0c055f2300b37dca31635f2c24cba9454b99fa593a362c4ffab6cad0877",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan fix-1056-prose-path-reference",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T18:44:24+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/finish-1035-ordinary-output-slices.plan.json",
+      "sha256": "4477419d75b6c32792a80888b23534d2ca314f1020c0c359b4b3a2b42d112f62",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold finish-1035-ordinary-output-slices",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T18:48:46+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "d84f52477645c9a1839118adc72811632aebe875fa6978172132130bbe7c31c8",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold finish-1035-ordinary-output-slices",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T18:48:46+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/finish-1035-ordinary-output-slices.plan.json",
+      "sha256": "a131c96ff7820eaa5e19b1e5c805101a659bdfe7e2ef43e417d2bb07cf57500c",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T18:49:49+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "3bbdfd9f69a3011a05a38b3d28122c6cfc204fd38fac9e3534bf2ea067e12e4f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan finish-1035-ordinary-output-slices",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T19:17:04+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/finish-1035-ordinary-output-slices.plan.json",
+      "sha256": "96301c2cf45bcec42c8f52dff10cab347fd451ed7399edd1ac206f9f9d11f63b",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan finish-1035-ordinary-output-slices",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T19:17:04+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/address-pr-1057-review.plan.json",
+      "sha256": "acfdfd99506face2c00df66a769c86c66b3072c7bc7f86e6144e4c1739991355",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold address-pr-1057-review",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T20:36:41+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "42d78a50af779e979ec1d396ecda49e384823658c8d1656dbcd8d549c1663479",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold address-pr-1057-review",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T20:36:41+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/address-pr-1057-review.plan.json",
+      "sha256": "1db8b68475d018d9ad8a3d737933ba7adef950a88646e1cf01d59bb6b01c19ef",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T20:39:06+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "3bbdfd9f69a3011a05a38b3d28122c6cfc204fd38fac9e3534bf2ea067e12e4f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan address-pr-1057-review",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T20:41:56+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/address-pr-1057-review.plan.json",
+      "sha256": "c3c410ab9ee1b38533b77ab96036ff9479705e6b47c44f4196dfbd5a62cd30f1",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan address-pr-1057-review",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T20:41:56+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "3bbdfd9f69a3011a05a38b3d28122c6cfc204fd38fac9e3534bf2ea067e12e4f",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan address-pr-1057-review",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T20:41:56+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/address-pr-1057-review.plan.json",
+      "sha256": "c3c410ab9ee1b38533b77ab96036ff9479705e6b47c44f4196dfbd5a62cd30f1",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan address-pr-1057-review",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T20:41:56+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/mutation-provenance.json",
+      "sha256": "4385250e9bb02d570d162bfae3ce03480b2adfcc45ee1ebbf65033ba2ddeb972",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan address-pr-1057-review",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-18T20:41:56+00:00"
     }
   ]
 }

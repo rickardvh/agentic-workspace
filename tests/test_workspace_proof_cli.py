@@ -180,6 +180,22 @@ def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
     payload = json.loads(capsys.readouterr().out)
     encoded = json.dumps(payload)
     assert payload["kind"] == "proof-next-decision/v1"
+    assert set(payload) <= {
+        "kind",
+        "target",
+        "selector",
+        "sufficiency",
+        "next",
+        "required_commands",
+        "proof_command_adjustments",
+        "unavailable_proof_commands",
+        "proof_strategy",
+        "target_proof_capabilities",
+        "manual_verification",
+        "warnings",
+        "detail_command",
+        "proof_route_decision",
+    }
     assert payload["selector"] == {"changed": ["generated/workspace/python/cli.py"]}
     assert payload["next"]["action"] == "run-validation-command"
     assert payload["next"]["command"] == "make test-workspace"

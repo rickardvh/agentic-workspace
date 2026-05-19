@@ -33,8 +33,13 @@ def test_execplan_template_surfaces_archive_closeout_terminal_values() -> None:
     assert template["post_decomposition_delegation"]["status"] == "pending"
     assert "delegate-exploration" in template["post_decomposition_delegation"]["route candidates"]
     assert "actual friction" in template["delegation_outcome_feedback"]
+    assert template["improvement_signal_review"]["status"] == "not_checked"
+    assert "no_signal_found" in template["improvement_signal_review"]["accepted statuses"]
     assert template["improvement_signal_review"]["source"] == "operating_posture"
-    assert "reported-only/routed" in template["improvement_signal_review"]["guidance"]
+    assert "smoothness/helpfulness gaps" in template["improvement_signal_review"]["guidance"]
+    assert "Memory" in template["improvement_signal_review"]["owner classes"]
+    assert "dismissed with reason" in template["improvement_signal_review"]["owner classes"]
+    assert template["improvement_signal_review"]["ordinary output cap"] == 3
 
 
 def test_planning_record_schema_rejects_unknown_execplan_fields(tmp_path: Path) -> None:
@@ -435,6 +440,19 @@ def test_planning_tiny_report_uses_fast_summary_path(tmp_path: Path, monkeypatch
 
     assert report["kind"] == "planning-module-report/v1"
     assert report["profile"] == "tiny"
+    assert set(report) <= {
+        "kind",
+        "profile",
+        "module",
+        "target_root",
+        "health",
+        "status",
+        "active",
+        "finding_count",
+        "findings",
+        "next_action",
+        "detail_commands",
+    }
     assert report["status"]["active_todo_count"] == 0
 
 
@@ -1238,6 +1256,23 @@ def test_planning_summary_ignores_conceptual_slash_phrases_in_execplan_next_acti
 
     assert not any(
         warning["warning_class"] == "execplan_missing_file_reference" and "IR/contracts" in warning["message"] for warning in warnings
+    )
+
+
+def test_planning_summary_ignores_slash_separated_category_phrases_in_execplan_next_action(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(plan_path)
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["immediate_next_action"] = ["Harden focused tests/contracts/docs before closeout."]
+    installer_mod._write_execplan_record(record_path=plan_path, record=record)
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+    warnings = summary["planning_surface_health"]["warnings"]
+
+    assert not any(
+        warning["warning_class"] == "execplan_missing_file_reference" and "tests/contracts/docs" in warning["message"]
+        for warning in warnings
     )
 
 

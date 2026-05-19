@@ -8126,6 +8126,12 @@ def _closeout_distillation_buckets(*, record: dict[str, Any], explicit: dict[str
     if "doc" in combined_learning:
         buckets["docs"].append({"summary": knowledge or posterity, "owner": "docs", "source": "execution_summary"})
 
+    improvement_review = _record_section_value(record, "improvement_signal_review") or {}
+    for item in _improvement_signal_review_distillation_items(improvement_review):
+        bucket = item.pop("bucket", "discard")
+        if bucket in buckets:
+            buckets[bucket].append(item)
+
     for ref in [] if buckets["issue_follow_up"] else (_record_section_references(record, "references") or []):
         role = str(ref.get("role", "")).lower()
         if "follow" in role or "issue" in str(ref.get("kind", "")).lower():
@@ -8146,6 +8152,68 @@ def _closeout_distillation_buckets(*, record: dict[str, Any], explicit: dict[str
             }
         )
     return {bucket: _dedupe_distillation_items(items) for bucket, items in buckets.items()}
+
+
+def _improvement_signal_review_distillation_items(review: dict[str, Any]) -> list[dict[str, str]]:
+    status = str(review.get("status", "")).strip().lower()
+    items: list[dict[str, str]] = []
+    for key in ("signals routed", "signals fixed"):
+        raw_items = review.get(key, [])
+        if not isinstance(raw_items, list):
+            continue
+        for raw in raw_items:
+            normalized = _normalize_improvement_signal_item(raw, source=f"improvement_signal_review.{key}")
+            if normalized is not None:
+                items.append(normalized)
+    raw_dismissed = review.get("signals dismissed", [])
+    if isinstance(raw_dismissed, list):
+        for raw in raw_dismissed:
+            normalized = _normalize_improvement_signal_item(
+                raw, source="improvement_signal_review.signals dismissed", default_bucket="discard"
+            )
+            if normalized is not None:
+                items.append(normalized)
+    if status == "no_signal_found" and not items:
+        items.append(
+            {
+                "bucket": "discard",
+                "summary": "Improvement signal review was checked and no signal was found.",
+                "owner": "none",
+                "source": "improvement_signal_review.status",
+            }
+        )
+    return items
+
+
+def _normalize_improvement_signal_item(raw: Any, *, source: str, default_bucket: str | None = None) -> dict[str, str] | None:
+    if isinstance(raw, str):
+        summary = raw.strip()
+        owner = ""
+    elif isinstance(raw, dict):
+        summary = str(raw.get("summary") or raw.get("signal") or raw.get("symptom") or raw.get("detail") or "").strip()
+        owner = str(raw.get("owner") or raw.get("owner class") or raw.get("destination") or raw.get("target") or "").strip()
+    else:
+        return None
+    if not summary:
+        return None
+    owner_lower = owner.lower()
+    if default_bucket is not None:
+        bucket = default_bucket
+    elif "memory" in owner_lower:
+        bucket = "memory"
+    elif "doc" in owner_lower:
+        bucket = "docs"
+    elif any(marker in owner_lower for marker in ("issue", "github", "#")):
+        bucket = "issue_follow_up"
+    elif any(marker in owner_lower for marker in ("check", "contract", "test", "config")):
+        bucket = "config_check"
+    elif "planning" in owner_lower:
+        bucket = "continuation"
+    elif "direct fix" in owner_lower:
+        bucket = "config_check"
+    else:
+        bucket = "discard"
+    return {"bucket": bucket, "summary": summary, "owner": owner, "source": source}
 
 
 def _normalize_distillation_items(raw_items: list[Any]) -> list[dict[str, str]]:
@@ -12444,7 +12512,21 @@ def _looks_like_conceptual_slash_phrase(value: str) -> bool:
     if Path(value).suffix:
         return False
     parts = [part for part in value.split("/") if part]
-    return len(parts) > 1 and any(len(part) > 1 and part.isupper() for part in parts)
+    if len(parts) <= 1:
+        return False
+    if any(len(part) > 1 and part.isupper() for part in parts):
+        return True
+    conceptual_terms = {
+        "checks",
+        "contracts",
+        "docs",
+        "reports",
+        "schemas",
+        "skills",
+        "tests",
+        "tools",
+    }
+    return len(parts) >= 3 and all(part.lower() in conceptual_terms for part in parts)
 
 
 def _execplan_missing_reference_warnings(*, target_root: Path, plan_path: Path, record: dict[str, Any]) -> list[dict[str, str]]:
@@ -13049,12 +13131,16 @@ def _build_execplan_record_from_todo_item(
             "reopen trigger": "",
         },
         "improvement_signal_review": {
-            "status": "pending",
+            "status": "not_checked",
+            "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
             "guidance": (
-                "At closeout, separate acted-on, reported-only/routed, and dismissed incidental findings; "
-                "keep this compact and evidence-backed."
+                "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, "
+                "and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly "
+                "split, or mark no_signal_found after checking."
             ),
             "source": "operating_posture",
+            "owner classes": ["issue", "Memory", "Planning", "docs/checks/contracts", "direct fix", "dismissed with reason"],
+            "ordinary output cap": 3,
             "signals found": [],
             "signals fixed": [],
             "signals routed": [],
