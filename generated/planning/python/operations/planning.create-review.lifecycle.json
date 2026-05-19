@@ -146,10 +146,6 @@
     {
       "required": true,
       "surface": ".agentic-workspace/planning/reviews/"
-    },
-    {
-      "required": false,
-      "surface": ".agentic-workspace/planning/mutation-provenance.json"
     }
   ]
 }

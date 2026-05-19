@@ -13,8 +13,7 @@
       "handoff",
       "intake-artifact",
       "new-plan",
-      "promote-to-plan",
-      "record-recovery"
+      "promote-to-plan"
     ]
   },
   "summary": "Show Planning help or dispatch Planning subcommands through the workspace front door.",

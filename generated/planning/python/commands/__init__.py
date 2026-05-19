@@ -27,7 +27,6 @@ from . import planning_new_plan_lifecycle as _command_planning_new_plan_lifecycl
 from . import planning_promote_to_plan_lifecycle as _command_planning_promote_to_plan_lifecycle
 from . import planning_prompt_render as _command_planning_prompt_render
 from . import planning_reconcile_report as _command_planning_reconcile_report
-from . import planning_record_recovery_lifecycle as _command_planning_record_recovery_lifecycle
 from . import planning_report_report as _command_planning_report_report
 from . import planning_status_report as _command_planning_status_report
 from . import planning_summary_report as _command_planning_summary_report
@@ -53,7 +52,6 @@ GENERATED_COMMAND_HANDLERS = {
     'planning.promote-to-plan.lifecycle': _command_planning_promote_to_plan_lifecycle.run,
     'planning.prompt.render': _command_planning_prompt_render.run,
     'planning.reconcile.report': _command_planning_reconcile_report.run,
-    'planning.record-recovery.lifecycle': _command_planning_record_recovery_lifecycle.run,
     'planning.report.report': _command_planning_report_report.run,
     'planning.status.report': _command_planning_status_report.run,
     'planning.summary.report': _command_planning_summary_report.run,

@@ -21,7 +21,6 @@ from repo_planning_bootstrap.installer import (
     planning_summary,
     promote_todo_item_to_execplan,
     record_delegation_decision,
-    record_planning_recovery,
 )
 
 
@@ -159,15 +158,6 @@ def apply_planning_delegation_decision_operation(values: dict, _arguments: dict,
         proof_result=str(values.get("proof_result") or ""),
         quality_concern=str(values.get("quality_concern") or ""),
         decomposition_adjustment=str(values.get("decomposition_adjustment") or ""),
-        dry_run=bool(values.get("dry_run")),
-    )
-
-
-def apply_planning_record_recovery_operation(values: dict, _arguments: dict, _context):
-    return record_planning_recovery(
-        target=values.get("target"),
-        paths=list(values.get("paths") or []),
-        reason=str(values.get("reason") or ""),
         dry_run=bool(values.get("dry_run")),
     )
 

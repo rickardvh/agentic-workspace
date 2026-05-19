@@ -829,18 +829,6 @@
       "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
-      "id": "planning.record-recovery.apply",
-      "summary": "Bless an emergency manual repair to managed planning surfaces with explicit provenance.",
-      "kind": "planning-runtime",
-      "portability": "domain-runtime",
-      "taxonomy_tier": "tier-2-package-domain",
-      "tier_owner": "planning package runtime boundary",
-      "tier_reason": "Planning policy, lifecycle state mutation, closeout, or installed-surface interpretation remains package-domain behavior.",
-      "conformance_ref": "planning package tests plus generated command package checks",
-      "migration_path": "Extract deterministic record/file/template portions into schema-backed Tier 1 primitives when the planning policy boundary is explicit.",
-      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
-    },
-    {
       "id": "planning.report.load",
       "summary": "Load package-local planning report state for a target repository.",
       "taxonomy_tier": "tier-2-package-domain",

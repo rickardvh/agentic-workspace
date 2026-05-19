@@ -43,7 +43,6 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
         'planning.promote-to-plan.lifecycle',
         'planning.prompt.render',
         'planning.reconcile.report',
-        'planning.record-recovery.lifecycle',
         'planning.report.report',
         'planning.status.report',
         'planning.summary.report',
@@ -137,7 +136,6 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'planning.archive-plan.apply': _handle_planning_archive_plan_apply,
                 'planning.closeout.apply': _handle_planning_closeout_apply,
                 'planning.delegation-decision.apply': _handle_planning_delegation_decision_apply,
-                'planning.record-recovery.apply': _handle_planning_record_recovery_apply,
             },
         )
         emitted = values.get('emitted')
@@ -216,9 +214,3 @@ def _handle_planning_delegation_decision_apply(values: dict[str, Any], arguments
     from .planning_runtime import apply_planning_delegation_decision_operation
 
     return apply_planning_delegation_decision_operation(values, arguments, context)
-
-
-def _handle_planning_record_recovery_apply(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from .planning_runtime import apply_planning_record_recovery_operation
-
-    return apply_planning_record_recovery_operation(values, arguments, context)

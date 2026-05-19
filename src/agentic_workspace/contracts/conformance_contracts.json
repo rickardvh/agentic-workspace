@@ -316,12 +316,6 @@
       "adapter_kind": "process"
     },
     {
-      "id": "planning.record-recovery.lifecycle.dry-run.process",
-      "operation_id": "planning.record-recovery.lifecycle",
-      "path": "conformance/planning.record-recovery.lifecycle.dry-run.process.json",
-      "adapter_kind": "process"
-    },
-    {
       "id": "planning.report.process",
       "operation_id": "planning.report.report",
       "path": "conformance/planning.report.process.json",

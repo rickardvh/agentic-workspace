@@ -58,7 +58,7 @@ candidates = []
     assert handoff["handoff_contract"]["role_metadata"] == expected_role_metadata
 
 
-def test_delegation_decision_records_route_and_provenance_on_active_plan(tmp_path: Path) -> None:
+def test_delegation_decision_records_route_on_active_plan(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     plan_path = tmp_path / ".agentic-workspace/planning/execplans/active-plan.plan.json"
     _write(
@@ -89,7 +89,6 @@ candidates = []
     )
 
     assert any(action.kind == "updated" and action.path == plan_path for action in result.actions)
-    assert any(action.kind == "updated" and action.path.name == "mutation-provenance.json" for action in result.actions)
     record = json.loads(plan_path.read_text(encoding="utf-8"))
     assert record["post_decomposition_delegation"]["status"] == "recorded"
     assert record["post_decomposition_delegation"]["route chosen"] == "keep-local"

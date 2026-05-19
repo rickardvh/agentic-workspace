@@ -329,12 +329,6 @@
       "migration_status": "runtime-consumed"
     },
     {
-      "id": "planning.record-recovery.lifecycle",
-      "path": "operations/planning.record-recovery.lifecycle.json",
-      "command": "record-recovery",
-      "migration_status": "runtime-consumed"
-    },
-    {
       "id": "planning.report.report",
       "path": "operations/planning.report.report.json",
       "command": "report",

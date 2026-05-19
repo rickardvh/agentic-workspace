@@ -1170,7 +1170,6 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
             new_plan_command,
             promote_command,
             delegation_command,
-            f"agentic-workspace planning record-recovery --path <managed-planning-file> --reason <reason>{target_arg} --format json",
             f"agentic-workspace planning create-review --slug <slug> --title <title>{target_arg} --format json",
             f"agentic-workspace planning close-item --item <item-id>{target_arg} --format json",
             f"agentic-workspace planning archive-plan --plan <plan>{target_arg} --format json",
@@ -1283,7 +1282,6 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
             "Edit intent, scope, proof, and closeout content inside schema-backed checked-in records.",
             "Copy TEMPLATE.* files to new task-specific filenames; never move, rename, delete, or repurpose templates as live planning records.",
             "After any planning mutation, run agentic-workspace summary --format json or the planning surface checker.",
-            "If emergency manual repair is unavoidable, stamp the repaired managed planning files with planning record-recovery and a reason.",
             "For decomposed or mechanical lanes, record the delegation route or keep-local reason before implementation proceeds.",
         ],
         "runtime_native_bridge": {
@@ -1296,8 +1294,7 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
             "inspect": f"agentic-workspace summary{target_arg} --format json",
             "doctor": f"agentic-workspace doctor{target_arg} --format json",
             "preferred": f"agentic-workspace planning archive-plan --plan <plan>{target_arg} --format json",
-            "record_emergency_repair": f"agentic-workspace planning record-recovery --path <managed-planning-file> --reason <reason>{target_arg} --format json",
-            "manual_fallback": "Make the smallest schema-preserving edit to .agentic-workspace/planning/state.toml or the active plan only when no CLI mutation exists, then stamp the repair and rerun summary; do not invent reset flags.",
+            "manual_fallback": "Make the smallest schema-preserving edit to .agentic-workspace/planning/state.toml or the active plan only when no CLI mutation exists, then rerun summary; do not invent reset flags.",
         },
         "fallback": "If lifecycle commands are unavailable, copy the package template exactly, edit content inside the schema shape, register the item in .agentic-workspace/planning/state.toml, then rerun summary.",
     }

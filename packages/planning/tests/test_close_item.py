@@ -34,7 +34,6 @@ queued_items = [
     assert state["todo"]["active_items"] == []
     assert state["todo"]["queued_items"][0]["id"] == "next-item"
     assert any(action.kind == "updated" and "issue: #953" in action.detail for action in result.actions)
-    assert (tmp_path / ".agentic-workspace/planning/mutation-provenance.json").exists()
 
 
 def test_close_item_dry_run_does_not_mutate_state(tmp_path: Path) -> None:

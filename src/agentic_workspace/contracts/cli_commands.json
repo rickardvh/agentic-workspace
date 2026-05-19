@@ -832,52 +832,6 @@
           "mutates_state": true
         },
         {
-          "name": "record-recovery",
-          "help": "Bless an emergency manual repair to managed planning surfaces with explicit provenance.",
-          "uses_option_groups": [
-            "format"
-          ],
-          "options": [
-            {
-              "name": "paths",
-              "flags": [
-                "--path"
-              ],
-              "nargs": "*",
-              "default": [],
-              "required": true,
-              "help": "Managed planning file path to stamp; repeat or pass multiple values."
-            },
-            {
-              "name": "reason",
-              "flags": [
-                "--reason"
-              ],
-              "required": true,
-              "help": "Emergency repair reason."
-            },
-            {
-              "name": "target",
-              "flags": [
-                "--target"
-              ],
-              "help": "Optional repository path."
-            },
-            {
-              "name": "dry_run",
-              "flags": [
-                "--dry-run"
-              ],
-              "action": "store_true",
-              "help": "Show planned changes without mutating files."
-            }
-          ],
-          "role": "core_context_router",
-          "audience": "ordinary_host_repo",
-          "classification_note": "Planning recovery provenance front door",
-          "mutates_state": true
-        },
-        {
           "name": "handoff",
           "help": "Emit the compact delegated-worker handoff derived from active planning state.",
           "uses_option_groups": [
