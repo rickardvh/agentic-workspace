@@ -156,4 +156,3 @@ Cheap implementer context for a bounded changed-path scope.
 | `handoff_requirements.before_handoff` | array of string | yes |  | Ordered before handoff entries used by this contract. |  |  |
 | `handoff_requirements.stop_when` | array of string | yes |  | Ordered stop when entries used by this contract. |  |  |
 | `next_allowed_action` | string | yes |  | Smallest safe implementation action after reading this context. |  |  |
-| `task_routing` | object | no |  | Routing guidance when the task is too broad, misplaced, or needs planning first. |  |  |

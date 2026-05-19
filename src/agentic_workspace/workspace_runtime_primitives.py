@@ -8869,7 +8869,7 @@ def _run_preflight_command(
         config=config, active_planning_record=obligation_record, task_text=task_text, changed_paths=changed_paths
     )
     closeout_obligations = _closeout_workflow_obligations_payload(workflow_obligations)
-    durable_intent = _intent_decision_projection(target_root=target_root, config=config, task_text=task_text, compact=True)
+    durable_intent = _intent_decision_projection(target_root=target_root, config=config, compact=True)
     if active_only:
         active_payload = {
             "kind": "preflight-response/v1",
@@ -8885,9 +8885,7 @@ def _run_preflight_command(
             "closeout_obligations": closeout_obligations,
             "operating_posture": _operating_posture_payload(config=config, surface="preflight", compact=True),
             "durable_intent": durable_intent,
-            "skill_routing": _task_skill_recommendations_payload(
-                target_root=target_root, task_text=task_text, cli_invoke=config.cli_invoke
-            ),
+            "skill_routing": _startup_skill_routing_payload(target_root=target_root, cli_invoke=config.cli_invoke),
             "active_planning_state": active_state,
             "planning_record": planning_record if isinstance(planning_record, dict) else {"status": "unavailable"},
         }
@@ -8901,7 +8899,7 @@ def _run_preflight_command(
     escalation_rules = _guidance_with_cli_invoke(value=startup_payload.get("escalation_cues", [])[:2], cli_invoke=config.cli_invoke)
     skill_routing = _guidance_with_cli_invoke(
         value=_startup_skill_routing_payload(
-            cli_invoke=config.cli_invoke, enabled_advanced_features=config.advanced_features, target_root=target_root, task_text=task_text
+            cli_invoke=config.cli_invoke, enabled_advanced_features=config.advanced_features, target_root=target_root
         ),
         cli_invoke=config.cli_invoke,
     )
@@ -9370,7 +9368,7 @@ def _next_safe_action_packet(
     decision = str((workflow_sufficiency or {}).get("decision", "") or "")
     preferred_routes = (skill_routing or {}).get("preferred_routes", [])
     skill = ""
-    if isinstance(preferred_routes, list):
+    if action != "choose-smallest-workflow-shape" and isinstance(preferred_routes, list):
         for route in preferred_routes:
             if isinstance(route, dict) and route.get("skill"):
                 skill = str(route.get("skill"))
@@ -9446,19 +9444,11 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         immediate["required_inputs"] = []
         immediate["next_proof"] = "select proof after changed paths are known"
     skill_routing = payload.get("skill_routing", {})
-    task_recommendations = skill_routing.get("task_recommendations", {}) if isinstance(skill_routing, dict) else {}
-    top_recommendations = task_recommendations.get("top_recommendations", []) if isinstance(task_recommendations, dict) else []
     preferred_routes = [
-        {"task_shape": "current task", "skill": str(item.get("id", ""))}
-        for item in top_recommendations[:2]
-        if isinstance(item, dict) and item.get("id")
+        {"task_shape": str(item.get("task_shape", "")), "skill": str(item.get("skill", ""))}
+        for item in (skill_routing.get("preferred_routes", []) if isinstance(skill_routing, dict) else [])[:2]
+        if isinstance(item, dict)
     ]
-    if not preferred_routes and isinstance(skill_routing, dict):
-        preferred_routes = [
-            {"task_shape": str(item.get("task_shape", "")), "skill": str(item.get("skill", ""))}
-            for item in skill_routing.get("preferred_routes", [])[:2]
-            if isinstance(item, dict)
-        ]
     task_intent = payload.get("task_intent", {})
     detail_commands = {
         "known_changed_paths": "agentic-workspace implement --changed <paths> --format json",
@@ -9552,6 +9542,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             if isinstance(skill_routing, dict)
             else 'agentic-workspace skills --target ./repo --task "<task>" --format json',
             "preferred_routes": preferred_routes,
+            **({"task_search": skill_routing["task_search"]} if isinstance(skill_routing, dict) and "task_search" in skill_routing else {}),
         },
     }
     proof = payload.get("proof", {})
@@ -9611,17 +9602,6 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
     matched_count = int(subsystem_intent.get("matched_count", 0) or 0) if isinstance(subsystem_intent, dict) else 0
     if isinstance(durable_intent, dict) and durable_intent.get("status") == "present" and matched_count:
         projected["durable_intent"] = _tiny_durable_intent(durable_intent)
-    if isinstance(task_recommendations, dict) and task_recommendations.get("status") == "recommended":
-        compact_recommendations = []
-        for item in task_recommendations.get("top_recommendations", [])[:2]:
-            if not isinstance(item, dict):
-                continue
-            compact_recommendations.append({key: item.get(key) for key in ("id", "path", "score") if item.get(key) not in ("", None)})
-        projected["skill_routing"]["task_recommendations"] = {
-            "status": task_recommendations.get("status", "recommended"),
-            "top_recommendations": compact_recommendations,
-            "warning_count": task_recommendations.get("warning_count", 0),
-        }
     if isinstance(task_intent, dict) and task_intent.get("status") == "present":
         acceptance = task_intent.get("acceptance", {})
         projected["task_intent"] = {
@@ -9989,84 +9969,6 @@ def _is_completion_status_task(task_text: str | None) -> bool:
     )
 
 
-def _is_routine_issue_intake_task(task_text: str | None) -> bool:
-    normalized = " ".join((task_text or "").lower().split())
-    if not normalized:
-        return False
-    issue_terms = ("issue", "issues", "github", "tracker", "ticket", "tickets", "external work", "external-work")
-    intake_terms = (
-        "ingest",
-        "intake",
-        "import",
-        "sync",
-        "triage",
-        "prioritise",
-        "prioritize",
-        "prioritization",
-        "prioritisation",
-        "label",
-        "labels",
-    )
-    implementation_terms = (
-        "implement",
-        "fix",
-        "build",
-        "code",
-        "change product source",
-        "open a pr",
-        "create a pr",
-        "pull request",
-        "merge",
-    )
-    return (
-        any((term in normalized for term in issue_terms))
-        and any((term in normalized for term in intake_terms))
-        and not any((term in normalized for term in implementation_terms))
-    )
-
-
-def _task_requests_roadmap_or_decomposition(task_text: str | None) -> bool:
-    normalized = " ".join((task_text or "").lower().split())
-    if not normalized:
-        return False
-    route_terms = (
-        "roadmap",
-        "next milestone",
-        "next lane",
-        "promote",
-        "promotion",
-        "promote-to-plan",
-        "continue the lane",
-        "continue lane",
-        "continue the epic",
-        "continue epic",
-        "epic",
-        "lane",
-        "decomposition",
-        "decompose",
-        "decomposed",
-        "delegate",
-        "delegation",
-        "worker",
-        "handoff",
-    )
-    return any((term in normalized for term in route_terms))
-
-
-def _is_narrow_repair_task(task_text: str | None) -> bool:
-    normalized = " ".join((task_text or "").lower().split())
-    if not normalized:
-        return False
-    repair_terms = ("fix ci", "ci check", "ci checks", "failing check", "repair", "rerun", "docs fix", "doc fix")
-    narrow_terms = ("narrow", "small", "tiny", "schema-reference", "schema reference", "proof", "validation", "docs", "ci")
-    broad_terms = ("epic", "lane", "roadmap", "architecture", "decompose", "multiple milestones")
-    return (
-        any((term in normalized for term in repair_terms))
-        and any((term in normalized for term in narrow_terms))
-        and not any((term in normalized for term in broad_terms))
-    )
-
-
 def _completion_closeout_inspection_payload(*, target_root: Path, config: WorkspaceConfig, task_text: str | None) -> dict[str, Any]:
     command = _command_with_cli_invoke(
         command="agentic-workspace report --target ./repo --section closeout_trust --format json", cli_invoke=config.cli_invoke
@@ -10335,13 +10237,11 @@ def _start_payload(
     vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
     if vague_orientation["applies_to_current_task"]:
         payload["vague_outcome_orientation"] = vague_orientation
-    if task_text or changed_paths:
-        durable_intent = _intent_decision_projection(
-            target_root=target_root, config=config, task_text=task_text, changed_paths=changed_paths, compact=True
-        )
+    if changed_paths:
+        durable_intent = _intent_decision_projection(target_root=target_root, config=config, changed_paths=changed_paths, compact=True)
         subsystem_projection = durable_intent.get("subsystem_intent", {})
         subsystem_matched_count = int(subsystem_projection.get("matched_count", 0) or 0) if isinstance(subsystem_projection, dict) else 0
-        if task_text or subsystem_matched_count:
+        if subsystem_matched_count:
             payload["durable_intent"] = durable_intent
     execution_posture = _execution_posture_payload(
         config=config, changed_paths=_normalize_changed_paths(changed_paths), task_text=task_text, target_root=target_root
@@ -10689,17 +10589,9 @@ def _skill_catalog_summary_from_payload(skills_payload: dict[str, Any]) -> dict[
 def _startup_skills_projection(
     *, payload: dict[str, Any], next_safe_action: dict[str, Any], target_root: Path | None, cli_invoke: str
 ) -> dict[str, Any]:
-    skill_routing = payload.get("skill_routing", {}) if isinstance(payload.get("skill_routing"), dict) else {}
-    task_recommendations = skill_routing.get("task_recommendations", {}) if isinstance(skill_routing, dict) else {}
-    task_text = payload.get("task_intent", {}).get("task") if isinstance(payload.get("task_intent"), dict) else None
-    if not task_text and isinstance(task_recommendations, dict):
-        task_text = task_recommendations.get("task")
-    skills_payload = _skills_payload(target_root=target_root, task_text=str(task_text) if task_text else None)
+    skills_payload = _skills_payload(target_root=target_root, task_text=None)
     skills_by_id = {
         str(skill.get("id", "")): skill for skill in skills_payload.get("skills", []) if isinstance(skill, dict) and skill.get("id")
-    }
-    recommendations_by_id = {
-        str(item.get("id", "")): item for item in skills_payload.get("recommendations", []) if isinstance(item, dict) and item.get("id")
     }
 
     required_id = str(next_safe_action.get("required_skill", "") or "")
@@ -10716,37 +10608,17 @@ def _startup_skills_projection(
         )
 
     recommended: list[dict[str, Any]] = []
-    if isinstance(task_recommendations, dict):
-        for item in task_recommendations.get("top_recommendations", [])[:3]:
-            if not isinstance(item, dict):
-                continue
-            skill_id = str(item.get("id", "") or "")
-            if not skill_id or skill_id == required_id:
-                continue
-            skill = skills_by_id.get(skill_id, {})
-            recommendation = recommendations_by_id.get(skill_id, {})
-            reasons = _list_payload(item.get("reasons") or recommendation.get("reasons"))
-            reason = str(reasons[0]) if reasons else "task-match"
-            recommended.append(
-                {
-                    "id": skill_id,
-                    "path": str(item.get("path") or recommendation.get("path") or skill.get("path") or ""),
-                    "reasons": [reason[:40]],
-                }
-            )
 
     catalog_command = _proof_command_for_target(
         command='agentic-workspace skills --target ./repo --task "<task>" --format json',
         target_root=target_root,
     )
     catalog_command = _command_with_cli_invoke(command=catalog_command, cli_invoke=cli_invoke)
-    if isinstance(task_recommendations, dict) and task_recommendations.get("command"):
-        catalog_command = str(task_recommendations["command"])
 
     return {
         "kind": "agentic-workspace/startup-skills-projection/v1",
-        "status": "recommended" if (required or recommended) else "available",
-        "rule": "Compact skill projection; use catalog.command for the full list.",
+        "status": "recommended" if required else "available",
+        "rule": "Compact skill projection; use catalog.command only when explicit task-specific skill search is useful.",
         "required": required,
         "recommended": recommended,
         "catalog": {
@@ -11047,13 +10919,11 @@ def _start_tiny_payload_fast(
     vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
     if vague_orientation["applies_to_current_task"]:
         payload["vague_outcome_orientation"] = vague_orientation
-    if task_text or changed_paths:
-        durable_intent = _intent_decision_projection(
-            target_root=target_root, config=config, task_text=task_text, changed_paths=changed_paths, compact=True
-        )
+    if changed_paths:
+        durable_intent = _intent_decision_projection(target_root=target_root, config=config, changed_paths=changed_paths, compact=True)
         subsystem_projection = durable_intent.get("subsystem_intent", {})
         subsystem_matched_count = int(subsystem_projection.get("matched_count", 0) or 0) if isinstance(subsystem_projection, dict) else 0
-        if task_text or subsystem_matched_count:
+        if subsystem_matched_count:
             payload["durable_intent"] = durable_intent
     execution_posture = _execution_posture_payload(
         config=config, changed_paths=_normalize_changed_paths(changed_paths), task_text=task_text, target_root=target_root
@@ -11867,7 +11737,6 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
     path_boundaries = [_boundary_warning_for_path(path) for path in normalized_paths]
     attention_paths = [item["path"] for item in path_boundaries if item["requires_attention"]]
     inspect_files = normalized_paths or list(implementer_template["default_inspect_files"])
-    task_routing = _implementation_task_routing(target_root=target_root, task_text=task_text)
     execution_posture = _execution_posture_payload(
         config=config, changed_paths=normalized_paths, task_text=task_text, target_root=target_root
     )
@@ -11993,24 +11862,14 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
         "execution_posture": execution_posture,
         "planning_safety_gate": planning_safety_gate,
         "delegation_decision": execution_posture["delegation_decision"],
-        "durable_intent": _intent_decision_projection(
-            target_root=target_root, config=config, task_text=task_text, changed_paths=normalized_paths, compact=True
-        ),
+        "durable_intent": _intent_decision_projection(target_root=target_root, config=config, changed_paths=normalized_paths, compact=True),
         "handoff_requirements": copy.deepcopy(implementer_template["handoff_requirements"]),
-        "next_allowed_action": implementer_template["next_allowed_action"]["attention"]
+        "next_allowed_action": "Provide --changed paths or use start/preflight before broad implementation."
+        if not normalized_paths
+        else implementer_template["next_allowed_action"]["attention"]
         if attention_paths
         else implementer_template["next_allowed_action"]["default"],
     }
-    if task_routing is not None:
-        payload["task_routing"] = task_routing
-        if task_routing.get("status") == "needs-planning":
-            payload["next_allowed_action"] = (
-                "Promote/create an active planning record, or narrow to one explicit issue before implementation."
-            )
-            payload["handoff_requirements"]["stop_when"] = [
-                "task routing status is needs-planning for broad external-work ingestion",
-                *payload["handoff_requirements"]["stop_when"],
-            ]
     if not planning_safety_gate["workflow_sufficient"]:
         payload["next_allowed_action"] = "Create or promote an active execplan before continuing implementation."
         payload["handoff_requirements"]["stop_when"] = [
@@ -12026,13 +11885,10 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         for item in payload.get("path_boundaries", [])
         if isinstance(item, dict) and item.get("requires_attention")
     ]
-    task_routing = payload.get("task_routing")
     next_action = payload.get("next_allowed_action", "")
     planning_safety_gate = payload.get("planning_safety_gate", {})
     if isinstance(planning_safety_gate, dict) and planning_safety_gate.get("workflow_sufficient") is False:
         next_action = "Create or promote an active execplan before continuing implementation."
-    elif isinstance(task_routing, dict) and task_routing.get("status") == "needs-planning":
-        next_action = "Plan or narrow before implementation."
     elif path_warnings:
         next_action = "Resolve path authority warnings before editing."
     elif not payload.get("changed_paths"):
@@ -12108,7 +11964,6 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "objective_drift": _tiny_objective_drift(payload.get("objective_drift", {})),
             "durable_intent_promotion": _tiny_task_intent_promotion_guidance(payload.get("durable_intent_promotion", {})),
             "routing": {
-                "task_status": task_routing.get("status") if isinstance(task_routing, dict) else None,
                 "work_shape": capability.get("work_shape"),
                 "proof_burden": capability.get("proof_burden"),
                 "delegation_recommendation": runtime_resolution.get("recommendation"),
@@ -12530,32 +12385,7 @@ def _planning_safety_gate_payload(
     decomposition_status = str(decomposition_delegation.get("status", "")) if isinstance(decomposition_delegation, dict) else ""
     path_classification = _planning_safety_path_classification(changed_paths)
     issue_refs = sorted(set(re.findall("#\\d+", task_text or "")))
-    normalized_task = " ".join((task_text or "").lower().split())
-    completion_status_question = _is_completion_status_task(task_text) and (not changed_paths)
-    routine_issue_intake = _is_routine_issue_intake_task(task_text) and (not changed_paths)
     path_classification = _allow_ancillary_memory_feedback_path(path_classification)
-    narrow_repair_task = _is_narrow_repair_task(task_text)
-    roadmap_or_decomposition_requested = _task_requests_roadmap_or_decomposition(task_text)
-    high_assurance_requires_plan = proof_burden == "high" and not changed_paths and not narrow_repair_task and not routine_issue_intake
-    external_implementation_without_changed_paths = (
-        bool(issue_refs)
-        and not changed_paths
-        and any((term in normalized_task for term in ("implement", "fix", "build", "code")))
-        and not routine_issue_intake
-        and not narrow_repair_task
-    )
-    broad_or_high_assurance = not completion_status_question and (
-        (work_shape in {"lane", "epic"} and not routine_issue_intake and not narrow_repair_task)
-        or high_assurance_requires_plan
-        or external_implementation_without_changed_paths
-        or (len(issue_refs) > 1 and not routine_issue_intake and not narrow_repair_task)
-        or (not narrow_repair_task and any((term in normalized_task for term in ("epic", "high-assurance", "dogfooding issues"))))
-    )
-    decomposition_pressure = (
-        decomposition_status in {"present", "available-without-active-planning"}
-        and roadmap_or_decomposition_requested
-        and work_shape in {"lane", "epic"}
-    )
     promotion_command = _planning_safety_promotion_command(
         config=config,
         decomposition_delegation=decomposition_delegation if isinstance(decomposition_delegation, dict) else {},
@@ -12610,22 +12440,10 @@ def _planning_safety_gate_payload(
         reason = "Implementation paths are mixed with planning recovery paths without active planning ownership."
         required_next_action = "checkpoint-planning-before-implementation"
         workflow_sufficient = False
-    elif path_classification["implementation_paths"] and broad_or_high_assurance:
-        status = "violation"
-        decision = "implementation-owner-missing"
-        reason = "Implementation paths are present for broad or high-assurance work without an active execplan."
-        required_next_action = "checkpoint-planning-before-implementation"
-        workflow_sufficient = False
-    elif broad_or_high_assurance or decomposition_pressure:
-        status = "blocked"
-        decision = "active-execplan-required"
-        reason = "Broad, high-assurance, multi-issue, or decomposed work needs an active execplan before implementation."
-        required_next_action = "promote-or-create-active-execplan"
-        workflow_sufficient = False
     else:
         status = "clear"
         decision = "direct-work-allowed"
-        reason = "No broad or high-assurance planning ownership pressure was detected."
+        reason = "No AW-owned hard blocker was detected; the agent owns soft work-shape judgment."
         required_next_action = "continue-direct"
         workflow_sufficient = True
     candidates = (
@@ -12646,15 +12464,12 @@ def _planning_safety_gate_payload(
         "proof_burden": proof_burden or "unknown",
         "issue_refs": issue_refs,
         "repair_route": {
-            "status": "direct-no-plan-ok" if narrow_repair_task and workflow_sufficient else "not-applicable",
+            "status": "retired",
             "fit_criteria": [
-                "CI, docs, schema-reference, proof, or tiny validation repair",
-                "one or two touched surfaces",
-                "no parent intent change",
-                "obvious proof command",
-                "no durable continuation except the PR or CI result",
+                "use work_shape_facts instead of prompt phrase exceptions",
+                "agent decides whether a repair is small enough when hard_blockers is empty",
             ],
-            "rule": "Narrow repair work can stay direct when changed-path proof is obvious; create a normal execplan if scope grows or parent intent changes.",
+            "rule": "Narrow repair is no longer a prompt-text gate; work_shape_facts reports hard blockers, factors, proof, and stop conditions.",
         },
         "work_shape_facts": _work_shape_facts_payload(
             path_classification=path_classification,
@@ -12683,80 +12498,8 @@ def _planning_safety_gate_payload(
             "If a decomposition lane already exists, promote that lane instead of reconstructing the slice by hand.",
             "If direct work has grown across boundaries, create or promote an execplan from the discovered scope before further edits.",
         ],
-        "delegation_decision_required": bool(
-            decomposition_pressure
-            and any(
-                (
-                    isinstance(candidate, dict) and candidate.get("route_candidate") in {"delegate-implementation", "delegate-exploration"}
-                    for candidate in candidates
-                )
-            )
-        ),
-        "rule": "Direct/no-plan mode is provisional; broad, high-assurance, decomposed, or widened implementation needs active planning ownership.",
-    }
-
-
-def _implementation_task_routing(*, target_root: Path, task_text: str | None) -> dict[str, Any] | None:
-    normalized = " ".join((task_text or "").lower().split())
-    if not normalized:
-        return None
-    issue_refs = sorted(set(re.findall("#\\d+", task_text or "")))
-    external_terms = ("issue", "issues", "github", "tracker", "ticket", "tickets", "external work", "external-work")
-    broad_terms = ("all", "open", "many", "multiple", "batch", "broad", "lane by lane", "lanes")
-    intake_terms = ("ingest", "intake", "import", "sync", "triage", "implement")
-    is_external_work = any((term in normalized for term in external_terms)) or bool(issue_refs)
-    is_broad = any((term in normalized for term in broad_terms)) or len(issue_refs) > 1
-    asks_intake_or_implementation = any((term in normalized for term in intake_terms))
-    if not is_external_work or not asks_intake_or_implementation:
-        return {
-            "status": "not-external-work",
-            "task": task_text,
-            "broad_external_work": False,
-            "allowed_next_actions": ["continue with changed-path proof selection"],
-        }
-    if len(issue_refs) == 1 and (not is_broad):
-        return {
-            "status": "narrow-external-work",
-            "task": task_text,
-            "issue_refs": issue_refs,
-            "broad_external_work": False,
-            "allowed_next_actions": ["continue if the issue is small enough for direct work or promote it through upstream-task intake"],
-        }
-    planning_status = "unavailable"
-    readiness: dict[str, Any] = {}
-    try:
-        from repo_planning_bootstrap.installer import planning_summary
-
-        summary = planning_summary(target=target_root, profile="compact")
-        planning_record = summary.get("planning_record", {})
-        if isinstance(planning_record, dict):
-            planning_status = str(planning_record.get("status", "unavailable"))
-        raw_readiness = summary.get("execution_readiness", {})
-        if isinstance(raw_readiness, dict):
-            readiness = raw_readiness
-    except ImportError:
-        planning_status = "planning-module-unavailable"
-    if planning_status == "present" or readiness.get("status") == "planning-backed":
-        return {
-            "status": "planning-backed",
-            "task": task_text,
-            "issue_refs": issue_refs,
-            "broad_external_work": True,
-            "planning_readiness": readiness,
-            "allowed_next_actions": ["execute from the active checked-in planning record"],
-        }
-    return {
-        "status": "needs-planning",
-        "task": task_text,
-        "issue_refs": issue_refs,
-        "broad_external_work": True,
-        "planning_status": planning_status,
-        "planning_readiness": readiness,
-        "allowed_next_actions": [
-            "promote/create one active TODO item plus an execplan for the selected lane",
-            "narrow the request to one explicit issue if direct work is truly small",
-        ],
-        "rule": "Broad external-work ingestion is not executable from issue text alone when no active planning record exists.",
+        "delegation_decision_required": active_delegation_requirement.get("required", False),
+        "rule": "Direct/no-plan mode is provisional; AW hard blockers, changed-path scope growth, or active planning obligations require checked-in ownership.",
     }
 
 
@@ -16234,11 +15977,18 @@ def _startup_skill_routing_payload(
             command="agentic-workspace modules --target ./repo --format json",
             target_root=target_root,
         )
-    task_recommendations = _task_skill_recommendations_payload(
-        target_root=target_root, task_text=task_text, cli_invoke=cli_invoke, compact=compact
-    )
-    if task_recommendations["status"] != "not-requested":
-        payload["task_recommendations"] = task_recommendations
+    if task_text and task_text.strip():
+        payload["task_search"] = {
+            "status": "available-explicitly",
+            "rule": "Startup does not rank skills from prompt text; run the catalog command only when task-specific skill search is useful.",
+            "command": _command_with_cli_invoke(
+                command=_proof_command_for_target(
+                    command=f"agentic-workspace skills --target ./repo --task {_shell_quote(task_text)} --format json",
+                    target_root=target_root,
+                ),
+                cli_invoke=cli_invoke,
+            ),
+        }
     if compact:
         fallback_items = payload.pop("fallback_when_skills_unavailable", [])
         payload["preferred_routes"] = [
