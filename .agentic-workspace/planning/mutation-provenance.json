@@ -2088,6 +2088,78 @@
       "reason": "close out execplan address-pr-1057-review",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-18T20:41:56+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/implement-1059-work-shape-facts.plan.json",
+      "sha256": "fa82032923b863e3961b899ce2224170ca25b0c34c0c3018f6aee4a759514239",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold implement-1059-work-shape-facts",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-19T07:14:01+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "002f39c3e780b1492cb14490d45edba826d8a7565e2e0b07d0a8547dbf900129",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold implement-1059-work-shape-facts",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-19T07:14:01+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/implement-1059-work-shape-facts.plan.json",
+      "sha256": "ba376930e60c2ea57cf5f3181d4b5b7cbb353e8cd82bca066fdfa244dead40e3",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-19T07:18:54+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/implement-1059-work-shape-facts.plan.json",
+      "sha256": "348b046eb3def32e62390241d96cc77b323b6de4a01dcbfeec1ab9df19f41e18",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan implement-1059-work-shape-facts",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-19T07:21:26+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "3bbdfd9f69a3011a05a38b3d28122c6cfc204fd38fac9e3534bf2ea067e12e4f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan implement-1059-work-shape-facts",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-19T07:21:54+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/implement-1059-work-shape-facts.plan.json",
+      "sha256": "4fcdc2d26bafbde30884010fcf32870b33f05eb88d032729c87772cc5259dbd5",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan implement-1059-work-shape-facts",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-19T07:21:54+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/implement-1059-work-shape-facts.plan.json",
+      "sha256": "41b502caf15ba2e2db598cc0a89c105af2a76f1e3141877e064dfdd324dd2e4a",
+      "command": "agentic-planning record-recovery",
+      "reason": "Manual archive residue repair after command-owned closeout/archive left placeholder and contradictory closeout fields; dogfooding follow-up filed as #1062.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-19T07:24:22+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/implement-1059-work-shape-facts.plan.json",
+      "sha256": "0fe478fa147774d69c274c216e9822a913c8e08064a246c6b1c3f990896e1c1e",
+      "command": "agentic-planning record-recovery",
+      "reason": "Manual archive consistency repair after deciding #1059 first-slice acceptance closes the issue; dogfooding closeout-residue gap remains routed to #1062.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-19T07:26:41+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/implement-1059-work-shape-facts.plan.json",
+      "sha256": "f6e1e5b89c00246f3b5ebda658bb57ff2241f8f46459c8a2d65d04b69520b22a",
+      "command": "agentic-planning record-recovery",
+      "reason": "Manual archive schema repair: keep durable_residue.status within the planning schema while preserving #1062 as the dogfooding issue owner in detailed fields.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-19T07:27:06+00:00"
     }
   ]
 }
