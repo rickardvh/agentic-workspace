@@ -1915,7 +1915,7 @@ def test_external_intent_refresh_github_writes_provider_agnostic_evidence(tmp_pa
                         "title": "Open work",
                         "state": "OPEN",
                         "url": "https://github.com/acme/project/issues/1",
-                        "labels": [{"name": "planning"}],
+                        "labels": [{"name": "planning"}, {"name": "priority/medium"}],
                         "createdAt": "2026-04-01T00:00:00Z",
                         "updatedAt": "2026-04-27T00:00:00Z",
                         "closedAt": None,
@@ -1968,6 +1968,12 @@ def test_external_intent_refresh_github_writes_provider_agnostic_evidence(tmp_pa
     assert payload["state_source"] == "explicit"
     assert payload["limit_source"] == "product_default"
     assert payload["item_count"] == 2
+    suggestions = payload["planning_candidate_suggestions"]
+    assert suggestions["status"] == "suggestions-ready"
+    assert suggestions["candidate_count"] == 1
+    assert suggestions["candidates"][0]["refs"] == "GitHub #1"
+    assert suggestions["candidates"][0]["priority"] == "P2"
+    assert suggestions["candidates"][0]["status"] == "next"
     refreshed = json.loads(evidence_path.read_text(encoding="utf-8"))
     assert refreshed["kind"] == "planning-external-intent-evidence/v1"
     assert refreshed["refresh_metadata"]["adapter"] == "github-gh-cli"
@@ -1983,7 +1989,7 @@ def test_external_intent_refresh_github_writes_provider_agnostic_evidence(tmp_pa
         "Do not accept proxy completion.",
         "discard explicit invariant follow-up.",
     ]
-    assert refreshed["items"][0]["labels"] == ["planning"]
+    assert refreshed["items"][0]["labels"] == ["planning", "priority/medium"]
     assert refreshed["items"][1]["status"] == "closed"
 
 

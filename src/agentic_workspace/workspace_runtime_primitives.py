@@ -8399,6 +8399,86 @@ def _github_issue_to_external_intent_item(*, issue: dict[str, Any], repo: str) -
     }
 
 
+def _planning_candidate_priority_from_labels(labels: Sequence[str]) -> str | None:
+    normalized = {str(label).strip().lower() for label in labels}
+    if "priority/high" in normalized:
+        return "P1"
+    if "priority/medium" in normalized:
+        return "P2"
+    if "priority/low" in normalized:
+        return "P3"
+    if "priority/lowest" in normalized:
+        return "P4"
+    return None
+
+
+def _existing_planning_candidate_refs(*, target_root: Path) -> set[str]:
+    state_path = target_root / ".agentic-workspace" / "planning" / "state.toml"
+    if not state_path.exists():
+        return set()
+    try:
+        payload = tomllib.loads(state_path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return set()
+    refs: set[str] = set()
+    roadmap = payload.get("roadmap", {}) if isinstance(payload, dict) else {}
+    candidates = roadmap.get("candidates", []) if isinstance(roadmap, dict) else []
+    for candidate in candidates if isinstance(candidates, list) else []:
+        if not isinstance(candidate, dict):
+            continue
+        raw_refs = str(candidate.get("refs", ""))
+        refs.update(f"#{match}" for match in re.findall(r"#(\d+)\b", raw_refs))
+    return refs
+
+
+def _planning_candidate_suggestions_from_external_items(*, target_root: Path, items: list[dict[str, Any]]) -> dict[str, Any]:
+    existing_refs = _existing_planning_candidate_refs(target_root=target_root)
+    candidates: list[dict[str, str]] = []
+    for item in items:
+        if item.get("status") != "open":
+            continue
+        labels = [str(label) for label in item.get("labels", []) if str(label).strip()]
+        if "status/deferred" in labels or "codegen" in labels:
+            continue
+        priority = _planning_candidate_priority_from_labels(labels)
+        if priority is None:
+            continue
+        ref = str(item.get("id", "")).strip()
+        if not ref or ref in existing_refs:
+            continue
+        number_slug = ref.lstrip("#")
+        title = str(item.get("title", "")).strip()
+        slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")[:48] or f"issue-{number_slug}"
+        candidates.append(
+            {
+                "id": f"github-{number_slug}-{slug}",
+                "maturity": "candidate",
+                "status": "next",
+                "priority": priority,
+                "refs": f"GitHub {ref}",
+                "title": title,
+                "outcome": "Route the upstream issue into a bounded Agentic Workspace slice before implementation.",
+                "reason": "Open prioritized upstream issue from refreshed external intent evidence.",
+                "promotion_signal": "Promote when this issue is selected for implementation or grouped into a bounded lane.",
+                "suggested_first_slice": "Inspect the issue body, choose the smallest workflow shape, and record exact proof before closeout.",
+            }
+        )
+    return {
+        "kind": "planning-candidate-suggestions/v1",
+        "status": "suggestions-ready" if candidates else "no-new-prioritized-candidates",
+        "rule": "Use these schema-valid rows as command-owned intake suggestions; do not hand-edit planning state without checking for duplicate refs.",
+        "excluded": [
+            "closed issues",
+            "unprioritized issues",
+            "status/deferred issues",
+            "codegen issues",
+            "refs already in planning candidates",
+        ],
+        "candidate_count": len(candidates),
+        "candidates": candidates,
+    }
+
+
 def _load_existing_external_intent_evidence(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {"kind": "planning-external-intent-evidence/v1", "items": []}
@@ -8616,6 +8696,7 @@ def _refresh_github_external_intent_evidence(
     }
     if cache_compaction is not None:
         next_payload["refresh_metadata"]["cache_compaction"] = cache_compaction
+    planning_candidate_suggestions = _planning_candidate_suggestions_from_external_items(target_root=target_root, items=items)
     if not dry_run:
         evidence_path.parent.mkdir(parents=True, exist_ok=True)
         evidence_path.write_text(json.dumps(next_payload, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
@@ -8642,6 +8723,7 @@ def _refresh_github_external_intent_evidence(
         "limit": resolved_limit,
         "state_source": state_source,
         "limit_source": limit_source,
+        "planning_candidate_suggestions": planning_candidate_suggestions,
         "provider_rule": "Core planning consumes only provider-agnostic external intent evidence; GitHub access stays in this optional adapter.",
     }
 
@@ -19578,6 +19660,41 @@ def _proof_execution_evidence_summary(*, declared: Any, required_commands: list[
     }
 
 
+def _proof_completion_options(*, required_commands: list[str], manual_verification: dict[str, Any] | None) -> list[dict[str, Any]]:
+    proof_ready = bool(required_commands) and manual_verification is None
+    options: list[dict[str, Any]] = [
+        {
+            "id": "run-selected-proof",
+            "allowed": bool(required_commands),
+            "command": required_commands[0] if required_commands else None,
+            "why": "proof selection found required local proof" if required_commands else "no executable proof command was selected",
+        },
+        {
+            "id": "record-manual-verification",
+            "allowed": manual_verification is not None,
+            "why": "manual verification is required when executable proof is unavailable"
+            if manual_verification is not None
+            else "executable proof is available",
+        },
+        {
+            "id": "claim-slice-complete",
+            "allowed": False,
+            "why": "proof selection is not proof execution; claim completion only after required proof is run and intent/residue are reconciled",
+        },
+        {
+            "id": "close-parent-lane",
+            "allowed": False,
+            "why": "selected proof can support a slice closeout but cannot close a parent lane or epic without explicit continuation-owner evidence",
+        },
+        {
+            "id": "continue-to-closeout",
+            "allowed": proof_ready,
+            "why": "after selected proof passes, record proof execution, residue, and continuation owner in the closeout surface",
+        },
+    ]
+    return options
+
+
 def _proof_selection_for_changed_paths(
     *, changed_paths: list[str], target_root: Path | None = None, include_durable_intent: bool = True
 ) -> dict[str, Any]:
@@ -20044,6 +20161,7 @@ def _proof_selection_for_changed_paths(
         ),
         "broaden_when": broaden_when,
         "escalate_when": escalate_when,
+        "completion_options": _proof_completion_options(required_commands=required_commands, manual_verification=manual_verification),
     }
     if routing_reductions:
         proof_selection["routing_reductions"] = routing_reductions
