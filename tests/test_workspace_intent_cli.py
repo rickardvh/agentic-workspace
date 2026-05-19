@@ -103,15 +103,11 @@ source_records = [{ source_type = "test", ref = "test", summary = "unknown id" }
     assert "planning" in error
 
 
-def test_start_surfaces_compact_durable_intent_for_task(capsys) -> None:
+def test_start_does_not_match_durable_intent_from_task_text(capsys) -> None:
     assert cli.main(["start", "--target", ".", "--task", "planning closeout should preserve durable intent", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    durable_intent = _start_durable_intent(payload)
-    assert durable_intent["kind"] == "agentic-workspace/durable-intent-decision/v1"
-    assert durable_intent["subsystem_intent"]["surface"] == ".agentic-workspace/system-intent/subsystems.toml"
-    assert durable_intent["subsystem_intent"]["ownership_registry"]["status"] == "present"
-    assert any(match["id"] == "planning" for match in durable_intent["subsystem_intent"]["matches"])
+    assert "durable_intent" not in payload.get("context", {})
 
 
 def test_start_matches_subsystem_intent_through_ownership_paths(capsys) -> None:
@@ -186,23 +182,10 @@ needs_review = false
 """,
     )
 
-    assert (
-        cli.main(
-            [
-                "start",
-                "--target",
-                str(tmp_path),
-                "--task",
-                "improve memory usage, elderly user accessibility, self-documenting code, and audit logs",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "durable_intent", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    durable_intent = _start_durable_intent(payload)
+    durable_intent = payload["answer"]
     matches = {match["id"] for match in durable_intent["subsystem_intent"]["matches"]}
     assert {"performance", "accessibility"} <= matches
     assert durable_intent["subsystem_intent"]["matched_count"] == 4

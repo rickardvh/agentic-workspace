@@ -596,7 +596,7 @@ def test_start_tiny_profile_returns_first_contact_projection(capsys) -> None:
     assert _start_task_context(payload)["implement_changed_command"] == (
         f'uv run agentic-workspace implement --changed <paths> --task "{task}" --format json'
     )
-    assert _start_context(payload)["durable_intent"]["kind"] == "agentic-workspace/durable-intent-decision/v1"
+    assert "durable_intent" not in _start_context(payload)
     assert "cli_compatibility" not in payload
     assert "proof" not in payload
     assert "authority_markers" not in payload
@@ -1331,7 +1331,7 @@ def test_start_decomposition_only_delegation_requires_lane_promotion_before_hand
     assert "Select or promote" in decision["delegation_next_step"]["precondition"]
 
 
-def test_start_blocks_decomposed_epic_without_active_execplan(tmp_path: Path, capsys) -> None:
+def test_start_exposes_decomposition_without_prompt_text_blocking(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(
         tmp_path / ".agentic-workspace" / "planning" / "decompositions" / "dogfood.decomposition.json",
@@ -1381,13 +1381,11 @@ def test_start_blocks_decomposed_epic_without_active_execplan(tmp_path: Path, ca
     )
 
     payload = json.loads(capsys.readouterr().out)
-    gate = _start_planning_safety_gate(payload)
-    assert gate["status"] == "blocked"
-    assert gate["delegation_decision_required"] is True
-    assert _start_workflow_sufficiency(payload)["decision"] == "active-execplan-required"
-    assert _start_primary_action(payload)["command"].endswith(
-        "agentic-workspace planning promote-to-plan --item-id safety-slice --target . --format json"
-    )
+    assert "planning_safety_gate" not in _start_context(payload).get("planning", {})
+    assert _start_workflow_sufficiency(payload)["decision"] == "enough-for-first-contact-routing"
+    assert _start_primary_action(payload)["action"] == "choose-smallest-workflow-shape"
+    decision = _start_context_value(payload, "delegation_decision")
+    assert decision["decomposition_delegation"]["status"] == "available-without-active-planning"
 
 
 def test_implement_flags_scope_growth_without_active_execplan(tmp_path: Path, capsys) -> None:
@@ -1449,7 +1447,7 @@ def test_implement_allows_routine_pr_comment_repair_without_plan_scaffold(tmp_pa
     assert gate["status"] == "clear"
     assert gate["decision"] == "direct-work-allowed"
     assert gate["implementation_allowed"] is True
-    assert gate["repair_route"]["status"] == "not-applicable"
+    assert gate["repair_route"]["status"] == "retired"
     assert gate["work_shape_facts"]["hard_blockers"] == []
     assert gate["work_shape_facts"]["agent_decision_required"] is True
     assert gate["work_shape_facts"]["suggested_shape"] == "direct"
@@ -1486,7 +1484,7 @@ def test_implement_allows_single_issue_followthrough_with_memory_feedback_note(t
     assert gate["status"] == "clear"
     assert gate["decision"] == "direct-work-allowed"
     assert gate["implementation_allowed"] is True
-    assert gate["repair_route"]["status"] == "not-applicable"
+    assert gate["repair_route"]["status"] == "retired"
     assert gate["work_shape_facts"]["hard_blockers"] == []
     assert gate["work_shape_facts"]["agent_decision_required"] is True
     assert gate["work_shape_facts"]["suggested_shape"] == "direct"
@@ -1944,11 +1942,8 @@ def test_startup_skillspec_pilot_keeps_direct_work_light_and_blocks_epic_work(tm
 
     epic = json.loads(capsys.readouterr().out)
     _assert_next_safe_action_valid(epic["next_safe_action"])
-    gate = _start_planning_safety_gate(epic)
-    assert gate["implementation_allowed"] is False
-    assert gate["work_shape"] == "epic"
-    assert gate["required_next_action"] == "promote-or-create-active-execplan"
-    assert epic["next_safe_action"]["next_safe_action"] == "promote-or-create-active-execplan"
+    assert "planning_safety_gate" not in _start_context(epic).get("planning", {})
+    assert epic["next_safe_action"]["next_safe_action"] == "choose-smallest-workflow-shape"
     assert _start_skill_routing(epic)["preferred_routes"][0]["skill"] == "planning-reporting"
 
 
@@ -1998,12 +1993,11 @@ def test_start_routine_issue_intake_uses_skill_without_execplan(tmp_path: Path, 
     _assert_next_safe_action_valid(payload["next_safe_action"])
     assert payload["next_safe_action"]["next_safe_action"] == "choose-smallest-workflow-shape"
     assert "planning_safety_gate" not in payload["context"]["planning"]
-    skill_ids = {
-        item["id"]
-        for item in [*payload["skills"]["required"], *payload["skills"]["recommended"]]
-        if isinstance(item, dict) and item.get("id")
-    }
-    assert "planning-intake-upstream-task" in skill_ids
+    assert payload["skills"]["required"] == []
+    assert payload["skills"]["recommended"] == []
+    assert 'skills --target "' in payload["skills"]["catalog"]["command"]
+    assert payload["skills"]["catalog"]["command"].endswith('--task "<task>" --format json')
+    assert "task_recommendations" not in _start_skill_routing(payload)
 
 
 def test_init_creates_managed_workspace_local_agent_instructions(tmp_path: Path, capsys) -> None:
@@ -2102,7 +2096,7 @@ def test_start_narrow_ci_repair_stays_direct_without_execplan(tmp_path: Path, ca
     assert payload["next_safe_action"]["next_safe_action"] == "select-changed-path-proof"
 
 
-def test_start_task_includes_compact_skill_recommendations(tmp_path: Path, capsys) -> None:
+def test_start_task_keeps_skill_search_explicit(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
@@ -2125,10 +2119,12 @@ def test_start_task_includes_compact_skill_recommendations(tmp_path: Path, capsy
     )
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["skills"]["status"] == "recommended"
-    assert payload["skills"]["required"][0]["id"] == "planning-decompose"
-    assert payload["skills"]["required"][0]["path"] == ".agentic-workspace/planning/skills/planning-decompose/SKILL.md"
+    assert payload["skills"]["status"] == "available"
+    assert payload["skills"]["required"] == []
+    assert payload["skills"]["recommended"] == []
     assert payload["skills"]["catalog"]["total_count"] > 0
+    assert "skills --target" in payload["skills"]["catalog"]["command"]
+    assert "task_recommendations" not in _start_skill_routing(payload)
 
 
 def test_preflight_task_includes_skill_recommendations(tmp_path: Path, capsys) -> None:
@@ -2155,10 +2151,10 @@ def test_preflight_task_includes_skill_recommendations(tmp_path: Path, capsys) -
     )
 
     payload = json.loads(capsys.readouterr().out)
-    recommendations = payload["startup_guidance"]["skill_routing"]["task_recommendations"]
-    assert recommendations["status"] == "recommended"
-    assert recommendations["top_recommendations"][0]["id"] == "planning-new-plan-tighten"
-    assert "phrase match" in " ".join(recommendations["top_recommendations"][0]["reasons"])
+    skill_routing = payload["startup_guidance"]["skill_routing"]
+    assert "task_recommendations" not in skill_routing
+    assert "skills --target" in skill_routing["query"]
+    assert "task_recommendations" not in skill_routing
 
 
 def test_summary_command_includes_memory_consult(tmp_path: Path, capsys) -> None:

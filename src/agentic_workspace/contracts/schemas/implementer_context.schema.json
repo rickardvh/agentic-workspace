@@ -496,10 +496,6 @@
     "next_allowed_action": {
       "type": "string",
       "description": "Smallest safe implementation action after reading this context."
-    },
-    "task_routing": {
-      "type": "object",
-      "description": "Routing guidance when the task is too broad, misplaced, or needs planning first."
     }
   },
   "additionalProperties": false,

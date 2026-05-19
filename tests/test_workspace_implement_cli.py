@@ -286,7 +286,7 @@ def test_implement_task_file_preserves_task_intent_for_acceptance_checks(tmp_pat
     assert context["objective_drift"]["missing_from_changed_surface"] == ["normalize_whitespace", "sentence_summary"]
 
 
-def test_implement_task_routes_broad_issue_ingestion_to_planning(tmp_path: Path, capsys) -> None:
+def test_implement_task_text_does_not_route_broad_issue_ingestion_to_planning(tmp_path: Path, capsys) -> None:
     assert (
         cli.main(
             [
@@ -304,12 +304,11 @@ def test_implement_task_routes_broad_issue_ingestion_to_planning(tmp_path: Path,
     )
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["task_routing"]["status"] == "needs-planning"
-    assert payload["task_routing"]["broad_external_work"] is True
-    assert (
-        payload["next_allowed_action"] == "Promote/create an active planning record, or narrow to one explicit issue before implementation."
-    )
-    assert payload["handoff_requirements"]["stop_when"][0] == ("task routing status is needs-planning for broad external-work ingestion")
+    assert "task_routing" not in payload
+    assert payload["planning_safety_gate"]["status"] == "clear"
+    assert payload["planning_safety_gate"]["work_shape_facts"]["agent_decision_required"] is True
+    assert payload["next_allowed_action"] == "Provide --changed paths or use start/preflight before broad implementation."
+    assert payload["handoff_requirements"]["stop_when"][0] != "task routing status is needs-planning for broad external-work ingestion"
 
 
 def test_implement_task_allows_narrow_single_issue_context(tmp_path: Path, capsys) -> None:
@@ -319,11 +318,11 @@ def test_implement_task_allows_narrow_single_issue_context(tmp_path: Path, capsy
     assert cli.main(["implement", "--target", str(tmp_path), "--task", "implement issue #424", "--verbose", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["task_routing"]["status"] == "narrow-external-work"
-    assert payload["task_routing"]["issue_refs"] == ["#424"]
-    assert payload["task_routing"]["broad_external_work"] is False
-    assert payload["next_allowed_action"] == "Create or promote an active execplan before continuing implementation."
-    assert payload["planning_safety_gate"]["status"] == "blocked"
+    assert "task_routing" not in payload
+    assert payload["planning_safety_gate"]["status"] == "clear"
+    assert payload["planning_safety_gate"]["work_shape_facts"]["scope_factors"]["issue_refs"] == ["#424"]
+    assert payload["planning_safety_gate"]["work_shape_facts"]["agent_decision_required"] is True
+    assert payload["next_allowed_action"] == "Provide --changed paths or use start/preflight before broad implementation."
 
 
 def test_implement_with_explicit_target_ignores_checkout_active_plan(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
@@ -374,9 +373,9 @@ candidates = []
     )
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["task_routing"]["status"] == "narrow-external-work"
-    assert payload["planning_safety_gate"]["status"] == "blocked"
-    assert payload["next_allowed_action"] == "Create or promote an active execplan before continuing implementation."
+    assert "task_routing" not in payload
+    assert payload["planning_safety_gate"]["status"] == "clear"
+    assert payload["next_allowed_action"] == "Provide --changed paths or use start/preflight before broad implementation."
 
 
 def test_implement_task_specific_acceptance_warns_on_objective_drift(tmp_path: Path, capsys) -> None:
