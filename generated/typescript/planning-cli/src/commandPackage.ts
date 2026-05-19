@@ -1911,109 +1911,6 @@ export const generatedCommandPackage = {
       "status": "generated"
     },
     {
-      "adapter_id": "planning.record-recovery.cli",
-      "command": {
-        "manifest_ref": "package:planning:cli",
-        "name": "record-recovery"
-      },
-      "conformance_refs": [
-        "planning.record-recovery.lifecycle.dry-run.process"
-      ],
-      "effect_hints": {
-        "destructive": false,
-        "idempotent": false,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
-      },
-      "interface": {
-        "help": "Bless an emergency manual repair to managed planning surfaces with explicit provenance.",
-        "name": "record-recovery",
-        "options": [
-          {
-            "flags": [
-              "--target"
-            ],
-            "help": "Target repository path. Defaults to the current directory.",
-            "name": "target"
-          },
-          {
-            "action": "append",
-            "flags": [
-              "--path"
-            ],
-            "help": "Managed planning path repaired manually.",
-            "name": "paths",
-            "required": true
-          },
-          {
-            "flags": [
-              "--reason"
-            ],
-            "help": "Reason the recovery was needed.",
-            "name": "reason",
-            "required": true
-          },
-          {
-            "action": "store_true",
-            "flags": [
-              "--dry-run"
-            ],
-            "help": "Preview changes without writing files.",
-            "name": "dry_run"
-          },
-          {
-            "choices": [
-              "text",
-              "json"
-            ],
-            "default": "text",
-            "flags": [
-              "--format"
-            ],
-            "help": "Output format.",
-            "name": "format"
-          }
-        ]
-      },
-      "operation_ref": {
-        "id": "planning.record-recovery.lifecycle",
-        "path": "operations/planning.record-recovery.lifecycle.json"
-      },
-      "projection_boundary": {
-        "runtime_owned": [
-          "planning state mutation policy",
-          "planning provenance updates",
-          "module result assembly"
-        ],
-        "target_specific": [
-          "parser library",
-          "package entrypoint wiring",
-          "help text layout",
-          "test container image"
-        ],
-        "universal": [
-          "command identity",
-          "operation reference",
-          "runtime primitive reference",
-          "effect hints",
-          "conformance refs"
-        ]
-      },
-      "runtime_binding": {
-        "kind": "operation-primitive-sequence",
-        "primitive_refs": [
-          "planning.record-recovery.apply",
-          "output.emit"
-        ]
-      },
-      "schemas": {
-        "input": [],
-        "output": []
-      },
-      "status": "generated"
-    },
-    {
       "adapter_id": "planning.report.cli",
       "command": {
         "manifest_ref": "package:planning:cli",
@@ -2646,12 +2543,6 @@ export const generatedCommandPackage = {
           "handler": "runtime_handler",
           "import_module": "repo_planning_bootstrap.runtime_projection",
           "primitive": "planning.delegation-decision.apply"
-        },
-        {
-          "function": "apply_planning_record_recovery_operation",
-          "handler": "runtime_handler",
-          "import_module": "repo_planning_bootstrap.runtime_projection",
-          "primitive": "planning.record-recovery.apply"
         }
       ],
       "initial_values": [
@@ -2988,7 +2879,6 @@ export const generatedCommandPackage = {
         "planning.promote-to-plan.lifecycle",
         "planning.prompt.render",
         "planning.reconcile.report",
-        "planning.record-recovery.lifecycle",
         "planning.report.report",
         "planning.status.report",
         "planning.summary.report",

@@ -1170,7 +1170,6 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
             new_plan_command,
             promote_command,
             delegation_command,
-            f"agentic-workspace planning record-recovery --path <managed-planning-file> --reason <reason>{target_arg} --format json",
             f"agentic-workspace planning create-review --slug <slug> --title <title>{target_arg} --format json",
             f"agentic-workspace planning close-item --item <item-id>{target_arg} --format json",
             f"agentic-workspace planning archive-plan --plan <plan>{target_arg} --format json",
@@ -1283,7 +1282,6 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
             "Edit intent, scope, proof, and closeout content inside schema-backed checked-in records.",
             "Copy TEMPLATE.* files to new task-specific filenames; never move, rename, delete, or repurpose templates as live planning records.",
             "After any planning mutation, run agentic-workspace summary --format json or the planning surface checker.",
-            "If emergency manual repair is unavoidable, stamp the repaired managed planning files with planning record-recovery and a reason.",
             "For decomposed or mechanical lanes, record the delegation route or keep-local reason before implementation proceeds.",
         ],
         "runtime_native_bridge": {
@@ -1296,8 +1294,7 @@ def _planning_help_payload(*, target: str | None = None) -> dict[str, Any]:
             "inspect": f"agentic-workspace summary{target_arg} --format json",
             "doctor": f"agentic-workspace doctor{target_arg} --format json",
             "preferred": f"agentic-workspace planning archive-plan --plan <plan>{target_arg} --format json",
-            "record_emergency_repair": f"agentic-workspace planning record-recovery --path <managed-planning-file> --reason <reason>{target_arg} --format json",
-            "manual_fallback": "Make the smallest schema-preserving edit to .agentic-workspace/planning/state.toml or the active plan only when no CLI mutation exists, then stamp the repair and rerun summary; do not invent reset flags.",
+            "manual_fallback": "Make the smallest schema-preserving edit to .agentic-workspace/planning/state.toml or the active plan only when no CLI mutation exists, then rerun summary; do not invent reset flags.",
         },
         "fallback": "If lifecycle commands are unavailable, copy the package template exactly, edit content inside the schema shape, register the item in .agentic-workspace/planning/state.toml, then rerun summary.",
     }
@@ -2470,6 +2467,7 @@ def _workspace_repair_payload(
     repair_actions: list[dict[str, Any]] = []
     manual_review_actions: list[dict[str, Any]] = []
     missing_workspace_surfaces: list[str] = []
+    managed_local_instruction_surfaces: list[str] = []
     missing_startup_surfaces: list[str] = []
     pointer_surfaces: list[str] = []
     contract_drift_surfaces: list[str] = []
@@ -2480,6 +2478,8 @@ def _workspace_repair_payload(
         detail = str(action.get("detail", ""))
         if kind == "missing" and path in {relative.as_posix() for relative in WORKSPACE_PAYLOAD_FILES}:
             missing_workspace_surfaces.append(path)
+        if kind in {"missing", "warning"} and detail.startswith("managed .agentic-workspace local instructions "):
+            managed_local_instruction_surfaces.append(path)
         if kind == "missing" and "root startup entrypoint missing" in detail:
             missing_startup_surfaces.append(path)
         if "workspace workflow pointer block missing" in detail:
@@ -2505,6 +2505,14 @@ def _workspace_repair_payload(
                     "Do not hand-author managed workspace payloads when upgrade can recreate them.",
                     "Do not treat the missing surface as repo-owned without checking ownership metadata.",
                 ],
+            )
+        )
+    if managed_local_instruction_surfaces:
+        repair_actions.append(
+            _workspace_managed_local_instructions_repair_action(
+                target_root=target_root,
+                cli_invoke=cli_invoke,
+                affected_surfaces=_dedupe(managed_local_instruction_surfaces),
             )
         )
     for surface in missing_startup_surfaces:
@@ -2692,6 +2700,48 @@ def _workspace_safe_repair_action(
             "kind": "repair_recurrence",
             "route": "agentic-workspace defaults --section improvement_intake --format json",
             "preferred_remedy": "remove, merge, scaffold, or make the correct action more obvious before adding prose",
+        },
+    }
+
+
+def _workspace_managed_local_instructions_repair_action(
+    *, target_root: Path, cli_invoke: str, affected_surfaces: list[str]
+) -> dict[str, Any]:
+    target = target_root.as_posix()
+    dry_run = _command_with_cli_invoke(
+        command=f"agentic-workspace upgrade --target {target} --repair-managed-local-instructions --dry-run --format json",
+        cli_invoke=cli_invoke,
+    )
+    command = _command_with_cli_invoke(
+        command=f"agentic-workspace upgrade --target {target} --repair-managed-local-instructions --format json",
+        cli_invoke=cli_invoke,
+    )
+    proof_after = [_command_with_cli_invoke(command=f"agentic-workspace doctor --target {target} --format json", cli_invoke=cli_invoke)]
+    return {
+        "id": "apply-managed-local-instructions-repair",
+        "action": "run-managed-local-instructions-repair",
+        "invariant": "workspace.managed_local_instructions_current",
+        "fault_class": "agent_operation_fault",
+        "severity": "warning",
+        "owner": "workspace",
+        "safe_to_apply": True,
+        "risk": "low; writes only the workspace-managed local agent instructions file derived from workspace config",
+        "command": command,
+        "run": command,
+        "dry_run": dry_run,
+        "proof_after": proof_after,
+        "affected_surfaces": affected_surfaces,
+        "current_fault_summary": "Managed .agentic-workspace local instructions are missing or stale.",
+        "do_not": [
+            "Do not run a broad workspace upgrade only to refresh this single managed instruction file.",
+            "Do not hand-edit the managed local instructions when this scoped repair can regenerate them.",
+        ],
+        "recurrence": "first_seen",
+        "improvement_signal_candidate": {
+            "when": "repeated",
+            "kind": "repair_recurrence",
+            "route": "agentic-workspace defaults --section improvement_intake --format json",
+            "preferred_remedy": "make scoped repair commands visible from doctor instead of relying on broad lifecycle upgrades",
         },
     }
 
@@ -2900,6 +2950,92 @@ def _local_agent_indirection_is_current(*, target_root: Path, agents_relative: P
     return workspace_pointer_block(cli_invoke=cli_invoke) in local_agents_path.read_text(encoding="utf-8")
 
 
+def _workspace_managed_agent_instructions_path(config: WorkspaceConfig) -> Path:
+    return Path(".agentic-workspace") / Path(config.agent_instructions_file)
+
+
+def _workspace_managed_agent_instructions_text(*, config: WorkspaceConfig) -> str:
+    cli = config.cli_invoke
+    return "\n".join(
+        [
+            "# Agent Instructions for .agentic-workspace",
+            "",
+            "Authority marker:",
+            "",
+            "- authority: workspace-managed-local-adapter",
+            f"- canonical_source: `.agentic-workspace/config.toml` and `{cli} start --target . --format json`",
+            "- safe_to_edit: false",
+            f"- refresh_command: `{cli} init --target . --format json` or `{cli} upgrade --target . --format json`",
+            "",
+            "This directory contains Agentic Workspace managed workflow, planning, memory, ownership, and state surfaces.",
+            "",
+            "Before editing inside `.agentic-workspace/`:",
+            "",
+            f'- Use `{cli} start --target . --task "<task>" --format json` for routing.',
+            (
+                f"- Use `{cli} summary --target . --format json`, "
+                f'`{cli} implement --changed <paths> --task "<task>" --format json`, and '
+                f"`{cli} proof --changed <paths> --format json` before opening broad raw state."
+            ),
+            f"- Use `{cli} planning ...` and `{cli} memory ...` commands for structured Planning and Memory mutations when a command exists.",
+            "- Do not hand-edit structured state such as Planning execplans, Planning state, Memory indexes, ownership ledgers, or config when a package CLI command exists.",
+            (
+                "- Raw structured edits are only fallback or repair work; after any fallback edit, run "
+                f"`{cli} summary --target . --format json` and "
+                f"`{cli} doctor --target . --modules planning,memory --format json` as applicable."
+            ),
+            "- If a needed managed-state mutation has no command, route or file an improvement issue for a command-owned path instead of making manual edits routine.",
+            "",
+        ]
+    )
+
+
+def _sync_workspace_managed_agent_instructions(
+    *, target_root: Path, config: WorkspaceConfig, dry_run: bool, apply: bool
+) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+    relative = _workspace_managed_agent_instructions_path(config)
+    path = target_root / relative
+    rendered = _workspace_managed_agent_instructions_text(config=config)
+    existing = path.read_text(encoding="utf-8") if path.exists() else None
+    if existing == rendered:
+        return (
+            [
+                {
+                    "kind": "current",
+                    "path": relative.as_posix(),
+                    "detail": "managed .agentic-workspace local instructions already current",
+                }
+            ],
+            [],
+        )
+    if apply:
+        if not dry_run:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(rendered, encoding="utf-8")
+        return (
+            [
+                {
+                    "kind": _write_action_kind(dry_run=dry_run, existing=existing),
+                    "path": relative.as_posix(),
+                    "detail": "refresh managed .agentic-workspace local instructions for command-owned state edits",
+                }
+            ],
+            [],
+        )
+    action = {
+        "kind": "missing" if existing is None else "warning",
+        "path": relative.as_posix(),
+        "detail": "managed .agentic-workspace local instructions missing"
+        if existing is None
+        else "managed .agentic-workspace local instructions stale",
+    }
+    warning = {
+        "path": relative.as_posix(),
+        "message": action["detail"],
+    }
+    return ([action], [warning])
+
+
 def _workspace_status_report(
     *, target_root: Path, selected_modules: list[str], descriptors: dict[str, ModuleDescriptor], command_name: str, config: WorkspaceConfig
 ) -> dict[str, Any]:
@@ -2918,6 +3054,11 @@ def _workspace_status_report(
         )
         if not exists:
             warnings.append({"path": relative.as_posix(), "message": "required workspace file missing"})
+    local_actions, local_warnings = _sync_workspace_managed_agent_instructions(
+        target_root=target_root, config=config, dry_run=False, apply=False
+    )
+    actions.extend(local_actions)
+    warnings.extend(local_warnings)
     scratch_path = target_root / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH
     actions.append(
         {
@@ -3428,6 +3569,14 @@ def _workspace_init_or_upgrade_report(
                 "detail": "refresh workspace shared-layer file from package payload",
             }
         )
+    local_agent_actions, local_agent_warnings = _sync_workspace_managed_agent_instructions(
+        target_root=target_root,
+        config=config,
+        dry_run=dry_run,
+        apply=command_name in {"init", "upgrade"},
+    )
+    actions.extend(local_agent_actions)
+    warnings.extend(local_agent_warnings)
     agents_relative = Path(config.agent_instructions_file)
     agents_path = target_root / agents_relative
     rendered_agents = _workspace_agents_template(
@@ -18191,6 +18340,17 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
     target_root, local_only_repo_root, selected_modules, resolved_preset, descriptors, config = _load_lifecycle_mutation_context(
         args, command_name=command_name
     )
+    if command_name == "upgrade" and bool(getattr(args, "repair_managed_local_instructions", False)):
+        payload = _run_managed_local_instructions_repair(
+            target_root=target_root,
+            config=config,
+            dry_run=bool(getattr(args, "dry_run", False)),
+            selected_modules=selected_modules,
+            resolved_preset=resolved_preset,
+            non_interactive=args.non_interactive,
+        )
+        _emit_payload(payload=payload, format_name=args.format)
+        return 0
     payload = _run_lifecycle_command(
         command_name=command_name,
         target_root=target_root,
@@ -18204,6 +18364,57 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
     )
     _emit_payload(payload=payload, format_name=args.format)
     return 0
+
+
+def _run_managed_local_instructions_repair(
+    *,
+    target_root: Path,
+    config: WorkspaceConfig,
+    dry_run: bool,
+    selected_modules: list[str],
+    resolved_preset: str | None,
+    non_interactive: bool,
+) -> dict[str, Any]:
+    actions, warnings = _sync_workspace_managed_agent_instructions(target_root=target_root, config=config, dry_run=dry_run, apply=True)
+    report = _workspace_report(
+        target_root=target_root,
+        message="Managed local instructions repair",
+        dry_run=dry_run,
+        actions=actions,
+        warnings=warnings,
+    )
+    summary = _summarise_reports(target_root=target_root, reports=[report], descriptors={}, command_name="upgrade")
+    return {
+        "command": "upgrade",
+        "repair_mode": "managed-local-instructions",
+        "target": target_root.as_posix(),
+        "modules": selected_modules,
+        "preset": resolved_preset,
+        "dry_run": dry_run,
+        "non_interactive": non_interactive,
+        "health": "healthy" if not warnings else "attention-needed",
+        "created": summary["created"],
+        "updated_managed": summary["updated_managed"],
+        "preserved_existing": summary["preserved_existing"],
+        "needs_review": summary["needs_review"],
+        "generated_artifacts": summary["generated_artifacts"],
+        "warnings": summary["warnings"],
+        "reports": [report],
+        "config": _config_payload(config=config),
+        "repair_scope": {
+            "affected_surfaces": [_workspace_managed_agent_instructions_path(config).as_posix()],
+            "rule": "This scoped repair writes only the workspace-managed local agent instructions file.",
+        },
+        "next_action": {
+            "action": "verify-with-doctor",
+            "summary": "Run doctor to confirm the managed local instructions surface is current.",
+            "commands": [
+                _command_with_cli_invoke(
+                    command=f"agentic-workspace doctor --target {target_root.as_posix()} --format json", cli_invoke=config.cli_invoke
+                )
+            ],
+        },
+    }
 
 
 def _workspace_operation_profile(values: dict[str, Any], *, default: str = "tiny") -> str:

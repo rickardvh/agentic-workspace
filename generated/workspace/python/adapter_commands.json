@@ -893,57 +893,6 @@
           ]
         },
         {
-          "help": "Bless an emergency manual repair to managed planning surfaces with explicit provenance.",
-          "name": "record-recovery",
-          "options": [
-            {
-              "default": [],
-              "flags": [
-                "--path"
-              ],
-              "help": "Managed planning file path to stamp; repeat or pass multiple values.",
-              "name": "paths",
-              "nargs": "*",
-              "required": true
-            },
-            {
-              "flags": [
-                "--reason"
-              ],
-              "help": "Emergency repair reason.",
-              "name": "reason",
-              "required": true
-            },
-            {
-              "flags": [
-                "--target"
-              ],
-              "help": "Optional repository path.",
-              "name": "target"
-            },
-            {
-              "action": "store_true",
-              "flags": [
-                "--dry-run"
-              ],
-              "help": "Show planned changes without mutating files.",
-              "name": "dry_run"
-            },
-            {
-              "choices": [
-                "text",
-                "json"
-              ],
-              "default": "text",
-              "flags": [
-                "--format"
-              ],
-              "help": "Output format.",
-              "name": "format"
-            }
-          ]
-        },
-        {
           "help": "Emit the compact delegated-worker handoff derived from active planning state.",
           "name": "handoff",
           "options": [
@@ -2743,6 +2692,14 @@
           ],
           "help": "Show planned changes without mutating files.",
           "name": "dry_run"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--repair-managed-local-instructions"
+          ],
+          "help": "Refresh only the workspace-managed .agentic-workspace local agent instructions file.",
+          "name": "repair_managed_local_instructions"
         }
       ]
     },

@@ -1136,61 +1136,6 @@
     "operation_path": "operations/planning.reconcile.report.json"
   },
   {
-    "adapter_id": "planning.record-recovery.cli",
-    "interface": {
-      "help": "Bless an emergency manual repair to managed planning surfaces with explicit provenance.",
-      "name": "record-recovery",
-      "options": [
-        {
-          "flags": [
-            "--target"
-          ],
-          "help": "Target repository path. Defaults to the current directory.",
-          "name": "target"
-        },
-        {
-          "action": "append",
-          "flags": [
-            "--path"
-          ],
-          "help": "Managed planning path repaired manually.",
-          "name": "paths",
-          "required": true
-        },
-        {
-          "flags": [
-            "--reason"
-          ],
-          "help": "Reason the recovery was needed.",
-          "name": "reason",
-          "required": true
-        },
-        {
-          "action": "store_true",
-          "flags": [
-            "--dry-run"
-          ],
-          "help": "Preview changes without writing files.",
-          "name": "dry_run"
-        },
-        {
-          "choices": [
-            "text",
-            "json"
-          ],
-          "default": "text",
-          "flags": [
-            "--format"
-          ],
-          "help": "Output format.",
-          "name": "format"
-        }
-      ]
-    },
-    "operation_id": "planning.record-recovery.lifecycle",
-    "operation_path": "operations/planning.record-recovery.lifecycle.json"
-  },
-  {
     "adapter_id": "planning.report.cli",
     "interface": {
       "help": "Read-only report report.",

@@ -204,7 +204,6 @@ def test_skill_specs_contract_models_startup_and_planning_behavior() -> None:
     for mutating_command_ref in {
         "planning.archive-plan",
         "planning.close-item",
-        "planning.record-recovery",
     }:
         assert commands_by_ref[mutating_command_ref]["mutates_state"] is True
     for spec in manifest["specs"]:
@@ -233,18 +232,10 @@ def test_operational_affordance_roles_classify_first_contact_and_diagnostics() -
     checker_text = Path("packages/planning/scripts/check/check_planning_surfaces.py").read_text(encoding="utf-8")
     checker_warning_classes = set(re.findall(r'WARNING_[A-Z0-9_]+ = "([^"]+)"', checker_text))
     assert checker_warning_classes <= warning_roles.keys()
-    assert warning_roles["planning_manual_mutation_unstamped"]["role"] == "external_manual_drift"
-    assert "recovery-only drift diagnostic" in warning_roles["planning_manual_mutation_unstamped"]["preferred_remedy"]
     assert warning_roles["archive_missing_execution_summary"]["role"] == "diagnostic"
     assert "planning closeout evidence options" in warning_roles["archive_missing_execution_summary"]["preferred_remedy"]
     assert warning_roles["planning_artifact_freehand"]["role"] == "external_manual_drift"
     assert "intake-artifact" in warning_roles["planning_artifact_freehand"]["preferred_remedy"]
-
-    provenance_policy = manifest["provenance_policy"]
-    assert provenance_policy["role"] == "transitional_recovery_aid"
-    assert provenance_policy["source_issue"] == "#1031"
-    assert "schema validation, command output, and git diff" in provenance_policy["normal_operation_rule"]
-    assert "record-recovery" in provenance_policy["recovery_rule"]
 
     source_boundary_review = manifest["source_boundary_review"]
     assert source_boundary_review["review_issue"] == "#1032"
@@ -562,7 +553,6 @@ def test_command_package_ir_reuses_generated_adapter_truth() -> None:
         "planning.new-plan.cli",
         "planning.promote-to-plan.cli",
         "planning.prompt.cli",
-        "planning.record-recovery.cli",
         "planning.summary.cli",
         "planning.uninstall.cli",
         "planning.upgrade.cli",
@@ -1703,7 +1693,6 @@ def test_contract_tooling_check_reports_generated_adapter_status() -> None:
         "promote-to-plan",
         "prompt",
         "reconcile",
-        "record-recovery",
         "report",
         "status",
         "summary",

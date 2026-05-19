@@ -149,12 +149,6 @@ def apply_planning_promote_to_plan_operation(*args: Any, **kwargs: Any) -> Any:
     return source_function(*args, **kwargs)
 
 
-def apply_planning_record_recovery_operation(*args: Any, **kwargs: Any) -> Any:
-    from repo_planning_bootstrap.runtime_projection import apply_planning_record_recovery_operation as source_function
-
-    return source_function(*args, **kwargs)
-
-
 def emit_planning_operation_output(values: dict[str, Any], arguments: dict[str, Any], context: Any) -> Any:
     result = values['result']
     if str(values.get('format') or 'text') == 'json' and isinstance(result, dict):
@@ -190,7 +184,6 @@ __all__ = [
     'apply_planning_intake_artifact_operation',
     'apply_planning_new_plan_operation',
     'apply_planning_promote_to_plan_operation',
-    'apply_planning_record_recovery_operation',
     'emit_planning_operation_output',
     'load_planning_reconcile_operation',
     'load_planning_summary_operation',

@@ -2006,6 +2006,74 @@ def test_start_routine_issue_intake_uses_skill_without_execplan(tmp_path: Path, 
     assert "planning-intake-upstream-task" in skill_ids
 
 
+def test_init_creates_managed_workspace_local_agent_instructions(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["init", "--target", str(target), "--preset", "full", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    local_agents = target / ".agentic-workspace" / "AGENTS.md"
+    text = local_agents.read_text(encoding="utf-8")
+    assert ".agentic-workspace/AGENTS.md" in payload["created"]
+    assert "Do not hand-edit structured state" in text
+    assert "Use `agentic-workspace planning ...` and `agentic-workspace memory ...` commands" in text
+    assert "route or file an improvement issue" in text
+
+    assert cli.main(["doctor", "--target", str(target), "--modules", "planning", "--format", "json"]) == 0
+    doctor_payload = json.loads(capsys.readouterr().out)
+    assert doctor_payload["health"] == "healthy"
+    assert ".agentic-workspace/AGENTS.md" not in doctor_payload["warnings"]
+
+
+def test_init_uses_configured_workspace_local_agent_instructions_filename(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        'schema_version = 1\n\n[workspace]\nagent_instructions_file = "GEMINI.md"\n',
+    )
+
+    assert cli.main(["init", "--target", str(target), "--preset", "full", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert ".agentic-workspace/GEMINI.md" in payload["created"]
+    assert (target / ".agentic-workspace" / "GEMINI.md").is_file()
+    assert (target / "GEMINI.md").is_file()
+    assert "Do not hand-edit structured state" in (target / ".agentic-workspace" / "GEMINI.md").read_text(encoding="utf-8")
+
+
+def test_doctor_offers_scoped_repair_for_missing_workspace_local_agent_instructions(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["init", "--target", str(target), "--preset", "full", "--format", "json"]) == 0
+    capsys.readouterr()
+    local_agents = target / ".agentic-workspace" / "AGENTS.md"
+    local_agents.unlink()
+
+    assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
+    doctor_payload = json.loads(capsys.readouterr().out)
+
+    assert doctor_payload["health"] == "attention-needed"
+    action = doctor_payload["repair_actions"][0]
+    assert action["id"] == "apply-managed-local-instructions-repair"
+    assert action["safe_to_apply"] is True
+    assert action["affected_surfaces"] == [".agentic-workspace/AGENTS.md"]
+    assert "--repair-managed-local-instructions" in action["command"]
+
+    assert cli.main(["upgrade", "--target", str(target), "--repair-managed-local-instructions", "--format", "json"]) == 0
+    repair_payload = json.loads(capsys.readouterr().out)
+
+    assert repair_payload["repair_mode"] == "managed-local-instructions"
+    assert repair_payload["created"] == [".agentic-workspace/AGENTS.md"]
+    assert repair_payload["repair_scope"]["affected_surfaces"] == [".agentic-workspace/AGENTS.md"]
+    assert "Do not hand-edit structured state" in local_agents.read_text(encoding="utf-8")
+
+
 def test_start_narrow_ci_repair_stays_direct_without_execplan(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

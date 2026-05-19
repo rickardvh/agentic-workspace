@@ -1622,57 +1622,6 @@
                 ]
               },
               {
-                "name": "record-recovery",
-                "help": "Bless an emergency manual repair to managed planning surfaces with explicit provenance.",
-                "options": [
-                  {
-                    "name": "paths",
-                    "flags": [
-                      "--path"
-                    ],
-                    "nargs": "*",
-                    "default": [],
-                    "required": true,
-                    "help": "Managed planning file path to stamp; repeat or pass multiple values."
-                  },
-                  {
-                    "name": "reason",
-                    "flags": [
-                      "--reason"
-                    ],
-                    "required": true,
-                    "help": "Emergency repair reason."
-                  },
-                  {
-                    "name": "target",
-                    "flags": [
-                      "--target"
-                    ],
-                    "help": "Optional repository path."
-                  },
-                  {
-                    "name": "dry_run",
-                    "flags": [
-                      "--dry-run"
-                    ],
-                    "action": "store_true",
-                    "help": "Show planned changes without mutating files."
-                  },
-                  {
-                    "name": "format",
-                    "flags": [
-                      "--format"
-                    ],
-                    "choices": [
-                      "text",
-                      "json"
-                    ],
-                    "default": "text",
-                    "help": "Output format."
-                  }
-                ]
-              },
-              {
                 "name": "handoff",
                 "help": "Emit the compact delegated-worker handoff derived from active planning state.",
                 "options": [
@@ -4601,6 +4550,14 @@
                 ],
                 "action": "store_true",
                 "help": "Show planned changes without mutating files."
+              },
+              {
+                "name": "repair_managed_local_instructions",
+                "flags": [
+                  "--repair-managed-local-instructions"
+                ],
+                "action": "store_true",
+                "help": "Refresh only the workspace-managed .agentic-workspace local agent instructions file."
               }
             ]
           },
@@ -4852,7 +4809,6 @@
             "planning.promote-to-plan.lifecycle",
             "planning.prompt.render",
             "planning.reconcile.report",
-            "planning.record-recovery.lifecycle",
             "planning.report.report",
             "planning.status.report",
             "planning.summary.report",
@@ -5259,12 +5215,6 @@
               "primitive": "planning.delegation-decision.apply",
               "handler": "runtime_handler",
               "function": "apply_planning_delegation_decision_operation",
-              "import_module": "repo_planning_bootstrap.runtime_projection"
-            },
-            {
-              "primitive": "planning.record-recovery.apply",
-              "handler": "runtime_handler",
-              "function": "apply_planning_record_recovery_operation",
               "import_module": "repo_planning_bootstrap.runtime_projection"
             }
           ]
@@ -7198,109 +7148,6 @@
               "output emission"
             ]
           }
-        },
-        {
-          "adapter_id": "planning.record-recovery.cli",
-          "status": "generated",
-          "command": {
-            "manifest_ref": "package:planning:cli",
-            "name": "record-recovery"
-          },
-          "operation_ref": {
-            "id": "planning.record-recovery.lifecycle",
-            "path": "operations/planning.record-recovery.lifecycle.json"
-          },
-          "runtime_binding": {
-            "kind": "operation-primitive-sequence",
-            "primitive_refs": [
-              "planning.record-recovery.apply",
-              "output.emit"
-            ]
-          },
-          "schemas": {
-            "input": [],
-            "output": []
-          },
-          "effect_hints": {
-            "read_only": false,
-            "destructive": false,
-            "idempotent": false,
-            "writes_repo_state": true,
-            "requires_preflight_gate": false
-          },
-          "interface": {
-            "name": "record-recovery",
-            "help": "Bless an emergency manual repair to managed planning surfaces with explicit provenance.",
-            "options": [
-              {
-                "name": "target",
-                "flags": [
-                  "--target"
-                ],
-                "help": "Target repository path. Defaults to the current directory."
-              },
-              {
-                "name": "paths",
-                "flags": [
-                  "--path"
-                ],
-                "action": "append",
-                "required": true,
-                "help": "Managed planning path repaired manually."
-              },
-              {
-                "name": "reason",
-                "flags": [
-                  "--reason"
-                ],
-                "required": true,
-                "help": "Reason the recovery was needed."
-              },
-              {
-                "name": "dry_run",
-                "flags": [
-                  "--dry-run"
-                ],
-                "action": "store_true",
-                "help": "Preview changes without writing files."
-              },
-              {
-                "name": "format",
-                "flags": [
-                  "--format"
-                ],
-                "choices": [
-                  "text",
-                  "json"
-                ],
-                "default": "text",
-                "help": "Output format."
-              }
-            ]
-          },
-          "projection_boundary": {
-            "universal": [
-              "command identity",
-              "operation reference",
-              "runtime primitive reference",
-              "effect hints",
-              "conformance refs"
-            ],
-            "target_specific": [
-              "parser library",
-              "package entrypoint wiring",
-              "help text layout",
-              "test container image"
-            ],
-            "runtime_owned": [
-              "planning state mutation policy",
-              "planning provenance updates",
-              "module result assembly"
-            ]
-          },
-          "conformance_refs": [
-            "planning.record-recovery.lifecycle.dry-run.process"
-          ]
         },
         {
           "adapter_id": "planning.report.cli",

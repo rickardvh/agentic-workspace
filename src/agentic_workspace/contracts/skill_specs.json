@@ -677,11 +677,6 @@
           "path": ".agentic-workspace/planning/execplans/",
           "authority": "cli-mutated-state",
           "edit_rule": "Create, promote, update, archive, or close through planning CLI commands when available."
-        },
-        {
-          "path": ".agentic-workspace/planning/mutation-provenance.json",
-          "authority": "cli-mutated-state",
-          "edit_rule": "Do not hand-author provenance."
         }
       ],
       "allowed_actions": [

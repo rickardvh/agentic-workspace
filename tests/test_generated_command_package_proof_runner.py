@@ -396,25 +396,6 @@ def test_generated_operation_cli_input_proof_allows_explicit_runtime_only_input(
     assert errors == []
 
 
-def test_generated_parser_uses_option_name_as_argparse_dest_for_aliases() -> None:
-    checker = _load_checker()
-    generated = checker.load_generated_command_module_for_entrypoint("agentic-planning", "cli.py")
-    parser = generated.build_generated_parser()
-
-    args = parser.parse_args(
-        [
-            "record-recovery",
-            "--path",
-            ".agentic-workspace/planning/state.toml",
-            "--reason",
-            "test",
-        ]
-    )
-
-    assert args.paths == [".agentic-workspace/planning/state.toml"]
-    assert not hasattr(args, "path")
-
-
 def test_command_package_ir_records_deferred_shell_transport_evaluation() -> None:
     checker = _load_checker()
     ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
