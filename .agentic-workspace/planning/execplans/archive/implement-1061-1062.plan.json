@@ -190,7 +190,7 @@
     "what happened": "Implemented #1061 managed .agentic-workspace local agent instructions and #1062 deterministic closeout scaffold residue normalization, with focused lifecycle/archive tests and required workspace/planning proof.",
     "scope touched": "Workspace lifecycle runtime and tests; planning archive closeout preparation and tests; managed .agentic-workspace/AGENTS.md; active planning closeout/provenance.",
     "changed surfaces": "src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_start_preflight_cli.py; tests/test_workspace_doctor_status_cli.py; packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_archive.py; .agentic-workspace/AGENTS.md; .agentic-workspace/planning/execplans/implement-1061-1062.plan.json; .agentic-workspace/planning/mutation-provenance.json; .agentic-workspace/planning/state.toml",
-    "validations run": "uv run pytest tests/test_workspace_start_preflight_cli.py::test_init_creates_managed_workspace_local_agent_instructions tests/test_workspace_start_preflight_cli.py::test_init_uses_configured_workspace_local_agent_instructions_filename packages/planning/tests/test_archive.py::test_archive_plan_prepare_closeout_normalizes_scaffold_residue_in_retained_archive -q; uv run pytest tests/test_workspace_doctor_status_cli.py::test_doctor_json_exposes_standardised_summary_fields -q; make test-workspace; make lint-workspace; make test-planning; make lint-planning; uv run agentic-workspace summary --target . --verbose --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "validations run": "Focused lifecycle/archive tests, workspace and planning tests/lints, AW summary, and planning doctor passed; see PR #1065 validation list.",
     "result for continuation": "bounded closeout complete",
     "next step": "archive this execplan"
   },
@@ -213,9 +213,9 @@
     "decomposition adjustment": "none"
   },
   "proof_report": {
-    "validation proof": "uv run pytest tests/test_workspace_start_preflight_cli.py::test_init_creates_managed_workspace_local_agent_instructions tests/test_workspace_start_preflight_cli.py::test_init_uses_configured_workspace_local_agent_instructions_filename packages/planning/tests/test_archive.py::test_archive_plan_prepare_closeout_normalizes_scaffold_residue_in_retained_archive -q; uv run pytest tests/test_workspace_doctor_status_cli.py::test_doctor_json_exposes_standardised_summary_fields -q; make test-workspace; make lint-workspace; make test-planning; make lint-planning; uv run agentic-workspace summary --target . --verbose --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "validation proof": "Focused lifecycle/archive tests, workspace and planning tests/lints, AW summary, and planning doctor passed; see PR #1065 validation list.",
     "proof achieved now": "yes; planning closeout recorded explicit proof input.",
-    "evidence for \"proof achieved\" state": "uv run pytest tests/test_workspace_start_preflight_cli.py::test_init_creates_managed_workspace_local_agent_instructions tests/test_workspace_start_preflight_cli.py::test_init_uses_configured_workspace_local_agent_instructions_filename packages/planning/tests/test_archive.py::test_archive_plan_prepare_closeout_normalizes_scaffold_residue_in_retained_archive -q; uv run pytest tests/test_workspace_doctor_status_cli.py::test_doctor_json_exposes_standardised_summary_fields -q; make test-workspace; make lint-workspace; make test-planning; make lint-planning; uv run agentic-workspace summary --target . --verbose --format json; uv run agentic-workspace doctor --target . --modules planning --format json"
+    "evidence for \"proof achieved\" state": "Focused lifecycle/archive tests, workspace and planning tests/lints, AW summary, and planning doctor passed; see PR #1065 validation list."
   },
   "intent_satisfaction": {
     "original intent": "Create a bounded plan for Implement local AW instructions and closeout residue normalization.",
@@ -225,7 +225,7 @@
   },
   "execution_summary": {
     "outcome delivered": "#1061 and #1062 are implemented and validated; follow-up improvement pressure is routed to #1064.",
-    "validation confirmed": "uv run pytest tests/test_workspace_start_preflight_cli.py::test_init_creates_managed_workspace_local_agent_instructions tests/test_workspace_start_preflight_cli.py::test_init_uses_configured_workspace_local_agent_instructions_filename packages/planning/tests/test_archive.py::test_archive_plan_prepare_closeout_normalizes_scaffold_residue_in_retained_archive -q; uv run pytest tests/test_workspace_doctor_status_cli.py::test_doctor_json_exposes_standardised_summary_fields -q; make test-workspace; make lint-workspace; make test-planning; make lint-planning; uv run agentic-workspace summary --target . --verbose --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "validation confirmed": "Focused lifecycle/archive tests, workspace and planning tests/lints, AW summary, and planning doctor passed; see PR #1065 validation list.",
     "follow-on routed to": "none",
     "post-work posterity capture": "archive closeout distillation",
     "knowledge promoted (memory/docs/config)": "none",
@@ -256,7 +256,7 @@
     "larger-intent status": "closed",
     "closure decision": "archive-and-close",
     "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
-    "evidence carried forward": "uv run pytest tests/test_workspace_start_preflight_cli.py::test_init_creates_managed_workspace_local_agent_instructions tests/test_workspace_start_preflight_cli.py::test_init_uses_configured_workspace_local_agent_instructions_filename packages/planning/tests/test_archive.py::test_archive_plan_prepare_closeout_normalizes_scaffold_residue_in_retained_archive -q; uv run pytest tests/test_workspace_doctor_status_cli.py::test_doctor_json_exposes_standardised_summary_fields -q; make test-workspace; make lint-workspace; make test-planning; make lint-planning; uv run agentic-workspace summary --target . --verbose --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "evidence carried forward": "Focused lifecycle/archive tests, workspace and planning tests/lints, AW summary, and planning doctor passed; see PR #1065 validation list.",
     "reopen trigger": "None unless new evidence shows the closeout was incomplete."
   },
   "improvement_signal_review": {
@@ -324,6 +324,6 @@
     "status": "generated",
     "source": "archive-plan --prepare-closeout",
     "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
-    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Create a bounded plan for Implement local AW instructions and closeout residue normalization.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: uv run pytest tests/test_workspace_start_preflight_cli.py::test_init_creates_managed_workspace_local_agent_instructions tests/test_workspace_start_preflight_cli.py::test_init_uses_configured_workspace_local_agent_instructions_filename packages/planning/tests/test_archive.py::test_archive_plan_prepare_closeout_normalizes_scaffold_residue_in_retained_archive -q; uv run pytest tests/test_workspace_doctor_status_cli.py::test_doctor_json_exposes_standardised_summary_fields -q; make test-workspace; make lint-workspace; make test-planning; make lint-planning; uv run agentic-workspace summary --target . --verbose --format json; uv run agentic-workspace doctor --target . --modules planning --format json\nChanged surfaces: src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_start_preflight_cli.py; tests/test_workspace_doctor_status_cli.py; packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_archive.py; .agentic-workspace/AGENTS.md; .agentic-workspace/planning/execplans/implement-1061-1062.plan.json; .agentic-workspace/planning/mutation-provenance.json; .agentic-workspace/planning/state.toml\nDurable residue: planning (GitHub #1064)\nMemory learning: route_to_planning\nFollow-up: none"
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Create a bounded plan for Implement local AW instructions and closeout residue normalization.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: Focused lifecycle/archive tests, workspace and planning tests/lints, AW summary, and planning doctor passed; see PR #1065 validation list.\nChanged surfaces: workspace runtime/tests, planning closeout/tests, managed .agentic-workspace/AGENTS.md, planning archive/provenance\nDurable residue: planning (GitHub #1064)\nMemory learning: route_to_planning\nFollow-up: none"
   }
 }

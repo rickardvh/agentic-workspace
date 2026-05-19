@@ -1,0 +1,339 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Implement scoped managed local instructions repair",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement GitHub #1064 by making doctor surface a safe, scoped command-owned repair for missing or stale .agentic-workspace local agent instructions.",
+    "hard_constraints": "Keep the repair scoped to the configured .agentic-workspace/<agent instructions file>; do not make agents use a broad workspace upgrade for this single managed surface; preserve existing init/upgrade behavior.",
+    "agent_may_decide": "Use an upgrade submode and doctor repair action if that fits the current lifecycle model better than a new top-level command.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Add scoped managed-local-instructions repair mode, route doctor to it, regenerate generated command adapters, and validate focused plus workspace and contract proof.",
+    "proof_expectations": "['uv run pytest tests/test_workspace_start_preflight_cli.py::test_doctor_offers_scoped_repair_for_missing_workspace_local_agent_instructions -q', 'make test-workspace', 'make lint-workspace', 'uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success', 'uv run python scripts/check/check_structured_file_inventory.py --quiet-success', 'uv run python scripts/check/check_generated_command_packages.py', 'uv run python scripts/check/check_generated_command_packages.py --conformance --require-node']",
+    "touched_scope": "['src/agentic_workspace/workspace_runtime_primitives.py', 'src/agentic_workspace/contracts/cli_commands.json', 'src/agentic_workspace/contracts/command_package_ir.json', 'src/agentic_workspace/contracts/operations/upgrade.lifecycle.json', 'generated/workspace/python/', 'generated/typescript/workspace-cli/', 'tests/test_workspace_start_preflight_cli.py', '.agentic-workspace/planning/execplans/implement-1064-managed-local-instructions-repair.plan.json']",
+    "completion_criteria": "['Doctor reports a safe repair action for missing or stale .agentic-workspace local instructions.', 'The repair action points to a scoped command that writes only the configured managed local instructions file.', 'The scoped command restores the file and leaves broad lifecycle upgrade as unnecessary for this case.', 'Generated command adapters and contracts include the new repair option.']",
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Create a bounded plan for Implement scoped managed local instructions repair."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Implement GitHub #1064 by adding a scoped managed local instructions repair path.",
+      "constraints": "Keep the repair scoped to .agentic-workspace local instructions and preserve existing lifecycle behavior.",
+      "latitude": "Choose the smallest lifecycle affordance and proof that satisfies #1064.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "implement-1064-managed-local-instructions-repair",
+      "status": "active",
+      "next_step": "Add scoped managed-local-instructions repair mode, route doctor to it, regenerate generated command adapters, and validate focused plus workspace and contract proof.",
+      "proof": "Focused lifecycle regression, workspace tests/lint, contract tooling checks, and generated command package checks."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "src/agentic_workspace/contracts/cli_commands.json",
+        "src/agentic_workspace/contracts/command_package_ir.json",
+        "src/agentic_workspace/contracts/operations/upgrade.lifecycle.json",
+        "generated/workspace/python/",
+        "generated/typescript/workspace-cli/",
+        "tests/test_workspace_start_preflight_cli.py",
+        ".agentic-workspace/planning/execplans/implement-1064-managed-local-instructions-repair.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Close #1064 by making the correct repair path command-owned and obvious from doctor.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Do #1064 as well",
+    "inferred intended outcome": "Implement GitHub #1064 on the current PR branch.",
+    "chosen concrete what": "Add `upgrade --repair-managed-local-instructions` and a doctor repair action that points to it when .agentic-workspace local instructions are missing or stale.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Workspace lifecycle runtime; root command contracts and generated workspace command adapters; focused workspace lifecycle tests; this execplan and command-owned planning provenance/archive files.",
+    "max changed files": "About fifteen files including generated workspace adapters and planning closeout/provenance.",
+    "required validation commands": "Focused lifecycle regression; make test-workspace; make lint-workspace; contract tooling checks; generated command package checks.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue #1064: scoped managed-local-instructions repair command and doctor repair action on the #1061/#1062 PR branch.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement GitHub #1064 on the current PR branch.",
+    "hard constraints": "Keep the command scoped to the managed local instructions file and avoid broad lifecycle refresh for this single repair.",
+    "agent may decide locally": "Use the existing upgrade lifecycle as the command family and add a scoped mode rather than a new top-level command.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "#1064 is a tightly scoped lifecycle contract/runtime/generated-adapter change; delegating would require sharing the same generated surface ownership and proof context, so it would add coordination cost without saving meaningful tokens.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-19T10:06:18+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "implement-1064-managed-local-instructions-repair",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Add scoped managed-local-instructions repair mode, route doctor to it, regenerate generated command adapters, and validate focused plus workspace and contract proof."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "src/agentic_workspace/contracts/cli_commands.json",
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    "src/agentic_workspace/contracts/operations/upgrade.lifecycle.json",
+    "generated/workspace/python/",
+    "generated/typescript/workspace-cli/",
+    "tests/test_workspace_start_preflight_cli.py",
+    ".agentic-workspace/planning/execplans/implement-1064-managed-local-instructions-repair.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_start_preflight_cli.py::test_doctor_offers_scoped_repair_for_missing_workspace_local_agent_instructions -q",
+    "make test-workspace",
+    "make lint-workspace",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Doctor reports a safe repair action for missing or stale .agentic-workspace local instructions.",
+    "The repair action points to a scoped command that writes only the configured managed local instructions file.",
+    "The scoped command restores the file and leaves broad lifecycle upgrade as unnecessary for this case.",
+    "Generated command adapters and contracts include the new repair option."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Implemented #1064 by adding scoped upgrade --repair-managed-local-instructions, routing doctor repair actions for missing/stale .agentic-workspace local instructions to that command, regenerating workspace adapters, and adding a lifecycle regression.",
+    "scope touched": "Workspace lifecycle runtime; root command contracts; generated workspace command adapters; focused lifecycle tests; planning closeout/provenance.",
+    "changed surfaces": "workspace_runtime_primitives.py; workspace command contracts; generated workspace adapters; tests/test_workspace_start_preflight_cli.py; planning archive/provenance",
+    "validations run": "Focused #1064 regression, workspace tests/lint, contract tooling, structured inventory, generated command package static/conformance/Docker checks, root CLI authority defaults, workspace CLI tests, ruff, summary, and planning doctor passed.",
+    "result for continuation": "bounded closeout complete",
+    "next step": "archive this execplan"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Scope stayed bounded to #1064 plus direct cleanup of the existing branch archive required by structured-file inventory. The new command writes only the configured managed local instructions file. Dogfooding closeout/archive size friction was routed to GitHub #1066.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "#1064 is a tightly scoped lifecycle contract/runtime/generated-adapter change; delegating would require sharing the same generated surface ownership and proof context, so it would add coordination cost without saving meaningful tokens.",
+    "expected savings": "unknown",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "Focused #1064 regression, workspace tests/lint, contract tooling, structured inventory, generated command package static/conformance/Docker checks, root CLI authority defaults, workspace CLI tests, ruff, summary, and planning doctor passed.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "Focused #1064 regression, workspace tests/lint, contract tooling, structured inventory, generated command package static/conformance/Docker checks, root CLI authority defaults, workspace CLI tests, ruff, summary, and planning doctor passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Implement scoped managed local instructions repair.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Focused #1064 regression, workspace tests/lint, contract tooling, structured inventory, generated command package static/conformance/Docker checks, root CLI authority defaults, workspace CLI tests, ruff, summary, and planning doctor passed.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "#1064 is implemented and validated; follow-up improvement pressure is routed to #1066.",
+    "validation confirmed": "Focused #1064 regression, workspace tests/lint, contract tooling, structured inventory, generated command package static/conformance/Docker checks, root CLI authority defaults, workspace CLI tests, ruff, summary, and planning doctor passed.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "knowledge promoted (memory/docs/config)": "none",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed issue residue to GitHub #1066.",
+    "motivation worth preserving": "Future agents should continue from GitHub #1066 rather than rediscover this closeout residue.",
+    "canonical owner now": "GitHub #1066",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "GitHub #1066",
+    "proposed durable intent": "Future agents should continue from GitHub #1066 rather than rediscover this closeout residue.",
+    "confidence": "low",
+    "needs review": "True",
+    "owner surface": "GitHub #1066"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": "Focused #1064 regression, workspace tests/lint, contract tooling, structured inventory, generated command package static/conformance/Docker checks, root CLI authority defaults, workspace CLI tests, ruff, summary, and planning doctor passed.",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "improvement_signal_review": {
+    "status": "signals_routed",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [
+      {
+        "summary": "Closeout routed issue residue to GitHub #1066.",
+        "owner": "GitHub #1066",
+        "source": "durable_residue"
+      }
+    ],
+    "signals fixed": [],
+    "signals routed": [
+      {
+        "summary": "Closeout routed issue residue to GitHub #1066.",
+        "owner": "GitHub #1066",
+        "source": "durable_residue"
+      }
+    ],
+    "signals dismissed": [],
+    "next owner": "see routed signal owner"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "Closeout routed issue residue to GitHub #1066.",
+          "owner": "GitHub #1066",
+          "source": "improvement_signal_review.signals routed"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-05-19: Scaffolded by agentic-planning new-plan.",
+    "2026-05-19: Recorded delegation decision route=keep-local."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "yes",
+    "decision": "route_to_planning",
+    "target": "GitHub #1066",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Create a bounded plan for Implement scoped managed local instructions repair.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: Focused #1064 regression, workspace tests/lint, contract tooling, structured inventory, generated command package static/conformance/Docker checks, root CLI authority defaults, workspace CLI tests, ruff, summary, and planning doctor passed.\nChanged surfaces: workspace_runtime_primitives.py; workspace command contracts; generated workspace adapters; tests/test_workspace_start_preflight_cli.py; planning archive/provenance\nDurable residue: planning (GitHub #1066)\nMemory learning: route_to_planning\nFollow-up: none"
+  }
+}

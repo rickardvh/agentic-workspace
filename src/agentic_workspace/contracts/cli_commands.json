@@ -1937,6 +1937,14 @@
           ],
           "action": "store_true",
           "help": "Show planned changes without mutating files."
+        },
+        {
+          "name": "repair_managed_local_instructions",
+          "flags": [
+            "--repair-managed-local-instructions"
+          ],
+          "action": "store_true",
+          "help": "Refresh only the workspace-managed .agentic-workspace local agent instructions file."
         }
       ],
       "role": "core_lifecycle",

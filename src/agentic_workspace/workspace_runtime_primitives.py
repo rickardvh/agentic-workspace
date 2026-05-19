@@ -2470,6 +2470,7 @@ def _workspace_repair_payload(
     repair_actions: list[dict[str, Any]] = []
     manual_review_actions: list[dict[str, Any]] = []
     missing_workspace_surfaces: list[str] = []
+    managed_local_instruction_surfaces: list[str] = []
     missing_startup_surfaces: list[str] = []
     pointer_surfaces: list[str] = []
     contract_drift_surfaces: list[str] = []
@@ -2480,6 +2481,8 @@ def _workspace_repair_payload(
         detail = str(action.get("detail", ""))
         if kind == "missing" and path in {relative.as_posix() for relative in WORKSPACE_PAYLOAD_FILES}:
             missing_workspace_surfaces.append(path)
+        if kind in {"missing", "warning"} and detail.startswith("managed .agentic-workspace local instructions "):
+            managed_local_instruction_surfaces.append(path)
         if kind == "missing" and "root startup entrypoint missing" in detail:
             missing_startup_surfaces.append(path)
         if "workspace workflow pointer block missing" in detail:
@@ -2505,6 +2508,14 @@ def _workspace_repair_payload(
                     "Do not hand-author managed workspace payloads when upgrade can recreate them.",
                     "Do not treat the missing surface as repo-owned without checking ownership metadata.",
                 ],
+            )
+        )
+    if managed_local_instruction_surfaces:
+        repair_actions.append(
+            _workspace_managed_local_instructions_repair_action(
+                target_root=target_root,
+                cli_invoke=cli_invoke,
+                affected_surfaces=_dedupe(managed_local_instruction_surfaces),
             )
         )
     for surface in missing_startup_surfaces:
@@ -2692,6 +2703,48 @@ def _workspace_safe_repair_action(
             "kind": "repair_recurrence",
             "route": "agentic-workspace defaults --section improvement_intake --format json",
             "preferred_remedy": "remove, merge, scaffold, or make the correct action more obvious before adding prose",
+        },
+    }
+
+
+def _workspace_managed_local_instructions_repair_action(
+    *, target_root: Path, cli_invoke: str, affected_surfaces: list[str]
+) -> dict[str, Any]:
+    target = target_root.as_posix()
+    dry_run = _command_with_cli_invoke(
+        command=f"agentic-workspace upgrade --target {target} --repair-managed-local-instructions --dry-run --format json",
+        cli_invoke=cli_invoke,
+    )
+    command = _command_with_cli_invoke(
+        command=f"agentic-workspace upgrade --target {target} --repair-managed-local-instructions --format json",
+        cli_invoke=cli_invoke,
+    )
+    proof_after = [_command_with_cli_invoke(command=f"agentic-workspace doctor --target {target} --format json", cli_invoke=cli_invoke)]
+    return {
+        "id": "apply-managed-local-instructions-repair",
+        "action": "run-managed-local-instructions-repair",
+        "invariant": "workspace.managed_local_instructions_current",
+        "fault_class": "agent_operation_fault",
+        "severity": "warning",
+        "owner": "workspace",
+        "safe_to_apply": True,
+        "risk": "low; writes only the workspace-managed local agent instructions file derived from workspace config",
+        "command": command,
+        "run": command,
+        "dry_run": dry_run,
+        "proof_after": proof_after,
+        "affected_surfaces": affected_surfaces,
+        "current_fault_summary": "Managed .agentic-workspace local instructions are missing or stale.",
+        "do_not": [
+            "Do not run a broad workspace upgrade only to refresh this single managed instruction file.",
+            "Do not hand-edit the managed local instructions when this scoped repair can regenerate them.",
+        ],
+        "recurrence": "first_seen",
+        "improvement_signal_candidate": {
+            "when": "repeated",
+            "kind": "repair_recurrence",
+            "route": "agentic-workspace defaults --section improvement_intake --format json",
+            "preferred_remedy": "make scoped repair commands visible from doctor instead of relying on broad lifecycle upgrades",
         },
     }
 
@@ -18272,6 +18325,17 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
     target_root, local_only_repo_root, selected_modules, resolved_preset, descriptors, config = _load_lifecycle_mutation_context(
         args, command_name=command_name
     )
+    if command_name == "upgrade" and bool(getattr(args, "repair_managed_local_instructions", False)):
+        payload = _run_managed_local_instructions_repair(
+            target_root=target_root,
+            config=config,
+            dry_run=bool(getattr(args, "dry_run", False)),
+            selected_modules=selected_modules,
+            resolved_preset=resolved_preset,
+            non_interactive=args.non_interactive,
+        )
+        _emit_payload(payload=payload, format_name=args.format)
+        return 0
     payload = _run_lifecycle_command(
         command_name=command_name,
         target_root=target_root,
@@ -18285,6 +18349,57 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
     )
     _emit_payload(payload=payload, format_name=args.format)
     return 0
+
+
+def _run_managed_local_instructions_repair(
+    *,
+    target_root: Path,
+    config: WorkspaceConfig,
+    dry_run: bool,
+    selected_modules: list[str],
+    resolved_preset: str | None,
+    non_interactive: bool,
+) -> dict[str, Any]:
+    actions, warnings = _sync_workspace_managed_agent_instructions(target_root=target_root, config=config, dry_run=dry_run, apply=True)
+    report = _workspace_report(
+        target_root=target_root,
+        message="Managed local instructions repair",
+        dry_run=dry_run,
+        actions=actions,
+        warnings=warnings,
+    )
+    summary = _summarise_reports(target_root=target_root, reports=[report], descriptors={}, command_name="upgrade")
+    return {
+        "command": "upgrade",
+        "repair_mode": "managed-local-instructions",
+        "target": target_root.as_posix(),
+        "modules": selected_modules,
+        "preset": resolved_preset,
+        "dry_run": dry_run,
+        "non_interactive": non_interactive,
+        "health": "healthy" if not warnings else "attention-needed",
+        "created": summary["created"],
+        "updated_managed": summary["updated_managed"],
+        "preserved_existing": summary["preserved_existing"],
+        "needs_review": summary["needs_review"],
+        "generated_artifacts": summary["generated_artifacts"],
+        "warnings": summary["warnings"],
+        "reports": [report],
+        "config": _config_payload(config=config),
+        "repair_scope": {
+            "affected_surfaces": [_workspace_managed_agent_instructions_path(config).as_posix()],
+            "rule": "This scoped repair writes only the workspace-managed local agent instructions file.",
+        },
+        "next_action": {
+            "action": "verify-with-doctor",
+            "summary": "Run doctor to confirm the managed local instructions surface is current.",
+            "commands": [
+                _command_with_cli_invoke(
+                    command=f"agentic-workspace doctor --target {target_root.as_posix()} --format json", cli_invoke=config.cli_invoke
+                )
+            ],
+        },
+    }
 
 
 def _workspace_operation_profile(values: dict[str, Any], *, default: str = "tiny") -> str:

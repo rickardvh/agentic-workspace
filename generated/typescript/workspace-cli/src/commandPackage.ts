@@ -3998,6 +3998,14 @@ export const generatedCommandPackage = {
             ],
             "help": "Show planned changes without mutating files.",
             "name": "dry_run"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--repair-managed-local-instructions"
+            ],
+            "help": "Refresh only the workspace-managed .agentic-workspace local agent instructions file.",
+            "name": "repair_managed_local_instructions"
           }
         ]
       },

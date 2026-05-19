@@ -2176,6 +2176,134 @@
       "reason": "Removed stale pending validation wording from the archived closeout after final proof passed.",
       "mode": "manual-recovery",
       "recorded_at": "2026-05-19T07:49:38+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/implement-1064-managed-local-instructions-repair.plan.json",
+      "sha256": "5b329fdaea89f3ca0a9997e1f77f1381bbd88d1aa1f75e6320734fe5be21354c",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold implement-1064-managed-local-instructions-repair",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-19T10:05:21+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "91cc26f208fa1c631348d9a3e8bd0ff15e36645ea3243f269ff02af7536ebde3",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold implement-1064-managed-local-instructions-repair",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-19T10:05:21+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/implement-1064-managed-local-instructions-repair.plan.json",
+      "sha256": "840a79e0bbbdfec901baa58da21ccb868d5a53c3469d068775a20b0bf1fe1822",
+      "command": "agentic-planning record-recovery",
+      "reason": "Tightened new-plan scaffold to the concrete #1064 repair scope, touched paths, and proof commands after implement routing required an active execplan.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-19T10:06:12+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/implement-1064-managed-local-instructions-repair.plan.json",
+      "sha256": "5aa5a6244c65ed52954d1e8f3b6cf51338cc5f7b07303c3db6e67c584eee0986",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-19T10:06:18+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/implement-1061-1062.plan.json",
+      "sha256": "1c3a2dfd31895868863a11b88bb453cab09e87e35d3d9ee0dfdc9957e6f7b731",
+      "command": "agentic-planning record-recovery",
+      "reason": "Compacted repeated proof strings in the archived #1061/#1062 closeout after structured-file inventory reported the archive exceeded the 25 KB guardrail.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-19T10:07:15+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/implement-1064-managed-local-instructions-repair.plan.json",
+      "sha256": "948e21a2a263ed0d158af2c9d52097dfca4d9a3b31a5b30edde3a5c7c7b24026",
+      "command": "agentic-planning record-recovery",
+      "reason": "Aligned active #1064 execplan compatibility fields with canonical_core and removed slash wording that summary interpreted as a missing path.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-19T10:10:14+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/implement-1064-managed-local-instructions-repair.plan.json",
+      "sha256": "7325729350ab19c77cd8f212084d6ed478cd5e70d10f74dfe7dd404c83bde378",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan implement-1064-managed-local-instructions-repair",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-19T10:11:56+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/implement-1064-managed-local-instructions-repair.plan.json",
+      "sha256": "7325729350ab19c77cd8f212084d6ed478cd5e70d10f74dfe7dd404c83bde378",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan implement-1064-managed-local-instructions-repair",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-19T10:11:56+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "91cc26f208fa1c631348d9a3e8bd0ff15e36645ea3243f269ff02af7536ebde3",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan implement-1064-managed-local-instructions-repair",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-19T10:11:56+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "3bbdfd9f69a3011a05a38b3d28122c6cfc204fd38fac9e3534bf2ea067e12e4f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan implement-1064-managed-local-instructions-repair",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-19T10:12:08+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/implement-1064-managed-local-instructions-repair.plan.json",
+      "sha256": "dad9ab720c211e0eaeaada6d88d75aaf48d73d30efe040d0b9c86f08943921c4",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan implement-1064-managed-local-instructions-repair",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-19T10:12:08+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "3bbdfd9f69a3011a05a38b3d28122c6cfc204fd38fac9e3534bf2ea067e12e4f",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan implement-1064-managed-local-instructions-repair",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-19T10:12:08+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/implement-1064-managed-local-instructions-repair.plan.json",
+      "sha256": "dad9ab720c211e0eaeaada6d88d75aaf48d73d30efe040d0b9c86f08943921c4",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan implement-1064-managed-local-instructions-repair",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-19T10:12:08+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/mutation-provenance.json",
+      "sha256": "9f273f81313f34d912948375a08af255ebff8c1c55a19a041cf344b1ae218fef",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan implement-1064-managed-local-instructions-repair",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-19T10:12:08+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/implement-1064-managed-local-instructions-repair.plan.json",
+      "sha256": "d4a1e8cd100f9f34908b4cec57b0e3e3b2ad39ad05b4b4af736495039dc95d0c",
+      "command": "agentic-planning record-recovery",
+      "reason": "Corrected the source cli_commands contract placement for the #1064 flag after closeout review; regenerated command packages and reran focused lifecycle, contract tooling, and generated package checks.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-19T10:16:04+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/implement-1061-1062.plan.json",
+      "sha256": "577d42349aa4746866301b211da09e69899cfe0a9683790098c170ee547291b4",
+      "command": "agentic-planning record-recovery",
+      "reason": "Intentional archive compaction kept the #1061/#1062 closeout under structured-file inventory guardrails while preserving the closeout record.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-19T10:16:31+00:00"
     }
   ]
 }

@@ -4594,16 +4594,24 @@
                 "default": 900,
                 "help": "Maximum token age when --strict-preflight is enabled (default: 900)."
               },
-              {
-                "name": "dry_run",
-                "flags": [
-                  "--dry-run"
-                ],
-                "action": "store_true",
-                "help": "Show planned changes without mutating files."
-              }
-            ]
-          },
+            {
+              "name": "dry_run",
+              "flags": [
+                "--dry-run"
+              ],
+              "action": "store_true",
+              "help": "Show planned changes without mutating files."
+            },
+            {
+              "name": "repair_managed_local_instructions",
+              "flags": [
+                "--repair-managed-local-instructions"
+              ],
+              "action": "store_true",
+              "help": "Refresh only the workspace-managed .agentic-workspace local agent instructions file."
+            }
+          ]
+        },
           "operation_ref": {
             "id": "upgrade.lifecycle",
             "path": "operations/upgrade.lifecycle.json"
