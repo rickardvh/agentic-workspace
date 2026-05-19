@@ -1449,8 +1449,10 @@ def test_implement_allows_routine_pr_comment_repair_without_plan_scaffold(tmp_pa
     assert gate["status"] == "clear"
     assert gate["decision"] == "direct-work-allowed"
     assert gate["implementation_allowed"] is True
-    assert gate["repair_route"]["status"] == "direct-no-plan-ok"
-    assert gate["repair_route"]["routine_review_comment_repair"] is True
+    assert gate["repair_route"]["status"] == "not-applicable"
+    assert gate["work_shape_facts"]["hard_blockers"] == []
+    assert gate["work_shape_facts"]["agent_decision_required"] is True
+    assert gate["work_shape_facts"]["suggested_shape"] == "direct"
     assert gate["changed_path_classification"]["scope_growth_detected"] is False
     assert gate["changed_path_classification"]["ancillary_paths"] == [".agentic-workspace/memory/repo/current/routing-feedback.md"]
     assert _start_workflow_sufficiency(payload)["decision"] == "enough-for-bounded-implementation"
@@ -1484,8 +1486,11 @@ def test_implement_allows_single_issue_followthrough_with_memory_feedback_note(t
     assert gate["status"] == "clear"
     assert gate["decision"] == "direct-work-allowed"
     assert gate["implementation_allowed"] is True
-    assert gate["repair_route"]["status"] == "direct-no-plan-ok"
-    assert gate["repair_route"]["single_issue_changed_path_followthrough"] is True
+    assert gate["repair_route"]["status"] == "not-applicable"
+    assert gate["work_shape_facts"]["hard_blockers"] == []
+    assert gate["work_shape_facts"]["agent_decision_required"] is True
+    assert gate["work_shape_facts"]["suggested_shape"] == "direct"
+    assert gate["work_shape_facts"]["scope_factors"]["issue_refs"] == ["#1058"]
     assert gate["changed_path_classification"]["ancillary_paths"] == [".agentic-workspace/memory/repo/current/routing-feedback.md"]
     assert _start_workflow_sufficiency(payload)["decision"] == "enough-for-bounded-implementation"
 

@@ -1,0 +1,327 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Implement #1059 work-shape facts",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement the #1059 first slice: expose structured work-shape facts and migrate #1058 soft routing away from authoritative keyword exceptions.",
+    "hard_constraints": "Keep code-owned gates limited to AW-owned hard facts and blockers; do not remove hard safety checks for scope growth, planning-plus-implementation, generated/source coupling, active planning, delegation, or parent decomposition.",
+    "agent_may_decide": "Choose the smallest helper shape, test boundaries, and skill wording needed to prove AW returns facts, blockers, proof cues, and stop conditions while the agent retains soft semantic judgment.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Refactor planning safety gate output around work-shape facts, update skill guidance, and validate workspace behavior.",
+    "proof_expectations": [
+      "uv run pytest tests/test_workspace_start_preflight_cli.py::test_implement_allows_routine_pr_comment_repair_without_plan_scaffold tests/test_workspace_start_preflight_cli.py::test_implement_allows_single_issue_followthrough_with_memory_feedback_note tests/test_workspace_start_preflight_cli.py::test_implement_flags_scope_growth_without_active_execplan tests/test_workspace_start_preflight_cli.py::test_implement_distinguishes_planning_recovery_from_mixed_wip -q",
+      "make test-workspace",
+      "make lint-workspace"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "tests/test_workspace_start_preflight_cli.py",
+      ".agentic-workspace/skills/workspace-work-shape/SKILL.md",
+      ".agentic-workspace/planning/execplans/implement-1059-work-shape-facts.plan.json"
+    ],
+    "completion_criteria": [
+      "Implement exposes structured work-shape facts with hard blockers, agent-decision-required soft cases, stop conditions, and proof cues; #1058 behavior remains covered without authoritative phrase-specific routing."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Implement the #1059 first slice: expose structured work-shape facts and migrate #1058 soft routing away from authoritative keyword exceptions."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Implement the #1059 first slice: expose structured work-shape facts and migrate #1058 soft routing away from authoritative keyword exceptions.",
+      "constraints": "Keep code-owned gates limited to AW-owned hard facts and blockers; preserve hard safety checks.",
+      "latitude": "Choose the smallest helper shape, test boundaries, and skill wording needed to prove AW returns facts, blockers, proof cues, and stop conditions.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "implement-1059-work-shape-facts",
+      "status": "active",
+      "next_step": "Refactor planning safety gate output around work-shape facts, update skill guidance, and validate workspace behavior.",
+      "proof": "Focused workspace pytest plus make test-workspace and make lint-workspace."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "tests/test_workspace_start_preflight_cli.py",
+        "tests/test_workspace_implement_cli.py",
+        ".agentic-workspace/skills/workspace-work-shape/SKILL.md",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/mutation-provenance.json",
+        ".agentic-workspace/planning/execplans/archive/implement-1059-work-shape-facts.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Replace keyword-heavy task routing with a work-shape skill and decision-helper path.",
+    "this slice completes the larger intended outcome": "yes; #1059 explicitly scoped the first PR to work-shape facts behind implement --changed and did not require removing every keyword classifier.",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "Open a new issue only if future soft routing cases still require phrase-specific exceptions instead of consuming work_shape_facts."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "AW implement output can expose hard blockers, scope facts, advisory work shape, stop conditions, and proof cues without making PR-comment or single-issue phrase matches authoritative.",
+    "intentionally deferred": "Broad removal of every remaining keyword classifier; #1059 explicitly said not to remove every classifier in the first PR.",
+    "discovered implications": "The closeout/archive command left scaffold residue that required manual residue scanning; routed to #1062.",
+    "proof achieved now": "Focused boundary pytest passed, make test-workspace passed, make lint-workspace passed, planning summary returned clean, and planning doctor reported healthy.",
+    "validation still needed": "None for this slice; future classifier cleanup should carry its own proof.",
+    "next likely slice": "No required #1059 slice remains; open a new follow-up only if future friction proves another classifier should be removed."
+  },
+  "intent_interpretation": {
+    "literal request": "Implement #1059 work-shape facts",
+    "inferred intended outcome": "Implement the #1059 first slice without trying to remove every keyword classifier in one PR.",
+    "chosen concrete what": "Add structured work-shape facts to implement/planning safety output and update #1058 tests to assert facts rather than authoritative keyword routing.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_start_preflight_cli.py; .agentic-workspace/skills/workspace-work-shape/SKILL.md; this execplan and command-owned planning closeout/provenance.",
+    "max changed files": "Six tracked files including planning closeout metadata.",
+    "required validation commands": "Focused pytest for work-shape boundaries; make test-workspace; make lint-workspace.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue #1059 first slice: structured work-shape facts, skill guidance, focused boundary tests, workspace proof.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement the #1059 first slice: expose structured work-shape facts and migrate #1058 soft routing away from authoritative keyword exceptions.",
+    "hard constraints": "Keep code-owned gates limited to AW-owned hard facts and blockers; preserve hard safety checks.",
+    "agent may decide locally": "Choose the smallest helper shape, test boundaries, and skill wording needed to prove AW returns facts, blockers, proof cues, and stop conditions.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "Bounded #1059 first-slice implementation already has a tight local write set, focused acceptance tests, and AW-selected proof commands; delegation would add coordination overhead without reducing proof burden.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-19T07:18:54+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "implement-1059-work-shape-facts",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to #1059 first slice.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Refactor planning safety gate output around work-shape facts, update skill guidance, and validate workspace behavior."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "tests/test_workspace_start_preflight_cli.py",
+    "tests/test_workspace_implement_cli.py",
+    ".agentic-workspace/skills/workspace-work-shape/SKILL.md",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/mutation-provenance.json",
+    ".agentic-workspace/planning/execplans/archive/implement-1059-work-shape-facts.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_start_preflight_cli.py::test_implement_allows_routine_pr_comment_repair_without_plan_scaffold tests/test_workspace_start_preflight_cli.py::test_implement_allows_single_issue_followthrough_with_memory_feedback_note tests/test_workspace_start_preflight_cli.py::test_implement_flags_scope_growth_without_active_execplan tests/test_workspace_start_preflight_cli.py::test_implement_distinguishes_planning_recovery_from_mixed_wip -q",
+    "make test-workspace",
+    "make lint-workspace"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Implement exposes structured work-shape facts with hard blockers, agent-decision-required soft cases, stop conditions, and proof cues; #1058 behavior remains covered without authoritative phrase-specific routing."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Implemented #1059 first-slice work-shape facts: removed PR-comment and single-issue phrase exceptions from planning safety, added structured work_shape_facts with hard blockers and advisory shape data, kept Memory routing feedback as an ancillary path rule, and updated the workspace-work-shape skill.",
+    "scope touched": "workspace runtime planning safety gate, implement/start-preflight tests, workspace-work-shape skill, command-owned planning closeout state",
+    "changed surfaces": "src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_start_preflight_cli.py; tests/test_workspace_implement_cli.py; .agentic-workspace/skills/workspace-work-shape/SKILL.md; .agentic-workspace/planning/execplans/implement-1059-work-shape-facts.plan.json; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/mutation-provenance.json",
+    "validations run": "uv run pytest tests/test_workspace_implement_cli.py::test_implement_tiny_profile_returns_next_decision_without_diagnostics -q; focused start-preflight boundary tests (4 passed); make test-workspace; make lint-workspace; uv run agentic-workspace summary --target . --verbose --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "result for continuation": "bounded closeout complete",
+    "next step": "archive this execplan"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Scope stayed within the #1059 first slice: hard blockers remain authoritative, soft work-shape judgment is exposed as facts for the agent, and prior routine PR-comment/single-issue direct routes are now covered by fact payload tests rather than phrase-specific gates.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "Bounded #1059 first-slice implementation already has a tight local write set, focused acceptance tests, and AW-selected proof commands; delegation would add coordination overhead without reducing proof burden.",
+    "expected savings": "unknown",
+    "actual friction": "No savings expected from delegation after the local write set and proof path were already identified; command-owned closeout residue was the only notable process friction.",
+    "proof result": "Focused and full workspace proof passed locally.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_workspace_implement_cli.py::test_implement_tiny_profile_returns_next_decision_without_diagnostics -q; focused start-preflight boundary tests (4 passed); make test-workspace; make lint-workspace; uv run agentic-workspace summary --target . --verbose --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "uv run pytest tests/test_workspace_implement_cli.py::test_implement_tiny_profile_returns_next_decision_without_diagnostics -q; focused start-preflight boundary tests (4 passed); make test-workspace; make lint-workspace; uv run agentic-workspace summary --target . --verbose --format json; uv run agentic-workspace doctor --target . --modules planning --format json"
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement the #1059 first slice: expose structured work-shape facts and migrate #1058 soft routing away from authoritative keyword exceptions.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Slice proof passed: focused regression tests, make test-workspace, make lint-workspace, planning summary, and planning doctor.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "AW implement output now reports work_shape_facts so agents can make soft routing decisions without expanding keyword special cases; #1059 acceptance is covered by focused regressions and the workspace proof suite.",
+    "validation confirmed": "uv run pytest tests/test_workspace_implement_cli.py::test_implement_tiny_profile_returns_next_decision_without_diagnostics -q; focused start-preflight boundary tests (4 passed); make test-workspace; make lint-workspace; uv run agentic-workspace summary --target . --verbose --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "follow-on routed to": "No required #1059 follow-up; dogfooding closeout-residue signal filed as #1062.",
+    "post-work posterity capture": "archive closeout distillation",
+    "knowledge promoted (memory/docs/config)": "none",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Soft routing should consume work_shape_facts before adding new phrase-specific exceptions; archive residue should be checked for placeholders before merge.",
+    "motivation worth preserving": "The slice deliberately moved soft judgment out of code-owned keyword gates while preserving hard blockers.",
+    "canonical owner now": "#1062 for closeout/archive residue cleanup; future classifier cleanup needs a new issue only if new friction appears.",
+    "promotion trigger": "Promote if future routing friction reintroduces phrase-specific exceptions or if archive closeout leaves scaffold fields again.",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "archive",
+    "proposed durable intent": "Closeout reviewed durable residue and found no live follow-up.",
+    "confidence": "low",
+    "needs review": "True",
+    "owner surface": "archive"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "#1059 explicitly suggested this first slice and said not to remove every keyword classifier in the first PR; the requested work-shape facts boundary is implemented and validated.",
+    "evidence carried forward": "work_shape_facts payload exposes hard blockers, observable scope factors, advisory shape, and agent-decision responsibility; phrase-specific PR-comment and single-issue gates were removed.",
+    "reopen trigger": "Reopen or promote follow-up if new soft routing cases require another phrase-specific exception instead of consuming work_shape_facts."
+  },
+  "improvement_signal_review": {
+    "status": "signals_routed",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [
+      "The command-owned closeout/archive path left scaffold-like pending/not_checked fields and contradictory larger-intent fields in the archived execplan."
+    ],
+    "signals fixed": [],
+    "signals routed": [
+      "Filed #1062 to make closeout/archive either normalize all scaffold residue before archiving or fail with exact fields and command-owned setters."
+    ],
+    "signals dismissed": [],
+    "next owner": "#1062"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-19: Scaffolded by agentic-planning new-plan.",
+    "2026-05-19: Recorded delegation decision route=keep-local."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Implement the #1059 first slice: expose structured work-shape facts and migrate #1058 soft routing away from authoritative keyword exceptions.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: uv run pytest tests/test_workspace_implement_cli.py::test_implement_tiny_profile_returns_next_decision_without_diagnostics -q; focused start-preflight boundary tests (4 passed); make test-workspace; make lint-workspace; uv run agentic-workspace summary --target . --verbose --format json; uv run agentic-workspace doctor --target . --modules planning --format json\nChanged surfaces: src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_start_preflight_cli.py; tests/test_workspace_implement_cli.py; .agentic-workspace/skills/workspace-work-shape/SKILL.md; .agentic-workspace/planning/execplans/archive/implement-1059-work-shape-facts.plan.json; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/mutation-provenance.json\nDurable residue: #1062 for closeout/archive residue cleanup\nMemory learning: none\nFollow-up: none required for #1059."
+  }
+}

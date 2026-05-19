@@ -10070,43 +10070,6 @@ def _is_narrow_repair_task(task_text: str | None) -> bool:
     )
 
 
-def _is_routine_review_comment_repair_task(task_text: str | None) -> bool:
-    normalized = " ".join((task_text or "").lower().split())
-    if not normalized:
-        return False
-    review_terms = (
-        "pr comment",
-        "pr review",
-        "pull request comment",
-        "pull request review",
-        "review comment",
-        "address the comment",
-        "address comment",
-        "review feedback",
-        "comment on the pr",
-        "comment on pr",
-        "routine pr-comment",
-        "routine pr comment",
-    )
-    repair_terms = (
-        "address",
-        "fix",
-        "repair",
-        "respond",
-        "resolve",
-        "review-comment",
-        "review comment",
-        "pr-comment",
-        "pr comment",
-    )
-    broad_terms = ("epic", "lane", "roadmap", "decompose", "multiple milestones", "all comments", "all review comments")
-    return (
-        any((term in normalized for term in review_terms))
-        and any((term in normalized for term in repair_terms))
-        and not any((term in normalized for term in broad_terms))
-    )
-
-
 def _completion_closeout_inspection_payload(*, target_root: Path, config: WorkspaceConfig, task_text: str | None) -> dict[str, Any]:
     command = _command_with_cli_invoke(
         command="agentic-workspace report --target ./repo --section closeout_trust --format json", cli_invoke=config.cli_invoke
@@ -10821,6 +10784,7 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
         "active_delegation_requirement",
         "active_parent_decomposition_requirement",
         "repair_route",
+        "work_shape_facts",
     ):
         if key in gate:
             compact[key] = gate[key]
@@ -12324,7 +12288,7 @@ def _planning_safety_path_classification(changed_paths: list[str]) -> dict[str, 
     }
 
 
-def _allow_routine_repair_memory_feedback_path(path_classification: dict[str, Any]) -> dict[str, Any]:
+def _allow_ancillary_memory_feedback_path(path_classification: dict[str, Any]) -> dict[str, Any]:
     implementation_paths = [str(path) for path in path_classification.get("implementation_paths", []) if isinstance(path, str) and path]
     memory_feedback_paths = [path for path in implementation_paths if path == ".agentic-workspace/memory/repo/current/routing-feedback.md"]
     if not memory_feedback_paths:
@@ -12340,9 +12304,63 @@ def _allow_routine_repair_memory_feedback_path(path_classification: dict[str, An
             "scope_growth_detected": False,
             "scope_growth_reasons": [],
             "ancillary_paths": memory_feedback_paths,
-            "ancillary_rule": "Routine PR review-comment repairs may carry the dedicated Memory routing-feedback note without forcing an execplan.",
+            "ancillary_rule": "The dedicated Memory routing-feedback note may accompany bounded work without making Memory the primary implementation surface.",
         }
     return path_classification
+
+
+def _work_shape_facts_payload(
+    *,
+    path_classification: dict[str, Any],
+    issue_refs: list[str],
+    work_shape: str,
+    proof_burden: str,
+    active_planning_present: bool,
+    status: str,
+    decision: str,
+    workflow_sufficient: bool,
+    required_next_action: str,
+) -> dict[str, Any]:
+    hard_blockers: list[str] = []
+    if not workflow_sufficient:
+        hard_blockers.append(decision)
+    suggested_shape = work_shape or "unknown"
+    implementation_paths = path_classification.get("implementation_paths", [])
+    if not hard_blockers:
+        if active_planning_present:
+            suggested_shape = "bounded"
+        elif implementation_paths and not path_classification.get("scope_growth_detected"):
+            suggested_shape = "direct"
+        elif path_classification.get("dirty_shape") == "planning-only":
+            suggested_shape = "direct"
+    confidence = "high" if hard_blockers else "medium"
+    return {
+        "hard_blockers": hard_blockers,
+        "scope_factors": {
+            "dirty_shape": path_classification.get("dirty_shape"),
+            "changed_roots": path_classification.get("surface_roots", []),
+            "surface_root_count": path_classification.get("surface_root_count", 0),
+            "scope_growth_detected": path_classification.get("scope_growth_detected", False),
+            "scope_growth_reasons": path_classification.get("scope_growth_reasons", []),
+            "ancillary_paths": path_classification.get("ancillary_paths", []),
+            "active_planning_present": active_planning_present,
+            "issue_refs": issue_refs,
+            "proof_burden": proof_burden or "unknown",
+        },
+        "suggested_shape": suggested_shape,
+        "confidence": confidence,
+        "agent_decision_required": workflow_sufficient,
+        "stop_conditions": [
+            "changed paths widen beyond the current bounded roots",
+            "proof expands beyond the selected proof route",
+            "parent issue or lane intent changes",
+        ],
+        "required_proof": ["run `agentic-workspace proof --changed <paths> --format json` and the selected commands"],
+        "status": status,
+        "decision": decision,
+        "required_next_action": required_next_action,
+        "rule": "AW reports hard blockers and work-shape facts; the agent owns soft semantic work-shape judgment when no hard blocker applies.",
+    }
 
 
 def _planning_safety_promotion_command(*, config: WorkspaceConfig, decomposition_delegation: dict[str, Any], task_text: str | None) -> str:
@@ -12518,18 +12536,10 @@ def _planning_safety_gate_payload(
     normalized_task = " ".join((task_text or "").lower().split())
     completion_status_question = _is_completion_status_task(task_text) and (not changed_paths)
     routine_issue_intake = _is_routine_issue_intake_task(task_text) and (not changed_paths)
-    routine_review_comment_repair = _is_routine_review_comment_repair_task(task_text)
-    single_issue_changed_path_followthrough = (
-        len(issue_refs) == 1
-        and bool(changed_paths)
-        and not _task_requests_roadmap_or_decomposition(task_text)
-        and not any((term in normalized_task for term in ("all issues", "multiple issues", "batch", "epic", "lane")))
-    )
-    if routine_review_comment_repair or single_issue_changed_path_followthrough:
-        path_classification = _allow_routine_repair_memory_feedback_path(path_classification)
-    narrow_repair_task = _is_narrow_repair_task(task_text) or routine_review_comment_repair or single_issue_changed_path_followthrough
+    path_classification = _allow_ancillary_memory_feedback_path(path_classification)
+    narrow_repair_task = _is_narrow_repair_task(task_text)
     roadmap_or_decomposition_requested = _task_requests_roadmap_or_decomposition(task_text)
-    high_assurance_requires_plan = proof_burden == "high" and not narrow_repair_task and not routine_issue_intake
+    high_assurance_requires_plan = proof_burden == "high" and not changed_paths and not narrow_repair_task and not routine_issue_intake
     external_implementation_without_changed_paths = (
         bool(issue_refs)
         and not changed_paths
@@ -12640,11 +12650,8 @@ def _planning_safety_gate_payload(
         "issue_refs": issue_refs,
         "repair_route": {
             "status": "direct-no-plan-ok" if narrow_repair_task and workflow_sufficient else "not-applicable",
-            "routine_review_comment_repair": routine_review_comment_repair,
-            "single_issue_changed_path_followthrough": single_issue_changed_path_followthrough,
             "fit_criteria": [
                 "CI, docs, schema-reference, proof, or tiny validation repair",
-                "routine PR review-comment response with bounded changed paths",
                 "one or two touched surfaces",
                 "no parent intent change",
                 "obvious proof command",
@@ -12652,6 +12659,17 @@ def _planning_safety_gate_payload(
             ],
             "rule": "Narrow repair work can stay direct when changed-path proof is obvious; create a normal execplan if scope grows or parent intent changes.",
         },
+        "work_shape_facts": _work_shape_facts_payload(
+            path_classification=path_classification,
+            issue_refs=issue_refs,
+            work_shape=work_shape or "unknown",
+            proof_burden=proof_burden or "unknown",
+            active_planning_present=active_planning_present,
+            status=status,
+            decision=decision,
+            workflow_sufficient=workflow_sufficient,
+            required_next_action=required_next_action,
+        ),
         "decomposition": {"status": decomposition_status or "unknown", "candidate_count": len(candidates), "candidates": candidates},
         "changed_path_classification": path_classification,
         "promotion_command": promotion_command,

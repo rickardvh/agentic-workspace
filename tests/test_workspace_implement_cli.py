@@ -130,7 +130,7 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     assert adaptive["read_budget"]["profile"] == "tiny"
     assert adaptive["detail_commands"]["task_scoped_state"].startswith("agentic-workspace summary --changed")
     assert "raw workspace files" in adaptive["not_needed_now"]
-    assert payload["next"]["action"] == "Create or promote an active execplan before continuing implementation."
+    assert payload["next"]["action"] == "Inspect only the listed files and run the required validation commands."
     assert payload["next"]["command"] == "make test-workspace"
     assert payload["next"]["run"] == payload["next"]["command"]
     assert "make lint-workspace" in payload["next"]["commands"]
