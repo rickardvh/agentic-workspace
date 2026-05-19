@@ -491,6 +491,64 @@ candidates = []
     assert not record_path.exists()
 
 
+def test_archive_plan_prepare_closeout_normalizes_scaffold_residue_in_retained_archive(tmp_path: Path, capsys) -> None:
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "plan-alpha", status = "completed", surface = ".agentic-workspace/planning/execplans/plan-alpha.plan.json" },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="completed")
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    record["execution_summary"]["validation confirmed"] = "pytest"
+    record["execution_summary"]["outcome delivered"] = "Implemented the bounded slice."
+    record.pop("intent_satisfaction")
+    record.pop("closure_check")
+    record.pop("closeout_distillation", None)
+    installer_mod._write_execplan_record(record_path=record_path, record=record)
+
+    assert (
+        planning_cli.main(
+            [
+                "archive-plan",
+                "plan-alpha",
+                "--target",
+                str(tmp_path),
+                "--prepare-closeout",
+                "--apply-cleanup",
+                "--retain-archive",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    archived_record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json"
+    archived = json.loads(archived_record_path.read_text(encoding="utf-8"))
+
+    assert payload["warnings"] == []
+    assert archived["canonical_core"]["closeout_decision"] == "archive-and-close"
+    assert archived["canonical_core"]["continuation_owner"] == "none"
+    assert archived["iterative_follow_through"]["proof achieved now"] != "pending"
+    assert archived["iterative_follow_through"]["validation still needed"].lower() != "pending"
+    assert archived["delegation_outcome_feedback"]["actual friction"] == "none recorded"
+    assert archived["delegation_outcome_feedback"]["proof result"] != "pending"
+    assert archived["improvement_signal_review"]["status"] == "no_signal_found"
+    assert archived["improvement_signal_review"]["next owner"] == "none"
+    assert "Intent satisfied: yes" in archived["generated_closeout"]["text"]
+    assert "Archive decision: archive-and-close" in archived["generated_closeout"]["text"]
+
+
 def test_archive_plan_prepare_closeout_handles_open_parent_lane(tmp_path: Path, capsys) -> None:
     _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
@@ -913,6 +971,8 @@ def test_planning_closeout_records_explicit_proof_and_issue_residue(tmp_path: Pa
     assert archived["proof_report"]["validation proof"] == "uv run pytest packages/planning/tests/test_archive.py -q"
     assert archived["durable_residue"]["status"] == "planning"
     assert archived["durable_residue"]["canonical owner now"] == "GitHub #1021"
+    assert archived["improvement_signal_review"]["status"] == "signals_routed"
+    assert archived["improvement_signal_review"]["signals routed"][0]["owner"] == "GitHub #1021"
 
 
 def test_archive_plan_parent_lane_closeout_creates_schema_valid_record_without_active_plan(tmp_path: Path, capsys) -> None:

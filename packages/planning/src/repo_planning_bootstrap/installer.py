@@ -9980,6 +9980,130 @@ def _prepared_task_intent_promotion(record: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _closeout_value_needs_normalization(value: Any) -> bool:
+    if not isinstance(value, str):
+        return value is None
+    return value.strip().lower() in {"", "pending", "not_checked", "not-run-yet", "not run yet", "todo", "tbd"}
+
+
+def _prepared_canonical_core_closeout(*, record: dict[str, Any], normalized_closure: str, routed_unsolved_intent: str) -> dict[str, Any]:
+    canonical_core = dict(_record_section_dict(record, "canonical_core") or {})
+    canonical_core["closeout_decision"] = normalized_closure
+    canonical_core["continuation_owner"] = routed_unsolved_intent if normalized_closure == "archive-but-keep-lane-open" else "none"
+    return canonical_core
+
+
+def _prepared_iterative_follow_through(
+    *,
+    record: dict[str, Any],
+    proof_now: str,
+    validation_evidence: str,
+    outcome_delivered: str,
+    normalized_closure: str,
+    routed_unsolved_intent: str,
+) -> dict[str, str]:
+    existing = _record_section_dict(record, "iterative_follow_through") or {}
+    prepared = dict(existing)
+    if _closeout_value_needs_normalization(prepared.get("what this slice enabled")):
+        prepared["what this slice enabled"] = outcome_delivered or "The bounded slice completed with recorded closeout evidence."
+    if _closeout_value_needs_normalization(prepared.get("proof achieved now")):
+        prepared["proof achieved now"] = proof_now or validation_evidence or "validation evidence is recorded in proof_report."
+    if _closeout_value_needs_normalization(prepared.get("validation still needed")):
+        prepared["validation still needed"] = "None for this archived slice; reopen only if new evidence invalidates the proof."
+    if _closeout_value_needs_normalization(prepared.get("next likely slice")):
+        prepared["next likely slice"] = (
+            f"Continue via {routed_unsolved_intent}."
+            if normalized_closure == "archive-but-keep-lane-open"
+            else "No required continuation remains for this archived slice."
+        )
+    if _closeout_value_needs_normalization(prepared.get("intentionally deferred")):
+        prepared["intentionally deferred"] = (
+            f"Remaining larger intent is routed to {routed_unsolved_intent}."
+            if normalized_closure == "archive-but-keep-lane-open"
+            else "None."
+        )
+    if _closeout_value_needs_normalization(prepared.get("discovered implications")):
+        prepared["discovered implications"] = "None beyond the recorded closeout distillation."
+    return prepared
+
+
+def _prepared_delegation_outcome_feedback(*, record: dict[str, Any], proof_now: str, normalized_closure: str) -> dict[str, str]:
+    existing = _record_section_dict(record, "delegation_outcome_feedback") or {}
+    prepared = dict(existing)
+    defaults = {
+        "route chosen": "not-delegated",
+        "route skipped reason": "No delegation route was recorded; prepare-closeout normalized archive-only residue.",
+        "expected savings": "none recorded",
+        "actual friction": "none recorded",
+        "proof result": proof_now or "closeout proof recorded",
+        "quality concern": "none recorded",
+        "decomposition adjustment": "none",
+    }
+    if normalized_closure == "archive-but-keep-lane-open":
+        defaults["decomposition adjustment"] = "larger intent remains routed through the continuation owner"
+    for key, fallback in defaults.items():
+        if _closeout_value_needs_normalization(prepared.get(key)):
+            prepared[key] = fallback
+    return prepared
+
+
+def _prepared_improvement_signal_review(record: dict[str, Any]) -> dict[str, Any]:
+    existing = _record_section_value(record, "improvement_signal_review") or {}
+    if not isinstance(existing, dict):
+        existing = {}
+    prepared = dict(existing)
+    durable_residue = _prepared_durable_residue(record)
+    durable_owner = durable_residue.get("canonical owner now", "").strip()
+    durable_learned = durable_residue.get("learned constraint", "").strip()
+    durable_motivation = durable_residue.get("motivation worth preserving", "").strip()
+    issue_routed_signal = (
+        durable_residue.get("status", "").strip().lower() == "planning"
+        and durable_owner
+        and (
+            durable_owner.lower().startswith("github #")
+            or durable_owner.lower() == "issue follow-up"
+            or "issue residue" in durable_learned.lower()
+        )
+    )
+    prepared.setdefault("accepted statuses", "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found")
+    prepared.setdefault(
+        "guidance",
+        (
+            "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, "
+            "and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly "
+            "split, or mark no_signal_found after checking."
+        ),
+    )
+    prepared.setdefault("source", "operating_posture")
+    prepared.setdefault("owner classes", ["issue", "Memory", "Planning", "docs/checks/contracts", "direct fix", "dismissed with reason"])
+    prepared.setdefault("ordinary output cap", 3)
+    for key in ("signals found", "signals fixed", "signals routed", "signals dismissed"):
+        value = prepared.get(key)
+        prepared[key] = value if isinstance(value, list) else []
+    if issue_routed_signal:
+        signal = {
+            "summary": durable_learned or durable_motivation or f"Closeout routed issue residue to {durable_owner}.",
+            "owner": durable_owner,
+            "source": "durable_residue",
+        }
+        if not any(isinstance(item, dict) and item.get("owner") == durable_owner for item in prepared["signals routed"]):
+            prepared["signals routed"].append(signal)
+        if not any(isinstance(item, dict) and item.get("owner") == durable_owner for item in prepared["signals found"]):
+            prepared["signals found"].append(signal)
+    if _closeout_value_needs_normalization(prepared.get("status")):
+        if prepared["signals fixed"]:
+            prepared["status"] = "signals_fixed"
+        elif prepared["signals routed"]:
+            prepared["status"] = "signals_routed"
+        elif prepared["signals dismissed"]:
+            prepared["status"] = "signals_dismissed"
+        else:
+            prepared["status"] = "no_signal_found"
+    if _closeout_value_needs_normalization(prepared.get("next owner")):
+        prepared["next owner"] = "none" if prepared["status"] == "no_signal_found" else "see routed signal owner"
+    return prepared
+
+
 def _closeout_larger_intent_is_unresolved(
     *,
     completes_larger_outcome: str,
@@ -10277,6 +10401,28 @@ def _prepare_execplan_closeout(
     )
     if prepared_proof_report:
         patch["proof_report"] = prepared_proof_report
+    normalized_proof_report = prepared_proof_report or proof_report
+    proof_now = normalized_proof_report.get("proof achieved now", "").strip()
+    validation_evidence = normalized_proof_report.get("validation proof", "").strip()
+    patch["canonical_core"] = _prepared_canonical_core_closeout(
+        record=record,
+        normalized_closure=normalized_closure,
+        routed_unsolved_intent=routed_unsolved_intent,
+    )
+    patch["iterative_follow_through"] = _prepared_iterative_follow_through(
+        record=record,
+        proof_now=proof_now,
+        validation_evidence=validation_evidence,
+        outcome_delivered=str(execution_summary.get("outcome delivered", "")).strip(),
+        normalized_closure=normalized_closure,
+        routed_unsolved_intent=routed_unsolved_intent,
+    )
+    patch["delegation_outcome_feedback"] = _prepared_delegation_outcome_feedback(
+        record=record,
+        proof_now=proof_now,
+        normalized_closure=normalized_closure,
+    )
+    patch["improvement_signal_review"] = _prepared_improvement_signal_review(record)
 
     buckets = _closeout_distillation_buckets(record=record, explicit={})
     for bucket in ("discard", "continuation", "memory", "config_check", "docs", "issue_follow_up"):

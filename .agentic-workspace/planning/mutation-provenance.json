@@ -2088,6 +2088,94 @@
       "reason": "close out execplan address-pr-1057-review",
       "mode": "cli-mutation",
       "recorded_at": "2026-05-18T20:41:56+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/implement-1061-1062.plan.json",
+      "sha256": "9bb37aac665988b5962efad13c0f6f812f1e3328d0a1dec9491dac313fed0bf4",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold implement-1061-1062",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-19T07:30:25+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "781ced9fc5431ea0f20b3e722af9d393c653833ba8e6e55d0001b215f694a0a5",
+      "command": "agentic-planning new-plan",
+      "reason": "create execplan scaffold implement-1061-1062",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-19T07:30:25+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/implement-1061-1062.plan.json",
+      "sha256": "65e06f838f420cb9faf2fba0fb7e0ffc9c551d18b1402e4f243c13c531301f63",
+      "command": "agentic-planning delegation-decision",
+      "reason": "record delegation decision route=keep-local",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-19T07:38:06+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/implement-1061-1062.plan.json",
+      "sha256": "3fa67125e90e611ab47000bf9fd3bb7beb0cf45bd73e49569e7d2062525427e2",
+      "command": "agentic-planning record-recovery",
+      "reason": "Aligned active execplan compatibility projections with canonical_core after summary reported projection drift during closeout preparation.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-19T07:43:52+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "3bbdfd9f69a3011a05a38b3d28122c6cfc204fd38fac9e3534bf2ea067e12e4f",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan implement-1061-1062",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-19T07:45:51+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/implement-1061-1062.plan.json",
+      "sha256": "28a91539aed3d026d143531ac56d616ac10e2d3217cf648d9180925d99ddba96",
+      "command": "agentic-planning archive-plan",
+      "reason": "archive execplan implement-1061-1062",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-19T07:45:51+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "sha256": "3bbdfd9f69a3011a05a38b3d28122c6cfc204fd38fac9e3534bf2ea067e12e4f",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan implement-1061-1062",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-19T07:45:51+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/implement-1061-1062.plan.json",
+      "sha256": "28a91539aed3d026d143531ac56d616ac10e2d3217cf648d9180925d99ddba96",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan implement-1061-1062",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-19T07:45:51+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/mutation-provenance.json",
+      "sha256": "6a201bdbd57eb7b1d13150bfbb31ac1f61f35ba2d6cce3bff0f6546b2dfc4cb1",
+      "command": "agentic-planning closeout",
+      "reason": "close out execplan implement-1061-1062",
+      "mode": "cli-mutation",
+      "recorded_at": "2026-05-19T07:45:51+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/implement-1061-1062.plan.json",
+      "sha256": "8edff5d1008f2e918adb62d95c23583511f59933e9980e7d0bae8602d0419d44",
+      "command": "agentic-planning record-recovery",
+      "reason": "Corrected archived improvement_signal_review to reflect dogfooding issue #1064 after closeout normalized issue-routed residue to no_signal_found.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-19T07:47:35+00:00"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans/archive/implement-1061-1062.plan.json",
+      "sha256": "97c07d6ee8faccd6140daa8d6769a8cca839dfb0a02e05e2114f1358d7aaf9a0",
+      "command": "agentic-planning record-recovery",
+      "reason": "Removed stale pending validation wording from the archived closeout after final proof passed.",
+      "mode": "manual-recovery",
+      "recorded_at": "2026-05-19T07:49:38+00:00"
     }
   ]
 }

@@ -2900,6 +2900,92 @@ def _local_agent_indirection_is_current(*, target_root: Path, agents_relative: P
     return workspace_pointer_block(cli_invoke=cli_invoke) in local_agents_path.read_text(encoding="utf-8")
 
 
+def _workspace_managed_agent_instructions_path(config: WorkspaceConfig) -> Path:
+    return Path(".agentic-workspace") / Path(config.agent_instructions_file)
+
+
+def _workspace_managed_agent_instructions_text(*, config: WorkspaceConfig) -> str:
+    cli = config.cli_invoke
+    return "\n".join(
+        [
+            "# Agent Instructions for .agentic-workspace",
+            "",
+            "Authority marker:",
+            "",
+            "- authority: workspace-managed-local-adapter",
+            f"- canonical_source: `.agentic-workspace/config.toml` and `{cli} start --target . --format json`",
+            "- safe_to_edit: false",
+            f"- refresh_command: `{cli} init --target . --format json` or `{cli} upgrade --target . --format json`",
+            "",
+            "This directory contains Agentic Workspace managed workflow, planning, memory, ownership, and state surfaces.",
+            "",
+            "Before editing inside `.agentic-workspace/`:",
+            "",
+            f'- Use `{cli} start --target . --task "<task>" --format json` for routing.',
+            (
+                f"- Use `{cli} summary --target . --format json`, "
+                f'`{cli} implement --changed <paths> --task "<task>" --format json`, and '
+                f"`{cli} proof --changed <paths> --format json` before opening broad raw state."
+            ),
+            f"- Use `{cli} planning ...` and `{cli} memory ...` commands for structured Planning and Memory mutations when a command exists.",
+            "- Do not hand-edit structured state such as Planning execplans, Planning state, Memory indexes, ownership ledgers, or config when a package CLI command exists.",
+            (
+                "- Raw structured edits are only fallback or repair work; after any fallback edit, run "
+                f"`{cli} summary --target . --format json` and "
+                f"`{cli} doctor --target . --modules planning,memory --format json` as applicable."
+            ),
+            "- If a needed managed-state mutation has no command, route or file an improvement issue for a command-owned path instead of making manual edits routine.",
+            "",
+        ]
+    )
+
+
+def _sync_workspace_managed_agent_instructions(
+    *, target_root: Path, config: WorkspaceConfig, dry_run: bool, apply: bool
+) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+    relative = _workspace_managed_agent_instructions_path(config)
+    path = target_root / relative
+    rendered = _workspace_managed_agent_instructions_text(config=config)
+    existing = path.read_text(encoding="utf-8") if path.exists() else None
+    if existing == rendered:
+        return (
+            [
+                {
+                    "kind": "current",
+                    "path": relative.as_posix(),
+                    "detail": "managed .agentic-workspace local instructions already current",
+                }
+            ],
+            [],
+        )
+    if apply:
+        if not dry_run:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(rendered, encoding="utf-8")
+        return (
+            [
+                {
+                    "kind": _write_action_kind(dry_run=dry_run, existing=existing),
+                    "path": relative.as_posix(),
+                    "detail": "refresh managed .agentic-workspace local instructions for command-owned state edits",
+                }
+            ],
+            [],
+        )
+    action = {
+        "kind": "missing" if existing is None else "warning",
+        "path": relative.as_posix(),
+        "detail": "managed .agentic-workspace local instructions missing"
+        if existing is None
+        else "managed .agentic-workspace local instructions stale",
+    }
+    warning = {
+        "path": relative.as_posix(),
+        "message": action["detail"],
+    }
+    return ([action], [warning])
+
+
 def _workspace_status_report(
     *, target_root: Path, selected_modules: list[str], descriptors: dict[str, ModuleDescriptor], command_name: str, config: WorkspaceConfig
 ) -> dict[str, Any]:
@@ -2918,6 +3004,11 @@ def _workspace_status_report(
         )
         if not exists:
             warnings.append({"path": relative.as_posix(), "message": "required workspace file missing"})
+    local_actions, local_warnings = _sync_workspace_managed_agent_instructions(
+        target_root=target_root, config=config, dry_run=False, apply=False
+    )
+    actions.extend(local_actions)
+    warnings.extend(local_warnings)
     scratch_path = target_root / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH
     actions.append(
         {
@@ -3428,6 +3519,14 @@ def _workspace_init_or_upgrade_report(
                 "detail": "refresh workspace shared-layer file from package payload",
             }
         )
+    local_agent_actions, local_agent_warnings = _sync_workspace_managed_agent_instructions(
+        target_root=target_root,
+        config=config,
+        dry_run=dry_run,
+        apply=command_name in {"init", "upgrade"},
+    )
+    actions.extend(local_agent_actions)
+    warnings.extend(local_agent_warnings)
     agents_relative = Path(config.agent_instructions_file)
     agents_path = target_root / agents_relative
     rendered_agents = _workspace_agents_template(

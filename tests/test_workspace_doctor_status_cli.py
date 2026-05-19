@@ -267,6 +267,13 @@ def test_doctor_json_exposes_standardised_summary_fields(monkeypatch, tmp_path: 
         f"# Agent Instructions\n\n{cli.WORKSPACE_POINTER_BLOCK}\n\nLocal repo instructions.\n",
         encoding="utf-8",
     )
+    _write(
+        (tmp_path / ".agentic-workspace" / "AGENTS.md"),
+        cli._workspace_managed_agent_instructions_text(
+            config=cli.config_lib.load_workspace_config(target_root=tmp_path, valid_presets={"full", "planning", "memory"})
+        ),
+        encoding="utf-8",
+    )
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
 
     assert cli.main(["doctor", "--verbose", "--modules", "planning,memory", "--target", str(tmp_path), "--format", "json"]) == 0

@@ -2001,6 +2001,45 @@ def test_start_routine_issue_intake_uses_skill_without_execplan(tmp_path: Path, 
     assert "planning-intake-upstream-task" in skill_ids
 
 
+def test_init_creates_managed_workspace_local_agent_instructions(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["init", "--target", str(target), "--preset", "full", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    local_agents = target / ".agentic-workspace" / "AGENTS.md"
+    text = local_agents.read_text(encoding="utf-8")
+    assert ".agentic-workspace/AGENTS.md" in payload["created"]
+    assert "Do not hand-edit structured state" in text
+    assert "Use `agentic-workspace planning ...` and `agentic-workspace memory ...` commands" in text
+    assert "route or file an improvement issue" in text
+
+    assert cli.main(["doctor", "--target", str(target), "--modules", "planning", "--format", "json"]) == 0
+    doctor_payload = json.loads(capsys.readouterr().out)
+    assert doctor_payload["health"] == "healthy"
+    assert ".agentic-workspace/AGENTS.md" not in doctor_payload["warnings"]
+
+
+def test_init_uses_configured_workspace_local_agent_instructions_filename(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        'schema_version = 1\n\n[workspace]\nagent_instructions_file = "GEMINI.md"\n',
+    )
+
+    assert cli.main(["init", "--target", str(target), "--preset", "full", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert ".agentic-workspace/GEMINI.md" in payload["created"]
+    assert (target / ".agentic-workspace" / "GEMINI.md").is_file()
+    assert (target / "GEMINI.md").is_file()
+    assert "Do not hand-edit structured state" in (target / ".agentic-workspace" / "GEMINI.md").read_text(encoding="utf-8")
+
+
 def test_start_narrow_ci_repair_stays_direct_without_execplan(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
