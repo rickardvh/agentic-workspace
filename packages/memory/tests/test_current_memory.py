@@ -279,6 +279,31 @@ def test_current_view_json_shape(tmp_path: Path) -> None:
     assert data["notes"][0]["path"] == ".agentic-workspace/memory/repo/current/project-state.md"
 
 
+def test_generated_current_show_json_uses_declarative_payload_view(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    note_path = target / ".agentic-workspace" / "memory" / "repo" / "current" / "project-state.md"
+    note_path.write_text("# Project State\n\nShort status.\n", encoding="utf-8")
+
+    def fail_current_loader(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError("current show JSON should not use the package current loader")
+
+    monkeypatch.setattr(runtime_primitives, "_load_memory_current", fail_current_loader)
+
+    assert cli.main(["current", "show", "--target", str(target), "--format", "json"]) == 0
+
+    data = json.loads(capsys.readouterr().out)
+    assert data["notes"][0] == {
+        "path": ".agentic-workspace/memory/repo/current/project-state.md",
+        "exists": True,
+        "content": "# Project State\n\nShort status.\n",
+    }
+    assert data["notes"][1]["exists"] is False
+    assert data["notes"][2]["path"] == ".agentic-workspace/memory/repo/current/routing-feedback.md"
+
+
 def test_current_note_size_pressure_is_classified_as_current_memory_review() -> None:
     assert (
         _infer_action_category(

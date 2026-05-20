@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/primitives/payload_current_memory.input.schema.json",
+  "title": "payload.current-memory input",
+  "type": "object",
+  "required": [
+    "policy_root",
+    "policy_path",
+    "target_root_value"
+  ],
+  "properties": {
+    "policy_root": {
+      "type": "string",
+      "minLength": 1
+    },
+    "policy_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target_root_value": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "additionalProperties": true
+}

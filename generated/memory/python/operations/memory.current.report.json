@@ -14,7 +14,7 @@
   },
   "guards": [
     "Keep current show/check read-only.",
-    "Generated code owns parser/help/dispatch shape; memory-owned current-memory inspection remains behind the declared primitive."
+    "Generated code owns parser/help/dispatch shape and current show JSON; memory-owned current-memory review heuristics remain behind the declared primitive for current check and text output."
   ],
   "id": "memory.current.report",
   "inputs": [
@@ -38,6 +38,31 @@
     "status": "representative",
     "steps": [
       {
+        "arguments": {
+          "must_be_dir": true,
+          "must_exist": true
+        },
+        "description": "Resolve the target root for target-local current-memory view checks.",
+        "id": "resolve_target_root",
+        "on_error": "fail",
+        "outputs": [
+          "target_root"
+        ],
+        "uses": "path.target_root.resolve",
+        "when": {
+          "all": [
+            {
+              "equals": "json",
+              "value": "format"
+            },
+            {
+              "equals": "show",
+              "value": "current_command"
+            }
+          ]
+        }
+      },
+      {
         "arguments": {},
         "description": "Load legacy current-memory show or check result based on the current subcommand.",
         "id": "load_current",
@@ -45,7 +70,47 @@
         "outputs": [
           "result"
         ],
-        "uses": "memory.current.load"
+        "uses": "memory.current.load",
+        "when": {
+          "not": {
+            "all": [
+              {
+                "equals": "json",
+                "value": "format"
+              },
+              {
+                "equals": "show",
+                "value": "current_command"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "arguments": {
+          "policy_path": "payload_verification.memory.json",
+          "policy_root": "memory.contracts",
+          "target_root_value": "target_root"
+        },
+        "description": "Assemble current show JSON from declared target-local current-memory note files.",
+        "id": "assemble_current_view",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "payload.current-memory",
+        "when": {
+          "all": [
+            {
+              "equals": "json",
+              "value": "format"
+            },
+            {
+              "equals": "show",
+              "value": "current_command"
+            }
+          ]
+        }
       },
       {
         "arguments": {},
@@ -58,7 +123,7 @@
         "uses": "output.emit"
       }
     ],
-    "summary": "Memory current show/check executes generated operation IR through codegen-owned primitive dataflow while the memory module owns current-note inspection policy."
+    "summary": "Memory current show JSON executes generated operation IR through codegen-owned portable primitives. Current check and text output keep using the explicit package-domain source runtime."
   },
   "locality": {
     "network": "forbidden",
@@ -82,9 +147,19 @@
   "schema_version": "agentic-workspace/operation/v1",
   "steps": [
     {
+      "description": "Resolve the target root for target-local current-memory view checks.",
+      "id": "resolve_target_root",
+      "uses": "path.target_root.resolve"
+    },
+    {
       "description": "Load legacy current-memory show or check result based on the current subcommand.",
       "id": "load_current",
       "uses": "memory.current.load"
+    },
+    {
+      "description": "Assemble current show JSON from declared target-local current-memory note files.",
+      "id": "assemble_current_view",
+      "uses": "payload.current-memory"
     },
     {
       "description": "Emit legacy current-memory output in the requested format.",
@@ -92,6 +167,6 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Inspect or check legacy current-memory migration residue through the memory module CLI.",
+  "summary": "Inspect or check legacy current-memory migration residue through the memory module CLI; current show JSON is assembled from declared target-local files while text/check behavior remains package-domain.",
   "writes": []
 }

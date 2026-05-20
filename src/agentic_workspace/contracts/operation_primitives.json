@@ -92,6 +92,7 @@
           "json.parse",
           "toml.table.counts",
           "payload.assemble",
+          "payload.current-memory",
           "payload.lifecycle-plan",
           "payload.status",
           "payload.verify",
@@ -619,6 +620,16 @@
       "semantics": "Read a schema-backed package payload policy and produce safe dry-run action records for missing or existing managed payload files without applying repository mutations.",
       "input_schema_ref": "schemas/primitives/payload_lifecycle_plan.input.schema.json",
       "output_schema_ref": "schemas/primitives/payload_lifecycle_plan.output.schema.json",
+      "taxonomy_tier": "tier-1-portable-codegen"
+    },
+    {
+      "id": "payload.current-memory",
+      "summary": "Assemble a current-memory view from declarative package payload policy.",
+      "kind": "output",
+      "portability": "target-executor",
+      "semantics": "Read a schema-backed package payload policy and produce the ordered current-memory note view for a target root by reading only declared target-local note files.",
+      "input_schema_ref": "schemas/primitives/payload_current_memory.input.schema.json",
+      "output_schema_ref": "schemas/primitives/payload_current_memory.output.schema.json",
       "taxonomy_tier": "tier-1-portable-codegen"
     },
     {

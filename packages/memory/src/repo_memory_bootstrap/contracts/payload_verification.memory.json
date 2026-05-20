@@ -79,6 +79,11 @@
   ],
   "current_memory": {
     "prefix": ".agentic-workspace/memory/repo/current/",
+    "view_files": [
+      ".agentic-workspace/memory/repo/current/project-state.md",
+      ".agentic-workspace/memory/repo/current/task-context.md",
+      ".agentic-workspace/memory/repo/current/routing-feedback.md"
+    ],
     "required": [],
     "optional": [
       ".agentic-workspace/memory/repo/current/routing-feedback.md"

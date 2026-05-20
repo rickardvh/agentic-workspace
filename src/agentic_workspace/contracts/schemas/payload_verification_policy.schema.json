@@ -143,6 +143,7 @@
       "type": "object",
       "required": [
         "prefix",
+        "view_files",
         "required",
         "optional"
       ],
@@ -151,6 +152,10 @@
         "prefix": {
           "description": "Path prefix under which current-memory files are installed.",
           "$ref": "#/$defs/relative_path"
+        },
+        "view_files": {
+          "description": "Current-memory files shown by the compact current-memory view, in display order.",
+          "$ref": "#/$defs/path_list"
         },
         "required": {
           "description": "Current-memory files that must be present.",

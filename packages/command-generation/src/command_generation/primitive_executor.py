@@ -87,6 +87,8 @@ def execute_primitive(
         return _payload_status(values=values, arguments=arguments, context=context)
     if primitive == "payload.lifecycle-plan":
         return _payload_lifecycle_plan(values=values, arguments=arguments, context=context)
+    if primitive == "payload.current-memory":
+        return _payload_current_memory(values=values, arguments=arguments, context=context)
     if primitive == "payload.verify":
         return _verify_payload(values=values, arguments=arguments, context=context)
     if primitive == "output.emit":
@@ -507,6 +509,40 @@ def _payload_lifecycle_plan(*, values: dict[str, Any], arguments: dict[str, Any]
         "detected_version": detected_version,
         "bootstrap_version": bootstrap_version,
         "actions": actions,
+    }
+
+
+def _payload_current_memory(*, values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> dict[str, Any]:
+    policy_root = context.root(str(arguments.get("policy_root", "")))
+    policy_path = _resolve_inside(policy_root, str(arguments.get("policy_path", "")))
+    try:
+        policy = json.loads(policy_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise PrimitiveExecutionError(f"payload.current-memory cannot load policy: {policy_path}") from exc
+    target_root = Path(str(values.get(str(arguments.get("target_root_value", "target_root")), context.cwd))).resolve()
+    bootstrap_version = int(policy.get("bootstrap_version", 0))
+    version_path = str(policy.get("version_path", ""))
+    legacy_version_path = str(policy.get("legacy_version_path", ""))
+    current_memory = policy.get("current_memory", {})
+    if not isinstance(current_memory, dict):
+        raise PrimitiveExecutionError("payload.current-memory current_memory policy must be an object")
+    note_paths = _string_list(current_memory.get("view_files", []), source="payload.current-memory current_memory.view_files")
+    notes: list[dict[str, Any]] = []
+    for relative_path in note_paths:
+        note_path = target_root / relative_path
+        exists = note_path.exists()
+        notes.append(
+            {
+                "path": relative_path,
+                "exists": exists,
+                "content": note_path.read_text(encoding="utf-8") if exists else "",
+            }
+        )
+    return {
+        "target_root": str(target_root),
+        "detected_version": _read_first_version(target_root, [version_path, legacy_version_path]),
+        "bootstrap_version": bootstrap_version,
+        "notes": notes,
     }
 
 

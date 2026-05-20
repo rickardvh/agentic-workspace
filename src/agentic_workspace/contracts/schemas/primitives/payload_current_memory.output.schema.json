@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/primitives/payload_current_memory.output.schema.json",
+  "title": "payload.current-memory output",
+  "type": "object",
+  "required": [
+    "payload"
+  ],
+  "properties": {
+    "payload": {
+      "type": "object",
+      "required": [
+        "target_root",
+        "bootstrap_version",
+        "notes"
+      ],
+      "properties": {
+        "target_root": {
+          "type": "string"
+        },
+        "detected_version": {
+          "type": [
+            "string",
+            "integer",
+            "null"
+          ]
+        },
+        "bootstrap_version": {
+          "type": [
+            "string",
+            "integer",
+            "null"
+          ]
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "path",
+              "exists",
+              "content"
+            ],
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "exists": {
+                "type": "boolean"
+              },
+              "content": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}
