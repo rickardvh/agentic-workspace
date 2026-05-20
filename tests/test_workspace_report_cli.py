@@ -2095,7 +2095,8 @@ def test_external_intent_refresh_github_writes_provider_agnostic_evidence(tmp_pa
     assert refreshed["refresh_metadata"]["repository"] == "acme/project"
     assert refreshed["refresh_metadata"]["state"] == "all"
     assert refreshed["refresh_metadata"]["limit"] == 1000
-    assert "previous_items" not in refreshed
+    assert refreshed["previous_items"][0]["id"] == "#1"
+    assert refreshed["previous_items"][0]["title"] == "Previous"
     assert refreshed["items"][0]["id"] == "#1"
     assert refreshed["items"][0]["kind"] == "slice"
     assert refreshed["items"][0]["parent_id"] == "#10"
