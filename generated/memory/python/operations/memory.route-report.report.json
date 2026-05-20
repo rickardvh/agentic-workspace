@@ -49,16 +49,8 @@
         ],
         "uses": "path.target_root.resolve",
         "when": {
-          "all": [
-            {
-              "equals": "json",
-              "value": "format"
-            },
-            {
-              "equals": false,
-              "value": "verbose"
-            }
-          ]
+          "equals": false,
+          "value": "verbose"
         }
       },
       {
@@ -75,16 +67,8 @@
         ],
         "uses": "filesystem.exists",
         "when": {
-          "all": [
-            {
-              "equals": "json",
-              "value": "format"
-            },
-            {
-              "equals": false,
-              "value": "verbose"
-            }
-          ]
+          "equals": false,
+          "value": "verbose"
         }
       },
       {
@@ -100,16 +84,8 @@
         ],
         "uses": "filesystem.glob",
         "when": {
-          "all": [
-            {
-              "equals": "json",
-              "value": "format"
-            },
-            {
-              "equals": false,
-              "value": "verbose"
-            }
-          ]
+          "equals": false,
+          "value": "verbose"
         }
       },
       {
@@ -164,22 +140,14 @@
         ],
         "uses": "payload.assemble",
         "when": {
-          "all": [
-            {
-              "equals": "json",
-              "value": "format"
-            },
-            {
-              "equals": false,
-              "value": "verbose"
-            }
-          ]
+          "equals": false,
+          "value": "verbose"
         }
       },
       {
         "arguments": {},
-        "description": "Load the package-domain route report when verbose or text output is requested.",
-        "id": "load_verbose_or_text_route_report",
+        "description": "Load the package-domain route report when verbose output is requested.",
+        "id": "load_verbose_route_report",
         "on_error": "fail",
         "outputs": [
           "result"
@@ -187,16 +155,8 @@
         "uses": "memory.route_report.load",
         "when": {
           "not": {
-            "all": [
-              {
-                "equals": "json",
-                "value": "format"
-              },
-              {
-                "equals": false,
-                "value": "verbose"
-              }
-            ]
+            "equals": false,
+            "value": "verbose"
           }
         }
       },
@@ -211,7 +171,7 @@
         "uses": "output.emit"
       }
     ],
-    "summary": "Memory route-report non-verbose JSON executes generated operation IR through codegen-owned portable primitives. Verbose/text route-report behavior remains package-domain source runtime."
+    "summary": "Memory route-report non-verbose text/JSON executes generated operation IR through codegen-owned portable primitives. Verbose route-report behavior remains package-domain source runtime."
   },
   "locality": {
     "network": "forbidden",
@@ -259,8 +219,8 @@
       "uses": "payload.assemble"
     },
     {
-      "description": "Load the package-domain route report when verbose or text output is requested.",
-      "id": "load_verbose_or_text_route_report",
+      "description": "Load the package-domain route report when verbose output is requested.",
+      "id": "load_verbose_route_report",
       "uses": "memory.route_report.load"
     },
     {
@@ -269,6 +229,6 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Show a compact aggregate memory routing snapshot from checked-in feedback cases and fixtures; non-verbose JSON is assembled from portable target-file primitives while verbose/text behavior remains on the explicit source fallback.",
+  "summary": "Show a compact aggregate memory routing snapshot from checked-in feedback cases and fixtures; non-verbose text/JSON is assembled from portable target-file primitives while verbose behavior remains on the explicit source fallback.",
   "writes": []
 }

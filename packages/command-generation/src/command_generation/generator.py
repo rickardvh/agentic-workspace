@@ -1140,6 +1140,10 @@ def _python_local_runtime_generated_function(
             "    if str(values.get('format') or 'text') == 'json' and isinstance(result, dict):\n"
             "        print(json.dumps(_serialise_value(values['result']), indent=2))\n"
             "        return None\n"
+            "    if isinstance(result, dict) and isinstance(result.get('route_report_summary'), dict):\n"
+            "        from command_generation.primitive_executor import _emit_output\n\n"
+            "        print(_emit_output(values=values, arguments=arguments), end='')\n"
+            "        return None\n"
             f"    from {source_import_module} import {function} as source_function\n\n"
             "    return source_function(values, arguments, context)\n"
         )

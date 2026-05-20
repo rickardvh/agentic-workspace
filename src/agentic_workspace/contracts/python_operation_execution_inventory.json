@@ -556,8 +556,8 @@
       "operation_contract": "operations/memory.route-report.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
-        "memory.route_report.load verbose/text fallback",
-        "module-result text compatibility formatting"
+        "memory.route_report.load verbose fallback",
+        "module-result verbose compatibility formatting"
       ],
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "memory.route-report.process",
@@ -569,9 +569,9 @@
         "memory.route_report.load"
       ],
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps; portable primitives own the non-verbose JSON tiny route snapshot, while package-domain primitive fallback still owns verbose/text routing evaluation.",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps; portable primitives own the non-verbose text/JSON tiny route snapshot, while package-domain primitive fallback still owns verbose routing evaluation.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as package-specific-judgment for the remaining verbose/text fallback; generated operation IR now builds the non-verbose JSON tiny route snapshot from target-local files with path.target_root.resolve, filesystem.exists, filesystem.glob, and payload.assemble. The remaining memory.route_report.load fallback is still explicit package-domain debt for verbose/text behavior, not portable codegen completion."
+      "generic_behavior_audit": "Classified as package-specific-judgment for the remaining verbose fallback; generated operation IR now builds the non-verbose text/JSON tiny route snapshot from target-local files with path.target_root.resolve, filesystem.exists, filesystem.glob, payload.assemble, and output.emit. The remaining memory.route_report.load fallback is still explicit package-domain debt for verbose behavior, not portable codegen completion."
     },
     {
       "operation_id": "memory.route.report",

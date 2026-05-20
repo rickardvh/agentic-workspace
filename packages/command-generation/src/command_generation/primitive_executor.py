@@ -815,6 +815,8 @@ def _emit_output(*, values: dict[str, Any], arguments: dict[str, Any] | None = N
         return _emit_current_memory_text(result)
     if str(arguments.get("text_style", "")) == "install-result" and isinstance(result, dict):
         return _emit_install_result_text(result)
+    if isinstance(result, dict) and isinstance(result.get("route_report_summary"), dict):
+        return _emit_route_report_text(result)
     if not isinstance(result, dict):
         return f"{result}\n"
     lines = [str(result.get("message", ""))]
@@ -880,6 +882,23 @@ def _emit_current_memory_text(result: dict[str, Any]) -> str:
             lines.append("(missing)")
             continue
         lines.append(str(note.get("content", "")).rstrip())
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _emit_route_report_text(result: dict[str, Any]) -> str:
+    summary = result.get("route_report_summary", {})
+    if not isinstance(summary, Mapping):
+        return f"{result.get('message', 'Routing report')}\n"
+    feedback = summary.get("feedback", {})
+    fixtures = summary.get("fixtures", {})
+    lines = [str(result.get("message", "Routing report"))]
+    if isinstance(feedback, Mapping):
+        lines.append(f"Feedback: {feedback.get('status', 'unknown')} ({feedback.get('path', '')})")
+    if isinstance(fixtures, Mapping):
+        lines.append(f"Fixtures: {fixtures.get('status', 'unknown')} ({fixtures.get('fixture_count', 0)})")
+    detail = summary.get("detail") or result.get("detail_command")
+    if detail:
+        lines.append(str(detail))
     return "\n".join(lines).rstrip() + "\n"
 
 

@@ -179,6 +179,25 @@ def test_memory_route_report_tiny_does_not_evaluate_fixtures(tmp_path: Path, mon
     assert payload["route_report_summary"]["detail"].startswith("Run full route-report")
 
 
+def test_memory_route_report_text_uses_compact_declarative_payload(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+
+    def fail_report_routes(*, target=None):
+        raise AssertionError("non-verbose text route-report should not evaluate route fixtures")
+
+    monkeypatch.setattr(runtime_primitives, "report_routes", fail_report_routes)
+
+    assert cli.main(["route-report", "--target", str(target)]) == 0
+
+    output = capsys.readouterr().out
+    assert "Routing report" in output
+    assert "Feedback:" in output
+    assert "Fixtures:" in output
+    assert "Run full route-report" in output
+
+
 def test_memory_generated_report_uses_compact_target_error_for_ambiguous_root(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
 ) -> None:

@@ -43,6 +43,10 @@ from command_generation.generated_package_loader import (  # noqa: E402
 SelectedFields = Callable[[str], dict[str, object]]
 
 
+def _repo_relative(path: Path) -> str:
+    return os.path.relpath(path, REPO_ROOT).replace(os.sep, "/")
+
+
 class AdapterConformanceCase(NamedTuple):
     conformance_ref: str
     label: str
@@ -744,7 +748,7 @@ def _adapter_conformance_cases_by_package() -> tuple[dict[str, dict[str, Adapter
             continue
         contracts_by_id[contract_id] = _load_json(path)
 
-    ir = load_workspace_command_package_ir(repo_root=REPO_ROOT)
+    ir = _load_json("command_package_ir.json")
     cases_by_package: dict[str, dict[str, AdapterConformanceCase]] = {}
     for package in ir.get("packages", []):
         if not isinstance(package, dict):
@@ -1974,7 +1978,7 @@ def _validate_generated_cli_compatibility_vocabulary() -> list[str]:
             if root_path.is_file():
                 candidate_paths.append(root)
             elif root_path.is_dir():
-                candidate_paths.extend(path.relative_to(REPO_ROOT).as_posix() for path in root_path.rglob("*") if path.is_file())
+                candidate_paths.extend(_repo_relative(path) for path in root_path.rglob("*") if path.is_file())
     for relative_path in sorted(candidate_paths):
         if not relative_path.endswith((".py", ".json", ".toml", ".md")):
             continue
