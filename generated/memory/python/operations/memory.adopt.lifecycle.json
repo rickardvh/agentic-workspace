@@ -84,6 +84,124 @@
     "steps": [
       {
         "arguments": {
+          "must_be_dir": true,
+          "must_exist": true
+        },
+        "description": "Resolve the target root for declarative dry-run planning.",
+        "id": "resolve_target_root",
+        "on_error": "fail",
+        "outputs": [
+          "target_root"
+        ],
+        "uses": "path.target_root.resolve",
+        "when": {
+          "all": [
+            {
+              "equals": true,
+              "value": "dry_run"
+            },
+            {
+              "equals": false,
+              "value": "apply_local_entrypoint"
+            },
+            {
+              "equals": null,
+              "value": "project_name"
+            },
+            {
+              "equals": null,
+              "value": "project_purpose"
+            },
+            {
+              "equals": null,
+              "value": "key_repo_docs"
+            },
+            {
+              "equals": null,
+              "value": "key_subsystems"
+            },
+            {
+              "equals": null,
+              "value": "primary_build_command"
+            },
+            {
+              "equals": null,
+              "value": "primary_test_command"
+            },
+            {
+              "equals": null,
+              "value": "other_key_commands"
+            },
+            {
+              "equals": "default",
+              "value": "policy_profile"
+            }
+          ]
+        }
+      },
+      {
+        "arguments": {
+          "dry_run": true,
+          "message": "Adopt plan",
+          "mode": "adopt",
+          "policy_path": "payload_verification.memory.json",
+          "policy_root": "memory.contracts",
+          "target_root_value": "target_root"
+        },
+        "description": "Plan default dry-run adopt actions from declarative payload policy.",
+        "id": "plan_default_dry_run",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "payload.lifecycle-plan",
+        "when": {
+          "all": [
+            {
+              "equals": true,
+              "value": "dry_run"
+            },
+            {
+              "equals": false,
+              "value": "apply_local_entrypoint"
+            },
+            {
+              "equals": null,
+              "value": "project_name"
+            },
+            {
+              "equals": null,
+              "value": "project_purpose"
+            },
+            {
+              "equals": null,
+              "value": "key_repo_docs"
+            },
+            {
+              "equals": null,
+              "value": "key_subsystems"
+            },
+            {
+              "equals": null,
+              "value": "primary_build_command"
+            },
+            {
+              "equals": null,
+              "value": "primary_test_command"
+            },
+            {
+              "equals": null,
+              "value": "other_key_commands"
+            },
+            {
+              "equals": "default",
+              "value": "policy_profile"
+            }
+          ]
+        }
+      },
+      {
+        "arguments": {
           "function": "adopt_bootstrap",
           "import_module": "repo_memory_bootstrap.installer",
           "kwargs": {
@@ -122,13 +240,59 @@
             }
           }
         },
-        "description": "Adopt Memory bootstrap capability in an existing repository.",
+        "description": "Apply or plan Memory bootstrap adoption through package runtime when mutation or customized adoption policy is required.",
         "id": "apply_memory_lifecycle",
         "on_error": "fail",
         "outputs": [
           "result"
         ],
-        "uses": "python.function.call"
+        "uses": "python.function.call",
+        "when": {
+          "not": {
+            "all": [
+              {
+                "equals": true,
+                "value": "dry_run"
+              },
+              {
+                "equals": false,
+                "value": "apply_local_entrypoint"
+              },
+              {
+                "equals": null,
+                "value": "project_name"
+              },
+              {
+                "equals": null,
+                "value": "project_purpose"
+              },
+              {
+                "equals": null,
+                "value": "key_repo_docs"
+              },
+              {
+                "equals": null,
+                "value": "key_subsystems"
+              },
+              {
+                "equals": null,
+                "value": "primary_build_command"
+              },
+              {
+                "equals": null,
+                "value": "primary_test_command"
+              },
+              {
+                "equals": null,
+                "value": "other_key_commands"
+              },
+              {
+                "equals": "default",
+                "value": "policy_profile"
+              }
+            ]
+          }
+        }
       },
       {
         "arguments": {},
@@ -138,10 +302,10 @@
         "outputs": [
           "emitted"
         ],
-        "uses": "output.emit"
+        "uses": "output.emit.install-result"
       }
     ],
-    "summary": "Memory adopt executes generated operation IR through codegen-owned primitive dataflow while the memory module owns lifecycle policy."
+    "summary": "Default dry-run Memory adopt executes generated operation IR through codegen-owned payload.lifecycle-plan. Mutating and customized adoption policy paths remain package-domain runtime."
   },
   "locality": {
     "network": "forbidden",
@@ -165,14 +329,24 @@
   "schema_version": "agentic-workspace/operation/v1",
   "steps": [
     {
-      "description": "Adopt Memory bootstrap capability in an existing repository.",
+      "description": "Resolve the target root for declarative dry-run planning.",
+      "id": "resolve_target_root",
+      "uses": "path.target_root.resolve"
+    },
+    {
+      "description": "Plan default dry-run adopt actions from declarative payload policy.",
+      "id": "plan_default_dry_run",
+      "uses": "payload.lifecycle-plan"
+    },
+    {
+      "description": "Apply or plan Memory bootstrap adoption through package runtime when mutation or customized adoption policy is required.",
       "id": "apply_memory_lifecycle",
       "uses": "python.function.call"
     },
     {
       "description": "Emit the adopt result in the requested format.",
       "id": "emit_output",
-      "uses": "output.emit"
+      "uses": "output.emit.install-result"
     }
   ],
   "summary": "Adopt Memory bootstrap capability in an existing repository.",

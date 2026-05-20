@@ -42,6 +42,7 @@
       ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
       ".agentic-workspace/planning/execplans/tier-3-memory-first.plan.json",
       ".agentic-workspace/planning/state.toml",
+      "generated/memory/python/_contracts/operations/memory.adopt.lifecycle.json",
       "generated/memory/python/_contracts/operations/memory.doctor.report.json",
       "generated/memory/python/_contracts/operations/memory.status.report.json",
       "generated/memory/python/_contracts/payload_verification.memory.json",
@@ -49,12 +50,14 @@
       "generated/memory/python/generated_command_adapters.json",
       "generated/memory/python/_contracts/operations/memory.init.lifecycle.json",
       "generated/memory/python/_contracts/operations/memory.install.lifecycle.json",
+      "generated/memory/python/operations/memory.adopt.lifecycle.json",
       "generated/memory/python/operations/memory.init.lifecycle.json",
       "generated/memory/python/operations/memory.install.lifecycle.json",
       "generated/memory/python/operations/memory.doctor.report.json",
       "generated/memory/python/operations/memory.status.report.json",
       "generated/typescript/memory-cli/src/commandPackage.ts",
       "packages/command-generation/src/command_generation/primitive_executor.py",
+      "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.adopt.lifecycle.json",
       "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.init.lifecycle.json",
       "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.install.lifecycle.json",
       "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.doctor.report.json",
@@ -142,12 +145,12 @@
     "activation trigger": "after committing the memory.status payload-status slice, continue with remaining Memory read-only and lifecycle operation conversion before promoting Workspace or Planning"
   },
   "iterative_follow_through": {
-    "what this slice enabled": "memory.status and memory.doctor non-verbose JSON/text use generated payload.status; default memory install/init dry-runs use generated payload.lifecycle-plan. Package runtime no longer owns those deterministic report/planning routes.",
+    "what this slice enabled": "memory.status and memory.doctor non-verbose JSON/text use generated payload.status; default memory install/init/adopt dry-runs use generated payload.lifecycle-plan. Package runtime no longer owns those deterministic report/planning routes.",
     "intentionally deferred": "Remaining Memory lifecycle commands, customized lifecycle policy, verbose/strict doctor detail, and mutation/apply paths are still part of this active lane.",
     "discovered implications": "none yet",
     "proof achieved now": "focused first slice proof passed; full lane proof remains pending",
     "validation still needed": "make test-memory, make lint-memory, docker conformance, and remaining lane-specific checks before closing Tier 3",
-    "next likely slice": "extend declarative payload lifecycle planning to adopt/upgrade dry-run where policy can remain explicit without weakening apply safety"
+    "next likely slice": "evaluate whether upgrade dry-run can be represented declaratively without flattening replacement/removal policy; otherwise keep it package-domain and move to the next safe Memory runtime reduction"
   },
   "intent_interpretation": {
     "literal request": "Finish Memory first",
@@ -227,6 +230,7 @@
     ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
     ".agentic-workspace/planning/execplans/tier-3-memory-first.plan.json",
     ".agentic-workspace/planning/state.toml",
+    "generated/memory/python/_contracts/operations/memory.adopt.lifecycle.json",
     "generated/memory/python/_contracts/operations/memory.doctor.report.json",
     "generated/memory/python/_contracts/operations/memory.status.report.json",
     "generated/memory/python/_contracts/payload_verification.memory.json",
@@ -234,12 +238,14 @@
     "generated/memory/python/generated_command_adapters.json",
     "generated/memory/python/_contracts/operations/memory.init.lifecycle.json",
     "generated/memory/python/_contracts/operations/memory.install.lifecycle.json",
+    "generated/memory/python/operations/memory.adopt.lifecycle.json",
     "generated/memory/python/operations/memory.init.lifecycle.json",
     "generated/memory/python/operations/memory.install.lifecycle.json",
     "generated/memory/python/operations/memory.doctor.report.json",
     "generated/memory/python/operations/memory.status.report.json",
     "generated/typescript/memory-cli/src/commandPackage.ts",
     "packages/command-generation/src/command_generation/primitive_executor.py",
+    "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.adopt.lifecycle.json",
     "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.init.lifecycle.json",
     "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.install.lifecycle.json",
     "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.doctor.report.json",
@@ -264,6 +270,7 @@
   "validation_commands": [
     "uv run pytest packages/memory/tests/test_report.py::test_memory_lifecycle_status_defaults_to_tiny_actions packages/memory/tests/test_report.py::test_memory_lifecycle_tiny_does_not_collect_full_status packages/memory/tests/test_report.py::test_memory_lifecycle_text_status_uses_declarative_payload_policy packages/memory/tests/test_report.py::test_memory_lifecycle_doctor_uses_declarative_payload_policy packages/memory/tests/test_report.py::test_memory_lifecycle_text_doctor_uses_declarative_payload_policy -q",
     "uv run pytest packages/memory/tests/test_install.py::test_generated_install_dry_run_uses_declarative_payload_plan packages/memory/tests/test_install.py::test_generated_init_dry_run_uses_declarative_payload_plan -q",
+    "uv run pytest packages/memory/tests/test_install.py::test_generated_adopt_dry_run_uses_declarative_payload_plan -q",
     "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
     "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
     "uv run python scripts/generate/generate_command_packages.py --check",
@@ -280,12 +287,12 @@
     "run status": "first-slice-implemented",
     "executor": "Codex",
     "handoff source": "agentic-planning promote-to-plan decomposition lane",
-    "what happened": "Implemented three Tier 3 Memory slices: memory.status and memory.doctor non-verbose JSON/text now flow through declarative payload.status plus generated install-result output; default install/init dry-run planning now flows through declarative payload.lifecycle-plan.",
+    "what happened": "Implemented four Tier 3 Memory slices: memory.status and memory.doctor non-verbose JSON/text now flow through declarative payload.status plus generated install-result output; default install/init/adopt dry-run planning now flows through declarative payload.lifecycle-plan.",
     "scope touched": "memory report and lifecycle operation contracts, payload verification policy/schema, primitive registry and executor, generated memory operation/package artifacts, inventory/IR metadata, focused memory tests, and this planning surface",
-    "changed surfaces": "packages/command-generation/src/command_generation/primitive_executor.py; packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.status.report.json; packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.doctor.report.json; packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.install.lifecycle.json; packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.init.lifecycle.json; packages/memory/src/repo_memory_bootstrap/contracts/payload_verification.memory.json; generated/memory/python/operations and _contracts for status/doctor/install/init; generated/memory/python/command_package.json; generated/memory/python/generated_command_adapters.json; generated/typescript/memory-cli/src/commandPackage.ts; packages/memory/tests/test_report.py; packages/memory/tests/test_install.py; src/agentic_workspace/contracts command/primitive/inventory/schema files; planning state/decomposition/execplan",
-    "validations run": "focused memory.status/doctor/install/init pytest passed; contract tooling passed; structured-file inventory passed; generated package check passed; generated Python conformance passed; base generated package proof passed; root CLI authority defaults check passed; Python completion-blocker report still correctly blocks full Python completion on remaining runtime ownership",
-    "result for continuation": "commit the install/init dry-run slice, then continue Tier 3 Memory before promoting Workspace or Planning",
-    "next step": "Extend declarative lifecycle planning to adopt/upgrade dry-run where policy can remain explicit without weakening apply safety."
+    "changed surfaces": "packages/command-generation/src/command_generation/primitive_executor.py; packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.status.report.json; packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.doctor.report.json; packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.install.lifecycle.json; packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.init.lifecycle.json; packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.adopt.lifecycle.json; packages/memory/src/repo_memory_bootstrap/contracts/payload_verification.memory.json; generated/memory/python/operations and _contracts for status/doctor/install/init/adopt; generated/memory/python/command_package.json; generated/memory/python/generated_command_adapters.json; generated/typescript/memory-cli/src/commandPackage.ts; packages/memory/tests/test_report.py; packages/memory/tests/test_install.py; src/agentic_workspace/contracts command/primitive/inventory/schema files; planning state/decomposition/execplan",
+    "validations run": "focused memory.status/doctor/install/init/adopt pytest passed; contract tooling passed; structured-file inventory passed; generated package check passed; generated Python conformance passed; base generated package proof passed; root CLI authority defaults check passed; Python completion-blocker report still correctly blocks full Python completion on remaining runtime ownership",
+    "result for continuation": "commit the adopt dry-run slice, then continue Tier 3 Memory before promoting Workspace or Planning",
+    "next step": "Evaluate upgrade dry-run carefully before moving it; do not flatten replacement/removal policy into copy-only payload planning."
   },
   "finished_run_review": {
     "review status": "first-slice-reviewed",
@@ -306,18 +313,18 @@
     "decomposition adjustment": "none"
   },
   "proof_report": {
-    "validation proof": "uv run pytest packages/memory/tests/test_report.py::test_memory_lifecycle_doctor_uses_declarative_payload_policy packages/memory/tests/test_report.py::test_memory_lifecycle_text_doctor_uses_declarative_payload_policy packages/memory/tests/test_report.py::test_memory_lifecycle_status_defaults_to_tiny_actions packages/memory/tests/test_report.py::test_memory_lifecycle_text_status_uses_declarative_payload_policy -q; uv run pytest packages/memory/tests/test_install.py::test_generated_install_dry_run_uses_declarative_payload_plan packages/memory/tests/test_install.py::test_generated_init_dry_run_uses_declarative_payload_plan -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json; uv run agentic-workspace defaults --section root_cli_authority --format json",
-    "proof achieved now": "memory.status, memory.doctor, and default install/init dry-run slices complete; full Tier 3 lane incomplete",
-    "evidence for \"proof achieved\" state": "Focused status/doctor/install/init tests pass, contract tooling and generated package checks pass, root CLI authority is satisfied, and the completion-blocker report still rejects full completion because remaining runtime-owned memory/workspace/planning surfaces exist."
+    "validation proof": "uv run pytest packages/memory/tests/test_report.py::test_memory_lifecycle_doctor_uses_declarative_payload_policy packages/memory/tests/test_report.py::test_memory_lifecycle_text_doctor_uses_declarative_payload_policy packages/memory/tests/test_report.py::test_memory_lifecycle_status_defaults_to_tiny_actions packages/memory/tests/test_report.py::test_memory_lifecycle_text_status_uses_declarative_payload_policy -q; uv run pytest packages/memory/tests/test_install.py::test_generated_install_dry_run_uses_declarative_payload_plan packages/memory/tests/test_install.py::test_generated_init_dry_run_uses_declarative_payload_plan -q; uv run pytest packages/memory/tests/test_install.py::test_generated_adopt_dry_run_uses_declarative_payload_plan -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json; uv run agentic-workspace defaults --section root_cli_authority --format json",
+    "proof achieved now": "memory.status, memory.doctor, and default install/init/adopt dry-run slices complete; full Tier 3 lane incomplete",
+    "evidence for \"proof achieved\" state": "Focused status/doctor/install/init/adopt tests pass, contract tooling and generated package checks pass, root CLI authority is satisfied, and the completion-blocker report still rejects full completion because remaining runtime-owned memory/workspace/planning surfaces exist."
   },
   "intent_satisfaction": {
     "original intent": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane tier-3-memory-first.",
     "was original intent fully satisfied?": "no",
-    "evidence of intent satisfaction": "The #1008 memory.status payload/status IR slice, memory.doctor non-verbose payload/status IR slice, and default install/init dry-run payload lifecycle-plan slice are implemented.",
+    "evidence of intent satisfaction": "The #1008 memory.status payload/status IR slice, memory.doctor non-verbose payload/status IR slice, and default install/init/adopt dry-run payload lifecycle-plan slices are implemented.",
     "unsolved intent passed to": "tier-3-memory-first"
   },
   "execution_summary": {
-    "outcome delivered": "memory.status/doctor payload-status slices and default install/init dry-run payload lifecycle-plan slice implemented",
+    "outcome delivered": "memory.status/doctor payload-status slices and default install/init/adopt dry-run payload lifecycle-plan slices implemented",
     "validation confirmed": "focused memory report tests, contract tooling, structured inventory, generated package checks, generated Python conformance, root CLI authority defaults, and completion-blocker report",
     "follow-on routed to": "tier-3-memory-first",
     "post-work posterity capture": "execplan updated with concrete scope, proof, and continuation",
@@ -347,7 +354,7 @@
     "larger-intent status": "open",
     "closure decision": "archive-but-keep-lane-open",
     "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
-    "why this decision is honest": "The memory.status and memory.doctor non-verbose routes plus default install/init dry-run routes are generated and proven, but Tier 3 Memory still includes additional lifecycle/mutation paths.",
+    "why this decision is honest": "The memory.status and memory.doctor non-verbose routes plus default install/init/adopt dry-run routes are generated and proven, but Tier 3 Memory still includes additional lifecycle/mutation paths.",
     "evidence carried forward": "Focused tests and generated package proof passed; completion-blocker output still names remaining source-runtime ownership.",
     "reopen trigger": "If memory.status or memory.doctor text/JSON calls package-owned status or doctor collection for non-verbose non-strict output again."
   },

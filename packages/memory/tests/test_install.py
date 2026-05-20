@@ -408,6 +408,24 @@ def test_generated_init_dry_run_uses_declarative_payload_plan(tmp_path: Path, mo
     assert any(action["kind"] == "would copy" and action["path"] == "AGENTS.md" for action in payload["actions"])
 
 
+def test_generated_adopt_dry_run_uses_declarative_payload_plan(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+
+    def fail_adopt(*args, **kwargs):
+        raise AssertionError("default generated adopt dry-run should not call package adopt runtime")
+
+    monkeypatch.setattr(installer, "adopt_bootstrap", fail_adopt)
+
+    assert cli.main(["adopt", "--target", str(target), "--dry-run", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["dry_run"] is True
+    assert payload["mode"] == "adopt"
+    assert payload["message"] == "Adopt plan"
+    assert any(action["kind"] == "would copy" and action["path"] == "AGENTS.md" for action in payload["actions"])
+
+
 def test_install_does_not_write_current_memory_seed_notes(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True, exist_ok=True)
