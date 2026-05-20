@@ -162,6 +162,74 @@ def render_skillspec_target_skill(manifest: dict[str, Any], skill_id: str) -> st
     return "\n".join(sections)
 
 
+def _generated_plugin_targets(manifest: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {str(target.get("id")): target for target in manifest.get("generated_plugin_targets", []) if isinstance(target, dict)}
+
+
+def render_skillspec_plugin_target(manifest: dict[str, Any], target_id: str) -> str:
+    targets = _generated_plugin_targets(manifest)
+    if target_id not in targets:
+        raise KeyError(f"unknown SkillSpec plugin target id: {target_id}")
+    target = targets[target_id]
+
+    payload = {
+        "name": target["plugin_name"],
+        "version": "0.1.0",
+        "description": "Generated Codex plugin projection for Agentic Workspace startup routing.",
+        "author": {
+            "name": "Agentic Workspace",
+            "url": "https://github.com/rickardvh/agentic-workspace",
+        },
+        "repository": "https://github.com/rickardvh/agentic-workspace",
+        "license": "MIT",
+        "keywords": [
+            "agentic-workspace",
+            "skillspec",
+            "workspace-routing",
+        ],
+        "skills": "./skills/",
+        "interface": {
+            "displayName": "Agentic Workspace",
+            "shortDescription": "Generated AW routing plugin projection.",
+            "longDescription": (
+                "Framework-native metadata generated from SkillSpec. The plugin prefers the configured AW CLI "
+                "when available and preserves conservative no-CLI fallback behavior."
+            ),
+            "developerName": "Agentic Workspace",
+            "category": "Productivity",
+            "capabilities": [
+                "Read",
+                "Workflow",
+            ],
+            "defaultPrompt": [
+                "Start AW routing for this repo.",
+                "Check whether completion is claimable.",
+                "Show the next safe AW action.",
+            ],
+        },
+        "agenticWorkspace": {
+            "generated": True,
+            "source": "src/agentic_workspace/contracts/skill_specs.json",
+            "schema": "src/agentic_workspace/contracts/schemas/skill_spec.schema.json",
+            "targetId": target["id"],
+            "framework": target["framework"],
+            "status": target["status"],
+            "sourceSkillSpecs": target["source_skill_ids"],
+            "generatedSkills": target["generated_skill_paths"],
+            "preferredCli": target["preferred_cli_commands"],
+            "cliDependency": target["cli_dependency"],
+            "interpretedFields": target["interpreted_fields"],
+            "forbiddenActions": target["forbidden_actions"],
+            "fallbackWhenCliUnavailable": target["fallback_when_cli_unavailable"],
+            "mustPreserve": target["must_preserve"],
+            "nextSafeActionSemantics": target["next_safe_action_semantics"],
+            "whereToEdit": "src/agentic_workspace/contracts/skill_specs.json",
+            "doNotHandEditGeneratedOutput": True,
+        },
+    }
+    return json.dumps(payload, indent=2, sort_keys=True) + "\n"
+
+
 def improvement_latitude_policy_manifest() -> dict[str, Any]:
     return load_validated_contract_json("improvement_latitude_policy.json", "improvement_latitude_policy.schema.json")
 

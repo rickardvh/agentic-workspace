@@ -478,6 +478,56 @@
       }
     }
   ],
+  "generated_plugin_targets": [
+    {
+      "id": "codex-plugin",
+      "framework": "codex",
+      "title": "Codex Plugin Projection",
+      "status": "ready-for-renderer",
+      "output_path": "generated/workspace/plugins/codex/.codex-plugin/plugin.json",
+      "plugin_name": "agentic-workspace",
+      "source_skill_ids": [
+        "startup-router"
+      ],
+      "generated_skill_paths": [
+        "generated/workspace/skills/startup-router/SKILL.md"
+      ],
+      "preferred_cli_commands": [
+        "uv run agentic-workspace start --task \"<task>\" --format json"
+      ],
+      "interpreted_fields": [
+        "immediate_next_allowed_action",
+        "workflow_sufficiency",
+        "next_safe_action",
+        "skill_routing",
+        "next_safe_action.implementation_allowed",
+        "next_safe_action.proof_required",
+        "next_safe_action.completion_claim_allowed",
+        "next_safe_action.closure_blockers",
+        "next_safe_action.continuation_owner_required"
+      ],
+      "forbidden_actions": [
+        "Open raw planning or memory state before compact startup routing points there.",
+        "Create planning, review, memory, or handoff artifacts for routine direct work.",
+        "Treat generated skill or adapter output as the source of product behavior."
+      ],
+      "fallback_when_cli_unavailable": [
+        "Read `.agentic-workspace/WORKFLOW.md` before other workspace files.",
+        "Use the smallest safe manual path and preserve no-artifact-by-default behavior.",
+        "Escalate to planning only when the work shape, risk, or continuation need requires durable state."
+      ],
+      "must_preserve": [
+        "SkillSpec source traceability.",
+        "Generated skill linkage.",
+        "CLI-first startup routing when available.",
+        "Conservative no-CLI fallback.",
+        "Forbidden raw planning/memory reads before compact routing.",
+        "next_safe_action completion and proof semantics."
+      ],
+      "cli_dependency": "preferred-when-available",
+      "next_safe_action_semantics": true
+    }
+  ],
   "specs": [
     {
       "id": "startup-router",

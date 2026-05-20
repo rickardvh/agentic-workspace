@@ -29,6 +29,26 @@ def test_generated_startup_router_skill_is_compact_adapter_projection() -> None:
     assert len(generated.splitlines()) < 70
 
 
+def test_generated_codex_plugin_is_compact_framework_native_projection() -> None:
+    root = Path(__file__).resolve().parents[1]
+    plugin_path = root / "generated" / "workspace" / "plugins" / "codex" / ".codex-plugin" / "plugin.json"
+    generated = plugin_path.read_text(encoding="utf-8")
+    payload = json.loads(generated)
+    metadata = payload["agenticWorkspace"]
+
+    assert payload["name"] == "agentic-workspace"
+    assert payload["interface"]["displayName"] == "Agentic Workspace"
+    assert payload["skills"] == "./skills/"
+    assert metadata["source"] == "src/agentic_workspace/contracts/skill_specs.json"
+    assert metadata["doNotHandEditGeneratedOutput"] is True
+    assert metadata["cliDependency"] == "preferred-when-available"
+    assert "next_safe_action.proof_required" in metadata["interpretedFields"]
+    assert "next_safe_action.completion_claim_allowed" in metadata["interpretedFields"]
+    assert any("Treat generated skill or adapter output" in action for action in metadata["forbiddenActions"])
+    assert any("Conservative no-CLI fallback" in requirement for requirement in metadata["mustPreserve"])
+    assert len(generated.splitlines()) < 100
+
+
 def test_critical_skills_include_anti_rationalization_and_behavior_evidence() -> None:
     root = Path(__file__).resolve().parents[1]
     startup = (root / ".agentic-workspace" / "skills" / "workspace-startup" / "SKILL.md").read_text(encoding="utf-8")

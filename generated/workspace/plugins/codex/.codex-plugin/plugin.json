@@ -1,0 +1,83 @@
+{
+  "agenticWorkspace": {
+    "cliDependency": "preferred-when-available",
+    "doNotHandEditGeneratedOutput": true,
+    "fallbackWhenCliUnavailable": [
+      "Read `.agentic-workspace/WORKFLOW.md` before other workspace files.",
+      "Use the smallest safe manual path and preserve no-artifact-by-default behavior.",
+      "Escalate to planning only when the work shape, risk, or continuation need requires durable state."
+    ],
+    "forbiddenActions": [
+      "Open raw planning or memory state before compact startup routing points there.",
+      "Create planning, review, memory, or handoff artifacts for routine direct work.",
+      "Treat generated skill or adapter output as the source of product behavior."
+    ],
+    "framework": "codex",
+    "generated": true,
+    "generatedSkills": [
+      "generated/workspace/skills/startup-router/SKILL.md"
+    ],
+    "interpretedFields": [
+      "immediate_next_allowed_action",
+      "workflow_sufficiency",
+      "next_safe_action",
+      "skill_routing",
+      "next_safe_action.implementation_allowed",
+      "next_safe_action.proof_required",
+      "next_safe_action.completion_claim_allowed",
+      "next_safe_action.closure_blockers",
+      "next_safe_action.continuation_owner_required"
+    ],
+    "mustPreserve": [
+      "SkillSpec source traceability.",
+      "Generated skill linkage.",
+      "CLI-first startup routing when available.",
+      "Conservative no-CLI fallback.",
+      "Forbidden raw planning/memory reads before compact routing.",
+      "next_safe_action completion and proof semantics."
+    ],
+    "nextSafeActionSemantics": true,
+    "preferredCli": [
+      "uv run agentic-workspace start --task \"<task>\" --format json"
+    ],
+    "schema": "src/agentic_workspace/contracts/schemas/skill_spec.schema.json",
+    "source": "src/agentic_workspace/contracts/skill_specs.json",
+    "sourceSkillSpecs": [
+      "startup-router"
+    ],
+    "status": "ready-for-renderer",
+    "targetId": "codex-plugin",
+    "whereToEdit": "src/agentic_workspace/contracts/skill_specs.json"
+  },
+  "author": {
+    "name": "Agentic Workspace",
+    "url": "https://github.com/rickardvh/agentic-workspace"
+  },
+  "description": "Generated Codex plugin projection for Agentic Workspace startup routing.",
+  "interface": {
+    "capabilities": [
+      "Read",
+      "Workflow"
+    ],
+    "category": "Productivity",
+    "defaultPrompt": [
+      "Start AW routing for this repo.",
+      "Check whether completion is claimable.",
+      "Show the next safe AW action."
+    ],
+    "developerName": "Agentic Workspace",
+    "displayName": "Agentic Workspace",
+    "longDescription": "Framework-native metadata generated from SkillSpec. The plugin prefers the configured AW CLI when available and preserves conservative no-CLI fallback behavior.",
+    "shortDescription": "Generated AW routing plugin projection."
+  },
+  "keywords": [
+    "agentic-workspace",
+    "skillspec",
+    "workspace-routing"
+  ],
+  "license": "MIT",
+  "name": "agentic-workspace",
+  "repository": "https://github.com/rickardvh/agentic-workspace",
+  "skills": "./skills/",
+  "version": "0.1.0"
+}

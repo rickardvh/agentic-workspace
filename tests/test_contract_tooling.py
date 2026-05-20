@@ -231,6 +231,31 @@ def test_skillspec_generated_startup_target_preserves_behavior_contract() -> Non
     assert "Fallback task: when the CLI is unavailable" in checked_in
 
 
+def test_skillspec_generated_codex_plugin_preserves_framework_native_contract() -> None:
+    manifest = contract_tooling.skill_specs_manifest()
+    rendered = contract_tooling.render_skillspec_plugin_target(manifest, "codex-plugin")
+    checked_in = Path("generated/workspace/plugins/codex/.codex-plugin/plugin.json").read_text(encoding="utf-8")
+    payload = json.loads(checked_in)
+    metadata = payload["agenticWorkspace"]
+
+    assert checked_in == rendered
+    assert payload["name"] == "agentic-workspace"
+    assert payload["skills"] == "./skills/"
+    assert metadata["generated"] is True
+    assert metadata["source"] == "src/agentic_workspace/contracts/skill_specs.json"
+    assert metadata["whereToEdit"] == "src/agentic_workspace/contracts/skill_specs.json"
+    assert metadata["framework"] == "codex"
+    assert metadata["sourceSkillSpecs"] == ["startup-router"]
+    assert metadata["generatedSkills"] == ["generated/workspace/skills/startup-router/SKILL.md"]
+    assert metadata["cliDependency"] == "preferred-when-available"
+    assert 'uv run agentic-workspace start --task "<task>" --format json' in metadata["preferredCli"]
+    assert "next_safe_action.completion_claim_allowed" in metadata["interpretedFields"]
+    assert metadata["nextSafeActionSemantics"] is True
+    assert any("Open raw planning or memory state" in action for action in metadata["forbiddenActions"])
+    assert any("WORKFLOW.md" in fallback for fallback in metadata["fallbackWhenCliUnavailable"])
+    assert any("Generated skill linkage" in requirement for requirement in metadata["mustPreserve"])
+
+
 def test_operational_affordance_roles_classify_first_contact_and_diagnostics() -> None:
     manifest = contract_tooling.operational_affordance_roles_manifest()
     schema = contract_tooling.contract_schema("operational_affordance_roles.schema.json")
