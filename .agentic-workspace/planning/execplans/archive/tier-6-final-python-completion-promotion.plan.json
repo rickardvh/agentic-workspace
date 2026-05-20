@@ -1,0 +1,357 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Promote Python completion only after inventory proof",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "lane",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "required_continuation",
+      "iterative_follow_through",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane tier-6-final-python-completion-promotion.",
+    "hard_constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Python is promoted only when generated package Python output is the shipped executable projection, command-generation has no package-specific runtime behavior, package source has no parser, help, dispatch, or executable CLI ownership, every generated operation is portable-codegen-primitive-executed or an explicit accepted package-domain primitive with non-portability proof, no Tier 2 primitive hides generic deterministic behavior, and source, installed, and Docker conformance pass.",
+    "proof_expectations": "['uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json', 'uv run python scripts/check/check_generated_command_packages.py', 'uv run python scripts/check/check_generated_command_packages.py --python-conformance', 'uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker', 'uv run python scripts/generate/generate_command_packages.py --check', 'uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success', 'uv run python scripts/check/check_structured_file_inventory.py --quiet-success', 'make schema-reference-docs', 'make test-workspace', 'make test-memory', 'make test-planning', 'make lint-workspace', 'make lint-memory', 'make lint-planning', 'uv build']",
+    "touched_scope": "['src/agentic_workspace/contracts/command_package_ir.json', 'src/agentic_workspace/contracts/python_runtime_projection_inventory.json', 'src/agentic_workspace/contracts/schemas/python_runtime_projection_inventory.schema.json', 'scripts/check/check_generated_command_packages.py', 'tests/test_generated_command_package_proof_runner.py', 'tests/test_contract_tooling.py', '.agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json', '.agentic-workspace/planning/state.toml']",
+    "completion_criteria": "All validation_commands passed before closeout.",
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane tier-6-final-python-completion-promotion."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane tier-6-final-python-completion-promotion.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "tier-6-final-python-completion-promotion",
+      "status": "completed",
+      "next_step": "Python is promoted only when generated package Python output is the shipped executable projection, command-generation has no package-specific runtime behavior, package source has no parser, help, dispatch, or executable CLI ownership, every generated operation is portable-codegen-primitive-executed or an explicit accepted package-domain primitive with non-portability proof, no Tier 2 primitive hides generic deterministic behavior, and source, installed, and Docker conformance pass.",
+      "proof": "uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success"
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/contracts/command_package_ir.json",
+        "src/agentic_workspace/contracts/python_runtime_projection_inventory.json",
+        "src/agentic_workspace/contracts/schemas/python_runtime_projection_inventory.schema.json",
+        "scripts/check/check_generated_command_packages.py",
+        "tests/test_generated_command_package_proof_runner.py",
+        "tests/test_contract_tooling.py",
+        ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+        ".agentic-workspace/planning/state.toml"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane tier-6-final-python-completion-promotion.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes",
+    "validation still needed": "none for Tier 6",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Promote Python completion only after inventory proof",
+    "inferred intended outcome": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane tier-6-final-python-completion-promotion.",
+    "chosen concrete what": "Python is promoted only when generated package Python output is the shipped executable projection, command-generation has no package-specific runtime behavior, package source has no parser, help, dispatch, or executable CLI ownership, every generated operation is portable-codegen-primitive-executed or an explicit accepted package-domain primitive with non-portability proof, no Tier 2 primitive hides generic deterministic behavior, and source, installed, and Docker conformance pass.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Runtime projection inventory, Python completion gate policy/checks/tests, and this promoted planning lane.",
+    "max changed files": "About 10 files, plus generated freshness output if a generator reports drift.",
+    "required validation commands": "uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; then full lane completion criteria before PR.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "route chosen": "keep-local",
+    "route skipped reason": "Tier 6 completion proof was already locally loaded and tightly coupled across policy, schema, checker, and tests."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Complete Tier 6 final Python completion promotion.",
+    "hard constraints": "Keep TypeScript and shell epics out of scope.",
+    "agent may decide locally": "How to prove accepted permanent package-domain runtime boundaries.",
+    "escalate when": "Completion would require hiding generic deterministic runtime debt."
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "label": "decomposition lane tier-6-final-python-completion-promotion",
+      "role": "intake",
+      "locator": "candidate_lanes[16]"
+    }
+  ],
+  "active_milestone": {
+    "id": "tier-6-final-python-completion-promotion",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Python is promoted only when generated package Python output is the shipped executable projection, command-generation has no package-specific runtime behavior, package source has no parser, help, dispatch, or executable CLI ownership, every generated operation is portable-codegen-primitive-executed or an explicit accepted package-domain primitive with non-portability proof, no Tier 2 primitive hides generic deterministic behavior, and source, installed, and Docker conformance pass."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    "src/agentic_workspace/contracts/python_runtime_projection_inventory.json",
+    "src/agentic_workspace/contracts/schemas/python_runtime_projection_inventory.schema.json",
+    "scripts/check/check_generated_command_packages.py",
+    "tests/test_generated_command_package_proof_runner.py",
+    "tests/test_contract_tooling.py",
+    ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+    ".agentic-workspace/planning/state.toml"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+    "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
+    "uv run python scripts/generate/generate_command_packages.py --check",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "make schema-reference-docs",
+    "make test-workspace",
+    "make test-memory",
+    "make test-planning",
+    "make lint-workspace",
+    "make lint-memory",
+    "make lint-planning",
+    "uv build"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "All validation_commands pass before closeout."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning promote-to-plan decomposition lane",
+    "what happened": "Added accepted permanent runtime-boundary proof to python_runtime_projection_inventory, taught the completion gate to accept only inventoried non-generic package-domain runtime source/facade bridges, and promoted command_package_ir python_cli_completion to full-generated-cli-complete.",
+    "scope touched": "Python completion policy, runtime projection inventory/schema, completion checker, focused tests, and the promoted planning lane.",
+    "changed surfaces": "src/agentic_workspace/contracts/command_package_ir.json; src/agentic_workspace/contracts/python_runtime_projection_inventory.json; src/agentic_workspace/contracts/schemas/python_runtime_projection_inventory.schema.json; scripts/check/check_generated_command_packages.py; tests/test_generated_command_package_proof_runner.py; tests/test_contract_tooling.py; planning state/decomposition/execplan.",
+    "validations run": "Focused pytest subset, python-completion-blockers report, generated command package static proof, Python conformance, Docker conformance, generator freshness, contract tooling, structured file inventory, schema reference docs, workspace/memory/planning tests and lints, Node conformance, planning summary/doctor, and uv build passed.",
+    "result for continuation": "Archive this completed Tier 6 plan and open the stacked PR.",
+    "next step": "Open stacked PR against codex/codegen-tiers-3-5."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "no Tier 6 continuation"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "Tier 6 implementation is tightly coupled across completion policy, schema validation, blocker semantics, and focused tests; delegating now would duplicate the already-loaded proof context more than it would save tokens.",
+    "expected savings": "unknown",
+    "actual friction": "AW required a delegation-decision record after work had already started; the record was useful for closeout but the timing felt procedural.",
+    "proof result": "passed",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "Full Tier 6 validation passed: python-completion-blockers, generated package proof, Python conformance, Docker conformance, generator check, contract tooling, structured inventory, schema reference docs, workspace/memory/planning tests and lints, Node conformance, planning summary/doctor, and uv build.",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "python-completion-blockers reports blocker_count=0, completion_claim_allowed=true, current_state=full-generated-cli-complete, completion_gate_state=satisfied; all lane completion commands passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane tier-6-final-python-completion-promotion.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Tier 6 blocker report now returns blocker_count=0 and completion_claim_allowed=true with command_package_ir current_state=full-generated-cli-complete and completion_gate.state=satisfied; full generated package, conformance, Docker conformance, contract tooling, structured inventory, make test/lint, schema docs, and uv build validation passed.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Tier 6 final Python completion promotion is complete.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "none for Tier 6; non-Python codegen epics remain separate deferred lanes.",
+    "post-work posterity capture": "completed in archived execplan",
+    "knowledge promoted (Memory/Docs/Config)": "none; no durable reusable memory note was needed beyond this plan and existing contract checks.",
+    "resume from": "stacked PR review"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "Tier 6 implementation and closeout",
+    "target scope": "none",
+    "proposed durable intent": "none",
+    "confidence": "high",
+    "needs review": "False",
+    "owner surface": "none"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The slice completes the final Python completion promotion by making remaining package-domain runtime source and generated facade bridges explicit accepted permanent non-generic boundaries, while keeping TypeScript and shell codegen epics out of scope.",
+    "evidence carried forward": "Accepted runtime boundaries are recorded in python_runtime_projection_inventory; the completion checker rejects unaccepted source/facade bridges and generic-deterministic-runtime-debt; generated package proof and broad validation passed.",
+    "reopen trigger": "Reopen if python-completion-blockers reports blockers again, if a new generic deterministic runtime boundary appears in accepted package-domain source, or if generated command modules import package runtime helpers directly."
+  },
+  "improvement_signal_review": {
+    "status": "signals_routed",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [
+      "AW summary caught planning residue after implementation, but the plan scaffold allowed path-like prose and proof divergence until late.",
+      "uv build succeeded with a duplicate-name warning for agentic_workspace/_generated_cli_package_impl/primitives/operation_executor.py, which is not surfaced as a failing or structured diagnostic.",
+      "Memory consult is improving but still asks for an index read without directly selecting the most relevant memory note for this exact changed-path set."
+    ],
+    "signals fixed": [],
+    "signals routed": [
+      "Planning residue was fixed directly in this plan before archive.",
+      "Build duplicate-name warning and memory routing friction are reported in PR dogfooding notes rather than new issues because the user asked not to create issues unless explicitly requested."
+    ],
+    "signals dismissed": [],
+    "next owner": "PR dogfooding notes; no new issue without explicit user request"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Intermediate pending blocker state and scaffold placeholders are superseded by completed proof evidence.",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "Planning residue was fixed directly in this plan before archive.",
+          "owner": "",
+          "source": "improvement_signal_review.signals routed"
+        },
+        {
+          "summary": "Build duplicate-name warning and memory routing friction are reported in PR dogfooding notes rather than new issues because the user asked not to create issues unless explicitly requested.",
+          "owner": "",
+          "source": "improvement_signal_review.signals routed"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "none for Tier 6; non-Python codegen epics remain separate deferred lanes.",
+          "owner": "none",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "none; no durable reusable memory note was needed beyond this plan and existing contract checks.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "none; no durable reusable memory note was needed beyond this plan and existing contract checks.",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "No issue created by instruction; note the uv build duplicate-name warning and memory routing friction in PR/final dogfooding output.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-05-20: Scaffolded by agentic-planning promote-to-plan from decomposition lane tier-6-final-python-completion-promotion.",
+    "2026-05-20: Recorded delegation decision route=keep-local.",
+    "2026-05-20: Completed Tier 6 by accepting permanent non-generic package-domain runtime boundaries in python_runtime_projection_inventory and promoting python_cli_completion to full-generated-cli-complete after full validation."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane tier-6-final-python-completion-promotion.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: Full Tier 6 validation passed: python-completion-blockers, generated package proof, Python conformance, Docker conformance, generator check, contract tooling, structured inventory, schema reference docs, workspace/memory/planning tests and lints, Node conformance, planning summary/doctor, and uv build.\nChanged surfaces: src/agentic_workspace/contracts/command_package_ir.json; src/agentic_workspace/contracts/python_runtime_projection_inventory.json; src/agentic_workspace/contracts/schemas/python_runtime_projection_inventory.schema.json; scripts/check/check_generated_command_packages.py; tests/test_generated_command_package_proof_runner.py; tests/test_contract_tooling.py; planning state/decomposition/execplan.\nDurable residue: none (none)\nMemory learning: none\nFollow-up: none for Tier 6; non-Python codegen epics remain separate deferred lanes."
+  }
+}

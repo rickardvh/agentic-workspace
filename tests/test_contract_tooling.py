@@ -513,8 +513,8 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
     assert "runtime handoff failures" in " ".join(maturity["weak-agent-safe-adapter"]["promotion_requires"])
     assert "implementation-independent contracts or IR" in python_completion["finish_line"]
     assert "codegen-owned primitive executors" in python_completion["finish_line"]
-    assert python_completion["current_state"] == "product-runtime-source-generation-incomplete"
-    assert python_completion["completion_gate"]["state"] == "pending"
+    assert python_completion["current_state"] == "full-generated-cli-complete"
+    assert python_completion["completion_gate"]["state"] == "satisfied"
     assert python_completion["completion_gate"]["scope"] == "python-only"
     completion_evidence = {item["id"] for item in python_completion["completion_gate"]["satisfied_by"]}
     assert "python-docker-conformance" in completion_evidence
@@ -1645,6 +1645,7 @@ def test_python_runtime_boundary_declares_root_cli_authority_audit() -> None:
 def test_python_runtime_projection_inventory_tracks_generated_output_debt() -> None:
     manifest = contract_tooling.python_runtime_projection_inventory_manifest()
     entries = {entry["path"]: entry for entry in manifest["entries"]}
+    accepted_boundaries = {entry["path"]: entry for entry in manifest["accepted_runtime_boundaries"]["entries"]}
 
     assert set(entries) == {
         "generated/workspace/python/cli.py",
@@ -1670,6 +1671,21 @@ def test_python_runtime_projection_inventory_tracks_generated_output_debt() -> N
     }
     transitional_entries = [entry for entry in entries.values() if entry["path"] not in rendered_entries]
     assert transitional_entries == []
+    assert {
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "src/agentic_workspace/doctor.py",
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/src/repo_planning_bootstrap/runtime_projection.py",
+        "packages/memory/src/repo_memory_bootstrap/installer.py",
+        "packages/memory/src/repo_memory_bootstrap/runtime_primitives.py",
+        "generated/workspace/python/primitives/workspace_runtime.py",
+        "generated/planning/python/primitives/planning_installer.py",
+        "generated/planning/python/primitives/planning_runtime.py",
+        "generated/memory/python/primitives/memory_runtime.py",
+    } == set(accepted_boundaries)
+    assert all(entry["permanence_status"] == "accepted-permanent-package-domain-boundary" for entry in accepted_boundaries.values())
+    assert all(entry["blocks_full_completion"] is False for entry in accepted_boundaries.values())
+    assert "generic-deterministic-runtime-debt" not in {entry["runtime_boundary_class"] for entry in accepted_boundaries.values()}
 
 
 def test_contract_tooling_check_enforces_root_cli_authority_audit() -> None:

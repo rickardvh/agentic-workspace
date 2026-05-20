@@ -111,7 +111,7 @@
     },
     "python_cli_completion": {
       "finish_line": "Python CLI completion means parser, dispatch, command/interface behavior, adapter metadata, conformance expectations, product-specific runtime binding, and generic deterministic file/data behavior are generated from implementation-independent contracts or IR into generated/python outputs and executed by codegen-owned primitive executors; packages/command-generation/src owns only generic generation, rendering, primitive execution, schema, freshness, and conformance machinery.",
-      "current_state": "product-runtime-source-generation-incomplete",
+      "current_state": "full-generated-cli-complete",
       "allowed_hand_owned_cli_responsibilities": [
         "live workspace inspection",
         "package-specific runtime primitive implementation that cannot yet be represented by codegen-owned primitives",
@@ -140,11 +140,11 @@
         "root console smoke proof executes at least one generated root command through the installed console path, not only through generated parser/help imports",
         "Full completion proof must distinguish generated-output placement from generated ownership; product-specific runtime files under generated/python must be produced by command-generation or explicitly inventoried as transitional generated-output debt.",
         "Full completion proof must distinguish portable codegen primitive execution from domain runtime primitives wrapped in IR.",
-        "Full completion proof must fail while shipped module source contains runtime primitive/projection modules that own generated CLI behavior.",
+        "Full completion proof must fail while shipped module source contains unaccepted runtime primitive/projection modules that own generated CLI behavior; accepted permanent package-domain runtime boundaries must be inventoried with non-generic audit evidence.",
         "The compact Python completion blocker report must answer why current_state cannot honestly move to full-generated-cli-complete."
       ],
       "completion_gate": {
-        "state": "pending",
+        "state": "satisfied",
         "scope": "python-only",
         "satisfied_by": [
           {
@@ -199,7 +199,7 @@
           },
           {
             "id": "product-specific-runtime-generated-output-owned",
-            "evidence": "generated/python runtime handler and operation executor modules are produced by command-generation render_outputs, and shipped module source no longer owns parser, dispatch, generated runtime handler maps, fallback dispatch, or operation executor behavior.",
+            "evidence": "generated/python runtime handler and operation executor modules are produced by command-generation render_outputs, shipped module source no longer owns parser, dispatch, generated runtime handler maps, fallback dispatch, or operation executor behavior, and remaining package-domain runtime boundaries are accepted permanent non-generic package boundaries.",
             "proof": "scripts/check/check_generated_command_packages.py::_validate_full_python_completion_executable_ownership"
           }
         ]

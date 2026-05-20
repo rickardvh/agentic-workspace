@@ -16,4 +16,7 @@ Inventory proving whether generated Python runtime projection files are rendered
 | `purpose` | string | yes |  | Human-readable purpose for tracking generated Python runtime projection provenance. |  |  |
 | `completion_rule` | string | yes |  | Rule that determines whether runtime projection provenance can support full Python generated CLI completion. |  |  |
 | `allowed_provenance_statuses` | array of enum `"rendered-by-command-generation"`, `"transitional-generated-output-debt"` | yes |  | Allowed provenance status values for runtime projection entries. |  |  |
+| `accepted_runtime_boundaries` | object | yes |  | Accepted package-domain runtime boundaries that do not block full Python completion when audited. |  |  |
+| `accepted_runtime_boundaries.completion_rule` | string | yes |  | Rule for accepting package-domain runtime source and generated facade bridges under full Python generated CLI completion. |  |  |
+| `accepted_runtime_boundaries.entries` | array of ref `#/$defs/accepted_runtime_boundary` | yes |  | Package-domain runtime source files and generated facade bridges accepted as permanent non-generic runtime boundaries. |  |  |
 | `entries` | array of ref `#/$defs/entry` | yes |  | Runtime projection files that must be accounted for before Python generated CLI completion can be claimed. |  |  |

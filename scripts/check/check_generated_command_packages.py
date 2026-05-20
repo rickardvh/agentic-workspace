@@ -170,6 +170,13 @@ PYTHON_FULL_COMPLETION_BLOCKING_RUNTIME_SOURCE_PATHS = (
     "packages/memory/src/repo_memory_bootstrap/installer.py",
     "packages/memory/src/repo_memory_bootstrap/runtime_primitives.py",
 )
+PYTHON_FULL_COMPLETION_ACCEPTED_RUNTIME_FACADE_PATHS = (
+    "generated/workspace/python/primitives/workspace_runtime.py",
+    "generated/planning/python/primitives/planning_installer.py",
+    "generated/planning/python/primitives/planning_runtime.py",
+    "generated/memory/python/primitives/memory_runtime.py",
+)
+PYTHON_ACCEPTED_RUNTIME_BOUNDARY_PERMANENCE_STATUS = "accepted-permanent-package-domain-boundary"
 GENERATED_CLI_COMPATIBILITY_VOCABULARY = (
     "generated_cli_package",
     "load_generated_cli_",
@@ -1141,14 +1148,16 @@ def _validate_full_python_completion_executable_ownership(ir: dict[str, object])
                 "command_package_ir.json cannot claim full Python generated CLI completion while shipped module "
                 f"or product-specific command-generation source {relative_path} owns executable behavior markers: {matched_categories!r}"
             )
+    boundary_errors, accepted_boundary_paths = _validate_python_completion_accepted_runtime_boundaries()
+    errors.extend(boundary_errors)
     existing_runtime_source = sorted(
         relative_path
         for relative_path in PYTHON_FULL_COMPLETION_BLOCKING_RUNTIME_SOURCE_PATHS
-        if (REPO_ROOT / relative_path).is_file()
+        if (REPO_ROOT / relative_path).is_file() and relative_path not in accepted_boundary_paths
     )
     if existing_runtime_source:
         errors.append(
-            "Tier 6 final Python completion promotion remains blocked while accepted package-domain runtime/lifecycle "
+            "Tier 6 final Python completion promotion remains blocked while unaccepted package-domain runtime/lifecycle "
             "source is still present and must be proven permanent or retired: "
             f"{existing_runtime_source!r}"
         )
@@ -1158,11 +1167,15 @@ def _validate_full_python_completion_executable_ownership(ir: dict[str, object])
             "command_package_ir.json cannot claim full Python generated CLI completion while generated command modules "
             f"import package-owned runtime helpers directly: {runtime_imports!r}"
         )
-    generated_runtime_facade_imports = _generated_runtime_facade_package_runtime_imports()
+    generated_runtime_facade_imports = [
+        relative_path
+        for relative_path in _generated_runtime_facade_package_runtime_imports()
+        if relative_path not in accepted_boundary_paths
+    ]
     if generated_runtime_facade_imports:
         errors.append(
             "Tier 6 final Python completion promotion remains blocked while generated runtime facades still bridge to "
-            f"accepted package-owned runtime helpers: {generated_runtime_facade_imports!r}"
+            f"unaccepted package-owned runtime helpers: {generated_runtime_facade_imports!r}"
         )
     return errors
 
@@ -1332,7 +1345,100 @@ def _validate_python_runtime_projection_inventory(*, full_completion: bool) -> l
                 f"python_runtime_projection_inventory.json tracks {relative_path} as {provenance_status!r} "
                 f"with blocking_full_completion={blocking_full_completion!r}"
             )
+    boundary_errors, _accepted_boundary_paths = _validate_python_completion_accepted_runtime_boundaries()
+    errors.extend(boundary_errors)
     return errors
+
+
+def _validate_python_completion_accepted_runtime_boundaries() -> tuple[list[str], set[str]]:
+    errors: list[str] = []
+    try:
+        inventory = python_runtime_projection_inventory_manifest()
+    except Exception as exc:  # noqa: BLE001
+        return [f"python_runtime_projection_inventory.json is missing or invalid: {exc}"], set()
+
+    accepted = inventory.get("accepted_runtime_boundaries", {})
+    if not isinstance(accepted, dict):
+        return ["python_runtime_projection_inventory.json accepted_runtime_boundaries must be an object"], set()
+    entries = accepted.get("entries", [])
+    if not isinstance(entries, list) or not all(isinstance(entry, dict) for entry in entries):
+        return ["python_runtime_projection_inventory.json accepted_runtime_boundaries.entries must be a list of objects"], set()
+
+    expected_paths = set(PYTHON_FULL_COMPLETION_BLOCKING_RUNTIME_SOURCE_PATHS) | set(
+        PYTHON_FULL_COMPLETION_ACCEPTED_RUNTIME_FACADE_PATHS
+    )
+    by_path = {str(entry.get("path")): entry for entry in entries}
+    missing_paths = sorted(expected_paths - set(by_path))
+    extra_paths = sorted(set(by_path) - expected_paths)
+    if missing_paths:
+        errors.append(
+            "python_runtime_projection_inventory.json accepted_runtime_boundaries missing entries: "
+            f"{missing_paths!r}"
+        )
+    if extra_paths:
+        errors.append(
+            "python_runtime_projection_inventory.json accepted_runtime_boundaries contains unexpected entries: "
+            f"{extra_paths!r}"
+        )
+
+    accepted_nonblocking_paths: set[str] = set()
+    for relative_path, entry in sorted(by_path.items()):
+        if relative_path not in expected_paths:
+            continue
+        expected_kind = (
+            "package-runtime-source"
+            if relative_path in PYTHON_FULL_COMPLETION_BLOCKING_RUNTIME_SOURCE_PATHS
+            else "generated-runtime-facade-bridge"
+        )
+        if entry.get("boundary_kind") != expected_kind:
+            errors.append(
+                f"python_runtime_projection_inventory.json accepted runtime boundary {relative_path} "
+                f"must declare boundary_kind={expected_kind!r}"
+            )
+        if not (REPO_ROOT / relative_path).is_file():
+            errors.append(
+                f"python_runtime_projection_inventory.json accepted runtime boundary {relative_path} does not exist"
+            )
+        if entry.get("permanence_status") != PYTHON_ACCEPTED_RUNTIME_BOUNDARY_PERMANENCE_STATUS:
+            errors.append(
+                f"python_runtime_projection_inventory.json accepted runtime boundary {relative_path} "
+                f"must declare permanence_status={PYTHON_ACCEPTED_RUNTIME_BOUNDARY_PERMANENCE_STATUS!r}"
+            )
+        if entry.get("blocks_full_completion") is not False:
+            errors.append(
+                f"python_runtime_projection_inventory.json accepted runtime boundary {relative_path} "
+                "must declare blocks_full_completion=false"
+            )
+        boundary_class = str(entry.get("runtime_boundary_class", ""))
+        if boundary_class not in PYTHON_OPERATION_ACCEPTED_BOUNDARY_CLASSES:
+            errors.append(
+                f"python_runtime_projection_inventory.json accepted runtime boundary {relative_path} "
+                f"must declare runtime_boundary_class in {sorted(PYTHON_OPERATION_ACCEPTED_BOUNDARY_CLASSES)!r}"
+            )
+        if boundary_class in PYTHON_OPERATION_FULL_COMPLETION_BLOCKING_BOUNDARY_CLASSES:
+            errors.append(
+                f"python_runtime_projection_inventory.json accepted runtime boundary {relative_path} "
+                "cannot classify generic deterministic behavior as accepted permanent runtime"
+            )
+        for field in (
+            "current_owner",
+            "source_of_truth",
+            "runtime_boundary_reason",
+            "conformance_ref",
+            "what_would_make_portable_later",
+            "generic_behavior_audit",
+            "why_not_blocking",
+        ):
+            if not str(entry.get(field, "")).strip():
+                errors.append(
+                    f"python_runtime_projection_inventory.json accepted runtime boundary {relative_path} "
+                    f"must include {field}"
+                )
+        if relative_path not in missing_paths and relative_path not in extra_paths and not any(
+            relative_path in error for error in errors
+        ):
+            accepted_nonblocking_paths.add(relative_path)
+    return errors, accepted_nonblocking_paths
 
 
 def _tracked_python_source_files() -> list[str]:
@@ -2569,7 +2675,7 @@ def _python_completion_blockers_report(ir: dict[str, object]) -> dict[str, objec
         "next_owner": (
             "#892 / tier-6-final-python-completion-promotion"
             if blockers
-            else "python_cli_completion may be promoted only with full proof rerun"
+            else "none"
         ),
     }
 
