@@ -154,9 +154,9 @@
   "iterative_follow_through": {
     "what this slice enabled": "memory.status and memory.doctor non-verbose JSON/text use generated payload.status; default memory install/init/adopt dry-runs use generated payload.lifecycle-plan; memory current show JSON/text uses generated payload.current-memory plus output.emit.current-memory. Package runtime no longer owns those deterministic report/planning/view routes.",
     "intentionally deferred": "Remaining Memory lifecycle commands, customized lifecycle policy, current check, verbose/strict doctor detail, and mutation/apply paths are still part of this active lane.",
-    "discovered implications": "none yet",
+    "discovered implications": "Full memory suite caught a target-root resolution gap in the earlier memory.status text path: payload.status used the process cwd when text output skipped resolve_target_root. Fixed directly by running target resolution for all non-verbose status output.",
     "proof achieved now": "focused status/doctor/install/init/adopt/current-show JSON/text proof passed; full lane proof remains pending",
-    "validation still needed": "make test-memory, make lint-memory, docker conformance, and remaining lane-specific checks before closing Tier 3",
+    "validation still needed": "make lint-memory, docker conformance, and remaining lane-specific checks before closing Tier 3",
     "next likely slice": "evaluate whether another Memory report/render path can be represented declaratively before tackling upgrade dry-run; do not flatten replacement/removal policy into copy-only payload planning."
   },
   "intent_interpretation": {
@@ -380,7 +380,13 @@
     ],
     "ordinary output cap": 3,
     "signals found": [],
-    "signals fixed": [],
+    "signals fixed": [
+      {
+        "signal": "Full memory proof caught that the generated memory.status text path skipped target-root resolution while payload.status still needed target_root, making the command depend on process cwd.",
+        "owner": "direct fix",
+        "fix": "memory.status now resolves target_root for all non-verbose output before payload.status runs."
+      }
+    ],
     "signals routed": [],
     "signals dismissed": [],
     "next owner": ""

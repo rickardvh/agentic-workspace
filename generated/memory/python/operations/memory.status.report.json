@@ -49,16 +49,8 @@
         ],
         "uses": "path.target_root.resolve",
         "when": {
-          "all": [
-            {
-              "equals": "json",
-              "value": "format"
-            },
-            {
-              "equals": false,
-              "value": "verbose"
-            }
-          ]
+          "equals": false,
+          "value": "verbose"
         }
       },
       {

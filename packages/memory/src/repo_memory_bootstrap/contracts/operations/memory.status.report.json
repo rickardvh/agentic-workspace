@@ -90,16 +90,8 @@
         "uses": "path.target_root.resolve",
         "description": "Resolve the target root for target-local memory status checks.",
         "when": {
-          "all": [
-            {
-              "value": "format",
-              "equals": "json"
-            },
-            {
-              "value": "verbose",
-              "equals": false
-            }
-          ]
+          "value": "verbose",
+          "equals": false
         },
         "arguments": {
           "must_exist": true,
