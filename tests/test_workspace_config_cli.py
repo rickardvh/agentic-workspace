@@ -251,6 +251,32 @@ safe_to_auto_run_commands = false
     assert values["workspace.workflow_obligations"][0]["id"] == "closeout_proof"
 
 
+def test_config_selected_text_uses_generated_output(tmp_path: Path, monkeypatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[workspace]
+optimization_bias = "agent-efficiency"
+""".strip(),
+        encoding="utf-8",
+    )
+
+    def fail_source_output(*_args, **_kwargs) -> None:
+        raise AssertionError("config selected text should not fall back to package output")
+
+    monkeypatch.setattr(workspace_runtime_primitives, "_emit_workspace_operation_output", fail_source_output)
+
+    assert cli.main(["config", "--target", str(tmp_path), "--select", "workspace.optimization_bias", "--format", "text"]) == 0
+
+    text = capsys.readouterr().out
+    assert "Kind: agentic-workspace/selected-output/v1" in text
+    assert "Source command: config" in text
+    assert '"workspace.optimization_bias": "agent-efficiency"' in text
+
+
 def test_config_command_reports_tiny_profile_for_config_posture(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(
