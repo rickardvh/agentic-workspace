@@ -174,6 +174,7 @@ def test_skill_specs_contract_models_startup_and_planning_behavior() -> None:
     assert startup_command["mutates_state"] is False
     assert "skill_routing.preferred_routes" in startup_command["key_output_fields"]
     assert any("Create planning" in action or "planning" in action for action in startup["forbidden_actions"])
+    assert startup["generated_target_requirements"]["status"] == "ready-for-renderer"
 
     planning = specs["planning-autopilot"]
     planning_commands = {command["id"]: command for command in planning["preferred_cli_commands"]}
@@ -212,6 +213,22 @@ def test_skill_specs_contract_models_startup_and_planning_behavior() -> None:
             assert command_ref in commands_by_ref
             assert affordance["command"].replace(" ", ".") == command_ref
             assert affordance["mutates_state"] is commands_by_ref[command_ref]["mutates_state"]
+
+
+def test_skillspec_generated_startup_target_preserves_behavior_contract() -> None:
+    manifest = contract_tooling.skill_specs_manifest()
+    rendered = contract_tooling.render_skillspec_target_skill(manifest, "startup-router")
+    checked_in = Path("generated/workspace/skills/startup-router/SKILL.md").read_text(encoding="utf-8")
+
+    assert checked_in == rendered
+    assert "uv run agentic-workspace start --task" in checked_in
+    assert "`immediate_next_allowed_action`" in checked_in
+    assert "`next_safe_action.implementation_allowed`" in checked_in
+    assert "Open raw planning or memory state before compact startup routing points there." in checked_in
+    assert "Read `.agentic-workspace/WORKFLOW.md` before other workspace files." in checked_in
+    assert "Direct task: continue without durable artifacts" in checked_in
+    assert "Lane or epic task: block implementation" in checked_in
+    assert "Fallback task: when the CLI is unavailable" in checked_in
 
 
 def test_operational_affordance_roles_classify_first_contact_and_diagnostics() -> None:

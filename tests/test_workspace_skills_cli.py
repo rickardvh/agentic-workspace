@@ -18,6 +18,17 @@ def test_workspace_startup_skill_declares_skillspec_pilot_contract() -> None:
         assert "No-CLI fallback" in text
 
 
+def test_generated_startup_router_skill_is_compact_adapter_projection() -> None:
+    root = Path(__file__).resolve().parents[1]
+    generated = (root / "generated" / "workspace" / "skills" / "startup-router" / "SKILL.md").read_text(encoding="utf-8")
+
+    assert "Generated from `src/agentic_workspace/contracts/skill_specs.json`" in generated
+    assert "Do not hand-edit generated output." in generated
+    assert "Treat generated skill or adapter output as the source of product behavior." in generated
+    assert generated.count("\n## ") <= 9
+    assert len(generated.splitlines()) < 70
+
+
 def test_critical_skills_include_anti_rationalization_and_behavior_evidence() -> None:
     root = Path(__file__).resolve().parents[1]
     startup = (root / ".agentic-workspace" / "skills" / "workspace-startup" / "SKILL.md").read_text(encoding="utf-8")

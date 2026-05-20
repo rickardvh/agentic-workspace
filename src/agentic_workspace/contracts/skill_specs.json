@@ -570,14 +570,13 @@
         "Do not claim completion when compact routing reports closure blockers or missing continuation ownership."
       ],
       "generated_target_requirements": {
-        "status": "contract-only",
+        "status": "ready-for-renderer",
         "must_preserve": [
           "CLI-first startup routing when available.",
           "Conservative no-CLI fallback.",
           "No-artifact-by-default behavior for ordinary direct work.",
           "Forbidden raw planning/memory reads before compact routing."
-        ],
-        "deferred_until": "A renderer slice is intentionally selected after the SkillSpec contract proves sufficient."
+        ]
       }
     },
     {

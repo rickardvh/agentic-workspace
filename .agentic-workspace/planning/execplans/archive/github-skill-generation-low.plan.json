@@ -1,0 +1,333 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "SkillSpec generated startup-router target",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "lane",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "required_continuation",
+      "iterative_follow_through",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement the first #960 skill-generation lane slice by rendering a compact generated startup-router skill from SkillSpec and proving it preserves the intended startup-routing behavior contract.",
+    "hard_constraints": "Keep scope bounded to one generated SkillSpec target, generated output, and behavior-focused tests. Do not introduce a broad plugin-generation framework or make generated targets the source of product behavior.",
+    "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Pick one generated SkillSpec target and prove behavior equivalence before broad generation work.",
+    "proof_expectations": "['uv run pytest tests/test_contract_tooling.py::test_skill_specs_contract_models_startup_and_planning_behavior tests/test_contract_tooling.py::test_skillspec_generated_startup_target_preserves_behavior_contract tests/test_workspace_skills_cli.py::test_generated_startup_router_skill_is_compact_adapter_projection -q', 'uv run ruff check src/agentic_workspace/contract_tooling.py scripts/generate/generate_skillspec_targets.py tests/test_contract_tooling.py tests/test_workspace_skills_cli.py', 'uv run python scripts/generate/generate_skillspec_targets.py --check', 'uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success', 'make test-workspace', 'make lint-workspace']",
+    "touched_scope": "['.agentic-workspace/planning/state.toml', '.agentic-workspace/planning/execplans/github-skill-generation-low.plan.json', 'src/agentic_workspace/contracts/skill_specs.json', 'src/agentic_workspace/contract_tooling.py', 'scripts/generate/generate_skillspec_targets.py', 'generated/workspace/skills/startup-router/SKILL.md', 'tests/test_contract_tooling.py', 'tests/test_workspace_skills_cli.py']",
+    "completion_criteria": "['SkillSpec marks startup-router ready for rendering.', 'A generated startup-router SKILL.md exists under generated/workspace/skills/startup-router.', 'The generated skill preserves preferred CLI, no-CLI fallback, allowed/forbidden actions, proof/closeout guidance, and direct/lane/fallback behavior fixtures.', 'Tests prove checked-in generated output matches the renderer and remains compact.']",
+    "continuation_owner": "#989 framework-native plugin definitions",
+    "closeout_decision": "archive-but-keep-lane-open"
+  },
+  "goal": [
+    "Implement the first #960 skill-generation lane slice by rendering a compact generated startup-router skill from SkillSpec and proving it preserves the intended startup-routing behavior contract."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Implement the first #960 skill-generation lane slice by rendering a compact generated startup-router skill from SkillSpec and proving it preserves the intended startup-routing behavior contract.",
+      "constraints": "Keep scope bounded to one generated SkillSpec target, generated output, and behavior-focused tests. Do not introduce a broad plugin-generation framework or make generated targets the source of product behavior.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "github-skill-generation-low",
+      "status": "in-progress",
+      "next_step": "Pick one generated SkillSpec target and prove behavior equivalence before broad generation work.",
+      "proof": "focused pytest, ruff, and generated SkillSpec target freshness check"
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/github-skill-generation-low.plan.json",
+        "src/agentic_workspace/contracts/skill_specs.json",
+        "src/agentic_workspace/contract_tooling.py",
+        "scripts/generate/generate_skillspec_targets.py",
+        "generated/workspace/skills/startup-router/SKILL.md",
+        "tests/test_contract_tooling.py",
+        "tests/test_workspace_skills_cli.py"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#960 skill/proof routing generation lane, including generated skill targets now and framework-native plugin definitions later.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "#989 framework-native plugin definitions"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "#989 framework-native plugin definitions",
+    "activation trigger": "Generated skill target pattern is stable enough to apply to plugin definitions without creating a broad workflow-options engine."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "SkillSpec can now render one compact adapter-facing skill target from canonical contract data.",
+    "intentionally deferred": "#989 framework-native plugin definitions and broad multi-target generation.",
+    "discovered implications": "Generated targets need behavior fixtures and freshness checks so adapters do not drift from SkillSpec.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Implement the skill-generation lane around #960 on a new branch.",
+    "inferred intended outcome": "Ship the first concrete generated SkillSpec target for #960/#962 and cover #1040 behavior acceptance without over-scoping the deferred #989 plugin generation lane.",
+    "chosen concrete what": "Pick one generated SkillSpec target and prove behavior equivalence before broad generation work.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "SkillSpec contract, renderer/generator, generated startup-router skill target, focused tests, and this plan/state update.",
+    "max changed files": "8 implementation/planning files plus generated target directory.",
+    "required validation commands": "focused pytest, ruff on touched Python/test files, generated target --check, contract tooling check, make test-workspace, make lint-workspace.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Pick one generated SkillSpec target and prove behavior equivalence before broad generation work.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement the first #960 skill-generation lane slice by rendering a compact generated startup-router skill from SkillSpec and proving it preserves the intended startup-routing behavior contract.",
+    "hard constraints": "Keep scope bounded to one generated SkillSpec target, generated output, and behavior-focused tests. Do not introduce a broad plugin-generation framework or make generated targets the source of product behavior.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "The first #960 skill-generation slice is already bounded to one generated SkillSpec target plus tests; splitting now would add coordination overhead without reducing proof or quality risk.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-20T12:18:07+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    "#960",
+    "#962",
+    "#1040",
+    "#989"
+  ],
+  "active_milestone": {
+    "id": "startup-router-generated-target",
+    "status": "completed",
+    "scope": "Render and prove one startup-router generated SkillSpec target.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Pick one generated SkillSpec target and prove behavior equivalence before broad generation work."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/github-skill-generation-low.plan.json",
+    "src/agentic_workspace/contracts/skill_specs.json",
+    "src/agentic_workspace/contract_tooling.py",
+    "scripts/generate/generate_skillspec_targets.py",
+    "generated/workspace/skills/startup-router/SKILL.md",
+    "tests/test_contract_tooling.py",
+    "tests/test_workspace_skills_cli.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_contract_tooling.py::test_skill_specs_contract_models_startup_and_planning_behavior tests/test_contract_tooling.py::test_skillspec_generated_startup_target_preserves_behavior_contract tests/test_workspace_skills_cli.py::test_generated_startup_router_skill_is_compact_adapter_projection -q",
+    "uv run ruff check src/agentic_workspace/contract_tooling.py scripts/generate/generate_skillspec_targets.py tests/test_contract_tooling.py tests/test_workspace_skills_cli.py",
+    "uv run python scripts/generate/generate_skillspec_targets.py --check",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "make test-workspace",
+    "make lint-workspace"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "SkillSpec marks startup-router ready for rendering.",
+    "A generated startup-router SKILL.md exists under generated/workspace/skills/startup-router.",
+    "The generated skill preserves preferred CLI, no-CLI fallback, allowed/forbidden actions, proof/closeout guidance, and direct/lane/fallback behavior fixtures.",
+    "Tests prove checked-in generated output matches the renderer and remains compact."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning promote-to-plan",
+    "what happened": "Implemented the first #960 skill-generation lane slice: a SkillSpec renderer/generator now produces the startup-router target skill, and behavior tests prove the generated skill preserves startup-routing CLI, fallback, actions, proof/closeout, and fixture semantics.",
+    "scope touched": "SkillSpec contract, renderer/generator, generated startup-router skill target, focused tests, and planning state/execplan closeout.",
+    "changed surfaces": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/github-skill-generation-low.plan.json; src/agentic_workspace/contracts/skill_specs.json; src/agentic_workspace/contract_tooling.py; scripts/generate/generate_skillspec_targets.py; generated/workspace/skills/startup-router/SKILL.md; tests/test_contract_tooling.py; tests/test_workspace_skills_cli.py",
+    "validations run": "focused pytest; ruff; generated SkillSpec target --check; contract tooling; structured inventory; planning doctor; make test-workspace; make lint-workspace",
+    "result for continuation": "continue from #989 framework-native plugin definitions",
+    "next step": "promote the next bounded slice from #989 framework-native plugin definitions"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Scope stayed bounded to one generated SkillSpec target. #962 and the skill-target portion of #1040 are satisfied by this slice; #960 remains open for the wider lane and #989 owns framework-native plugin definitions.",
+    "proof status": "passed",
+    "intent served": "no; intent-status=deferred-with-owner keeps continuation explicit.",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "#989 framework-native plugin definitions"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "The first #960 skill-generation slice is already bounded to one generated SkillSpec target plus tests; splitting now would add coordination overhead without reducing proof or quality risk.",
+    "expected savings": "unknown",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "focused pytest; ruff; generated SkillSpec target --check; contract tooling; structured inventory; planning doctor; make test-workspace; make lint-workspace",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "focused pytest; ruff; generated SkillSpec target --check; contract tooling; structured inventory; planning doctor; make test-workspace; make lint-workspace"
+  },
+  "intent_satisfaction": {
+    "original intent": "These are useful architecture enhancements, but current dogfooding points to immediate trust/provenance issues first.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "focused pytest; ruff; generated SkillSpec target --check; contract tooling; structured inventory; planning doctor; make test-workspace; make lint-workspace",
+    "unsolved intent passed to": "#989 framework-native plugin definitions"
+  },
+  "execution_summary": {
+    "outcome delivered": "Generated startup-router SKILL.md from SkillSpec with checked-in freshness and behavior tests.",
+    "validation confirmed": "focused pytest; ruff; generated SkillSpec target --check; contract tooling; structured inventory; planning doctor; make test-workspace; make lint-workspace",
+    "follow-on routed to": "#989 framework-native plugin definitions",
+    "post-work posterity capture": "archive closeout distillation",
+    "knowledge promoted (memory/docs/config)": "none",
+    "resume from": "#989 framework-native plugin definitions",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed planning residue to #989 framework-native plugin definitions.",
+    "motivation worth preserving": "Future agents should continue from #989 framework-native plugin definitions rather than rediscover this closeout residue.",
+    "canonical owner now": "#989 framework-native plugin definitions",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "#989 framework-native plugin definitions",
+    "proposed durable intent": "Future agents should continue from #989 framework-native plugin definitions rather than rediscover this closeout residue.",
+    "confidence": "low",
+    "needs review": "True",
+    "owner surface": "#989 framework-native plugin definitions"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status deferred-with-owner.",
+    "evidence carried forward": "focused pytest; ruff; generated SkillSpec target --check; contract tooling; structured inventory; planning doctor; make test-workspace; make lint-workspace",
+    "reopen trigger": "Reopen when #989 framework-native plugin definitions activates a fresh bounded slice."
+  },
+  "improvement_signal_review": {
+    "status": "no_signal_found",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#989 framework-native plugin definitions",
+          "owner": "#989 framework-native plugin definitions",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-20: Promoted from TODO direct-task shape into an execplan.",
+    "2026-05-20: Recorded delegation decision route=keep-local."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "yes",
+    "decision": "route_to_planning",
+    "target": "#989 framework-native plugin definitions",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: These are useful architecture enhancements, but current dogfooding points to immediate trust/provenance issues first.\nIntent satisfied: no\nArchive decision: archive-but-keep-lane-open\nProof: focused pytest; ruff; generated SkillSpec target --check; contract tooling; structured inventory; planning doctor; make test-workspace; make lint-workspace\nChanged surfaces: .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/github-skill-generation-low.plan.json; src/agentic_workspace/contracts/skill_specs.json; src/agentic_workspace/contract_tooling.py; scripts/generate/generate_skillspec_targets.py; generated/workspace/skills/startup-router/SKILL.md; tests/test_contract_tooling.py; tests/test_workspace_skills_cli.py\nDurable residue: planning (#989 framework-native plugin definitions)\nMemory learning: route_to_planning\nFollow-up: #989 framework-native plugin definitions"
+  }
+}
