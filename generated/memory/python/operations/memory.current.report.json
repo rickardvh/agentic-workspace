@@ -14,7 +14,7 @@
   },
   "guards": [
     "Keep current show/check read-only.",
-    "Generated code owns parser/help/dispatch shape and current show JSON; memory-owned current-memory review heuristics remain behind the declared primitive for current check and text output."
+    "Generated code owns parser/help/dispatch shape and current show output; memory-owned current-memory review heuristics remain behind the declared primitive for current check."
   ],
   "id": "memory.current.report",
   "inputs": [
@@ -50,16 +50,8 @@
         ],
         "uses": "path.target_root.resolve",
         "when": {
-          "all": [
-            {
-              "equals": "json",
-              "value": "format"
-            },
-            {
-              "equals": "show",
-              "value": "current_command"
-            }
-          ]
+          "equals": "show",
+          "value": "current_command"
         }
       },
       {
@@ -73,16 +65,8 @@
         "uses": "memory.current.load",
         "when": {
           "not": {
-            "all": [
-              {
-                "equals": "json",
-                "value": "format"
-              },
-              {
-                "equals": "show",
-                "value": "current_command"
-              }
-            ]
+            "equals": "show",
+            "value": "current_command"
           }
         }
       },
@@ -100,16 +84,8 @@
         ],
         "uses": "payload.current-memory",
         "when": {
-          "all": [
-            {
-              "equals": "json",
-              "value": "format"
-            },
-            {
-              "equals": "show",
-              "value": "current_command"
-            }
-          ]
+          "equals": "show",
+          "value": "current_command"
         }
       },
       {
@@ -120,10 +96,30 @@
         "outputs": [
           "emitted"
         ],
-        "uses": "output.emit"
+        "uses": "output.emit",
+        "when": {
+          "not": {
+            "equals": "show",
+            "value": "current_command"
+          }
+        }
+      },
+      {
+        "arguments": {},
+        "description": "Emit current show output from the generated current-memory payload.",
+        "id": "emit_current_show",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit.current-memory",
+        "when": {
+          "equals": "show",
+          "value": "current_command"
+        }
       }
     ],
-    "summary": "Memory current show JSON executes generated operation IR through codegen-owned portable primitives. Current check and text output keep using the explicit package-domain source runtime."
+    "summary": "Memory current show executes generated operation IR through codegen-owned portable primitives. Current check keeps using the explicit package-domain source runtime."
   },
   "locality": {
     "network": "forbidden",
@@ -165,8 +161,13 @@
       "description": "Emit legacy current-memory output in the requested format.",
       "id": "emit_output",
       "uses": "output.emit"
+    },
+    {
+      "description": "Emit current show output from the generated current-memory payload.",
+      "id": "emit_current_show",
+      "uses": "output.emit.current-memory"
     }
   ],
-  "summary": "Inspect or check legacy current-memory migration residue through the memory module CLI; current show JSON is assembled from declared target-local files while text/check behavior remains package-domain.",
+  "summary": "Inspect or check legacy current-memory migration residue through the memory module CLI; current show output is assembled from declared target-local files while current check behavior remains package-domain.",
   "writes": []
 }

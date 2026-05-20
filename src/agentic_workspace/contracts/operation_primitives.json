@@ -97,6 +97,7 @@
           "payload.status",
           "payload.verify",
           "output.emit",
+          "output.emit.current-memory",
           "output.emit.install-result"
         ],
         "domain_runtime_extension_behavior": "Python generated packages may bridge explicit domain-runtime primitives through the declared runtime module binding; that bridge is not counted as shared primitive executor coverage.",
@@ -560,6 +561,16 @@
       "semantics": "Emit stable JSON for machine-readable output or compact install-result text from declared action records without calling package runtime formatting.",
       "input_schema_ref": "schemas/primitives/output_emit_install_result.input.schema.json",
       "output_schema_ref": "schemas/primitives/output_emit_install_result.output.schema.json",
+      "taxonomy_tier": "tier-1-portable-codegen"
+    },
+    {
+      "id": "output.emit.current-memory",
+      "summary": "Render a current-memory view as text or JSON from an already assembled structured payload.",
+      "kind": "output",
+      "portability": "target-executor",
+      "semantics": "Emit stable JSON for machine-readable output or canonical current-memory text from declared note records without calling package runtime formatting.",
+      "input_schema_ref": "schemas/primitives/output_emit_current_memory.input.schema.json",
+      "output_schema_ref": "schemas/primitives/output_emit_current_memory.output.schema.json",
       "taxonomy_tier": "tier-1-portable-codegen"
     },
     {

@@ -1570,7 +1570,8 @@ export const generatedCommandPackage = {
           "path.target_root.resolve",
           "memory.current.load",
           "payload.current-memory",
-          "output.emit"
+          "output.emit",
+          "output.emit.current-memory"
         ]
       },
       "schemas": {

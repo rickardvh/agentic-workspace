@@ -6,7 +6,7 @@
     "command": "current",
     "format_option": "format"
   },
-  "summary": "Inspect or check legacy current-memory migration residue through the memory module CLI; current show JSON is assembled from declared target-local files while text/check behavior remains package-domain.",
+  "summary": "Inspect or check legacy current-memory migration residue through the memory module CLI; current show output is assembled from declared target-local files while current check behavior remains package-domain.",
   "classification": "read-only-report",
   "inputs": [
     {
@@ -67,11 +67,16 @@
       "id": "emit_output",
       "uses": "output.emit",
       "description": "Emit legacy current-memory output in the requested format."
+    },
+    {
+      "id": "emit_current_show",
+      "uses": "output.emit.current-memory",
+      "description": "Emit current show output from the generated current-memory payload."
     }
   ],
   "guards": [
     "Keep current show/check read-only.",
-    "Generated code owns parser/help/dispatch shape and current show JSON; memory-owned current-memory review heuristics remain behind the declared primitive for current check and text output."
+    "Generated code owns parser/help/dispatch shape and current show output; memory-owned current-memory review heuristics remain behind the declared primitive for current check."
   ],
   "proof": [
     "operation contract validates against operation.schema.json",
@@ -80,23 +85,15 @@
   "migration_status": "runtime-consumed",
   "ir_plan": {
     "status": "representative",
-    "summary": "Memory current show JSON executes generated operation IR through codegen-owned portable primitives. Current check and text output keep using the explicit package-domain source runtime.",
+    "summary": "Memory current show executes generated operation IR through codegen-owned portable primitives. Current check keeps using the explicit package-domain source runtime.",
     "steps": [
       {
         "id": "resolve_target_root",
         "uses": "path.target_root.resolve",
         "description": "Resolve the target root for target-local current-memory view checks.",
         "when": {
-          "all": [
-            {
-              "value": "format",
-              "equals": "json"
-            },
-            {
-              "value": "current_command",
-              "equals": "show"
-            }
-          ]
+          "value": "current_command",
+          "equals": "show"
         },
         "arguments": {
           "must_exist": true,
@@ -113,16 +110,8 @@
         "description": "Load legacy current-memory show or check result based on the current subcommand.",
         "when": {
           "not": {
-            "all": [
-              {
-                "value": "format",
-                "equals": "json"
-              },
-              {
-                "value": "current_command",
-                "equals": "show"
-              }
-            ]
+            "value": "current_command",
+            "equals": "show"
           }
         },
         "arguments": {},
@@ -136,16 +125,8 @@
         "uses": "payload.current-memory",
         "description": "Assemble current show JSON from declared target-local current-memory note files.",
         "when": {
-          "all": [
-            {
-              "value": "format",
-              "equals": "json"
-            },
-            {
-              "value": "current_command",
-              "equals": "show"
-            }
-          ]
+          "value": "current_command",
+          "equals": "show"
         },
         "arguments": {
           "policy_root": "memory.contracts",
@@ -161,6 +142,26 @@
         "id": "emit_output",
         "uses": "output.emit",
         "description": "Emit legacy current-memory output in the requested format.",
+        "when": {
+          "not": {
+            "value": "current_command",
+            "equals": "show"
+          }
+        },
+        "arguments": {},
+        "outputs": [
+          "emitted"
+        ],
+        "on_error": "emit_usage_error"
+      },
+      {
+        "id": "emit_current_show",
+        "uses": "output.emit.current-memory",
+        "description": "Emit current show output from the generated current-memory payload.",
+        "when": {
+          "value": "current_command",
+          "equals": "show"
+        },
         "arguments": {},
         "outputs": [
           "emitted"

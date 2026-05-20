@@ -95,6 +95,8 @@ def execute_primitive(
         return _emit_output(values=values, arguments=arguments)
     if primitive == "output.emit.install-result":
         return _emit_output(values=values, arguments={"text_style": "install-result"})
+    if primitive == "output.emit.current-memory":
+        return _emit_output(values=values, arguments={"text_style": "current-memory"})
     if primitive == "python.function.call":
         return _call_python_function(values=values, arguments=arguments)
     raise PrimitiveExecutionError(f"unsupported portable primitive: {primitive!r}")
@@ -809,6 +811,8 @@ def _emit_output(*, values: dict[str, Any], arguments: dict[str, Any] | None = N
     output_format = str(values.get("format") or "text")
     if output_format == "json":
         return json.dumps(result, indent=2, sort_keys=True) + "\n"
+    if str(arguments.get("text_style", "")) == "current-memory" and isinstance(result, dict):
+        return _emit_current_memory_text(result)
     if str(arguments.get("text_style", "")) == "install-result" and isinstance(result, dict):
         return _emit_install_result_text(result)
     if not isinstance(result, dict):
@@ -851,6 +855,22 @@ def _emit_install_result_text(result: dict[str, Any]) -> str:
                 details.append(str(value) if not label_name else f"{label_name}={value}")
         detail = f" ({'; '.join(details)})" if details else ""
         lines.append(f"- {action.get('kind')}: {label}{detail}")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _emit_current_memory_text(result: dict[str, Any]) -> str:
+    lines = [f"Target: {Path(str(result.get('target_root', ''))).resolve()}"]
+    detected_version = result.get("detected_version")
+    lines.append(
+        f"Detected version: {detected_version if detected_version is not None else 'none'} (payload version {result.get('bootstrap_version')})"
+    )
+    for note in _list_of_objects(result.get("notes", []), source="result.notes"):
+        lines.append("")
+        lines.append(f"[{note.get('path', '')}]")
+        if not bool(note.get("exists", False)):
+            lines.append("(missing)")
+            continue
+        lines.append(str(note.get("content", "")).rstrip())
     return "\n".join(lines).rstrip() + "\n"
 
 

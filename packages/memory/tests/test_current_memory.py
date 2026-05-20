@@ -304,6 +304,29 @@ def test_generated_current_show_json_uses_declarative_payload_view(
     assert data["notes"][2]["path"] == ".agentic-workspace/memory/repo/current/routing-feedback.md"
 
 
+def test_generated_current_show_text_uses_declarative_payload_view(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    note_path = target / ".agentic-workspace" / "memory" / "repo" / "current" / "project-state.md"
+    note_path.write_text("# Project State\n\nShort status.\n", encoding="utf-8")
+
+    def fail_current_loader(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError("current show text should not use the package current loader")
+
+    monkeypatch.setattr(runtime_primitives, "_load_memory_current", fail_current_loader)
+
+    assert cli.main(["current", "show", "--target", str(target)]) == 0
+
+    output = capsys.readouterr().out
+    assert f"Target: {target.resolve()}" in output
+    assert "Detected version: none (payload version" in output
+    assert "[.agentic-workspace/memory/repo/current/project-state.md]" in output
+    assert "# Project State\n\nShort status." in output
+    assert "[.agentic-workspace/memory/repo/current/task-context.md]\n(missing)" in output
+
+
 def test_current_note_size_pressure_is_classified_as_current_memory_review() -> None:
     assert (
         _infer_action_category(
