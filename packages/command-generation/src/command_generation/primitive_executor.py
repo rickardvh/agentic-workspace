@@ -440,7 +440,7 @@ def _payload_status(*, values: dict[str, Any], arguments: dict[str, Any], contex
             )
     return {
         "target_root": str(target_root),
-        "dry_run": False,
+        "dry_run": bool(arguments.get("dry_run", False)),
         "mode": "",
         "message": str(arguments.get("message", "Status report")),
         "health": "healthy" if active["status"] == "present" else "attention-needed",

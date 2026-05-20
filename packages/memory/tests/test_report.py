@@ -127,6 +127,42 @@ def test_memory_lifecycle_text_status_uses_declarative_payload_policy(tmp_path: 
     assert "- present: AGENTS.md" in output
 
 
+def test_memory_lifecycle_doctor_uses_declarative_payload_policy(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+
+    def fail_doctor(*args, **kwargs):
+        raise AssertionError("non-verbose doctor should not call package-domain doctor runtime")
+
+    monkeypatch.setattr(runtime_primitives, "_load_memory_bootstrap_doctor", fail_doctor)
+
+    assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["dry_run"] is True
+    assert payload["message"] == "Doctor report"
+    assert any(action["kind"] == "present" and action["path"] == "AGENTS.md" for action in payload["actions"])
+
+
+def test_memory_lifecycle_text_doctor_uses_declarative_payload_policy(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+
+    def fail_doctor(*args, **kwargs):
+        raise AssertionError("non-verbose text doctor should not call package-domain doctor runtime")
+
+    monkeypatch.setattr(runtime_primitives, "_load_memory_bootstrap_doctor", fail_doctor)
+
+    assert cli.main(["doctor", "--target", str(target)]) == 0
+
+    output = capsys.readouterr().out
+    assert "Doctor report" in output
+    assert "Detected version: 47 (payload version 47)" in output
+    assert "- present: AGENTS.md" in output
+
+
 def test_memory_route_report_tiny_does_not_evaluate_fixtures(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True, exist_ok=True)
