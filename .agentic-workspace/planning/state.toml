@@ -12,9 +12,7 @@ work_items = []
 execplans = []
 
 [todo]
-active_items = [
-  { id = "tier-5-planning-last", title = "Reduce Planning runtime surface", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/tier-5-planning-last.plan.json", why_now = "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane tier-5-planning-last.", owner_role = "implementation", handoff_ready = true, refs = [".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"] },
-]
+active_items = []
 queued_items = []
 
 [roadmap]
