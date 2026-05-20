@@ -1,0 +1,363 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Finish Memory first",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "lane",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "required_continuation",
+      "iterative_follow_through",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane tier-3-memory-first.",
+    "hard_constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Memory is completed before Workspace or Planning. Tier 3A converts read-only report JSON and non-verbose paths to portable primitives where practical, including #1008 for memory.status text and declarative payload status IR; Tier 3B handles lifecycle commands through managed-payload and mutation-planning primitives where practical, leaving apply and mutation safety as explicit domain runtime until modeled.",
+    "proof_expectations": [
+      "uv run pytest packages/memory/tests/test_report.py::test_memory_lifecycle_status_defaults_to_tiny_actions packages/memory/tests/test_report.py::test_memory_lifecycle_tiny_does_not_collect_full_status packages/memory/tests/test_report.py::test_memory_lifecycle_text_status_uses_declarative_payload_policy -q",
+      "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+      "uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json"
+    ],
+    "touched_scope": [
+      ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      ".agentic-workspace/planning/execplans/tier-3-memory-first.plan.json",
+      ".agentic-workspace/planning/state.toml",
+      "generated/memory/python/_contracts/operations/memory.status.report.json",
+      "generated/memory/python/_contracts/payload_verification.memory.json",
+      "generated/memory/python/command_package.json",
+      "generated/memory/python/generated_command_adapters.json",
+      "generated/memory/python/operations/memory.status.report.json",
+      "generated/typescript/memory-cli/src/commandPackage.ts",
+      "packages/command-generation/src/command_generation/primitive_executor.py",
+      "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.status.report.json",
+      "packages/memory/src/repo_memory_bootstrap/contracts/payload_verification.memory.json",
+      "packages/memory/tests/test_report.py",
+      "src/agentic_workspace/contracts/command_adapter_generation.json",
+      "src/agentic_workspace/contracts/command_package_ir.json",
+      "src/agentic_workspace/contracts/operation_primitives.json",
+      "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+      "src/agentic_workspace/contracts/schemas/payload_verification_policy.schema.json",
+      "src/agentic_workspace/contracts/schemas/primitives/output_emit_install_result.input.schema.json",
+      "src/agentic_workspace/contracts/schemas/primitives/output_emit_install_result.output.schema.json",
+      "src/agentic_workspace/contracts/schemas/primitives/payload_status.input.schema.json",
+      "src/agentic_workspace/contracts/schemas/primitives/payload_status.output.schema.json"
+    ],
+    "completion_criteria": [
+      "make test-memory; make lint-memory; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker"
+    ],
+    "continuation_owner": "tier-3-memory-first",
+    "closeout_decision": "keep-lane-open"
+  },
+  "goal": [
+    "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane tier-3-memory-first."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane tier-3-memory-first.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "tier-3-memory-first",
+      "status": "active",
+      "next_step": "Memory is completed before Workspace or Planning. Tier 3A converts read-only report JSON and non-verbose paths to portable primitives where practical, including #1008 for memory.status text and declarative payload status IR; Tier 3B handles lifecycle commands through managed-payload and mutation-planning primitives where practical, leaving apply and mutation safety as explicit domain runtime until modeled.",
+      "proof": "Focused memory.status tests, generated Python conformance, and Python completion-blocker check prove the first Tier 3A memory status slice without claiming the full lane."
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+        ".agentic-workspace/planning/execplans/tier-3-memory-first.plan.json",
+      ".agentic-workspace/planning/state.toml",
+      "generated/memory/python/_contracts/operations/memory.status.report.json",
+      "generated/memory/python/_contracts/payload_verification.memory.json",
+      "generated/memory/python/command_package.json",
+      "generated/memory/python/generated_command_adapters.json",
+      "generated/memory/python/operations/memory.status.report.json",
+      "generated/typescript/memory-cli/src/commandPackage.ts",
+      "packages/command-generation/src/command_generation/primitive_executor.py",
+      "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.status.report.json",
+      "packages/memory/src/repo_memory_bootstrap/contracts/payload_verification.memory.json",
+      "packages/memory/tests/test_report.py",
+      "src/agentic_workspace/contracts/command_adapter_generation.json",
+      "src/agentic_workspace/contracts/command_package_ir.json",
+      "src/agentic_workspace/contracts/operation_primitives.json",
+      "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+      "src/agentic_workspace/contracts/schemas/payload_verification_policy.schema.json",
+      "src/agentic_workspace/contracts/schemas/primitives/output_emit_install_result.input.schema.json",
+      "src/agentic_workspace/contracts/schemas/primitives/output_emit_install_result.output.schema.json",
+      "src/agentic_workspace/contracts/schemas/primitives/payload_status.input.schema.json",
+      "src/agentic_workspace/contracts/schemas/primitives/payload_status.output.schema.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane tier-3-memory-first.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "tier-3-memory-first"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "tier-3-memory-first",
+    "activation trigger": "after committing the memory.status payload-status slice, continue with remaining Memory read-only and lifecycle operation conversion before promoting Workspace or Planning"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "memory.status non-verbose JSON and text now use a generated portable payload.status primitive plus generated install-result output instead of package-owned status collection.",
+    "intentionally deferred": "Remaining Memory report/lifecycle commands, including memory.doctor and mutation/apply paths, are still part of this active lane.",
+    "discovered implications": "none yet",
+    "proof achieved now": "focused first slice proof passed; full lane proof remains pending",
+    "validation still needed": "make test-memory, make lint-memory, docker conformance, and remaining lane-specific checks before closing Tier 3",
+    "next likely slice": "convert memory.doctor non-verbose status to the same payload.status and install-result output primitives"
+  },
+  "intent_interpretation": {
+    "literal request": "Finish Memory first",
+    "inferred intended outcome": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane tier-3-memory-first.",
+    "chosen concrete what": "Memory is completed before Workspace or Planning. Tier 3A converts read-only report JSON and non-verbose paths to portable primitives where practical, including #1008 for memory.status text and declarative payload status IR; Tier 3B handles lifecycle commands through managed-payload and mutation-planning primitives where practical, leaving apply and mutation safety as explicit domain runtime until modeled.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json; .agentic-workspace/planning/execplans/tier-3-memory-first.plan.json; .agentic-workspace/planning/state.toml; generated/memory/python/**; packages/command-generation/src/command_generation/primitive_executor.py; packages/memory/src/repo_memory_bootstrap/contracts/**; packages/memory/tests/**; src/agentic_workspace/contracts/command_package_ir.json; src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+    "max changed files": "about 15 for the first memory.status slice; revisit before broadening to lifecycle mutation primitives",
+    "required validation commands": "Focused memory.status tests; contract tooling; structured-file inventory; generated package check; generated Python conformance; completion-blocker report; full make test-memory/lint-memory/docker conformance before Tier 3 closeout.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Memory is completed before Workspace or Planning. Tier 3A converts read-only report JSON and non-verbose paths to portable primitives where practical, including #1008 for memory.status text and declarative payload status IR; Tier 3B handles lifecycle commands through managed-payload and mutation-planning primitives where practical, leaving apply and mutation safety as explicit domain runtime until modeled.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane tier-3-memory-first.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "First Tier 3 memory.status slice was narrow, already implemented in local context, and delegation would add handoff overhead without reducing proof burden.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-20T14:20:23+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      "label": "decomposition lane tier-3-memory-first",
+      "role": "intake",
+      "locator": "candidate_lanes[13]"
+    }
+  ],
+  "active_milestone": {
+    "id": "tier-3-memory-first",
+    "status": "active",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Memory is completed before Workspace or Planning. Tier 3A converts read-only report JSON and non-verbose paths to portable primitives where practical, including #1008 for memory.status text and declarative payload status IR; Tier 3B handles lifecycle commands through managed-payload and mutation-planning primitives where practical, leaving apply and mutation safety as explicit domain runtime until modeled."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+    ".agentic-workspace/planning/execplans/tier-3-memory-first.plan.json",
+    ".agentic-workspace/planning/state.toml",
+    "generated/memory/python/_contracts/operations/memory.status.report.json",
+    "generated/memory/python/_contracts/payload_verification.memory.json",
+    "generated/memory/python/command_package.json",
+    "generated/memory/python/generated_command_adapters.json",
+    "generated/memory/python/operations/memory.status.report.json",
+    "generated/typescript/memory-cli/src/commandPackage.ts",
+    "packages/command-generation/src/command_generation/primitive_executor.py",
+    "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.status.report.json",
+    "packages/memory/src/repo_memory_bootstrap/contracts/payload_verification.memory.json",
+    "packages/memory/tests/test_report.py",
+    "src/agentic_workspace/contracts/command_adapter_generation.json",
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    "src/agentic_workspace/contracts/operation_primitives.json",
+    "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+    "src/agentic_workspace/contracts/schemas/payload_verification_policy.schema.json",
+    "src/agentic_workspace/contracts/schemas/primitives/output_emit_install_result.input.schema.json",
+    "src/agentic_workspace/contracts/schemas/primitives/output_emit_install_result.output.schema.json",
+    "src/agentic_workspace/contracts/schemas/primitives/payload_status.input.schema.json",
+    "src/agentic_workspace/contracts/schemas/primitives/payload_status.output.schema.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest packages/memory/tests/test_report.py::test_memory_lifecycle_status_defaults_to_tiny_actions packages/memory/tests/test_report.py::test_memory_lifecycle_tiny_does_not_collect_full_status packages/memory/tests/test_report.py::test_memory_lifecycle_text_status_uses_declarative_payload_policy -q",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run python scripts/generate/generate_command_packages.py --check",
+    "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+    "uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "make test-memory; make lint-memory; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker"
+  ],
+  "execution_run": {
+    "run status": "first-slice-implemented",
+    "executor": "Codex",
+    "handoff source": "agentic-planning promote-to-plan decomposition lane",
+    "what happened": "Implemented the first Tier 3A Memory slice by moving memory.status non-verbose JSON and text through declarative payload.status plus generated install-result output.",
+    "scope touched": "memory status operation contract, payload verification policy/schema, primitive registry and executor, generated memory operation/package artifacts, inventory/IR metadata, focused memory tests, and this planning surface",
+    "changed surfaces": "packages/command-generation/src/command_generation/primitive_executor.py; packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.status.report.json; packages/memory/src/repo_memory_bootstrap/contracts/payload_verification.memory.json; generated/memory/python/operations/memory.status.report.json; generated/memory/python/_contracts/operations/memory.status.report.json; generated/memory/python/_contracts/payload_verification.memory.json; generated/memory/python/command_package.json; generated/memory/python/generated_command_adapters.json; generated/typescript/memory-cli/src/commandPackage.ts; packages/memory/tests/test_report.py; src/agentic_workspace/contracts/command_adapter_generation.json; src/agentic_workspace/contracts/command_package_ir.json; src/agentic_workspace/contracts/operation_primitives.json; src/agentic_workspace/contracts/python_operation_execution_inventory.json; src/agentic_workspace/contracts/schemas/payload_verification_policy.schema.json; primitive schema files; planning state/decomposition/execplan",
+    "validations run": "focused memory.status pytest passed; contract tooling passed; structured-file inventory passed; generated package check passed; generated Python conformance passed; Python completion-blocker report still correctly blocks full Python completion on remaining runtime ownership",
+    "result for continuation": "commit this first slice, then continue Tier 3 Memory before promoting Workspace or Planning",
+    "next step": "Convert memory.doctor non-verbose status to payload.status/install-result output, then continue into managed-payload and mutation-planning lifecycle paths."
+  },
+  "finished_run_review": {
+    "review status": "first-slice-reviewed",
+    "scope respected": "yes",
+    "proof status": "focused proof passed; full lane proof pending",
+    "intent served": "partial",
+    "config compliance": "used AW startup and kept repo-relative touched paths",
+    "misinterpretation risk": "low for memory.status slice; high if treated as full Tier 3 completion",
+    "follow-on decision": "keep lane open"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "First Tier 3 memory.status slice was narrow, already implemented in local context, and delegation would add handoff overhead without reducing proof burden.",
+    "expected savings": "low",
+    "actual friction": "none",
+    "proof result": "focused proof passed",
+    "quality concern": "none for first slice",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest packages/memory/tests/test_report.py::test_memory_lifecycle_status_defaults_to_tiny_actions packages/memory/tests/test_report.py::test_memory_lifecycle_tiny_does_not_collect_full_status packages/memory/tests/test_report.py::test_memory_lifecycle_text_status_uses_declarative_payload_policy tests/test_contract_tooling.py::test_python_operation_execution_inventory_tracks_direct_generated_memory_commands tests/test_contract_tooling.py::test_package_generated_python_command_packages_parse_status_runtime_operations -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json",
+    "proof achieved now": "first memory.status slice complete; full Tier 3 lane incomplete",
+    "evidence for \"proof achieved\" state": "The focused tests pass, generated Python conformance passes, and the completion-blocker report still rejects full completion because remaining runtime-owned memory/workspace/planning surfaces exist."
+  },
+  "intent_satisfaction": {
+    "original intent": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane tier-3-memory-first.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "Only the first #1008 memory.status payload/status IR slice is implemented.",
+    "unsolved intent passed to": "tier-3-memory-first"
+  },
+  "execution_summary": {
+    "outcome delivered": "first memory.status payload-status slice implemented",
+    "validation confirmed": "focused memory.status tests, generated Python conformance, and completion-blocker report",
+    "follow-on routed to": "tier-3-memory-first",
+    "post-work posterity capture": "execplan updated with concrete scope, proof, and continuation",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "current milestone"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "first-slice implementation review",
+    "target scope": "none",
+    "proposed durable intent": "",
+    "confidence": "medium",
+    "needs review": false,
+    "owner surface": "tier-3-memory-first"
+  },
+  "closure_check": {
+    "slice status": "bounded slice complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "The memory.status non-verbose route is generated and proven, but Tier 3 Memory still includes memory.doctor and lifecycle/mutation paths.",
+    "evidence carried forward": "Focused tests and generated package proof passed; completion-blocker output still names remaining source-runtime ownership.",
+    "reopen trigger": "If memory.status text or JSON calls package-owned status collection for non-verbose output again."
+  },
+  "improvement_signal_review": {
+    "status": "not_checked",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-20: Scaffolded by agentic-planning promote-to-plan from decomposition lane tier-3-memory-first.",
+    "2026-05-20: Filled concrete scope/proof for first #1008 memory.status payload-status slice and kept Tier 3 lane open.",
+    "2026-05-20: Recorded delegation decision route=keep-local."
+  ]
+}

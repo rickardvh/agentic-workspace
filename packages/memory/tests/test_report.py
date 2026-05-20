@@ -89,8 +89,7 @@ def test_memory_lifecycle_status_defaults_to_tiny_actions(tmp_path: Path, capsys
 
     payload = json.loads(capsys.readouterr().out)
     assert "action_count" in payload
-    assert len(payload["actions"]) <= 5
-    assert payload["detail_command"] == "agentic-memory status --target . --verbose --format json"
+    assert any(action["path"] == "AGENTS.md" for action in payload["actions"])
 
 
 def test_memory_lifecycle_tiny_does_not_collect_full_status(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
@@ -107,7 +106,25 @@ def test_memory_lifecycle_tiny_does_not_collect_full_status(tmp_path: Path, monk
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["health"] == "healthy"
-    assert payload["active"]["note_count"] >= 1
+    assert any(action["kind"] == "present" and action["path"] == "AGENTS.md" for action in payload["actions"])
+
+
+def test_memory_lifecycle_text_status_uses_declarative_payload_policy(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+
+    def fail_collect_status(*, target=None):
+        raise AssertionError("text status should not collect full lifecycle status")
+
+    monkeypatch.setattr(runtime_primitives, "collect_status", fail_collect_status)
+
+    assert cli.main(["status", "--target", str(target)]) == 0
+
+    output = capsys.readouterr().out
+    assert "Status report" in output
+    assert "Detected version: 47 (payload version 47)" in output
+    assert "- present: AGENTS.md" in output
 
 
 def test_memory_route_report_tiny_does_not_evaluate_fixtures(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:

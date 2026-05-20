@@ -185,6 +185,75 @@
           "minLength": 1
         }
       }
+    },
+    "workspace_orchestrator_notice": {
+      "description": "Optional status action emitted when the shared workspace orchestration layer is absent.",
+      "type": "object",
+      "required": [
+        "marker",
+        "detail",
+        "role",
+        "safety",
+        "category"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "marker": {
+          "$ref": "#/$defs/relative_path"
+        },
+        "detail": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1
+        },
+        "safety": {
+          "type": "string",
+          "minLength": 1
+        },
+        "category": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "status_files": {
+      "description": "Payload files to summarize in declarative status reports.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "$ref": "#/$defs/relative_path"
+          },
+          "source": {
+            "$ref": "#/$defs/relative_path"
+          },
+          "role": {
+            "type": "string",
+            "minLength": 1
+          },
+          "safety": {
+            "type": "string",
+            "minLength": 1
+          },
+          "category": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "uniqueItems": true
+    },
+    "obsolete_files": {
+      "description": "Legacy payload files to report as obsolete when present.",
+      "$ref": "#/$defs/path_list"
     }
   },
   "$defs": {

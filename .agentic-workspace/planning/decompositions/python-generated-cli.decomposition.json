@@ -179,9 +179,9 @@
     {
       "id": "tier-3-memory-first",
       "title": "Finish Memory first",
-      "readiness": "deferred",
+      "readiness": "promoted",
       "outcome": "Memory is completed before Workspace or Planning. Tier 3A converts read-only report JSON and non-verbose paths to portable primitives where practical, including #1008 for memory.status text and payload-entry/status IR; Tier 3B handles lifecycle commands through managed-payload and mutation-planning primitives where practical, leaving apply/mutation safety as explicit domain runtime until modeled.",
-      "owner_surface": "packages/memory contracts and fixtures, generated/memory/python, src/agentic_workspace/contracts/python_operation_execution_inventory.json, packages/command-generation primitive executors, and #1008",
+      "owner_surface": ".agentic-workspace/planning/execplans/tier-3-memory-first.plan.json",
       "proof": "make test-memory; make lint-memory; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
       "depends_on": [
         "tier-0-honest-gate",

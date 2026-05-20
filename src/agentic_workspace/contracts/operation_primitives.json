@@ -92,8 +92,10 @@
           "json.parse",
           "toml.table.counts",
           "payload.assemble",
+          "payload.status",
           "payload.verify",
-          "output.emit"
+          "output.emit",
+          "output.emit.install-result"
         ],
         "domain_runtime_extension_behavior": "Python generated packages may bridge explicit domain-runtime primitives through the declared runtime module binding; that bridge is not counted as shared primitive executor coverage.",
         "conformance_ref": "packages/command-generation/tests/primitive_conformance.py and scripts/check/check_generated_command_packages.py --primitive-docker-conformance --require-docker",
@@ -549,6 +551,16 @@
       "taxonomy_tier": "tier-1-portable-codegen"
     },
     {
+      "id": "output.emit.install-result",
+      "summary": "Render lifecycle-style install/status result text or JSON from an already assembled structured payload.",
+      "kind": "output",
+      "portability": "target-executor",
+      "semantics": "Emit stable JSON for machine-readable output or compact install-result text from declared action records without calling package runtime formatting.",
+      "input_schema_ref": "schemas/primitives/output_emit_install_result.input.schema.json",
+      "output_schema_ref": "schemas/primitives/output_emit_install_result.output.schema.json",
+      "taxonomy_tier": "tier-1-portable-codegen"
+    },
+    {
       "id": "output.fields.select",
       "summary": "Select exact top-level or dotted JSON fields before rendering output.",
       "taxonomy_tier": "tier-2-package-domain",
@@ -596,6 +608,16 @@
       "semantics": "Build a JSON-serializable payload from declared step outputs and constants.",
       "input_schema_ref": "schemas/primitives/payload_assemble.input.schema.json",
       "output_schema_ref": "schemas/primitives/payload_assemble.output.schema.json",
+      "taxonomy_tier": "tier-1-portable-codegen"
+    },
+    {
+      "id": "payload.status",
+      "summary": "Assemble a package payload status report from a declarative payload verification policy.",
+      "kind": "validation",
+      "portability": "target-executor",
+      "semantics": "Read a schema-backed package payload policy and report installed, missing, obsolete, and manifest-derived status actions for a target root without package-specific executable status collection.",
+      "input_schema_ref": "schemas/primitives/payload_status.input.schema.json",
+      "output_schema_ref": "schemas/primitives/payload_status.output.schema.json",
       "taxonomy_tier": "tier-1-portable-codegen"
     },
     {

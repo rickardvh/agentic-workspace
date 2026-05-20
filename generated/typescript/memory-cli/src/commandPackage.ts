@@ -83,10 +83,9 @@ export const generatedCommandPackage = {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
           "path.target_root.resolve",
-          "toml.table.counts",
-          "payload.assemble",
+          "payload.status",
           "memory.bootstrap.status.load",
-          "output.emit"
+          "output.emit.install-result"
         ]
       },
       "schemas": {

@@ -83,10 +83,14 @@ def execute_primitive(
         return _toml_table_counts(values=values, arguments=arguments, context=context)
     if primitive == "payload.assemble":
         return _assemble_payload(values=values, arguments=arguments)
+    if primitive == "payload.status":
+        return _payload_status(values=values, arguments=arguments, context=context)
     if primitive == "payload.verify":
         return _verify_payload(values=values, arguments=arguments, context=context)
     if primitive == "output.emit":
-        return _emit_output(values=values)
+        return _emit_output(values=values, arguments=arguments)
+    if primitive == "output.emit.install-result":
+        return _emit_output(values=values, arguments={"text_style": "install-result"})
     if primitive == "python.function.call":
         return _call_python_function(values=values, arguments=arguments)
     raise PrimitiveExecutionError(f"unsupported portable primitive: {primitive!r}")
@@ -372,6 +376,160 @@ def _verify_payload(*, values: dict[str, Any], arguments: dict[str, Any], contex
     }
 
 
+def _payload_status(*, values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> dict[str, Any]:
+    policy_root = context.root(str(arguments.get("policy_root", "")))
+    policy_path = _resolve_inside(policy_root, str(arguments.get("policy_path", "")))
+    try:
+        policy = json.loads(policy_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise PrimitiveExecutionError(f"payload.status cannot load policy: {policy_path}") from exc
+    target_root = Path(str(values.get(str(arguments.get("target_root_value", "target_root")), context.cwd))).resolve()
+    bootstrap_version = int(policy.get("bootstrap_version", 0))
+    version_path = str(policy.get("version_path", ""))
+    legacy_version_path = str(policy.get("legacy_version_path", ""))
+    manifest_path = str(policy.get("manifest_path", ""))
+    detected_version = _read_first_version(target_root, [version_path, legacy_version_path])
+    active = _memory_manifest_counts(target_root=target_root, manifest_path=manifest_path)
+    actions: list[dict[str, Any]] = []
+    workspace_notice = policy.get("workspace_orchestrator_notice", {})
+    if isinstance(workspace_notice, dict):
+        marker = str(workspace_notice.get("marker", "")).strip()
+        if marker and not (target_root / marker).exists():
+            actions.append(
+                _status_action(
+                    "warning",
+                    marker,
+                    str(workspace_notice.get("detail", "")),
+                    role=str(workspace_notice.get("role", "workspace-orchestration")),
+                    safety=str(workspace_notice.get("safety", "safe")),
+                    source=marker,
+                    category=str(workspace_notice.get("category", "safe-update")),
+                )
+            )
+    for raw_entry in _list_of_objects(policy.get("status_files", []), source="payload.status status_files"):
+        relative_path = str(raw_entry.get("path", ""))
+        present = (target_root / relative_path).exists()
+        role = str(raw_entry.get("role", ""))
+        safety = str(raw_entry.get("safety", "safe"))
+        kind = "present" if present else "missing"
+        detail = "file exists" if present else "file missing"
+        actions.append(
+            _status_action(
+                kind,
+                relative_path,
+                detail,
+                role=role,
+                safety=safety,
+                source=relative_path,
+                category=str(raw_entry.get("present_category" if present else "missing_category", ""))
+                or _infer_status_category(kind=kind, path=relative_path, detail=detail, role=role, safety=safety),
+            )
+        )
+    for obsolete in _string_list(policy.get("obsolete_files", []), source="payload.status obsolete_files"):
+        if (target_root / obsolete).exists():
+            actions.append(
+                _status_action(
+                    "obsolete",
+                    obsolete,
+                    "legacy shared file should be removed on upgrade",
+                    role="shared-replaceable",
+                    safety="safe",
+                    source=obsolete,
+                    category="obsolete-managed-file",
+                )
+            )
+    return {
+        "target_root": str(target_root),
+        "dry_run": False,
+        "mode": "",
+        "message": str(arguments.get("message", "Status report")),
+        "health": "healthy" if active["status"] == "present" else "attention-needed",
+        "detected_version": detected_version,
+        "bootstrap_version": bootstrap_version,
+        "action_count": len(actions),
+        "actions": actions,
+        "active": active,
+        "detail_command": str(arguments.get("detail_command", "")),
+    }
+
+
+def _memory_manifest_counts(*, target_root: Path, manifest_path: str) -> dict[str, Any]:
+    counts = {
+        "status": "missing",
+        "note_count": 0,
+        "required_count": 0,
+        "optional_count": 0,
+        "routing_only_count": 0,
+        "path": manifest_path,
+    }
+    path = target_root / manifest_path
+    if not path.exists():
+        return counts
+    try:
+        payload = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        counts["status"] = "invalid"
+        return counts
+    notes = payload.get("notes", {}) if isinstance(payload, dict) else {}
+    note_values = list(notes.values()) if isinstance(notes, dict) else []
+    counts["status"] = "present"
+    counts["note_count"] = len(note_values)
+    for note in note_values:
+        if not isinstance(note, dict):
+            continue
+        relevance = str(note.get("task_relevance", "")).strip().lower()
+        if relevance == "required":
+            counts["required_count"] += 1
+        elif relevance == "optional":
+            counts["optional_count"] += 1
+        if bool(note.get("routing_only", False)):
+            counts["routing_only_count"] += 1
+    return counts
+
+
+def _status_action(
+    kind: str,
+    path: str,
+    detail: str,
+    *,
+    role: str,
+    safety: str,
+    source: str,
+    category: str,
+) -> dict[str, str]:
+    return {
+        "kind": kind,
+        "path": path,
+        "detail": detail,
+        "role": role,
+        "safety": safety,
+        "source": source,
+        "category": category,
+        "remediation_kind": "",
+        "remediation_target": "",
+        "remediation_reason": "",
+        "remediation_confidence": "",
+        "memory_action": "",
+        "match_source": "",
+    }
+
+
+def _infer_status_category(*, kind: str, path: str, detail: str, role: str, safety: str) -> str:
+    detail_lower = detail.lower()
+    if "placeholder" in detail_lower:
+        return "placeholder-review"
+    if role in {"payload-contract", "local-entrypoint"} or role.startswith("shared-"):
+        if kind in {"manual review", "missing"}:
+            return "contract-drift"
+    if kind in {"current", "present", "optional", "required", "warning"}:
+        return "safe-update"
+    if kind in {"manual review", "consider"}:
+        return "manual-review"
+    if safety == "safe":
+        return "safe-update"
+    return ""
+
+
 def _payload_file_set(*, payload_root: Path, policy: dict[str, Any]) -> set[str]:
     aliases = {
         str(item["source"]): str(item["target"])
@@ -552,17 +710,54 @@ def _resolve_template(template: Any, *, values: dict[str, Any]) -> Any:
     return {str(key): _resolve_template(value, values=values) for key, value in template.items()}
 
 
-def _emit_output(*, values: dict[str, Any]) -> str:
+def _emit_output(*, values: dict[str, Any], arguments: dict[str, Any] | None = None) -> str:
+    arguments = arguments or {}
     result = values.get("result")
     output_format = str(values.get("format") or "text")
     if output_format == "json":
         return json.dumps(result, indent=2, sort_keys=True) + "\n"
+    if str(arguments.get("text_style", "")) == "install-result" and isinstance(result, dict):
+        return _emit_install_result_text(result)
     if not isinstance(result, dict):
         return f"{result}\n"
     lines = [str(result.get("message", ""))]
     for action in _list_of_objects(result.get("actions", []), source="result.actions"):
         label = action.get("path") or action.get("id") or action.get("kind")
         lines.append(f"- {label}")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _emit_install_result_text(result: dict[str, Any]) -> str:
+    target_root = Path(str(result.get("target_root", ""))).resolve()
+    lines = [
+        f"Target: {target_root}",
+        str(result.get("message", "")),
+        f"Detected version: {result.get('detected_version') or 'none'} (payload version {result.get('bootstrap_version')})",
+    ]
+    for action in _list_of_objects(result.get("actions", []), source="result.actions"):
+        raw_path = str(action.get("path", ""))
+        action_path = Path(raw_path)
+        try:
+            label = action_path.relative_to(target_root)
+        except ValueError:
+            label = action_path
+        details = []
+        for key, label_name in (
+            ("detail", ""),
+            ("role", "role"),
+            ("safety", "safety"),
+            ("category", "category"),
+            ("remediation_kind", "remediation"),
+            ("remediation_target", "target"),
+            ("remediation_confidence", "confidence"),
+            ("memory_action", "memory_action"),
+            ("match_source", "match_source"),
+        ):
+            value = action.get(key)
+            if value:
+                details.append(str(value) if not label_name else f"{label_name}={value}")
+        detail = f" ({'; '.join(details)})" if details else ""
+        lines.append(f"- {action.get('kind')}: {label}{detail}")
     return "\n".join(lines).rstrip() + "\n"
 
 

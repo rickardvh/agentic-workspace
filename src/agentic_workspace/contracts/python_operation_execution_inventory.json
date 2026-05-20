@@ -668,14 +668,17 @@
       "conformance_ref": "memory.status.process",
       "domain_runtime_primitive_refs": [
         "path.target_root.resolve",
-        "toml.table.counts",
-        "payload.assemble",
-        "memory.bootstrap.status.load"
+        "payload.status",
+        "memory.bootstrap.status.load",
+        "output.emit.install-result"
       ],
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Non-verbose JSON status executes through codegen-owned portable primitives; package-domain runtime remains only for verbose/text compatibility output.",
-      "what_would_make_portable_later": "Replace the remaining verbose/text memory.bootstrap.status.load fallback with schema-backed output/template primitives or explicitly retire compatibility text output.",
-      "generic_behavior_audit": "Non-verbose JSON behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, toml.table.counts, payload.assemble, and output.emit. The remaining package-domain primitive is a compatibility fallback for verbose/text behavior and is not counted as portable codegen coverage."
+      "runtime_boundary_reason": "Non-verbose text and JSON status execute through codegen-owned payload status primitives backed by Memory-owned declarative payload policy; package-domain runtime remains only for verbose compatibility output.",
+      "what_would_make_portable_later": "Replace the remaining verbose memory.bootstrap.status.load fallback with schema-backed output/detail primitives or explicitly retire verbose compatibility output.",
+      "generic_behavior_audit": "Non-verbose text and JSON behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, payload.status, and output.emit.install-result over schema-backed Memory payload policy. The remaining package-domain primitive is a verbose compatibility fallback and is not counted as portable codegen coverage.",
+      "source_runtime_dependencies": [
+        "memory.bootstrap.status.load for verbose fallback"
+      ]
     },
     {
       "operation_id": "memory.sync-memory.report",

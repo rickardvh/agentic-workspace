@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/primitives/payload_status.output.schema.json",
+  "title": "payload.status output",
+  "type": "object",
+  "required": [
+    "payload"
+  ],
+  "properties": {
+    "payload": {
+      "type": "object",
+      "required": [
+        "target_root",
+        "message",
+        "health",
+        "actions"
+      ],
+      "properties": {
+        "target_root": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "health": {
+          "type": "string"
+        },
+        "detected_version": {
+          "type": [
+            "string",
+            "integer",
+            "null"
+          ]
+        },
+        "bootstrap_version": {
+          "type": [
+            "string",
+            "integer",
+            "null"
+          ]
+        },
+        "action_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "active": {
+          "type": "object"
+        },
+        "detail_command": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

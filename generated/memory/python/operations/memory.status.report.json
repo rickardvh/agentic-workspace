@@ -63,140 +63,50 @@
       },
       {
         "arguments": {
-          "base_value": "target_root",
-          "optional_value": "optional",
-          "path": ".agentic-workspace/memory/repo/manifest.toml",
-          "relevance_field": "task_relevance",
-          "required_value": "required",
-          "routing_only_field": "routing_only",
-          "table": "notes"
+          "detail_command": "agentic-memory status --target . --verbose --format json",
+          "message": "Status report",
+          "policy_path": "payload_verification.memory.json",
+          "policy_root": "memory.contracts",
+          "target_root_value": "target_root"
         },
-        "description": "Count note records and relevance categories in the target memory manifest.",
-        "id": "count_manifest_notes",
-        "on_error": "fail",
-        "outputs": [
-          "table_counts",
-          "table_present",
-          "table_status"
-        ],
-        "uses": "toml.table.counts",
-        "when": {
-          "all": [
-            {
-              "equals": "json",
-              "value": "format"
-            },
-            {
-              "equals": false,
-              "value": "verbose"
-            }
-          ]
-        }
-      },
-      {
-        "arguments": {
-          "fields": {
-            "template": {
-              "action_count": {
-                "$exists_status": {
-                  "missing": 1,
-                  "present": 0,
-                  "value": "table_present"
-                }
-              },
-              "actions": {
-                "$exists_status": {
-                  "missing": [
-                    {
-                      "detail": "memory manifest is not readable; run full doctor for remediation detail",
-                      "kind": {
-                        "$value": "table_status"
-                      },
-                      "path": ".agentic-workspace/memory/repo/manifest.toml"
-                    }
-                  ],
-                  "present": [],
-                  "value": "table_present"
-                }
-              },
-              "active": {
-                "$value": "table_counts"
-              },
-              "bootstrap_version": null,
-              "detail_command": "agentic-memory status --target . --verbose --format json",
-              "detected_version": null,
-              "dry_run": false,
-              "health": {
-                "$exists_status": {
-                  "missing": "attention-needed",
-                  "present": "healthy",
-                  "value": "table_present"
-                }
-              },
-              "message": "Status report",
-              "mode": "",
-              "target_root": {
-                "$value": "target_root"
-              }
-            }
-          }
-        },
-        "description": "Assemble the compact status payload from primitive outputs.",
+        "description": "Assemble Memory status from declarative payload status policy for non-verbose output.",
         "id": "assemble_status",
         "on_error": "fail",
         "outputs": [
           "result"
         ],
-        "uses": "payload.assemble",
+        "uses": "payload.status",
         "when": {
-          "all": [
-            {
-              "equals": "json",
-              "value": "format"
-            },
-            {
-              "equals": false,
-              "value": "verbose"
-            }
-          ]
+          "equals": false,
+          "value": "verbose"
         }
       },
       {
         "arguments": {},
-        "description": "Load the package-domain status report when verbose or text output is requested.",
-        "id": "load_verbose_or_text_status",
+        "description": "Load the package-domain status report only when verbose output is requested.",
+        "id": "load_verbose_status",
         "on_error": "fail",
         "outputs": [
           "result"
         ],
         "uses": "memory.bootstrap.status.load",
         "when": {
-          "not": {
-            "all": [
-              {
-                "equals": "json",
-                "value": "format"
-              },
-              {
-                "equals": false,
-                "value": "verbose"
-              }
-            ]
-          }
+          "equals": true,
+          "value": "verbose"
         }
       },
       {
         "arguments": {},
-        "description": "Emit the memory status payload in the requested format.",
+        "description": "Emit Memory status as JSON or install-result text without package-runtime formatting.",
         "id": "emit_output",
         "on_error": "emit_usage_error",
         "outputs": [
           "emitted"
         ],
-        "uses": "output.emit"
+        "uses": "output.emit.install-result"
       }
     ],
-    "summary": "Memory status non-verbose JSON executes generated operation IR through codegen-owned portable primitives. Verbose/text status behavior remains package-domain source runtime."
+    "summary": "Memory status non-verbose text and JSON execute generated operation IR through a schema-backed payload.status primitive. Verbose status behavior remains package-domain source runtime."
   },
   "locality": {
     "network": "forbidden",
@@ -229,24 +139,19 @@
       "uses": "path.target_root.resolve"
     },
     {
-      "description": "Count note records and relevance categories in the target memory manifest.",
-      "id": "count_manifest_notes",
-      "uses": "toml.table.counts"
-    },
-    {
-      "description": "Assemble the compact status payload from primitive outputs.",
+      "description": "Assemble Memory status from declarative payload status policy.",
       "id": "assemble_status",
-      "uses": "payload.assemble"
+      "uses": "payload.status"
     },
     {
-      "description": "Load the package-domain status report when verbose or text output is requested.",
-      "id": "load_verbose_or_text_status",
+      "description": "Load the package-domain status report only when verbose output is requested.",
+      "id": "load_verbose_status",
       "uses": "memory.bootstrap.status.load"
     },
     {
-      "description": "Emit memory status in the requested format.",
+      "description": "Emit Memory status as JSON or install-result text without package-runtime formatting.",
       "id": "emit_output",
-      "uses": "output.emit"
+      "uses": "output.emit.install-result"
     }
   ],
   "summary": "Report whether memory bootstrap files are present for a target repository.",
