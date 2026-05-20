@@ -1100,7 +1100,7 @@
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "planning.report.load",
-        "module-result text/json compatibility formatting"
+        "verbose module-result compatibility formatting"
       ],
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "planning.report.process",
@@ -1108,9 +1108,9 @@
         "planning.report.load"
       ],
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior.",
+      "runtime_boundary_reason": "Operation dataflow and tiny report text are generated; package-domain primitive steps still own planning report payload source and verbose compatibility output.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.report.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR, codegen-owned run_operation_steps, and generated output own deterministic tiny report text, while planning.report.load remains an explicit package-boundary call for report payload construction and verbose detail. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
     },
     {
       "operation_id": "planning.status.report",

@@ -205,9 +205,9 @@
     {
       "id": "tier-5-planning-last",
       "title": "Reduce Planning runtime surface",
-      "readiness": "deferred",
+      "readiness": "promoted",
       "outcome": "Planning is converted after Memory and Workspace prove the primitive set. Low-risk read-only reports move first; mutation/lifecycle commands separate deterministic file/data edits, package-domain planning judgment, and safety/refusal gates, with closeout/intent behavior remaining explicit domain runtime until #973/#974 mature.",
-      "owner_surface": "packages/planning contracts and fixtures, generated/planning/python, src/agentic_workspace/contracts/python_operation_execution_inventory.json, planning tests, and planning lint target",
+      "owner_surface": ".agentic-workspace/planning/execplans/tier-5-planning-last.plan.json",
       "proof": "make test-planning; make lint-planning; uv run pytest packages/planning/tests -q",
       "depends_on": [
         "tier-4-workspace-next"

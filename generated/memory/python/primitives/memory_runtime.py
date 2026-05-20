@@ -172,6 +172,28 @@ def _emit_delegation_outcomes_text(payload: dict[str, Any]) -> str:
     return '\n'.join(lines) + '\n'
 
 
+def _emit_planning_module_report_text(payload: dict[str, Any]) -> str:
+    status = payload.get('status', {})
+    next_action = payload.get('next_action', {})
+    lines = [
+        f"Target: {payload.get('target_root')}",
+        f"Command: {payload.get('module', 'planning')}",
+        f"Health: {payload.get('health')}",
+    ]
+    if isinstance(status, dict):
+        lines.append(
+            'Status: '
+            f"{status.get('active_todo_count', 0)} active TODO / "
+            f"{status.get('queued_todo_count', 0)} queued TODO / "
+            f"{status.get('active_execplan_count', 0)} active execplans / "
+            f"{status.get('roadmap_lane_count', 0)} roadmap lanes / "
+            f"{status.get('roadmap_candidate_count', 0)} roadmap candidates"
+        )
+    if isinstance(next_action, dict):
+        lines.append(f"Next action: {next_action.get('summary', '')}")
+    return '\n'.join(lines) + '\n'
+
+
 def _emit_memory_operation_output(values: dict[str, Any], arguments: dict[str, Any], context: Any) -> Any:
     result = values['result']
     if str(values.get('format') or 'text') == 'json' and isinstance(result, dict):
@@ -193,6 +215,9 @@ def _emit_memory_operation_output(values: dict[str, Any], arguments: dict[str, A
         return None
     if isinstance(result, dict) and result.get('kind') == 'agentic-workspace/delegation-outcomes/v1':
         print(_emit_delegation_outcomes_text(result), end='')
+        return None
+    if isinstance(result, dict) and result.get('kind') == 'planning-module-report/v1' and result.get('profile') == 'tiny':
+        print(_emit_planning_module_report_text(result), end='')
         return None
     from repo_memory_bootstrap.runtime_primitives import _emit_memory_operation_output as source_function
 
