@@ -478,6 +478,115 @@
       }
     }
   ],
+  "generated_plugin_targets": [
+    {
+      "id": "codex-plugin",
+      "framework": "codex",
+      "title": "Codex Plugin Projection",
+      "status": "ready-for-renderer",
+      "output_path": "generated/workspace/plugins/codex/.codex-plugin/plugin.json",
+      "plugin_name": "agentic-workspace",
+      "source_skill_ids": [
+        "startup-router"
+      ],
+      "generated_skill_paths": [
+        "generated/workspace/skills/startup-router/SKILL.md"
+      ],
+      "preferred_cli_commands": [
+        "uv run agentic-workspace start --task \"<task>\" --format json"
+      ],
+      "interpreted_fields": [
+        "immediate_next_allowed_action",
+        "workflow_sufficiency",
+        "next_safe_action",
+        "skill_routing",
+        "next_safe_action.implementation_allowed",
+        "next_safe_action.proof_required",
+        "next_safe_action.completion_claim_allowed",
+        "next_safe_action.closure_blockers",
+        "next_safe_action.continuation_owner_required"
+      ],
+      "forbidden_actions": [
+        "Open raw planning or memory state before compact startup routing points there.",
+        "Create planning, review, memory, or handoff artifacts for routine direct work.",
+        "Treat generated skill or adapter output as the source of product behavior."
+      ],
+      "fallback_when_cli_unavailable": [
+        "Read `.agentic-workspace/WORKFLOW.md` before other workspace files.",
+        "Use the smallest safe manual path and preserve no-artifact-by-default behavior.",
+        "Escalate to planning only when the work shape, risk, or continuation need requires durable state."
+      ],
+      "must_preserve": [
+        "SkillSpec source traceability.",
+        "Generated skill linkage.",
+        "CLI-first startup routing when available.",
+        "Conservative no-CLI fallback.",
+        "Forbidden raw planning/memory reads before compact routing.",
+        "next_safe_action completion and proof semantics."
+      ],
+      "cli_dependency": "preferred-when-available",
+      "next_safe_action_semantics": true
+    }
+  ],
+  "generated_target_behavior_fixtures": [
+    {
+      "id": "direct-task-cheap-path",
+      "task_shape": "direct",
+      "task": "Fix a small typo in a single documentation file.",
+      "required_skill": "startup-router",
+      "expected_fields": [
+        "next_safe_action",
+        "next_safe_action.implementation_allowed",
+        "workflow_sufficiency"
+      ],
+      "implementation_allowed": true,
+      "proof_required": false,
+      "completion_claim_allowed": false,
+      "must_preserve": [
+        "Direct work remains cheap when compact routing permits it.",
+        "Generated targets do not create planning artifacts by default.",
+        "A narrow validation or inspection is still named before completion."
+      ]
+    },
+    {
+      "id": "lane-task-planning-gate",
+      "task_shape": "lane",
+      "task": "Continue a parent issue by implementing the next milestone.",
+      "required_skill": "planning-autopilot",
+      "expected_fields": [
+        "next_safe_action",
+        "next_safe_action.implementation_allowed",
+        "next_safe_action.proof_required",
+        "skill_routing"
+      ],
+      "implementation_allowed": false,
+      "proof_required": true,
+      "completion_claim_allowed": false,
+      "must_preserve": [
+        "Lane and epic work route through planning ownership before implementation.",
+        "Generated targets surface required skill visibility.",
+        "Proof requirements stay separate from completion permission."
+      ]
+    },
+    {
+      "id": "no-cli-conservative-fallback",
+      "task_shape": "fallback",
+      "task": "Start in a repo where the configured AW CLI is unavailable.",
+      "required_skill": "startup-router",
+      "expected_fields": [
+        "fallback_when_cli_unavailable",
+        "forbidden_actions"
+      ],
+      "implementation_allowed": false,
+      "proof_required": true,
+      "completion_claim_allowed": false,
+      "must_preserve": [
+        "Read `.agentic-workspace/WORKFLOW.md` before broad raw state.",
+        "Preserve forbidden actions even without CLI output.",
+        "Do not bypass CLI-preferred/no-CLI fallback semantics."
+      ]
+    }
+  ],
   "specs": [
     {
       "id": "startup-router",
@@ -570,14 +679,13 @@
         "Do not claim completion when compact routing reports closure blockers or missing continuation ownership."
       ],
       "generated_target_requirements": {
-        "status": "contract-only",
+        "status": "ready-for-renderer",
         "must_preserve": [
           "CLI-first startup routing when available.",
           "Conservative no-CLI fallback.",
           "No-artifact-by-default behavior for ordinary direct work.",
           "Forbidden raw planning/memory reads before compact routing."
-        ],
-        "deferred_until": "A renderer slice is intentionally selected after the SkillSpec contract proves sufficient."
+        ]
       }
     },
     {

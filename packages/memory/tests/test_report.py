@@ -447,6 +447,90 @@ def test_memory_capture_note_prefers_existing_note(tmp_path: Path, capsys: pytes
     assert cli_payload["recommended_action"] == "update-existing-note"
 
 
+def test_memory_capture_note_surfaces_improvement_promotion_metadata(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+
+    assert (
+        cli.main(
+            [
+                "capture-note",
+                "dogfooding-feedback",
+                "--target",
+                str(target),
+                "--summary",
+                "Dogfooding improvement pressure: repeated correction should become routine Memory promotion metadata.",
+                "--files",
+                ".agentic-workspace/memory/repo/current/routing-feedback.md",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    guidance = payload["promotion_metadata_guidance"]
+    assert guidance["status"] == "promotion-metadata-suggested"
+    assert guidance["metadata_required"] is True
+    assert guidance["suggested_manifest_fields"]["memory_role"] == "improvement_signal"
+    assert "promotion-report" in payload["commands"][-1]
+
+
+def test_promotion_report_surfaces_prose_only_current_improvement_signal(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+    note_path = target / ".agentic-workspace/memory/repo/current/routing-feedback.md"
+    note_path.write_text(
+        "# Routing Feedback\n\nDogfooding improvement pressure: repeated correction about Memory promotion should not stay prose-only.\n",
+        encoding="utf-8",
+    )
+
+    result = installer.promotion_report(target=target, mode="remediation")
+
+    assert any(
+        action.kind == "manual review"
+        and action.source == ".agentic-workspace/memory/repo/current/routing-feedback.md"
+        and action.remediation_kind == "metadata"
+        and action.memory_action == "mark_improvement_signal_or_dismiss"
+        for action in result.actions
+    )
+
+
+def test_promotion_report_does_not_rescan_metadata_routed_current_signal(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+    note_path = target / ".agentic-workspace/memory/repo/current/routing-feedback.md"
+    note_path.write_text(
+        "# Routing Feedback\n\nDogfooding improvement pressure: repeated correction is routed through manifest metadata.\n",
+        encoding="utf-8",
+    )
+    manifest_path = target / ".agentic-workspace/memory/repo/manifest.toml"
+    with manifest_path.open("a", encoding="utf-8") as handle:
+        handle.write(
+            '\n[notes.".agentic-workspace/memory/repo/current/routing-feedback.md"]\n'
+            'note_type = "current"\n'
+            'canonical_home = ".agentic-workspace/memory/repo/current/routing-feedback.md"\n'
+            'authority = "advisory"\n'
+            'audience = "agent"\n'
+            'memory_role = "improvement_signal"\n'
+            'promotion_target = "planning closeout tests"\n'
+            'promotion_trigger = "next closeout friction pass"\n'
+            'retention_after_promotion = "shrink"\n'
+        )
+
+    result = installer.promotion_report(target=target, mode="remediation")
+
+    assert not any(
+        action.source == ".agentic-workspace/memory/repo/current/routing-feedback.md"
+        and action.memory_action == "mark_improvement_signal_or_dismiss"
+        for action in result.actions
+    )
+
+
 def test_memory_report_exposes_habitual_pull_boundary_and_evidence(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True, exist_ok=True)

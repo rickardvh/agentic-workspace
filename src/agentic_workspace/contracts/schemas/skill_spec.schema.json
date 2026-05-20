@@ -9,7 +9,9 @@
     "rule",
     "specs",
     "transition_gates",
-    "module_slots"
+    "module_slots",
+    "generated_plugin_targets",
+    "generated_target_behavior_fixtures"
   ],
   "properties": {
     "schema_version": {
@@ -44,6 +46,22 @@
         "$ref": "#/$defs/module_slot"
       },
       "description": "Structured SkillSpec-compatible module ownership slots used by next-safe-action packets and operating-loop skills."
+    },
+    "generated_plugin_targets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/generated_plugin_target"
+      },
+      "description": "Framework-native plugin/adaptor targets generated from SkillSpec without owning product behavior."
+    },
+    "generated_target_behavior_fixtures": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/generated_target_behavior_fixture"
+      },
+      "description": "Target-agnostic behavior fixtures that generated skills and plugins must preserve."
     }
   },
   "$defs": {
@@ -215,6 +233,152 @@
       },
       "additionalProperties": false,
       "description": "Constraints for future generated skill or adapter surfaces."
+    },
+    "generated_plugin_target": {
+      "type": "object",
+      "required": [
+        "id",
+        "framework",
+        "title",
+        "status",
+        "output_path",
+        "plugin_name",
+        "source_skill_ids",
+        "generated_skill_paths",
+        "preferred_cli_commands",
+        "interpreted_fields",
+        "forbidden_actions",
+        "fallback_when_cli_unavailable",
+        "must_preserve",
+        "cli_dependency",
+        "next_safe_action_semantics"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/non_empty_string",
+          "description": "Stable generated plugin target identifier."
+        },
+        "framework": {
+          "$ref": "#/$defs/non_empty_string",
+          "description": "Host framework or adapter family for the generated target."
+        },
+        "title": {
+          "$ref": "#/$defs/non_empty_string",
+          "description": "Human-readable target title."
+        },
+        "status": {
+          "enum": [
+            "ready-for-renderer",
+            "generated",
+            "deferred"
+          ],
+          "description": "Generation readiness for this plugin target."
+        },
+        "output_path": {
+          "$ref": "#/$defs/non_empty_string",
+          "description": "Repo-relative generated plugin manifest path."
+        },
+        "plugin_name": {
+          "$ref": "#/$defs/non_empty_string",
+          "description": "Framework-native plugin identifier."
+        },
+        "source_skill_ids": {
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "SkillSpec ids projected into this plugin target."
+        },
+        "generated_skill_paths": {
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "Generated skill paths this plugin target exposes or links to."
+        },
+        "preferred_cli_commands": {
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "CLI invocations the plugin target should prefer when available."
+        },
+        "interpreted_fields": {
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "Output fields the plugin target must preserve for agent decisions."
+        },
+        "forbidden_actions": {
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "Actions the generated plugin must preserve as forbidden."
+        },
+        "fallback_when_cli_unavailable": {
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "No-CLI fallback behavior preserved by the generated plugin."
+        },
+        "must_preserve": {
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "Semantics required for target equivalence."
+        },
+        "cli_dependency": {
+          "enum": [
+            "preferred-when-available",
+            "required",
+            "none"
+          ],
+          "description": "Whether the target depends on the CLI or only prefers it."
+        },
+        "next_safe_action_semantics": {
+          "type": "boolean",
+          "description": "Whether the target preserves next-safe-action packet semantics."
+        }
+      },
+      "additionalProperties": false,
+      "description": "A framework-native plugin/adaptor target generated from SkillSpec."
+    },
+    "generated_target_behavior_fixture": {
+      "type": "object",
+      "required": [
+        "id",
+        "task_shape",
+        "task",
+        "required_skill",
+        "expected_fields",
+        "implementation_allowed",
+        "proof_required",
+        "completion_claim_allowed",
+        "must_preserve"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/non_empty_string",
+          "description": "Stable fixture identifier."
+        },
+        "task_shape": {
+          "$ref": "#/$defs/non_empty_string",
+          "description": "Representative task shape covered by the fixture."
+        },
+        "task": {
+          "$ref": "#/$defs/non_empty_string",
+          "description": "Representative task prompt for the fixture."
+        },
+        "required_skill": {
+          "$ref": "#/$defs/non_empty_string",
+          "description": "Skill that should remain visible or routed for the fixture."
+        },
+        "expected_fields": {
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "CLI output fields or packet fields the generated target must preserve."
+        },
+        "implementation_allowed": {
+          "type": "boolean",
+          "description": "Expected implementation permission for the representative task shape."
+        },
+        "proof_required": {
+          "type": "boolean",
+          "description": "Expected proof requirement for the representative task shape."
+        },
+        "completion_claim_allowed": {
+          "type": "boolean",
+          "description": "Expected completion-claim permission for the representative task shape."
+        },
+        "must_preserve": {
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "Semantics generated targets must preserve for this fixture."
+        }
+      },
+      "additionalProperties": false,
+      "description": "A representative generated-target behavior fixture."
     },
     "transition_gate": {
       "type": "object",

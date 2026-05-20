@@ -8795,6 +8795,112 @@ def _append_planning_candidate_rows(*, target_root: Path, candidates: list[dict[
     }
 
 
+def _candidate_refs(candidate: dict[str, Any]) -> set[str]:
+    refs: set[str] = set()
+    for field in ("refs", "issues"):
+        raw_value = candidate.get(field, "")
+        if isinstance(raw_value, list):
+            raw_text = " ".join(str(item) for item in raw_value)
+        else:
+            raw_text = str(raw_value)
+        refs.update(f"#{match}" for match in re.findall(r"#(\d+)\b", raw_text))
+    return refs
+
+
+def _candidate_has_local_continuation(candidate: dict[str, Any]) -> bool:
+    text = " ".join(str(candidate.get(field, "")) for field in ("reason", "outcome", "promotion_signal", "suggested_first_slice")).lower()
+    return any(
+        marker in text
+        for marker in (
+            "local continuation",
+            "package-owned work remains open",
+            "remains open locally",
+            "keep open locally",
+            "local work remains",
+        )
+    )
+
+
+def _stale_planning_candidate_reconciliation(
+    *, target_root: Path, items: list[dict[str, Any]], apply: bool, dry_run: bool
+) -> dict[str, Any]:
+    state_path = target_root / ".agentic-workspace" / "planning" / "state.toml"
+    relative_path = ".agentic-workspace/planning/state.toml"
+    closed_refs = {str(item.get("id", "")).strip() for item in items if str(item.get("status", "")).lower() == "closed"}
+    open_refs = {str(item.get("id", "")).strip() for item in items if str(item.get("status", "")).lower() == "open"}
+    if not state_path.exists() or not closed_refs:
+        return {"status": "no-stale-candidates", "path": relative_path, "stale_count": 0, "stale_candidates": [], "applied_count": 0}
+    try:
+        state = tomllib.loads(state_path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError) as exc:
+        return {
+            "status": "blocked",
+            "path": relative_path,
+            "reason": f"planning state is unreadable: {exc}",
+            "stale_count": 0,
+            "stale_candidates": [],
+            "applied_count": 0,
+        }
+    roadmap = state.get("roadmap", {}) if isinstance(state, dict) else {}
+    raw_candidates = roadmap.get("candidates", []) if isinstance(roadmap, dict) else []
+    stale: list[dict[str, Any]] = []
+    for candidate in raw_candidates if isinstance(raw_candidates, list) else []:
+        if not isinstance(candidate, dict):
+            continue
+        if str(candidate.get("status", "")).strip().lower() != "next":
+            continue
+        refs = _candidate_refs(candidate)
+        if not refs or refs.intersection(open_refs) or not refs.issubset(closed_refs):
+            continue
+        if _candidate_has_local_continuation(candidate):
+            continue
+        stale.append(
+            {
+                "id": str(candidate.get("id", "")),
+                "refs": sorted(refs),
+                "title": str(candidate.get("title", "")),
+                "reconcile_command": f"uv run agentic-workspace planning close-item --target . --item {candidate.get('id', '')} --issue '{', '.join(sorted(refs))}' --format json",
+            }
+        )
+    if not stale:
+        return {"status": "no-stale-candidates", "path": relative_path, "stale_count": 0, "stale_candidates": [], "applied_count": 0}
+    if not apply:
+        return {
+            "status": "stale-candidates-found",
+            "path": relative_path,
+            "stale_count": len(stale),
+            "stale_candidates": stale,
+            "applied_count": 0,
+        }
+    if dry_run:
+        return {"status": "dry-run", "path": relative_path, "stale_count": len(stale), "stale_candidates": stale, "applied_count": 0}
+
+    stale_ids = {item["id"] for item in stale}
+    text = state_path.read_text(encoding="utf-8")
+    filtered_lines: list[str] = []
+    removed = 0
+    for line in text.splitlines():
+        candidate_match = re.search(r'\{\s*id\s*=\s*"([^"]+)"', line)
+        if candidate_match and candidate_match.group(1) in stale_ids:
+            removed += 1
+            continue
+        filtered_lines.append(line)
+    updated = "\n".join(filtered_lines).rstrip() + "\n"
+    try:
+        tomllib.loads(updated)
+    except tomllib.TOMLDecodeError as exc:
+        return {
+            "status": "blocked",
+            "path": relative_path,
+            "reason": f"stale-candidate removal would make planning state invalid: {exc}",
+            "stale_count": len(stale),
+            "stale_candidates": stale,
+            "applied_count": 0,
+        }
+    state_path.write_text(updated, encoding="utf-8")
+    return {"status": "applied", "path": relative_path, "stale_count": len(stale), "stale_candidates": stale, "applied_count": removed}
+
+
 def _load_existing_external_intent_evidence(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {"kind": "planning-external-intent-evidence/v1", "items": []}
@@ -9017,9 +9123,18 @@ def _refresh_github_external_intent_evidence(
         "refresh_metadata": refresh_metadata,
         "items": items,
     }
+    previous_items = [item for item in _list_payload(previous_payload.get("items")) if isinstance(item, dict)]
+    if previous_items:
+        next_payload["previous_items"] = previous_items
     if cache_compaction is not None:
         next_payload["refresh_metadata"]["cache_compaction"] = cache_compaction
     planning_candidate_suggestions = _planning_candidate_suggestions_from_external_items(target_root=target_root, items=items)
+    stale_planning_candidate_reconciliation = _stale_planning_candidate_reconciliation(
+        target_root=target_root,
+        items=items,
+        apply=apply_planning_candidates,
+        dry_run=dry_run,
+    )
     if not dry_run:
         evidence_path.parent.mkdir(parents=True, exist_ok=True)
         evidence_path.write_text(json.dumps(next_payload, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
@@ -9062,6 +9177,7 @@ def _refresh_github_external_intent_evidence(
         "limit_source": limit_source,
         "planning_candidate_suggestions": planning_candidate_suggestions,
         "planning_candidate_apply": planning_candidate_apply,
+        "stale_planning_candidate_reconciliation": stale_planning_candidate_reconciliation,
         "provider_rule": "Core planning consumes only provider-agnostic external intent evidence; GitHub access stays in this optional adapter.",
     }
 
@@ -9833,6 +9949,13 @@ def _next_safe_action_packet(
     allowed_next_actions = [action]
     if preferred_cli:
         allowed_next_actions.append("run-preferred-cli")
+    proof_required = bool(
+        proof_hint
+        and proof_hint not in {"select proof after changed paths are known", "no file proof unless the task later becomes an edit"}
+    )
+    if skill in {"planning-reporting", "planning-autopilot", "planning-decompose", "planning-new-plan-tighten"}:
+        proof_required = True
+    implementation_allowed = not forbidden_actions and not skill.startswith("planning")
     return {
         "kind": "agentic-workspace/next-safe-action/v1",
         "next_safe_action": action,
@@ -9844,10 +9967,8 @@ def _next_safe_action_packet(
         "module_slot": module_slot,
         "allowed_next_actions": allowed_next_actions,
         "forbidden_actions": sorted(set(forbidden_actions)),
-        "proof_required": bool(
-            proof_hint
-            and proof_hint not in {"select proof after changed paths are known", "no file proof unless the task later becomes an edit"}
-        ),
+        "implementation_allowed": implementation_allowed,
+        "proof_required": proof_required,
         "completion_claim_allowed": not forbidden_actions and action not in {"choose-smallest-workflow-shape"},
         "closure_blockers": closure_blockers,
         "continuation_owner_required": continuation_owner_required,

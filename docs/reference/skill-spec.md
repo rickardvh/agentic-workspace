@@ -22,3 +22,5 @@ Package-owned semantic contract for skills that steer agent behavior while the C
 | `specs` | array of ref `#/$defs/spec` | yes |  | Ordered skill contracts that can be consumed by hand-authored skills, references, or later generators. |  |  |
 | `transition_gates` | array of ref `#/$defs/transition_gate` | yes |  | Structured SkillSpec-compatible transition gates that can be consumed without scraping skill prose. |  |  |
 | `module_slots` | array of ref `#/$defs/module_slot` | yes |  | Structured SkillSpec-compatible module ownership slots used by next-safe-action packets and operating-loop skills. |  |  |
+| `generated_plugin_targets` | array of ref `#/$defs/generated_plugin_target` | yes |  | Framework-native plugin/adaptor targets generated from SkillSpec without owning product behavior. |  |  |
+| `generated_target_behavior_fixtures` | array of ref `#/$defs/generated_target_behavior_fixture` | yes |  | Target-agnostic behavior fixtures that generated skills and plugins must preserve. |  |  |

@@ -377,6 +377,107 @@ candidates = []
     assert cache_payload["refresh_metadata"]["state"] == "all"
 
 
+def test_external_intent_refresh_applies_stale_candidate_reconciliation_and_preserves_delta(tmp_path: Path, monkeypatch, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    state_path = tmp_path / ".agentic-workspace/planning/state.toml"
+    _write(
+        state_path,
+        """
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = [
+  { id = "github-10-stale", maturity = "candidate", status = "next", priority = "P2", refs = "GitHub #10", title = "Stale upstream", outcome = "Route upstream issue.", reason = "Open issue.", promotion_signal = "Promote when selected.", suggested_first_slice = "Inspect issue." },
+]
+""",
+    )
+    cache_path = tmp_path / ".agentic-workspace/local/cache/external-intent-evidence.json"
+    _write(
+        cache_path,
+        json.dumps(
+            {
+                "kind": "planning-external-intent-evidence/v1",
+                "items": [
+                    {
+                        "system": "github",
+                        "id": "#10",
+                        "title": "Stale upstream",
+                        "status": "open",
+                        "kind": "issue",
+                        "planning_residue_expected": "optional",
+                    }
+                ],
+            },
+            indent=2,
+        ),
+    )
+
+    class Result:
+        def __init__(self, stdout: str) -> None:
+            self.returncode = 0
+            self.stdout = stdout
+            self.stderr = ""
+
+    def fake_run(command, cwd, capture_output, text, encoding, check):
+        if command[:3] == ["gh", "repo", "view"]:
+            return Result(json.dumps({"nameWithOwner": "acme/project"}))
+        assert command[:3] == ["gh", "issue", "list"]
+        return Result(
+            json.dumps(
+                [
+                    {
+                        "number": 10,
+                        "title": "Stale upstream",
+                        "state": "CLOSED",
+                        "url": "https://github.com/acme/project/issues/10",
+                        "labels": [{"name": "priority/medium"}],
+                        "createdAt": "2026-04-28T00:00:00Z",
+                        "updatedAt": "2026-05-20T00:00:00Z",
+                        "closedAt": "2026-05-20T00:00:00Z",
+                        "body": "",
+                        "comments": 0,
+                    }
+                ]
+            )
+        )
+
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+
+    exit_code = cli.main(
+        [
+            "external-intent",
+            "refresh-github",
+            "--target",
+            str(tmp_path),
+            "--state",
+            "all",
+            "--storage",
+            "cache",
+            "--apply-planning-candidates",
+            "--format",
+            "json",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    reconciliation = payload["stale_planning_candidate_reconciliation"]
+    assert reconciliation["status"] == "applied"
+    assert reconciliation["stale_candidates"][0]["id"] == "github-10-stale"
+    state = tomllib.loads(state_path.read_text(encoding="utf-8"))
+    assert state["roadmap"]["candidates"] == []
+    cache_payload = json.loads(cache_path.read_text(encoding="utf-8"))
+    assert cache_payload["previous_items"][0]["id"] == "#10"
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "external_work_delta", "--format", "json"]) == 0
+    delta = json.loads(capsys.readouterr().out)
+    assert delta["answer"]["status"] == "delta-present"
+    assert delta["answer"]["closed_count"] == 1
+
+
 def test_workspace_summary_json_surfaces_external_work_reconciliation(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
     _write(

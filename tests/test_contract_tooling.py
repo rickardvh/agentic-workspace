@@ -131,6 +131,12 @@ def test_skill_specs_contract_models_startup_and_planning_behavior() -> None:
         "proof-to-closeout",
     } == transition_gates.keys()
     assert {"workspace", "planning", "planning.closeout", "workspace.proof", "memory"} == module_slots.keys()
+    behavior_fixtures = {entry["id"]: entry for entry in manifest["generated_target_behavior_fixtures"]}
+    assert {
+        "direct-task-cheap-path",
+        "lane-task-planning-gate",
+        "no-cli-conservative-fallback",
+    } == behavior_fixtures.keys()
 
     required_gate_fields = {
         "trigger",
@@ -166,6 +172,11 @@ def test_skill_specs_contract_models_startup_and_planning_behavior() -> None:
     assert "state.toml" in " ".join(module_slots["planning"]["forbidden_actions"])
     assert "completion_claim_allowed" in transition_gates["proof-to-closeout"]["interpreted_fields"]
     assert "durable_residue_decision" in transition_gates["work-to-memory-residue"]["interpreted_fields"]
+    assert behavior_fixtures["direct-task-cheap-path"]["implementation_allowed"] is True
+    assert behavior_fixtures["lane-task-planning-gate"]["implementation_allowed"] is False
+    assert behavior_fixtures["lane-task-planning-gate"]["required_skill"] == "planning-autopilot"
+    assert behavior_fixtures["no-cli-conservative-fallback"]["proof_required"] is True
+    assert any("forbidden actions" in item for item in behavior_fixtures["no-cli-conservative-fallback"]["must_preserve"])
 
     startup = specs["startup-router"]
     startup_command = startup["preferred_cli_commands"][0]
@@ -174,6 +185,7 @@ def test_skill_specs_contract_models_startup_and_planning_behavior() -> None:
     assert startup_command["mutates_state"] is False
     assert "skill_routing.preferred_routes" in startup_command["key_output_fields"]
     assert any("Create planning" in action or "planning" in action for action in startup["forbidden_actions"])
+    assert startup["generated_target_requirements"]["status"] == "ready-for-renderer"
 
     planning = specs["planning-autopilot"]
     planning_commands = {command["id"]: command for command in planning["preferred_cli_commands"]}
@@ -212,6 +224,58 @@ def test_skill_specs_contract_models_startup_and_planning_behavior() -> None:
             assert command_ref in commands_by_ref
             assert affordance["command"].replace(" ", ".") == command_ref
             assert affordance["mutates_state"] is commands_by_ref[command_ref]["mutates_state"]
+
+
+def test_skillspec_generated_startup_target_preserves_behavior_contract() -> None:
+    manifest = contract_tooling.skill_specs_manifest()
+    rendered = contract_tooling.render_skillspec_target_skill(manifest, "startup-router")
+    checked_in = Path("generated/workspace/skills/startup-router/SKILL.md").read_text(encoding="utf-8")
+
+    assert checked_in == rendered
+    assert "uv run agentic-workspace start --task" in checked_in
+    assert "`immediate_next_allowed_action`" in checked_in
+    assert "`next_safe_action.implementation_allowed`" in checked_in
+    assert "Open raw planning or memory state before compact startup routing points there." in checked_in
+    assert "Read `.agentic-workspace/WORKFLOW.md` before other workspace files." in checked_in
+    assert "Direct task: continue without durable artifacts" in checked_in
+    assert "Lane or epic task: block implementation" in checked_in
+    assert "Fallback task: when the CLI is unavailable" in checked_in
+    assert "`direct-task-cheap-path`" in checked_in
+    assert "`lane-task-planning-gate`" in checked_in
+    assert "`no-cli-conservative-fallback`" in checked_in
+    assert "Generated targets surface required skill visibility." in checked_in
+
+
+def test_skillspec_generated_codex_plugin_preserves_framework_native_contract() -> None:
+    manifest = contract_tooling.skill_specs_manifest()
+    rendered = contract_tooling.render_skillspec_plugin_target(manifest, "codex-plugin")
+    checked_in = Path("generated/workspace/plugins/codex/.codex-plugin/plugin.json").read_text(encoding="utf-8")
+    payload = json.loads(checked_in)
+    metadata = payload["agenticWorkspace"]
+
+    assert checked_in == rendered
+    assert payload["name"] == "agentic-workspace"
+    assert payload["skills"] == "./skills/"
+    assert metadata["generated"] is True
+    assert metadata["source"] == "src/agentic_workspace/contracts/skill_specs.json"
+    assert metadata["whereToEdit"] == "src/agentic_workspace/contracts/skill_specs.json"
+    assert metadata["framework"] == "codex"
+    assert metadata["sourceSkillSpecs"] == ["startup-router"]
+    assert metadata["generatedSkills"] == ["generated/workspace/skills/startup-router/SKILL.md"]
+    assert metadata["cliDependency"] == "preferred-when-available"
+    assert 'uv run agentic-workspace start --task "<task>" --format json' in metadata["preferredCli"]
+    assert "next_safe_action.completion_claim_allowed" in metadata["interpretedFields"]
+    assert metadata["nextSafeActionSemantics"] is True
+    fixture_ids = {fixture["id"] for fixture in metadata["behaviorFixtures"]}
+    assert fixture_ids == {"direct-task-cheap-path", "lane-task-planning-gate", "no-cli-conservative-fallback"}
+    lane_fixture = next(fixture for fixture in metadata["behaviorFixtures"] if fixture["id"] == "lane-task-planning-gate")
+    assert lane_fixture["required_skill"] == "planning-autopilot"
+    assert lane_fixture["implementation_allowed"] is False
+    assert lane_fixture["proof_required"] is True
+    assert "next_safe_action.proof_required" in lane_fixture["expected_fields"]
+    assert any("Open raw planning or memory state" in action for action in metadata["forbiddenActions"])
+    assert any("WORKFLOW.md" in fallback for fallback in metadata["fallbackWhenCliUnavailable"])
+    assert any("Generated skill linkage" in requirement for requirement in metadata["mustPreserve"])
 
 
 def test_operational_affordance_roles_classify_first_contact_and_diagnostics() -> None:

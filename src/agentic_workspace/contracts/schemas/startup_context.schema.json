@@ -799,6 +799,7 @@
         "module_slot",
         "allowed_next_actions",
         "forbidden_actions",
+        "implementation_allowed",
         "proof_required",
         "completion_claim_allowed",
         "closure_blockers",
@@ -869,6 +870,10 @@
             "minLength": 1
           },
           "description": "Actions forbidden by this packet until a newer compact packet supersedes it."
+        },
+        "implementation_allowed": {
+          "type": "boolean",
+          "description": "Whether implementation may begin from this packet without additional planning, proof setup, or skill-guided escalation."
         },
         "proof_required": {
           "type": "boolean",

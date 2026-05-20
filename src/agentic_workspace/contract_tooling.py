@@ -97,6 +97,156 @@ def skill_specs_manifest() -> dict[str, Any]:
     return load_validated_contract_json("skill_specs.json", "skill_spec.schema.json")
 
 
+def _markdown_list(items: list[Any]) -> str:
+    return "\n".join(f"- {str(item)}" for item in items)
+
+
+def _generated_behavior_fixture_lines(manifest: dict[str, Any]) -> list[str]:
+    lines: list[str] = []
+    for fixture in manifest.get("generated_target_behavior_fixtures", []):
+        if not isinstance(fixture, dict):
+            continue
+        fixture_id = str(fixture.get("id", ""))
+        task_shape = str(fixture.get("task_shape", ""))
+        required_skill = str(fixture.get("required_skill", ""))
+        preserve = "; ".join(str(item) for item in fixture.get("must_preserve", []) if str(item).strip())
+        lines.append(f"`{fixture_id}` ({task_shape}, skill `{required_skill}`): {preserve}")
+    return lines
+
+
+def render_skillspec_target_skill(manifest: dict[str, Any], skill_id: str) -> str:
+    specs = {str(spec.get("id")): spec for spec in manifest.get("specs", []) if isinstance(spec, dict)}
+    if skill_id not in specs:
+        raise KeyError(f"unknown SkillSpec id: {skill_id}")
+    spec = specs[skill_id]
+    commands = spec.get("preferred_cli_commands", [])
+    primary_command = commands[0] if commands and isinstance(commands[0], dict) else {}
+    generated_requirements = spec.get("generated_target_requirements", {})
+    must_preserve = generated_requirements.get("must_preserve", []) if isinstance(generated_requirements, dict) else []
+
+    sections = [
+        "---",
+        f"name: generated-{skill_id}",
+        "description: Generated SkillSpec target projection for Agentic Workspace startup routing. Use as a compact adapter target, not as the source of product behavior.",
+        "---",
+        "",
+        f"# Generated {spec.get('title', skill_id)}",
+        "",
+        "Generated from `src/agentic_workspace/contracts/skill_specs.json`. Do not hand-edit generated output.",
+        "",
+        "## Applies When",
+        _markdown_list(list(spec.get("applies_when", []))),
+        "",
+        "## Preferred CLI",
+        f"- `{primary_command.get('preferred_invocation', '')}`",
+        f"- Purpose: {primary_command.get('purpose', '')}",
+        f"- Mutates state: {str(primary_command.get('mutates_state', False)).lower()}",
+        "",
+        "## Interpret These Fields",
+        _markdown_list(
+            [
+                f"`{field.get('path', '')}`: {field.get('decision', '')}"
+                for field in spec.get("interpreted_output_fields", [])
+                if isinstance(field, dict)
+            ]
+        ),
+        "",
+        "## Allowed Actions",
+        _markdown_list(list(spec.get("allowed_actions", []))),
+        "",
+        "## Forbidden Actions",
+        _markdown_list(list(spec.get("forbidden_actions", []))),
+        "",
+        "## No-CLI Fallback",
+        _markdown_list(list(spec.get("fallback_when_cli_unavailable", []))),
+        "",
+        "## Proof And Closeout",
+        _markdown_list([*list(spec.get("proof_obligations", [])), *list(spec.get("closeout_obligations", []))]),
+        "",
+        "## Generated Target Contract",
+        _markdown_list(list(must_preserve)),
+        "",
+        "## Behavior Fixture",
+        "- Direct task: continue without durable artifacts only when compact routing permits it and proof is obvious.",
+        "- Lane or epic task: block implementation until compact routing, planning ownership, and proof expectations are present.",
+        "- Fallback task: when the CLI is unavailable, read the workflow fallback and preserve forbidden actions.",
+        "",
+        "## Generated Target Behavior Fixtures",
+        _markdown_list(_generated_behavior_fixture_lines(manifest)),
+        "",
+    ]
+    return "\n".join(sections)
+
+
+def _generated_plugin_targets(manifest: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {str(target.get("id")): target for target in manifest.get("generated_plugin_targets", []) if isinstance(target, dict)}
+
+
+def render_skillspec_plugin_target(manifest: dict[str, Any], target_id: str) -> str:
+    targets = _generated_plugin_targets(manifest)
+    if target_id not in targets:
+        raise KeyError(f"unknown SkillSpec plugin target id: {target_id}")
+    target = targets[target_id]
+
+    payload = {
+        "name": target["plugin_name"],
+        "version": "0.1.0",
+        "description": "Generated Codex plugin projection for Agentic Workspace startup routing.",
+        "author": {
+            "name": "Agentic Workspace",
+            "url": "https://github.com/rickardvh/agentic-workspace",
+        },
+        "repository": "https://github.com/rickardvh/agentic-workspace",
+        "license": "MIT",
+        "keywords": [
+            "agentic-workspace",
+            "skillspec",
+            "workspace-routing",
+        ],
+        "skills": "./skills/",
+        "interface": {
+            "displayName": "Agentic Workspace",
+            "shortDescription": "Generated AW routing plugin projection.",
+            "longDescription": (
+                "Framework-native metadata generated from SkillSpec. The plugin prefers the configured AW CLI "
+                "when available and preserves conservative no-CLI fallback behavior."
+            ),
+            "developerName": "Agentic Workspace",
+            "category": "Productivity",
+            "capabilities": [
+                "Read",
+                "Workflow",
+            ],
+            "defaultPrompt": [
+                "Start AW routing for this repo.",
+                "Check whether completion is claimable.",
+                "Show the next safe AW action.",
+            ],
+        },
+        "agenticWorkspace": {
+            "generated": True,
+            "source": "src/agentic_workspace/contracts/skill_specs.json",
+            "schema": "src/agentic_workspace/contracts/schemas/skill_spec.schema.json",
+            "targetId": target["id"],
+            "framework": target["framework"],
+            "status": target["status"],
+            "sourceSkillSpecs": target["source_skill_ids"],
+            "generatedSkills": target["generated_skill_paths"],
+            "preferredCli": target["preferred_cli_commands"],
+            "cliDependency": target["cli_dependency"],
+            "interpretedFields": target["interpreted_fields"],
+            "forbiddenActions": target["forbidden_actions"],
+            "fallbackWhenCliUnavailable": target["fallback_when_cli_unavailable"],
+            "mustPreserve": target["must_preserve"],
+            "nextSafeActionSemantics": target["next_safe_action_semantics"],
+            "behaviorFixtures": manifest["generated_target_behavior_fixtures"],
+            "whereToEdit": "src/agentic_workspace/contracts/skill_specs.json",
+            "doNotHandEditGeneratedOutput": True,
+        },
+    }
+    return json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n"
+
+
 def improvement_latitude_policy_manifest() -> dict[str, Any]:
     return load_validated_contract_json("improvement_latitude_policy.json", "improvement_latitude_policy.schema.json")
 

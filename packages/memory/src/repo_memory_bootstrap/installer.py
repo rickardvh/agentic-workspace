@@ -526,6 +526,51 @@ def _tokenize_capture_text(*values: str) -> set[str]:
     return tokens
 
 
+def _looks_like_improvement_pressure(*values: str) -> bool:
+    text = " ".join(value.lower() for value in values if value)
+    if not text.strip():
+        return False
+    phrase_markers = (
+        "dogfooding",
+        "improvement pressure",
+        "improvement signal",
+        "repeated correction",
+        "recurring correction",
+        "better way",
+        "less smooth",
+        "not smooth",
+        "workflow friction",
+        "capture improvement",
+    )
+    if any(marker in text for marker in phrase_markers):
+        return True
+    return "should" in text and any(marker in text for marker in ("memory", "promotion", "routine", "friction", "help more"))
+
+
+def _promotion_metadata_guidance(*, summary: str, best: dict[str, object] | None) -> dict[str, object] | None:
+    best_path = str(best.get("path", "")) if best else ""
+    if not _looks_like_improvement_pressure(summary, best_path):
+        return None
+    existing_has_metadata = bool(best) and str(best.get("memory_role", "")) == "improvement_signal"
+    suggested_fields = {
+        "memory_role": "improvement_signal",
+        "promotion_target": "<existing issue, planning candidate, docs/checks/contracts, skill, script, or code owner>",
+        "promotion_trigger": "<when this should leave prose memory>",
+        "retention_after_promotion": "shrink|remove|retain",
+    }
+    return {
+        "status": "metadata-present" if existing_has_metadata else "promotion-metadata-suggested",
+        "metadata_required": not existing_has_metadata,
+        "reason": (
+            "capture text looks like dogfooding or repeated-correction pressure; avoid adding prose-only Memory "
+            "when an issue, planning candidate, or promotion target should own the signal"
+        ),
+        "owner_surface": MANIFEST_PATH.as_posix(),
+        "suggested_manifest_fields": suggested_fields,
+        "dismissal_allowed_when": "an existing runbook, issue, planning candidate, or manifest promotion path already owns the signal",
+    }
+
+
 def _capture_specificity_bonus(*, note: MemoryNoteRecord, files: tuple[str, ...]) -> tuple[int, list[str]]:
     note_path = note.path.as_posix()
     bonus = 0
@@ -655,7 +700,7 @@ def suggest_memory_note_capture(
         next_command = f"agentic-memory create-note {safe_slug} --target ./repo --summary <text> --format json"
         reason = "no existing Memory note matched the capture request"
 
-    return {
+    payload: dict[str, object] = {
         "kind": "agentic-memory/capture-recommendation/v1",
         "status": "ready",
         "owner_surface": MANIFEST_PATH.as_posix(),
@@ -667,6 +712,15 @@ def suggest_memory_note_capture(
         "candidates": candidates[:5],
         "commands": [next_command, "agentic-memory doctor --target ./repo --format json"],
     }
+    promotion_guidance = _promotion_metadata_guidance(summary=summary, best=best)
+    if promotion_guidance is not None:
+        payload["promotion_metadata_guidance"] = promotion_guidance
+        if promotion_guidance["metadata_required"]:
+            payload["commands"] = [
+                *cast(list[str], payload["commands"]),
+                "agentic-memory promotion-report --target ./repo --mode remediation --format json",
+            ]
+    return payload
 
 
 def install_bootstrap(
@@ -2300,6 +2354,7 @@ def promotion_report(
     )
     if mode == "remediation":
         records = [record for record in records if record[3] is not None and record[3].confidence in {"high", "medium"}]
+    prose_only_signals = _prose_only_improvement_signals(target_root=target_root, manifest=manifest)
     records.sort(
         key=lambda record: (
             record[3].kind if record[3] is not None else "zzz",
@@ -2308,6 +2363,23 @@ def promotion_report(
         )
     )
     if not records:
+        if prose_only_signals:
+            for signal in prose_only_signals:
+                result.add(
+                    "manual review",
+                    target_root / str(signal["path"]),
+                    str(signal["detail"]),
+                    role="promotion-report",
+                    safety="manual",
+                    source=str(signal["path"]),
+                    category="manual-review",
+                    remediation_kind="metadata",
+                    remediation_target=str(signal["path"]),
+                    remediation_reason="dogfooding or repeated-correction pressure needs promotion metadata or explicit dismissal",
+                    remediation_confidence="medium",
+                    memory_action="mark_improvement_signal_or_dismiss",
+                )
+            return result
         result.add(
             "manual review",
             target_root / MANIFEST_PATH,
@@ -2355,6 +2427,48 @@ def promotion_report(
                     category="manual-review",
                 )
     return result
+
+
+def _prose_only_improvement_signals(*, target_root: Path, manifest) -> list[dict[str, str]]:
+    if manifest is None:
+        return []
+    signals: list[dict[str, str]] = []
+    scanned_paths: set[str] = set()
+
+    def add_signal(relative: str, summary: str = "") -> None:
+        note_path = target_root / relative
+        if not note_path.exists():
+            return
+        scanned_paths.add(relative)
+        try:
+            text = note_path.read_text(encoding="utf-8")
+        except OSError:
+            return
+        if not _looks_like_improvement_pressure(text, summary):
+            return
+        signals.append(
+            {
+                "path": relative,
+                "detail": (
+                    "prose-only dogfooding or repeated-correction signal found; add manifest metadata "
+                    "memory_role=improvement_signal with promotion_target, promotion_trigger, and "
+                    "retention_after_promotion, route it to an existing owner, or explicitly dismiss it"
+                ),
+            }
+        )
+
+    for note in manifest.notes:
+        relative = note.path.as_posix()
+        if note.memory_role == "improvement_signal" or note.improvement_candidate:
+            scanned_paths.add(relative)
+            continue
+        if "/current/" not in relative and "routing-feedback" not in relative:
+            continue
+        add_signal(relative, note.summary)
+    routing_feedback = ".agentic-workspace/memory/repo/current/routing-feedback.md"
+    if routing_feedback not in scanned_paths:
+        add_signal(routing_feedback)
+    return signals
 
 
 def _memory_evidence_anchors(note: MemoryNoteRecord) -> list[str]:
