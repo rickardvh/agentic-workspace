@@ -85,6 +85,8 @@ def execute_primitive(
         return _assemble_payload(values=values, arguments=arguments)
     if primitive == "payload.status":
         return _payload_status(values=values, arguments=arguments, context=context)
+    if primitive == "payload.lifecycle-plan":
+        return _payload_lifecycle_plan(values=values, arguments=arguments, context=context)
     if primitive == "payload.verify":
         return _verify_payload(values=values, arguments=arguments, context=context)
     if primitive == "output.emit":
@@ -450,6 +452,61 @@ def _payload_status(*, values: dict[str, Any], arguments: dict[str, Any], contex
         "actions": actions,
         "active": active,
         "detail_command": str(arguments.get("detail_command", "")),
+    }
+
+
+def _payload_lifecycle_plan(*, values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> dict[str, Any]:
+    policy_root = context.root(str(arguments.get("policy_root", "")))
+    policy_path = _resolve_inside(policy_root, str(arguments.get("policy_path", "")))
+    try:
+        policy = json.loads(policy_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise PrimitiveExecutionError(f"payload.lifecycle-plan cannot load policy: {policy_path}") from exc
+    target_root = Path(str(values.get(str(arguments.get("target_root_value", "target_root")), context.cwd))).resolve()
+    bootstrap_version = int(policy.get("bootstrap_version", 0))
+    version_path = str(policy.get("version_path", ""))
+    legacy_version_path = str(policy.get("legacy_version_path", ""))
+    detected_version = _read_first_version(target_root, [version_path, legacy_version_path])
+    actions: list[dict[str, Any]] = []
+    workspace_notice = policy.get("workspace_orchestrator_notice", {})
+    if isinstance(workspace_notice, dict):
+        marker = str(workspace_notice.get("marker", "")).strip()
+        if marker and not (target_root / marker).exists():
+            actions.append(
+                _status_action(
+                    "warning",
+                    marker,
+                    str(workspace_notice.get("detail", "")),
+                    role=str(workspace_notice.get("role", "workspace-orchestration")),
+                    safety=str(workspace_notice.get("safety", "safe")),
+                    source=marker,
+                    category=str(workspace_notice.get("category", "safe-update")),
+                )
+            )
+    for raw_entry in _list_of_objects(policy.get("status_files", []), source="payload.lifecycle-plan status_files"):
+        relative_path = str(raw_entry.get("path", ""))
+        if not relative_path:
+            continue
+        exists = (target_root / relative_path).exists()
+        actions.append(
+            _status_action(
+                "preserve" if exists else str(arguments.get("missing_kind", "would copy")),
+                relative_path,
+                "already exists" if exists else str(arguments.get("missing_detail", "planned change")),
+                role=str(raw_entry.get("role", "")),
+                safety=str(raw_entry.get("safety", "safe")),
+                source=str(raw_entry.get("source", relative_path)),
+                category=str(raw_entry.get("category", "")) or "safe-update",
+            )
+        )
+    return {
+        "target_root": str(target_root),
+        "dry_run": bool(arguments.get("dry_run", True)),
+        "mode": str(arguments.get("mode", "")),
+        "message": str(arguments.get("message", "Install plan")),
+        "detected_version": detected_version,
+        "bootstrap_version": bootstrap_version,
+        "actions": actions,
     }
 
 

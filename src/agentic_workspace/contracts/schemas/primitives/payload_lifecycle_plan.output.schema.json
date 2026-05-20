@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/primitives/payload_lifecycle_plan.output.schema.json",
+  "title": "payload.lifecycle-plan output",
+  "type": "object",
+  "required": [
+    "payload"
+  ],
+  "properties": {
+    "payload": {
+      "type": "object",
+      "required": [
+        "target_root",
+        "dry_run",
+        "message",
+        "actions"
+      ],
+      "properties": {
+        "target_root": {
+          "type": "string"
+        },
+        "dry_run": {
+          "const": true
+        },
+        "mode": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "detected_version": {
+          "type": [
+            "string",
+            "integer",
+            "null"
+          ]
+        },
+        "bootstrap_version": {
+          "type": [
+            "string",
+            "integer",
+            "null"
+          ]
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

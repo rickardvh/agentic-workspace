@@ -100,13 +100,23 @@
   ],
   "steps": [
     {
+      "id": "resolve_target_root",
+      "uses": "path.target_root.resolve",
+      "description": "Resolve the target root for declarative dry-run planning."
+    },
+    {
+      "id": "plan_default_dry_run",
+      "uses": "payload.lifecycle-plan",
+      "description": "Plan default dry-run install actions from declarative payload policy."
+    },
+    {
       "id": "apply_memory_lifecycle",
       "uses": "python.function.call",
-      "description": "Install Memory bootstrap files into a repository."
+      "description": "Apply or plan Memory bootstrap install through package runtime when mutation or customized install policy is required."
     },
     {
       "id": "emit_output",
-      "uses": "output.emit",
+      "uses": "output.emit.install-result",
       "description": "Emit the install result in the requested format."
     }
   ],
@@ -121,12 +131,176 @@
   "migration_status": "runtime-consumed",
   "ir_plan": {
     "status": "representative",
-    "summary": "Memory install executes generated operation IR through codegen-owned primitive dataflow while the memory module owns lifecycle policy.",
+    "summary": "Default dry-run Memory install executes generated operation IR through codegen-owned payload.lifecycle-plan. Mutating and customized install policy paths remain package-domain runtime.",
     "steps": [
+      {
+        "id": "resolve_target_root",
+        "uses": "path.target_root.resolve",
+        "description": "Resolve the target root for declarative dry-run planning.",
+        "when": {
+          "all": [
+            {
+              "value": "dry_run",
+              "equals": true
+            },
+            {
+              "value": "force",
+              "equals": false
+            },
+            {
+              "value": "project_name",
+              "equals": null
+            },
+            {
+              "value": "project_purpose",
+              "equals": null
+            },
+            {
+              "value": "key_repo_docs",
+              "equals": null
+            },
+            {
+              "value": "key_subsystems",
+              "equals": null
+            },
+            {
+              "value": "primary_build_command",
+              "equals": null
+            },
+            {
+              "value": "primary_test_command",
+              "equals": null
+            },
+            {
+              "value": "other_key_commands",
+              "equals": null
+            },
+            {
+              "value": "policy_profile",
+              "equals": "default"
+            }
+          ]
+        },
+        "arguments": {
+          "must_exist": true,
+          "must_be_dir": true
+        },
+        "outputs": [
+          "target_root"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "plan_default_dry_run",
+        "uses": "payload.lifecycle-plan",
+        "description": "Plan default dry-run install actions from declarative payload policy.",
+        "when": {
+          "all": [
+            {
+              "value": "dry_run",
+              "equals": true
+            },
+            {
+              "value": "force",
+              "equals": false
+            },
+            {
+              "value": "project_name",
+              "equals": null
+            },
+            {
+              "value": "project_purpose",
+              "equals": null
+            },
+            {
+              "value": "key_repo_docs",
+              "equals": null
+            },
+            {
+              "value": "key_subsystems",
+              "equals": null
+            },
+            {
+              "value": "primary_build_command",
+              "equals": null
+            },
+            {
+              "value": "primary_test_command",
+              "equals": null
+            },
+            {
+              "value": "other_key_commands",
+              "equals": null
+            },
+            {
+              "value": "policy_profile",
+              "equals": "default"
+            }
+          ]
+        },
+        "arguments": {
+          "policy_root": "memory.contracts",
+          "policy_path": "payload_verification.memory.json",
+          "target_root_value": "target_root",
+          "dry_run": true,
+          "mode": "bootstrap",
+          "message": "Install plan"
+        },
+        "outputs": [
+          "result"
+        ],
+        "on_error": "fail"
+      },
       {
         "id": "apply_memory_lifecycle",
         "uses": "python.function.call",
-        "description": "Install Memory bootstrap files into a repository.",
+        "description": "Apply or plan Memory bootstrap install through package runtime when mutation or customized install policy is required.",
+        "when": {
+          "not": {
+            "all": [
+              {
+                "value": "dry_run",
+                "equals": true
+              },
+              {
+                "value": "force",
+                "equals": false
+              },
+              {
+                "value": "project_name",
+                "equals": null
+              },
+              {
+                "value": "project_purpose",
+                "equals": null
+              },
+              {
+                "value": "key_repo_docs",
+                "equals": null
+              },
+              {
+                "value": "key_subsystems",
+                "equals": null
+              },
+              {
+                "value": "primary_build_command",
+                "equals": null
+              },
+              {
+                "value": "primary_test_command",
+                "equals": null
+              },
+              {
+                "value": "other_key_commands",
+                "equals": null
+              },
+              {
+                "value": "policy_profile",
+                "equals": "default"
+              }
+            ]
+          }
+        },
         "arguments": {
           "import_module": "repo_memory_bootstrap.installer",
           "function": "install_bootstrap",
@@ -173,7 +347,7 @@
       },
       {
         "id": "emit_output",
-        "uses": "output.emit",
+        "uses": "output.emit.install-result",
         "description": "Emit the install result in the requested format.",
         "arguments": {},
         "outputs": [

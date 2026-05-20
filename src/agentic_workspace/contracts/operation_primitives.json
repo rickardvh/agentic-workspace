@@ -92,6 +92,7 @@
           "json.parse",
           "toml.table.counts",
           "payload.assemble",
+          "payload.lifecycle-plan",
           "payload.status",
           "payload.verify",
           "output.emit",
@@ -608,6 +609,16 @@
       "semantics": "Build a JSON-serializable payload from declared step outputs and constants.",
       "input_schema_ref": "schemas/primitives/payload_assemble.input.schema.json",
       "output_schema_ref": "schemas/primitives/payload_assemble.output.schema.json",
+      "taxonomy_tier": "tier-1-portable-codegen"
+    },
+    {
+      "id": "payload.lifecycle-plan",
+      "summary": "Assemble a dry-run lifecycle plan from declarative package payload policy.",
+      "kind": "validation",
+      "portability": "target-executor",
+      "semantics": "Read a schema-backed package payload policy and produce safe dry-run action records for missing or existing managed payload files without applying repository mutations.",
+      "input_schema_ref": "schemas/primitives/payload_lifecycle_plan.input.schema.json",
+      "output_schema_ref": "schemas/primitives/payload_lifecycle_plan.output.schema.json",
       "taxonomy_tier": "tier-1-portable-codegen"
     },
     {

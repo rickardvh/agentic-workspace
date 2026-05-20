@@ -237,18 +237,20 @@
       "operation_contract": "operations/memory.install.lifecycle.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
-        "memory.install.apply",
-        "module-result text/json compatibility formatting"
+        "memory.install.apply for mutation or customized install policy"
       ],
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "memory.install.lifecycle.dry-run.process",
       "domain_runtime_primitive_refs": [
-        "memory.install.apply"
+        "path.target_root.resolve",
+        "payload.lifecycle-plan",
+        "memory.install.apply",
+        "output.emit.install-result"
       ],
       "runtime_boundary_class": "mutation-orchestration",
-      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own Memory lifecycle policy and mutation safety behavior.",
-      "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.install.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "runtime_boundary_reason": "Default dry-run install planning executes through codegen-owned payload.lifecycle-plan and install-result output; package-domain runtime still owns mutation and customized install policy safety.",
+      "what_would_make_portable_later": "Move customized dry-run policy into schema-backed payload planning and model apply safety separately before replacing memory.install.apply for mutating paths.",
+      "generic_behavior_audit": "Default dry-run behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, payload.lifecycle-plan, and output.emit.install-result. The remaining package-domain primitive is a mutation/custom-policy fallback and is not counted as portable codegen coverage."
     },
     {
       "operation_id": "memory.init.lifecycle",
@@ -258,18 +260,20 @@
       "operation_contract": "operations/memory.init.lifecycle.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
-        "memory.init.apply",
-        "module-result text/json compatibility formatting"
+        "memory.init.apply for mutation or customized init policy"
       ],
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "memory.init.lifecycle.dry-run.process",
       "domain_runtime_primitive_refs": [
-        "memory.init.apply"
+        "path.target_root.resolve",
+        "payload.lifecycle-plan",
+        "memory.init.apply",
+        "output.emit.install-result"
       ],
       "runtime_boundary_class": "mutation-orchestration",
-      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own Memory lifecycle policy and mutation safety behavior.",
-      "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.init.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "runtime_boundary_reason": "Default dry-run init planning executes through codegen-owned payload.lifecycle-plan and install-result output; package-domain runtime still owns mutation and customized init policy safety.",
+      "what_would_make_portable_later": "Move customized dry-run policy into schema-backed payload planning and model apply safety separately before replacing memory.init.apply for mutating paths.",
+      "generic_behavior_audit": "Default dry-run behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, payload.lifecycle-plan, and output.emit.install-result. The remaining package-domain primitive is a mutation/custom-policy fallback and is not counted as portable codegen coverage."
     },
     {
       "operation_id": "memory.adopt.lifecycle",

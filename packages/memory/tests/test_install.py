@@ -374,6 +374,40 @@ def test_install_dry_run_excludes_current_memory_baseline(tmp_path: Path) -> Non
     assert ".agentic-workspace/memory/repo/current/active-decisions.md" not in planned_copies
 
 
+def test_generated_install_dry_run_uses_declarative_payload_plan(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+
+    def fail_install(*args, **kwargs):
+        raise AssertionError("default generated install dry-run should not call package install runtime")
+
+    monkeypatch.setattr(installer, "install_bootstrap", fail_install)
+
+    assert cli.main(["install", "--target", str(target), "--dry-run", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["dry_run"] is True
+    assert payload["message"] == "Install plan"
+    assert any(action["kind"] == "would copy" and action["path"] == "AGENTS.md" for action in payload["actions"])
+
+
+def test_generated_init_dry_run_uses_declarative_payload_plan(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+
+    def fail_install(*args, **kwargs):
+        raise AssertionError("default generated init dry-run should not call package install runtime")
+
+    monkeypatch.setattr(installer, "install_bootstrap", fail_install)
+
+    assert cli.main(["init", "--target", str(target), "--dry-run", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["dry_run"] is True
+    assert payload["message"] == "Install plan"
+    assert any(action["kind"] == "would copy" and action["path"] == "AGENTS.md" for action in payload["actions"])
+
+
 def test_install_does_not_write_current_memory_seed_notes(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True, exist_ok=True)
