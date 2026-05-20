@@ -4785,6 +4785,22 @@ def _lifecycle_plan_payload(
         for module in module_policy_payloads
         if isinstance(module, dict) and str(module.get("module", "")) in set(selected_modules)
     ]
+    action_owner_groups: dict[str, list[str]] = {
+        "memory_managed_payload": [],
+        "shared_workspace_payload": [],
+        "local_source_checkout_state": [],
+        "package_command_or_install_state": [],
+    }
+    for path in list(payload.get("created", [])) + list(payload.get("updated_managed", [])) + planned_removals:
+        path_text = str(path)
+        if path_text.startswith(".agentic-workspace/memory/"):
+            action_owner_groups["memory_managed_payload"].append(path_text)
+        elif path_text.startswith(".agentic-workspace/") or path_text == DEFAULT_AGENT_INSTRUCTIONS_FILE:
+            action_owner_groups["shared_workspace_payload"].append(path_text)
+        elif path_text.startswith(".git/") or "source-checkout" in path_text:
+            action_owner_groups["local_source_checkout_state"].append(path_text)
+        else:
+            action_owner_groups["package_command_or_install_state"].append(path_text)
     next_command = _lifecycle_apply_command(
         command_name=command_name, target_root=target_root, selected_modules=selected_modules, local_only=local_only, cli_invoke=cli_invoke
     )
@@ -4822,6 +4838,11 @@ def _lifecycle_plan_payload(
         "review_items": review_items,
         "local_only_state_interaction": "install-root" if local_only else "not-requested",
         "module_update_freshness": module_update_freshness,
+        "action_owner_groups": action_owner_groups,
+        "source_checkout_payload_boundary": {
+            "source_class": _invoked_cli_identity_payload(target_root=target_root, compact=True).get("source_class"),
+            "rule": "A source-checkout command can still report target-repo managed payload refresh; that is not a Python package upgrade.",
+        },
         "mutation_safety": _lifecycle_mutation_safety_payload(
             command_name=command_name,
             dry_run=dry_run,
@@ -7168,6 +7189,192 @@ def _report_section_hints(payload: dict[str, Any]) -> list[dict[str, Any]]:
     return report_section_hints(payload)
 
 
+_COMPLETION_OPTION_IDS = (
+    "run-proof",
+    "claim-slice-complete",
+    "claim-work-complete",
+    "keep-parent-open",
+    "close-parent-lane",
+    "route-residue",
+    "request-review",
+    "stop-with-status",
+)
+
+
+def _completion_option(
+    option_id: str,
+    *,
+    allowed: bool,
+    why: str,
+    command: str | None = None,
+    owner: str | None = None,
+    blocking_fields: list[str] | None = None,
+) -> dict[str, Any]:
+    if option_id not in _COMPLETION_OPTION_IDS:
+        raise ValueError(f"unknown completion option id: {option_id}")
+    item: dict[str, Any] = {"id": option_id, "allowed": allowed, "why": why}
+    if command is not None:
+        item["command"] = command
+    if owner:
+        item["owner"] = owner
+    if blocking_fields:
+        item["blocking_fields"] = blocking_fields
+    return item
+
+
+def _closeout_completion_options(
+    *,
+    status: str,
+    trust: str,
+    strict_gate: dict[str, Any],
+    intent_check: dict[str, Any],
+    acceptance_reconciliation: dict[str, Any],
+    durable_residue_action: dict[str, Any],
+    lower_trust_closeout_count: int,
+    cli_invoke: str,
+) -> list[dict[str, Any]]:
+    closure_scope = intent_check.get("closure_scope", {}) if isinstance(intent_check, dict) else {}
+    closure_scope = closure_scope if isinstance(closure_scope, dict) else {}
+    validation_proof = closure_scope.get("validation_proof", {})
+    validation_proof = validation_proof if isinstance(validation_proof, dict) else {}
+    proof_text = " ".join(
+        str(value)
+        for value in (
+            validation_proof.get("proof_report", ""),
+            validation_proof.get("status", ""),
+            validation_proof.get("proof_achieved_now", ""),
+        )
+        if value
+    ).lower()
+    proof_achieved = any(marker in proof_text for marker in ("passed", "satisfied", "achieved", "complete"))
+    proof_command = _command_with_cli_invoke(command="agentic-workspace proof --target ./repo --format json", cli_invoke=cli_invoke)
+    strict_blocking = bool(strict_gate.get("blocking"))
+    intent_trust = str(intent_check.get("trust", "")).strip().lower()
+    acceptance_trust = str(acceptance_reconciliation.get("trust", "")).strip().lower()
+    larger_closure = closure_scope.get("larger_intent_closure", {})
+    larger_closure = larger_closure if isinstance(larger_closure, dict) else {}
+    larger_status = str(larger_closure.get("status", "")).strip().lower()
+    closure_decision = str(larger_closure.get("closure_decision", "")).strip().lower()
+    continuation_owner = str(intent_check.get("continuation_surface", "")).strip()
+    package_continuation = intent_check.get("package_owned_continuation", {})
+    if not continuation_owner and isinstance(package_continuation, dict):
+        owner_surfaces = [str(item).strip() for item in _list_payload(package_continuation.get("owner_surfaces")) if str(item).strip()]
+        continuation_owner = owner_surfaces[0] if owner_surfaces else ""
+    required_follow_on = str(intent_check.get("required_follow_on", "")).strip().lower()
+    larger_intent_open = (
+        intent_trust in {"follow-up-required", "needs-review"}
+        or larger_status in {"open", "follow-up-required"}
+        or required_follow_on in {"yes", "true"}
+    )
+    residue_required = (
+        lower_trust_closeout_count > 0
+        or trust in {"lower-trust", "unavailable"}
+        or intent_trust
+        in {
+            "follow-up-required",
+            "needs-review",
+        }
+    )
+    acceptance_ok = acceptance_trust in {"normal", "not-applicable", ""}
+    intent_satisfied = intent_trust in {"satisfied", "normal"}
+    close_evidence = larger_status in {"closed", "complete", "completed", "done"} or closure_decision in {
+        "archive-and-close",
+        "close",
+        "closed",
+    }
+    completion_blockers: list[str] = []
+    if not proof_achieved:
+        completion_blockers.append("intent_satisfaction.closure_scope.validation_proof")
+    if strict_blocking:
+        completion_blockers.append("strict_closeout_gate")
+    if not acceptance_ok:
+        completion_blockers.append("acceptance_criteria_reconciliation")
+    if residue_required:
+        completion_blockers.append("durable_residue")
+    if larger_intent_open:
+        completion_blockers.append("intent_satisfaction")
+    if larger_intent_open and not continuation_owner:
+        completion_blockers.append("continuation_owner")
+
+    claim_slice_allowed = proof_achieved and (not strict_blocking) and acceptance_ok and not residue_required
+    claim_work_allowed = claim_slice_allowed and intent_satisfied and (not larger_intent_open)
+    close_parent_allowed = claim_work_allowed and close_evidence
+    route_residue_command = str(durable_residue_action.get("command", "")) or _command_with_cli_invoke(
+        command="agentic-workspace report --target ./repo --section closeout_trust --format json", cli_invoke=cli_invoke
+    )
+    request_review_allowed = (
+        status in {"unavailable", "invalid"} or intent_trust == "needs-review" or str(strict_gate.get("status", "")) == "requires-review"
+    )
+    return [
+        _completion_option(
+            "run-proof",
+            allowed=not proof_achieved,
+            command=proof_command,
+            why="proof has not been recorded as executed" if not proof_achieved else "proof execution evidence is already visible",
+            blocking_fields=None if proof_achieved else ["intent_satisfaction.closure_scope.validation_proof"],
+        ),
+        _completion_option(
+            "claim-slice-complete",
+            allowed=claim_slice_allowed,
+            why="slice proof and closeout evidence support a bounded completion claim"
+            if claim_slice_allowed
+            else "slice completion is blocked until proof, strict closeout, acceptance, and residue evidence are reconciled",
+            blocking_fields=[field for field in completion_blockers if field != "intent_satisfaction"] or None,
+        ),
+        _completion_option(
+            "claim-work-complete",
+            allowed=claim_work_allowed,
+            why="proof, intent, residue, and closeout evidence support claiming the requested work complete"
+            if claim_work_allowed
+            else "work completion is blocked until proof, intent, residue, continuation, and closeout evidence support it",
+            owner=continuation_owner if larger_intent_open else None,
+            blocking_fields=completion_blockers or None,
+        ),
+        _completion_option(
+            "keep-parent-open",
+            allowed=larger_intent_open and bool(continuation_owner),
+            why="larger intent remains open and a continuation owner is named"
+            if larger_intent_open and continuation_owner
+            else "no larger-intent continuation owner is currently required or named",
+            owner=continuation_owner if larger_intent_open else None,
+            blocking_fields=["continuation_owner"] if larger_intent_open and not continuation_owner else None,
+        ),
+        _completion_option(
+            "close-parent-lane",
+            allowed=close_parent_allowed,
+            why="explicit closure evidence supports closing the parent lane"
+            if close_parent_allowed
+            else "parent lane closure requires satisfied larger intent and explicit closure evidence",
+            owner=continuation_owner if larger_intent_open else None,
+            blocking_fields=completion_blockers if completion_blockers else ["intent_satisfaction.closure_scope.larger_intent_closure"],
+        ),
+        _completion_option(
+            "route-residue",
+            allowed=residue_required,
+            command=route_residue_command,
+            why="durable residue or lower-trust closeout signals need routing"
+            if residue_required
+            else "no durable residue routing is currently required by closeout_trust",
+        ),
+        _completion_option(
+            "request-review",
+            allowed=request_review_allowed,
+            why="intent satisfaction or strict closeout evidence requires human/domain review"
+            if request_review_allowed
+            else "a concrete closeout action is available without requiring review",
+            blocking_fields=["intent_satisfaction"] if intent_trust == "needs-review" else None,
+        ),
+        _completion_option(
+            "stop-with-status",
+            allowed=True,
+            why="safe exit is always available when completion cannot honestly be claimed",
+            command=_command_with_cli_invoke(
+                command="agentic-workspace report --target ./repo --section closeout_trust --format json", cli_invoke=cli_invoke
+            ),
+        ),
+    ]
+
+
 def _report_closeout_trust_payload(
     *,
     module_reports: list[dict[str, Any]],
@@ -7251,37 +7458,63 @@ def _report_closeout_trust_payload(
     planning_report = next((report for report in module_reports if isinstance(report, dict) and report.get("module") == "planning"), None)
     if not isinstance(planning_report, dict):
         gate = strict_gate(trust="unavailable", reason="planning module is not installed", active_planning_record=False)
+        intent_check = _intent_satisfaction_check_payload(planning_report={}, target_root=target_root)
+        acceptance_reconciliation = _acceptance_criteria_reconciliation_payload(planning_report={})
+        residue_action = durable_residue_action(trust="unavailable")
         return {
             "status": "unavailable",
             "reason": "planning module is not installed",
             "strict_closeout_gate": gate,
             "package_workflow_evidence": _package_workflow_evidence_payload(planning_report={}),
-            "intent_satisfaction_check": _intent_satisfaction_check_payload(planning_report={}, target_root=target_root),
-            "acceptance_criteria_reconciliation": _acceptance_criteria_reconciliation_payload(planning_report={}),
+            "intent_satisfaction_check": intent_check,
+            "acceptance_criteria_reconciliation": acceptance_reconciliation,
             "historical_review_artifacts": _historical_review_artifacts_policy(
                 planning_report={}, intent_validation={}, target_root=target_root
             ),
-            "durable_residue_action": durable_residue_action(trust="unavailable"),
+            "durable_residue_action": residue_action,
             "terminal_action": terminal_action(
                 trust="unavailable", recommended_next_action="Install or run planning report before trusting closeout state."
+            ),
+            "completion_options": _closeout_completion_options(
+                status="unavailable",
+                trust="unavailable",
+                strict_gate=gate,
+                intent_check=intent_check,
+                acceptance_reconciliation=acceptance_reconciliation,
+                durable_residue_action=residue_action,
+                lower_trust_closeout_count=1,
+                cli_invoke=cli_invoke,
             ),
         }
     intent_validation = planning_report.get("intent_validation", {})
     if not isinstance(intent_validation, dict):
         gate = strict_gate(trust="unavailable", reason="planning intent validation is unavailable", active_planning_record=False)
+        intent_check = _intent_satisfaction_check_payload(planning_report=planning_report, target_root=target_root)
+        acceptance_reconciliation = _acceptance_criteria_reconciliation_payload(planning_report=planning_report)
+        residue_action = durable_residue_action(trust="unavailable")
         return {
             "status": "unavailable",
             "reason": "planning intent validation is unavailable",
             "strict_closeout_gate": gate,
             "package_workflow_evidence": _package_workflow_evidence_payload(planning_report=planning_report),
-            "intent_satisfaction_check": _intent_satisfaction_check_payload(planning_report=planning_report, target_root=target_root),
-            "acceptance_criteria_reconciliation": _acceptance_criteria_reconciliation_payload(planning_report=planning_report),
+            "intent_satisfaction_check": intent_check,
+            "acceptance_criteria_reconciliation": acceptance_reconciliation,
             "historical_review_artifacts": _historical_review_artifacts_policy(
                 planning_report=planning_report, intent_validation={}, target_root=target_root
             ),
-            "durable_residue_action": durable_residue_action(trust="unavailable"),
+            "durable_residue_action": residue_action,
             "terminal_action": terminal_action(
                 trust="unavailable", recommended_next_action="Inspect planning report before trusting closeout state."
+            ),
+            "completion_options": _closeout_completion_options(
+                status="unavailable",
+                trust="unavailable",
+                strict_gate=gate,
+                intent_check=intent_check,
+                acceptance_reconciliation=acceptance_reconciliation,
+                durable_residue_action=residue_action,
+                lower_trust_closeout_count=1,
+                cli_invoke=cli_invoke,
             ),
         }
     counts = intent_validation.get("counts", {})
@@ -7329,14 +7562,16 @@ def _report_closeout_trust_payload(
     else:
         summary = "No lower-trust closeout signals are currently detected from planning evidence."
         recommended_next_action = "No extra closeout trust review is needed beyond normal report inspection."
+    gate = strict_gate(
+        trust=trust,
+        reason="active planning record present" if active_planning_record else "no active planning record",
+        active_planning_record=active_planning_record,
+    )
+    residue_action = durable_residue_action(trust=trust)
     return {
         "status": "present",
         "trust": trust,
-        "strict_closeout_gate": strict_gate(
-            trust=trust,
-            reason="active planning record present" if active_planning_record else "no active planning record",
-            active_planning_record=active_planning_record,
-        ),
+        "strict_closeout_gate": gate,
         "lower_trust_closeout_count": effective_lower_trust_count,
         "planning_residue_lower_trust_count": lower_trust_closeout_count,
         "package_evidence_lower_trust_count": len(package_absence_signals),
@@ -7351,8 +7586,18 @@ def _report_closeout_trust_payload(
         "historical_review_artifacts": _historical_review_artifacts_policy(
             planning_report=planning_report, intent_validation=intent_validation, target_root=target_root
         ),
-        "durable_residue_action": durable_residue_action(trust=trust),
+        "durable_residue_action": residue_action,
         "terminal_action": terminal_action(trust=trust, recommended_next_action=recommended_next_action),
+        "completion_options": _closeout_completion_options(
+            status="present",
+            trust=trust,
+            strict_gate=gate,
+            intent_check=intent_satisfaction_check,
+            acceptance_reconciliation=acceptance_reconciliation,
+            durable_residue_action=residue_action,
+            lower_trust_closeout_count=effective_lower_trust_count,
+            cli_invoke=cli_invoke,
+        ),
         "recommended_next_action": recommended_next_action,
     }
 
@@ -8399,6 +8644,155 @@ def _github_issue_to_external_intent_item(*, issue: dict[str, Any], repo: str) -
     }
 
 
+def _planning_candidate_priority_from_labels(labels: Sequence[str]) -> str | None:
+    normalized = {str(label).strip().lower() for label in labels}
+    if "priority/high" in normalized:
+        return "P1"
+    if "priority/medium" in normalized:
+        return "P2"
+    if "priority/low" in normalized:
+        return "P3"
+    if "priority/lowest" in normalized:
+        return "P4"
+    return None
+
+
+def _existing_planning_candidate_refs(*, target_root: Path) -> set[str]:
+    state_path = target_root / ".agentic-workspace" / "planning" / "state.toml"
+    if not state_path.exists():
+        return set()
+    try:
+        payload = tomllib.loads(state_path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return set()
+    refs: set[str] = set()
+    roadmap = payload.get("roadmap", {}) if isinstance(payload, dict) else {}
+    candidates = roadmap.get("candidates", []) if isinstance(roadmap, dict) else []
+    for candidate in candidates if isinstance(candidates, list) else []:
+        if not isinstance(candidate, dict):
+            continue
+        raw_refs = str(candidate.get("refs", ""))
+        refs.update(f"#{match}" for match in re.findall(r"#(\d+)\b", raw_refs))
+    return refs
+
+
+def _planning_candidate_suggestions_from_external_items(*, target_root: Path, items: list[dict[str, Any]]) -> dict[str, Any]:
+    existing_refs = _existing_planning_candidate_refs(target_root=target_root)
+    candidates: list[dict[str, str]] = []
+    for item in items:
+        if item.get("status") != "open":
+            continue
+        labels = [str(label) for label in item.get("labels", []) if str(label).strip()]
+        if "status/deferred" in labels or "codegen" in labels:
+            continue
+        priority = _planning_candidate_priority_from_labels(labels)
+        if priority is None:
+            continue
+        ref = str(item.get("id", "")).strip()
+        if not ref or ref in existing_refs:
+            continue
+        number_slug = ref.lstrip("#")
+        title = str(item.get("title", "")).strip()
+        slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")[:48] or f"issue-{number_slug}"
+        candidates.append(
+            {
+                "id": f"github-{number_slug}-{slug}",
+                "maturity": "candidate",
+                "status": "next",
+                "priority": priority,
+                "refs": f"GitHub {ref}",
+                "title": title,
+                "outcome": "Route the upstream issue into a bounded Agentic Workspace slice before implementation.",
+                "reason": "Open prioritized upstream issue from refreshed external intent evidence.",
+                "promotion_signal": "Promote when this issue is selected for implementation or grouped into a bounded lane.",
+                "suggested_first_slice": "Inspect the issue body, choose the smallest workflow shape, and record exact proof before closeout.",
+            }
+        )
+    return {
+        "kind": "planning-candidate-suggestions/v1",
+        "status": "suggestions-ready" if candidates else "no-new-prioritized-candidates",
+        "rule": "Use these schema-valid rows as command-owned intake suggestions; do not hand-edit planning state without checking for duplicate refs.",
+        "excluded": [
+            "closed issues",
+            "unprioritized issues",
+            "status/deferred issues",
+            "codegen issues",
+            "refs already in planning candidates",
+        ],
+        "candidate_count": len(candidates),
+        "candidates": candidates,
+    }
+
+
+def _toml_inline_string(value: str) -> str:
+    return json.dumps(value, ensure_ascii=True)
+
+
+def _planning_candidate_toml_row(candidate: dict[str, str]) -> str:
+    fields = (
+        "id",
+        "maturity",
+        "status",
+        "priority",
+        "refs",
+        "title",
+        "outcome",
+        "reason",
+        "promotion_signal",
+        "suggested_first_slice",
+    )
+    rendered = ", ".join(f"{field} = {_toml_inline_string(str(candidate.get(field, '')))}" for field in fields)
+    return f"  {{ {rendered} }}"
+
+
+def _append_planning_candidate_rows(*, target_root: Path, candidates: list[dict[str, str]], dry_run: bool) -> dict[str, Any]:
+    state_path = target_root / ".agentic-workspace" / "planning" / "state.toml"
+    relative_path = ".agentic-workspace/planning/state.toml"
+    if not candidates:
+        return {"status": "nothing-to-apply", "path": relative_path, "applied_count": 0, "candidate_ids": []}
+    if not state_path.exists():
+        return {"status": "blocked", "path": relative_path, "reason": "planning state is missing", "applied_count": 0, "candidate_ids": []}
+    original = state_path.read_text(encoding="utf-8")
+    rows = [_planning_candidate_toml_row(candidate) for candidate in candidates]
+
+    roadmap_match = re.search(r"(?m)^\[roadmap\]\s*$", original)
+    if roadmap_match is None:
+        updated = original.rstrip() + "\n\n[roadmap]\nlanes = []\ncandidates = [\n" + ",\n".join(rows) + "\n]\n"
+    else:
+        candidates_match = re.search(r"(?ms)^candidates\s*=\s*\[(.*?)^\]", original[roadmap_match.end() :])
+        if candidates_match is None:
+            insert_at = roadmap_match.end()
+            updated = original[:insert_at] + "\nlanes = []\ncandidates = [\n" + ",\n".join(rows) + "\n]\n" + original[insert_at:]
+        else:
+            block_start = roadmap_match.end() + candidates_match.start()
+            block_end = roadmap_match.end() + candidates_match.end()
+            block = original[block_start:block_end]
+            has_existing = bool(re.search(r"\{", block))
+            prefix = block[:-1].rstrip()
+            separator = ",\n" if has_existing else "\n"
+            replacement = prefix + separator + ",\n".join(rows) + "\n]"
+            updated = original[:block_start] + replacement + original[block_end:]
+    try:
+        tomllib.loads(updated)
+    except tomllib.TOMLDecodeError as exc:
+        return {
+            "status": "blocked",
+            "path": relative_path,
+            "reason": f"candidate append would make planning state invalid: {exc}",
+            "applied_count": 0,
+            "candidate_ids": [],
+        }
+    if not dry_run:
+        state_path.write_text(updated, encoding="utf-8")
+    return {
+        "status": "dry-run" if dry_run else "applied",
+        "path": relative_path,
+        "applied_count": len(candidates),
+        "candidate_ids": [candidate["id"] for candidate in candidates],
+        "proof_after": "uv run agentic-workspace summary --target . --format json",
+    }
+
+
 def _load_existing_external_intent_evidence(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {"kind": "planning-external-intent-evidence/v1", "items": []}
@@ -8539,7 +8933,14 @@ def _compact_external_intent_cache_items(
 
 
 def _refresh_github_external_intent_evidence(
-    *, target_root: Path, repo: str | None, limit: int | None, state: str | None, storage: str, dry_run: bool
+    *,
+    target_root: Path,
+    repo: str | None,
+    limit: int | None,
+    state: str | None,
+    storage: str,
+    dry_run: bool,
+    apply_planning_candidates: bool = False,
 ) -> dict[str, Any]:
     evidence_path, evidence_relative_path, storage_class = _external_intent_evidence_write_location(target_root, storage)
     previous_payload = _load_existing_external_intent_evidence(evidence_path)
@@ -8616,9 +9017,24 @@ def _refresh_github_external_intent_evidence(
     }
     if cache_compaction is not None:
         next_payload["refresh_metadata"]["cache_compaction"] = cache_compaction
+    planning_candidate_suggestions = _planning_candidate_suggestions_from_external_items(target_root=target_root, items=items)
     if not dry_run:
         evidence_path.parent.mkdir(parents=True, exist_ok=True)
         evidence_path.write_text(json.dumps(next_payload, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
+    planning_candidate_apply = (
+        _append_planning_candidate_rows(
+            target_root=target_root,
+            candidates=planning_candidate_suggestions["candidates"],
+            dry_run=dry_run,
+        )
+        if apply_planning_candidates
+        else {
+            "status": "not-requested",
+            "path": ".agentic-workspace/planning/state.toml",
+            "applied_count": 0,
+            "candidate_ids": [],
+        }
+    )
     return {
         "kind": "external-intent-refresh/v1",
         "provider": "github",
@@ -8642,6 +9058,8 @@ def _refresh_github_external_intent_evidence(
         "limit": resolved_limit,
         "state_source": state_source,
         "limit_source": limit_source,
+        "planning_candidate_suggestions": planning_candidate_suggestions,
+        "planning_candidate_apply": planning_candidate_apply,
         "provider_rule": "Core planning consumes only provider-agnostic external intent evidence; GitHub access stays in this optional adapter.",
     }
 
@@ -9549,6 +9967,9 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if isinstance(proof, dict) and proof.get("kind") == "proof-selection/v1":
         projected["proof"] = _compact_start_proof_payload(proof)
         immediate["next_proof"] = "run the selected required validation commands before closeout"
+    repair_profile = payload.get("repair_plan_profile", {})
+    if isinstance(repair_profile, dict) and repair_profile.get("status") == "direct-no-plan":
+        projected["repair_plan_profile"] = repair_profile
     cli_compatibility = payload.get("cli_compatibility", {})
     if isinstance(cli_compatibility, dict) and cli_compatibility.get("status") in {"blocking-drift", "warning-drift"}:
         projected["cli_compatibility"] = cli_compatibility
@@ -10060,6 +10481,38 @@ def _prep_only_handoff_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
     }
 
 
+def _compact_repair_plan_profile(*, changed_paths: list[str], task_text: str | None, proof_command: str) -> dict[str, Any]:
+    normalized_task = " ".join((task_text or "").lower().split())
+    narrow_paths = len(changed_paths) <= 2
+    repair_terms = ("ci", "docs", "doc", "schema-reference", "proof", "validation", "repair", "fix check", "fix checks")
+    repair_task = any(term in normalized_task for term in repair_terms)
+    repair_paths = all(
+        path.startswith("docs/")
+        or path.endswith(".md")
+        or "/schemas/" in path
+        or path.startswith("src/agentic_workspace/contracts/schemas/")
+        for path in changed_paths
+    )
+    direct = bool(changed_paths and narrow_paths and (repair_task or repair_paths))
+    return {
+        "kind": "agentic-workspace/compact-repair-plan-profile/v1",
+        "status": "direct-no-plan" if direct else "not-repair-profile",
+        "fit_criteria": [
+            "CI, docs, schema-reference, proof, or tiny validation repair",
+            "one or two touched surfaces",
+            "no parent intent change",
+            "obvious proof command",
+            "no durable continuation except PR/CI result",
+        ],
+        "required_record": {
+            "changed_paths": changed_paths,
+            "proof_command": proof_command,
+            "continuation_owner": "PR/CI result",
+        },
+        "rule": "Keep narrow repair work direct when checked-in continuity adds more cleanup than safety; preserve exact proof and continuation honesty.",
+    }
+
+
 _START_TINY_ONLY_SELECTORS = {
     "adaptive_routing",
     "active_state_summary",
@@ -10394,12 +10847,25 @@ def _start_payload(
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
         }
         payload["proof"] = _compact_start_proof_payload(proof_payload)
+        repair_profile = _compact_repair_plan_profile(changed_paths=normalized_paths, task_text=task_text, proof_command=proof_command)
+        if repair_profile["status"] == "direct-no-plan":
+            payload["repair_plan_profile"] = repair_profile
         payload["path_boundaries"] = [_boundary_warning_for_path(path) for path in normalized_paths]
     elif normalized_paths:
         proof_payload = _proof_selection_for_changed_paths(
             changed_paths=normalized_paths, target_root=target_root, include_durable_intent=False
         )
         payload["proof"] = _compact_start_proof_payload(proof_payload)
+        repair_profile = _compact_repair_plan_profile(
+            changed_paths=normalized_paths,
+            task_text=task_text,
+            proof_command=_command_with_cli_invoke(
+                command=f"agentic-workspace proof --changed {' '.join(normalized_paths)} --format json",
+                cli_invoke=config.cli_invoke,
+            ),
+        )
+        if repair_profile["status"] == "direct-no-plan":
+            payload["repair_plan_profile"] = repair_profile
         payload["path_boundaries"] = [_boundary_warning_for_path(path) for path in normalized_paths]
     if profile == "tiny":
         payload["cli_invocation"] = _cli_invocation_payload(config=config)
@@ -10512,6 +10978,7 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "workflow_obligations",
         "closeout_obligations",
         "proof",
+        "repair_plan_profile",
         "next",
         "scope",
         "context",
@@ -10722,6 +11189,8 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         for optional_key in ("task_file", "task_file_instruction", "task_excerpt", "task_digest", "task_text_length"):
             if isinstance(task_intent, dict) and optional_key in task_intent:
                 context["task"][optional_key] = task_intent[optional_key]
+    if "repair_plan_profile" in payload:
+        context["repair_plan_profile"] = payload["repair_plan_profile"]
     selected: dict[str, Any] = {
         "kind": payload["kind"],
         "target": ".",
@@ -11051,11 +11520,21 @@ def _start_tiny_payload_fast(
         payload["proof"] = _proof_selection_for_changed_paths(
             changed_paths=normalized_paths, target_root=target_root, include_durable_intent=False
         )
+        repair_profile = _compact_repair_plan_profile(changed_paths=normalized_paths, task_text=task_text, proof_command=proof_command)
+        if repair_profile["status"] == "direct-no-plan":
+            payload["repair_plan_profile"] = repair_profile
         payload["path_boundaries"] = [_boundary_warning_for_path(path) for path in normalized_paths]
     elif normalized_paths:
+        proof_command = _command_with_cli_invoke(
+            command=f"agentic-workspace proof --changed {' '.join(normalized_paths)} --format json",
+            cli_invoke=config.cli_invoke,
+        )
         payload["proof"] = _proof_selection_for_changed_paths(
             changed_paths=normalized_paths, target_root=target_root, include_durable_intent=False
         )
+        repair_profile = _compact_repair_plan_profile(changed_paths=normalized_paths, task_text=task_text, proof_command=proof_command)
+        if repair_profile["status"] == "direct-no-plan":
+            payload["repair_plan_profile"] = repair_profile
         payload["path_boundaries"] = [_boundary_warning_for_path(path) for path in normalized_paths]
     cli_compatibility = _cli_compatibility_payload(config=config, compact=True)
     if cli_compatibility["configured"]:
@@ -17900,6 +18379,7 @@ def _run_external_intent_refresh_github_adapter(args: argparse.Namespace) -> int
         state=getattr(args, "state", None),
         storage=str(getattr(args, "storage", "cache") or "cache"),
         dry_run=bool(getattr(args, "dry_run", False)),
+        apply_planning_candidates=bool(getattr(args, "apply_planning_candidates", False)),
     )
     _emit_payload(payload=payload, format_name=args.format)
     return 0
@@ -19578,6 +20058,55 @@ def _proof_execution_evidence_summary(*, declared: Any, required_commands: list[
     }
 
 
+def _proof_completion_options(*, required_commands: list[str], manual_verification: dict[str, Any] | None) -> list[dict[str, Any]]:
+    options: list[dict[str, Any]] = [
+        _completion_option(
+            "run-proof",
+            allowed=bool(required_commands),
+            command=required_commands[0] if required_commands else None,
+            why="proof selection found required local proof" if required_commands else "no executable proof command was selected",
+        ),
+        _completion_option(
+            "claim-slice-complete",
+            allowed=False,
+            why="proof selection is not proof execution; claim completion only after required proof is run and intent/residue are reconciled",
+        ),
+        _completion_option(
+            "claim-work-complete",
+            allowed=False,
+            why="proof selection is not proof execution and cannot prove full work completion without closeout_trust evidence",
+        ),
+        _completion_option(
+            "keep-parent-open",
+            allowed=False,
+            why="proof selection does not name a continuation owner; closeout_trust must reconcile larger intent",
+        ),
+        _completion_option(
+            "close-parent-lane",
+            allowed=False,
+            why="selected proof can support a slice closeout but cannot close a parent lane or epic without explicit continuation-owner evidence",
+        ),
+        _completion_option(
+            "route-residue",
+            allowed=False,
+            why="proof selection does not decide durable residue; route residue during closeout_trust reconciliation",
+        ),
+        _completion_option(
+            "request-review",
+            allowed=manual_verification is not None,
+            why="manual verification is required when executable proof is unavailable"
+            if manual_verification is not None
+            else "executable proof is available",
+        ),
+        _completion_option(
+            "stop-with-status",
+            allowed=True,
+            why="safe exit is available after reporting selected proof and blocked completion claims",
+        ),
+    ]
+    return options
+
+
 def _proof_selection_for_changed_paths(
     *, changed_paths: list[str], target_root: Path | None = None, include_durable_intent: bool = True
 ) -> dict[str, Any]:
@@ -20044,6 +20573,7 @@ def _proof_selection_for_changed_paths(
         ),
         "broaden_when": broaden_when,
         "escalate_when": escalate_when,
+        "completion_options": _proof_completion_options(required_commands=required_commands, manual_verification=manual_verification),
     }
     if routing_reductions:
         proof_selection["routing_reductions"] = routing_reductions

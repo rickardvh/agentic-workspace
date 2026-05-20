@@ -272,6 +272,8 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
         terminal_action = terminal_action if isinstance(terminal_action, dict) else {}
         durable_action = answer.get("durable_residue_action", {})
         durable_action = durable_action if isinstance(durable_action, dict) else {}
+        completion_options = answer.get("completion_options", [])
+        completion_options = completion_options if isinstance(completion_options, list) else []
         strict_gate = answer.get("strict_closeout_gate", {})
         strict_gate = strict_gate if isinstance(strict_gate, dict) else {}
         detail_command = _command_with_cli_invoke(
@@ -285,6 +287,7 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
             "lower_trust_closeout_count": answer.get("lower_trust_closeout_count", 0),
             "summary": answer.get("summary", ""),
             "terminal_action": terminal_action,
+            "completion_options": completion_options,
             "checks": {
                 "package_workflow_evidence": compact_closeout_check(package_evidence),
                 "intent_satisfaction": compact_closeout_check(intent_check),

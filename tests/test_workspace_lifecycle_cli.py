@@ -1003,6 +1003,8 @@ def test_lifecycle_plan_uses_resolved_cli_invoke_for_next_actions(monkeypatch, t
     freshness = lifecycle_plan["module_update_freshness"][0]["freshness"]
     assert freshness["status"] in {"fresh", "unknown"}
     assert freshness["next_action"] is None or freshness["next_action"]["command"].startswith("uv run agentic-workspace upgrade ")
+    assert "memory_managed_payload" in lifecycle_plan["action_owner_groups"]
+    assert lifecycle_plan["source_checkout_payload_boundary"]["rule"].endswith("not a Python package upgrade.")
     front_door = lifecycle_plan["root_upgrade_front_door"]
     assert front_door["ordinary_sequence"][0]["command"].startswith("uv run agentic-workspace upgrade ")
     assert front_door["ordinary_sequence"][1]["command"].startswith("uv run agentic-workspace upgrade ")

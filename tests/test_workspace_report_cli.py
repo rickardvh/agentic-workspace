@@ -1407,6 +1407,112 @@ def test_report_closeout_trust_surfaces_package_workflow_evidence(tmp_path: Path
     assert terminal_action["next_command"] == "agentic-workspace report --target ./repo --section closeout_trust --format json"
     assert "Lower-trust closeout signals" in terminal_action["why"]
     assert "lower_trust_closeout_count is 0" in terminal_action["changes_closure"]
+    options = {option["id"]: option for option in payload["closeout_trust"]["completion_options"]}
+    assert options["run-proof"]["allowed"] is False
+    assert options["claim-slice-complete"]["allowed"] is False
+    assert "strict_closeout_gate" in options["claim-slice-complete"]["blocking_fields"]
+    assert options["claim-work-complete"]["allowed"] is False
+    assert "intent_satisfaction" in options["claim-work-complete"]["blocking_fields"]
+    assert options["keep-parent-open"]["allowed"] is True
+    assert options["keep-parent-open"]["owner"] == ".agentic-workspace/planning/state.toml"
+    assert options["close-parent-lane"]["allowed"] is False
+    assert options["route-residue"]["allowed"] is True
+    assert options["stop-with-status"]["allowed"] is True
+
+
+def test_report_closeout_trust_request_review_for_ambiguous_intent(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        "schema_version = 1\n\n[assurance]\nstrict_closeout = true\n",
+    )
+    plan = target / ".agentic-workspace" / "planning" / "execplans" / "ambiguous-intent.plan.json"
+    _write_json(
+        plan,
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Ambiguous Intent",
+            "active_milestone": {"id": "ambiguous-intent", "status": "active"},
+            "delegated_judgment": {
+                "requested outcome": "Finish the work if the larger intent is actually satisfied.",
+                "hard constraints": "Do not infer larger intent closure from proof alone.",
+                "agent may decide locally": "Implementation details.",
+                "escalate when": "Intent satisfaction is ambiguous.",
+            },
+            "immediate_next_action": ["Use closeout trust."],
+            "completion_criteria": ["Completion option menu distinguishes review from completion."],
+            "validation_commands": ["uv run agentic-workspace proof --target . --format json"],
+            "intent_continuity": {
+                "larger intended outcome": "Finish the ambiguous parent intent.",
+                "this slice completes the larger intended outcome": "unknown",
+                "continuation surface": "",
+            },
+            "required_continuation": {
+                "required follow-on for the larger intended outcome": "unknown",
+                "owner surface": "",
+                "activation trigger": "human/domain review",
+            },
+            "execution_run": {
+                "run status": "active",
+                "executor": "test",
+                "handoff source": "uv run agentic-workspace preflight --format json",
+                "what happened": "Used agentic-workspace report --target . --format json and agentic-workspace proof --target . --format json.",
+                "scope touched": "test",
+                "changed surfaces": "test",
+                "validations run": "uv run agentic-workspace summary --format json; uv run agentic-workspace reconcile --format json",
+                "result for continuation": "review",
+                "next step": "review",
+            },
+            "proof_report": {
+                "validation proof": "uv run agentic-workspace proof passed",
+                "acceptance reconciliation": "requested menu behavior -> delivered closeout completion_options -> proof passed",
+                "proof achieved now": "yes",
+                'evidence for "proof achieved" state': "focused report test fixture",
+            },
+            "closure_check": {
+                "slice status": "active",
+                "larger-intent status": "unknown",
+                "closure decision": "requires-review",
+                "why this decision is honest": "Intent satisfaction is not explicit.",
+                "evidence carried forward": "report closeout_trust",
+                "reopen trigger": "review resolves intent satisfaction",
+            },
+        },
+    )
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        "[todo]\n"
+        "active_items = [\n"
+        "  { id = 'ambiguous-intent', title = 'Ambiguous intent', surface = '.agentic-workspace/planning/execplans/ambiguous-intent.plan.json' },\n"
+        "]\n"
+        "queued_items = []\n\n"
+        "[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
+
+    closeout = json.loads(capsys.readouterr().out)["closeout_trust"]
+    assert closeout["trust"] == "lower-trust"
+    assert closeout["intent_satisfaction_check"]["trust"] == "needs-review"
+    options = {option["id"]: option for option in closeout["completion_options"]}
+    assert tuple(options) == (
+        "run-proof",
+        "claim-slice-complete",
+        "claim-work-complete",
+        "keep-parent-open",
+        "close-parent-lane",
+        "route-residue",
+        "request-review",
+        "stop-with-status",
+    )
+    assert options["request-review"]["allowed"] is True
+    assert options["request-review"]["blocking_fields"] == ["intent_satisfaction"]
+    assert options["claim-work-complete"]["allowed"] is False
+    assert "intent_satisfaction" in options["claim-work-complete"]["blocking_fields"]
 
 
 def test_report_closeout_trust_requires_external_negative_invariant_reconciliation(tmp_path: Path, capsys) -> None:
@@ -1533,6 +1639,12 @@ def test_report_closeout_trust_requires_external_negative_invariant_reconciliati
     external_check = closeout["intent_satisfaction_check"]["external_intent_evidence"]
     assert external_check["trust"] == "normal"
     assert external_check["negative_invariants"][0]["status"] == "satisfied"
+    options = {option["id"]: option for option in closeout["completion_options"]}
+    assert options["run-proof"]["allowed"] is False
+    assert options["claim-slice-complete"]["allowed"] is True
+    assert options["claim-work-complete"]["allowed"] is True
+    assert options["close-parent-lane"]["allowed"] is True
+    assert options["route-residue"]["allowed"] is False
 
 
 def test_report_closeout_trust_lowers_trust_for_open_package_owned_continuation_without_active_plan(tmp_path: Path, capsys) -> None:
@@ -1608,6 +1720,9 @@ candidates = [
     answer = section_payload["answer"]
     assert answer["trust"] == "lower-trust"
     assert answer["lower_trust_closeout_count"] == 1
+    compact_options = {option["id"]: option for option in answer["completion_options"]}
+    assert compact_options["claim-work-complete"]["allowed"] is False
+    assert compact_options["keep-parent-open"]["owner"] == ".agentic-workspace/planning/state.toml"
     assert answer["checks"]["intent_satisfaction"]["status"] == "present"
     assert answer["checks"]["intent_satisfaction"]["trust"] == "follow-up-required"
     assert answer["checks"]["intent_satisfaction"]["continuation_surface"] == ".agentic-workspace/planning/state.toml"
@@ -1915,7 +2030,7 @@ def test_external_intent_refresh_github_writes_provider_agnostic_evidence(tmp_pa
                         "title": "Open work",
                         "state": "OPEN",
                         "url": "https://github.com/acme/project/issues/1",
-                        "labels": [{"name": "planning"}],
+                        "labels": [{"name": "planning"}, {"name": "priority/medium"}],
                         "createdAt": "2026-04-01T00:00:00Z",
                         "updatedAt": "2026-04-27T00:00:00Z",
                         "closedAt": None,
@@ -1968,6 +2083,12 @@ def test_external_intent_refresh_github_writes_provider_agnostic_evidence(tmp_pa
     assert payload["state_source"] == "explicit"
     assert payload["limit_source"] == "product_default"
     assert payload["item_count"] == 2
+    suggestions = payload["planning_candidate_suggestions"]
+    assert suggestions["status"] == "suggestions-ready"
+    assert suggestions["candidate_count"] == 1
+    assert suggestions["candidates"][0]["refs"] == "GitHub #1"
+    assert suggestions["candidates"][0]["priority"] == "P2"
+    assert suggestions["candidates"][0]["status"] == "next"
     refreshed = json.loads(evidence_path.read_text(encoding="utf-8"))
     assert refreshed["kind"] == "planning-external-intent-evidence/v1"
     assert refreshed["refresh_metadata"]["adapter"] == "github-gh-cli"
@@ -1983,8 +2104,62 @@ def test_external_intent_refresh_github_writes_provider_agnostic_evidence(tmp_pa
         "Do not accept proxy completion.",
         "discard explicit invariant follow-up.",
     ]
-    assert refreshed["items"][0]["labels"] == ["planning"]
+    assert refreshed["items"][0]["labels"] == ["planning", "priority/medium"]
     assert refreshed["items"][1]["status"] == "closed"
+
+
+def test_external_intent_refresh_github_applies_prioritized_candidates(tmp_path: Path, monkeypatch, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--preset", "planning", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    class Result:
+        returncode = 0
+        stderr = ""
+        stdout = json.dumps(
+            [
+                {
+                    "number": 55,
+                    "title": "Command owned intake",
+                    "state": "OPEN",
+                    "url": "https://github.com/acme/project/issues/55",
+                    "labels": [{"name": "priority/medium"}],
+                    "createdAt": "2026-04-01T00:00:00Z",
+                    "updatedAt": "2026-04-27T00:00:00Z",
+                    "closedAt": None,
+                    "body": "",
+                    "comments": 0,
+                }
+            ]
+        )
+
+    monkeypatch.setattr(cli.subprocess, "run", lambda *args, **kwargs: Result())
+
+    assert (
+        cli.main(
+            [
+                "external-intent",
+                "refresh-github",
+                "--target",
+                str(target),
+                "--repo",
+                "acme/project",
+                "--apply-planning-candidates",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["planning_candidate_apply"]["status"] == "applied"
+    assert payload["planning_candidate_apply"]["applied_count"] == 1
+    state_text = (target / ".agentic-workspace" / "planning" / "state.toml").read_text(encoding="utf-8")
+    assert "GitHub #55" in state_text
+    assert 'priority = "P2"' in state_text
 
 
 def test_external_intent_refresh_github_compacts_old_unreferenced_closed_cache_items(tmp_path: Path, monkeypatch, capsys) -> None:

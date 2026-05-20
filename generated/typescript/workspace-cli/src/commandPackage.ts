@@ -2867,6 +2867,14 @@ export const generatedCommandPackage = {
               {
                 "action": "store_true",
                 "flags": [
+                  "--apply-planning-candidates"
+                ],
+                "help": "Append schema-valid open prioritized issue candidates to Planning roadmap state after refresh.",
+                "name": "apply_planning_candidates"
+              },
+              {
+                "action": "store_true",
+                "flags": [
                   "--dry-run"
                 ],
                 "help": "Preview refresh counts without writing external intent evidence.",

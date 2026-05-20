@@ -54,6 +54,8 @@ It makes three decisions visible:
 
 ## Guardrails
 
+- Red flag: No Memory write means no durable lesson exists.
+- Use instead: Inspect Memory routing or promotion-report, then record `memory_consultation_status`, `durable_residue_decision`, and `improvement_signal_status`.
 - Do not bulk-read Memory to prove diligence.
 - Do not capture every chat correction, task step, validation transcript, backlog item, or plan history.
 - Do not call `checked_none` unless the index, manifest route, or structured memory route was actually inspected.

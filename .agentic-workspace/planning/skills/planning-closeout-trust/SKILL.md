@@ -23,6 +23,12 @@ Route broad/high-risk workflow setup to `planning-high-assurance-lifecycle`, dec
 
 ## Guardrails
 
+- Red flag: Archive or close is safe because validation passed.
+- Use instead: Run `agentic-workspace report --target . --section closeout_trust --format json`, then archive only when proof, intent satisfaction, residue, and continuation owner are reconciled.
 - Do not keep completed execplans as the knowledge base.
 - Do not close external issues when intent is only partially satisfied.
 - Treat missing proof, skipped startup, or absent closeout evidence as lower trust.
+
+## Behavior-Impact Evidence
+
+Changes to this skill must preserve the separation between validation, intent satisfaction, issue closure, residue routing, and archive mechanics. Use closeout-trust report output or focused closeout tests as evidence.

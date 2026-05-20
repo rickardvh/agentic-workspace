@@ -756,7 +756,7 @@ candidates = [
         },
     )
 
-    assert cli.main(["start", "--target", str(target), "--task", "Is the epic satisfied?", "--format", "json"]) == 0
+    assert cli.main(["start", "--target", str(target), "--task", "Can I mark this work complete?", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     action = _start_primary_action(payload)
@@ -772,6 +772,8 @@ candidates = [
     assert closeout["trust"] == "lower-trust"
     assert closeout["strict_closeout_gate"]["status"] == "blocked"
     assert closeout["intent_satisfaction"]["trust"] == "follow-up-required"
+    assert "completion_options" not in payload
+    assert "completion_options" not in closeout
     assert "closeout_trust_inspection" in payload["drill_down"]["available_selectors"]
 
 
@@ -2094,6 +2096,9 @@ def test_start_narrow_ci_repair_stays_direct_without_execplan(tmp_path: Path, ca
     _assert_next_safe_action_valid(payload["next_safe_action"])
     assert "planning_safety_gate" not in payload["context"]["planning"]
     assert payload["next_safe_action"]["next_safe_action"] == "select-changed-path-proof"
+    profile = payload["context"].get("repair_plan_profile") or payload.get("repair_plan_profile")
+    assert profile["status"] == "direct-no-plan"
+    assert profile["required_record"]["continuation_owner"] == "PR/CI result"
 
 
 def test_start_task_keeps_skill_search_explicit(tmp_path: Path, capsys) -> None:

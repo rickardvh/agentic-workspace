@@ -3468,6 +3468,14 @@
                     "help": "Where to write refreshed evidence. Defaults to ignored local cache; planning writes the legacy planning evidence path explicitly."
                   },
                   {
+                    "name": "apply_planning_candidates",
+                    "flags": [
+                      "--apply-planning-candidates"
+                    ],
+                    "action": "store_true",
+                    "help": "Append schema-valid open prioritized issue candidates to Planning roadmap state after refresh."
+                  },
+                  {
                     "name": "dry_run",
                     "flags": [
                       "--dry-run"

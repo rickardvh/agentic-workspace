@@ -18,6 +18,14 @@ Use this skill when the task is about ordinary startup, task routing, config obl
 
 Open raw `.agentic-workspace/` files only after a compact command points there.
 
+## Red Flags
+
+Red flag:
+  I can inspect raw planning or memory files first because the request seems simple.
+
+Use instead:
+  Run `agentic-workspace start --target . --task "<task>" --format json`, or the known dedicated AW command when the request already names one, then follow `next_safe_action`.
+
 ## SkillSpec Pilot
 
 This skill is the hand-authored startup pilot for the `startup-router` SkillSpec contract in `src/agentic_workspace/contracts/skill_specs.json`.
