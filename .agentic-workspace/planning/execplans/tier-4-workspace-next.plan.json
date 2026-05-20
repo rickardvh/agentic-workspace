@@ -147,10 +147,14 @@
     "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
   },
   "post_decomposition_delegation": {
-    "status": "pending",
+    "status": "recorded",
     "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
     "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
-    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "Tier 4 Workspace slices are tightly coupled generated/runtime-contract edits with local proof burden; delegation would not remove the need to regenerate and validate locally.",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-20T15:58:53+00:00"
   },
   "system_intent_alignment": {
     "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
@@ -231,13 +235,13 @@
     "follow-on decision": "pending"
   },
   "delegation_outcome_feedback": {
-    "route chosen": "pending",
-    "route skipped reason": "pending",
-    "expected savings": "pending",
-    "actual friction": "pending",
-    "proof result": "pending",
-    "quality concern": "pending",
-    "decomposition adjustment": "pending"
+    "route chosen": "keep-local",
+    "route skipped reason": "Tier 4 Workspace slices are tightly coupled generated/runtime-contract edits with local proof burden; delegation would not remove the need to regenerate and validate locally.",
+    "expected savings": "low",
+    "actual friction": "none",
+    "proof result": "focused defaults output proof passed for the first slice",
+    "quality concern": "none",
+    "decomposition adjustment": "continue lane locally, reassess before broad live-inspection or lifecycle slices"
   },
   "proof_report": {
     "validation proof": "pending",
@@ -316,6 +320,7 @@
     }
   },
   "drift_log": [
-    "2026-05-20: Scaffolded by agentic-planning promote-to-plan from decomposition lane tier-4-workspace-next."
+    "2026-05-20: Scaffolded by agentic-planning promote-to-plan from decomposition lane tier-4-workspace-next.",
+    "2026-05-20: Recorded delegation decision route=keep-local."
   ]
 }
