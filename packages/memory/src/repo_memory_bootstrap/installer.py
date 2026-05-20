@@ -2458,9 +2458,10 @@ def _prose_only_improvement_signals(*, target_root: Path, manifest) -> list[dict
         )
 
     for note in manifest.notes:
-        if note.memory_role == "improvement_signal" or note.improvement_candidate:
-            continue
         relative = note.path.as_posix()
+        if note.memory_role == "improvement_signal" or note.improvement_candidate:
+            scanned_paths.add(relative)
+            continue
         if "/current/" not in relative and "routing-feedback" not in relative:
             continue
         add_signal(relative, note.summary)

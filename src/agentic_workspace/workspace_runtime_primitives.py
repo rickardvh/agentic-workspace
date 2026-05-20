@@ -9949,6 +9949,13 @@ def _next_safe_action_packet(
     allowed_next_actions = [action]
     if preferred_cli:
         allowed_next_actions.append("run-preferred-cli")
+    proof_required = bool(
+        proof_hint
+        and proof_hint not in {"select proof after changed paths are known", "no file proof unless the task later becomes an edit"}
+    )
+    if skill in {"planning-reporting", "planning-autopilot", "planning-decompose", "planning-new-plan-tighten"}:
+        proof_required = True
+    implementation_allowed = not forbidden_actions and not skill.startswith("planning")
     return {
         "kind": "agentic-workspace/next-safe-action/v1",
         "next_safe_action": action,
@@ -9960,10 +9967,8 @@ def _next_safe_action_packet(
         "module_slot": module_slot,
         "allowed_next_actions": allowed_next_actions,
         "forbidden_actions": sorted(set(forbidden_actions)),
-        "proof_required": bool(
-            proof_hint
-            and proof_hint not in {"select proof after changed paths are known", "no file proof unless the task later becomes an edit"}
-        ),
+        "implementation_allowed": implementation_allowed,
+        "proof_required": proof_required,
         "completion_claim_allowed": not forbidden_actions and action not in {"choose-smallest-workflow-shape"},
         "closure_blockers": closure_blockers,
         "continuation_owner_required": continuation_owner_required,

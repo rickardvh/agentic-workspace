@@ -91,6 +91,7 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `next_safe_action.module_slot` | string | yes |  | Workspace module or sub-slot that owns the next action. |  |  |
 | `next_safe_action.allowed_next_actions` | array of string | yes |  | Actions allowed before the next wider context read or implementation step. |  |  |
 | `next_safe_action.forbidden_actions` | array of string | yes |  | Actions forbidden by this packet until a newer compact packet supersedes it. |  |  |
+| `next_safe_action.implementation_allowed` | boolean | yes |  | Whether implementation may begin from this packet without additional planning, proof setup, or skill-guided escalation. |  |  |
 | `next_safe_action.proof_required` | boolean | yes |  | Whether proof is required before claiming the next action is complete. |  |  |
 | `next_safe_action.completion_claim_allowed` | boolean | yes |  | Whether the packet permits claiming completion at the current claim level. |  |  |
 | `next_safe_action.closure_blockers` | array of string | yes |  | Reasons closure or completion claims are blocked. |  |  |

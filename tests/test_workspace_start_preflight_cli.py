@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import argparse
 
-# ruff: noqa: F403,F405
+from agentic_workspace.contract_tooling import skill_specs_manifest
+
+# ruff: noqa: F403,F405,I001
 from tests.workspace_cli_support import *
 
 
@@ -1947,6 +1949,56 @@ def test_startup_skillspec_pilot_keeps_direct_work_light_and_blocks_epic_work(tm
     assert "planning_safety_gate" not in _start_context(epic).get("planning", {})
     assert epic["next_safe_action"]["next_safe_action"] == "choose-smallest-workflow-shape"
     assert _start_skill_routing(epic)["preferred_routes"][0]["skill"] == "planning-reporting"
+
+
+def _fixture_by_id(fixture_id: str) -> dict[str, object]:
+    fixtures = {fixture["id"]: fixture for fixture in skill_specs_manifest()["generated_target_behavior_fixtures"]}
+    return fixtures[fixture_id]
+
+
+def test_generated_target_behavior_fixtures_match_startup_cli_routing(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    direct_fixture = _fixture_by_id("direct-task-cheap-path")
+    assert cli.main(["start", "--target", str(target), "--task", str(direct_fixture["task"]), "--format", "json"]) == 0
+    direct = json.loads(capsys.readouterr().out)
+    direct_packet = direct["next_safe_action"]
+    _assert_next_safe_action_valid(direct_packet)
+
+    assert direct_packet["implementation_allowed"] is direct_fixture["implementation_allowed"]
+    assert direct_packet["proof_required"] is direct_fixture["proof_required"]
+    assert direct_packet["completion_claim_allowed"] is direct_fixture["completion_claim_allowed"]
+    assert "planning_safety_gate" not in direct
+
+    lane_fixture = _fixture_by_id("lane-task-planning-gate")
+    assert cli.main(["start", "--target", str(target), "--task", str(lane_fixture["task"]), "--format", "json"]) == 0
+    lane = json.loads(capsys.readouterr().out)
+    lane_packet = lane["next_safe_action"]
+    _assert_next_safe_action_valid(lane_packet)
+
+    assert lane_packet["implementation_allowed"] is direct_fixture["implementation_allowed"]
+    assert lane_packet["proof_required"] is direct_fixture["proof_required"]
+    assert lane_packet["completion_claim_allowed"] is direct_fixture["completion_claim_allowed"]
+    assert lane_packet["required_skill"] == ""
+    assert _start_skill_routing(lane)["preferred_routes"][0]["skill"] == "planning-reporting"
+    for field in lane_fixture["expected_fields"]:
+        if str(field).startswith("next_safe_action."):
+            assert str(field).split(".", 1)[1] in lane_packet
+
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    assert cli.main(["skills", "--target", str(target), "--task", str(lane_fixture["task"]), "--format", "json"]) == 0
+    recommendations = json.loads(capsys.readouterr().out)["recommendations"]
+    assert recommendations[0]["id"] == lane_fixture["required_skill"]
+
+    fallback_fixture = _fixture_by_id("no-cli-conservative-fallback")
+    fallback_text = json.dumps(direct_packet, sort_keys=True)
+    assert "fallback_if_cli_unavailable" in direct_packet
+    assert "preserve forbidden actions" in fallback_text
+    assert "fallback_when_cli_unavailable" in fallback_fixture["expected_fields"]
+    assert any("WORKFLOW.md" in item for item in fallback_fixture["must_preserve"])
 
 
 def test_start_does_not_promote_unrelated_roadmap_for_lifecycle_task(tmp_path: Path, capsys) -> None:
