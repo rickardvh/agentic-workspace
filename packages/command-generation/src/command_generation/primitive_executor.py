@@ -817,6 +817,8 @@ def _emit_output(*, values: dict[str, Any], arguments: dict[str, Any] | None = N
         return _emit_install_result_text(result)
     if isinstance(result, dict) and isinstance(result.get("route_report_summary"), dict):
         return _emit_route_report_text(result)
+    if isinstance(result, dict) and result.get("kind") == "memory-module-report/v1":
+        return _emit_memory_report_text(result)
     if not isinstance(result, dict):
         return f"{result}\n"
     lines = [str(result.get("message", ""))]
@@ -899,6 +901,31 @@ def _emit_route_report_text(result: dict[str, Any]) -> str:
     detail = summary.get("detail") or result.get("detail_command")
     if detail:
         lines.append(str(detail))
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _emit_memory_report_text(result: dict[str, Any]) -> str:
+    status = result.get("status", {})
+    active = result.get("active", {})
+    habitual_pull = result.get("habitual_pull", {})
+    next_action = result.get("next_action", {})
+    lines = ["Memory report", f"Target: {result.get('target_root', '')}", f"Health: {result.get('health', 'unknown')}"]
+    if isinstance(status, Mapping):
+        lines.append(f"Notes: {status.get('note_count', 0)} ({status.get('manifest_status', 'unknown')})")
+    if isinstance(active, Mapping):
+        lines.append(
+            "Active: "
+            f"required={active.get('required_count', 0)}, "
+            f"optional={active.get('optional_count', 0)}, "
+            f"routing-only={active.get('routing_only_count', 0)}"
+        )
+    if isinstance(habitual_pull, Mapping):
+        lines.append(f"Habitual pull: {habitual_pull.get('status', 'unknown')}")
+    if isinstance(next_action, Mapping):
+        lines.append(f"Next: {next_action.get('summary', '')}")
+    detail_commands = result.get("detail_commands", {})
+    if isinstance(detail_commands, Mapping) and detail_commands.get("full"):
+        lines.append(str(detail_commands["full"]))
     return "\n".join(lines).rstrip() + "\n"
 
 

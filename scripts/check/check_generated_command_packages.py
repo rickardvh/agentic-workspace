@@ -1950,6 +1950,7 @@ def _generated_cli_compatibility_allowlist_reason(relative_path: str) -> str | N
 
 def _validate_generated_cli_compatibility_vocabulary() -> list[str]:
     errors: list[str] = []
+    candidate_paths: list[str] = []
     if shutil.which("git"):
         completed = subprocess.run(
             ["git", "ls-files"],
@@ -1958,10 +1959,9 @@ def _validate_generated_cli_compatibility_vocabulary() -> list[str]:
             capture_output=True,
             check=False,
         )
-        if completed.returncode != 0:
-            return [f"cannot validate generated CLI compatibility vocabulary: git ls-files failed: {completed.stderr.strip()}"]
-        candidate_paths = [path.strip().replace("\\", "/") for path in completed.stdout.splitlines() if path.strip()]
-    else:
+        if completed.returncode == 0:
+            candidate_paths = [path.strip().replace("\\", "/") for path in completed.stdout.splitlines() if path.strip()]
+    if not candidate_paths:
         roots = (
             ".agentic-workspace",
             "docs",

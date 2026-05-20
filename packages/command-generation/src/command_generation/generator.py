@@ -1140,7 +1140,7 @@ def _python_local_runtime_generated_function(
             "    if str(values.get('format') or 'text') == 'json' and isinstance(result, dict):\n"
             "        print(json.dumps(_serialise_value(values['result']), indent=2))\n"
             "        return None\n"
-            "    if isinstance(result, dict) and isinstance(result.get('route_report_summary'), dict):\n"
+            "    if isinstance(result, dict) and (isinstance(result.get('route_report_summary'), dict) or result.get('kind') == 'memory-module-report/v1'):\n"
             "        from command_generation.primitive_executor import _emit_output\n\n"
             "        print(_emit_output(values=values, arguments=arguments), end='')\n"
             "        return None\n"

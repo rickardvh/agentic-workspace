@@ -56,6 +56,25 @@ def test_memory_report_tiny_does_not_build_full_report(tmp_path: Path, monkeypat
     assert payload["active"]["note_count"] >= 1
 
 
+def test_memory_report_text_uses_compact_declarative_payload(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+
+    def fail_full_report(*, target=None):
+        raise AssertionError("non-verbose text memory report should not build the full report")
+
+    monkeypatch.setattr(runtime_primitives, "memory_report", fail_full_report)
+
+    assert cli.main(["report", "--target", str(target)]) == 0
+
+    output = capsys.readouterr().out
+    assert "Memory report" in output
+    assert "Notes:" in output
+    assert "Habitual pull:" in output
+    assert "agentic-memory report --target . --verbose --format json" in output
+
+
 def test_memory_promotion_report_defaults_to_primary_next_action(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True, exist_ok=True)

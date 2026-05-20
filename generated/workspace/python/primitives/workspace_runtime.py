@@ -124,7 +124,7 @@ def _emit_workspace_operation_output(values: dict[str, Any], arguments: dict[str
     if str(values.get('format') or 'text') == 'json' and isinstance(result, dict):
         print(json.dumps(_serialise_value(values['result']), indent=2))
         return None
-    if isinstance(result, dict) and isinstance(result.get('route_report_summary'), dict):
+    if isinstance(result, dict) and (isinstance(result.get('route_report_summary'), dict) or result.get('kind') == 'memory-module-report/v1'):
         from command_generation.primitive_executor import _emit_output
 
         print(_emit_output(values=values, arguments=arguments), end='')

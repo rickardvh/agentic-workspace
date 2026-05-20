@@ -6,7 +6,7 @@
     "command": "report",
     "format_option": "format"
   },
-  "summary": "Read-only agentic-memory report; non-verbose JSON uses portable manifest-count primitives while verbose/text behavior remains on the explicit source fallback.",
+  "summary": "Read-only agentic-memory report; non-verbose text/JSON uses portable manifest-count primitives while verbose behavior remains on the explicit source fallback.",
   "classification": "read-only-report",
   "inputs": [
     {
@@ -68,9 +68,9 @@
       "description": "Assemble the compact report payload from primitive outputs."
     },
     {
-      "id": "load_verbose_or_text_report",
+      "id": "load_verbose_report",
       "uses": "memory.report.load",
-      "description": "Load package-domain report payload when verbose or text output is requested."
+      "description": "Load package-domain report payload when verbose output is requested."
     },
     {
       "id": "emit_output",
@@ -88,23 +88,15 @@
   "migration_status": "runtime-consumed",
   "ir_plan": {
     "status": "representative",
-    "summary": "Memory report non-verbose JSON executes generated operation IR through codegen-owned portable primitives. Verbose/text report behavior remains package-domain source runtime.",
+    "summary": "Memory report non-verbose text/JSON executes generated operation IR through codegen-owned portable primitives. Verbose report behavior remains package-domain source runtime.",
     "steps": [
       {
         "id": "resolve_target_root",
         "uses": "path.target_root.resolve",
         "description": "Resolve the target root for target-local compact report checks.",
         "when": {
-          "all": [
-            {
-              "value": "format",
-              "equals": "json"
-            },
-            {
-              "value": "verbose",
-              "equals": false
-            }
-          ]
+          "value": "verbose",
+          "equals": false
         },
         "arguments": {
           "must_exist": true,
@@ -120,16 +112,8 @@
         "uses": "toml.table.counts",
         "description": "Count note records and relevance categories in the target memory manifest.",
         "when": {
-          "all": [
-            {
-              "value": "format",
-              "equals": "json"
-            },
-            {
-              "value": "verbose",
-              "equals": false
-            }
-          ]
+          "value": "verbose",
+          "equals": false
         },
         "arguments": {
           "base_value": "target_root",
@@ -152,16 +136,8 @@
         "uses": "payload.assemble",
         "description": "Assemble the compact report payload from primitive outputs.",
         "when": {
-          "all": [
-            {
-              "value": "format",
-              "equals": "json"
-            },
-            {
-              "value": "verbose",
-              "equals": false
-            }
-          ]
+          "value": "verbose",
+          "equals": false
         },
         "arguments": {
           "fields": {
@@ -296,21 +272,13 @@
         "on_error": "fail"
       },
       {
-        "id": "load_verbose_or_text_report",
+        "id": "load_verbose_report",
         "uses": "memory.report.load",
-        "description": "Load package-domain report payload when verbose or text output is requested.",
+        "description": "Load package-domain report payload when verbose output is requested.",
         "when": {
           "not": {
-            "all": [
-              {
-                "value": "format",
-                "equals": "json"
-              },
-              {
-                "value": "verbose",
-                "equals": false
-              }
-            ]
+            "value": "verbose",
+            "equals": false
           }
         },
         "arguments": {},
