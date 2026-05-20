@@ -544,6 +544,25 @@ def test_verify_payload_passes_for_current_payload(tmp_path: Path) -> None:
     assert not any(action.category == "contract-drift" for action in result.actions)
 
 
+def test_generated_verify_payload_text_uses_declarative_payload_policy(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+
+    def fail_verify_payload(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError("verify-payload text should not call package runtime verification")
+
+    monkeypatch.setattr(installer, "verify_payload", fail_verify_payload)
+
+    assert cli.main(["verify-payload", "--target", str(target)]) == 0
+
+    output = capsys.readouterr().out
+    assert "Payload verification" in output
+    assert "Detected version: none (payload version" in output
+    assert ".agentic-workspace/memory/repo/manifest.toml" in output
+
+
 def test_payload_verification_policy_matches_installer_constants() -> None:
     policy = installer._load_payload_verification_policy()
     schema_path = (

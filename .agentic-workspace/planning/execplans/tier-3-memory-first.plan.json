@@ -45,6 +45,7 @@
       "generated/memory/python/_contracts/operations/memory.adopt.lifecycle.json",
       "generated/memory/python/_contracts/operations/memory.doctor.report.json",
       "generated/memory/python/_contracts/operations/memory.status.report.json",
+      "generated/memory/python/_contracts/operations/memory.verify-payload.report.json",
       "generated/memory/python/_contracts/payload_verification.memory.json",
       "generated/memory/python/command_package.json",
       "generated/memory/python/generated_command_adapters.json",
@@ -120,12 +121,17 @@
       "generated/memory/python/generated_command_adapters.json",
       "generated/memory/python/operations/memory.doctor.report.json",
       "generated/memory/python/operations/memory.status.report.json",
+      "generated/memory/python/operations/memory.verify-payload.report.json",
       "generated/typescript/memory-cli/src/commandPackage.ts",
       "packages/command-generation/src/command_generation/primitive_executor.py",
+      "packages/command-generation/tests/primitive_conformance.py",
       "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.doctor.report.json",
       "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.status.report.json",
+      "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.verify-payload.report.json",
       "packages/memory/src/repo_memory_bootstrap/contracts/payload_verification.memory.json",
       "packages/memory/tests/test_report.py",
+      "packages/memory/tests/test_install.py",
+      "scripts/check/check_generated_command_packages.py",
       "src/agentic_workspace/contracts/command_adapter_generation.json",
       "src/agentic_workspace/contracts/command_package_ir.json",
       "src/agentic_workspace/contracts/operation_primitives.json",
@@ -278,6 +284,7 @@
     "uv run pytest packages/memory/tests/test_report.py::test_memory_lifecycle_status_defaults_to_tiny_actions packages/memory/tests/test_report.py::test_memory_lifecycle_tiny_does_not_collect_full_status packages/memory/tests/test_report.py::test_memory_lifecycle_text_status_uses_declarative_payload_policy packages/memory/tests/test_report.py::test_memory_lifecycle_doctor_uses_declarative_payload_policy packages/memory/tests/test_report.py::test_memory_lifecycle_text_doctor_uses_declarative_payload_policy -q",
     "uv run pytest packages/memory/tests/test_install.py::test_generated_install_dry_run_uses_declarative_payload_plan packages/memory/tests/test_install.py::test_generated_init_dry_run_uses_declarative_payload_plan -q",
     "uv run pytest packages/memory/tests/test_install.py::test_generated_adopt_dry_run_uses_declarative_payload_plan -q",
+    "uv run pytest packages/memory/tests/test_install.py::test_generated_verify_payload_text_uses_declarative_payload_policy tests/test_command_generation_primitive_executor.py::test_output_emit_serializes_module_result_objects -q",
     "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
     "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
     "uv run python scripts/generate/generate_command_packages.py --check",
@@ -291,15 +298,15 @@
     "make test-memory; make lint-memory; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker"
   ],
   "execution_run": {
-    "run status": "first-slice-implemented",
+    "run status": "verify-payload-slice-implemented",
     "executor": "Codex",
     "handoff source": "agentic-planning promote-to-plan decomposition lane",
-    "what happened": "Implemented six Tier 3 Memory slices: memory.status and memory.doctor non-verbose JSON/text now flow through declarative payload.status plus generated install-result output; default install/init/adopt dry-run planning now flows through declarative payload.lifecycle-plan; memory current show JSON/text now flows through declarative payload.current-memory plus output.emit.current-memory.",
-    "scope touched": "memory report/current/lifecycle operation contracts, payload verification policy/schema, primitive registry and executor, generated memory operation/package artifacts, inventory/IR metadata, focused memory tests, and this planning surface",
-    "changed surfaces": "packages/command-generation/src/command_generation/primitive_executor.py; packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.status.report.json; packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.doctor.report.json; packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.install.lifecycle.json; packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.init.lifecycle.json; packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.adopt.lifecycle.json; packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.current.report.json; packages/memory/src/repo_memory_bootstrap/contracts/payload_verification.memory.json; generated/memory/python/operations and _contracts for status/doctor/install/init/adopt/current; generated/memory/python/command_package.json; generated/memory/python/generated_command_adapters.json; generated/typescript/memory-cli/src/commandPackage.ts; packages/memory/tests/test_report.py; packages/memory/tests/test_install.py; packages/memory/tests/test_current_memory.py; src/agentic_workspace/contracts command/primitive/inventory/schema files; planning state/decomposition/execplan",
-    "validations run": "focused memory.status/doctor/install/init/adopt/current-show pytest passed; contract tooling passed; structured-file inventory passed; generated package check passed; generated Python conformance passed; base generated package proof passed; root CLI authority defaults check passed; Python completion-blocker report still correctly blocks full Python completion on remaining runtime ownership",
-    "result for continuation": "commit the current show text slice, then continue Tier 3 Memory before promoting Workspace or Planning",
-    "next step": "Evaluate another Memory report/render path before upgrade dry-run; do not flatten replacement/removal policy into copy-only payload planning."
+    "what happened": "Implemented seven Tier 3 Memory slices: memory.status and memory.doctor non-verbose JSON/text now flow through declarative payload.status plus generated install-result output; default install/init/adopt dry-run planning now flows through declarative payload.lifecycle-plan; memory current show JSON/text now flows through declarative payload.current-memory plus output.emit.current-memory; memory verify-payload text/JSON now flows through payload.verify plus output.emit.install-result without the package runtime text fallback.",
+    "scope touched": "memory report/current/lifecycle/verify-payload operation contracts, payload verification policy/schema, primitive registry and executor, generated memory operation/package artifacts, inventory/IR metadata, generated proof Dockerfile, focused tests, and this planning surface",
+    "changed surfaces": "packages/command-generation/src/command_generation/primitive_executor.py; packages/command-generation/tests/primitive_conformance.py; packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.verify-payload.report.json; packages/memory/tests/test_install.py; tests/test_command_generation_primitive_executor.py; scripts/check/check_generated_command_packages.py; generated/memory/python/operations and _contracts for verify-payload; generated/memory/python/command_package.json; generated/memory/python/generated_command_adapters.json; generated/typescript/memory-cli/src/commandPackage.ts; generated/typescript/Dockerfile.conformance; src/agentic_workspace/contracts command/IR/inventory files; planning execplan",
+    "validations run": "focused verify-payload and output-emitter pytest passed; make test-memory passed; make lint-memory passed; make test-workspace passed after fixing output.emit.install-result module-result serialization; make lint-workspace passed; contract tooling passed; structured-file inventory passed; generated package check passed; generated package --conformance --require-node passed; generated Python conformance passed; generated TypeScript Docker package proof passed; generated TypeScript Docker conformance passed after deleting stale Debian Python bytecode before pip install in the proof image; root CLI authority defaults check passed; Python completion-blocker report still correctly blocks full Python completion on remaining runtime ownership",
+    "result for continuation": "commit the verify-payload text slice, then continue Tier 3 Memory before promoting Workspace or Planning",
+    "next step": "Continue with the next Memory runtime-owned path; do not promote Workspace or Planning until Tier 3 Memory closeout proof is clean."
   },
   "finished_run_review": {
     "review status": "first-slice-reviewed",
@@ -320,19 +327,19 @@
     "decomposition adjustment": "none"
   },
   "proof_report": {
-    "validation proof": "uv run pytest packages/memory/tests/test_report.py::test_memory_lifecycle_doctor_uses_declarative_payload_policy packages/memory/tests/test_report.py::test_memory_lifecycle_text_doctor_uses_declarative_payload_policy packages/memory/tests/test_report.py::test_memory_lifecycle_status_defaults_to_tiny_actions packages/memory/tests/test_report.py::test_memory_lifecycle_text_status_uses_declarative_payload_policy packages/memory/tests/test_current_memory.py::test_generated_current_show_json_uses_declarative_payload_view packages/memory/tests/test_current_memory.py::test_generated_current_show_text_uses_declarative_payload_view -q; uv run pytest packages/memory/tests/test_install.py::test_generated_install_dry_run_uses_declarative_payload_plan packages/memory/tests/test_install.py::test_generated_init_dry_run_uses_declarative_payload_plan -q; uv run pytest packages/memory/tests/test_install.py::test_generated_adopt_dry_run_uses_declarative_payload_plan -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json; uv run agentic-workspace defaults --section root_cli_authority --format json",
-    "proof achieved now": "memory.status, memory.doctor, default install/init/adopt dry-run, and memory current show JSON/text slices complete; full Tier 3 lane incomplete",
-    "evidence for \"proof achieved\" state": "Focused status/doctor/install/init/adopt/current-show JSON/text tests pass, contract tooling and generated package checks pass, root CLI authority is satisfied, and the completion-blocker report still rejects full completion because remaining runtime-owned memory/workspace/planning surfaces exist."
+    "validation proof": "uv run pytest packages/memory/tests/test_install.py::test_generated_verify_payload_text_uses_declarative_payload_policy tests/test_command_generation_primitive_executor.py::test_output_emit_serializes_module_result_objects -q; make test-memory; make lint-memory; make test-workspace; make lint-workspace; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --conformance --require-node; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --docker --require-docker; uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker; uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json; uv run agentic-workspace defaults --section root_cli_authority --format json",
+    "proof achieved now": "memory.status, memory.doctor, default install/init/adopt dry-run, memory current show JSON/text, and memory verify-payload text/JSON slices complete; full Tier 3 lane incomplete",
+    "evidence for \"proof achieved\" state": "Focused verify-payload and output-emitter tests pass, full memory and workspace suites pass, contract tooling and generated package checks pass, root CLI authority is satisfied, and the completion-blocker report still rejects full completion because remaining runtime-owned memory/workspace/planning surfaces exist."
   },
   "intent_satisfaction": {
     "original intent": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane tier-3-memory-first.",
     "was original intent fully satisfied?": "no",
-    "evidence of intent satisfaction": "The #1008 memory.status payload/status IR slice, memory.doctor non-verbose payload/status IR slice, default install/init/adopt dry-run payload lifecycle-plan slices, and memory current show JSON/text payload.current-memory slice are implemented.",
+    "evidence of intent satisfaction": "The #1008 memory.status payload/status IR slice, memory.doctor non-verbose payload/status IR slice, default install/init/adopt dry-run payload lifecycle-plan slices, memory current show JSON/text payload.current-memory slice, and memory verify-payload text/JSON payload.verify slice are implemented.",
     "unsolved intent passed to": "tier-3-memory-first"
   },
   "execution_summary": {
-    "outcome delivered": "memory.status/doctor payload-status slices and default install/init/adopt dry-run payload lifecycle-plan slices implemented",
-    "validation confirmed": "focused memory report tests, contract tooling, structured inventory, generated package checks, generated Python conformance, root CLI authority defaults, and completion-blocker report",
+    "outcome delivered": "memory.status/doctor payload-status slices, default install/init/adopt dry-run payload lifecycle-plan slices, current show payload-current-memory slice, and verify-payload payload.verify slice implemented",
+    "validation confirmed": "focused memory tests, full memory/workspace tests and lint, contract tooling, structured inventory, generated package checks, Node conformance, generated Python conformance, TypeScript Docker package proof, root CLI authority defaults, and completion-blocker report",
     "follow-on routed to": "tier-3-memory-first",
     "post-work posterity capture": "execplan updated with concrete scope, proof, and continuation",
     "knowledge promoted (Memory/Docs/Config)": "none",
@@ -340,10 +347,10 @@
   },
   "durable_residue": {
     "status": "none",
-    "learned constraint": "none yet",
-    "motivation worth preserving": "none yet",
+    "learned constraint": "TypeScript Docker conformance proof needed stale Debian Python bytecode removal before invoking pip in the proof image.",
+    "motivation worth preserving": "Keep proof-environment failures separate from adapter contract drift so agents do not overfit implementation changes to broken proof setup.",
     "canonical owner now": "none",
-    "promotion trigger": "none",
+    "promotion trigger": "promote if the same Docker conformance environment failure recurs outside this lane",
     "retention after promotion": "retain"
   },
   "task_intent_promotion": {
@@ -385,6 +392,11 @@
         "signal": "Full memory proof caught that the generated memory.status text path skipped target-root resolution while payload.status still needed target_root, making the command depend on process cwd.",
         "owner": "direct fix",
         "fix": "memory.status now resolves target_root for all non-verbose output before payload.status runs."
+      },
+      {
+        "signal": "The TypeScript Docker conformance proof was less smooth than local conformance: the original image hit a Debian pip bytecode failure before conformance could run.",
+        "owner": "Planning",
+        "fix": "Fixed directly by deleting stale Debian Python bytecode in generated/typescript/Dockerfile.conformance before invoking pip; no issue filed per instruction."
       }
     ],
     "signals routed": [],
@@ -404,6 +416,7 @@
   "drift_log": [
     "2026-05-20: Scaffolded by agentic-planning promote-to-plan from decomposition lane tier-3-memory-first.",
     "2026-05-20: Filled concrete scope/proof for first #1008 memory.status payload-status slice and kept Tier 3 lane open.",
-    "2026-05-20: Recorded delegation decision route=keep-local."
+    "2026-05-20: Recorded delegation decision route=keep-local.",
+    "2026-05-20: Added memory verify-payload text/JSON payload.verify slice and fixed TypeScript Docker conformance image bytecode/pip fragility; full selected proof passed."
   ]
 }

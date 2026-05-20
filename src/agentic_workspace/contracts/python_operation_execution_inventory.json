@@ -643,20 +643,18 @@
       "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.verify-payload.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
-      "hand_owned_runtime_code": [
-        "text-output runtime fallback through repo_memory_bootstrap.installer.verify_payload",
-        "module-result text compatibility formatting"
-      ],
-      "status": "domain-runtime-primitive-via-ir",
+      "hand_owned_runtime_code": [],
+      "status": "portable-codegen-primitive-executed",
       "conformance_ref": "memory.verify-payload.process",
-      "domain_runtime_primitive_refs": [
-        "python.function.call"
+      "portable_primitive_refs": [
+        "path.target_root.resolve",
+        "payload.verify",
+        "output.emit.install-result"
       ],
-      "external_adapter_note": "The non-json branch still calls repo_memory_bootstrap.installer.verify_payload through python.function.call, so that branch is external-adapter debt and not portable primitive coverage.",
-      "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "JSON operation dataflow is generated and executes payload verification through codegen-owned path.target_root.resolve, payload.verify, and output.emit using package-owned payload_verification.memory.json. Text output remains a declared runtime fallback until its formatting is represented by portable rendering primitives.",
-      "what_would_make_portable_later": "Replace the non-json python.function.call fallback with schema-backed text rendering primitives or declare text output out of scope for target-independent parity.",
-      "generic_behavior_audit": "Classified as package-specific-judgment only for the remaining text-output fallback. JSON payload verification policy execution is no longer generic deterministic runtime debt: package truth lives in payload_verification.memory.json and codegen-owned payload.verify executes file presence, forbidden files/prefixes, version markers, TOML metadata, guidance fragments, and module-result assembly."
+      "runtime_boundary_class": "portable-deterministic",
+      "runtime_boundary_reason": "Text and JSON operation dataflow is generated and executes payload verification through codegen-owned path.target_root.resolve, payload.verify, and output.emit.install-result using package-owned payload_verification.memory.json.",
+      "what_would_make_portable_later": "Already portable for the declared payload verification policy; package truth remains data-owned by payload_verification.memory.json.",
+      "generic_behavior_audit": "Text and JSON payload verification policy execution is no longer generic deterministic runtime debt: package truth lives in payload_verification.memory.json and codegen-owned payload.verify executes file presence, forbidden files/prefixes, version markers, TOML metadata, guidance fragments, module-result assembly, and install-result output."
     },
     {
       "operation_id": "memory.status.report",

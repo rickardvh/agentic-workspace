@@ -2310,8 +2310,7 @@ export const generatedCommandPackage = {
         "primitive_refs": [
           "path.target_root.resolve",
           "payload.verify",
-          "python.function.call",
-          "output.emit"
+          "output.emit.install-result"
         ]
       },
       "schemas": {

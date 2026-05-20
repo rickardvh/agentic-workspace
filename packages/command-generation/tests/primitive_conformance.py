@@ -141,6 +141,14 @@ def main() -> int:
         assert "Files" in emitted_text
         assert "- nested/beta.txt" in emitted_text
 
+        emitted_install_text = execute_primitive(
+            "output.emit.install-result",
+            values={"result": verify_payload, "format": "text"},
+            context=context,
+        )
+        assert "Payload verification" in emitted_install_text
+        assert ".agentic-workspace/memory/VERSION.md" in emitted_install_text
+
         operation = {
             "ir_plan": {
                 "steps": [

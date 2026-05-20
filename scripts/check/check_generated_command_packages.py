@@ -124,6 +124,7 @@ REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE = {
     "payload.assemble",
     "payload.verify",
     "output.emit",
+    "output.emit.install-result",
 }
 PYTHON_MODULE_SOURCE_EXECUTABLE_MARKERS = {
     "parser construction": ("argparse.ArgumentParser", ".add_subparsers(", ".add_parser("),
@@ -1533,7 +1534,12 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         "prompt.upgrade",
         "system-intent.sync",
     }
-    portable_primitive_operations = {"memory.list-files.report", "memory.list-skills.report", "planning.list-files.report"}
+    portable_primitive_operations = {
+        "memory.list-files.report",
+        "memory.list-skills.report",
+        "memory.verify-payload.report",
+        "planning.list-files.report",
+    }
     expected_primitive_executors = {
         "memory.list-files.report": "generated/memory/python/commands/memory_list_files_report.py",
         "memory.list-skills.report": "generated/memory/python/commands/memory_list_skills_report.py",
@@ -1676,12 +1682,14 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         for fragment in (
             '"uses": "path.target_root.resolve"',
             '"uses": "payload.verify"',
-            '"uses": "python.function.call"',
+            '"uses": "output.emit.install-result"',
             '"policy_root": "memory.contracts"',
             '"payload_root": "memory.package-payload"',
         ):
             if fragment not in verify_payload_text:
-                errors.append("generated memory verify-payload operation must retain portable JSON primitive plus explicit text fallback")
+                errors.append("generated memory verify-payload operation must retain portable payload verification primitives")
+        if '"uses": "python.function.call"' in verify_payload_text:
+            errors.append("generated memory verify-payload operation must not retain a text runtime fallback")
     else:
         errors.append("generated memory verify-payload operation is missing")
     if "repo_memory_bootstrap._installer_paths" in memory_operation_executor_text:

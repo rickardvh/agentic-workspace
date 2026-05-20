@@ -807,7 +807,7 @@ def _resolve_template(template: Any, *, values: dict[str, Any]) -> Any:
 
 def _emit_output(*, values: dict[str, Any], arguments: dict[str, Any] | None = None) -> str:
     arguments = arguments or {}
-    result = values.get("result")
+    result = _plain_output_result(values.get("result"))
     output_format = str(values.get("format") or "text")
     if output_format == "json":
         return json.dumps(result, indent=2, sort_keys=True) + "\n"
@@ -822,6 +822,15 @@ def _emit_output(*, values: dict[str, Any], arguments: dict[str, Any] | None = N
         label = action.get("path") or action.get("id") or action.get("kind")
         lines.append(f"- {label}")
     return "\n".join(lines).rstrip() + "\n"
+
+
+def _plain_output_result(result: Any) -> Any:
+    if isinstance(result, Mapping):
+        return dict(result)
+    to_dict = getattr(result, "to_dict", None)
+    if callable(to_dict):
+        return to_dict()
+    return result
 
 
 def _emit_install_result_text(result: dict[str, Any]) -> str:
