@@ -2094,6 +2094,9 @@ def test_start_narrow_ci_repair_stays_direct_without_execplan(tmp_path: Path, ca
     _assert_next_safe_action_valid(payload["next_safe_action"])
     assert "planning_safety_gate" not in payload["context"]["planning"]
     assert payload["next_safe_action"]["next_safe_action"] == "select-changed-path-proof"
+    profile = payload["context"].get("repair_plan_profile") or payload.get("repair_plan_profile")
+    assert profile["status"] == "direct-no-plan"
+    assert profile["required_record"]["continuation_owner"] == "PR/CI result"
 
 
 def test_start_task_keeps_skill_search_explicit(tmp_path: Path, capsys) -> None:

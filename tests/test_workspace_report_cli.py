@@ -1993,6 +1993,60 @@ def test_external_intent_refresh_github_writes_provider_agnostic_evidence(tmp_pa
     assert refreshed["items"][1]["status"] == "closed"
 
 
+def test_external_intent_refresh_github_applies_prioritized_candidates(tmp_path: Path, monkeypatch, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--preset", "planning", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    class Result:
+        returncode = 0
+        stderr = ""
+        stdout = json.dumps(
+            [
+                {
+                    "number": 55,
+                    "title": "Command owned intake",
+                    "state": "OPEN",
+                    "url": "https://github.com/acme/project/issues/55",
+                    "labels": [{"name": "priority/medium"}],
+                    "createdAt": "2026-04-01T00:00:00Z",
+                    "updatedAt": "2026-04-27T00:00:00Z",
+                    "closedAt": None,
+                    "body": "",
+                    "comments": 0,
+                }
+            ]
+        )
+
+    monkeypatch.setattr(cli.subprocess, "run", lambda *args, **kwargs: Result())
+
+    assert (
+        cli.main(
+            [
+                "external-intent",
+                "refresh-github",
+                "--target",
+                str(target),
+                "--repo",
+                "acme/project",
+                "--apply-planning-candidates",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["planning_candidate_apply"]["status"] == "applied"
+    assert payload["planning_candidate_apply"]["applied_count"] == 1
+    state_text = (target / ".agentic-workspace" / "planning" / "state.toml").read_text(encoding="utf-8")
+    assert "GitHub #55" in state_text
+    assert 'priority = "P2"' in state_text
+
+
 def test_external_intent_refresh_github_compacts_old_unreferenced_closed_cache_items(tmp_path: Path, monkeypatch, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

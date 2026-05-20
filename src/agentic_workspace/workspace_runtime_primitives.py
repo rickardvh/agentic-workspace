@@ -4785,6 +4785,22 @@ def _lifecycle_plan_payload(
         for module in module_policy_payloads
         if isinstance(module, dict) and str(module.get("module", "")) in set(selected_modules)
     ]
+    action_owner_groups: dict[str, list[str]] = {
+        "memory_managed_payload": [],
+        "shared_workspace_payload": [],
+        "local_source_checkout_state": [],
+        "package_command_or_install_state": [],
+    }
+    for path in list(payload.get("created", [])) + list(payload.get("updated_managed", [])) + planned_removals:
+        path_text = str(path)
+        if path_text.startswith(".agentic-workspace/memory/"):
+            action_owner_groups["memory_managed_payload"].append(path_text)
+        elif path_text.startswith(".agentic-workspace/") or path_text == DEFAULT_AGENT_INSTRUCTIONS_FILE:
+            action_owner_groups["shared_workspace_payload"].append(path_text)
+        elif path_text.startswith(".git/") or "source-checkout" in path_text:
+            action_owner_groups["local_source_checkout_state"].append(path_text)
+        else:
+            action_owner_groups["package_command_or_install_state"].append(path_text)
     next_command = _lifecycle_apply_command(
         command_name=command_name, target_root=target_root, selected_modules=selected_modules, local_only=local_only, cli_invoke=cli_invoke
     )
@@ -4822,6 +4838,11 @@ def _lifecycle_plan_payload(
         "review_items": review_items,
         "local_only_state_interaction": "install-root" if local_only else "not-requested",
         "module_update_freshness": module_update_freshness,
+        "action_owner_groups": action_owner_groups,
+        "source_checkout_payload_boundary": {
+            "source_class": _invoked_cli_identity_payload(target_root=target_root, compact=True).get("source_class"),
+            "rule": "A source-checkout command can still report target-repo managed payload refresh; that is not a Python package upgrade.",
+        },
         "mutation_safety": _lifecycle_mutation_safety_payload(
             command_name=command_name,
             dry_run=dry_run,
@@ -8479,6 +8500,75 @@ def _planning_candidate_suggestions_from_external_items(*, target_root: Path, it
     }
 
 
+def _toml_inline_string(value: str) -> str:
+    return json.dumps(value, ensure_ascii=True)
+
+
+def _planning_candidate_toml_row(candidate: dict[str, str]) -> str:
+    fields = (
+        "id",
+        "maturity",
+        "status",
+        "priority",
+        "refs",
+        "title",
+        "outcome",
+        "reason",
+        "promotion_signal",
+        "suggested_first_slice",
+    )
+    rendered = ", ".join(f"{field} = {_toml_inline_string(str(candidate.get(field, '')))}" for field in fields)
+    return f"  {{ {rendered} }}"
+
+
+def _append_planning_candidate_rows(*, target_root: Path, candidates: list[dict[str, str]], dry_run: bool) -> dict[str, Any]:
+    state_path = target_root / ".agentic-workspace" / "planning" / "state.toml"
+    relative_path = ".agentic-workspace/planning/state.toml"
+    if not candidates:
+        return {"status": "nothing-to-apply", "path": relative_path, "applied_count": 0, "candidate_ids": []}
+    if not state_path.exists():
+        return {"status": "blocked", "path": relative_path, "reason": "planning state is missing", "applied_count": 0, "candidate_ids": []}
+    original = state_path.read_text(encoding="utf-8")
+    rows = [_planning_candidate_toml_row(candidate) for candidate in candidates]
+
+    roadmap_match = re.search(r"(?m)^\[roadmap\]\s*$", original)
+    if roadmap_match is None:
+        updated = original.rstrip() + "\n\n[roadmap]\nlanes = []\ncandidates = [\n" + ",\n".join(rows) + "\n]\n"
+    else:
+        candidates_match = re.search(r"(?ms)^candidates\s*=\s*\[(.*?)^\]", original[roadmap_match.end() :])
+        if candidates_match is None:
+            insert_at = roadmap_match.end()
+            updated = original[:insert_at] + "\nlanes = []\ncandidates = [\n" + ",\n".join(rows) + "\n]\n" + original[insert_at:]
+        else:
+            block_start = roadmap_match.end() + candidates_match.start()
+            block_end = roadmap_match.end() + candidates_match.end()
+            block = original[block_start:block_end]
+            has_existing = bool(re.search(r"\{", block))
+            prefix = block[:-1].rstrip()
+            separator = ",\n" if has_existing else "\n"
+            replacement = prefix + separator + ",\n".join(rows) + "\n]"
+            updated = original[:block_start] + replacement + original[block_end:]
+    try:
+        tomllib.loads(updated)
+    except tomllib.TOMLDecodeError as exc:
+        return {
+            "status": "blocked",
+            "path": relative_path,
+            "reason": f"candidate append would make planning state invalid: {exc}",
+            "applied_count": 0,
+            "candidate_ids": [],
+        }
+    if not dry_run:
+        state_path.write_text(updated, encoding="utf-8")
+    return {
+        "status": "dry-run" if dry_run else "applied",
+        "path": relative_path,
+        "applied_count": len(candidates),
+        "candidate_ids": [candidate["id"] for candidate in candidates],
+        "proof_after": "uv run agentic-workspace summary --target . --format json",
+    }
+
+
 def _load_existing_external_intent_evidence(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {"kind": "planning-external-intent-evidence/v1", "items": []}
@@ -8619,7 +8709,14 @@ def _compact_external_intent_cache_items(
 
 
 def _refresh_github_external_intent_evidence(
-    *, target_root: Path, repo: str | None, limit: int | None, state: str | None, storage: str, dry_run: bool
+    *,
+    target_root: Path,
+    repo: str | None,
+    limit: int | None,
+    state: str | None,
+    storage: str,
+    dry_run: bool,
+    apply_planning_candidates: bool = False,
 ) -> dict[str, Any]:
     evidence_path, evidence_relative_path, storage_class = _external_intent_evidence_write_location(target_root, storage)
     previous_payload = _load_existing_external_intent_evidence(evidence_path)
@@ -8700,6 +8797,20 @@ def _refresh_github_external_intent_evidence(
     if not dry_run:
         evidence_path.parent.mkdir(parents=True, exist_ok=True)
         evidence_path.write_text(json.dumps(next_payload, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
+    planning_candidate_apply = (
+        _append_planning_candidate_rows(
+            target_root=target_root,
+            candidates=planning_candidate_suggestions["candidates"],
+            dry_run=dry_run,
+        )
+        if apply_planning_candidates
+        else {
+            "status": "not-requested",
+            "path": ".agentic-workspace/planning/state.toml",
+            "applied_count": 0,
+            "candidate_ids": [],
+        }
+    )
     return {
         "kind": "external-intent-refresh/v1",
         "provider": "github",
@@ -8724,6 +8835,7 @@ def _refresh_github_external_intent_evidence(
         "state_source": state_source,
         "limit_source": limit_source,
         "planning_candidate_suggestions": planning_candidate_suggestions,
+        "planning_candidate_apply": planning_candidate_apply,
         "provider_rule": "Core planning consumes only provider-agnostic external intent evidence; GitHub access stays in this optional adapter.",
     }
 
@@ -9631,6 +9743,9 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if isinstance(proof, dict) and proof.get("kind") == "proof-selection/v1":
         projected["proof"] = _compact_start_proof_payload(proof)
         immediate["next_proof"] = "run the selected required validation commands before closeout"
+    repair_profile = payload.get("repair_plan_profile", {})
+    if isinstance(repair_profile, dict) and repair_profile.get("status") == "direct-no-plan":
+        projected["repair_plan_profile"] = repair_profile
     cli_compatibility = payload.get("cli_compatibility", {})
     if isinstance(cli_compatibility, dict) and cli_compatibility.get("status") in {"blocking-drift", "warning-drift"}:
         projected["cli_compatibility"] = cli_compatibility
@@ -10142,6 +10257,38 @@ def _prep_only_handoff_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
     }
 
 
+def _compact_repair_plan_profile(*, changed_paths: list[str], task_text: str | None, proof_command: str) -> dict[str, Any]:
+    normalized_task = " ".join((task_text or "").lower().split())
+    narrow_paths = len(changed_paths) <= 2
+    repair_terms = ("ci", "docs", "doc", "schema-reference", "proof", "validation", "repair", "fix check", "fix checks")
+    repair_task = any(term in normalized_task for term in repair_terms)
+    repair_paths = all(
+        path.startswith("docs/")
+        or path.endswith(".md")
+        or "/schemas/" in path
+        or path.startswith("src/agentic_workspace/contracts/schemas/")
+        for path in changed_paths
+    )
+    direct = bool(changed_paths and narrow_paths and (repair_task or repair_paths))
+    return {
+        "kind": "agentic-workspace/compact-repair-plan-profile/v1",
+        "status": "direct-no-plan" if direct else "not-repair-profile",
+        "fit_criteria": [
+            "CI, docs, schema-reference, proof, or tiny validation repair",
+            "one or two touched surfaces",
+            "no parent intent change",
+            "obvious proof command",
+            "no durable continuation except PR/CI result",
+        ],
+        "required_record": {
+            "changed_paths": changed_paths,
+            "proof_command": proof_command,
+            "continuation_owner": "PR/CI result",
+        },
+        "rule": "Keep narrow repair work direct when checked-in continuity adds more cleanup than safety; preserve exact proof and continuation honesty.",
+    }
+
+
 _START_TINY_ONLY_SELECTORS = {
     "adaptive_routing",
     "active_state_summary",
@@ -10476,12 +10623,25 @@ def _start_payload(
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
         }
         payload["proof"] = _compact_start_proof_payload(proof_payload)
+        repair_profile = _compact_repair_plan_profile(changed_paths=normalized_paths, task_text=task_text, proof_command=proof_command)
+        if repair_profile["status"] == "direct-no-plan":
+            payload["repair_plan_profile"] = repair_profile
         payload["path_boundaries"] = [_boundary_warning_for_path(path) for path in normalized_paths]
     elif normalized_paths:
         proof_payload = _proof_selection_for_changed_paths(
             changed_paths=normalized_paths, target_root=target_root, include_durable_intent=False
         )
         payload["proof"] = _compact_start_proof_payload(proof_payload)
+        repair_profile = _compact_repair_plan_profile(
+            changed_paths=normalized_paths,
+            task_text=task_text,
+            proof_command=_command_with_cli_invoke(
+                command=f"agentic-workspace proof --changed {' '.join(normalized_paths)} --format json",
+                cli_invoke=config.cli_invoke,
+            ),
+        )
+        if repair_profile["status"] == "direct-no-plan":
+            payload["repair_plan_profile"] = repair_profile
         payload["path_boundaries"] = [_boundary_warning_for_path(path) for path in normalized_paths]
     if profile == "tiny":
         payload["cli_invocation"] = _cli_invocation_payload(config=config)
@@ -10594,6 +10754,7 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "workflow_obligations",
         "closeout_obligations",
         "proof",
+        "repair_plan_profile",
         "next",
         "scope",
         "context",
@@ -10804,6 +10965,8 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         for optional_key in ("task_file", "task_file_instruction", "task_excerpt", "task_digest", "task_text_length"):
             if isinstance(task_intent, dict) and optional_key in task_intent:
                 context["task"][optional_key] = task_intent[optional_key]
+    if "repair_plan_profile" in payload:
+        context["repair_plan_profile"] = payload["repair_plan_profile"]
     selected: dict[str, Any] = {
         "kind": payload["kind"],
         "target": ".",
@@ -11133,11 +11296,21 @@ def _start_tiny_payload_fast(
         payload["proof"] = _proof_selection_for_changed_paths(
             changed_paths=normalized_paths, target_root=target_root, include_durable_intent=False
         )
+        repair_profile = _compact_repair_plan_profile(changed_paths=normalized_paths, task_text=task_text, proof_command=proof_command)
+        if repair_profile["status"] == "direct-no-plan":
+            payload["repair_plan_profile"] = repair_profile
         payload["path_boundaries"] = [_boundary_warning_for_path(path) for path in normalized_paths]
     elif normalized_paths:
+        proof_command = _command_with_cli_invoke(
+            command=f"agentic-workspace proof --changed {' '.join(normalized_paths)} --format json",
+            cli_invoke=config.cli_invoke,
+        )
         payload["proof"] = _proof_selection_for_changed_paths(
             changed_paths=normalized_paths, target_root=target_root, include_durable_intent=False
         )
+        repair_profile = _compact_repair_plan_profile(changed_paths=normalized_paths, task_text=task_text, proof_command=proof_command)
+        if repair_profile["status"] == "direct-no-plan":
+            payload["repair_plan_profile"] = repair_profile
         payload["path_boundaries"] = [_boundary_warning_for_path(path) for path in normalized_paths]
     cli_compatibility = _cli_compatibility_payload(config=config, compact=True)
     if cli_compatibility["configured"]:
@@ -17982,6 +18155,7 @@ def _run_external_intent_refresh_github_adapter(args: argparse.Namespace) -> int
         state=getattr(args, "state", None),
         storage=str(getattr(args, "storage", "cache") or "cache"),
         dry_run=bool(getattr(args, "dry_run", False)),
+        apply_planning_candidates=bool(getattr(args, "apply_planning_candidates", False)),
     )
     _emit_payload(payload=payload, format_name=args.format)
     return 0

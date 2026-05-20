@@ -18,6 +18,24 @@ def test_workspace_startup_skill_declares_skillspec_pilot_contract() -> None:
         assert "No-CLI fallback" in text
 
 
+def test_critical_skills_include_anti_rationalization_and_behavior_evidence() -> None:
+    root = Path(__file__).resolve().parents[1]
+    startup = (root / ".agentic-workspace" / "skills" / "workspace-startup" / "SKILL.md").read_text(encoding="utf-8")
+    proof = (root / ".agentic-workspace" / "skills" / "workspace-proof-selection" / "SKILL.md").read_text(encoding="utf-8")
+    closeout = (root / ".agentic-workspace" / "planning" / "skills" / "planning-closeout-trust" / "SKILL.md").read_text(encoding="utf-8")
+    memory = (root / ".agentic-workspace" / "memory" / "skills" / "memory-consultation-and-residue" / "SKILL.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "Red flag:" in startup
+    assert "Use instead:" in startup
+    assert "Tests passed, so completion is claimable" in proof
+    assert "Behavior-Impact Evidence" in proof
+    assert "Archive or close is safe because validation passed" in closeout
+    assert "Behavior-Impact Evidence" in closeout
+    assert "No Memory write means no durable lesson exists" in memory
+
+
 def test_skills_command_lists_registered_workspace_skills(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

@@ -47,11 +47,17 @@ Use it to choose and interpret proof before closeout. It is not a test-running c
 
 ## Guardrails
 
+- Red flag: Tests passed, so completion is claimable.
+- Use instead: Record proof execution evidence, inspect `completion_options`, and reconcile intent/residue before claiming completion.
 - Do not claim a lane or epic complete from proof that only covers a local slice.
 - Do not treat passing self-authored tests as sufficient when the parent intent, negative invariant, or user-visible behavior is unverified.
 - Do not ignore warnings, skipped tests, retries, crashes, or environment failures; classify them.
 - Do not replace proof with a review artifact unless the requested surface is review-only.
 - Do not run broad validation first when a structured proof selector names a narrower command.
+
+## Behavior-Impact Evidence
+
+Changes to this skill must name the behavior being steered and cite the command/output that proves the proof route, allowed action, or completion claim still behaves correctly.
 
 ## Typical outputs
 
