@@ -1407,6 +1407,17 @@ def test_report_closeout_trust_surfaces_package_workflow_evidence(tmp_path: Path
     assert terminal_action["next_command"] == "agentic-workspace report --target ./repo --section closeout_trust --format json"
     assert "Lower-trust closeout signals" in terminal_action["why"]
     assert "lower_trust_closeout_count is 0" in terminal_action["changes_closure"]
+    options = {option["id"]: option for option in payload["closeout_trust"]["completion_options"]}
+    assert options["run-proof"]["allowed"] is False
+    assert options["claim-slice-complete"]["allowed"] is False
+    assert "strict_closeout_gate" in options["claim-slice-complete"]["blocking_fields"]
+    assert options["claim-work-complete"]["allowed"] is False
+    assert "intent_satisfaction" in options["claim-work-complete"]["blocking_fields"]
+    assert options["keep-parent-open"]["allowed"] is True
+    assert options["keep-parent-open"]["owner"] == ".agentic-workspace/planning/state.toml"
+    assert options["close-parent-lane"]["allowed"] is False
+    assert options["route-residue"]["allowed"] is True
+    assert options["stop-with-status"]["allowed"] is True
 
 
 def test_report_closeout_trust_requires_external_negative_invariant_reconciliation(tmp_path: Path, capsys) -> None:
@@ -1533,6 +1544,12 @@ def test_report_closeout_trust_requires_external_negative_invariant_reconciliati
     external_check = closeout["intent_satisfaction_check"]["external_intent_evidence"]
     assert external_check["trust"] == "normal"
     assert external_check["negative_invariants"][0]["status"] == "satisfied"
+    options = {option["id"]: option for option in closeout["completion_options"]}
+    assert options["run-proof"]["allowed"] is False
+    assert options["claim-slice-complete"]["allowed"] is True
+    assert options["claim-work-complete"]["allowed"] is True
+    assert options["close-parent-lane"]["allowed"] is True
+    assert options["route-residue"]["allowed"] is False
 
 
 def test_report_closeout_trust_lowers_trust_for_open_package_owned_continuation_without_active_plan(tmp_path: Path, capsys) -> None:
@@ -1608,6 +1625,9 @@ candidates = [
     answer = section_payload["answer"]
     assert answer["trust"] == "lower-trust"
     assert answer["lower_trust_closeout_count"] == 1
+    compact_options = {option["id"]: option for option in answer["completion_options"]}
+    assert compact_options["claim-work-complete"]["allowed"] is False
+    assert compact_options["keep-parent-open"]["owner"] == ".agentic-workspace/planning/state.toml"
     assert answer["checks"]["intent_satisfaction"]["status"] == "present"
     assert answer["checks"]["intent_satisfaction"]["trust"] == "follow-up-required"
     assert answer["checks"]["intent_satisfaction"]["continuation_surface"] == ".agentic-workspace/planning/state.toml"

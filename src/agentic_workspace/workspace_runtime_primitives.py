@@ -7189,6 +7189,177 @@ def _report_section_hints(payload: dict[str, Any]) -> list[dict[str, Any]]:
     return report_section_hints(payload)
 
 
+def _closeout_completion_options(
+    *,
+    status: str,
+    trust: str,
+    strict_gate: dict[str, Any],
+    intent_check: dict[str, Any],
+    acceptance_reconciliation: dict[str, Any],
+    durable_residue_action: dict[str, Any],
+    lower_trust_closeout_count: int,
+    cli_invoke: str,
+) -> list[dict[str, Any]]:
+    closure_scope = intent_check.get("closure_scope", {}) if isinstance(intent_check, dict) else {}
+    closure_scope = closure_scope if isinstance(closure_scope, dict) else {}
+    validation_proof = closure_scope.get("validation_proof", {})
+    validation_proof = validation_proof if isinstance(validation_proof, dict) else {}
+    proof_text = " ".join(
+        str(value)
+        for value in (
+            validation_proof.get("proof_report", ""),
+            validation_proof.get("status", ""),
+            validation_proof.get("proof_achieved_now", ""),
+        )
+        if value
+    ).lower()
+    proof_achieved = any(marker in proof_text for marker in ("passed", "satisfied", "achieved", "complete"))
+    proof_command = _command_with_cli_invoke(command="agentic-workspace proof --target ./repo --format json", cli_invoke=cli_invoke)
+    strict_blocking = bool(strict_gate.get("blocking"))
+    intent_trust = str(intent_check.get("trust", "")).strip().lower()
+    acceptance_trust = str(acceptance_reconciliation.get("trust", "")).strip().lower()
+    larger_closure = closure_scope.get("larger_intent_closure", {})
+    larger_closure = larger_closure if isinstance(larger_closure, dict) else {}
+    larger_status = str(larger_closure.get("status", "")).strip().lower()
+    closure_decision = str(larger_closure.get("closure_decision", "")).strip().lower()
+    continuation_owner = str(intent_check.get("continuation_surface", "")).strip()
+    package_continuation = intent_check.get("package_owned_continuation", {})
+    if not continuation_owner and isinstance(package_continuation, dict):
+        owner_surfaces = [str(item).strip() for item in _list_payload(package_continuation.get("owner_surfaces")) if str(item).strip()]
+        continuation_owner = owner_surfaces[0] if owner_surfaces else ""
+    required_follow_on = str(intent_check.get("required_follow_on", "")).strip().lower()
+    larger_intent_open = (
+        intent_trust in {"follow-up-required", "needs-review"}
+        or larger_status in {"open", "follow-up-required"}
+        or required_follow_on in {"yes", "true"}
+    )
+    residue_required = (
+        lower_trust_closeout_count > 0
+        or trust in {"lower-trust", "unavailable"}
+        or intent_trust
+        in {
+            "follow-up-required",
+            "needs-review",
+        }
+    )
+    acceptance_ok = acceptance_trust in {"normal", "not-applicable", ""}
+    intent_satisfied = intent_trust in {"satisfied", "normal"}
+    close_evidence = larger_status in {"closed", "complete", "completed", "done"} or closure_decision in {
+        "archive-and-close",
+        "close",
+        "closed",
+    }
+    completion_blockers: list[str] = []
+    if not proof_achieved:
+        completion_blockers.append("intent_satisfaction.closure_scope.validation_proof")
+    if strict_blocking:
+        completion_blockers.append("strict_closeout_gate")
+    if not acceptance_ok:
+        completion_blockers.append("acceptance_criteria_reconciliation")
+    if residue_required:
+        completion_blockers.append("durable_residue")
+    if larger_intent_open:
+        completion_blockers.append("intent_satisfaction")
+    if larger_intent_open and not continuation_owner:
+        completion_blockers.append("continuation_owner")
+
+    def option(
+        option_id: str,
+        *,
+        allowed: bool,
+        why: str,
+        command: str | None = None,
+        owner: str | None = None,
+        blocking_fields: list[str] | None = None,
+    ) -> dict[str, Any]:
+        item: dict[str, Any] = {"id": option_id, "allowed": allowed, "why": why}
+        if command is not None:
+            item["command"] = command
+        if owner:
+            item["owner"] = owner
+        if blocking_fields:
+            item["blocking_fields"] = blocking_fields
+        return item
+
+    claim_slice_allowed = proof_achieved and (not strict_blocking) and acceptance_ok and not residue_required
+    claim_work_allowed = claim_slice_allowed and intent_satisfied and (not larger_intent_open)
+    close_parent_allowed = claim_work_allowed and close_evidence
+    route_residue_command = str(durable_residue_action.get("command", "")) or _command_with_cli_invoke(
+        command="agentic-workspace report --target ./repo --section closeout_trust --format json", cli_invoke=cli_invoke
+    )
+    request_review_allowed = (
+        status in {"unavailable", "invalid"} or intent_trust == "needs-review" or str(strict_gate.get("status", "")) == "requires-review"
+    )
+    return [
+        option(
+            "run-proof",
+            allowed=not proof_achieved,
+            command=proof_command,
+            why="proof has not been recorded as executed" if not proof_achieved else "proof execution evidence is already visible",
+            blocking_fields=None if proof_achieved else ["intent_satisfaction.closure_scope.validation_proof"],
+        ),
+        option(
+            "claim-slice-complete",
+            allowed=claim_slice_allowed,
+            why="slice proof and closeout evidence support a bounded completion claim"
+            if claim_slice_allowed
+            else "slice completion is blocked until proof, strict closeout, acceptance, and residue evidence are reconciled",
+            blocking_fields=[field for field in completion_blockers if field != "intent_satisfaction"] or None,
+        ),
+        option(
+            "claim-work-complete",
+            allowed=claim_work_allowed,
+            why="proof, intent, residue, and closeout evidence support claiming the requested work complete"
+            if claim_work_allowed
+            else "work completion is blocked until proof, intent, residue, continuation, and closeout evidence support it",
+            owner=continuation_owner if larger_intent_open else None,
+            blocking_fields=completion_blockers or None,
+        ),
+        option(
+            "keep-parent-open",
+            allowed=larger_intent_open and bool(continuation_owner),
+            why="larger intent remains open and a continuation owner is named"
+            if larger_intent_open and continuation_owner
+            else "no larger-intent continuation owner is currently required or named",
+            owner=continuation_owner if larger_intent_open else None,
+            blocking_fields=["continuation_owner"] if larger_intent_open and not continuation_owner else None,
+        ),
+        option(
+            "close-parent-lane",
+            allowed=close_parent_allowed,
+            why="explicit closure evidence supports closing the parent lane"
+            if close_parent_allowed
+            else "parent lane closure requires satisfied larger intent and explicit closure evidence",
+            owner=continuation_owner if larger_intent_open else None,
+            blocking_fields=completion_blockers if completion_blockers else ["intent_satisfaction.closure_scope.larger_intent_closure"],
+        ),
+        option(
+            "route-residue",
+            allowed=residue_required,
+            command=route_residue_command,
+            why="durable residue or lower-trust closeout signals need routing"
+            if residue_required
+            else "no durable residue routing is currently required by closeout_trust",
+        ),
+        option(
+            "request-review",
+            allowed=request_review_allowed,
+            why="intent satisfaction or strict closeout evidence requires human/domain review"
+            if request_review_allowed
+            else "a concrete closeout action is available without requiring review",
+            blocking_fields=["intent_satisfaction"] if intent_trust == "needs-review" else None,
+        ),
+        option(
+            "stop-with-status",
+            allowed=True,
+            why="safe exit is always available when completion cannot honestly be claimed",
+            command=_command_with_cli_invoke(
+                command="agentic-workspace report --target ./repo --section closeout_trust --format json", cli_invoke=cli_invoke
+            ),
+        ),
+    ]
+
+
 def _report_closeout_trust_payload(
     *,
     module_reports: list[dict[str, Any]],
@@ -7272,37 +7443,63 @@ def _report_closeout_trust_payload(
     planning_report = next((report for report in module_reports if isinstance(report, dict) and report.get("module") == "planning"), None)
     if not isinstance(planning_report, dict):
         gate = strict_gate(trust="unavailable", reason="planning module is not installed", active_planning_record=False)
+        intent_check = _intent_satisfaction_check_payload(planning_report={}, target_root=target_root)
+        acceptance_reconciliation = _acceptance_criteria_reconciliation_payload(planning_report={})
+        residue_action = durable_residue_action(trust="unavailable")
         return {
             "status": "unavailable",
             "reason": "planning module is not installed",
             "strict_closeout_gate": gate,
             "package_workflow_evidence": _package_workflow_evidence_payload(planning_report={}),
-            "intent_satisfaction_check": _intent_satisfaction_check_payload(planning_report={}, target_root=target_root),
-            "acceptance_criteria_reconciliation": _acceptance_criteria_reconciliation_payload(planning_report={}),
+            "intent_satisfaction_check": intent_check,
+            "acceptance_criteria_reconciliation": acceptance_reconciliation,
             "historical_review_artifacts": _historical_review_artifacts_policy(
                 planning_report={}, intent_validation={}, target_root=target_root
             ),
-            "durable_residue_action": durable_residue_action(trust="unavailable"),
+            "durable_residue_action": residue_action,
             "terminal_action": terminal_action(
                 trust="unavailable", recommended_next_action="Install or run planning report before trusting closeout state."
+            ),
+            "completion_options": _closeout_completion_options(
+                status="unavailable",
+                trust="unavailable",
+                strict_gate=gate,
+                intent_check=intent_check,
+                acceptance_reconciliation=acceptance_reconciliation,
+                durable_residue_action=residue_action,
+                lower_trust_closeout_count=1,
+                cli_invoke=cli_invoke,
             ),
         }
     intent_validation = planning_report.get("intent_validation", {})
     if not isinstance(intent_validation, dict):
         gate = strict_gate(trust="unavailable", reason="planning intent validation is unavailable", active_planning_record=False)
+        intent_check = _intent_satisfaction_check_payload(planning_report=planning_report, target_root=target_root)
+        acceptance_reconciliation = _acceptance_criteria_reconciliation_payload(planning_report=planning_report)
+        residue_action = durable_residue_action(trust="unavailable")
         return {
             "status": "unavailable",
             "reason": "planning intent validation is unavailable",
             "strict_closeout_gate": gate,
             "package_workflow_evidence": _package_workflow_evidence_payload(planning_report=planning_report),
-            "intent_satisfaction_check": _intent_satisfaction_check_payload(planning_report=planning_report, target_root=target_root),
-            "acceptance_criteria_reconciliation": _acceptance_criteria_reconciliation_payload(planning_report=planning_report),
+            "intent_satisfaction_check": intent_check,
+            "acceptance_criteria_reconciliation": acceptance_reconciliation,
             "historical_review_artifacts": _historical_review_artifacts_policy(
                 planning_report=planning_report, intent_validation={}, target_root=target_root
             ),
-            "durable_residue_action": durable_residue_action(trust="unavailable"),
+            "durable_residue_action": residue_action,
             "terminal_action": terminal_action(
                 trust="unavailable", recommended_next_action="Inspect planning report before trusting closeout state."
+            ),
+            "completion_options": _closeout_completion_options(
+                status="unavailable",
+                trust="unavailable",
+                strict_gate=gate,
+                intent_check=intent_check,
+                acceptance_reconciliation=acceptance_reconciliation,
+                durable_residue_action=residue_action,
+                lower_trust_closeout_count=1,
+                cli_invoke=cli_invoke,
             ),
         }
     counts = intent_validation.get("counts", {})
@@ -7350,14 +7547,16 @@ def _report_closeout_trust_payload(
     else:
         summary = "No lower-trust closeout signals are currently detected from planning evidence."
         recommended_next_action = "No extra closeout trust review is needed beyond normal report inspection."
+    gate = strict_gate(
+        trust=trust,
+        reason="active planning record present" if active_planning_record else "no active planning record",
+        active_planning_record=active_planning_record,
+    )
+    residue_action = durable_residue_action(trust=trust)
     return {
         "status": "present",
         "trust": trust,
-        "strict_closeout_gate": strict_gate(
-            trust=trust,
-            reason="active planning record present" if active_planning_record else "no active planning record",
-            active_planning_record=active_planning_record,
-        ),
+        "strict_closeout_gate": gate,
         "lower_trust_closeout_count": effective_lower_trust_count,
         "planning_residue_lower_trust_count": lower_trust_closeout_count,
         "package_evidence_lower_trust_count": len(package_absence_signals),
@@ -7372,8 +7571,18 @@ def _report_closeout_trust_payload(
         "historical_review_artifacts": _historical_review_artifacts_policy(
             planning_report=planning_report, intent_validation=intent_validation, target_root=target_root
         ),
-        "durable_residue_action": durable_residue_action(trust=trust),
+        "durable_residue_action": residue_action,
         "terminal_action": terminal_action(trust=trust, recommended_next_action=recommended_next_action),
+        "completion_options": _closeout_completion_options(
+            status="present",
+            trust=trust,
+            strict_gate=gate,
+            intent_check=intent_satisfaction_check,
+            acceptance_reconciliation=acceptance_reconciliation,
+            durable_residue_action=residue_action,
+            lower_trust_closeout_count=effective_lower_trust_count,
+            cli_invoke=cli_invoke,
+        ),
         "recommended_next_action": recommended_next_action,
     }
 
@@ -19835,10 +20044,9 @@ def _proof_execution_evidence_summary(*, declared: Any, required_commands: list[
 
 
 def _proof_completion_options(*, required_commands: list[str], manual_verification: dict[str, Any] | None) -> list[dict[str, Any]]:
-    proof_ready = bool(required_commands) and manual_verification is None
     options: list[dict[str, Any]] = [
         {
-            "id": "run-selected-proof",
+            "id": "run-proof",
             "allowed": bool(required_commands),
             "command": required_commands[0] if required_commands else None,
             "why": "proof selection found required local proof" if required_commands else "no executable proof command was selected",
@@ -19856,14 +20064,36 @@ def _proof_completion_options(*, required_commands: list[str], manual_verificati
             "why": "proof selection is not proof execution; claim completion only after required proof is run and intent/residue are reconciled",
         },
         {
+            "id": "claim-work-complete",
+            "allowed": False,
+            "why": "proof selection is not proof execution and cannot prove full work completion without closeout_trust evidence",
+        },
+        {
+            "id": "keep-parent-open",
+            "allowed": False,
+            "why": "proof selection does not name a continuation owner; closeout_trust must reconcile larger intent",
+        },
+        {
             "id": "close-parent-lane",
             "allowed": False,
             "why": "selected proof can support a slice closeout but cannot close a parent lane or epic without explicit continuation-owner evidence",
         },
         {
-            "id": "continue-to-closeout",
-            "allowed": proof_ready,
-            "why": "after selected proof passes, record proof execution, residue, and continuation owner in the closeout surface",
+            "id": "route-residue",
+            "allowed": False,
+            "why": "proof selection does not decide durable residue; route residue during closeout_trust reconciliation",
+        },
+        {
+            "id": "request-review",
+            "allowed": manual_verification is not None,
+            "why": "manual verification is required when executable proof is unavailable"
+            if manual_verification is not None
+            else "executable proof is available",
+        },
+        {
+            "id": "stop-with-status",
+            "allowed": True,
+            "why": "safe exit is available after reporting selected proof and blocked completion claims",
         },
     ]
     return options
