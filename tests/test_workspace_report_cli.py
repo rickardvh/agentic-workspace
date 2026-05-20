@@ -2114,6 +2114,18 @@ def test_external_intent_refresh_github_applies_prioritized_candidates(tmp_path:
     _init_git_repo(target)
     assert cli.main(["init", "--target", str(target), "--preset", "planning", "--format", "json"]) == 0
     capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        'kind = "agentic-planning-state"\n'
+        'schema_version = "planning-state/v1"\n\n'
+        "work_items = []\n\n"
+        "[active]\nexecplans = []\n\n"
+        "[todo]\nactive_items = []\nqueued_items = []\n\n"
+        "[roadmap]\nlanes = []\n"
+        "candidates = [\n"
+        '  { id = "existing", maturity = "candidate", status = "next", priority = "P3", refs = "GitHub #44", title = "Existing", outcome = "Keep existing candidate.", reason = "Fixture.", promotion_signal = "Fixture.", suggested_first_slice = "Fixture." },\n'
+        "]\n",
+    )
 
     class Result:
         returncode = 0
@@ -2158,6 +2170,7 @@ def test_external_intent_refresh_github_applies_prioritized_candidates(tmp_path:
     assert payload["planning_candidate_apply"]["status"] == "applied"
     assert payload["planning_candidate_apply"]["applied_count"] == 1
     state_text = (target / ".agentic-workspace" / "planning" / "state.toml").read_text(encoding="utf-8")
+    assert "GitHub #44" in state_text
     assert "GitHub #55" in state_text
     assert 'priority = "P2"' in state_text
 

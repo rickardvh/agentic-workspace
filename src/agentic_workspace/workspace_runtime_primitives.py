@@ -8769,6 +8769,8 @@ def _append_planning_candidate_rows(*, target_root: Path, candidates: list[dict[
             block = original[block_start:block_end]
             has_existing = bool(re.search(r"\{", block))
             prefix = block[:-1].rstrip()
+            if prefix.endswith(","):
+                prefix = prefix[:-1].rstrip()
             separator = ",\n" if has_existing else "\n"
             replacement = prefix + separator + ",\n".join(rows) + "\n]"
             updated = original[:block_start] + replacement + original[block_end:]
