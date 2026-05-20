@@ -12,9 +12,7 @@ work_items = []
 execplans = []
 
 [todo]
-active_items = [
-  { id = "tier-3-memory-first", title = "Finish Memory first", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/tier-3-memory-first.plan.json", why_now = "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane tier-3-memory-first.", owner_role = "implementation", handoff_ready = true, refs = [".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"] },
-]
+active_items = []
 queued_items = []
 
 [roadmap]
