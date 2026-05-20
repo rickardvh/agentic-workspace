@@ -563,6 +563,35 @@ def test_defaults_command_routes_through_generated_adapter(monkeypatch, capsys) 
     assert calls == [("defaults", "json", "startup", None)]
 
 
+def test_defaults_tiny_text_uses_generated_output(monkeypatch, capsys) -> None:
+    def fail_source_output(*_args, **_kwargs) -> None:
+        raise AssertionError("defaults text should not fall back to package output")
+
+    monkeypatch.setattr(workspace_runtime_primitives, "_emit_workspace_operation_output", fail_source_output)
+
+    assert cli.main(["defaults", "--format", "text"]) == 0
+
+    text = capsys.readouterr().out
+    assert "Default-route contract sections are available on demand" in text
+    assert "Common sections:" in text
+    assert "- startup" in text
+    assert "Detail commands:" in text
+
+
+def test_defaults_selected_section_text_uses_generated_output(monkeypatch, capsys) -> None:
+    def fail_source_output(*_args, **_kwargs) -> None:
+        raise AssertionError("defaults selected text should not fall back to package output")
+
+    monkeypatch.setattr(workspace_runtime_primitives, "_emit_workspace_operation_output", fail_source_output)
+
+    assert cli.main(["defaults", "--section", "root_cli_authority", "--select", "answer.command", "--format", "text"]) == 0
+
+    text = capsys.readouterr().out
+    assert "Kind: agentic-workspace/selected-output/v1" in text
+    assert "Source command: defaults" in text
+    assert '"answer.command": "agentic-workspace defaults --section root_cli_authority --format json"' in text
+
+
 def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -> None:
     assert cli.main(["defaults", "--verbose"]) == 0
 

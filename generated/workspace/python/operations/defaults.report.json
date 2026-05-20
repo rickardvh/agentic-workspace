@@ -68,7 +68,7 @@
         "uses": "output.emit"
       }
     ],
-    "summary": "Defaults report executes generated operation IR through codegen-owned primitive dataflow while workspace runtime supplies the defaults payload source and text compatibility formatting."
+    "summary": "Defaults report executes generated operation IR through codegen-owned primitive dataflow; workspace runtime supplies the defaults payload source while generated output owns tiny-router, compact-answer, and selected-output text formatting."
   },
   "locality": {
     "network": "forbidden",
@@ -81,7 +81,8 @@
   },
   "proof": [
     "operation contract validates against operation.schema.json",
-    "defaults command tests remain compatible"
+    "defaults command tests remain compatible",
+    "defaults selected-output text and tiny-router text stay in generated output rather than package fallback"
   ],
   "reads": [
     {

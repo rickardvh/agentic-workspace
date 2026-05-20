@@ -193,9 +193,9 @@
     {
       "id": "tier-4-workspace-next",
       "title": "Reduce Workspace runtime surface",
-      "readiness": "deferred",
+      "readiness": "promoted",
       "outcome": "Workspace is converted after Memory proves the pattern. Read-only and report-like commands are prioritized before routing and policy commands; generic deterministic Workspace behavior leaves workspace_runtime_primitives.py, while live inspection and routing judgment remain explicit Tier 2 debt.",
-      "owner_surface": "workspace command contracts, generated/workspace/python, src/agentic_workspace/contracts/python_operation_execution_inventory.json, workspace tests, and workspace lint target",
+      "owner_surface": ".agentic-workspace/planning/execplans/tier-4-workspace-next.plan.json",
       "proof": "make test-workspace; make lint-workspace; uv run pytest tests/test_workspace_cli_blackbox.py tests/test_workspace_config_cli.py tests/test_workspace_defaults_cli.py -q",
       "depends_on": [
         "tier-3-memory-first"
