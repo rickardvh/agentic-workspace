@@ -30,9 +30,18 @@ Declarative policy used by generated payload verification primitives to validate
 | `compatibility_contract_files` | ref `#/$defs/path_list` | yes |  | Contract files whose presence preserves compatibility with existing installed payload expectations. |  |  |
 | `current_memory` | object | yes |  | Current-memory path policy for required and optional memory payload files. |  |  |
 | `current_memory.prefix` | ref `#/$defs/relative_path` | yes |  | Path prefix under which current-memory files are installed. |  |  |
+| `current_memory.view_files` | ref `#/$defs/path_list` | yes |  | Current-memory files shown by the compact current-memory view, in display order. |  |  |
 | `current_memory.required` | ref `#/$defs/path_list` | yes |  | Current-memory files that must be present. |  |  |
 | `current_memory.optional` | ref `#/$defs/path_list` | yes |  | Current-memory files that may be present but are not required. |  |  |
 | `forbidden_files` | ref `#/$defs/path_list` | yes |  | Managed payload files that must not be present. |  |  |
 | `forbidden_prefixes` | array of string | yes |  | Path prefixes that must not appear in the managed payload. |  |  |
 | `guidance_fragments` | object | yes |  | Expected guidance text fragments keyed by guidance file path or identifier. |  |  |
 | `guidance_fragments.<name>` | array of string | no |  | Ordered guidance fragments that must be present. |  |  |
+| `workspace_orchestrator_notice` | object | no |  | Optional status action emitted when the shared workspace orchestration layer is absent. |  |  |
+| `workspace_orchestrator_notice.marker` | ref `#/$defs/relative_path` | yes |  | Marker path whose absence triggers the workspace orchestration notice. |  |  |
+| `workspace_orchestrator_notice.detail` | string | yes |  | Human-readable status detail explaining why the orchestration notice was emitted. |  |  |
+| `workspace_orchestrator_notice.role` | string | yes |  | Role label assigned to the orchestration notice status action. |  |  |
+| `workspace_orchestrator_notice.safety` | string | yes |  | Safety label assigned to the orchestration notice status action. |  |  |
+| `workspace_orchestrator_notice.category` | string | yes |  | Category label assigned to the orchestration notice status action. |  |  |
+| `status_files` | array of object | no |  | Payload files to summarize in declarative status reports. |  |  |
+| `obsolete_files` | ref `#/$defs/path_list` | no |  | Legacy payload files to report as obsolete when present. |  |  |

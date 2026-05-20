@@ -204,21 +204,26 @@
       "additionalProperties": false,
       "properties": {
         "marker": {
+          "description": "Marker path whose absence triggers the workspace orchestration notice.",
           "$ref": "#/$defs/relative_path"
         },
         "detail": {
+          "description": "Human-readable status detail explaining why the orchestration notice was emitted.",
           "type": "string",
           "minLength": 1
         },
         "role": {
+          "description": "Role label assigned to the orchestration notice status action.",
           "type": "string",
           "minLength": 1
         },
         "safety": {
+          "description": "Safety label assigned to the orchestration notice status action.",
           "type": "string",
           "minLength": 1
         },
         "category": {
+          "description": "Category label assigned to the orchestration notice status action.",
           "type": "string",
           "minLength": 1
         }
