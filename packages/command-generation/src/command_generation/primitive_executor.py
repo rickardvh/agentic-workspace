@@ -128,27 +128,28 @@ def _condition_matches(condition: Any, *, values: dict[str, Any]) -> bool:
         return True
     if not isinstance(condition, dict):
         raise PrimitiveExecutionError("step when condition must be an object")
-    if "all" in condition:
+    keys = set(condition)
+    if keys == {"all"}:
         items = condition["all"]
         if not isinstance(items, Sequence) or isinstance(items, (str, bytes)):
             raise PrimitiveExecutionError("step when all condition must be a sequence")
         return all(_condition_matches(item, values=values) for item in items)
-    if "any" in condition:
+    if keys == {"any"}:
         items = condition["any"]
         if not isinstance(items, Sequence) or isinstance(items, (str, bytes)):
             raise PrimitiveExecutionError("step when any condition must be a sequence")
         return any(_condition_matches(item, values=values) for item in items)
-    if "not" in condition:
+    if keys == {"not"}:
         return not _condition_matches(condition["not"], values=values)
+    if keys not in ({"value", "equals"}, {"value", "present"}):
+        raise PrimitiveExecutionError("step when condition must use exactly one of all, any, not, equals, or present")
     value_name = str(condition.get("value", ""))
     if not value_name:
-        raise PrimitiveExecutionError("step when condition must declare value, all, any, or not")
+        raise PrimitiveExecutionError("step when condition must declare a value name")
     actual = values.get(value_name)
     if "equals" in condition:
         return actual == condition["equals"]
-    if "present" in condition:
-        return (actual is not None) == bool(condition["present"])
-    raise PrimitiveExecutionError("step when value condition must declare equals or present")
+    return (actual is not None) == bool(condition["present"])
 
 
 def _resolve_target_root(*, values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> str:

@@ -1148,8 +1148,9 @@ def _validate_full_python_completion_executable_ownership(ir: dict[str, object])
     )
     if existing_runtime_source:
         errors.append(
-            "command_package_ir.json cannot claim full Python generated CLI completion while shipped module source "
-            f"still owns generated CLI runtime/lifecycle behavior: {existing_runtime_source!r}"
+            "Tier 6 final Python completion promotion remains blocked while accepted package-domain runtime/lifecycle "
+            "source is still present and must be proven permanent or retired: "
+            f"{existing_runtime_source!r}"
         )
     runtime_imports = _generated_command_module_package_runtime_imports()
     if runtime_imports:
@@ -1160,8 +1161,8 @@ def _validate_full_python_completion_executable_ownership(ir: dict[str, object])
     generated_runtime_facade_imports = _generated_runtime_facade_package_runtime_imports()
     if generated_runtime_facade_imports:
         errors.append(
-            "command_package_ir.json cannot claim full Python generated CLI completion while generated runtime facades "
-            f"still delegate to package-owned runtime helpers: {generated_runtime_facade_imports!r}"
+            "Tier 6 final Python completion promotion remains blocked while generated runtime facades still bridge to "
+            f"accepted package-owned runtime helpers: {generated_runtime_facade_imports!r}"
         )
     return errors
 
@@ -2564,8 +2565,9 @@ def _python_completion_blockers_report(ir: dict[str, object]) -> dict[str, objec
         "false_completion_claim_would_fail": bool(blockers),
         "blockers": blockers,
         "blocker_count": len(blockers),
+        "remaining_scope": "tier-6-final-python-completion-promotion" if blockers else "none",
         "next_owner": (
-            "promote the next #892 primitive/runtime migration slice"
+            "#892 / tier-6-final-python-completion-promotion"
             if blockers
             else "python_cli_completion may be promoted only with full proof rerun"
         ),

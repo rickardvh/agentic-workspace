@@ -1023,12 +1023,20 @@ def test_operation_primitives_classify_operation_step_tiers(monkeypatch: pytest.
     assert module._validate_operation_primitives(registry) == []
     assert by_id["filesystem.glob"]["taxonomy_tier"] == "tier-1-portable-codegen"
     assert by_id["workspace.root.resolve"]["taxonomy_tier"] == "tier-2-package-domain"
+    assert by_id["python.function.call"]["portability"] == "external-adapter"
+    assert by_id["python.function.call"]["taxonomy_tier"] == "tier-2-package-domain"
     assert by_id["workspace.root.resolve"]["tier_owner"]
     assert by_id["workspace.root.resolve"]["generic_behavior_audit"]
 
-    by_id["workspace.root.resolve"].pop("generic_behavior_audit")
+    by_id["python.function.call"]["taxonomy_tier"] = "tier-1-portable-codegen"
     monkeypatch.setattr(module, "operation_primitives_manifest", lambda: registry)
 
+    errors = module._validate_operation_primitives(registry)
+
+    assert any("non-portable primitive python.function.call must not be classified tier-1-portable-codegen" in error for error in errors)
+
+    by_id["python.function.call"]["taxonomy_tier"] = "tier-2-package-domain"
+    by_id["workspace.root.resolve"].pop("generic_behavior_audit")
     errors = module._validate_operation_primitives(registry)
 
     assert any("tier-2 primitive workspace.root.resolve missing audit field" in error for error in errors)

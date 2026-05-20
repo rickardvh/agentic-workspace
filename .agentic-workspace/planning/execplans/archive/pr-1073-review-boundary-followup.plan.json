@@ -1,0 +1,308 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Address PR 1073 review boundary feedback",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Address PR #1073 review feedback after scope correction: make Tier 3, Tier 4, and Tier 5 completion explicit and honest while leaving #892 open for Tier 6.",
+    "hard_constraints": "Keep scope limited to Tier 3-5 closeout truth, Tier 6 blocker routing, python.function.call portability, guarded when semantics, and validation/PR wording.",
+    "agent_may_decide": "Use the smallest code, schema, test, blocker-report, planning-state, and PR metadata edits that make those boundaries mechanically visible.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Validate the review-boundary fixes and update PR evidence.",
+    "proof_expectations": [
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "uv run python packages/command-generation/tests/primitive_conformance.py",
+      "uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q",
+      "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+      "uv run python scripts/check/check_planning_surfaces.py"
+    ],
+    "touched_scope": [
+      "packages/command-generation/src/command_generation/primitive_executor.py",
+      "packages/command-generation/tests/primitive_conformance.py",
+      "src/agentic_workspace/contracts/schemas/operation.schema.json",
+      "scripts/check/check_contract_tooling_surfaces.py",
+      "tests/test_contract_tooling.py",
+      "tests/test_generated_command_package_proof_runner.py",
+      ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+      ".agentic-workspace/planning/execplans/pr-1073-review-boundary-followup.plan.json"
+    ],
+    "completion_criteria": [
+      "Address PR 1073 review boundary feedback is implemented, validated, and closed out honestly."
+    ],
+    "continuation_owner": "#892 / tier-6-final-python-completion-promotion",
+    "closeout_decision": "archive-but-keep-lane-open"
+  },
+  "goal": [
+    "Address PR #1073 review feedback after scope correction: make Tier 3, Tier 4, and Tier 5 completion explicit and honest while leaving #892 open for Tier 6."
+  ],
+  "non_goals": [
+    "Do not complete #892 or the final Python completion gate.",
+    "Do not add a general workflow-options engine or broaden guarded step selection into a DSL.",
+    "Do not make python.function.call count as portable primitive coverage."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Address PR #1073 review feedback after scope correction: make Tier 3, Tier 4, and Tier 5 completion explicit and honest while leaving #892 open for Tier 6.",
+      "constraints": "Keep scope limited to Tier 3-5 closeout truth, Tier 6 blocker routing, python.function.call portability, guarded when semantics, and validation/PR wording.",
+      "latitude": "Use the smallest code, schema, test, blocker-report, planning-state, and PR metadata edits that make those boundaries mechanically visible.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "pr-1073-review-boundary-followup",
+      "status": "active",
+      "next_step": "Validate the review-boundary fixes and update PR evidence.",
+      "proof": "Generated package, primitive conformance, contract tooling, planning surfaces, and focused tests pass."
+    },
+    "scope": {
+      "touched": [
+        "packages/command-generation/src/command_generation/primitive_executor.py",
+        "packages/command-generation/tests/primitive_conformance.py",
+        "src/agentic_workspace/contracts/schemas/operation.schema.json",
+        "scripts/check/check_contract_tooling_surfaces.py",
+        "tests/test_contract_tooling.py",
+        "tests/test_generated_command_package_proof_runner.py",
+        ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+        ".agentic-workspace/planning/execplans/pr-1073-review-boundary-followup.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#892 Python generated CLI completion.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "#892 / tier-6-final-python-completion-promotion"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane tier-6-final-python-completion-promotion",
+    "activation trigger": "After PR #1073 merge or review closeout, continue with the final Python completion inventory proof."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Tier 3-5 completion can be claimed honestly without overclaiming final #892 Python completion.",
+    "intentionally deferred": "The remaining #892 completion inventory and codegen extraction lane.",
+    "discovered implications": "Guarded when support needs explicit schema/executor proof that it is step selection, not a DSL.",
+    "proof achieved now": "Memory, Workspace, Planning, generated package, primitive conformance, contract tooling, structured inventory, and planning-surface checks passed.",
+    "validation still needed": "GitHub CI rerun after push.",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "There's another new comment correcting the scope.",
+    "inferred intended outcome": "Reconcile the PR #1073 review followup with the corrected Tier 3-5 completion scope.",
+    "chosen concrete what": "Keep mechanical checks for python.function.call and when boundaries, mark Tier 3-5 complete in decomposition, route remaining blockers to Tier 6, and align PR evidence.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Only command-generation primitive executor/conformance, operation schema, contract checker/tests, #892 decomposition, this execplan, and PR metadata.",
+    "max changed files": "9 tracked files plus PR metadata.",
+    "required validation commands": "uv run python scripts/check/check_generated_command_packages.py; uv run python packages/command-generation/tests/primitive_conformance.py; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_planning_surfaces.py",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Resume by running the focused proof commands and updating PR #1073 once checks pass.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Address PR #1073 review feedback after scope correction: make Tier 3, Tier 4, and Tier 5 completion explicit and honest while leaving #892 open for Tier 6.",
+    "hard constraints": "Keep scope limited to Tier 3-5 closeout truth, Tier 6 blocker routing, python.function.call portability, guarded when semantics, and validation/PR wording.",
+    "agent may decide locally": "Use the smallest code, schema, test, blocker-report, planning-state, and PR metadata edits that make those boundaries mechanically visible.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "evaluated",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "Stayed local because the comment is a narrow review-followup and splitting would add coordination overhead across a small shared write set."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "pr-1073-review-boundary-followup",
+    "status": "completed",
+    "scope": "Address PR #1073 review feedback after scope correction: Tier 3-5 complete, #892 remains open for Tier 6.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Run focused proof and update PR #1073 evidence."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "packages/command-generation/src/command_generation/primitive_executor.py",
+    "packages/command-generation/tests/primitive_conformance.py",
+    "src/agentic_workspace/contracts/schemas/operation.schema.json",
+    "scripts/check/check_contract_tooling_surfaces.py",
+    "tests/test_contract_tooling.py",
+    "tests/test_generated_command_package_proof_runner.py",
+    ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+    ".agentic-workspace/planning/execplans/pr-1073-review-boundary-followup.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python packages/command-generation/tests/primitive_conformance.py",
+    "uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run python scripts/check/check_planning_surfaces.py"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "PR #1073 review boundary feedback is implemented, Tier 3-5 completion is explicit, #892 continuation is routed to Tier 6, and validation is reported honestly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Addressed corrected PR #1073 review scope by preserving python.function.call as non-portable Tier 2 debt, constraining when guards to simple step selection, marking Tier 3-5 complete in decomposition outcome text, and routing remaining Python completion blockers to Tier 6.",
+    "scope touched": "command-generation primitive executor/conformance, operation schema, generated package checker/tests, #892 decomposition, and PR closeout planning.",
+    "changed surfaces": "operation schema, primitive executor, proof checker, focused tests, decomposition, and this closeout plan.",
+    "validations run": "uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python packages/command-generation/tests/primitive_conformance.py; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run python scripts/check/check_planning_surfaces.py; make test-memory; make lint-memory; make test-workspace; make lint-workspace; make test-planning; make lint-planning",
+    "result for continuation": "Tier 3, Tier 4, and Tier 5 are complete for this checkpoint; #892 remains open for Tier 6 final Python completion promotion.",
+    "next step": "Push the PR update and verify CI."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "passed locally; CI rerun pending until push",
+    "intent served": "yes for PR #1073 review feedback and Tier 3-5 closeout truth",
+    "config compliance": "yes",
+    "misinterpretation risk": "reduced by explicit Tier 6 blocker routing",
+    "follow-on decision": "#892 remains open under tier-6-final-python-completion-promotion"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "stay-local",
+    "route skipped reason": "Small shared write set across checker, schema, tests, and planning state; delegation would add merge/reconciliation overhead.",
+    "expected savings": "none",
+    "actual friction": "The first review interpretation was reversed by a later scope correction, requiring planning and decomposition wording to be rewritten.",
+    "proof result": "passed",
+    "quality concern": "Need CI confirmation after push.",
+    "decomposition adjustment": "Tier 3, Tier 4, and Tier 5 outcome text now says complete for this checkpoint; remaining owner is Tier 6."
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Generated-package proof, python conformance, primitive conformance, focused tests, contract tooling, structured inventory, planning surfaces, and Memory/Workspace/Planning test+lint targets all passed locally."
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Address PR 1073 review boundary feedback.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "PR feedback asks for Tier 3-5 completion truth, Tier 6 blocker routing, python.function.call non-portability, constrained when guards, and tier proof; each is represented in code, tests, decomposition, blocker report, and validation.",
+    "unsolved intent passed to": "#892 / tier-6-final-python-completion-promotion"
+  },
+  "execution_summary": {
+    "outcome delivered": "PR #1073 review feedback addressed with Tier 3-5 completion explicit and #892 continuation routed to Tier 6.",
+    "validation confirmed": "local proof passed; CI rerun pending after push",
+    "follow-on routed to": "#892 / tier-6-final-python-completion-promotion",
+    "post-work posterity capture": "decomposition outcome text and blocker report",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "#892 / tier-6-final-python-completion-promotion"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Tier readiness value 'promoted' means selected/advanced in current decomposition schema, so completion must be stated in allowed outcome/proof/closeout fields until the schema grows a separate completion state.",
+    "motivation worth preserving": "Avoid ambiguous completion language around broad #892 checkpoints.",
+    "canonical owner now": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json and #892 Tier 6",
+    "promotion trigger": "When Tier 6 final Python completion promotion is selected.",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "PR #1073 review feedback is addressed and validated locally, but #892 final Python completion remains blocked by Tier 6 final-promotion checks.",
+    "evidence carried forward": "python-completion-blockers report now names remaining_scope tier-6-final-python-completion-promotion and next_owner #892 / tier-6-final-python-completion-promotion.",
+    "reopen trigger": "CI failure or reviewer identifies remaining Tier 3-5 completion ambiguity."
+  },
+  "improvement_signal_review": {
+    "status": "not_checked",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-20: Scaffolded by agentic-planning new-plan."
+  ]
+}
