@@ -63,7 +63,7 @@
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "workspace.root.resolve",
-        "workspace operation compatibility formatting"
+        "local-only delegation outcome append"
       ],
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "delegation-outcome.append.process",
@@ -72,9 +72,9 @@
         "delegation.outcome.append"
       ],
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior.",
+      "runtime_boundary_reason": "Operation dataflow and text output are generated; package-domain primitive steps still own target resolution and the local-only append operation.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (workspace.root.resolve, delegation.outcome.append) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR, codegen-owned run_operation_steps, and generated output own the deterministic command result text, while workspace.root.resolve and delegation.outcome.append remain explicit package-boundary calls for target validation and local-only record append. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
     },
     {
       "operation_id": "doctor.report",

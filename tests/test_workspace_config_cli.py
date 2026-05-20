@@ -1370,6 +1370,41 @@ def test_note_delegation_outcome_command_writes_local_artifact(tmp_path: Path, c
     assert artifact["records"][0]["delegation_target"] == "gpt_5_4_mini"
 
 
+def test_note_delegation_outcome_text_uses_generated_output(tmp_path: Path, monkeypatch, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    def fail_source_output(*_args, **_kwargs) -> None:
+        raise AssertionError("delegation outcome text should not fall back to package output")
+
+    monkeypatch.setattr(workspace_runtime_primitives, "_emit_workspace_operation_output", fail_source_output)
+
+    assert (
+        cli.main(
+            [
+                "note-delegation-outcome",
+                "--target",
+                str(target),
+                "--delegation-target",
+                "gpt_5_4_mini",
+                "--task-class",
+                "bounded-docs",
+                "--outcome",
+                "success",
+                "--format",
+                "text",
+            ]
+        )
+        == 0
+    )
+
+    text = capsys.readouterr().out
+    assert "Kind: agentic-workspace/delegation-outcomes/v1" in text
+    assert "Path: .agentic-workspace/delegation-outcomes.json" in text
+    assert "- delegation_target: gpt_5_4_mini" in text
+
+
 def test_config_command_reports_delegation_outcome_suggestions(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

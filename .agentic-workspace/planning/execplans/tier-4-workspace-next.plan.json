@@ -36,6 +36,7 @@
     "proof_expectations": [
       "uv run pytest tests/test_workspace_defaults_cli.py::test_defaults_tiny_text_uses_generated_output tests/test_workspace_defaults_cli.py::test_defaults_selected_section_text_uses_generated_output tests/test_workspace_defaults_cli.py::test_defaults_supports_selector_drilldown_for_section_payload -q",
       "uv run pytest tests/test_workspace_config_cli.py::test_config_selected_text_uses_generated_output -q",
+      "uv run pytest tests/test_workspace_config_cli.py::test_note_delegation_outcome_text_uses_generated_output tests/test_workspace_config_cli.py::test_note_delegation_outcome_command_writes_local_artifact -q",
       "uv run python scripts/generate/generate_command_packages.py --check",
       "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
       "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
@@ -47,6 +48,7 @@
       ".agentic-workspace/planning/state.toml",
       "packages/command-generation/src/command_generation/generator.py",
       "src/agentic_workspace/contracts/operations/defaults.report.json",
+      "src/agentic_workspace/contracts/operations/delegation-outcome.append.json",
       "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
       "tests/test_workspace_defaults_cli.py",
       "tests/test_workspace_config_cli.py",
@@ -54,6 +56,7 @@
       "generated/planning/python/primitives/planning_runtime.py",
       "generated/memory/python/primitives/memory_runtime.py",
       "generated/workspace/python/operations/defaults.report.json",
+      "generated/workspace/python/operations/delegation-outcome.append.json",
       "generated/workspace/python/command_package.json",
       "generated/typescript/workspace-cli/src/commandPackage.ts"
     ],
@@ -80,12 +83,13 @@
       "milestone": "tier-4-workspace-next",
       "status": "active",
       "next_step": "Workspace is converted after Memory proves the pattern. Read-only and report-like commands are prioritized before routing and policy commands; generic deterministic Workspace behavior leaves workspace_runtime_primitives.py, while live inspection and routing judgment remain explicit Tier 2 debt.",
-      "proof": "Focused defaults and config selected-output text tests, contract/structured checks, generated package check, and generated Python conformance prove the current Tier 4 Workspace output slices."
+      "proof": "Focused defaults/config/delegation-output text tests, contract/structured checks, generated package check, and generated Python conformance prove the current Tier 4 Workspace output slices."
     },
     "scope": {
       "touched": [
         "packages/command-generation/src/command_generation/generator.py",
         "src/agentic_workspace/contracts/operations/defaults.report.json",
+        "src/agentic_workspace/contracts/operations/delegation-outcome.append.json",
         "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
         "tests/test_workspace_defaults_cli.py",
         "tests/test_workspace_config_cli.py",
@@ -109,10 +113,10 @@
     "activation trigger": "none"
   },
   "iterative_follow_through": {
-    "what this slice enabled": "defaults tiny-router, compact-answer, and selected-output text now emit from the generated runtime facade instead of falling back to package output; config selected-output text is also proven to stay generated.",
+    "what this slice enabled": "defaults tiny-router, compact-answer, and selected-output text now emit from the generated runtime facade instead of falling back to package output; config selected-output text and delegation-outcome text are also proven to stay generated.",
     "intentionally deferred": "none",
-    "discovered implications": "The existing defaults --section root_cli_authority --select answer.command --format text path crashed because package text output treated selected-output as a compact answer. Fixed directly by generated selected-output text emission.",
-    "proof achieved now": "focused defaults output and config selected-output slices passed",
+    "discovered implications": "The existing defaults --section root_cli_authority --select answer.command --format text path crashed because package text output treated selected-output as a compact answer. The existing note-delegation-outcome --format text path also crashed because package output treated the delegation outcome payload as lifecycle text. Fixed both directly by generated text emission.",
+    "proof achieved now": "focused defaults output, config selected-output, and delegation-outcome output slices passed",
     "validation still needed": "broader Workspace lane proof remains pending after additional slices",
     "next likely slice": "continue the current milestone until the completion criteria are met"
   },
@@ -126,7 +130,7 @@
   "execution_bounds": {
     "allowed paths": "packages/command-generation/src/command_generation/generator.py; src/agentic_workspace/contracts/operations/defaults.report.json; src/agentic_workspace/contracts/python_operation_execution_inventory.json; tests/test_workspace_defaults_cli.py; generated/**; .agentic-workspace/planning/**",
     "max changed files": "about 15 for this defaults-output slice; revisit before lifecycle or live-inspection changes",
-    "required validation commands": "focused defaults/config tests; contract tooling; structured inventory; generated package check; generated Python conformance; broaden to make test-workspace/make lint-workspace before Tier 4 closeout.",
+    "required validation commands": "focused defaults/config/delegation-output tests; contract tooling; structured inventory; generated package check; generated Python conformance; broaden to make test-workspace/make lint-workspace before Tier 4 closeout.",
     "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
     "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
   },
@@ -196,6 +200,7 @@
     ".agentic-workspace/planning/state.toml",
     "packages/command-generation/src/command_generation/generator.py",
     "src/agentic_workspace/contracts/operations/defaults.report.json",
+    "src/agentic_workspace/contracts/operations/delegation-outcome.append.json",
     "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
     "tests/test_workspace_defaults_cli.py",
     "tests/test_workspace_config_cli.py",
@@ -203,6 +208,7 @@
     "generated/planning/python/primitives/planning_runtime.py",
     "generated/memory/python/primitives/memory_runtime.py",
     "generated/workspace/python/operations/defaults.report.json",
+    "generated/workspace/python/operations/delegation-outcome.append.json",
     "generated/workspace/python/command_package.json",
     "generated/typescript/workspace-cli/src/commandPackage.ts"
   ],
@@ -212,6 +218,7 @@
   "validation_commands": [
     "uv run pytest tests/test_workspace_defaults_cli.py::test_defaults_tiny_text_uses_generated_output tests/test_workspace_defaults_cli.py::test_defaults_selected_section_text_uses_generated_output tests/test_workspace_defaults_cli.py::test_defaults_supports_selector_drilldown_for_section_payload -q",
     "uv run pytest tests/test_workspace_config_cli.py::test_config_selected_text_uses_generated_output -q",
+    "uv run pytest tests/test_workspace_config_cli.py::test_note_delegation_outcome_text_uses_generated_output tests/test_workspace_config_cli.py::test_note_delegation_outcome_command_writes_local_artifact -q",
     "uv run python scripts/generate/generate_command_packages.py --check",
     "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
     "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
@@ -229,9 +236,9 @@
     "handoff source": "agentic-planning promote-to-plan decomposition lane",
     "what happened": "execution has not started",
     "scope touched": "generated local runtime helper output, defaults operation contract, Python execution inventory, focused defaults tests, generated artifacts, and planning surfaces",
-    "changed surfaces": "packages/command-generation/src/command_generation/generator.py; src/agentic_workspace/contracts/operations/defaults.report.json; src/agentic_workspace/contracts/python_operation_execution_inventory.json; tests/test_workspace_defaults_cli.py; tests/test_workspace_config_cli.py; generated workspace/planning/memory runtime facades and workspace defaults artifacts",
-    "validations run": "focused defaults tests passed; focused config selected-output test passed; contract tooling passed; structured inventory passed; generated package check passed; generated Python conformance passed",
-    "result for continuation": "commit the config selected-output proof slice, then continue reducing Workspace runtime-owned deterministic output/report behavior",
+    "changed surfaces": "packages/command-generation/src/command_generation/generator.py; src/agentic_workspace/contracts/operations/defaults.report.json; src/agentic_workspace/contracts/operations/delegation-outcome.append.json; src/agentic_workspace/contracts/python_operation_execution_inventory.json; tests/test_workspace_defaults_cli.py; tests/test_workspace_config_cli.py; generated workspace/planning/memory runtime facades and workspace defaults/delegation artifacts",
+    "validations run": "focused defaults tests passed; focused config selected-output test passed; focused delegation-outcome output tests passed; contract tooling passed; structured inventory passed; generated package check passed; generated Python conformance passed",
+    "result for continuation": "commit the delegation-outcome output slice, then continue reducing Workspace runtime-owned deterministic output/report behavior",
     "next step": "Inspect the next Workspace domain-runtime-via-IR entry and migrate only deterministic output/data behavior that can stay schema-backed."
   },
   "finished_run_review": {
@@ -253,9 +260,9 @@
     "decomposition adjustment": "continue lane locally, reassess before broad live-inspection or lifecycle slices"
   },
   "proof_report": {
-    "validation proof": "focused defaults tests; focused config selected-output test; contract tooling; structured inventory; generated package check; generated Python conformance",
-    "proof achieved now": "defaults output and config selected-output text slices complete",
-    "evidence for \"proof achieved\" state": "Focused tests monkeypatch package output fallback to fail, proving selected deterministic text output is generated."
+    "validation proof": "focused defaults tests; focused config selected-output test; focused delegation-outcome output tests; contract tooling; structured inventory; generated package check; generated Python conformance",
+    "proof achieved now": "defaults output, config selected-output text, and delegation-outcome text slices complete",
+    "evidence for \"proof achieved\" state": "Focused tests monkeypatch package output fallback to fail, proving selected deterministic text output and delegation outcome result text are generated."
   },
   "intent_satisfaction": {
     "original intent": "Promoted from .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json lane tier-4-workspace-next.",

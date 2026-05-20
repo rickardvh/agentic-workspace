@@ -92,7 +92,7 @@
         "uses": "output.emit"
       }
     ],
-    "summary": "Delegation outcome append executes generated operation IR through codegen-owned primitive dataflow while workspace runtime performs the local-only append compatibility operation."
+    "summary": "Delegation outcome append executes generated operation IR through codegen-owned primitive dataflow while workspace runtime performs the local-only append compatibility operation and generated output owns the text result."
   },
   "locality": {
     "network": "forbidden",
@@ -105,7 +105,8 @@
   },
   "proof": [
     "operation contract validates against operation.schema.json",
-    "delegation outcome append tests remain compatible"
+    "delegation outcome append tests remain compatible",
+    "delegation outcome text output stays in generated output rather than lifecycle text fallback"
   ],
   "reads": [
     {

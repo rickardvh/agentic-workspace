@@ -156,6 +156,22 @@ def _emit_selected_output_text(payload: dict[str, Any]) -> str:
     return '\n'.join(lines) + '\n'
 
 
+def _emit_delegation_outcomes_text(payload: dict[str, Any]) -> str:
+    recorded = payload.get('recorded', {})
+    lines = [
+        f"Kind: {payload.get('kind')}",
+        f"Path: {payload.get('path')}",
+        f"Record count: {payload.get('record_count')}",
+        f"Rule: {payload.get('rule')}",
+    ]
+    if isinstance(recorded, dict):
+        lines.append('Recorded:')
+        for key in ('recorded_at', 'delegation_target', 'task_class', 'outcome', 'handoff_sufficiency', 'review_burden', 'escalation_required'):
+            if key in recorded:
+                lines.append(f'- {key}: {recorded[key]}')
+    return '\n'.join(lines) + '\n'
+
+
 def apply_planning_archive_plan_operation(*args: Any, **kwargs: Any) -> Any:
     from repo_planning_bootstrap.runtime_projection import apply_planning_archive_plan_operation as source_function
 
@@ -210,6 +226,9 @@ def emit_planning_operation_output(values: dict[str, Any], arguments: dict[str, 
         return None
     if isinstance(result, dict) and result.get('kind') == 'agentic-workspace/selected-output/v1':
         print(_emit_selected_output_text(result), end='')
+        return None
+    if isinstance(result, dict) and result.get('kind') == 'agentic-workspace/delegation-outcomes/v1':
+        print(_emit_delegation_outcomes_text(result), end='')
         return None
     from repo_planning_bootstrap.runtime_projection import emit_planning_operation_output as source_function
 
