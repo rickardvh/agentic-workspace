@@ -52,3 +52,8 @@ Generated from `src/agentic_workspace/contracts/skill_specs.json`. Do not hand-e
 - Direct task: continue without durable artifacts only when compact routing permits it and proof is obvious.
 - Lane or epic task: block implementation until compact routing, planning ownership, and proof expectations are present.
 - Fallback task: when the CLI is unavailable, read the workflow fallback and preserve forbidden actions.
+
+## Generated Target Behavior Fixtures
+- `direct-task-cheap-path` (direct, skill `startup-router`): Direct work remains cheap when compact routing permits it.; Generated targets do not create planning artifacts by default.; A narrow validation or inspection is still named before completion.
+- `lane-task-planning-gate` (lane, skill `planning-autopilot`): Lane and epic work route through planning ownership before implementation.; Generated targets surface required skill visibility.; Proof requirements stay separate from completion permission.
+- `no-cli-conservative-fallback` (fallback, skill `startup-router`): Read `.agentic-workspace/WORKFLOW.md` before broad raw state.; Preserve forbidden actions even without CLI output.; Do not bypass CLI-preferred/no-CLI fallback semantics.

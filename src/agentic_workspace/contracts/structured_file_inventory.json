@@ -829,6 +829,23 @@
       "routed_to": "#539"
     },
     {
+      "pattern": "generated/workspace/plugins/*/.codex-plugin/plugin.json",
+      "format": "json",
+      "owner": "generated-skillspec-targets",
+      "status": "generated-derived",
+      "schema_or_validator": "SkillSpec generated target freshness and contract tests",
+      "editable_by_agents": false,
+      "generated": true,
+      "notes": "Generated framework-native plugin manifests are adapter outputs derived from skill_specs.json.",
+      "storage_class": "generated-required-adapter",
+      "checked_in_justification": "Checked in for framework-native agent discovery; canonical source remains SkillSpec.",
+      "reconstructable_from": [
+        "uv run python scripts/generate/generate_skillspec_targets.py",
+        "src/agentic_workspace/contracts/skill_specs.json"
+      ],
+      "routed_to": "#989"
+    },
+    {
       "pattern": "generated/*/python/*.json",
       "format": "json",
       "owner": "generated-command-adapters",
@@ -1172,6 +1189,16 @@
       "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
       "removal_or_demotion_path": "demote to generated-on-demand once publishing no longer requires checked-in generated package metadata",
       "max_bytes": 5000
+    },
+    {
+      "pattern": "generated/workspace/plugins/*/.codex-plugin/plugin.json",
+      "source_command": "uv run python scripts/generate/generate_skillspec_targets.py",
+      "named_consumer": "framework-native generated SkillSpec plugin target tests",
+      "checked_in_justification": "Generated plugin metadata is kept as a reviewable native adapter output while SkillSpec target generation matures.",
+      "freshness_check": "uv run python scripts/generate/generate_skillspec_targets.py --check",
+      "ordinary_agent_route": "agentic-workspace start --task \"<task>\" --format json",
+      "removal_or_demotion_path": "demote to generated-on-demand only after framework-native discovery no longer needs checked-in plugin metadata",
+      "max_bytes": 10000
     }
   ],
   "storage_classes": [

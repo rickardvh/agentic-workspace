@@ -10,7 +10,8 @@
     "specs",
     "transition_gates",
     "module_slots",
-    "generated_plugin_targets"
+    "generated_plugin_targets",
+    "generated_target_behavior_fixtures"
   ],
   "properties": {
     "schema_version": {
@@ -53,6 +54,14 @@
         "$ref": "#/$defs/generated_plugin_target"
       },
       "description": "Framework-native plugin/adaptor targets generated from SkillSpec without owning product behavior."
+    },
+    "generated_target_behavior_fixtures": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/generated_target_behavior_fixture"
+      },
+      "description": "Target-agnostic behavior fixtures that generated skills and plugins must preserve."
     }
   },
   "$defs": {
@@ -316,6 +325,60 @@
       },
       "additionalProperties": false,
       "description": "A framework-native plugin/adaptor target generated from SkillSpec."
+    },
+    "generated_target_behavior_fixture": {
+      "type": "object",
+      "required": [
+        "id",
+        "task_shape",
+        "task",
+        "required_skill",
+        "expected_fields",
+        "implementation_allowed",
+        "proof_required",
+        "completion_claim_allowed",
+        "must_preserve"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/non_empty_string",
+          "description": "Stable fixture identifier."
+        },
+        "task_shape": {
+          "$ref": "#/$defs/non_empty_string",
+          "description": "Representative task shape covered by the fixture."
+        },
+        "task": {
+          "$ref": "#/$defs/non_empty_string",
+          "description": "Representative task prompt for the fixture."
+        },
+        "required_skill": {
+          "$ref": "#/$defs/non_empty_string",
+          "description": "Skill that should remain visible or routed for the fixture."
+        },
+        "expected_fields": {
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "CLI output fields or packet fields the generated target must preserve."
+        },
+        "implementation_allowed": {
+          "type": "boolean",
+          "description": "Expected implementation permission for the representative task shape."
+        },
+        "proof_required": {
+          "type": "boolean",
+          "description": "Expected proof requirement for the representative task shape."
+        },
+        "completion_claim_allowed": {
+          "type": "boolean",
+          "description": "Expected completion-claim permission for the representative task shape."
+        },
+        "must_preserve": {
+          "$ref": "#/$defs/non_empty_strings",
+          "description": "Semantics generated targets must preserve for this fixture."
+        }
+      },
+      "additionalProperties": false,
+      "description": "A representative generated-target behavior fixture."
     },
     "transition_gate": {
       "type": "object",

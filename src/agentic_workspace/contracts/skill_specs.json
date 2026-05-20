@@ -528,6 +528,65 @@
       "next_safe_action_semantics": true
     }
   ],
+  "generated_target_behavior_fixtures": [
+    {
+      "id": "direct-task-cheap-path",
+      "task_shape": "direct",
+      "task": "Fix a small typo in a single documentation file.",
+      "required_skill": "startup-router",
+      "expected_fields": [
+        "next_safe_action",
+        "next_safe_action.implementation_allowed",
+        "workflow_sufficiency"
+      ],
+      "implementation_allowed": true,
+      "proof_required": false,
+      "completion_claim_allowed": false,
+      "must_preserve": [
+        "Direct work remains cheap when compact routing permits it.",
+        "Generated targets do not create planning artifacts by default.",
+        "A narrow validation or inspection is still named before completion."
+      ]
+    },
+    {
+      "id": "lane-task-planning-gate",
+      "task_shape": "lane",
+      "task": "Continue a parent issue by implementing the next milestone.",
+      "required_skill": "planning-autopilot",
+      "expected_fields": [
+        "next_safe_action",
+        "next_safe_action.implementation_allowed",
+        "next_safe_action.proof_required",
+        "skill_routing"
+      ],
+      "implementation_allowed": false,
+      "proof_required": true,
+      "completion_claim_allowed": false,
+      "must_preserve": [
+        "Lane and epic work route through planning ownership before implementation.",
+        "Generated targets surface required skill visibility.",
+        "Proof requirements stay separate from completion permission."
+      ]
+    },
+    {
+      "id": "no-cli-conservative-fallback",
+      "task_shape": "fallback",
+      "task": "Start in a repo where the configured AW CLI is unavailable.",
+      "required_skill": "startup-router",
+      "expected_fields": [
+        "fallback_when_cli_unavailable",
+        "forbidden_actions"
+      ],
+      "implementation_allowed": false,
+      "proof_required": true,
+      "completion_claim_allowed": false,
+      "must_preserve": [
+        "Read `.agentic-workspace/WORKFLOW.md` before broad raw state.",
+        "Preserve forbidden actions even without CLI output.",
+        "Do not bypass CLI-preferred/no-CLI fallback semantics."
+      ]
+    }
+  ],
   "specs": [
     {
       "id": "startup-router",

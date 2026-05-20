@@ -12421,6 +12421,21 @@ def _looks_like_conceptual_slash_phrase(value: str) -> bool:
         return False
     if any(len(part) > 1 and part.isupper() for part in parts):
         return True
+    known_concept_pairs = {
+        frozenset({"adapter", "plugin"}),
+        frozenset({"adapter", "target"}),
+        frozenset({"adaptor", "plugin"}),
+        frozenset({"adaptor", "target"}),
+        frozenset({"json", "text"}),
+        frozenset({"lane", "epic"}),
+        frozenset({"parent", "lane"}),
+        frozenset({"proof", "closeout"}),
+        frozenset({"skill", "plugin"}),
+        frozenset({"slice", "lane"}),
+        frozenset({"task", "slice"}),
+    }
+    if len(parts) == 2 and frozenset(part.lower() for part in parts) in known_concept_pairs:
+        return True
     conceptual_terms = {
         "checks",
         "contracts",

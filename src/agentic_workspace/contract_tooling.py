@@ -101,6 +101,19 @@ def _markdown_list(items: list[Any]) -> str:
     return "\n".join(f"- {str(item)}" for item in items)
 
 
+def _generated_behavior_fixture_lines(manifest: dict[str, Any]) -> list[str]:
+    lines: list[str] = []
+    for fixture in manifest.get("generated_target_behavior_fixtures", []):
+        if not isinstance(fixture, dict):
+            continue
+        fixture_id = str(fixture.get("id", ""))
+        task_shape = str(fixture.get("task_shape", ""))
+        required_skill = str(fixture.get("required_skill", ""))
+        preserve = "; ".join(str(item) for item in fixture.get("must_preserve", []) if str(item).strip())
+        lines.append(f"`{fixture_id}` ({task_shape}, skill `{required_skill}`): {preserve}")
+    return lines
+
+
 def render_skillspec_target_skill(manifest: dict[str, Any], skill_id: str) -> str:
     specs = {str(spec.get("id")): spec for spec in manifest.get("specs", []) if isinstance(spec, dict)}
     if skill_id not in specs:
@@ -157,6 +170,9 @@ def render_skillspec_target_skill(manifest: dict[str, Any], skill_id: str) -> st
         "- Direct task: continue without durable artifacts only when compact routing permits it and proof is obvious.",
         "- Lane or epic task: block implementation until compact routing, planning ownership, and proof expectations are present.",
         "- Fallback task: when the CLI is unavailable, read the workflow fallback and preserve forbidden actions.",
+        "",
+        "## Generated Target Behavior Fixtures",
+        _markdown_list(_generated_behavior_fixture_lines(manifest)),
         "",
     ]
     return "\n".join(sections)
@@ -223,11 +239,12 @@ def render_skillspec_plugin_target(manifest: dict[str, Any], target_id: str) -> 
             "fallbackWhenCliUnavailable": target["fallback_when_cli_unavailable"],
             "mustPreserve": target["must_preserve"],
             "nextSafeActionSemantics": target["next_safe_action_semantics"],
+            "behaviorFixtures": manifest["generated_target_behavior_fixtures"],
             "whereToEdit": "src/agentic_workspace/contracts/skill_specs.json",
             "doNotHandEditGeneratedOutput": True,
         },
     }
-    return json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    return json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n"
 
 
 def improvement_latitude_policy_manifest() -> dict[str, Any]:
