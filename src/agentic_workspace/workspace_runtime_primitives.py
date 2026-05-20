@@ -7189,6 +7189,39 @@ def _report_section_hints(payload: dict[str, Any]) -> list[dict[str, Any]]:
     return report_section_hints(payload)
 
 
+_COMPLETION_OPTION_IDS = (
+    "run-proof",
+    "claim-slice-complete",
+    "claim-work-complete",
+    "keep-parent-open",
+    "close-parent-lane",
+    "route-residue",
+    "request-review",
+    "stop-with-status",
+)
+
+
+def _completion_option(
+    option_id: str,
+    *,
+    allowed: bool,
+    why: str,
+    command: str | None = None,
+    owner: str | None = None,
+    blocking_fields: list[str] | None = None,
+) -> dict[str, Any]:
+    if option_id not in _COMPLETION_OPTION_IDS:
+        raise ValueError(f"unknown completion option id: {option_id}")
+    item: dict[str, Any] = {"id": option_id, "allowed": allowed, "why": why}
+    if command is not None:
+        item["command"] = command
+    if owner:
+        item["owner"] = owner
+    if blocking_fields:
+        item["blocking_fields"] = blocking_fields
+    return item
+
+
 def _closeout_completion_options(
     *,
     status: str,
@@ -7263,24 +7296,6 @@ def _closeout_completion_options(
     if larger_intent_open and not continuation_owner:
         completion_blockers.append("continuation_owner")
 
-    def option(
-        option_id: str,
-        *,
-        allowed: bool,
-        why: str,
-        command: str | None = None,
-        owner: str | None = None,
-        blocking_fields: list[str] | None = None,
-    ) -> dict[str, Any]:
-        item: dict[str, Any] = {"id": option_id, "allowed": allowed, "why": why}
-        if command is not None:
-            item["command"] = command
-        if owner:
-            item["owner"] = owner
-        if blocking_fields:
-            item["blocking_fields"] = blocking_fields
-        return item
-
     claim_slice_allowed = proof_achieved and (not strict_blocking) and acceptance_ok and not residue_required
     claim_work_allowed = claim_slice_allowed and intent_satisfied and (not larger_intent_open)
     close_parent_allowed = claim_work_allowed and close_evidence
@@ -7291,14 +7306,14 @@ def _closeout_completion_options(
         status in {"unavailable", "invalid"} or intent_trust == "needs-review" or str(strict_gate.get("status", "")) == "requires-review"
     )
     return [
-        option(
+        _completion_option(
             "run-proof",
             allowed=not proof_achieved,
             command=proof_command,
             why="proof has not been recorded as executed" if not proof_achieved else "proof execution evidence is already visible",
             blocking_fields=None if proof_achieved else ["intent_satisfaction.closure_scope.validation_proof"],
         ),
-        option(
+        _completion_option(
             "claim-slice-complete",
             allowed=claim_slice_allowed,
             why="slice proof and closeout evidence support a bounded completion claim"
@@ -7306,7 +7321,7 @@ def _closeout_completion_options(
             else "slice completion is blocked until proof, strict closeout, acceptance, and residue evidence are reconciled",
             blocking_fields=[field for field in completion_blockers if field != "intent_satisfaction"] or None,
         ),
-        option(
+        _completion_option(
             "claim-work-complete",
             allowed=claim_work_allowed,
             why="proof, intent, residue, and closeout evidence support claiming the requested work complete"
@@ -7315,7 +7330,7 @@ def _closeout_completion_options(
             owner=continuation_owner if larger_intent_open else None,
             blocking_fields=completion_blockers or None,
         ),
-        option(
+        _completion_option(
             "keep-parent-open",
             allowed=larger_intent_open and bool(continuation_owner),
             why="larger intent remains open and a continuation owner is named"
@@ -7324,7 +7339,7 @@ def _closeout_completion_options(
             owner=continuation_owner if larger_intent_open else None,
             blocking_fields=["continuation_owner"] if larger_intent_open and not continuation_owner else None,
         ),
-        option(
+        _completion_option(
             "close-parent-lane",
             allowed=close_parent_allowed,
             why="explicit closure evidence supports closing the parent lane"
@@ -7333,7 +7348,7 @@ def _closeout_completion_options(
             owner=continuation_owner if larger_intent_open else None,
             blocking_fields=completion_blockers if completion_blockers else ["intent_satisfaction.closure_scope.larger_intent_closure"],
         ),
-        option(
+        _completion_option(
             "route-residue",
             allowed=residue_required,
             command=route_residue_command,
@@ -7341,7 +7356,7 @@ def _closeout_completion_options(
             if residue_required
             else "no durable residue routing is currently required by closeout_trust",
         ),
-        option(
+        _completion_option(
             "request-review",
             allowed=request_review_allowed,
             why="intent satisfaction or strict closeout evidence requires human/domain review"
@@ -7349,7 +7364,7 @@ def _closeout_completion_options(
             else "a concrete closeout action is available without requiring review",
             blocking_fields=["intent_satisfaction"] if intent_trust == "needs-review" else None,
         ),
-        option(
+        _completion_option(
             "stop-with-status",
             allowed=True,
             why="safe exit is always available when completion cannot honestly be claimed",
@@ -20045,56 +20060,49 @@ def _proof_execution_evidence_summary(*, declared: Any, required_commands: list[
 
 def _proof_completion_options(*, required_commands: list[str], manual_verification: dict[str, Any] | None) -> list[dict[str, Any]]:
     options: list[dict[str, Any]] = [
-        {
-            "id": "run-proof",
-            "allowed": bool(required_commands),
-            "command": required_commands[0] if required_commands else None,
-            "why": "proof selection found required local proof" if required_commands else "no executable proof command was selected",
-        },
-        {
-            "id": "record-manual-verification",
-            "allowed": manual_verification is not None,
-            "why": "manual verification is required when executable proof is unavailable"
+        _completion_option(
+            "run-proof",
+            allowed=bool(required_commands),
+            command=required_commands[0] if required_commands else None,
+            why="proof selection found required local proof" if required_commands else "no executable proof command was selected",
+        ),
+        _completion_option(
+            "claim-slice-complete",
+            allowed=False,
+            why="proof selection is not proof execution; claim completion only after required proof is run and intent/residue are reconciled",
+        ),
+        _completion_option(
+            "claim-work-complete",
+            allowed=False,
+            why="proof selection is not proof execution and cannot prove full work completion without closeout_trust evidence",
+        ),
+        _completion_option(
+            "keep-parent-open",
+            allowed=False,
+            why="proof selection does not name a continuation owner; closeout_trust must reconcile larger intent",
+        ),
+        _completion_option(
+            "close-parent-lane",
+            allowed=False,
+            why="selected proof can support a slice closeout but cannot close a parent lane or epic without explicit continuation-owner evidence",
+        ),
+        _completion_option(
+            "route-residue",
+            allowed=False,
+            why="proof selection does not decide durable residue; route residue during closeout_trust reconciliation",
+        ),
+        _completion_option(
+            "request-review",
+            allowed=manual_verification is not None,
+            why="manual verification is required when executable proof is unavailable"
             if manual_verification is not None
             else "executable proof is available",
-        },
-        {
-            "id": "claim-slice-complete",
-            "allowed": False,
-            "why": "proof selection is not proof execution; claim completion only after required proof is run and intent/residue are reconciled",
-        },
-        {
-            "id": "claim-work-complete",
-            "allowed": False,
-            "why": "proof selection is not proof execution and cannot prove full work completion without closeout_trust evidence",
-        },
-        {
-            "id": "keep-parent-open",
-            "allowed": False,
-            "why": "proof selection does not name a continuation owner; closeout_trust must reconcile larger intent",
-        },
-        {
-            "id": "close-parent-lane",
-            "allowed": False,
-            "why": "selected proof can support a slice closeout but cannot close a parent lane or epic without explicit continuation-owner evidence",
-        },
-        {
-            "id": "route-residue",
-            "allowed": False,
-            "why": "proof selection does not decide durable residue; route residue during closeout_trust reconciliation",
-        },
-        {
-            "id": "request-review",
-            "allowed": manual_verification is not None,
-            "why": "manual verification is required when executable proof is unavailable"
-            if manual_verification is not None
-            else "executable proof is available",
-        },
-        {
-            "id": "stop-with-status",
-            "allowed": True,
-            "why": "safe exit is available after reporting selected proof and blocked completion claims",
-        },
+        ),
+        _completion_option(
+            "stop-with-status",
+            allowed=True,
+            why="safe exit is available after reporting selected proof and blocked completion claims",
+        ),
     ]
     return options
 

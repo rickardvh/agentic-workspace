@@ -1198,6 +1198,16 @@ def test_proof_changed_selector_includes_schema_reference_docs_for_workspace_sch
     assert schema_lane["matched_paths"] == ["src/agentic_workspace/contracts/schemas/operation_primitives.schema.json"]
     assert "generated docs/reference" in schema_lane["when"]
     options = {option["id"]: option for option in answer["completion_options"]}
+    assert tuple(options) == (
+        "run-proof",
+        "claim-slice-complete",
+        "claim-work-complete",
+        "keep-parent-open",
+        "close-parent-lane",
+        "route-residue",
+        "request-review",
+        "stop-with-status",
+    )
     assert options["run-proof"]["allowed"] is True
     assert options["claim-slice-complete"]["allowed"] is False
     assert "proof selection is not proof execution" in options["claim-slice-complete"]["why"]

@@ -756,7 +756,7 @@ candidates = [
         },
     )
 
-    assert cli.main(["start", "--target", str(target), "--task", "Is the epic satisfied?", "--format", "json"]) == 0
+    assert cli.main(["start", "--target", str(target), "--task", "Can I mark this work complete?", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     action = _start_primary_action(payload)
@@ -772,6 +772,8 @@ candidates = [
     assert closeout["trust"] == "lower-trust"
     assert closeout["strict_closeout_gate"]["status"] == "blocked"
     assert closeout["intent_satisfaction"]["trust"] == "follow-up-required"
+    assert "completion_options" not in payload
+    assert "completion_options" not in closeout
     assert "closeout_trust_inspection" in payload["drill_down"]["available_selectors"]
 
 

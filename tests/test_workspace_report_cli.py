@@ -1420,6 +1420,101 @@ def test_report_closeout_trust_surfaces_package_workflow_evidence(tmp_path: Path
     assert options["stop-with-status"]["allowed"] is True
 
 
+def test_report_closeout_trust_request_review_for_ambiguous_intent(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        "schema_version = 1\n\n[assurance]\nstrict_closeout = true\n",
+    )
+    plan = target / ".agentic-workspace" / "planning" / "execplans" / "ambiguous-intent.plan.json"
+    _write_json(
+        plan,
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Ambiguous Intent",
+            "active_milestone": {"id": "ambiguous-intent", "status": "active"},
+            "delegated_judgment": {
+                "requested outcome": "Finish the work if the larger intent is actually satisfied.",
+                "hard constraints": "Do not infer larger intent closure from proof alone.",
+                "agent may decide locally": "Implementation details.",
+                "escalate when": "Intent satisfaction is ambiguous.",
+            },
+            "immediate_next_action": ["Use closeout trust."],
+            "completion_criteria": ["Completion option menu distinguishes review from completion."],
+            "validation_commands": ["uv run agentic-workspace proof --target . --format json"],
+            "intent_continuity": {
+                "larger intended outcome": "Finish the ambiguous parent intent.",
+                "this slice completes the larger intended outcome": "unknown",
+                "continuation surface": "",
+            },
+            "required_continuation": {
+                "required follow-on for the larger intended outcome": "unknown",
+                "owner surface": "",
+                "activation trigger": "human/domain review",
+            },
+            "execution_run": {
+                "run status": "active",
+                "executor": "test",
+                "handoff source": "uv run agentic-workspace preflight --format json",
+                "what happened": "Used agentic-workspace report --target . --format json and agentic-workspace proof --target . --format json.",
+                "scope touched": "test",
+                "changed surfaces": "test",
+                "validations run": "uv run agentic-workspace summary --format json; uv run agentic-workspace reconcile --format json",
+                "result for continuation": "review",
+                "next step": "review",
+            },
+            "proof_report": {
+                "validation proof": "uv run agentic-workspace proof passed",
+                "acceptance reconciliation": "requested menu behavior -> delivered closeout completion_options -> proof passed",
+                "proof achieved now": "yes",
+                'evidence for "proof achieved" state': "focused report test fixture",
+            },
+            "closure_check": {
+                "slice status": "active",
+                "larger-intent status": "unknown",
+                "closure decision": "requires-review",
+                "why this decision is honest": "Intent satisfaction is not explicit.",
+                "evidence carried forward": "report closeout_trust",
+                "reopen trigger": "review resolves intent satisfaction",
+            },
+        },
+    )
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        "[todo]\n"
+        "active_items = [\n"
+        "  { id = 'ambiguous-intent', title = 'Ambiguous intent', surface = '.agentic-workspace/planning/execplans/ambiguous-intent.plan.json' },\n"
+        "]\n"
+        "queued_items = []\n\n"
+        "[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
+
+    closeout = json.loads(capsys.readouterr().out)["closeout_trust"]
+    assert closeout["trust"] == "lower-trust"
+    assert closeout["intent_satisfaction_check"]["trust"] == "needs-review"
+    options = {option["id"]: option for option in closeout["completion_options"]}
+    assert tuple(options) == (
+        "run-proof",
+        "claim-slice-complete",
+        "claim-work-complete",
+        "keep-parent-open",
+        "close-parent-lane",
+        "route-residue",
+        "request-review",
+        "stop-with-status",
+    )
+    assert options["request-review"]["allowed"] is True
+    assert options["request-review"]["blocking_fields"] == ["intent_satisfaction"]
+    assert options["claim-work-complete"]["allowed"] is False
+    assert "intent_satisfaction" in options["claim-work-complete"]["blocking_fields"]
+
+
 def test_report_closeout_trust_requires_external_negative_invariant_reconciliation(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
