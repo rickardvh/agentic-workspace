@@ -20,5 +20,6 @@ Inventory proving whether generated Python runtime projection files are rendered
 | `accepted_runtime_boundaries.completion_rule` | string | yes |  | Rule for accepting exact package-domain runtime source symbols under full Python generated CLI completion. |  |  |
 | `accepted_runtime_boundaries.required_granularity` | const `"source-symbol"` | yes |  | Whole-file package runtime or generated facade acceptance is not sufficient for full Python completion. |  |  |
 | `accepted_runtime_boundaries.status` | enum `"exact-symbol-proof-required"`, `"exact-symbol-proof-satisfied"` | yes |  | Whether exact symbol-level proof is still required or satisfied. |  |  |
+| `accepted_runtime_boundaries.baseline_symbols` | array of string | yes |  | Exact accepted runtime boundary symbol ids captured before the #1079 reduction slices so reports can show added and removed accepted runtime symbols. |  |  |
 | `accepted_runtime_boundaries.entries` | array of ref `#/$defs/accepted_runtime_boundary` | yes |  | Exact source-symbol package-domain runtime boundaries. |  |  |
 | `entries` | array of ref `#/$defs/entry` | yes |  | Runtime projection files that must be accounted for before Python generated CLI completion can be claimed. |  |  |

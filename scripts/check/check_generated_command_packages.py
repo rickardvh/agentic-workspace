@@ -1546,9 +1546,11 @@ def _python_runtime_boundary_metrics() -> dict[str, object]:
     output_emission_symbols: list[dict[str, str]] = []
     python_bridge_symbols: list[dict[str, str]] = []
     generic_debt_symbols: list[dict[str, str]] = []
+    current_symbol_ids: set[str] = set()
     for entry in entries:
         if not isinstance(entry, dict):
             continue
+        current_symbol_ids.add(_accepted_runtime_symbol_id(entry))
         boundary_class = str(entry.get("runtime_boundary_class", "unknown") or "unknown")
         class_counts[boundary_class] = class_counts.get(boundary_class, 0) + 1
         owner_package = str(entry.get("owner_package", "unknown") or "unknown")
@@ -1588,6 +1590,8 @@ def _python_runtime_boundary_metrics() -> dict[str, object]:
                     "runtime_boundary_class": boundary_class,
                 }
             )
+    baseline_obj = accepted.get("baseline_symbols", []) if isinstance(accepted, dict) else []
+    baseline_symbol_ids = {str(item) for item in baseline_obj} if isinstance(baseline_obj, list) else set()
     return {
         "status": "available",
         "accepted_runtime_symbol_count": sum(class_counts.values()),
@@ -1597,13 +1601,37 @@ def _python_runtime_boundary_metrics() -> dict[str, object]:
         "output_fallback_symbol_count": len(output_emission_symbols),
         "python_bridge_step_count": len(python_bridge_symbols),
         "generic_debt_symbol_count": len(generic_debt_symbols),
-        "new_symbols_since_baseline": [],
-        "removed_symbols_since_baseline": [],
+        "baseline_symbol_count": len(baseline_symbol_ids),
+        "new_symbols_since_baseline": sorted(current_symbol_ids - baseline_symbol_ids),
+        "removed_symbols_since_baseline": sorted(baseline_symbol_ids - current_symbol_ids),
         "accepted_output_emission_symbol_count": len(output_emission_symbols),
         "accepted_output_emission_symbols": output_emission_symbols,
         "python_bridge_symbols": python_bridge_symbols,
         "generic_debt_symbols": generic_debt_symbols,
     }
+
+
+def _accepted_runtime_symbol_id(entry: dict[str, object]) -> str:
+    binding_kind = str(entry.get("binding_kind", "runtime-facade-call"))
+    if binding_kind == "operation-function-call":
+        return "|".join(
+            (
+                binding_kind,
+                str(entry.get("operation_path", "")),
+                str(entry.get("operation_id", "")),
+                str(entry.get("source_module", "")),
+                str(entry.get("source_symbol", "")),
+            )
+        )
+    return "|".join(
+        (
+            binding_kind,
+            str(entry.get("facade_path", "")),
+            str(entry.get("facade_symbol", "")),
+            str(entry.get("source_module", "")),
+            str(entry.get("source_symbol", "")),
+        )
+    )
 
 
 def _condition_requires_value(condition: object, *, value_name: str, expected: object) -> bool:

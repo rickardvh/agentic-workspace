@@ -52,6 +52,7 @@
         "completion_rule",
         "required_granularity",
         "status",
+        "baseline_symbols",
         "entries"
       ],
       "properties": {
@@ -70,6 +71,15 @@
             "exact-symbol-proof-satisfied"
           ],
           "description": "Whether exact symbol-level proof is still required or satisfied."
+        },
+        "baseline_symbols": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^(runtime-facade-call|operation-function-call)\\|.+\\|.+\\|.+\\|[A-Za-z_][A-Za-z0-9_]*$"
+          },
+          "uniqueItems": true,
+          "description": "Exact accepted runtime boundary symbol ids captured before the #1079 reduction slices so reports can show added and removed accepted runtime symbols."
         },
         "entries": {
           "type": "array",

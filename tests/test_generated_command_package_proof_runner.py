@@ -206,8 +206,15 @@ def test_python_completion_blocker_report_accepts_exact_symbol_runtime_boundarie
     assert runtime_metrics["python_bridge_step_count"] == 0
     assert runtime_metrics["python_bridge_symbols"] == []
     assert runtime_metrics["generic_debt_symbol_count"] == 0
-    assert runtime_metrics["new_symbols_since_baseline"] == []
-    assert runtime_metrics["removed_symbols_since_baseline"] == []
+    assert runtime_metrics["baseline_symbol_count"] == runtime_metrics["accepted_runtime_symbol_count"]
+    assert runtime_metrics["new_symbols_since_baseline"] == [
+        "operation-function-call|generated/memory/python/operations/memory.search.report.json|memory.search.report|"
+        "repo_memory_bootstrap.runtime_search|search_memory"
+    ]
+    assert runtime_metrics["removed_symbols_since_baseline"] == [
+        "operation-function-call|generated/memory/python/operations/memory.search.report.json|memory.search.report|"
+        "repo_memory_bootstrap.installer|search_memory"
+    ]
     lifecycle_metrics = report["lifecycle_dry_run_metrics"]
     assert lifecycle_metrics["status"] == "available"
     assert lifecycle_metrics["codegen_default_dry_run_operation_count"] >= 3
@@ -228,6 +235,26 @@ def test_lifecycle_dry_run_generation_regression_is_blocked(monkeypatch) -> None
     errors = checker._validate_lifecycle_dry_run_generation()
 
     assert any("does not route the default dry-run branch through payload.lifecycle-plan" in error for error in errors)
+
+
+def test_runtime_budget_metrics_compare_against_recorded_baseline(monkeypatch) -> None:
+    checker = _load_checker()
+    inventory = copy.deepcopy(checker.python_runtime_projection_inventory_manifest())
+    accepted = inventory["accepted_runtime_boundaries"]
+    current_symbols = [checker._accepted_runtime_symbol_id(entry) for entry in accepted["entries"] if isinstance(entry, dict)]
+    accepted["baseline_symbols"] = current_symbols[:-1] + [
+        "operation-function-call|generated/memory/python/operations/retired.report.json|retired.report|"
+        "repo_memory_bootstrap.installer|retired_runtime_symbol"
+    ]
+    monkeypatch.setattr(checker, "python_runtime_projection_inventory_manifest", lambda: inventory)
+
+    runtime_metrics = checker._python_runtime_boundary_metrics()
+
+    assert runtime_metrics["new_symbols_since_baseline"] == [current_symbols[-1]]
+    assert runtime_metrics["removed_symbols_since_baseline"] == [
+        "operation-function-call|generated/memory/python/operations/retired.report.json|retired.report|"
+        "repo_memory_bootstrap.installer|retired_runtime_symbol"
+    ]
 
 
 def test_declarative_view_specs_match_generated_operations() -> None:
