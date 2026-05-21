@@ -1276,6 +1276,22 @@ def test_planning_summary_ignores_slash_separated_category_phrases_in_execplan_n
     )
 
 
+def test_planning_summary_ignores_generic_prose_slash_taxonomy_in_execplan_next_action(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(plan_path)
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["immediate_next_action"] = [
+        "Reconcile parser/help/dispatch/executable behavior across source/installed/Docker proof/closeout paths."
+    ]
+    installer_mod._write_execplan_record(record_path=plan_path, record=record)
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+    warnings = summary["planning_surface_health"]["warnings"]
+
+    assert not any(warning["warning_class"] == "execplan_missing_file_reference" for warning in warnings)
+
+
 def test_planning_summary_ignores_known_conceptual_slash_pairs_in_execplan_next_action(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"

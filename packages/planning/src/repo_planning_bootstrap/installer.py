@@ -12469,6 +12469,8 @@ def _execplan_missing_reference_warnings(*, target_root: Path, plan_path: Path, 
         for candidate in _file_reference_candidates(value):
             if candidate.startswith("#"):
                 continue
+            if not field_name.startswith("references[]") and "/" in candidate and not Path(candidate).suffix:
+                continue
             candidate_path = (target_root / candidate).resolve()
             if candidate_path.exists():
                 continue
