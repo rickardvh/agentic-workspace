@@ -1,0 +1,307 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Close #1079 runtime reduction child slices",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Continue the #1079 runtime-reduction lane until its open child slices are honestly implemented or routed.",
+    "hard_constraints": "Reduce shipped/runtime Python coupling without adding new user workflow surfaces; keep command-generation as maintainer tooling and preserve generated CLI behavior.",
+    "agent_may_decide": "Choose the smallest child-slice order, use declarative contracts/primitives where already present, and close children only when proof covers their acceptance signals.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Finish the #1086 shipped-runtime dependency slice, then continue through #1082, #1083, #1084, and #1085 as bounded commits; reconcile #1080 and #1081 if current archive/proof already closes them.",
+    "proof_expectations": [
+      "uv run pytest tests/test_workspace_packaging.py::test_workspace_runtime_entrypoint_stays_off_command_generation tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence",
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "uv run python scripts/generate/generate_command_packages.py --check"
+    ],
+    "touched_scope": [
+      "pyproject.toml",
+      "uv.lock",
+      "src/agentic_workspace/cli.py",
+      "tests/test_workspace_packaging.py",
+      "src/agentic_workspace/contracts/**",
+      "packages/*/src/*/contracts/**",
+      "packages/command-generation/src/command_generation/**",
+      "scripts/check/check_generated_command_packages.py",
+      "tests/**",
+      "generated/**"
+    ],
+    "completion_criteria": [
+      "#1079 child issues #1080-#1086 are either closed by concrete proof in this branch or explicitly left open with a named continuation owner and reason.",
+      "Shipped agentic-workspace runtime no longer depends on command-generation for normal installed CLI execution.",
+      "Accepted-runtime/codegen checks report or prove the runtime-reduction signals needed by the implemented child slices."
+    ],
+    "continuation_owner": "#1079 if any child slice remains open after proof",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "Create a bounded plan for Close #1079 runtime reduction child slices."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Continue the #1079 runtime-reduction lane until its open child slices are honestly implemented or routed.",
+      "constraints": "Reduce shipped/runtime Python coupling without adding new user workflow surfaces; keep command-generation as maintainer tooling and preserve generated CLI behavior.",
+      "latitude": "Choose the smallest child-slice order, use declarative contracts/primitives where already present, and close children only when proof covers their acceptance signals.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "workspace-runtime-reduction-closeout",
+      "status": "active",
+      "next_step": "Finish the #1086 shipped-runtime dependency slice, then continue through remaining #1079 children in bounded commits.",
+      "proof": "Run focused packaging proof plus generated command package checks and generated freshness checks."
+    },
+    "scope": {
+      "touched": [
+        "pyproject.toml",
+        "uv.lock",
+        "src/agentic_workspace/cli.py",
+        "tests/test_workspace_packaging.py",
+        "runtime-reduction contracts, generated outputs, checker code, and focused tests as each child slice requires"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "#1079 reduces accepted package-domain Python after Python completion while keeping the #892 codegen epic open for future non-Python/codegen work.",
+    "this slice completes the larger intended outcome": "pending",
+    "continuation surface": "#1079 and its open child issues"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes until all #1079 children are closed or explicitly routed",
+    "owner surface": "#1079",
+    "activation trigger": "Any child issue remains open after branch proof"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Continue working on the #1079 lane until done",
+    "inferred intended outcome": "Implement or honestly route the open #1079 child slices on the current runtime-reduction branch.",
+    "chosen concrete what": "Complete #1086 first, then continue through declarative view specs, named domain primitives, runtime module split, and runtime budget metrics with exact proof.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "pyproject.toml; uv.lock; src/agentic_workspace/cli.py; tests/test_workspace_packaging.py; runtime-reduction contracts/checkers/generated outputs/tests for #1082-#1085; planning closeout files.",
+    "max changed files": "Broad lane: keep each commit slice narrow; ask before unrelated command surfaces or new user commands.",
+    "required validation commands": "Focused pytest for touched behavior, uv run python scripts/check/check_generated_command_packages.py, uv run python scripts/generate/generate_command_packages.py --check, and AW proof for changed paths.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, #1079/#1080-#1086 issue bodies, and the narrow files needed for the current child slice.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Current first slice removes command-generation from shipped AW runtime dependency and points the console script at agentic_workspace.cli.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Continue the #1079 runtime-reduction lane until its open child slices are honestly implemented or routed.",
+    "hard constraints": "Reduce shipped/runtime Python coupling without adding new user workflow surfaces; keep command-generation as maintainer tooling and preserve generated CLI behavior.",
+    "agent may decide locally": "Choose child-slice order, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-21T16:35:32+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "workspace-runtime-reduction-closeout",
+    "status": "active",
+    "scope": "#1079 runtime-reduction child issues #1080-#1086.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Finish and commit the #1086 shipped-runtime dependency slice."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "pyproject.toml",
+    "uv.lock",
+    "src/agentic_workspace/cli.py",
+    "tests/test_workspace_packaging.py",
+    "runtime-reduction contracts/checkers/generated outputs/tests as each child slice requires"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_packaging.py::test_workspace_runtime_entrypoint_stays_off_command_generation tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/generate/generate_command_packages.py --check"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "#1079 child issues #1080-#1086 are either closed by concrete proof in this branch or explicitly left open with a named continuation owner and reason.",
+    "Shipped runtime dependency on command-generation is removed for installed AW.",
+    "Runtime-reduction metrics/checks and inventories distinguish portable primitive coverage from remaining package-domain runtime debt."
+  ],
+  "execution_run": {
+    "run status": "not-run-yet",
+    "executor": "",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Started the #1086 slice by moving the root console script off command_generation.console and adding a shipped/source-compatible agentic_workspace.cli entrypoint.",
+    "scope touched": "pyproject.toml, uv.lock, src/agentic_workspace/cli.py, tests/test_workspace_packaging.py",
+    "changed surfaces": "root runtime dependencies, root console script, installed/source generated CLI entrypoint, workspace packaging proof",
+    "validations run": "uv run pytest tests/test_workspace_packaging.py::test_workspace_runtime_entrypoint_stays_off_command_generation tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence",
+    "result for continuation": "continue with #1082/#1083/#1084/#1085 after committing the #1086 slice",
+    "next step": "Run selected full generated-package proof for the current slice, then commit."
+  },
+  "finished_run_review": {
+    "review status": "pending",
+    "scope respected": "pending",
+    "proof status": "pending",
+    "intent served": "pending",
+    "config compliance": "pending",
+    "misinterpretation risk": "pending",
+    "follow-on decision": "pending"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "not skipped",
+    "expected savings": "Use Spark explorers for #1082 and #1083 read-only lane selection while local work handles the blocking #1086 packaging slice.",
+    "actual friction": "pending",
+    "proof result": "Explorers must return exact touched paths and proof plan before implementation; local proof remains required.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "pending",
+    "proof achieved now": "pending",
+    "evidence for \"proof achieved\" state": ""
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Close #1079 runtime reduction child slices.",
+    "was original intent fully satisfied?": "pending",
+    "evidence of intent satisfaction": "",
+    "unsolved intent passed to": "none yet"
+  },
+  "execution_summary": {
+    "outcome delivered": "not completed yet",
+    "validation confirmed": "pending",
+    "follow-on routed to": "none yet",
+    "post-work posterity capture": "pending",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "current milestone"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "pending",
+    "larger-intent status": "pending",
+    "closure decision": "pending",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "",
+    "evidence carried forward": "",
+    "reopen trigger": ""
+  },
+  "improvement_signal_review": {
+    "status": "not_checked",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-21: Scaffolded by agentic-planning new-plan.",
+    "2026-05-21: Recorded delegation decision route=delegate-exploration."
+  ]
+}
