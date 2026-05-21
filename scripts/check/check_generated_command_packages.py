@@ -28,6 +28,7 @@ for SOURCE_ROOT in (
     if str(SOURCE_ROOT) not in sys.path:
         sys.path.insert(0, str(SOURCE_ROOT))
 
+from jsonschema import Draft202012Validator  # noqa: E402
 from workspace_command_generation import (  # noqa: E402
     SCHEMA_PATH,
     SOURCE_PATH,
@@ -44,7 +45,6 @@ from command_generation.generated_package_loader import (  # noqa: E402
     load_generated_command_module_for_entrypoint,
     load_generated_command_package_for_entrypoint,
 )
-from jsonschema import Draft202012Validator  # noqa: E402
 
 SelectedFields = Callable[[str], dict[str, object]]
 

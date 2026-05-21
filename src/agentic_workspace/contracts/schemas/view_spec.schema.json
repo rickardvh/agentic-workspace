@@ -1,6 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/view-spec.schema.json",
+  "description": "Declarative view projection spec for generated command outputs.",
   "type": "object",
   "required": [
     "kind",
@@ -12,32 +13,40 @@
   ],
   "properties": {
     "kind": {
+      "description": "Schema discriminator for declarative view specs.",
       "const": "agentic-workspace/view-spec/v1"
     },
     "id": {
+      "description": "Stable view spec identifier.",
       "type": "string",
       "minLength": 1
     },
     "operation_id": {
+      "description": "Operation contract identifier rendered by this view.",
       "type": "string",
       "minLength": 1
     },
     "output_profile": {
+      "description": "Named output profile this view projects.",
       "type": "string",
       "minLength": 1
     },
     "primitive_refs": {
+      "description": "Primitive identifiers the view depends on.",
       "type": "array",
       "minItems": 1,
       "items": {
+        "description": "Primitive identifier referenced by the view spec.",
         "type": "string",
         "minLength": 1
       }
     },
     "fields": {
+      "description": "Projected output fields and their source expressions.",
       "type": "array",
       "minItems": 1,
       "items": {
+        "description": "Single projected output field.",
         "type": "object",
         "required": [
           "name",
@@ -45,10 +54,12 @@
         ],
         "properties": {
           "name": {
+            "description": "Output field name.",
             "type": "string",
             "minLength": 1
           },
           "source": {
+            "description": "Source expression or path used to populate the output field.",
             "type": "string",
             "minLength": 1
           }
@@ -57,5 +68,6 @@
       }
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "x-agentic-workspace-doc-role": "contract-reference"
 }
