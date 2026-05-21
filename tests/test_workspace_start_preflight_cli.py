@@ -1550,6 +1550,76 @@ def test_implement_distinguishes_planning_recovery_from_mixed_wip(tmp_path: Path
     assert planning_only["changed_path_classification"]["dirty_shape"] == "planning-only"
 
 
+def test_implement_does_not_require_active_plan_delegation_for_direct_task(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "mechanical-lane", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/mechanical-lane.plan.json", why_now = "prove delegation gate." },
+]
+queued_items = []
+""",
+    )
+    _write(
+        target / ".agentic-workspace/planning/execplans/mechanical-lane.plan.json",
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "id": "mechanical-lane",
+                "status": "in-progress",
+                "post_decomposition_delegation": {"status": "pending"},
+            }
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(target),
+                "--task",
+                "Investigate how workflow obligations are currently enforced",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    startup = json.loads(capsys.readouterr().out)
+    assert startup["next_safe_action"]["next_safe_action"] != "record-delegation-decision"
+    assert _start_workflow_sufficiency(startup)["decision"] != "delegation-decision-required"
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(target),
+                "--task",
+                "Investigate how workflow obligations are currently enforced",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    gate = _start_planning_safety_gate(payload)
+    assert gate["decision"] == "planning-backed"
+    assert gate["delegation_decision_required"] is False
+    assert gate["active_delegation_requirement"]["status"] == "delegation-decision-not-needed-for-direct-task"
+
+
 def test_implement_requires_delegation_decision_for_active_decomposed_lane(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
@@ -1609,7 +1679,12 @@ queued_items = []
                 "kind": "planning-execplan/v1",
                 "id": "mechanical-lane",
                 "status": "in-progress",
-                "post_decomposition_delegation": {"status": "recorded", "route chosen": "keep-local"},
+                "post_decomposition_delegation": {
+                    "status": "recorded",
+                    "route chosen": "keep-local",
+                    "decision command": "agentic-planning delegation-decision",
+                    "recorded at": "2026-05-21T15:04:09+00:00",
+                },
             }
         ),
     )
@@ -1629,6 +1704,56 @@ queued_items = []
     )
     recorded = _start_planning_safety_gate(json.loads(capsys.readouterr().out))
     assert recorded["status"] == "satisfied"
+
+
+def test_implement_rejects_hand_edited_active_plan_delegation_decision(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "mechanical-lane", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/mechanical-lane.plan.json", why_now = "prove delegation gate." },
+]
+queued_items = []
+""",
+    )
+    _write(
+        target / ".agentic-workspace/planning/execplans/mechanical-lane.plan.json",
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "id": "mechanical-lane",
+                "status": "in-progress",
+                "post_decomposition_delegation": {"status": "recorded", "route chosen": "keep-local"},
+            }
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(target),
+                "--task",
+                "Continue the decomposed mechanical lane implementation",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    gate = _start_planning_safety_gate(json.loads(capsys.readouterr().out))
+    assert gate["status"] == "blocked"
+    assert gate["decision"] == "delegation-decision-required"
+    assert gate["active_delegation_requirement"]["status"] == "delegation-decision-untrusted-shared-state"
 
 
 def test_implement_blocks_stale_parent_decomposition_for_active_epic_plan(tmp_path: Path, capsys) -> None:
@@ -1656,7 +1781,12 @@ queued_items = []
                 "id": "safety-slice",
                 "status": "in-progress",
                 "active_milestone": {"id": "safety-slice", "status": "in-progress"},
-                "post_decomposition_delegation": {"status": "recorded", "route chosen": "keep-local"},
+                "post_decomposition_delegation": {
+                    "status": "recorded",
+                    "route chosen": "keep-local",
+                    "decision command": "agentic-planning delegation-decision",
+                    "recorded at": "2026-05-21T15:04:09+00:00",
+                },
             }
         ),
     )
