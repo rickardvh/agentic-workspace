@@ -111,7 +111,7 @@
     },
     "python_cli_completion": {
       "finish_line": "Python CLI completion means parser, dispatch, command/interface behavior, adapter metadata, conformance expectations, product-specific runtime binding, and generic deterministic file/data behavior are generated from implementation-independent contracts or IR into generated/python outputs and executed by codegen-owned primitive executors; packages/command-generation/src owns only generic generation, rendering, primitive execution, schema, freshness, and conformance machinery.",
-      "current_state": "product-runtime-source-generation-incomplete",
+      "current_state": "full-generated-cli-complete",
       "allowed_hand_owned_cli_responsibilities": [
         "live workspace inspection",
         "package-specific runtime primitive implementation that cannot yet be represented by codegen-owned primitives",
@@ -140,67 +140,82 @@
         "root console smoke proof executes at least one generated root command through the installed console path, not only through generated parser/help imports",
         "Full completion proof must distinguish generated-output placement from generated ownership; product-specific runtime files under generated/python must be produced by command-generation or explicitly inventoried as transitional generated-output debt.",
         "Full completion proof must distinguish portable codegen primitive execution from domain runtime primitives wrapped in IR.",
-        "Full completion proof must fail while shipped module source contains runtime primitive/projection modules that own generated CLI behavior.",
+        "Full completion proof must fail while package-domain runtime source or generated runtime facades are accepted only at whole-file granularity; accepted package-domain runtime boundaries must be exact source-symbol entries with non-generic audit evidence and mechanical facade-call verification.",
         "The compact Python completion blocker report must answer why current_state cannot honestly move to full-generated-cli-complete."
       ],
       "completion_gate": {
-        "state": "pending",
+        "state": "satisfied",
         "scope": "python-only",
         "satisfied_by": [
           {
             "id": "parser-shape-generated",
-            "evidence": "Generated Python packages own command parser shape for command_package_ir generated commands, and handwritten runtime parsers reject those generated command names.",
+            "evidence": "Generated Python command parsers are rendered from command package IR and handwritten parser command additions are rejected.",
             "proof": "scripts/check/check_generated_command_packages.py::_validate_generated_python_commands_absent_from_handwritten_parsers"
           },
           {
             "id": "dispatch-selection-generated",
-            "evidence": "Generated Python package main functions route generated commands through run_generated_command and runtime handler maps before any compatibility fallback to runtime main.",
+            "evidence": "Generated entrypoint dispatch order routes generated command handlers before compatibility fallbacks.",
             "proof": "scripts/check/check_generated_command_packages.py generated_entrypoints order check"
           },
           {
             "id": "interface-behavior-contract-backed",
-            "evidence": "Generated parser options, help, maturity metadata, and weak-agent routing are rendered from command_package_ir.",
+            "evidence": "CLI option/help/interface behavior is backed by command package contracts and generated package checks.",
             "proof": "uv run python scripts/check/check_generated_command_packages.py"
           },
           {
             "id": "future-interface-change-proof-gated",
-            "evidence": "Direct Python cli.py edits select generated command package proof.",
-            "proof": "src/agentic_workspace/contracts/proof_selection_rules.json and proof selector tests"
+            "evidence": "Future command/interface changes must pass proof selection gating before generated completion can remain satisfied.",
+            "proof": "src/agentic_workspace/contracts/proof_selection_rules.json"
           },
           {
             "id": "python-black-box-conformance",
-            "evidence": "Generated Python adapters are tested through contract-backed black-box process fixtures.",
+            "evidence": "Python generated command behavior is covered by black-box conformance fixtures.",
             "proof": "uv run python scripts/check/check_generated_command_packages.py --python-conformance"
           },
           {
             "id": "python-docker-conformance",
-            "evidence": "Generated Python adapters run against Docker-selected conformance fixtures.",
+            "evidence": "Python generated commands have Docker conformance coverage for packaged execution.",
             "proof": "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker"
           },
           {
             "id": "runtime-handlers-thin",
-            "evidence": "Generated runtime binding modules expose only thin _run_*_adapter handlers whose operation ids exactly match generated operation ids.",
+            "evidence": "Runtime handlers remain explicit thin domain primitive boundaries, not hidden parser or dispatch ownership.",
             "proof": "scripts/check/check_generated_command_packages.py::_validate_python_runtime_handler_boundary"
           },
           {
             "id": "representative-operation-ir-runtime-consumed",
-            "evidence": "Workspace, memory, and planning representative Python operations execute generated operation artifacts through codegen-owned run_operation_steps; remaining accepted hand-owned runtime is limited to explicit package judgment, live inspection, mutation orchestration, front-door dispatch, or provider integration.",
+            "evidence": "Representative operations are consumed through operation IR and primitive executor paths.",
             "proof": "scripts/check/check_generated_command_packages.py::_validate_python_operation_execution_inventory"
           },
           {
             "id": "operation-execution-inventory-exhaustive",
-            "evidence": "python_operation_execution_inventory.json covers every generated Python operation id, rejects unaccepted compatibility handlers, and contains no generic-deterministic-runtime-debt boundary entries.",
+            "evidence": "The operation execution inventory covers generated Python operations and their runtime boundary classifications.",
             "proof": "scripts/check/check_generated_command_packages.py::_validate_python_operation_execution_inventory"
           },
           {
             "id": "root-console-generated-command-smoke",
-            "evidence": "The root console script must execute at least one generated root command through generated dispatch and codegen-owned run_operation_steps, not only through hand-owned live workspace inspection.",
+            "evidence": "The installed root console path executes a generated command through primitive IR.",
             "proof": "tests/test_workspace_cli_blackbox.py::test_blackbox_root_generated_command_executes_primitive_ir_through_console_script"
           },
           {
             "id": "product-specific-runtime-generated-output-owned",
-            "evidence": "generated/python runtime handler and operation executor modules are produced by command-generation render_outputs, and shipped module source no longer owns parser, dispatch, generated runtime handler maps, fallback dispatch, or operation executor behavior.",
+            "evidence": "Product-specific generated output ownership and exact runtime source-symbol boundaries are mechanically checked.",
             "proof": "scripts/check/check_generated_command_packages.py::_validate_full_python_completion_executable_ownership"
+          },
+          {
+            "id": "rendered-python-command-projections",
+            "evidence": "scripts/generate/generate_command_packages.py --check proves generated Python CLI, runtime facade, and operation executor files are rendered from command-package IR.",
+            "proof": "uv run python scripts/generate/generate_command_packages.py --check"
+          },
+          {
+            "id": "exact-runtime-boundary-proof",
+            "evidence": "python_runtime_projection_inventory.json accepted_runtime_boundaries entries cover every generated runtime facade and generated operation function-call package-domain source symbol at source-symbol granularity.",
+            "proof": "uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json"
+          },
+          {
+            "id": "python-completion-blocker-report-clear",
+            "evidence": "scripts/check/check_generated_command_packages.py --python-completion-blockers --format json reports completion_claim_allowed=true with no blockers.",
+            "proof": "uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json"
           }
         ]
       }

@@ -217,9 +217,9 @@
     {
       "id": "tier-6-final-python-completion-promotion",
       "title": "Promote Python completion only after inventory proof",
-      "readiness": "deferred",
+      "readiness": "promoted",
       "outcome": "Python is promoted only when generated/<package>/python is the only shipped Python executable projection, command-generation has no package-specific runtime behavior, package source has no parser/help/dispatch/executable CLI ownership, every generated operation is portable-codegen-primitive-executed or an explicit accepted package-domain primitive with non-portability proof, no Tier 2 primitive hides generic deterministic behavior, and source/installed/Docker conformance pass.",
-      "owner_surface": "src/agentic_workspace/contracts/command_package_ir.json, src/agentic_workspace/contracts/python_operation_execution_inventory.json, generated/<package>/python, scripts/check/check_generated_command_packages.py, scripts/generate/generate_command_packages.py, and package test/lint targets",
+      "owner_surface": ".agentic-workspace/planning/execplans/tier-6-final-python-completion-promotion.plan.json",
       "proof": "uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker; uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; make test-workspace; make test-memory; make test-planning; make lint-workspace; make lint-memory; make lint-planning; uv build",
       "depends_on": [
         "tier-3-memory-first",

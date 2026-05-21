@@ -1,0 +1,329 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Address PR 1074 exact runtime boundary review",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Address PR #1074 review by removing whole-file Tier 6 runtime acceptance and keeping completion blocked until exact source-symbol proof exists.",
+    "hard_constraints": "Do not claim full Python completion from file-level runtime source or generated facade acceptance.",
+    "agent_may_decide": "Use exact symbol-level boundary checks and focused tests without migrating the remaining runtime behavior in this review follow-up.",
+    "escalate_when": "A requested fix would require completing all remaining package-domain runtime migration rather than preserving the blocker.",
+    "next_action": "Demote the Python completion gate, replace file-level acceptance with exact source-symbol requirements, and prove the blocker report stays blocked.",
+    "proof_expectations": "['uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json', 'uv run python scripts/check/check_generated_command_packages.py', 'uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q', 'uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success', 'uv run python scripts/check/check_structured_file_inventory.py --quiet-success', 'make schema-reference-docs']",
+    "touched_scope": "['src/agentic_workspace/contracts/command_package_ir.json', 'src/agentic_workspace/contracts/python_runtime_projection_inventory.json', 'src/agentic_workspace/contracts/schemas/python_runtime_projection_inventory.schema.json', 'scripts/check/check_generated_command_packages.py', 'tests/test_generated_command_package_proof_runner.py', 'tests/test_contract_tooling.py', 'docs/reference/python-runtime-projection-inventory.md', '.agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json']",
+    "completion_criteria": "['PR #1074 no longer claims Tier 6 completion; blocker report names exact source-symbol proof as required; tests and contract checks pass.']",
+    "continuation_owner": "#892 / tier-6-final-python-completion-promotion",
+    "closeout_decision": "archive-but-keep-lane-open"
+  },
+  "goal": [
+    "Address PR #1074 review by removing whole-file Tier 6 runtime acceptance and keeping completion blocked until exact source-symbol proof exists."
+  ],
+  "non_goals": [
+    "Do not complete the exact symbol inventory or remaining runtime migrations in this review follow-up."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Address PR #1074 review by removing whole-file Tier 6 runtime acceptance and keeping completion blocked until exact source-symbol proof exists.",
+      "constraints": "Do not claim full Python completion from file-level runtime source or generated facade acceptance.",
+      "latitude": "Use exact symbol-level boundary checks and focused tests without migrating the remaining runtime behavior in this review follow-up.",
+      "escalation": "A requested fix would require completing all remaining package-domain runtime migration rather than preserving the blocker."
+    },
+    "execution": {
+      "milestone": "pr-1074-exact-runtime-boundary-review",
+      "status": "completed",
+      "next_step": "Demote the Python completion gate, replace file-level acceptance with exact source-symbol requirements, and prove the blocker report stays blocked.",
+      "proof": "uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json; uv run python scripts/check/check_generated_command_packages.py; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; make schema-reference-docs"
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/contracts/command_package_ir.json",
+        "src/agentic_workspace/contracts/python_runtime_projection_inventory.json",
+        "src/agentic_workspace/contracts/schemas/python_runtime_projection_inventory.schema.json",
+        "scripts/check/check_generated_command_packages.py",
+        "tests/test_generated_command_package_proof_runner.py",
+        "tests/test_contract_tooling.py",
+        "docs/reference/python-runtime-projection-inventory.md",
+        ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Tier 6 final Python completion promotion for #892.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "#892 / tier-6-final-python-completion-promotion"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "#892 / tier-6-final-python-completion-promotion",
+    "activation trigger": "Resume when exact source-symbol runtime boundary inventory and remaining migration proof are selected."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "PR #1074 now preserves the stricter review bar and blocks Tier 6 until exact runtime boundaries exist.",
+    "intentionally deferred": "Exact source-symbol inventory and any remaining migration of deterministic runtime behavior.",
+    "discovered implications": "Whole-file runtime acceptance is not an acceptable final completion proof.",
+    "proof achieved now": "yes",
+    "validation still needed": "none for this review follow-up",
+    "next likely slice": "#892 / tier-6-final-python-completion-promotion exact symbol inventory or runtime migration"
+  },
+  "intent_interpretation": {
+    "literal request": "There is a comment on #1074. Implement the requested changes.",
+    "inferred intended outcome": "Address PR #1074 review by removing whole-file Tier 6 runtime acceptance and keeping completion blocked until exact source-symbol proof exists.",
+    "chosen concrete what": "Demote the Python completion gate, replace file-level acceptance with exact source-symbol requirements, and prove the blocker report stays blocked.",
+    "interpretation distance": "low",
+    "review guidance": "Verify the PR no longer claims Tier 6 completion without exact symbol-level proof."
+  },
+  "execution_bounds": {
+    "allowed paths": "src/agentic_workspace/contracts/command_package_ir.json, src/agentic_workspace/contracts/python_runtime_projection_inventory.json, src/agentic_workspace/contracts/schemas/python_runtime_projection_inventory.schema.json, scripts/check/check_generated_command_packages.py, tests/test_generated_command_package_proof_runner.py, tests/test_contract_tooling.py, docs/reference/python-runtime-projection-inventory.md, .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+    "max changed files": "about 10 files",
+    "required validation commands": "uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json; uv run python scripts/check/check_generated_command_packages.py; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; make schema-reference-docs",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Create a bounded plan for Address PR 1074 exact runtime boundary review.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "pending",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "pr-1074-exact-runtime-boundary-review",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Demote the Python completion gate, replace file-level acceptance with exact source-symbol requirements, and prove the blocker report stays blocked."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    "src/agentic_workspace/contracts/python_runtime_projection_inventory.json",
+    "src/agentic_workspace/contracts/schemas/python_runtime_projection_inventory.schema.json",
+    "scripts/check/check_generated_command_packages.py",
+    "tests/test_generated_command_package_proof_runner.py",
+    "tests/test_contract_tooling.py",
+    "docs/reference/python-runtime-projection-inventory.md",
+    ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "make schema-reference-docs"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "PR #1074 no longer claims Tier 6 completion; blocker report names exact source-symbol proof as required; tests and contract checks pass."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Demoted python_cli_completion to pending, replaced whole-file accepted runtime boundaries with exact source-symbol proof requirements, added mechanical facade binding discovery, restored the Tier 6 blocker report, and removed the misleading Tier 6 completion archive.",
+    "scope touched": "src/agentic_workspace/contracts/command_package_ir.json, src/agentic_workspace/contracts/python_runtime_projection_inventory.json, src/agentic_workspace/contracts/schemas/python_runtime_projection_inventory.schema.json, scripts/check/check_generated_command_packages.py, tests/test_generated_command_package_proof_runner.py, tests/test_contract_tooling.py, docs/reference/python-runtime-projection-inventory.md, .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+    "changed surfaces": "src/agentic_workspace/contracts/command_package_ir.json, src/agentic_workspace/contracts/python_runtime_projection_inventory.json, src/agentic_workspace/contracts/schemas/python_runtime_projection_inventory.schema.json, scripts/check/check_generated_command_packages.py, tests/test_generated_command_package_proof_runner.py, tests/test_contract_tooling.py, docs/reference/python-runtime-projection-inventory.md, .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
+    "validations run": "uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json; uv run python scripts/check/check_generated_command_packages.py; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; make schema-reference-docs",
+    "result for continuation": "Tier 6 remains open under #892 until exact source-symbol proof or remaining migration completes.",
+    "next step": "Push PR #1074 update."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "#892 remains open for Tier 6 exact-boundary proof"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "The review fix was tightly coupled and already locally inspected.",
+    "expected savings": "none",
+    "actual friction": "none beyond required planning record",
+    "proof result": "passed",
+    "quality concern": "none",
+    "decomposition adjustment": "Tier 6 remains deferred/open."
+  },
+  "proof_report": {
+    "validation proof": "uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json; uv run python scripts/check/check_generated_command_packages.py; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; make schema-reference-docs",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "python-completion-blockers reports completion_claim_allowed=false with exact accepted source-symbol boundary entries required."
+  },
+  "intent_satisfaction": {
+    "original intent": "Address PR #1074 review by removing whole-file Tier 6 runtime acceptance and keeping completion blocked until exact source-symbol proof exists.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "PR #1074 review follow-up is complete: whole-file runtime acceptance was removed and the blocker report now requires exact accepted source-symbol boundary entries before full Python completion can be claimed.",
+    "unsolved intent passed to": "#892 / tier-6-final-python-completion-promotion"
+  },
+  "execution_summary": {
+    "outcome delivered": "PR #1074 review request addressed; Tier 6 completion claim demoted.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "#892 / tier-6-final-python-completion-promotion",
+    "post-work posterity capture": "this archived review-followup plan",
+    "knowledge promoted (Memory/Docs/Config)": "contract/check tests now encode the review boundary",
+    "resume from": "#892 exact-boundary proof"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "none",
+    "proposed durable intent": "none yet",
+    "confidence": "low",
+    "needs review": "True",
+    "owner surface": "none"
+  },
+  "closure_check": {
+    "closeout scope": "lane",
+    "slice status": "complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "This review-followup slice is complete, but the larger Tier 6 completion lane remains open until exact source-symbol runtime proof or remaining migration is done.",
+    "evidence carried forward": "python-completion-blockers reports completion_claim_allowed=false, current_state=product-runtime-source-generation-incomplete, completion_gate_state=pending, and missing exact facade source-symbol boundary entries.",
+    "reopen trigger": "Reopen if PR #1074 again claims Tier 6 completion from whole-file runtime acceptance."
+  },
+  "improvement_signal_review": {
+    "status": "no_signal_found",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Improvement signal review was checked and no signal was found.",
+          "owner": "none",
+          "source": "improvement_signal_review.status"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#892 tier-6-final-python-completion-promotion remains open for exact source-symbol proof or migration.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "Exact source-symbol boundary rules are encoded in contract schema, checker, and tests.",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "contract/check tests now encode the review boundary",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-21: Scaffolded by agentic-planning new-plan.",
+    "2026-05-21: Addressed PR #1074 review by removing whole-file runtime acceptance and restoring the Tier 6 blocker pending exact source-symbol proof."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Address PR #1074 review by removing whole-file Tier 6 runtime acceptance and keeping completion blocked until exact source-symbol proof exists.\nIntent satisfied: no\nArchive decision: archive-but-keep-lane-open\nProof: uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json; uv run python scripts/check/check_generated_command_packages.py; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_contract_tooling.py -q; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; make schema-reference-docs\nChanged surfaces: src/agentic_workspace/contracts/command_package_ir.json, src/agentic_workspace/contracts/python_runtime_projection_inventory.json, src/agentic_workspace/contracts/schemas/python_runtime_projection_inventory.schema.json, scripts/check/check_generated_command_packages.py, tests/test_generated_command_package_proof_runner.py, tests/test_contract_tooling.py, docs/reference/python-runtime-projection-inventory.md, .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json\nDurable residue: none (none)\nMemory learning: none\nFollow-up: #892 / tier-6-final-python-completion-promotion"
+  }
+}

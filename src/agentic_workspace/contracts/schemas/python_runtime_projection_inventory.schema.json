@@ -11,6 +11,7 @@
     "purpose",
     "completion_rule",
     "allowed_provenance_statuses",
+    "accepted_runtime_boundaries",
     "entries"
   ],
   "properties": {
@@ -43,6 +44,42 @@
       },
       "uniqueItems": true,
       "description": "Allowed provenance status values for runtime projection entries."
+    },
+    "accepted_runtime_boundaries": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "completion_rule",
+        "required_granularity",
+        "status",
+        "entries"
+      ],
+      "properties": {
+        "completion_rule": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Rule for accepting exact package-domain runtime source symbols under full Python generated CLI completion."
+        },
+        "required_granularity": {
+          "const": "source-symbol",
+          "description": "Whole-file package runtime or generated facade acceptance is not sufficient for full Python completion."
+        },
+        "status": {
+          "enum": [
+            "exact-symbol-proof-required",
+            "exact-symbol-proof-satisfied"
+          ],
+          "description": "Whether exact symbol-level proof is still required or satisfied."
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/accepted_runtime_boundary"
+          },
+          "description": "Exact source-symbol package-domain runtime boundaries."
+        }
+      },
+      "description": "Exact package-domain runtime boundaries. Whole-file runtime source or generated facade entries are not accepted."
     },
     "entries": {
       "type": "array",
@@ -132,8 +169,153 @@
           "description": "Resolution required if the entry blocks completion or maintenance action required if it does not."
         }
       }
+    },
+    "accepted_runtime_boundary": {
+      "type": "object",
+      "description": "One exact accepted package-domain runtime source symbol reached through a generated facade wrapper or generated operation function-call step.",
+      "additionalProperties": false,
+      "required": [
+        "binding_kind",
+        "source_module",
+        "source_symbol",
+        "owner_package",
+        "operation_ids",
+        "primitive_refs",
+        "runtime_boundary_class",
+        "why_not_generic_deterministic",
+        "conformance_ref",
+        "status",
+        "generic_behavior_audit"
+      ],
+      "properties": {
+        "binding_kind": {
+          "enum": [
+            "runtime-facade-call",
+            "operation-function-call"
+          ],
+          "description": "Generated call-site kind that reaches the package-domain source symbol."
+        },
+        "facade_path": {
+          "type": "string",
+          "pattern": "^generated/(workspace/python/primitives/workspace_runtime|planning/python/primitives/(planning_installer|planning_runtime)|memory/python/primitives/memory_runtime)\\.py$",
+          "description": "Generated runtime facade path containing the wrapper."
+        },
+        "facade_symbol": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+          "description": "Generated facade wrapper symbol."
+        },
+        "operation_path": {
+          "type": "string",
+          "pattern": "^generated/(workspace|planning|memory)/python/operations/[A-Za-z0-9_.-]+\\.json$",
+          "description": "Generated operation contract path containing the exact function-call step."
+        },
+        "operation_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Generated operation id containing the exact function-call step."
+        },
+        "source_module": {
+          "enum": [
+            "agentic_workspace.workspace_runtime_primitives",
+            "agentic_workspace.doctor",
+            "repo_planning_bootstrap.installer",
+            "repo_planning_bootstrap.runtime_projection",
+            "repo_memory_bootstrap.installer",
+            "repo_memory_bootstrap.runtime_primitives"
+          ],
+          "description": "Package-domain source module imported by the generated facade wrapper."
+        },
+        "source_symbol": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+          "description": "Exact package-domain source symbol imported by the generated facade wrapper."
+        },
+        "owner_package": {
+          "type": "string",
+          "minLength": 1
+        },
+        "operation_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Generated operation ids allowed to reach this source symbol."
+        },
+        "primitive_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Runtime primitive refs allowed to reach this source symbol."
+        },
+        "runtime_boundary_class": {
+          "enum": [
+            "front-door-dispatch",
+            "live-workspace-inspection",
+            "mutation-orchestration",
+            "package-specific-judgment",
+            "provider-integration"
+          ],
+          "description": "Non-generic package-domain runtime classification."
+        },
+        "why_not_generic_deterministic": {
+          "type": "string",
+          "minLength": 1
+        },
+        "conformance_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": [
+            "accepted-permanent-package-domain-boundary",
+            "migration-required-before-full-completion"
+          ],
+          "description": "Only accepted-permanent-package-domain-boundary can support full Python completion."
+        },
+        "generic_behavior_audit": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "binding_kind": {
+                "const": "runtime-facade-call"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "facade_path",
+              "facade_symbol"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "binding_kind": {
+                "const": "operation-function-call"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "operation_path",
+              "operation_id"
+            ]
+          }
+        }
+      ]
     }
   },
   "x-agentic-workspace-doc-role": "contract-reference"
 }
-
