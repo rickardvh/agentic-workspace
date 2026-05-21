@@ -6537,7 +6537,16 @@ def _memory_consult_payload(
                 "consultation_state": payload["consultation_state"],
                 "do_not_bulk_read": True,
             }
-        keys = ("kind", "status", "consultation_state", "read_first", "max_notes", "do_not_bulk_read")
+        keys = (
+            "kind",
+            "status",
+            "consultation_state",
+            "read_first",
+            "max_notes",
+            "do_not_bulk_read",
+            "changed_path_route_count",
+            "route_matches",
+        )
         keys = (*keys, "why", "selection_rule")
         return {key: payload[key] for key in keys if key in payload}
     return payload
@@ -18540,11 +18549,16 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
             target=target_root.as_posix(), profile=summary_profile, task_text=getattr(args, "task", None), changed_paths=changed_paths
         )
         if isinstance(summary, dict):
-            summary["memory_consult"] = (
-                _memory_consult_payload(target_root=target_root, compact=False, cli_invoke=config.cli_invoke)
-                if summary_profile == "full"
-                else _tiny_memory_consult_payload(config=config)
-            )
+            if summary_profile == "full":
+                summary["memory_consult"] = _memory_consult_payload(
+                    target_root=target_root, changed_paths=changed_paths, compact=False, cli_invoke=config.cli_invoke
+                )
+            elif changed_paths:
+                summary["memory_consult"] = _memory_consult_payload(
+                    target_root=target_root, changed_paths=changed_paths, compact=True, cli_invoke=config.cli_invoke
+                )
+            else:
+                summary["memory_consult"] = _tiny_memory_consult_payload(config=config)
             closeout_inspection = _completion_closeout_inspection_payload(
                 target_root=target_root, config=config, task_text=getattr(args, "task", None)
             )

@@ -2370,6 +2370,49 @@ def test_summary_command_includes_memory_consult(tmp_path: Path, capsys) -> None
     assert payload["memory_consult"]["consultation_state"] == "checked-with-matches"
 
 
+def test_summary_changed_path_memory_consult_surfaces_route_matches(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write(target / ".agentic-workspace" / "memory" / "repo" / "domains" / "api.md", "# API\n")
+    _write(
+        target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml",
+        """
+version = 1
+
+[notes.".agentic-workspace/memory/repo/index.md"]
+note_type = "routing"
+canonical_home = ".agentic-workspace/memory/repo/index.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "required"
+routing_only = true
+
+[notes.".agentic-workspace/memory/repo/domains/api.md"]
+note_type = "domain"
+canonical_home = ".agentic-workspace/memory/repo/domains/api.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "required"
+routes_from = ["src/api.py"]
+surfaces = ["api"]
+""".strip()
+        + "\n",
+    )
+
+    assert cli.main(["summary", "--target", str(target), "--changed", "src/api.py", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    memory_consult = payload["memory_consult"]
+    assert memory_consult["changed_path_route_count"] >= 1
+    assert any(match["path"] == ".agentic-workspace/memory/repo/domains/api.md" for match in memory_consult["route_matches"])
+    assert ".agentic-workspace/memory/repo/domains/api.md" in memory_consult["read_first"]
+
+
 def test_memory_consult_uses_local_cli_invoke_for_memory_helpers(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
