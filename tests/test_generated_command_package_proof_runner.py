@@ -160,6 +160,24 @@ def test_full_python_completion_rejects_wrong_operation_function_call_metadata(m
     assert any("must declare operation_ids" in error for error in errors)
 
 
+def test_full_python_completion_rejects_weak_output_boundary_audit(monkeypatch) -> None:
+    checker = _load_checker()
+    inventory = copy.deepcopy(checker.python_runtime_projection_inventory_manifest())
+    entry = next(
+        item for item in inventory["accepted_runtime_boundaries"]["entries"] if item.get("source_symbol") == "_emit_memory_operation_output"
+    )
+    entry["runtime_boundary_class"] = "mutation-orchestration"
+    entry["why_not_generic_deterministic"] = "package output"
+    entry["generic_behavior_audit"] = "package output"
+    monkeypatch.setattr(checker, "python_runtime_projection_inventory_manifest", lambda: inventory)
+
+    errors = checker._validate_python_completion_accepted_runtime_boundaries()[0]
+
+    assert any("output-emission boundary must use runtime_boundary_class='package-specific-judgment'" in error for error in errors)
+    assert any("output-emission boundary must explain the remaining package-specific output judgment" in error for error in errors)
+    assert any("output-emission boundary audit must include 'generated-owned output coverage:'" in error for error in errors)
+
+
 def test_current_python_completion_state_is_satisfied_by_exact_symbol_proof() -> None:
     checker = _load_checker()
     ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)

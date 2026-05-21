@@ -1678,6 +1678,23 @@ def test_python_runtime_projection_inventory_tracks_generated_output_debt() -> N
     assert {"runtime-facade-call", "operation-function-call"} <= binding_kinds
     assert all(entry["status"] == "accepted-permanent-package-domain-boundary" for entry in accepted_boundaries["entries"])
     assert all(entry["operation_ids"] and entry["primitive_refs"] for entry in accepted_boundaries["entries"])
+    output_entries = [
+        entry
+        for entry in accepted_boundaries["entries"]
+        if entry["source_symbol"]
+        in {
+            "_emit_memory_operation_output",
+            "_emit_workspace_operation_output",
+            "emit_planning_operation_output",
+        }
+    ]
+    assert len(output_entries) == 3
+    for entry in output_entries:
+        assert entry["runtime_boundary_class"] == "package-specific-judgment"
+        assert "remaining package-specific output judgment" in entry["why_not_generic_deterministic"]
+        assert "generated-owned output coverage:" in entry["generic_behavior_audit"]
+        assert "accepted source fallback:" in entry["generic_behavior_audit"]
+        assert "not accepted as generic output" in entry["generic_behavior_audit"]
 
 
 def test_contract_tooling_check_enforces_root_cli_authority_audit() -> None:

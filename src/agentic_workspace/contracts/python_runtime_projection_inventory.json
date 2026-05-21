@@ -525,11 +525,11 @@
         "primitive_refs": [
           "output.emit"
         ],
-        "runtime_boundary_class": "mutation-orchestration",
-        "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "Generated JSON dict emission and common compact/tiny text forms are emitted before source fallback. The accepted source fallback is remaining package-specific output judgment for memory capture-note, current, prompt, promotion, install/adopt/init result, route review, and Memory report compatibility text whose wording is coupled to Memory package semantics.",
         "conformance_ref": "memory.bootstrap-cleanup.process, memory.capture-note.process, memory.create-note.dry-run.process, memory.current-show.process, memory.list-files.process, memory.list-skills.process, memory.migrate-layout.lifecycle.dry-run.process, memory.promotion-report.process, memory.prompt.process, memory.report.process, memory.route-report.process, memory.route-review.process, memory.route.process, memory.search.process, memory.sync-memory.process, memory.uninstall.lifecycle.dry-run.process, memory.upgrade.lifecycle.dry-run.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.bootstrap.cleanup) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "generated-owned output coverage: JSON dict emission, compact-answer text, selected-output text, delegation-outcomes text, planning-module tiny text, and memory route/report text are handled in the generated facade or codegen output primitive before source fallback. accepted source fallback: memory capture-note, current, prompt, promotion, install/adopt/init result, route review, and Memory report compatibility text remain in Memory runtime because they encode Memory package semantics and compatibility wording. not accepted as generic output: generic JSON/text dict emission is already generated-owned and this exact symbol is accepted only for the named Memory-specific fallback cases."
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -831,11 +831,11 @@
         "primitive_refs": [
           "output.emit"
         ],
-        "runtime_boundary_class": "mutation-orchestration",
-        "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "Generated JSON dict emission and common compact/tiny text forms are emitted before source fallback. The accepted source fallback is remaining package-specific output judgment for planning summary, reconcile, handoff, prompt, list-files, and Planning lifecycle result compatibility text whose wording is coupled to Planning state semantics.",
         "conformance_ref": "planning.adopt.lifecycle.dry-run.process, planning.archive-plan.lifecycle.dry-run.process, planning.close-item.process, planning.closeout.lifecycle.dry-run.process, planning.create-review.process, planning.delegation-decision.lifecycle.dry-run.process, planning.doctor.process, planning.handoff.process, planning.init.lifecycle.dry-run.process, planning.install.lifecycle.dry-run.process, planning.intake-artifact.lifecycle.dry-run.process, planning.list-files.process, planning.new-plan.lifecycle.dry-run.process, planning.promote-to-plan.lifecycle.dry-run.process, planning.prompt.process, planning.reconcile.process, planning.report.process, planning.status.process, planning.summary.process, planning.uninstall.lifecycle.dry-run.process, planning.upgrade.lifecycle.dry-run.process, planning.verify-payload.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.adopt.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "generated-owned output coverage: JSON dict emission, compact-answer text, selected-output text, delegation-outcomes text, planning-module tiny text, and memory route/report text are handled in the generated facade or codegen output primitive before source fallback. accepted source fallback: planning summary, reconcile, handoff, prompt, list-files, and Planning lifecycle result compatibility text remain in Planning runtime because they encode Planning state view semantics and package compatibility wording. not accepted as generic output: generic JSON/text dict emission is already generated-owned and this exact symbol is accepted only for the named Planning-specific fallback cases."
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -935,10 +935,10 @@
           "workspace.config.emit"
         ],
         "runtime_boundary_class": "package-specific-judgment",
-        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "why_not_generic_deterministic": "Generated JSON, selected-output, compact-answer, defaults-router, delegation-outcome, planning-module tiny, and memory route/report text are emitted before source fallback. The accepted source fallback is remaining package-specific output judgment for prompt payload text, workspace-system-intent text, and config/defaults compatibility surfaces whose wording depends on workspace package policy.",
         "conformance_ref": "config.report.process, defaults.report.process, delegation-outcome.append.process, prompt.init.process, prompt.uninstall.process, prompt.upgrade.process, system-intent.sync.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, and generated output owns selected-output text. Domain primitive refs (workspace.root.resolve, workspace.config.load, output.fields.select, workspace.config.emit) remain explicit package-boundary calls for config loading, profile projection, and tiny/full text. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "generated-owned output coverage: JSON dict emission, selected-output text, compact-answer text, defaults-router text, delegation-outcomes text, planning-module tiny text, and memory route/report text are handled in the generated facade or codegen output primitive before source fallback. accepted source fallback: prompt payload text, workspace-system-intent text, and config/defaults compatibility emitters remain in workspace runtime because their wording is coupled to workspace policy and compatibility contracts. not accepted as generic output: generic JSON/text dict emission is already generated-owned and this exact symbol is accepted only for the named package-specific fallback cases."
       },
       {
         "binding_kind": "runtime-facade-call",

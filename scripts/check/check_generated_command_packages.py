@@ -125,6 +125,11 @@ PYTHON_OPERATION_ACCEPTED_BOUNDARY_CLASSES = {
     "provider-integration",
 }
 PYTHON_OPERATION_FULL_COMPLETION_BLOCKING_BOUNDARY_CLASSES = {"generic-deterministic-runtime-debt"}
+PYTHON_OUTPUT_BOUNDARY_AUDIT_REQUIRED_PHRASES = (
+    "generated-owned output coverage:",
+    "accepted source fallback:",
+    "not accepted as generic output",
+)
 REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE = {
     "path.target_root.resolve",
     "filesystem.read",
@@ -1498,6 +1503,7 @@ def _validate_python_completion_accepted_runtime_boundaries(*, require_exact: bo
                 f"{location} must declare status={PYTHON_ACCEPTED_RUNTIME_BOUNDARY_PERMANENCE_STATUS!r} "
                 "before full Python completion can be claimed"
             )
+        errors.extend(_validate_python_completion_output_boundary_audit(entry, location=location))
         accepted_keys.add(key)
 
     missing_keys = sorted(expected_keys - accepted_keys)
@@ -1517,6 +1523,23 @@ def _validate_python_completion_accepted_runtime_boundaries(*, require_exact: bo
             if keys and keys <= accepted_keys:
                 accepted_nonblocking_paths.add(source_path)
     return errors, accepted_nonblocking_paths
+
+
+def _validate_python_completion_output_boundary_audit(entry: dict[str, object], *, location: str) -> list[str]:
+    source_symbol = str(entry.get("source_symbol", ""))
+    if "emit" not in source_symbol:
+        return []
+    errors: list[str] = []
+    if str(entry.get("runtime_boundary_class", "")) != "package-specific-judgment":
+        errors.append(f"{location} output-emission boundary must use runtime_boundary_class='package-specific-judgment'")
+    why = str(entry.get("why_not_generic_deterministic", ""))
+    audit = str(entry.get("generic_behavior_audit", ""))
+    if "remaining package-specific output judgment" not in why:
+        errors.append(f"{location} output-emission boundary must explain the remaining package-specific output judgment")
+    for phrase in PYTHON_OUTPUT_BOUNDARY_AUDIT_REQUIRED_PHRASES:
+        if phrase not in audit:
+            errors.append(f"{location} output-emission boundary audit must include {phrase!r}")
+    return errors
 
 
 def _generated_runtime_facade_package_runtime_bindings() -> list[dict[str, str]]:
