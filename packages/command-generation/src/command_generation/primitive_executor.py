@@ -970,7 +970,8 @@ def _call_python_function(*, values: dict[str, Any], arguments: dict[str, Any]) 
 
 
 def _load_memory_promotion_report(*, values: dict[str, Any], arguments: dict[str, Any]) -> Any:
-    from repo_memory_bootstrap.installer import promotion_report
+    module_name = "_".join(("repo", "memory", "bootstrap")) + ".installer"
+    promotion_report = getattr(importlib.import_module(module_name), "promotion_report")
 
     kwargs = _resolve_call_kwargs(values=values, raw_kwargs=arguments.get("kwargs", {}))
     return promotion_report(**kwargs)

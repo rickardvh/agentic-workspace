@@ -2408,7 +2408,7 @@ export const generatedCommandPackage = {
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "python.function.call",
+          "memory.promotion_report.load",
           "output.emit"
         ]
       },
