@@ -35,7 +35,11 @@ from workspace_command_generation import (  # noqa: E402
     render_workspace_command_package_outputs,
 )
 
-from agentic_workspace.contract_tooling import operation_manifest, python_runtime_projection_inventory_manifest  # noqa: E402
+from agentic_workspace.contract_tooling import (  # noqa: E402
+    command_package_ir_manifest,
+    operation_manifest,
+    python_runtime_projection_inventory_manifest,
+)
 from command_generation.generated_package_loader import (  # noqa: E402
     load_generated_command_module_for_entrypoint,
     load_generated_command_package_for_entrypoint,
@@ -165,7 +169,6 @@ PYTHON_FULL_COMPLETION_BLOCKING_EXECUTABLE_PATHS = (
 )
 PYTHON_FULL_COMPLETION_BLOCKING_RUNTIME_SOURCE_PATHS = (
     "src/agentic_workspace/workspace_runtime_primitives.py",
-    "src/agentic_workspace/doctor.py",
     "packages/planning/src/repo_planning_bootstrap/installer.py",
     "packages/planning/src/repo_planning_bootstrap/runtime_projection.py",
     "packages/memory/src/repo_memory_bootstrap/installer.py",
@@ -1367,8 +1370,10 @@ def _validate_python_completion_accepted_runtime_boundaries(*, require_exact: bo
         errors.append("python_runtime_projection_inventory.json accepted_runtime_boundaries must require source-symbol granularity")
 
     facade_bindings = _generated_runtime_facade_package_runtime_bindings()
+    operation_bindings = _generated_operation_package_runtime_bindings()
     expected_keys = {
         (
+            "runtime-facade-call",
             binding["facade_path"],
             binding["facade_symbol"],
             binding["source_module"],
@@ -1376,7 +1381,41 @@ def _validate_python_completion_accepted_runtime_boundaries(*, require_exact: bo
         )
         for binding in facade_bindings
     }
-    accepted_keys: set[tuple[str, str, str, str]] = set()
+    expected_keys.update(
+        {
+            (
+                "operation-function-call",
+                binding["operation_path"],
+                binding["operation_id"],
+                binding["source_module"],
+                binding["source_symbol"],
+            )
+            for binding in operation_bindings
+        }
+    )
+    expected_by_key = {
+        (
+            "runtime-facade-call",
+            binding["facade_path"],
+            binding["facade_symbol"],
+            binding["source_module"],
+            binding["source_symbol"],
+        ): binding
+        for binding in facade_bindings
+    }
+    expected_by_key.update(
+        {
+            (
+                "operation-function-call",
+                binding["operation_path"],
+                binding["operation_id"],
+                binding["source_module"],
+                binding["source_symbol"],
+            ): binding
+            for binding in operation_bindings
+        }
+    )
+    accepted_keys: set[tuple[str, str, str, str, str]] = set()
     source_path_by_module = {
         "agentic_workspace.workspace_runtime_primitives": "src/agentic_workspace/workspace_runtime_primitives.py",
         "agentic_workspace.doctor": "src/agentic_workspace/doctor.py",
@@ -1385,9 +1424,9 @@ def _validate_python_completion_accepted_runtime_boundaries(*, require_exact: bo
         "repo_memory_bootstrap.installer": "packages/memory/src/repo_memory_bootstrap/installer.py",
         "repo_memory_bootstrap.runtime_primitives": "packages/memory/src/repo_memory_bootstrap/runtime_primitives.py",
     }
-    source_path_keys: dict[str, set[tuple[str, str, str, str]]] = {path: set() for path in source_path_by_module.values()}
+    source_path_keys: dict[str, set[tuple[str, str, str, str, str]]] = {path: set() for path in source_path_by_module.values()}
     for key in expected_keys:
-        source_path = source_path_by_module.get(key[2])
+        source_path = source_path_by_module.get(key[3])
         if source_path:
             source_path_keys[source_path].add(key)
 
@@ -1396,14 +1435,44 @@ def _validate_python_completion_accepted_runtime_boundaries(*, require_exact: bo
         if "path" in entry or entry.get("boundary_kind") in {"package-runtime-source", "generated-runtime-facade-bridge"}:
             errors.append(f"{location} uses whole-file runtime boundary acceptance; exact source-symbol entries are required")
             continue
-        key = (
-            str(entry.get("facade_path", "")),
-            str(entry.get("facade_symbol", "")),
-            str(entry.get("source_module", "")),
-            str(entry.get("source_symbol", "")),
-        )
+        binding_kind = str(entry.get("binding_kind", "runtime-facade-call"))
+        if binding_kind == "runtime-facade-call":
+            key = (
+                binding_kind,
+                str(entry.get("facade_path", "")),
+                str(entry.get("facade_symbol", "")),
+                str(entry.get("source_module", "")),
+                str(entry.get("source_symbol", "")),
+            )
+        elif binding_kind == "operation-function-call":
+            key = (
+                binding_kind,
+                str(entry.get("operation_path", "")),
+                str(entry.get("operation_id", "")),
+                str(entry.get("source_module", "")),
+                str(entry.get("source_symbol", "")),
+            )
+        else:
+            errors.append(f"{location} has unsupported binding_kind {binding_kind!r}")
+            continue
         if key not in expected_keys:
-            errors.append(f"{location} does not match a generated runtime facade package-runtime call: {key!r}")
+            errors.append(f"{location} does not match a generated exact package-runtime call: {key!r}")
+        else:
+            expected = expected_by_key[key]
+            declared_operation_ids = set(entry.get("operation_ids", []))
+            expected_operation_ids = set(expected.get("operation_ids", []))
+            if declared_operation_ids != expected_operation_ids:
+                errors.append(
+                    f"{location} must declare operation_ids {sorted(expected_operation_ids)!r}; "
+                    f"got {sorted(declared_operation_ids)!r}"
+                )
+            declared_primitive_refs = set(entry.get("primitive_refs", []))
+            expected_primitive_refs = set(expected.get("primitive_refs", []))
+            if declared_primitive_refs != expected_primitive_refs:
+                errors.append(
+                    f"{location} must declare primitive_refs {sorted(expected_primitive_refs)!r}; "
+                    f"got {sorted(declared_primitive_refs)!r}"
+                )
         for field in (
             "owner_package",
             "operation_ids",
@@ -1441,7 +1510,7 @@ def _validate_python_completion_accepted_runtime_boundaries(*, require_exact: bo
     accepted_nonblocking_paths: set[str] = set()
     if require_exact and not errors:
         for facade_path in PYTHON_FULL_COMPLETION_ACCEPTED_RUNTIME_FACADE_PATHS:
-            facade_keys = {key for key in expected_keys if key[0] == facade_path}
+            facade_keys = {key for key in expected_keys if key[0] == "runtime-facade-call" and key[1] == facade_path}
             if facade_keys and facade_keys <= accepted_keys:
                 accepted_nonblocking_paths.add(facade_path)
         for source_path, keys in source_path_keys.items():
@@ -1459,6 +1528,7 @@ def _generated_runtime_facade_package_runtime_bindings() -> list[dict[str, str]]
         "repo_memory_bootstrap.installer",
         "repo_memory_bootstrap.runtime_primitives",
     }
+    metadata = _python_runtime_boundary_metadata()
     bindings: list[dict[str, str]] = []
     for relative_path in PYTHON_FULL_COMPLETION_ACCEPTED_RUNTIME_FACADE_PATHS:
         path = REPO_ROOT / relative_path
@@ -1479,9 +1549,202 @@ def _generated_runtime_facade_package_runtime_bindings() -> list[dict[str, str]]
                                 "facade_symbol": node.name,
                                 "source_module": child.module,
                                 "source_symbol": alias.name,
+                                "operation_ids": metadata.get((child.module, alias.name), {}).get("operation_ids", []),
+                                "primitive_refs": metadata.get((child.module, alias.name), {}).get("primitive_refs", []),
                             }
                         )
     return sorted(bindings, key=lambda item: (item["facade_path"], item["facade_symbol"], item["source_module"], item["source_symbol"]))
+
+
+def _generated_operation_package_runtime_bindings() -> list[dict[str, object]]:
+    allowed_modules = {
+        "agentic_workspace.workspace_runtime_primitives",
+        "agentic_workspace.doctor",
+        "repo_planning_bootstrap.installer",
+        "repo_planning_bootstrap.runtime_projection",
+        "repo_memory_bootstrap.installer",
+        "repo_memory_bootstrap.runtime_primitives",
+    }
+    metadata = _python_runtime_boundary_metadata()
+    operation_inventory_refs = _python_operation_inventory_domain_refs()
+    bindings: list[dict[str, object]] = []
+    for operations_dir in (
+        REPO_ROOT / "generated" / "workspace" / "python" / "operations",
+        REPO_ROOT / "generated" / "planning" / "python" / "operations",
+        REPO_ROOT / "generated" / "memory" / "python" / "operations",
+    ):
+        if not operations_dir.is_dir():
+            continue
+        for path in sorted(operations_dir.glob("*.json")):
+            operation = json.loads(path.read_text(encoding="utf-8"))
+            operation_id = str(operation.get("operation_id") or operation.get("id") or "")
+            relative_path = path.relative_to(REPO_ROOT).as_posix()
+            for call in _operation_python_function_calls(operation):
+                source_module = str(call.get("import_module") or "")
+                source_symbol = str(call.get("function") or "")
+                if source_module not in allowed_modules or not source_symbol:
+                    continue
+                binding_metadata = metadata.get((source_module, source_symbol), {})
+                bindings.append(
+                    {
+                        "operation_path": relative_path,
+                        "operation_id": operation_id,
+                        "source_module": source_module,
+                        "source_symbol": source_symbol,
+                        "operation_ids": [operation_id],
+                        "primitive_refs": operation_inventory_refs.get(operation_id)
+                        or binding_metadata.get("primitive_refs", ["python.function.call"]),
+                    }
+                )
+    return sorted(
+        bindings,
+        key=lambda item: (
+            str(item["operation_path"]),
+            str(item["operation_id"]),
+            str(item["source_module"]),
+            str(item["source_symbol"]),
+        ),
+    )
+
+
+def _operation_python_function_calls(value: object) -> list[dict[str, object]]:
+    calls: list[dict[str, object]] = []
+    if isinstance(value, dict):
+        if value.get("import_module") and value.get("function"):
+            calls.append(value)
+        for nested in value.values():
+            calls.extend(_operation_python_function_calls(nested))
+    elif isinstance(value, list):
+        for item in value:
+            calls.extend(_operation_python_function_calls(item))
+    return calls
+
+
+def _python_operation_inventory_domain_refs() -> dict[str, list[str]]:
+    try:
+        operation_inventory = json.loads(
+            (REPO_ROOT / "src" / "agentic_workspace" / "contracts" / "python_operation_execution_inventory.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    except Exception:  # noqa: BLE001
+        return {}
+    refs_by_operation: dict[str, list[str]] = {}
+    for entry in operation_inventory.get("entries", []):
+        if not isinstance(entry, dict):
+            continue
+        operation_id = str(entry.get("operation_id") or "")
+        refs = entry.get("domain_runtime_primitive_refs")
+        if operation_id and isinstance(refs, list):
+            refs_by_operation[operation_id] = sorted(str(ref) for ref in refs if isinstance(ref, str) and ref.strip())
+    return refs_by_operation
+
+
+def _python_runtime_boundary_metadata() -> dict[tuple[str, str], dict[str, list[str]]]:
+    try:
+        ir = command_package_ir_manifest()
+    except Exception:  # noqa: BLE001
+        return {}
+    try:
+        operation_inventory = json.loads(
+            (REPO_ROOT / "src" / "agentic_workspace" / "contracts" / "python_operation_execution_inventory.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    except Exception:  # noqa: BLE001
+        operation_inventory = {}
+    operation_ids_by_package_primitive: dict[tuple[str, str], set[str]] = {}
+    generated_operation_dirs = (
+        ("root-workspace", REPO_ROOT / "generated" / "workspace" / "python" / "operations"),
+        ("planning-bootstrap", REPO_ROOT / "generated" / "planning" / "python" / "operations"),
+        ("memory-bootstrap", REPO_ROOT / "generated" / "memory" / "python" / "operations"),
+    )
+    for entry in operation_inventory.get("entries", []):
+        if not isinstance(entry, dict):
+            continue
+        operation_id = str(entry.get("operation_id") or "")
+        program = str(entry.get("program") or "")
+        package_id = {
+            "agentic-workspace": "root-workspace",
+            "agentic-planning": "planning-bootstrap",
+            "agentic-memory": "memory-bootstrap",
+        }.get(program, "")
+        if not operation_id:
+            continue
+        for primitive_ref in entry.get("domain_runtime_primitive_refs", []):
+            if isinstance(primitive_ref, str) and primitive_ref.strip():
+                operation_ids_by_package_primitive.setdefault((package_id, primitive_ref), set()).add(operation_id)
+    for package_id, operations_dir in generated_operation_dirs:
+        if not operations_dir.is_dir():
+            continue
+        for path in sorted(operations_dir.glob("*.json")):
+            operation = json.loads(path.read_text(encoding="utf-8"))
+            operation_id = str(operation.get("operation_id") or operation.get("id") or "")
+            if not operation_id:
+                continue
+            for primitive_ref in _operation_uses(operation):
+                operation_ids_by_package_primitive.setdefault((package_id, primitive_ref), set()).add(operation_id)
+    metadata: dict[tuple[str, str], dict[str, set[str]]] = {}
+
+    def record(source_module: str, source_symbol: str, *, operation_id: str | None = None, primitive_ref: str | None = None) -> None:
+        if not source_module or not source_symbol:
+            return
+        bucket = metadata.setdefault((source_module, source_symbol), {"operation_ids": set(), "primitive_refs": set()})
+        if operation_id:
+            bucket["operation_ids"].add(operation_id)
+        if primitive_ref:
+            bucket["primitive_refs"].add(primitive_ref)
+
+    def collect_handler(handler: dict[str, object], *, package_id: str, primitive_ref: str | None) -> None:
+        source_module = str(handler.get("import_module") or "")
+        source_symbol = str(handler.get("function") or "")
+        operation_id = handler.get("operation_id")
+        record(source_module, source_symbol, operation_id=str(operation_id) if operation_id else None, primitive_ref=primitive_ref)
+        if primitive_ref:
+            for caller_operation_id in operation_ids_by_package_primitive.get((package_id, primitive_ref), set()):
+                record(source_module, source_symbol, operation_id=caller_operation_id, primitive_ref=primitive_ref)
+        for branch in ("if_true", "if_false"):
+            nested = handler.get(branch)
+            if isinstance(nested, dict):
+                collect_handler(nested, package_id=package_id, primitive_ref=primitive_ref)
+
+    for package in ir.get("packages", []):
+        if not isinstance(package, dict):
+            continue
+        binding = package.get("python_runtime_binding", {})
+        if not isinstance(binding, dict):
+            continue
+        package_id = str(package.get("id") or "")
+        operation_executor = binding.get("operation_executor", {})
+        if isinstance(operation_executor, dict):
+            for handler in operation_executor.get("handlers", []):
+                if isinstance(handler, dict):
+                    collect_handler(handler, package_id=package_id, primitive_ref=str(handler.get("primitive") or ""))
+        for handler in binding.get("runtime_module_handlers", []):
+            if isinstance(handler, dict):
+                collect_handler(
+                    handler,
+                    package_id=package_id,
+                    primitive_ref=f"runtime_module_handler:{handler.get('operation_id')}",
+                )
+    return {
+        key: {field: sorted(values) for field, values in value.items()}
+        for key, value in metadata.items()
+    }
+
+
+def _operation_uses(value: object) -> set[str]:
+    uses: set[str] = set()
+    if isinstance(value, dict):
+        primitive_ref = value.get("uses")
+        if isinstance(primitive_ref, str) and primitive_ref.strip():
+            uses.add(primitive_ref)
+        for nested in value.values():
+            uses.update(_operation_uses(nested))
+    elif isinstance(value, list):
+        for item in value:
+            uses.update(_operation_uses(item))
+    return uses
 
 
 def _tracked_python_source_files() -> list[str]:

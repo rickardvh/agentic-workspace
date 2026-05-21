@@ -513,8 +513,8 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
     assert "runtime handoff failures" in " ".join(maturity["weak-agent-safe-adapter"]["promotion_requires"])
     assert "implementation-independent contracts or IR" in python_completion["finish_line"]
     assert "codegen-owned primitive executors" in python_completion["finish_line"]
-    assert python_completion["current_state"] == "product-runtime-source-generation-incomplete"
-    assert python_completion["completion_gate"]["state"] == "pending"
+    assert python_completion["current_state"] == "full-generated-cli-complete"
+    assert python_completion["completion_gate"]["state"] == "satisfied"
     assert python_completion["completion_gate"]["scope"] == "python-only"
     completion_evidence = {item["id"] for item in python_completion["completion_gate"]["satisfied_by"]}
     assert "python-docker-conformance" in completion_evidence
@@ -1672,8 +1672,12 @@ def test_python_runtime_projection_inventory_tracks_generated_output_debt() -> N
     transitional_entries = [entry for entry in entries.values() if entry["path"] not in rendered_entries]
     assert transitional_entries == []
     assert accepted_boundaries["required_granularity"] == "source-symbol"
-    assert accepted_boundaries["status"] == "exact-symbol-proof-required"
-    assert accepted_boundaries["entries"] == []
+    assert accepted_boundaries["status"] == "exact-symbol-proof-satisfied"
+    assert accepted_boundaries["entries"]
+    binding_kinds = {entry["binding_kind"] for entry in accepted_boundaries["entries"]}
+    assert {"runtime-facade-call", "operation-function-call"} <= binding_kinds
+    assert all(entry["status"] == "accepted-permanent-package-domain-boundary" for entry in accepted_boundaries["entries"])
+    assert all(entry["operation_ids"] and entry["primitive_refs"] for entry in accepted_boundaries["entries"])
 
 
 def test_contract_tooling_check_enforces_root_cli_authority_audit() -> None:

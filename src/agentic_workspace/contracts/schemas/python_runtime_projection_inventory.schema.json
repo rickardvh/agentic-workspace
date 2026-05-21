@@ -172,11 +172,10 @@
     },
     "accepted_runtime_boundary": {
       "type": "object",
-      "description": "One exact accepted package-domain runtime source symbol reached through a generated facade wrapper.",
+      "description": "One exact accepted package-domain runtime source symbol reached through a generated facade wrapper or generated operation function-call step.",
       "additionalProperties": false,
       "required": [
-        "facade_path",
-        "facade_symbol",
+        "binding_kind",
         "source_module",
         "source_symbol",
         "owner_package",
@@ -189,6 +188,13 @@
         "generic_behavior_audit"
       ],
       "properties": {
+        "binding_kind": {
+          "enum": [
+            "runtime-facade-call",
+            "operation-function-call"
+          ],
+          "description": "Generated call-site kind that reaches the package-domain source symbol."
+        },
         "facade_path": {
           "type": "string",
           "pattern": "^generated/(workspace/python/primitives/workspace_runtime|planning/python/primitives/(planning_installer|planning_runtime)|memory/python/primitives/memory_runtime)\\.py$",
@@ -198,6 +204,16 @@
           "type": "string",
           "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
           "description": "Generated facade wrapper symbol."
+        },
+        "operation_path": {
+          "type": "string",
+          "pattern": "^generated/(workspace|planning|memory)/python/operations/[A-Za-z0-9_.-]+\\.json$",
+          "description": "Generated operation contract path containing the exact function-call step."
+        },
+        "operation_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Generated operation id containing the exact function-call step."
         },
         "source_module": {
           "enum": [
@@ -266,7 +282,39 @@
           "type": "string",
           "minLength": 1
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "binding_kind": {
+                "const": "runtime-facade-call"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "facade_path",
+              "facade_symbol"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "binding_kind": {
+                "const": "operation-function-call"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "operation_path",
+              "operation_id"
+            ]
+          }
+        }
+      ]
     }
   },
   "x-agentic-workspace-doc-role": "contract-reference"

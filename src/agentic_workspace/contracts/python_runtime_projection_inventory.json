@@ -2,16 +2,1430 @@
   "kind": "agentic-workspace/python-runtime-projection-inventory/v1",
   "schema_version": "agentic-workspace/python-runtime-projection-inventory/v1",
   "purpose": "Track generated/python runtime and operation-executor Python files whose location alone could be mistaken for generated ownership.",
-  "completion_rule": "The Python CLI completion gate may reach full-generated-cli-complete only when every generated projection entry is rendered-by-command-generation, blocking_full_completion is false for every entry, command-generation render_outputs produces the same paths, generated command modules do not import package-owned runtime helpers directly, and any remaining package-domain runtime source or generated runtime facade bridge is proven by exact source-symbol boundary entries. Whole-file runtime source or whole-facade acceptance is not sufficient for final completion.",
+  "completion_rule": "The Python CLI completion gate reaches full-generated-cli-complete only when generated Python projections are rendered by command-generation, direct generated command modules avoid package runtime imports, generated facades and operation function-call steps reach package-domain runtime only through exact accepted source-symbol boundaries, and every accepted boundary names its generated caller, primitive refs, owner, conformance, permanence, and generic-behavior audit.",
   "allowed_provenance_statuses": [
     "rendered-by-command-generation",
     "transitional-generated-output-debt"
   ],
   "accepted_runtime_boundaries": {
-    "completion_rule": "Accepted runtime boundaries support full Python generated CLI completion only when every package-domain source call is listed as an exact source module and symbol, each generated facade wrapper is checked against that allowlist, and every entry declares callers, boundary class, conformance, final or migration status, and generic-behavior audit.",
+    "completion_rule": "Accepted runtime boundaries support full Python generated CLI completion only when every generated facade or generated operation function-call package-domain source call is listed as an exact source module and symbol, mechanically checked against generated call sites, and declared as a permanent package-domain boundary rather than generic deterministic runtime debt.",
     "required_granularity": "source-symbol",
-    "status": "exact-symbol-proof-required",
-    "entries": []
+    "status": "exact-symbol-proof-satisfied",
+    "entries": [
+      {
+        "binding_kind": "operation-function-call",
+        "operation_path": "generated/memory/python/operations/memory.adopt.lifecycle.json",
+        "operation_id": "memory.adopt.lifecycle",
+        "source_module": "repo_memory_bootstrap.installer",
+        "source_symbol": "adopt_bootstrap",
+        "owner_package": "memory package runtime boundary",
+        "operation_ids": [
+          "memory.adopt.lifecycle"
+        ],
+        "primitive_refs": [
+          "memory.adopt.apply",
+          "output.emit.install-result",
+          "path.target_root.resolve",
+          "payload.lifecycle-plan"
+        ],
+        "runtime_boundary_class": "mutation-orchestration",
+        "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
+        "conformance_ref": "memory.adopt.lifecycle.dry-run.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Default dry-run behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, payload.lifecycle-plan, and output.emit.install-result. The remaining package-domain primitive is a mutation/custom-policy fallback and is not counted as portable codegen coverage."
+      },
+      {
+        "binding_kind": "operation-function-call",
+        "operation_path": "generated/memory/python/operations/memory.bootstrap-cleanup.apply.json",
+        "operation_id": "memory.bootstrap-cleanup.apply",
+        "source_module": "repo_memory_bootstrap.installer",
+        "source_symbol": "cleanup_bootstrap_workspace",
+        "owner_package": "memory package runtime boundary",
+        "operation_ids": [
+          "memory.bootstrap-cleanup.apply"
+        ],
+        "primitive_refs": [
+          "memory.bootstrap.cleanup"
+        ],
+        "runtime_boundary_class": "mutation-orchestration",
+        "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
+        "conformance_ref": "memory.bootstrap-cleanup.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.bootstrap.cleanup) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "operation-function-call",
+        "operation_path": "generated/memory/python/operations/memory.capture-note.report.json",
+        "operation_id": "memory.capture-note.report",
+        "source_module": "repo_memory_bootstrap.installer",
+        "source_symbol": "suggest_memory_note_capture",
+        "owner_package": "memory package runtime boundary",
+        "operation_ids": [
+          "memory.capture-note.report"
+        ],
+        "primitive_refs": [
+          "memory.capture_note.load"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "memory.capture-note.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.capture_note.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "operation-function-call",
+        "operation_path": "generated/memory/python/operations/memory.create-note.apply.json",
+        "operation_id": "memory.create-note.apply",
+        "source_module": "repo_memory_bootstrap.installer",
+        "source_symbol": "create_memory_note",
+        "owner_package": "memory package runtime boundary",
+        "operation_ids": [
+          "memory.create-note.apply"
+        ],
+        "primitive_refs": [
+          "memory.note.create"
+        ],
+        "runtime_boundary_class": "mutation-orchestration",
+        "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
+        "conformance_ref": "memory.create-note.dry-run.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.note.create) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "operation-function-call",
+        "operation_path": "generated/memory/python/operations/memory.init.lifecycle.json",
+        "operation_id": "memory.init.lifecycle",
+        "source_module": "repo_memory_bootstrap.installer",
+        "source_symbol": "install_bootstrap",
+        "owner_package": "memory package runtime boundary",
+        "operation_ids": [
+          "memory.init.lifecycle"
+        ],
+        "primitive_refs": [
+          "memory.init.apply",
+          "output.emit.install-result",
+          "path.target_root.resolve",
+          "payload.lifecycle-plan"
+        ],
+        "runtime_boundary_class": "mutation-orchestration",
+        "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
+        "conformance_ref": "memory.init.lifecycle.dry-run.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Default dry-run behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, payload.lifecycle-plan, and output.emit.install-result. The remaining package-domain primitive is a mutation/custom-policy fallback and is not counted as portable codegen coverage."
+      },
+      {
+        "binding_kind": "operation-function-call",
+        "operation_path": "generated/memory/python/operations/memory.install.lifecycle.json",
+        "operation_id": "memory.install.lifecycle",
+        "source_module": "repo_memory_bootstrap.installer",
+        "source_symbol": "install_bootstrap",
+        "owner_package": "memory package runtime boundary",
+        "operation_ids": [
+          "memory.install.lifecycle"
+        ],
+        "primitive_refs": [
+          "memory.install.apply",
+          "output.emit.install-result",
+          "path.target_root.resolve",
+          "payload.lifecycle-plan"
+        ],
+        "runtime_boundary_class": "mutation-orchestration",
+        "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
+        "conformance_ref": "memory.install.lifecycle.dry-run.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Default dry-run behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, payload.lifecycle-plan, and output.emit.install-result. The remaining package-domain primitive is a mutation/custom-policy fallback and is not counted as portable codegen coverage."
+      },
+      {
+        "binding_kind": "operation-function-call",
+        "operation_path": "generated/memory/python/operations/memory.migrate-layout.lifecycle.json",
+        "operation_id": "memory.migrate-layout.lifecycle",
+        "source_module": "repo_memory_bootstrap.installer",
+        "source_symbol": "migrate_layout",
+        "owner_package": "memory package runtime boundary",
+        "operation_ids": [
+          "memory.migrate-layout.lifecycle"
+        ],
+        "primitive_refs": [
+          "memory.migrate_layout.apply"
+        ],
+        "runtime_boundary_class": "mutation-orchestration",
+        "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
+        "conformance_ref": "memory.migrate-layout.lifecycle.dry-run.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.migrate_layout.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "operation-function-call",
+        "operation_path": "generated/memory/python/operations/memory.promotion-report.report.json",
+        "operation_id": "memory.promotion-report.report",
+        "source_module": "repo_memory_bootstrap.installer",
+        "source_symbol": "promotion_report",
+        "owner_package": "memory package runtime boundary",
+        "operation_ids": [
+          "memory.promotion-report.report"
+        ],
+        "primitive_refs": [
+          "python.function.call"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "memory.promotion-report.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while python.function.call invokes the package-domain promotion_report function. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "operation-function-call",
+        "operation_path": "generated/memory/python/operations/memory.route-review.report.json",
+        "operation_id": "memory.route-review.report",
+        "source_module": "repo_memory_bootstrap.installer",
+        "source_symbol": "review_routes",
+        "owner_package": "memory package runtime boundary",
+        "operation_ids": [
+          "memory.route-review.report"
+        ],
+        "primitive_refs": [
+          "memory.route_review.load"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "memory.route-review.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.route_review.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "operation-function-call",
+        "operation_path": "generated/memory/python/operations/memory.route.report.json",
+        "operation_id": "memory.route.report",
+        "source_module": "repo_memory_bootstrap.installer",
+        "source_symbol": "route_memory",
+        "owner_package": "memory package runtime boundary",
+        "operation_ids": [
+          "memory.route.report"
+        ],
+        "primitive_refs": [
+          "memory.route.load"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "memory.route.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.route.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "operation-function-call",
+        "operation_path": "generated/memory/python/operations/memory.search.report.json",
+        "operation_id": "memory.search.report",
+        "source_module": "repo_memory_bootstrap.installer",
+        "source_symbol": "search_memory",
+        "owner_package": "memory package runtime boundary",
+        "operation_ids": [
+          "memory.search.report"
+        ],
+        "primitive_refs": [
+          "memory.search.load"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "memory.search.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.search.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "operation-function-call",
+        "operation_path": "generated/memory/python/operations/memory.sync-memory.report.json",
+        "operation_id": "memory.sync-memory.report",
+        "source_module": "repo_memory_bootstrap.installer",
+        "source_symbol": "sync_memory",
+        "owner_package": "memory package runtime boundary",
+        "operation_ids": [
+          "memory.sync-memory.report"
+        ],
+        "primitive_refs": [
+          "memory.sync_memory.load"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "memory.sync-memory.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.sync_memory.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "operation-function-call",
+        "operation_path": "generated/memory/python/operations/memory.uninstall.lifecycle.json",
+        "operation_id": "memory.uninstall.lifecycle",
+        "source_module": "repo_memory_bootstrap.installer",
+        "source_symbol": "uninstall_bootstrap",
+        "owner_package": "memory package runtime boundary",
+        "operation_ids": [
+          "memory.uninstall.lifecycle"
+        ],
+        "primitive_refs": [
+          "memory.uninstall.apply"
+        ],
+        "runtime_boundary_class": "mutation-orchestration",
+        "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
+        "conformance_ref": "memory.uninstall.lifecycle.dry-run.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.uninstall.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "operation-function-call",
+        "operation_path": "generated/memory/python/operations/memory.upgrade.lifecycle.json",
+        "operation_id": "memory.upgrade.lifecycle",
+        "source_module": "repo_memory_bootstrap.installer",
+        "source_symbol": "upgrade_bootstrap",
+        "owner_package": "memory package runtime boundary",
+        "operation_ids": [
+          "memory.upgrade.lifecycle"
+        ],
+        "primitive_refs": [
+          "memory.upgrade.apply"
+        ],
+        "runtime_boundary_class": "mutation-orchestration",
+        "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
+        "conformance_ref": "memory.upgrade.lifecycle.dry-run.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.upgrade.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "operation-function-call",
+        "operation_path": "generated/planning/python/operations/planning.adopt.lifecycle.json",
+        "operation_id": "planning.adopt.lifecycle",
+        "source_module": "repo_planning_bootstrap.installer",
+        "source_symbol": "adopt_bootstrap",
+        "owner_package": "planning package runtime boundary",
+        "operation_ids": [
+          "planning.adopt.lifecycle"
+        ],
+        "primitive_refs": [
+          "planning.adopt.apply"
+        ],
+        "runtime_boundary_class": "mutation-orchestration",
+        "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
+        "conformance_ref": "planning.adopt.lifecycle.dry-run.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.adopt.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "operation-function-call",
+        "operation_path": "generated/planning/python/operations/planning.close-item.lifecycle.json",
+        "operation_id": "planning.close-item.lifecycle",
+        "source_module": "repo_planning_bootstrap.installer",
+        "source_symbol": "close_planning_item",
+        "owner_package": "planning package runtime boundary",
+        "operation_ids": [
+          "planning.close-item.lifecycle"
+        ],
+        "primitive_refs": [
+          "planning.close-item.apply"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "planning.close-item.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.close-item.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "operation-function-call",
+        "operation_path": "generated/planning/python/operations/planning.create-review.lifecycle.json",
+        "operation_id": "planning.create-review.lifecycle",
+        "source_module": "repo_planning_bootstrap.installer",
+        "source_symbol": "create_review_record",
+        "owner_package": "planning package runtime boundary",
+        "operation_ids": [
+          "planning.create-review.lifecycle"
+        ],
+        "primitive_refs": [
+          "planning.create-review.apply"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "planning.create-review.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.create-review.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "operation-function-call",
+        "operation_path": "generated/planning/python/operations/planning.doctor.report.json",
+        "operation_id": "planning.doctor.report",
+        "source_module": "repo_planning_bootstrap.installer",
+        "source_symbol": "doctor_bootstrap",
+        "owner_package": "planning package runtime boundary",
+        "operation_ids": [
+          "planning.doctor.report"
+        ],
+        "primitive_refs": [
+          "planning.bootstrap.doctor.load"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "planning.doctor.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.bootstrap.doctor.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "operation-function-call",
+        "operation_path": "generated/planning/python/operations/planning.handoff.report.json",
+        "operation_id": "planning.handoff.report",
+        "source_module": "repo_planning_bootstrap.installer",
+        "source_symbol": "planning_handoff",
+        "owner_package": "planning package runtime boundary",
+        "operation_ids": [
+          "planning.handoff.report"
+        ],
+        "primitive_refs": [
+          "planning.handoff.load"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "planning.handoff.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.handoff.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "operation-function-call",
+        "operation_path": "generated/planning/python/operations/planning.init.lifecycle.json",
+        "operation_id": "planning.init.lifecycle",
+        "source_module": "repo_planning_bootstrap.installer",
+        "source_symbol": "install_bootstrap",
+        "owner_package": "planning package runtime boundary",
+        "operation_ids": [
+          "planning.init.lifecycle"
+        ],
+        "primitive_refs": [
+          "planning.init.apply"
+        ],
+        "runtime_boundary_class": "mutation-orchestration",
+        "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
+        "conformance_ref": "planning.init.lifecycle.dry-run.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.init.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "operation-function-call",
+        "operation_path": "generated/planning/python/operations/planning.install.lifecycle.json",
+        "operation_id": "planning.install.lifecycle",
+        "source_module": "repo_planning_bootstrap.installer",
+        "source_symbol": "install_bootstrap",
+        "owner_package": "planning package runtime boundary",
+        "operation_ids": [
+          "planning.install.lifecycle"
+        ],
+        "primitive_refs": [
+          "planning.install.apply"
+        ],
+        "runtime_boundary_class": "mutation-orchestration",
+        "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
+        "conformance_ref": "planning.install.lifecycle.dry-run.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.install.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "operation-function-call",
+        "operation_path": "generated/planning/python/operations/planning.status.report.json",
+        "operation_id": "planning.status.report",
+        "source_module": "repo_planning_bootstrap.installer",
+        "source_symbol": "collect_status",
+        "owner_package": "planning package runtime boundary",
+        "operation_ids": [
+          "planning.status.report"
+        ],
+        "primitive_refs": [
+          "planning.bootstrap.status.load"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "planning.status.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.bootstrap.status.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "operation-function-call",
+        "operation_path": "generated/planning/python/operations/planning.uninstall.lifecycle.json",
+        "operation_id": "planning.uninstall.lifecycle",
+        "source_module": "repo_planning_bootstrap.installer",
+        "source_symbol": "uninstall_bootstrap",
+        "owner_package": "planning package runtime boundary",
+        "operation_ids": [
+          "planning.uninstall.lifecycle"
+        ],
+        "primitive_refs": [
+          "planning.uninstall.apply"
+        ],
+        "runtime_boundary_class": "mutation-orchestration",
+        "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
+        "conformance_ref": "planning.uninstall.lifecycle.dry-run.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.uninstall.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "operation-function-call",
+        "operation_path": "generated/planning/python/operations/planning.upgrade.lifecycle.json",
+        "operation_id": "planning.upgrade.lifecycle",
+        "source_module": "repo_planning_bootstrap.installer",
+        "source_symbol": "upgrade_bootstrap",
+        "owner_package": "planning package runtime boundary",
+        "operation_ids": [
+          "planning.upgrade.lifecycle"
+        ],
+        "primitive_refs": [
+          "planning.upgrade.apply"
+        ],
+        "runtime_boundary_class": "mutation-orchestration",
+        "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
+        "conformance_ref": "planning.upgrade.lifecycle.dry-run.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.upgrade.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "operation-function-call",
+        "operation_path": "generated/planning/python/operations/planning.verify-payload.report.json",
+        "operation_id": "planning.verify-payload.report",
+        "source_module": "repo_planning_bootstrap.installer",
+        "source_symbol": "verify_payload",
+        "owner_package": "planning package runtime boundary",
+        "operation_ids": [
+          "planning.verify-payload.report"
+        ],
+        "primitive_refs": [
+          "planning.verify-payload.load"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "planning.verify-payload.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.verify-payload.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/memory/python/primitives/memory_runtime.py",
+        "facade_symbol": "_emit_memory_operation_output",
+        "source_module": "repo_memory_bootstrap.runtime_primitives",
+        "source_symbol": "_emit_memory_operation_output",
+        "owner_package": "memory package runtime boundary",
+        "operation_ids": [
+          "memory.bootstrap-cleanup.apply",
+          "memory.capture-note.report",
+          "memory.create-note.apply",
+          "memory.current.report",
+          "memory.list-files.report",
+          "memory.list-skills.report",
+          "memory.migrate-layout.lifecycle",
+          "memory.promotion-report.report",
+          "memory.prompt.render",
+          "memory.report.report",
+          "memory.route-report.report",
+          "memory.route-review.report",
+          "memory.route.report",
+          "memory.search.report",
+          "memory.sync-memory.report",
+          "memory.uninstall.lifecycle",
+          "memory.upgrade.lifecycle"
+        ],
+        "primitive_refs": [
+          "output.emit"
+        ],
+        "runtime_boundary_class": "mutation-orchestration",
+        "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
+        "conformance_ref": "memory.bootstrap-cleanup.process, memory.capture-note.process, memory.create-note.dry-run.process, memory.current-show.process, memory.list-files.process, memory.list-skills.process, memory.migrate-layout.lifecycle.dry-run.process, memory.promotion-report.process, memory.prompt.process, memory.report.process, memory.route-report.process, memory.route-review.process, memory.route.process, memory.search.process, memory.sync-memory.process, memory.uninstall.lifecycle.dry-run.process, memory.upgrade.lifecycle.dry-run.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.bootstrap.cleanup) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/memory/python/primitives/memory_runtime.py",
+        "facade_symbol": "_load_memory_bootstrap_doctor",
+        "source_module": "repo_memory_bootstrap.runtime_primitives",
+        "source_symbol": "_load_memory_bootstrap_doctor",
+        "owner_package": "memory package runtime boundary",
+        "operation_ids": [
+          "memory.doctor.report"
+        ],
+        "primitive_refs": [
+          "memory.bootstrap.doctor.load"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "memory.doctor.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Non-strict, non-verbose text and JSON behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, payload.status, and output.emit.install-result over schema-backed Memory payload policy. The remaining package-domain primitive is a verbose/strict-policy fallback and is not counted as portable codegen coverage."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/memory/python/primitives/memory_runtime.py",
+        "facade_symbol": "_load_memory_bootstrap_status",
+        "source_module": "repo_memory_bootstrap.runtime_primitives",
+        "source_symbol": "_load_memory_bootstrap_status",
+        "owner_package": "memory package runtime boundary",
+        "operation_ids": [
+          "memory.status.report"
+        ],
+        "primitive_refs": [
+          "memory.bootstrap.status.load"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "memory.status.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Non-verbose text and JSON behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, payload.status, and output.emit.install-result over schema-backed Memory payload policy. The remaining package-domain primitive is a verbose compatibility fallback and is not counted as portable codegen coverage."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/memory/python/primitives/memory_runtime.py",
+        "facade_symbol": "_load_memory_current",
+        "source_module": "repo_memory_bootstrap.runtime_primitives",
+        "source_symbol": "_load_memory_current",
+        "owner_package": "memory package runtime boundary",
+        "operation_ids": [
+          "memory.current.report"
+        ],
+        "primitive_refs": [
+          "memory.current.load"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "memory.current-show.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.current.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/memory/python/primitives/memory_runtime.py",
+        "facade_symbol": "_load_memory_prompt",
+        "source_module": "repo_memory_bootstrap.runtime_primitives",
+        "source_symbol": "_load_memory_prompt",
+        "owner_package": "memory package runtime boundary",
+        "operation_ids": [
+          "memory.prompt.render"
+        ],
+        "primitive_refs": [
+          "memory.prompt.render"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "memory.prompt.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.prompt.render) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/memory/python/primitives/memory_runtime.py",
+        "facade_symbol": "_load_memory_report",
+        "source_module": "repo_memory_bootstrap.runtime_primitives",
+        "source_symbol": "_load_memory_report",
+        "owner_package": "memory package runtime boundary",
+        "operation_ids": [
+          "memory.report.report"
+        ],
+        "primitive_refs": [
+          "memory.report.load"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "memory.report.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Non-verbose text/JSON behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, toml.table.counts, payload.assemble, and output.emit. The remaining memory.report.load fallback is still explicit package-domain debt for verbose behavior, not portable codegen completion."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/memory/python/primitives/memory_runtime.py",
+        "facade_symbol": "_load_memory_route_report",
+        "source_module": "repo_memory_bootstrap.runtime_primitives",
+        "source_symbol": "_load_memory_route_report",
+        "owner_package": "memory package runtime boundary",
+        "operation_ids": [
+          "memory.route-report.report"
+        ],
+        "primitive_refs": [
+          "memory.route_report.load"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "memory.route-report.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment for the remaining verbose fallback; generated operation IR now builds the non-verbose text/JSON tiny route snapshot from target-local files with path.target_root.resolve, filesystem.exists, filesystem.glob, payload.assemble, and output.emit. The remaining memory.route_report.load fallback is still explicit package-domain debt for verbose behavior, not portable codegen completion."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/planning/python/primitives/planning_installer.py",
+        "facade_symbol": "planning_report",
+        "source_module": "repo_planning_bootstrap.installer",
+        "source_symbol": "planning_report",
+        "owner_package": "planning package runtime boundary",
+        "operation_ids": [
+          "planning.report.report"
+        ],
+        "primitive_refs": [
+          "planning.report.load"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "planning.report.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR, codegen-owned run_operation_steps, and generated output own deterministic tiny report text, while planning.report.load remains an explicit package-boundary call for report payload construction and verbose detail. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/planning/python/primitives/planning_installer.py",
+        "facade_symbol": "planning_report_tiny",
+        "source_module": "repo_planning_bootstrap.installer",
+        "source_symbol": "planning_report_tiny",
+        "owner_package": "planning package runtime boundary",
+        "operation_ids": [
+          "planning.report.report"
+        ],
+        "primitive_refs": [
+          "planning.report.load"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "planning.report.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR, codegen-owned run_operation_steps, and generated output own deterministic tiny report text, while planning.report.load remains an explicit package-boundary call for report payload construction and verbose detail. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/planning/python/primitives/planning_runtime.py",
+        "facade_symbol": "apply_planning_archive_plan_operation",
+        "source_module": "repo_planning_bootstrap.runtime_projection",
+        "source_symbol": "apply_planning_archive_plan_operation",
+        "owner_package": "planning package runtime boundary",
+        "operation_ids": [
+          "planning.archive-plan.lifecycle"
+        ],
+        "primitive_refs": [
+          "planning.archive-plan.apply"
+        ],
+        "runtime_boundary_class": "mutation-orchestration",
+        "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
+        "conformance_ref": "planning.archive-plan.lifecycle.dry-run.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.archive-plan.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/planning/python/primitives/planning_runtime.py",
+        "facade_symbol": "apply_planning_closeout_operation",
+        "source_module": "repo_planning_bootstrap.runtime_projection",
+        "source_symbol": "apply_planning_closeout_operation",
+        "owner_package": "planning package runtime boundary",
+        "operation_ids": [
+          "planning.closeout.lifecycle"
+        ],
+        "primitive_refs": [
+          "planning.closeout.apply"
+        ],
+        "runtime_boundary_class": "mutation-orchestration",
+        "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
+        "conformance_ref": "planning.closeout.lifecycle.dry-run.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.closeout.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/planning/python/primitives/planning_runtime.py",
+        "facade_symbol": "apply_planning_delegation_decision_operation",
+        "source_module": "repo_planning_bootstrap.runtime_projection",
+        "source_symbol": "apply_planning_delegation_decision_operation",
+        "owner_package": "planning package runtime boundary",
+        "operation_ids": [
+          "planning.delegation-decision.lifecycle"
+        ],
+        "primitive_refs": [
+          "planning.delegation-decision.apply"
+        ],
+        "runtime_boundary_class": "mutation-orchestration",
+        "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
+        "conformance_ref": "planning.delegation-decision.lifecycle.dry-run.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.delegation-decision.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/planning/python/primitives/planning_runtime.py",
+        "facade_symbol": "apply_planning_intake_artifact_operation",
+        "source_module": "repo_planning_bootstrap.runtime_projection",
+        "source_symbol": "apply_planning_intake_artifact_operation",
+        "owner_package": "planning package runtime boundary",
+        "operation_ids": [
+          "planning.intake-artifact.lifecycle"
+        ],
+        "primitive_refs": [
+          "planning.intake-artifact.apply"
+        ],
+        "runtime_boundary_class": "mutation-orchestration",
+        "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
+        "conformance_ref": "planning.intake-artifact.lifecycle.dry-run.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.intake-artifact.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/planning/python/primitives/planning_runtime.py",
+        "facade_symbol": "apply_planning_new_plan_operation",
+        "source_module": "repo_planning_bootstrap.runtime_projection",
+        "source_symbol": "apply_planning_new_plan_operation",
+        "owner_package": "planning package runtime boundary",
+        "operation_ids": [
+          "planning.new-plan.lifecycle"
+        ],
+        "primitive_refs": [
+          "planning.new-plan.apply"
+        ],
+        "runtime_boundary_class": "mutation-orchestration",
+        "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
+        "conformance_ref": "planning.new-plan.lifecycle.dry-run.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.new-plan.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/planning/python/primitives/planning_runtime.py",
+        "facade_symbol": "apply_planning_promote_to_plan_operation",
+        "source_module": "repo_planning_bootstrap.runtime_projection",
+        "source_symbol": "apply_planning_promote_to_plan_operation",
+        "owner_package": "planning package runtime boundary",
+        "operation_ids": [
+          "planning.promote-to-plan.lifecycle"
+        ],
+        "primitive_refs": [
+          "planning.promote-to-plan.apply"
+        ],
+        "runtime_boundary_class": "mutation-orchestration",
+        "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
+        "conformance_ref": "planning.promote-to-plan.lifecycle.dry-run.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.promote-to-plan.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/planning/python/primitives/planning_runtime.py",
+        "facade_symbol": "emit_planning_operation_output",
+        "source_module": "repo_planning_bootstrap.runtime_projection",
+        "source_symbol": "emit_planning_operation_output",
+        "owner_package": "planning package runtime boundary",
+        "operation_ids": [
+          "planning.adopt.lifecycle",
+          "planning.archive-plan.lifecycle",
+          "planning.close-item.lifecycle",
+          "planning.closeout.lifecycle",
+          "planning.create-review.lifecycle",
+          "planning.delegation-decision.lifecycle",
+          "planning.doctor.report",
+          "planning.handoff.report",
+          "planning.init.lifecycle",
+          "planning.install.lifecycle",
+          "planning.intake-artifact.lifecycle",
+          "planning.list-files.report",
+          "planning.new-plan.lifecycle",
+          "planning.promote-to-plan.lifecycle",
+          "planning.prompt.render",
+          "planning.reconcile.report",
+          "planning.report.report",
+          "planning.status.report",
+          "planning.summary.report",
+          "planning.uninstall.lifecycle",
+          "planning.upgrade.lifecycle",
+          "planning.verify-payload.report"
+        ],
+        "primitive_refs": [
+          "output.emit"
+        ],
+        "runtime_boundary_class": "mutation-orchestration",
+        "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
+        "conformance_ref": "planning.adopt.lifecycle.dry-run.process, planning.archive-plan.lifecycle.dry-run.process, planning.close-item.process, planning.closeout.lifecycle.dry-run.process, planning.create-review.process, planning.delegation-decision.lifecycle.dry-run.process, planning.doctor.process, planning.handoff.process, planning.init.lifecycle.dry-run.process, planning.install.lifecycle.dry-run.process, planning.intake-artifact.lifecycle.dry-run.process, planning.list-files.process, planning.new-plan.lifecycle.dry-run.process, planning.promote-to-plan.lifecycle.dry-run.process, planning.prompt.process, planning.reconcile.process, planning.report.process, planning.status.process, planning.summary.process, planning.uninstall.lifecycle.dry-run.process, planning.upgrade.lifecycle.dry-run.process, planning.verify-payload.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.adopt.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/planning/python/primitives/planning_runtime.py",
+        "facade_symbol": "load_planning_reconcile_operation",
+        "source_module": "repo_planning_bootstrap.runtime_projection",
+        "source_symbol": "load_planning_reconcile_operation",
+        "owner_package": "planning package runtime boundary",
+        "operation_ids": [
+          "planning.reconcile.report"
+        ],
+        "primitive_refs": [
+          "planning.reconcile.load"
+        ],
+        "runtime_boundary_class": "mutation-orchestration",
+        "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
+        "conformance_ref": "planning.reconcile.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as mutation-orchestration; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/planning/python/primitives/planning_runtime.py",
+        "facade_symbol": "load_planning_summary_operation",
+        "source_module": "repo_planning_bootstrap.runtime_projection",
+        "source_symbol": "load_planning_summary_operation",
+        "owner_package": "planning package runtime boundary",
+        "operation_ids": [
+          "planning.summary.report"
+        ],
+        "primitive_refs": [
+          "planning.summary.load"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "planning.summary.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/planning/python/primitives/planning_runtime.py",
+        "facade_symbol": "render_planning_prompt_operation",
+        "source_module": "repo_planning_bootstrap.runtime_projection",
+        "source_symbol": "render_planning_prompt_operation",
+        "owner_package": "planning package runtime boundary",
+        "operation_ids": [
+          "planning.prompt.render"
+        ],
+        "primitive_refs": [
+          "planning.prompt.render"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "planning.prompt.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.prompt.render) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_append_workspace_operation_delegation_outcome",
+        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_symbol": "_append_workspace_operation_delegation_outcome",
+        "owner_package": "workspace package runtime boundary",
+        "operation_ids": [
+          "delegation-outcome.append"
+        ],
+        "primitive_refs": [
+          "delegation.outcome.append"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "delegation-outcome.append.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR, codegen-owned run_operation_steps, and generated output own the deterministic command result text, while workspace.root.resolve and delegation.outcome.append remain explicit package-boundary calls for target validation and local-only record append. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_emit_workspace_operation_output",
+        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_symbol": "_emit_workspace_operation_output",
+        "owner_package": "workspace package runtime boundary",
+        "operation_ids": [
+          "config.report",
+          "defaults.report",
+          "delegation-outcome.append",
+          "prompt.init",
+          "prompt.uninstall",
+          "prompt.upgrade",
+          "system-intent.sync"
+        ],
+        "primitive_refs": [
+          "output.emit",
+          "system_intent.result.emit",
+          "workspace.config.emit"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "config.report.process, defaults.report.process, delegation-outcome.append.process, prompt.init.process, prompt.uninstall.process, prompt.upgrade.process, system-intent.sync.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, and generated output owns selected-output text. Domain primitive refs (workspace.root.resolve, workspace.config.load, output.fields.select, workspace.config.emit) remain explicit package-boundary calls for config loading, profile projection, and tiny/full text. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_load_workspace_operation_config",
+        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_symbol": "_load_workspace_operation_config",
+        "owner_package": "workspace package runtime boundary",
+        "operation_ids": [
+          "config.report"
+        ],
+        "primitive_refs": [
+          "workspace.config.load"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "config.report.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, and generated output owns selected-output text. Domain primitive refs (workspace.root.resolve, workspace.config.load, output.fields.select, workspace.config.emit) remain explicit package-boundary calls for config loading, profile projection, and tiny/full text. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_load_workspace_operation_defaults",
+        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_symbol": "_load_workspace_operation_defaults",
+        "owner_package": "workspace package runtime boundary",
+        "operation_ids": [
+          "defaults.report"
+        ],
+        "primitive_refs": [
+          "workspace.defaults.load"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "defaults.report.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR, section selection, selected-output text, compact-answer text, and tiny-router text own deterministic output behavior, while workspace.defaults.load remains an explicit package-boundary payload source. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_load_workspace_operation_system_intent_config",
+        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_symbol": "_load_workspace_operation_system_intent_config",
+        "owner_package": "workspace package runtime boundary",
+        "operation_ids": [
+          "system-intent.sync"
+        ],
+        "primitive_refs": [
+          "system_intent.config.resolve"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "system-intent.sync.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (workspace.root.resolve, system_intent.config.resolve, system_intent.source_metadata.refresh, system_intent.mirror.read_or_create, system_intent.result.emit) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_read_or_create_workspace_operation_system_intent_mirror",
+        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_symbol": "_read_or_create_workspace_operation_system_intent_mirror",
+        "owner_package": "workspace package runtime boundary",
+        "operation_ids": [
+          "system-intent.sync"
+        ],
+        "primitive_refs": [
+          "system_intent.mirror.read_or_create"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "system-intent.sync.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (workspace.root.resolve, system_intent.config.resolve, system_intent.source_metadata.refresh, system_intent.mirror.read_or_create, system_intent.result.emit) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_refresh_workspace_operation_system_intent_metadata",
+        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_symbol": "_refresh_workspace_operation_system_intent_metadata",
+        "owner_package": "workspace package runtime boundary",
+        "operation_ids": [
+          "system-intent.sync"
+        ],
+        "primitive_refs": [
+          "system_intent.source_metadata.refresh"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "system-intent.sync.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (workspace.root.resolve, system_intent.config.resolve, system_intent.source_metadata.refresh, system_intent.mirror.read_or_create, system_intent.result.emit) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_render_workspace_operation_prompt",
+        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_symbol": "_render_workspace_operation_prompt",
+        "owner_package": "workspace package runtime boundary",
+        "operation_ids": [
+          "prompt.init",
+          "prompt.uninstall",
+          "prompt.upgrade"
+        ],
+        "primitive_refs": [
+          "prompt.render"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "prompt.init.process, prompt.uninstall.process, prompt.upgrade.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (workspace.selection.resolve, prompt.render) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_resolve_workspace_operation_selection",
+        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_symbol": "_resolve_workspace_operation_selection",
+        "owner_package": "workspace package runtime boundary",
+        "operation_ids": [
+          "prompt.init",
+          "prompt.uninstall",
+          "prompt.upgrade"
+        ],
+        "primitive_refs": [
+          "workspace.selection.resolve"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "prompt.init.process, prompt.uninstall.process, prompt.upgrade.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (workspace.selection.resolve, prompt.render) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_run_external_intent_refresh_github_adapter",
+        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_symbol": "_run_external_intent_refresh_github_adapter",
+        "owner_package": "workspace package runtime boundary",
+        "operation_ids": [
+          "external-intent.refresh-github"
+        ],
+        "primitive_refs": [
+          "runtime_module_handler:external-intent.refresh-github"
+        ],
+        "runtime_boundary_class": "provider-integration",
+        "why_not_generic_deterministic": "The symbol owns provider-specific integration or external-tool behavior rather than deterministic target-executor logic.",
+        "conformance_ref": "external-intent.refresh-github.help.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as provider-integration; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_run_implement_context_adapter",
+        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_symbol": "_run_implement_context_adapter",
+        "owner_package": "workspace package runtime boundary",
+        "operation_ids": [
+          "implement.context"
+        ],
+        "primitive_refs": [
+          "runtime_module_handler:implement.context"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "implement.context.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_run_init_lifecycle_adapter",
+        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_symbol": "_run_init_lifecycle_adapter",
+        "owner_package": "workspace package runtime boundary",
+        "operation_ids": [
+          "init.lifecycle",
+          "install.lifecycle"
+        ],
+        "primitive_refs": [
+          "runtime_module_handler:init.lifecycle",
+          "runtime_module_handler:install.lifecycle"
+        ],
+        "runtime_boundary_class": "mutation-orchestration",
+        "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
+        "conformance_ref": "init.lifecycle.dry-run.process, install.lifecycle.dry-run.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as mutation-orchestration; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_run_lifecycle_mutation_adapter",
+        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_symbol": "_run_lifecycle_mutation_adapter",
+        "owner_package": "workspace package runtime boundary",
+        "operation_ids": [
+          "uninstall.lifecycle",
+          "upgrade.lifecycle"
+        ],
+        "primitive_refs": [
+          "runtime_module_handler:uninstall.lifecycle",
+          "runtime_module_handler:upgrade.lifecycle"
+        ],
+        "runtime_boundary_class": "mutation-orchestration",
+        "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
+        "conformance_ref": "uninstall.lifecycle.destructive-refusal.process, upgrade.lifecycle.dry-run.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as mutation-orchestration; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_run_lifecycle_report_adapter",
+        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_symbol": "_run_lifecycle_report_adapter",
+        "owner_package": "workspace package runtime boundary",
+        "operation_ids": [
+          "doctor.report",
+          "status.report"
+        ],
+        "primitive_refs": [
+          "runtime_module_handler:doctor.report",
+          "runtime_module_handler:status.report"
+        ],
+        "runtime_boundary_class": "live-workspace-inspection",
+        "why_not_generic_deterministic": "The symbol owns live workspace inspection and policy interpretation over target state rather than deterministic target-executor logic.",
+        "conformance_ref": "doctor.report.process, status.report.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as live-workspace-inspection; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_run_memory_front_door_adapter",
+        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_symbol": "_run_memory_front_door_adapter",
+        "owner_package": "workspace package runtime boundary",
+        "operation_ids": [
+          "memory.front-door"
+        ],
+        "primitive_refs": [
+          "runtime_module_handler:memory.front-door"
+        ],
+        "runtime_boundary_class": "front-door-dispatch",
+        "why_not_generic_deterministic": "The symbol owns module front-door dispatch across installed package boundaries rather than deterministic target-executor logic.",
+        "conformance_ref": "memory.front-door.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as front-door-dispatch; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_run_modules_report_adapter",
+        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_symbol": "_run_modules_report_adapter",
+        "owner_package": "workspace package runtime boundary",
+        "operation_ids": [
+          "modules.report"
+        ],
+        "primitive_refs": [
+          "runtime_module_handler:modules.report"
+        ],
+        "runtime_boundary_class": "live-workspace-inspection",
+        "why_not_generic_deterministic": "The symbol owns live workspace inspection and policy interpretation over target state rather than deterministic target-executor logic.",
+        "conformance_ref": "modules.report.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as live-workspace-inspection; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_run_ownership_report_adapter",
+        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_symbol": "_run_ownership_report_adapter",
+        "owner_package": "workspace package runtime boundary",
+        "operation_ids": [
+          "ownership.report"
+        ],
+        "primitive_refs": [
+          "runtime_module_handler:ownership.report"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "ownership.report.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_run_planning_front_door_adapter",
+        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_symbol": "_run_planning_front_door_adapter",
+        "owner_package": "workspace package runtime boundary",
+        "operation_ids": [
+          "planning.front-door"
+        ],
+        "primitive_refs": [
+          "runtime_module_handler:planning.front-door"
+        ],
+        "runtime_boundary_class": "front-door-dispatch",
+        "why_not_generic_deterministic": "The symbol owns module front-door dispatch across installed package boundaries rather than deterministic target-executor logic.",
+        "conformance_ref": "planning.front-door.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as front-door-dispatch; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_run_preflight_report_adapter",
+        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_symbol": "_run_preflight_report_adapter",
+        "owner_package": "workspace package runtime boundary",
+        "operation_ids": [
+          "preflight.report"
+        ],
+        "primitive_refs": [
+          "runtime_module_handler:preflight.report"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "preflight.report.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_run_proof_report_adapter",
+        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_symbol": "_run_proof_report_adapter",
+        "owner_package": "workspace package runtime boundary",
+        "operation_ids": [
+          "proof.report"
+        ],
+        "primitive_refs": [
+          "runtime_module_handler:proof.report"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "proof.report.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_run_reconcile_report_adapter",
+        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_symbol": "_run_reconcile_report_adapter",
+        "owner_package": "workspace package runtime boundary",
+        "operation_ids": [
+          "reconcile.report"
+        ],
+        "primitive_refs": [
+          "runtime_module_handler:reconcile.report"
+        ],
+        "runtime_boundary_class": "mutation-orchestration",
+        "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior.",
+        "conformance_ref": "reconcile.report.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as mutation-orchestration; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_run_report_combined_adapter",
+        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_symbol": "_run_report_combined_adapter",
+        "owner_package": "workspace package runtime boundary",
+        "operation_ids": [
+          "report.combined"
+        ],
+        "primitive_refs": [
+          "runtime_module_handler:report.combined"
+        ],
+        "runtime_boundary_class": "live-workspace-inspection",
+        "why_not_generic_deterministic": "The symbol owns live workspace inspection and policy interpretation over target state rather than deterministic target-executor logic.",
+        "conformance_ref": "report.combined.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as live-workspace-inspection; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_run_setup_guidance_adapter",
+        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_symbol": "_run_setup_guidance_adapter",
+        "owner_package": "workspace package runtime boundary",
+        "operation_ids": [
+          "setup.guidance"
+        ],
+        "primitive_refs": [
+          "runtime_module_handler:setup.guidance"
+        ],
+        "runtime_boundary_class": "live-workspace-inspection",
+        "why_not_generic_deterministic": "The symbol owns live workspace inspection and policy interpretation over target state rather than deterministic target-executor logic.",
+        "conformance_ref": "setup.guidance.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as live-workspace-inspection; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_run_skills_report_adapter",
+        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_symbol": "_run_skills_report_adapter",
+        "owner_package": "workspace package runtime boundary",
+        "operation_ids": [
+          "skills.report"
+        ],
+        "primitive_refs": [
+          "runtime_module_handler:skills.report"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "skills.report.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_run_start_context_adapter",
+        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_symbol": "_run_start_context_adapter",
+        "owner_package": "workspace package runtime boundary",
+        "operation_ids": [
+          "start.context"
+        ],
+        "primitive_refs": [
+          "runtime_module_handler:start.context"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "start.context.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_run_summary_report_adapter",
+        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_symbol": "_run_summary_report_adapter",
+        "owner_package": "workspace package runtime boundary",
+        "operation_ids": [
+          "summary.report"
+        ],
+        "primitive_refs": [
+          "runtime_module_handler:summary.report"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "summary.report.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_select_workspace_operation_fields",
+        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_symbol": "_select_workspace_operation_fields",
+        "owner_package": "workspace package runtime boundary",
+        "operation_ids": [
+          "config.report"
+        ],
+        "primitive_refs": [
+          "output.fields.select"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "config.report.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, and generated output owns selected-output text. Domain primitive refs (workspace.root.resolve, workspace.config.load, output.fields.select, workspace.config.emit) remain explicit package-boundary calls for config loading, profile projection, and tiny/full text. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      }
+    ]
   },
   "entries": [
     {
