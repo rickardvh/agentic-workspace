@@ -8484,10 +8484,27 @@ def _external_intent_evidence_write_location(target_root: Path, storage: str) ->
 
 def _external_intent_evidence_read_location(target_root: Path) -> tuple[Path, str, str]:
     cache_path = target_root / EXTERNAL_INTENT_CACHE_RELATIVE_PATH
+    planning_path = target_root / EXTERNAL_INTENT_PLANNING_RELATIVE_PATH
+    if cache_path.exists() and planning_path.exists():
+        cache_timestamp = _external_intent_evidence_file_timestamp(cache_path)
+        planning_timestamp = _external_intent_evidence_file_timestamp(planning_path)
+        if planning_timestamp and (cache_timestamp is None or planning_timestamp > cache_timestamp):
+            return (planning_path, EXTERNAL_INTENT_PLANNING_RELATIVE_PATH.as_posix(), "planning")
     if cache_path.exists():
         return (cache_path, EXTERNAL_INTENT_CACHE_RELATIVE_PATH.as_posix(), "cache")
-    planning_path = target_root / EXTERNAL_INTENT_PLANNING_RELATIVE_PATH
     return (planning_path, EXTERNAL_INTENT_PLANNING_RELATIVE_PATH.as_posix(), "planning-legacy")
+
+
+def _external_intent_evidence_file_timestamp(path: Path) -> datetime | None:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    metadata = payload.get("refresh_metadata", {})
+    metadata = metadata if isinstance(metadata, dict) else {}
+    return _parse_external_intent_timestamp(payload.get("refreshed_at")) or _parse_external_intent_timestamp(metadata.get("refreshed_at"))
 
 
 def _ensure_external_intent_cache_if_available(target_root: Path) -> dict[str, Any]:
