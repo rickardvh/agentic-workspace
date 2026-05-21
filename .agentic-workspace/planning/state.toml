@@ -12,9 +12,7 @@ work_items = []
 execplans = []
 
 [todo]
-active_items = [
-  { id = "workspace-runtime-reduction-closeout", title = "Close #1079 runtime reduction child slices", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/workspace-runtime-reduction-closeout.plan.json", why_now = "Created by new-plan scaffold.", owner_role = "implementation", handoff_ready = true },
-]
+active_items = []
 queued_items = []
 
 [roadmap]
