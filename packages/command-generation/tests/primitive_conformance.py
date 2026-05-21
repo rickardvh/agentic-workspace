@@ -149,6 +149,34 @@ def main() -> int:
         assert "Payload verification" in emitted_install_text
         assert ".agentic-workspace/memory/VERSION.md" in emitted_install_text
 
+        emitted_planning_report_text = execute_primitive(
+            "output.emit",
+            values={
+                "result": {
+                    "kind": "planning-module-report/v1",
+                    "profile": "tiny",
+                    "target_root": str(root),
+                    "module": "planning",
+                    "health": "healthy",
+                    "status": {
+                        "active_todo_count": 1,
+                        "queued_todo_count": 2,
+                        "active_execplan_count": 3,
+                        "roadmap_lane_count": 4,
+                        "roadmap_candidate_count": 5,
+                    },
+                    "next_action": {"summary": "continue"},
+                },
+                "format": "text",
+            },
+            context=context,
+        )
+        assert "Command: planning" in emitted_planning_report_text
+        assert (
+            "Status: 1 active TODO / 2 queued TODO / 3 active execplans / 4 roadmap lanes / 5 roadmap candidates"
+            in emitted_planning_report_text
+        )
+
         operation = {
             "ir_plan": {
                 "steps": [

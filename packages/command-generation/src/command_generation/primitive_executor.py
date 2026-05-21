@@ -820,6 +820,8 @@ def _emit_output(*, values: dict[str, Any], arguments: dict[str, Any] | None = N
         return _emit_route_report_text(result)
     if isinstance(result, dict) and result.get("kind") == "memory-module-report/v1":
         return _emit_memory_report_text(result)
+    if isinstance(result, dict) and result.get("kind") == "planning-module-report/v1" and result.get("profile") == "tiny":
+        return _emit_planning_module_report_text(result)
     if not isinstance(result, dict):
         return f"{result}\n"
     lines = [str(result.get("message", ""))]
@@ -927,6 +929,28 @@ def _emit_memory_report_text(result: dict[str, Any]) -> str:
     detail_commands = result.get("detail_commands", {})
     if isinstance(detail_commands, Mapping) and detail_commands.get("full"):
         lines.append(str(detail_commands["full"]))
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _emit_planning_module_report_text(result: dict[str, Any]) -> str:
+    status = result.get("status", {})
+    next_action = result.get("next_action", {})
+    lines = [
+        f"Target: {result.get('target_root')}",
+        f"Command: {result.get('module', 'planning')}",
+        f"Health: {result.get('health')}",
+    ]
+    if isinstance(status, Mapping):
+        lines.append(
+            "Status: "
+            f"{status.get('active_todo_count', 0)} active TODO / "
+            f"{status.get('queued_todo_count', 0)} queued TODO / "
+            f"{status.get('active_execplan_count', 0)} active execplans / "
+            f"{status.get('roadmap_lane_count', 0)} roadmap lanes / "
+            f"{status.get('roadmap_candidate_count', 0)} roadmap candidates"
+        )
+    if isinstance(next_action, Mapping):
+        lines.append(f"Next action: {next_action.get('summary', '')}")
     return "\n".join(lines).rstrip() + "\n"
 
 

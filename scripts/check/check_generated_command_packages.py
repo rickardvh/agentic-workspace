@@ -468,8 +468,10 @@ def _format_generated_adapter_retry_recovery(
 
 
 def _load_json(relative_path: str) -> dict[str, object]:
-    return operation_manifest(relative_path) if relative_path.startswith("operations/") else json.loads(
-        (REPO_ROOT / "src" / "agentic_workspace" / "contracts" / relative_path).read_text(encoding="utf-8")
+    return (
+        operation_manifest(relative_path)
+        if relative_path.startswith("operations/")
+        else json.loads((REPO_ROOT / "src" / "agentic_workspace" / "contracts" / relative_path).read_text(encoding="utf-8"))
     )
 
 
@@ -568,14 +570,10 @@ def _validate_operation_cli_inputs_for_interface(
     if operation_id and operation_path and (option_names or not has_subcommands):
         try:
             operation = (
-                _load_generated_operation_json(generated_root, operation_path)
-                if generated_root is not None
-                else _load_json(operation_path)
+                _load_generated_operation_json(generated_root, operation_path) if generated_root is not None else _load_json(operation_path)
             )
         except (OSError, json.JSONDecodeError) as exc:
-            errors.append(
-                f"{package_id} {command_path} operation {operation_id} cannot be loaded for CLI input proof: {exc}"
-            )
+            errors.append(f"{package_id} {command_path} operation {operation_id} cannot be loaded for CLI input proof: {exc}")
         else:
             inputs = operation.get("inputs", [])
             if isinstance(inputs, list):
@@ -635,9 +633,7 @@ def _validate_generated_operation_cli_inputs(ir: dict[str, object]) -> list[str]
                     continue
                 raw_command = command.get("command", {})
                 command_name = str(
-                    interface.get("name")
-                    or (raw_command.get("name") if isinstance(raw_command, dict) else "")
-                    or "<unnamed>"
+                    interface.get("name") or (raw_command.get("name") if isinstance(raw_command, dict) else "") or "<unnamed>"
                 ).strip()
                 errors.extend(
                     _validate_operation_cli_inputs_for_interface(
@@ -921,8 +917,7 @@ def _runnable_typescript_conformance_cases() -> tuple[list[RunnableTypescriptCon
             for target in package.get("targets", [])
             if isinstance(target, dict)
             and target.get("kind") == "typescript"
-            and target.get("maturity_level_ref")
-            in {"runnable-read-only-adapter", "weak-agent-safe-adapter", "mutation-capable-adapter"}
+            and target.get("maturity_level_ref") in {"runnable-read-only-adapter", "weak-agent-safe-adapter", "mutation-capable-adapter"}
         ]
         if not runnable_typescript_targets:
             continue
@@ -939,8 +934,7 @@ def _runnable_typescript_conformance_cases() -> tuple[list[RunnableTypescriptCon
                 case = registry.get(str(conformance_ref))
                 if case is None:
                     errors.append(
-                        f"missing generated TypeScript conformance case for {package_id!r} command {command_name!r} "
-                        f"ref {conformance_ref!r}"
+                        f"missing generated TypeScript conformance case for {package_id!r} command {command_name!r} ref {conformance_ref!r}"
                     )
                     continue
                 selected.append(
@@ -964,9 +958,7 @@ def _validate_typescript_runtime_handoff_thinness(*, package: str, cli_text: str
     import_lines = {line.strip() for line in cli_text.splitlines() if line.startswith("import ")}
     unexpected_imports = sorted(import_lines - expected_imports)
     if unexpected_imports:
-        errors.append(
-            f"generated/typescript/{package}/src/cli.mjs imports runtime-owned modules: {unexpected_imports!r}"
-        )
+        errors.append(f"generated/typescript/{package}/src/cli.mjs imports runtime-owned modules: {unexpected_imports!r}")
     required_fragments = [
         "function splitRuntimeCommand(commandLine)",
         "const [runtimeExecutable, ...runtimeArgs] = splitRuntimeCommand(runtimeCommand);",
@@ -995,11 +987,7 @@ def _validate_typescript_runtime_handoff_thinness(*, package: str, cli_text: str
 def _validate_generated_command_projection_boundary(*, package_id: str, command: dict[str, object]) -> list[str]:
     errors: list[str] = []
     command_payload = command.get("command", {})
-    command_name = (
-        command_payload.get("name", "<unknown>")
-        if isinstance(command_payload, dict)
-        else "<unknown>"
-    )
+    command_name = command_payload.get("name", "<unknown>") if isinstance(command_payload, dict) else "<unknown>"
     location = f"command_package_ir.json package {package_id!r} command {command_name!r}"
     conformance_refs = command.get("conformance_refs", [])
     if not isinstance(conformance_refs, list) or not conformance_refs:
@@ -1039,7 +1027,9 @@ def _validate_python_cli_completion_policy(policy: dict[str, object]) -> list[st
     proof_requirements = [str(item) for item in policy.get("proof_requirements", []) if isinstance(item, str)]
     finish_line_lower = finish_line.lower()
     if "implementation-independent" not in finish_line_lower or "codegen-owned primitive executors" not in finish_line_lower:
-        errors.append("command_package_ir.json Python CLI completion finish_line must require implementation-independent artifacts and codegen-owned primitive executors")
+        errors.append(
+            "command_package_ir.json Python CLI completion finish_line must require implementation-independent artifacts and codegen-owned primitive executors"
+        )
     if current_state not in PYTHON_COMPLETION_STATES:
         errors.append(f"command_package_ir.json Python CLI completion current_state is unknown: {current_state!r}")
     if not any("runtime primitive implementation" in item for item in allowed):
@@ -1048,15 +1038,18 @@ def _validate_python_cli_completion_policy(policy: dict[str, object]) -> list[st
         if not any(required in item for item in must_move):
             errors.append(f"command_package_ir.json Python CLI completion policy must move {required!r} behind contracts or generation")
     if not any("generic file" in item and "json" in item.lower() and "markdown" in item.lower() for item in must_move):
-        errors.append("command_package_ir.json Python CLI completion policy must move generic deterministic file/data behavior behind codegen-owned primitives")
+        errors.append(
+            "command_package_ir.json Python CLI completion policy must move generic deterministic file/data behavior behind codegen-owned primitives"
+        )
     if not any("weak-agent-safe-adapter" in item and "full Python generated CLI completion" in item for item in proof_requirements):
-        errors.append("command_package_ir.json Python CLI completion proof must distinguish adapter maturity from full generated CLI completion")
+        errors.append(
+            "command_package_ir.json Python CLI completion proof must distinguish adapter maturity from full generated CLI completion"
+        )
     completion_gate = policy.get("completion_gate", {})
     if isinstance(completion_gate, dict) and current_state != "full-generated-cli-complete":
         if completion_gate.get("state") == "satisfied":
             errors.append(
-                "command_package_ir.json cannot mark the Python CLI completion gate satisfied while "
-                f"current_state is {current_state!r}"
+                f"command_package_ir.json cannot mark the Python CLI completion gate satisfied while current_state is {current_state!r}"
             )
     if current_state == "full-generated-cli-complete":
         if not isinstance(completion_gate, dict):
@@ -1131,8 +1124,7 @@ def _validate_full_python_completion_executable_ownership(ir: dict[str, object])
 
     errors: list[str] = []
     rendered_outputs = {
-        output.path.relative_to(REPO_ROOT).as_posix()
-        for output in render_workspace_command_package_outputs(ir, repo_root=REPO_ROOT)
+        output.path.relative_to(REPO_ROOT).as_posix() for output in render_workspace_command_package_outputs(ir, repo_root=REPO_ROOT)
     }
     required_generated_runtime_outputs = set(PYTHON_REQUIRED_RUNTIME_PROJECTION_OUTPUTS)
     missing_generated_runtime_outputs = sorted(required_generated_runtime_outputs - rendered_outputs)
@@ -1148,9 +1140,7 @@ def _validate_full_python_completion_executable_ownership(ir: dict[str, object])
             continue
         text = path.read_text(encoding="utf-8")
         matched_categories = sorted(
-            category
-            for category, markers in PYTHON_MODULE_SOURCE_EXECUTABLE_MARKERS.items()
-            if any(marker in text for marker in markers)
+            category for category, markers in PYTHON_MODULE_SOURCE_EXECUTABLE_MARKERS.items() if any(marker in text for marker in markers)
         )
         if matched_categories:
             errors.append(
@@ -1240,12 +1230,7 @@ def _validate_direct_generated_python_command_projection() -> list[str]:
     direct_commands = {
         "memory.list-files.report": REPO_ROOT / "generated" / "memory" / "python" / "commands" / "memory_list_files_report.py",
         "memory.list-skills.report": REPO_ROOT / "generated" / "memory" / "python" / "commands" / "memory_list_skills_report.py",
-        "planning.list-files.report": REPO_ROOT
-        / "generated"
-        / "planning"
-        / "python"
-        / "commands"
-        / "planning_list_files_report.py",
+        "planning.list-files.report": REPO_ROOT / "generated" / "planning" / "python" / "commands" / "planning_list_files_report.py",
     }
     forbidden_fragments = (
         "generated_operation_contract",
@@ -1285,8 +1270,7 @@ def _validate_direct_generated_python_command_projection() -> list[str]:
         for fragment in forbidden_fragments:
             if fragment in text:
                 errors.append(
-                    f"{path.relative_to(REPO_ROOT).as_posix()} direct generated command {operation_id} "
-                    f"must not contain {fragment!r}"
+                    f"{path.relative_to(REPO_ROOT).as_posix()} direct generated command {operation_id} must not contain {fragment!r}"
                 )
         for fragment in required_fragments_by_operation[operation_id]:
             if fragment not in text:
@@ -1330,9 +1314,7 @@ def _validate_python_runtime_projection_inventory(*, full_completion: bool) -> l
             "artifact_kind": artifact_kind,
         }.items():
             if entry.get(field) != expected_value:
-                errors.append(
-                    f"python_runtime_projection_inventory.json {relative_path} has wrong {field}: {entry.get(field)!r}"
-                )
+                errors.append(f"python_runtime_projection_inventory.json {relative_path} has wrong {field}: {entry.get(field)!r}")
         path = REPO_ROOT / relative_path
         if not path.is_file():
             errors.append(f"python_runtime_projection_inventory.json {relative_path} does not exist in generated/python")
@@ -1345,8 +1327,7 @@ def _validate_python_runtime_projection_inventory(*, full_completion: bool) -> l
             )
         if provenance_status == "transitional-generated-output-debt" and not blocking_full_completion:
             errors.append(
-                "python_runtime_projection_inventory.json transitional runtime projection debt must block full completion: "
-                f"{relative_path}"
+                f"python_runtime_projection_inventory.json transitional runtime projection debt must block full completion: {relative_path}"
             )
         if full_completion and (provenance_status != "rendered-by-command-generation" or blocking_full_completion):
             errors.append(
@@ -1468,15 +1449,13 @@ def _validate_python_completion_accepted_runtime_boundaries(*, require_exact: bo
             expected_operation_ids = set(expected.get("operation_ids", []))
             if declared_operation_ids != expected_operation_ids:
                 errors.append(
-                    f"{location} must declare operation_ids {sorted(expected_operation_ids)!r}; "
-                    f"got {sorted(declared_operation_ids)!r}"
+                    f"{location} must declare operation_ids {sorted(expected_operation_ids)!r}; got {sorted(declared_operation_ids)!r}"
                 )
             declared_primitive_refs = set(entry.get("primitive_refs", []))
             expected_primitive_refs = set(expected.get("primitive_refs", []))
             if declared_primitive_refs != expected_primitive_refs:
                 errors.append(
-                    f"{location} must declare primitive_refs {sorted(expected_primitive_refs)!r}; "
-                    f"got {sorted(declared_primitive_refs)!r}"
+                    f"{location} must declare primitive_refs {sorted(expected_primitive_refs)!r}; got {sorted(declared_primitive_refs)!r}"
                 )
         for field in (
             "owner_package",
@@ -1540,6 +1519,42 @@ def _validate_python_completion_output_boundary_audit(entry: dict[str, object], 
         if phrase not in audit:
             errors.append(f"{location} output-emission boundary audit must include {phrase!r}")
     return errors
+
+
+def _python_runtime_boundary_metrics() -> dict[str, object]:
+    try:
+        inventory = python_runtime_projection_inventory_manifest()
+    except Exception as exc:  # noqa: BLE001
+        return {"status": "unavailable", "error": str(exc)}
+    accepted = inventory.get("accepted_runtime_boundaries", {})
+    entries = accepted.get("entries", []) if isinstance(accepted, dict) else []
+    if not isinstance(entries, list):
+        return {"status": "unavailable", "error": "accepted_runtime_boundaries.entries is not a list"}
+    class_counts: dict[str, int] = {}
+    output_emission_symbols: list[dict[str, str]] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        boundary_class = str(entry.get("runtime_boundary_class", "unknown") or "unknown")
+        class_counts[boundary_class] = class_counts.get(boundary_class, 0) + 1
+        source_symbol = str(entry.get("source_symbol", ""))
+        if "emit" in source_symbol:
+            output_emission_symbols.append(
+                {
+                    "binding_kind": str(entry.get("binding_kind", "runtime-facade-call")),
+                    "facade_path": str(entry.get("facade_path", "")),
+                    "facade_symbol": str(entry.get("facade_symbol", "")),
+                    "source_symbol": source_symbol,
+                    "runtime_boundary_class": boundary_class,
+                }
+            )
+    return {
+        "status": "available",
+        "accepted_runtime_symbol_count": sum(class_counts.values()),
+        "accepted_runtime_symbol_count_by_class": dict(sorted(class_counts.items())),
+        "accepted_output_emission_symbol_count": len(output_emission_symbols),
+        "accepted_output_emission_symbols": output_emission_symbols,
+    }
 
 
 def _generated_runtime_facade_package_runtime_bindings() -> list[dict[str, str]]:
@@ -1750,10 +1765,7 @@ def _python_runtime_boundary_metadata() -> dict[tuple[str, str], dict[str, list[
                     package_id=package_id,
                     primitive_ref=f"runtime_module_handler:{handler.get('operation_id')}",
                 )
-    return {
-        key: {field: sorted(values) for field, values in value.items()}
-        for key, value in metadata.items()
-    }
+    return {key: {field: sorted(values) for field, values in value.items()} for key, value in metadata.items()}
 
 
 def _operation_uses(value: object) -> set[str]:
@@ -1805,9 +1817,9 @@ def _validate_python_shipped_source_executable_retirement() -> list[str]:
     tracked_sources = _tracked_python_source_files()
     for relative_path in tracked_sources:
         is_shipped_module_source = relative_path.startswith(PYTHON_SHIPPED_MODULE_SOURCE_ROOTS)
-        is_product_command_generation_source = relative_path.startswith("packages/command-generation/src/command_generation/") and relative_path.endswith(
-            PYTHON_PRODUCT_RUNTIME_SOURCE_PATTERNS
-        )
+        is_product_command_generation_source = relative_path.startswith(
+            "packages/command-generation/src/command_generation/"
+        ) and relative_path.endswith(PYTHON_PRODUCT_RUNTIME_SOURCE_PATTERNS)
         if not is_shipped_module_source and not is_product_command_generation_source:
             continue
         path = REPO_ROOT / relative_path
@@ -1815,9 +1827,7 @@ def _validate_python_shipped_source_executable_retirement() -> list[str]:
             continue
         text = path.read_text(encoding="utf-8")
         matched_categories = sorted(
-            category
-            for category, markers in PYTHON_MODULE_SOURCE_EXECUTABLE_MARKERS.items()
-            if any(marker in text for marker in markers)
+            category for category, markers in PYTHON_MODULE_SOURCE_EXECUTABLE_MARKERS.items() if any(marker in text for marker in markers)
         )
         if matched_categories:
             errors.append(
@@ -1914,15 +1924,11 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
             boundary_reason = str(entry.get("runtime_boundary_reason", "")).strip()
             if not boundary_reason:
                 errors.append(
-                    f"python_operation_execution_inventory.json {operation_id} domain runtime IR entry "
-                    "must explain runtime_boundary_reason"
+                    f"python_operation_execution_inventory.json {operation_id} domain runtime IR entry must explain runtime_boundary_reason"
                 )
             for field in ("what_would_make_portable_later", "generic_behavior_audit"):
                 if not str(entry.get(field, "")).strip():
-                    errors.append(
-                        f"python_operation_execution_inventory.json {operation_id} domain runtime IR entry "
-                        f"must include {field}"
-                    )
+                    errors.append(f"python_operation_execution_inventory.json {operation_id} domain runtime IR entry must include {field}")
             if "python.function.call" in primitive_refs and not str(entry.get("external_adapter_note", "")).strip():
                 errors.append(
                     f"python_operation_execution_inventory.json {operation_id} domain runtime IR entry "
@@ -1944,8 +1950,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
             for field in ("what_would_make_portable_later", "generic_behavior_audit"):
                 if not str(entry.get(field, "")).strip():
                     errors.append(
-                        f"python_operation_execution_inventory.json {operation_id} accepted hand-owned runtime entry "
-                        f"must include {field}"
+                        f"python_operation_execution_inventory.json {operation_id} accepted hand-owned runtime entry must include {field}"
                     )
 
     ir_consumed_operations = {
@@ -1992,9 +1997,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
             continue
         operation_contract = f"operations/{operation_id}.json"
         expected_status = (
-            "portable-codegen-primitive-executed"
-            if operation_id in portable_primitive_operations
-            else "domain-runtime-primitive-via-ir"
+            "portable-codegen-primitive-executed" if operation_id in portable_primitive_operations else "domain-runtime-primitive-via-ir"
         )
         if entry.get("status") != expected_status:
             errors.append(f"{operation_id} must be marked {expected_status} in python_operation_execution_inventory.json")
@@ -2053,9 +2056,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         except (ImportError, KeyError, FileNotFoundError, json.JSONDecodeError) as exc:
             errors.append(f"generated operation contract could not be loaded for {operation_id}: {exc}")
 
-    memory_operation_executor_text = (
-        REPO_ROOT / "generated" / "memory" / "python" / "primitives" / "operation_executor.py"
-    ).read_text(
+    memory_operation_executor_text = (REPO_ROOT / "generated" / "memory" / "python" / "primitives" / "operation_executor.py").read_text(
         encoding="utf-8"
     )
     if "from command_generation.primitive_executor import" not in memory_operation_executor_text:
@@ -2069,7 +2070,10 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         errors.append("generated memory runtime facade is missing")
     else:
         memory_runtime_text = memory_runtime_facade.read_text(encoding="utf-8")
-        if "isinstance(result, dict)" not in memory_runtime_text or "json.dumps(_serialise_value(values['result']), indent=2)" not in memory_runtime_text:
+        if (
+            "isinstance(result, dict)" not in memory_runtime_text
+            or "json.dumps(_serialise_value(values['result']), indent=2)" not in memory_runtime_text
+        ):
             errors.append("generated memory runtime facade must emit dict JSON through generated-local code before source fallback")
         for function_name in ("_load_memory_bootstrap_doctor", "_load_memory_bootstrap_status"):
             function_marker = f"def {function_name}(*args: Any, **kwargs: Any) -> Any:"
@@ -2089,11 +2093,15 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         if "_tiny_memory_report_payload_from_toml_table_counts(" in report_function_text:
             errors.append("_load_memory_report JSON fast path must live in portable operation IR, not the generated memory runtime facade")
     if "_tiny_memory_report_payload_from_toml_table_counts" in memory_runtime_text:
-        errors.append("generated memory runtime facade must not own memory report JSON projection helpers; memory report JSON uses portable operation IR primitives")
+        errors.append(
+            "generated memory runtime facade must not own memory report JSON projection helpers; memory report JSON uses portable operation IR primitives"
+        )
     if "_tiny_memory_report_fast" in memory_runtime_text:
         errors.append("generated memory runtime facade must not import the source tiny memory report fast path")
     if "_tiny_route_report_payload" in memory_runtime_text:
-        errors.append("generated memory runtime facade must not own route-report JSON projection helpers; route-report JSON uses portable operation IR primitives")
+        errors.append(
+            "generated memory runtime facade must not own route-report JSON projection helpers; route-report JSON uses portable operation IR primitives"
+        )
     route_report_operation = REPO_ROOT / "generated" / "memory" / "python" / "operations" / "memory.route-report.report.json"
     if route_report_operation.is_file():
         route_report_text = route_report_operation.read_text(encoding="utf-8")
@@ -2104,7 +2112,9 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
             '"uses": "memory.route_report.load"',
         ):
             if fragment not in route_report_text:
-                errors.append("generated memory route-report operation must retain portable JSON primitives plus explicit verbose/text fallback")
+                errors.append(
+                    "generated memory route-report operation must retain portable JSON primitives plus explicit verbose/text fallback"
+                )
     report_operation = REPO_ROOT / "generated" / "memory" / "python" / "operations" / "memory.report.report.json"
     if report_operation.is_file():
         report_text = report_operation.read_text(encoding="utf-8")
@@ -2160,15 +2170,11 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         "memory_status_report",
         "memory_verify_payload_report",
     ):
-        command_text = (REPO_ROOT / "generated" / "memory" / "python" / "commands" / f"{module_name}.py").read_text(
-            encoding="utf-8"
-        )
+        command_text = (REPO_ROOT / "generated" / "memory" / "python" / "commands" / f"{module_name}.py").read_text(encoding="utf-8")
         if "run_operation_ir(" not in command_text:
             errors.append(f"generated/memory/python/commands/{module_name}.py must execute operation IR through run_operation_ir")
 
-    planning_operation_executor_text = (
-        REPO_ROOT / "generated" / "planning" / "python" / "primitives" / "operation_executor.py"
-    ).read_text(
+    planning_operation_executor_text = (REPO_ROOT / "generated" / "planning" / "python" / "primitives" / "operation_executor.py").read_text(
         encoding="utf-8"
     )
     if "from command_generation.primitive_executor import" not in planning_operation_executor_text:
@@ -2197,17 +2203,13 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
     if "def emit_planning_operation_output" not in planning_runtime_text or "isinstance(result, dict)" not in planning_runtime_text:
         errors.append("generated planning runtime facade must emit dict JSON through generated-local code before source fallback")
     for module_name in ("planning_doctor_report", "planning_report_report", "planning_status_report"):
-        command_text = (REPO_ROOT / "generated" / "planning" / "python" / "commands" / f"{module_name}.py").read_text(
-            encoding="utf-8"
-        )
+        command_text = (REPO_ROOT / "generated" / "planning" / "python" / "commands" / f"{module_name}.py").read_text(encoding="utf-8")
         if "run_operation_ir(" not in command_text:
             errors.append(f"generated/planning/python/commands/{module_name}.py must execute operation IR through run_operation_ir")
 
     workspace_operation_executor_text = (
         REPO_ROOT / "generated" / "workspace" / "python" / "primitives" / "operation_executor.py"
-    ).read_text(
-        encoding="utf-8"
-    )
+    ).read_text(encoding="utf-8")
     if "from command_generation.primitive_executor import" not in workspace_operation_executor_text:
         errors.append("workspace operation IR executor must import the codegen-owned primitive executor")
     if "run_operation_steps(" not in workspace_operation_executor_text:
@@ -2221,9 +2223,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         "prompt_upgrade",
         "system_intent_sync",
     ):
-        command_text = (REPO_ROOT / "generated" / "workspace" / "python" / "commands" / f"{module_name}.py").read_text(
-            encoding="utf-8"
-        )
+        command_text = (REPO_ROOT / "generated" / "workspace" / "python" / "commands" / f"{module_name}.py").read_text(encoding="utf-8")
         if "run_operation_ir(" not in command_text:
             errors.append(f"generated/workspace/python/commands/{module_name}.py must execute operation IR through run_operation_ir")
 
@@ -2330,8 +2330,7 @@ def _validate_generated_python_target_layout() -> list[str]:
         if legacy_dirs:
             errors.append(
                 "generated/python must contain only shared Python proof support files; legacy generated Python "
-                "package directories must live under generated/<package>/python: "
-                + ", ".join(legacy_dirs)
+                "package directories must live under generated/<package>/python: " + ", ".join(legacy_dirs)
             )
     for package_name in ("workspace", "planning", "memory"):
         package_root = REPO_ROOT / "generated" / package_name / "python"
@@ -2427,9 +2426,7 @@ def _validate_generated_cli_compatibility_vocabulary() -> list[str]:
             continue
         reason = _generated_cli_compatibility_allowlist_reason(relative_path)
         if reason is None:
-            errors.append(
-                f"{relative_path} contains generated_cli_package compatibility vocabulary without an explicit allowlist reason"
-            )
+            errors.append(f"{relative_path} contains generated_cli_package compatibility vocabulary without an explicit allowlist reason")
     return errors
 
 
@@ -2484,8 +2481,7 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
         def compare_adapter(runnable_case: RunnableTypescriptConformanceCase) -> None:
             if not runnable_case.cli.is_file():
                 errors.append(
-                    "adapter conformance failed before execution: "
-                    f"{runnable_case.cli.relative_to(REPO_ROOT).as_posix()} is missing"
+                    f"adapter conformance failed before execution: {runnable_case.cli.relative_to(REPO_ROOT).as_posix()} is missing"
                 )
                 return
             case = runnable_case.case
@@ -2512,7 +2508,9 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
             try:
                 canonical_selected = case.selected_fields(canonical_process.stdout)
             except (KeyError, ValueError, json.JSONDecodeError) as exc:
-                errors.append(f"runtime primitive failure: canonical {runnable_case.package_id} {case.label} stdout did not satisfy selected fields: {exc}")
+                errors.append(
+                    f"runtime primitive failure: canonical {runnable_case.package_id} {case.label} stdout did not satisfy selected fields: {exc}"
+                )
                 return
             if case.expected_fields is not None and canonical_selected != case.expected_fields:
                 errors.append(
@@ -2720,7 +2718,9 @@ def _validate_static_surfaces() -> list[str]:
             if not isinstance(package, dict):
                 errors.append(f"command_package_ir.json is missing package {package_id!r}")
                 continue
-            python_targets = [target for target in package.get("targets", []) if isinstance(target, dict) and target.get("kind") == "python"]
+            python_targets = [
+                target for target in package.get("targets", []) if isinstance(target, dict) and target.get("kind") == "python"
+            ]
             if not python_targets:
                 errors.append(f"command_package_ir.json package {package_id!r} is missing a Python generated target")
                 continue
@@ -2746,7 +2746,7 @@ def _validate_static_surfaces() -> list[str]:
                 errors.append(f"{generated_root}/cli.py is missing")
             else:
                 generated_text = (REPO_ROOT / generated_root / "cli.py").read_text(encoding="utf-8")
-                if "json.loads(\n    r\"\"\"" in generated_text:
+                if 'json.loads(\n    r"""' in generated_text:
                     errors.append(f"{generated_root}/cli.py embeds generated JSON instead of loading resources")
                 if "def generated_maturity()" not in generated_text:
                     errors.append(f"{generated_root}/cli.py is missing generated_maturity")
@@ -2757,9 +2757,7 @@ def _validate_static_surfaces() -> list[str]:
                 if "from .commands import GENERATED_COMMAND_HANDLERS" not in generated_text:
                     errors.append(f"{generated_root}/cli.py does not route through generated command modules")
                 if "_GENERATED_WEAK_AGENT_ROUTING = 'allowed-mutation-with-review'" not in generated_text:
-                    errors.append(
-                        f"{generated_root}/cli.py does not advertise mutation review routing"
-                    )
+                    errors.append(f"{generated_root}/cli.py does not advertise mutation review routing")
             for resource_name in ("command_package.json", "adapter_commands.json"):
                 resource_path = REPO_ROOT / generated_root / resource_name
                 if not resource_path.is_file():
@@ -2792,9 +2790,7 @@ def _validate_static_surfaces() -> list[str]:
                             }
                         )
                     if payload != expected_adapter_commands:
-                        errors.append(
-                            f"{generated_root}/adapter_commands.json drifted from generated adapter projection"
-                        )
+                        errors.append(f"{generated_root}/adapter_commands.json drifted from generated adapter projection")
             for directory_name in ("commands", "operations", "primitives"):
                 if not (REPO_ROOT / generated_root / directory_name).is_dir():
                     errors.append(f"{generated_root}/{directory_name} is missing")
@@ -2839,7 +2835,9 @@ def _validate_static_surfaces() -> list[str]:
         conformance_cases, conformance_errors = _runnable_typescript_conformance_cases()
         errors.extend(f"static conformance coverage drift: {error}" for error in conformance_errors)
         if not conformance_errors and not conformance_cases:
-            errors.append("static conformance coverage drift: no runnable TypeScript conformance cases were derived from contract artifacts")
+            errors.append(
+                "static conformance coverage drift: no runnable TypeScript conformance cases were derived from contract artifacts"
+            )
     dockerfile = REPO_ROOT / "generated" / "typescript" / "Dockerfile"
     if not dockerfile.is_file():
         errors.append("generated/typescript/Dockerfile is missing")
@@ -2890,9 +2888,7 @@ def _validate_static_surfaces() -> list[str]:
             if is_weak_agent_safe and maturity.get("weak_agent_routing") != "allowed-read-only":
                 errors.append(f"generated/typescript/{package}/package.json weak-agent-safe target is missing allowed-read-only routing")
             if is_mutation_capable and maturity.get("weak_agent_routing") != "allowed-mutation-with-review":
-                errors.append(
-                    f"generated/typescript/{package}/package.json mutation-capable target is missing mutation review routing"
-                )
+                errors.append(f"generated/typescript/{package}/package.json mutation-capable target is missing mutation review routing")
             if (
                 is_runnable
                 and not is_weak_agent_safe
@@ -3000,12 +2996,9 @@ def _python_completion_blockers_report(ir: dict[str, object]) -> dict[str, objec
         "false_completion_claim_would_fail": bool(blockers),
         "blockers": blockers,
         "blocker_count": len(blockers),
+        "accepted_runtime_boundary_metrics": _python_runtime_boundary_metrics(),
         "remaining_scope": "tier-6-final-python-completion-promotion" if blockers else "none",
-        "next_owner": (
-            "#892 / tier-6-final-python-completion-promotion"
-            if blockers
-            else "none"
-        ),
+        "next_owner": ("#892 / tier-6-final-python-completion-promotion" if blockers else "none"),
     }
 
 
@@ -3016,6 +3009,10 @@ def _print_python_completion_blockers_report(report: dict[str, object], *, outpu
 
     print(f"Python completion state: {report['current_state']} (gate: {report['completion_gate_state']})")
     print(f"Completion claim allowed: {str(report['completion_claim_allowed']).lower()}")
+    metrics = report.get("accepted_runtime_boundary_metrics", {})
+    if isinstance(metrics, dict) and metrics.get("status") == "available":
+        print(f"Accepted runtime symbols: {metrics.get('accepted_runtime_symbol_count')}")
+        print(f"Accepted output-emission symbols: {metrics.get('accepted_output_emission_symbol_count')}")
     blockers = report.get("blockers", [])
     if not isinstance(blockers, list) or not blockers:
         print("Blockers: none")
