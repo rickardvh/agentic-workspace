@@ -5486,6 +5486,7 @@ def _run_report_command(
         "branch_workflow_posture": branch_workflow_posture,
         "local_memory": local_memory,
         "memory_consult": _memory_consult_payload(target_root=target_root, cli_invoke=config.cli_invoke),
+        "reuse_pressure": _reuse_pressure_payload(target_root=target_root, cli_invoke=config.cli_invoke),
         "agent_aids": _agent_aids_report_payload(target_root=target_root, cli_invoke=config.cli_invoke),
         "execution_shape": execution_shape,
         "durable_intent": durable_intent,
@@ -5592,6 +5593,7 @@ def _run_report_router_command(
         "config_enforcement": _config_enforcement_payload(config=config),
         "config_effect_audit": _config_effect_audit_payload(config=config),
         "memory_consult": _tiny_memory_consult_payload(config=config),
+        "reuse_pressure": _reuse_pressure_payload(target_root=target_root, cli_invoke=config.cli_invoke, compact=True),
         "execution_shape": _report_router_execution_shape_fast(config=config),
         "durable_intent": _intent_decision_projection(target_root=target_root, config=config, compact=True),
         "effective_authority": _effective_authority_payload(
@@ -11182,10 +11184,12 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "context.routing",
         "context.acceptance_reconciliation",
         "context.objective_drift",
+        "context.reuse_pressure",
         "context.detail_commands",
         "routing",
         "acceptance_reconciliation",
         "objective_drift",
+        "reuse_pressure",
         "detail_commands",
         "path_boundaries",
         "drill_down",
@@ -12399,6 +12403,219 @@ def _objective_drift_payload(*, target_root: Path, changed_paths: list[str], tas
     }
 
 
+def _reuse_pressure_taxonomy() -> list[dict[str, str]]:
+    return [
+        {"state": "none_found", "meaning": "cheap repo facts did not find nearby reuse or abstraction pressure"},
+        {"state": "existing_helper_candidate", "meaning": "a named helper or primitive already appears to exist"},
+        {"state": "similar_pattern_candidate", "meaning": "nearby files or similarly named surfaces suggest an existing pattern"},
+        {"state": "abstraction_pressure", "meaning": "the same helper or pattern appears in multiple places"},
+        {"state": "duplication_accepted_with_reason", "meaning": "duplication may proceed when the agent records why it is acceptable"},
+        {"state": "extraction_deferred_with_owner", "meaning": "extraction is routed to a durable owner instead of hidden in chat"},
+    ]
+
+
+def _reuse_pressure_payload(
+    *, target_root: Path, changed_paths: list[str] | None = None, cli_invoke: str = DEFAULT_CLI_INVOKE, compact: bool = False
+) -> dict[str, Any]:
+    normalized_paths = _normalize_changed_paths(changed_paths or [])
+    base: dict[str, Any] = {
+        "kind": "agentic-workspace/reuse-pressure/v1",
+        "rule": "AW exposes cheap reuse and abstraction facts; the agent owns the engineering decision.",
+        "taxonomy": _reuse_pressure_taxonomy(),
+        "changed_paths": normalized_paths,
+        "allowed_outcomes": [
+            "continue-direct",
+            "reuse-existing-helper",
+            "accept-duplication-with-reason",
+            "route-extraction-follow-up",
+        ],
+    }
+    if not normalized_paths:
+        return {
+            **base,
+            "status": "not-evaluated",
+            "state": "changed-paths-required",
+            "findings": [],
+            "summary": "Provide changed paths to evaluate reuse pressure.",
+            "command": _command_with_cli_invoke(
+                command="agentic-workspace implement --changed <paths> --select reuse_pressure --format json", cli_invoke=cli_invoke
+            ),
+        }
+
+    findings: list[dict[str, Any]] = []
+    for changed_path in normalized_paths:
+        findings.extend(_reuse_pressure_findings_for_path(target_root=target_root, changed_path=changed_path))
+    state = _reuse_pressure_state(findings)
+    payload = {
+        **base,
+        "status": "checked",
+        "state": state,
+        "finding_count": len(findings),
+        "findings": findings[:8],
+        "summary": _reuse_pressure_summary(state=state, finding_count=len(findings)),
+        "recording_options": {
+            "accept_duplication": {
+                "state": "duplication_accepted_with_reason",
+                "requires": ["reason"],
+                "owner": "final answer, closeout record, Memory, Planning, issue, docs, tests, or contracts as appropriate",
+            },
+            "route_extraction": {
+                "state": "extraction_deferred_with_owner",
+                "owner_targets": ["Planning", "GitHub issue", "Memory", "docs", "tests", "contracts"],
+                "command": _command_with_cli_invoke(
+                    command="agentic-workspace memory capture-note <slug> --summary <text> --files <changed paths> --format json",
+                    cli_invoke=cli_invoke,
+                ),
+            },
+        },
+    }
+    if compact:
+        return {
+            key: payload[key]
+            for key in ("kind", "status", "state", "summary", "finding_count", "findings", "allowed_outcomes", "recording_options")
+        }
+    return payload
+
+
+def _reuse_pressure_findings_for_path(*, target_root: Path, changed_path: str) -> list[dict[str, Any]]:
+    path = target_root / changed_path
+    if not path.is_file():
+        return []
+    if path.suffix == ".py":
+        return _reuse_pressure_python_findings(target_root=target_root, changed_path=changed_path, path=path)
+    return _reuse_pressure_surface_findings(target_root=target_root, changed_path=changed_path, path=path)
+
+
+def _reuse_pressure_python_findings(*, target_root: Path, changed_path: str, path: Path) -> list[dict[str, Any]]:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        return []
+    definitions = sorted(
+        name
+        for name in set(re.findall(r"^\s*(?:def|class)\s+([A-Za-z_][A-Za-z0-9_]*)", text, flags=re.MULTILINE))
+        if not (name.startswith("__") and name.endswith("__"))
+    )
+    findings: list[dict[str, Any]] = []
+    for name in definitions[:12]:
+        matches = _find_definition_matches(target_root=target_root, name=name, exclude=path)
+        if not matches:
+            continue
+        state = "abstraction_pressure" if len(matches) >= 2 else "existing_helper_candidate"
+        findings.append(
+            {
+                "state": state,
+                "changed_path": changed_path,
+                "symbol": name,
+                "candidate_paths": matches[:5],
+                "why": f"{name} is already defined elsewhere in the repository.",
+            }
+        )
+    if findings:
+        return findings
+    sibling_candidates = _sibling_helper_candidates(path=path, target_root=target_root)
+    if sibling_candidates:
+        findings.append(
+            {
+                "state": "similar_pattern_candidate",
+                "changed_path": changed_path,
+                "candidate_paths": sibling_candidates[:5],
+                "why": "Nearby module files define helpers or classes that may already express the local pattern.",
+            }
+        )
+    return findings
+
+
+def _reuse_pressure_surface_findings(*, target_root: Path, changed_path: str, path: Path) -> list[dict[str, Any]]:
+    basename = path.name.lower()
+    matches: list[str] = []
+    for candidate in _iter_reuse_scan_files(target_root):
+        if candidate == path or candidate.name.lower() != basename:
+            continue
+        matches.append(candidate.relative_to(target_root).as_posix())
+        if len(matches) >= 5:
+            break
+    if not matches:
+        return []
+    return [
+        {
+            "state": "similar_pattern_candidate",
+            "changed_path": changed_path,
+            "candidate_paths": matches,
+            "why": f"Other surfaces share the filename {path.name!r}.",
+        }
+    ]
+
+
+def _find_definition_matches(*, target_root: Path, name: str, exclude: Path) -> list[str]:
+    pattern = re.compile(rf"^\s*(?:def|class)\s+{re.escape(name)}\b", flags=re.MULTILINE)
+    matches: list[str] = []
+    for candidate in _iter_reuse_scan_files(target_root):
+        if candidate == exclude or candidate.suffix != ".py":
+            continue
+        try:
+            text = candidate.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        if pattern.search(text):
+            matches.append(candidate.relative_to(target_root).as_posix())
+            if len(matches) >= 8:
+                break
+    return matches
+
+
+def _sibling_helper_candidates(*, path: Path, target_root: Path) -> list[str]:
+    candidates: list[str] = []
+    for sibling in sorted(path.parent.glob("*.py")):
+        if sibling == path:
+            continue
+        try:
+            text = sibling.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        if re.search(r"^\s*(?:def|class)\s+[A-Za-z_][A-Za-z0-9_]*", text, flags=re.MULTILINE):
+            candidates.append(sibling.relative_to(target_root).as_posix())
+    return candidates
+
+
+def _iter_reuse_scan_files(target_root: Path) -> list[Path]:
+    skip_dirs = {".git", ".hg", ".svn", ".venv", "__pycache__", ".pytest_cache", ".ruff_cache", "dist", "build", "node_modules"}
+    suffixes = {".py", ".json", ".toml", ".yaml", ".yml", ".md"}
+    files: list[Path] = []
+    for path in target_root.rglob("*"):
+        if len(files) >= 800:
+            break
+        try:
+            relative_parts = path.relative_to(target_root).parts
+        except ValueError:
+            relative_parts = path.parts
+        if (
+            not path.is_file()
+            or path.suffix not in suffixes
+            or any(part in skip_dirs or part.startswith(".uv-cache") for part in relative_parts)
+        ):
+            continue
+        files.append(path)
+    return sorted(files)
+
+
+def _reuse_pressure_state(findings: list[dict[str, Any]]) -> str:
+    states = {str(finding.get("state", "")) for finding in findings}
+    if "abstraction_pressure" in states:
+        return "abstraction_pressure"
+    if "existing_helper_candidate" in states:
+        return "existing_helper_candidate"
+    if "similar_pattern_candidate" in states:
+        return "similar_pattern_candidate"
+    return "none_found"
+
+
+def _reuse_pressure_summary(*, state: str, finding_count: int) -> str:
+    if state == "none_found":
+        return "No cheap reuse or abstraction pressure found for the changed paths."
+    return f"{finding_count} reuse-pressure finding(s) surfaced; inspect before adding another local implementation."
+
+
 def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text: str | None = None) -> dict[str, Any]:
     implementer_template = _CONTEXT_TEMPLATES["implementer_context"]
     normalized_paths = _normalize_changed_paths(changed_paths)
@@ -12505,6 +12722,9 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
             task_text=task_text, execution_posture=execution_posture, vague_orientation=vague_orientation
         ),
         "objective_drift": _objective_drift_payload(target_root=target_root, changed_paths=normalized_paths, task_text=task_text),
+        "reuse_pressure": _reuse_pressure_payload(
+            target_root=target_root, changed_paths=normalized_paths, cli_invoke=config.cli_invoke, compact=False
+        ),
         "orientation": {
             "status": "changed-path-context" if normalized_paths else "unknown-scope",
             "minimum_before_editing": "Inspect the listed files, path boundaries, workflow obligations, and selected proof before editing."
@@ -12573,6 +12793,15 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     capability = execution_posture.get("capability_posture", {}) if isinstance(execution_posture, dict) else {}
     runtime_resolution = execution_posture.get("runtime_resolution", {}) if isinstance(execution_posture, dict) else {}
     intent_acknowledgement = payload.get("intent_acknowledgement", {})
+    reuse_pressure = (
+        _reuse_pressure_payload(
+            target_root=Path(str(payload.get("target", "."))),
+            changed_paths=payload.get("changed_paths", []),
+            compact=True,
+        )
+        if payload.get("changed_paths")
+        else payload.get("reuse_pressure", {})
+    )
     detail_commands = {
         "full_context": "agentic-workspace implement --verbose --changed <paths> --format json",
         "proof_detail": "agentic-workspace proof --verbose --changed <paths> --format json",
@@ -12601,6 +12830,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             else {},
             "detail_command": "agentic-workspace proof --verbose --changed <paths> --format json",
         },
+        "reuse_pressure": reuse_pressure,
         "context": {
             "workflow_sufficiency": payload.get("workflow_sufficiency"),
             "adaptive_routing": _tiny_adaptive_routing_payload(
@@ -12636,6 +12866,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "acceptance": _tiny_acceptance_payload(payload.get("acceptance", {})),
             "acceptance_reconciliation": _tiny_acceptance_reconciliation(payload.get("acceptance_reconciliation", {})),
             "objective_drift": _tiny_objective_drift(payload.get("objective_drift", {})),
+            "reuse_pressure": reuse_pressure,
             "durable_intent_promotion": _tiny_task_intent_promotion_guidance(payload.get("durable_intent_promotion", {})),
             "routing": {
                 "work_shape": capability.get("work_shape"),
@@ -12657,6 +12888,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "context.acceptance",
                 "context.acceptance_reconciliation",
                 "context.objective_drift",
+                "context.reuse_pressure",
                 "context.delegation_decision",
                 "context.routing",
             ],

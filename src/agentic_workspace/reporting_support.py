@@ -176,6 +176,7 @@ def report_profile_payload(*, context_router: dict[str, Any], cli_invoke: str = 
             "external_work_reconciliation",
             "successful_completion_cost",
             "maintenance_pressure",
+            "reuse_pressure",
         ],
         "router_shape_guard": {
             "status": "active",
@@ -878,6 +879,7 @@ def report_section_hints(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_C
         "execution_shape": "default execution posture and planning-backed work guidance",
         "durable_intent": "task, subsystem, and system intent pressure relevant to decisions before implementation or closeout",
         "maintenance_pressure": "one compact router for audit, retention, footprint, external-evidence, and closeout residue",
+        "reuse_pressure": "changed-path reuse and abstraction-pressure facts before adding local code",
         "operational_compression": "falsifiable advisory measures for whether surfaces reduce total operational cost",
         "successful_completion_cost": "recent model CLI evaluation cost, package-read overhead, and first-pass versus rework evidence",
         "findings": "raw warnings and attention signals grouped in router warning_summary",
@@ -907,6 +909,7 @@ def report_section_hints(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_C
         "execution_shape": "inspect now to choose direct work, light planning, or checked-in execplan promotion",
         "durable_intent": "inspect now when task intent may generalize into durable system or subsystem direction",
         "maintenance_pressure": "inspect now only when residue, retention, or closeout pressure affects the active lane",
+        "reuse_pressure": "inspect before implementation when deciding whether to reuse, accept duplication, or route extraction follow-up",
         "operational_compression": "inspect now when assessing whether package surfaces are reducing total work",
         "successful_completion_cost": "inspect now when deciding whether workflow surfaces should stay default, shrink, or move behind selectors",
         "findings": "inspect now because warnings are present" if findings else "skip unless diagnosing an absent-warning state",

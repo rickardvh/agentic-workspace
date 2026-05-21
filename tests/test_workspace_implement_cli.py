@@ -126,7 +126,7 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     context = _implement_context(payload)
     encoded = json.dumps(payload)
     assert payload["kind"] == "implementer-context-tiny/v1"
-    assert set(payload) <= {"kind", "target", "next", "proof", "context", "drill_down"}
+    assert set(payload) <= {"kind", "target", "next", "proof", "reuse_pressure", "context", "drill_down"}
     adaptive = context["adaptive_routing"]
     assert adaptive["current_need"] == "changed-path-next-action"
     assert adaptive["read_budget"]["profile"] == "tiny"
@@ -817,6 +817,78 @@ def test_implement_supports_selector_drilldown(tmp_path: Path, capsys) -> None:
     assert payload["values"]["context.delegation_decision.effort_recommendation.cost_posture"] == "save-tokens-where-safe"
 
 
+def test_implement_selector_surfaces_reuse_pressure_without_blocking_direct_work(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / "src" / "sample_app" / "helpers.py",
+        "def normalize_text(value):\n    return value.strip()\n",
+    )
+    _write(
+        tmp_path / "src" / "sample_app" / "text.py",
+        "def normalize_text(value):\n    return ' '.join(value.split())\n",
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/sample_app/text.py",
+                "--task",
+                "Add a text normalization helper",
+                "--select",
+                "reuse_pressure,context.workflow_sufficiency",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    reuse_pressure = payload["values"]["reuse_pressure"]
+    assert reuse_pressure["state"] == "existing_helper_candidate"
+    assert reuse_pressure["findings"][0]["symbol"] == "normalize_text"
+    assert reuse_pressure["findings"][0]["candidate_paths"] == ["src/sample_app/helpers.py"]
+    assert "accept-duplication-with-reason" in reuse_pressure["allowed_outcomes"]
+    assert payload["values"]["context.workflow_sufficiency"]["decision"] == "enough-for-bounded-implementation"
+
+
+def test_implement_reuse_pressure_ignores_dependency_cache_definitions(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / "src" / "sample_app" / "text.py",
+        "def normalize_text(value):\n    return ' '.join(value.split())\n",
+    )
+    _write(
+        tmp_path / "packages" / "planning" / ".uv-cache" / "archive-v0" / "dependency" / "text.py",
+        "def normalize_text(value):\n    return value\n",
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/sample_app/text.py",
+                "--select",
+                "reuse_pressure",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    reuse_pressure = json.loads(capsys.readouterr().out)["values"]["reuse_pressure"]
+    assert reuse_pressure["state"] == "none_found"
+    assert reuse_pressure["findings"] == []
+
+
 def test_implement_selector_reports_available_fields_for_missing_selector(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
 
@@ -843,3 +915,4 @@ def test_implement_selector_reports_available_fields_for_missing_selector(tmp_pa
     assert "next" in payload["available_selectors"]
     assert "context.scope" in payload["available_selectors"]
     assert "proof" in payload["available_selectors"]
+    assert "reuse_pressure" in payload["available_selectors"]

@@ -21,6 +21,7 @@
     "acceptance_reconciliation",
     "intent_acknowledgement",
     "objective_drift",
+    "reuse_pressure",
     "orientation",
     "inference_limits",
     "execution_posture",
@@ -117,6 +118,11 @@
     "intent_acknowledgement": {
       "type": "object",
       "description": "Guidance for stating inferred intent, first slice, non-goals, and correction point before non-direct implementation.",
+      "additionalProperties": true
+    },
+    "reuse_pressure": {
+      "type": "object",
+      "description": "Changed-path reuse and abstraction-pressure facts that help the agent decide whether to reuse, accept duplication, or route extraction follow-up.",
       "additionalProperties": true
     },
     "objective_drift": {

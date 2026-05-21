@@ -24,6 +24,7 @@
     "branch_workflow_posture",
     "local_memory",
     "memory_consult",
+    "reuse_pressure",
     "agent_aids",
     "agent_configuration_system",
     "agent_configuration_queries",
@@ -172,6 +173,10 @@
     "memory_consult": {
       "type": "object",
       "description": "Recommended checked-in Memory lookup route for the current report."
+    },
+    "reuse_pressure": {
+      "type": "object",
+      "description": "Entry point for changed-path reuse and abstraction-pressure facts."
     },
     "agent_aids": {
       "type": "object",
