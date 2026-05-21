@@ -22,6 +22,42 @@ def test_archive_execplan_rejects_schema_invalid_json_record(tmp_path: Path) -> 
     assert any(warning["warning_class"] == "archive_execplan_schema_drift" for warning in result.warnings)
 
 
+def test_archive_size_guardrail_warns_before_oversized_archive_write(tmp_path: Path) -> None:
+    inventory_path = tmp_path / "src" / "agentic_workspace" / "contracts" / "structured_file_inventory.json"
+    _write(
+        inventory_path,
+        json.dumps(
+            {
+                "entries": [
+                    {
+                        "pattern": ".agentic-workspace/planning/execplans/archive/*.plan.json",
+                        "schema_or_validator": ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
+                        "owner": "planning",
+                        "guardrails": {"max_bytes": 10},
+                    }
+                ]
+            }
+        )
+        + "\n",
+    )
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="completed")
+    destination = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json"
+
+    warning = installer_mod._archive_size_guardrail_warning(
+        target_root=tmp_path,
+        destination_record=destination,
+        record_path=record_path,
+        plan_path=record_path,
+        has_record=True,
+    )
+
+    assert warning is not None
+    assert warning["warning_class"] == "archive_size_guardrail_blocked"
+    assert warning["path"] == ".agentic-workspace/planning/execplans/archive/plan-alpha.plan.json"
+    assert "max_bytes=10" in warning["message"]
+
+
 def test_archive_execplan_removes_completed_plan_after_distillation(tmp_path: Path) -> None:
     _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     _write(
