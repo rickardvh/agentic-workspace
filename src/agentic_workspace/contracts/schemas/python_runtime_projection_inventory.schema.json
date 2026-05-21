@@ -222,6 +222,7 @@
             "repo_planning_bootstrap.installer",
             "repo_planning_bootstrap.runtime_projection",
             "repo_memory_bootstrap.installer",
+            "repo_memory_bootstrap.runtime_search",
             "repo_memory_bootstrap.runtime_primitives"
           ],
           "description": "Package-domain source module imported by the generated facade wrapper."

@@ -215,7 +215,7 @@
         "binding_kind": "operation-function-call",
         "operation_path": "generated/memory/python/operations/memory.search.report.json",
         "operation_id": "memory.search.report",
-        "source_module": "repo_memory_bootstrap.installer",
+        "source_module": "repo_memory_bootstrap.runtime_search",
         "source_symbol": "search_memory",
         "owner_package": "memory package runtime boundary",
         "operation_ids": [

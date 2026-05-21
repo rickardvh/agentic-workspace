@@ -40,7 +40,7 @@
       {
         "arguments": {
           "function": "search_memory",
-          "import_module": "repo_memory_bootstrap.installer",
+          "import_module": "repo_memory_bootstrap.runtime_search",
           "kwargs": {
             "query": {
               "value": "query"

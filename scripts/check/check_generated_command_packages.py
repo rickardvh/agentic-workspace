@@ -178,6 +178,7 @@ PYTHON_FULL_COMPLETION_BLOCKING_RUNTIME_SOURCE_PATHS = (
     "packages/planning/src/repo_planning_bootstrap/installer.py",
     "packages/planning/src/repo_planning_bootstrap/runtime_projection.py",
     "packages/memory/src/repo_memory_bootstrap/installer.py",
+    "packages/memory/src/repo_memory_bootstrap/runtime_search.py",
     "packages/memory/src/repo_memory_bootstrap/runtime_primitives.py",
 )
 PYTHON_FULL_COMPLETION_ACCEPTED_RUNTIME_FACADE_PATHS = (
@@ -1416,6 +1417,7 @@ def _validate_python_completion_accepted_runtime_boundaries(*, require_exact: bo
         "repo_planning_bootstrap.installer": "packages/planning/src/repo_planning_bootstrap/installer.py",
         "repo_planning_bootstrap.runtime_projection": "packages/planning/src/repo_planning_bootstrap/runtime_projection.py",
         "repo_memory_bootstrap.installer": "packages/memory/src/repo_memory_bootstrap/installer.py",
+        "repo_memory_bootstrap.runtime_search": "packages/memory/src/repo_memory_bootstrap/runtime_search.py",
         "repo_memory_bootstrap.runtime_primitives": "packages/memory/src/repo_memory_bootstrap/runtime_primitives.py",
     }
     source_path_keys: dict[str, set[tuple[str, str, str, str, str]]] = {path: set() for path in source_path_by_module.values()}
@@ -1763,6 +1765,7 @@ def _generated_runtime_facade_package_runtime_bindings() -> list[dict[str, str]]
         "repo_planning_bootstrap.installer",
         "repo_planning_bootstrap.runtime_projection",
         "repo_memory_bootstrap.installer",
+        "repo_memory_bootstrap.runtime_search",
         "repo_memory_bootstrap.runtime_primitives",
     }
     metadata = _python_runtime_boundary_metadata()
@@ -1800,6 +1803,7 @@ def _generated_operation_package_runtime_bindings() -> list[dict[str, object]]:
         "repo_planning_bootstrap.installer",
         "repo_planning_bootstrap.runtime_projection",
         "repo_memory_bootstrap.installer",
+        "repo_memory_bootstrap.runtime_search",
         "repo_memory_bootstrap.runtime_primitives",
     }
     metadata = _python_runtime_boundary_metadata()
