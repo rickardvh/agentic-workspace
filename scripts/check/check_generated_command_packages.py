@@ -214,6 +214,12 @@ GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST_PREFIXES = {
     ".agentic-workspace/planning/execplans/archive/": "historical planning evidence",
     "docs/reviews/": "historical review evidence",
 }
+DOMAIN_RUNTIME_PRIMITIVE_SOURCE_CALLS = {
+    "memory.promotion_report.load": {
+        "import_module": "repo_memory_bootstrap.installer",
+        "function": "promotion_report",
+    }
+}
 PYTHON_REQUIRED_RUNTIME_PROJECTION_OUTPUTS = {
     "generated/workspace/python/cli.py": (
         "root-workspace",
@@ -1811,6 +1817,9 @@ def _operation_python_function_calls(value: object) -> list[dict[str, object]]:
     if isinstance(value, dict):
         if value.get("import_module") and value.get("function"):
             calls.append(value)
+        primitive_source_call = DOMAIN_RUNTIME_PRIMITIVE_SOURCE_CALLS.get(str(value.get("uses", "")))
+        if primitive_source_call is not None:
+            calls.append(primitive_source_call)
         for nested in value.values():
             calls.extend(_operation_python_function_calls(nested))
     elif isinstance(value, list):
@@ -2313,7 +2322,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         if direct_operation_id in memory_operation_executor_text:
             errors.append(f"{direct_operation_id} must be executed by its direct generated command module, not memory run_operation_ir")
     if "_handle_memory_promotion_report_load" in memory_operation_executor_text:
-        errors.append("memory promotion-report must execute through declared python.function.call, not a runtime facade handler")
+        errors.append("memory promotion-report must execute through declared memory.promotion_report.load, not a runtime facade handler")
     if "_assemble_memory_operation_payload" in memory_operation_executor_text:
         errors.append("memory operation IR executor must not keep the dead payload.assemble runtime bridge for direct commands")
     for marker in (

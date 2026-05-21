@@ -165,13 +165,13 @@
           "memory.promotion-report.report"
         ],
         "primitive_refs": [
-          "python.function.call"
+          "memory.promotion_report.load"
         ],
         "runtime_boundary_class": "package-specific-judgment",
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "memory.promotion-report.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while python.function.call invokes the package-domain promotion_report function. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while memory.promotion_report.load names the package-domain promotion report boundary. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
       },
       {
         "binding_kind": "operation-function-call",
