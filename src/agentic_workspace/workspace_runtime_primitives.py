@@ -12913,15 +12913,39 @@ def _active_plan_delegation_requirement(
     delegation = record.get("post_decomposition_delegation")
     delegation = delegation if isinstance(delegation, dict) else {}
     status = str(delegation.get("status", "")).strip().lower()
-    recorded_statuses = {"recorded", "evaluated", "completed", "not-needed", "keep-local", "delegated"}
-    if status in recorded_statuses or delegation.get("route chosen"):
-        return {"required": False, "status": "delegation-decision-recorded", "path": active_surface}
     normalized_task = " ".join((task_text or "").lower().split())
     capability = execution_posture.get("capability_posture", {}) if isinstance(execution_posture, dict) else {}
     posture = capability.get("posture", {}) if isinstance(capability.get("posture"), dict) else {}
     work_shape = str(capability.get("work_shape") or posture.get("work shape") or "")
     proof_burden = str(capability.get("proof_burden") or posture.get("proof burden") or "")
     trigger_terms = ("decomposed", "decomposition", "delegate", "delegation", "mechanical", "lane", "epic", "high-assurance")
+    active_plan_continuation = _task_appears_to_continue_active_plan(
+        active_surface=active_surface,
+        record=record,
+        normalized_task=normalized_task,
+        trigger_terms=trigger_terms,
+    )
+    if not active_plan_continuation:
+        return {"required": False, "status": "delegation-decision-not-needed-for-direct-task", "path": active_surface}
+    recorded_statuses = {"recorded", "evaluated", "completed", "not-needed", "keep-local", "delegated"}
+    decision_recorded = status in recorded_statuses or bool(delegation.get("route chosen"))
+    if decision_recorded and _delegation_decision_has_command_provenance(delegation):
+        return {"required": False, "status": "delegation-decision-recorded", "path": active_surface}
+    if decision_recorded:
+        return {
+            "required": True,
+            "status": "delegation-decision-untrusted-shared-state",
+            "path": active_surface,
+            "current_status": status or "missing",
+            "command": _command_with_cli_invoke(
+                command="agentic-workspace planning delegation-decision --route keep-local --skipped-reason <reason> --target . --format json",
+                cli_invoke=config.cli_invoke,
+            ),
+            "rule": (
+                "A recorded delegation decision must carry command provenance; hand-edited active execplans are shared mutable "
+                "state and cannot prove the current session made or reviewed the decision."
+            ),
+        }
     required = (
         status in {"pending", "required", "available", "suitable"}
         or work_shape in {"lane", "epic"}
@@ -12941,6 +12965,55 @@ def _active_plan_delegation_requirement(
         ),
         "rule": "Decomposed, mechanical, lane, epic, or high-assurance active work must record a delegation route or keep-local reason before implementation proceeds.",
     }
+
+
+def _delegation_decision_has_command_provenance(delegation: dict[str, Any]) -> bool:
+    route = str(delegation.get("route chosen", "") or "").strip()
+    decision_command = str(delegation.get("decision command", "") or "").strip()
+    recorded_at = str(delegation.get("recorded at", "") or "").strip()
+    if not route or not recorded_at:
+        return False
+    return decision_command in {"agentic-planning delegation-decision", "agentic-workspace planning delegation-decision"}
+
+
+def _task_appears_to_continue_active_plan(
+    *, active_surface: str, record: dict[str, Any], normalized_task: str, trigger_terms: tuple[str, ...]
+) -> bool:
+    if not normalized_task:
+        return False
+    continuation_terms = (
+        "continue",
+        "resume",
+        "advance",
+        "finish",
+        "complete",
+        "implement",
+        "implementation",
+        "closeout",
+        "close out",
+        "run proof",
+        "validate",
+    )
+    if not any((term in normalized_task for term in continuation_terms)):
+        return False
+    if any((term in normalized_task for term in trigger_terms)):
+        return True
+    identifiers: list[str] = [Path(active_surface).stem.replace(".plan", "")]
+    for key in ("id", "title"):
+        value = record.get(key)
+        if isinstance(value, str):
+            identifiers.append(value)
+    milestone = record.get("active_milestone")
+    if isinstance(milestone, dict):
+        for key in ("id", "title"):
+            value = milestone.get(key)
+            if isinstance(value, str):
+                identifiers.append(value)
+    for identifier in identifiers:
+        normalized_identifier = " ".join(identifier.replace("-", " ").replace("_", " ").lower().split())
+        if len(normalized_identifier) >= 4 and normalized_identifier in normalized_task:
+            return True
+    return False
 
 
 def _active_plan_parent_decomposition_requirement(*, target_root: Path, active_summary: dict[str, Any]) -> dict[str, Any]:
