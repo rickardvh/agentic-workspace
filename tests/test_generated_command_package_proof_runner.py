@@ -199,6 +199,26 @@ def test_python_completion_blocker_report_accepts_exact_symbol_runtime_boundarie
     assert report["false_completion_claim_would_fail"] is False
     assert report["blockers"] == []
     assert report["remaining_scope"] == "none"
+    lifecycle_metrics = report["lifecycle_dry_run_metrics"]
+    assert lifecycle_metrics["status"] == "available"
+    assert lifecycle_metrics["codegen_default_dry_run_operation_count"] >= 3
+    assert "memory.install.lifecycle" in {
+        operation["operation_id"] for operation in lifecycle_metrics["codegen_default_dry_run_operations"]
+    }
+
+
+def test_lifecycle_dry_run_generation_regression_is_blocked(monkeypatch) -> None:
+    checker = _load_checker()
+    inventory = copy.deepcopy(checker.python_runtime_projection_inventory_manifest())
+    entry = next(
+        item for item in inventory["accepted_runtime_boundaries"]["entries"] if item.get("operation_id") == "memory.install.lifecycle"
+    )
+    entry["operation_path"] = "generated/planning/python/operations/planning.install.lifecycle.json"
+    monkeypatch.setattr(checker, "python_runtime_projection_inventory_manifest", lambda: inventory)
+
+    errors = checker._validate_lifecycle_dry_run_generation()
+
+    assert any("does not route the default dry-run branch through payload.lifecycle-plan" in error for error in errors)
 
 
 def test_python_function_call_stays_out_of_portable_completion_coverage() -> None:
@@ -219,6 +239,7 @@ def test_python_completion_blocker_report_has_json_cli_mode(capsys) -> None:
     assert payload["blocker_count"] == len(payload["blockers"])
     assert payload["remaining_scope"] == "none"
     assert payload["next_owner"] == "none"
+    assert payload["lifecycle_dry_run_metrics"]["codegen_default_dry_run_operation_count"] >= 3
 
 
 def test_memory_list_commands_are_direct_generated_python_projections() -> None:

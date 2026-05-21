@@ -1557,6 +1557,127 @@ def _python_runtime_boundary_metrics() -> dict[str, object]:
     }
 
 
+def _condition_requires_value(condition: object, *, value_name: str, expected: object) -> bool:
+    if not isinstance(condition, dict):
+        return False
+    keys = set(condition)
+    if keys == {"value", "equals"}:
+        return condition.get("value") == value_name and condition.get("equals") == expected
+    if keys == {"all"}:
+        items = condition.get("all")
+        return isinstance(items, list) and any(_condition_requires_value(item, value_name=value_name, expected=expected) for item in items)
+    if keys == {"any"}:
+        items = condition.get("any")
+        return (
+            isinstance(items, list)
+            and bool(items)
+            and all(_condition_requires_value(item, value_name=value_name, expected=expected) for item in items)
+        )
+    if keys == {"not"}:
+        return _condition_requires_value(condition.get("not"), value_name=value_name, expected=not bool(expected))
+    return False
+
+
+def _operation_lifecycle_dry_run_profile(*, operation_path: Path) -> dict[str, object] | None:
+    operation = json.loads(operation_path.read_text(encoding="utf-8"))
+    operation_id = str(operation.get("id", ""))
+    if not operation_id.endswith(".lifecycle"):
+        return None
+    inputs = operation.get("inputs", [])
+    has_dry_run_input = (
+        any(isinstance(item, dict) and item.get("name") == "dry_run" for item in inputs) if isinstance(inputs, list) else False
+    )
+    if not has_dry_run_input:
+        return None
+    steps = operation.get("ir_plan", {}).get("steps", [])
+    if not isinstance(steps, list):
+        steps = []
+    codegen_dry_run_steps: list[str] = []
+    package_runtime_dry_run_steps: list[str] = []
+    for step in steps:
+        if not isinstance(step, dict):
+            continue
+        primitive = str(step.get("uses", ""))
+        condition = step.get("when")
+        if primitive == "payload.lifecycle-plan" and _condition_requires_value(condition, value_name="dry_run", expected=True):
+            codegen_dry_run_steps.append(str(step.get("id", primitive)))
+        if primitive == "python.function.call":
+            if condition is None or not _condition_requires_value(condition, value_name="dry_run", expected=False):
+                package_runtime_dry_run_steps.append(str(step.get("id", primitive)))
+    default_dry_run_owner = (
+        "codegen" if codegen_dry_run_steps else "package-runtime" if package_runtime_dry_run_steps else "operation-runtime"
+    )
+    return {
+        "operation_id": operation_id,
+        "operation_path": operation_path.relative_to(REPO_ROOT).as_posix(),
+        "default_dry_run_owner": default_dry_run_owner,
+        "codegen_dry_run_steps": codegen_dry_run_steps,
+        "package_runtime_dry_run_steps": package_runtime_dry_run_steps,
+    }
+
+
+def _lifecycle_dry_run_metrics() -> dict[str, object]:
+    operation_roots = [
+        REPO_ROOT / "generated" / "memory" / "python" / "operations",
+        REPO_ROOT / "generated" / "planning" / "python" / "operations",
+    ]
+    profiles: list[dict[str, object]] = []
+    for operation_root in operation_roots:
+        if not operation_root.is_dir():
+            continue
+        for operation_path in sorted(operation_root.glob("*.json")):
+            profile = _operation_lifecycle_dry_run_profile(operation_path=operation_path)
+            if profile is not None:
+                profiles.append(profile)
+    codegen_owned = [profile for profile in profiles if profile["default_dry_run_owner"] == "codegen"]
+    package_owned = [profile for profile in profiles if profile["default_dry_run_owner"] == "package-runtime"]
+    operation_runtime_owned = [profile for profile in profiles if profile["default_dry_run_owner"] == "operation-runtime"]
+    return {
+        "status": "available",
+        "lifecycle_dry_run_operation_count": len(profiles),
+        "codegen_default_dry_run_operation_count": len(codegen_owned),
+        "package_runtime_default_dry_run_operation_count": len(package_owned),
+        "operation_runtime_default_dry_run_operation_count": len(operation_runtime_owned),
+        "codegen_default_dry_run_operations": codegen_owned,
+        "package_runtime_default_dry_run_operations": package_owned,
+        "operation_runtime_default_dry_run_operations": operation_runtime_owned,
+    }
+
+
+def _validate_lifecycle_dry_run_generation() -> list[str]:
+    errors: list[str] = []
+    try:
+        inventory = python_runtime_projection_inventory_manifest()
+    except Exception as exc:  # noqa: BLE001
+        return [f"python_runtime_projection_inventory.json is missing or invalid for lifecycle dry-run proof: {exc}"]
+    accepted = inventory.get("accepted_runtime_boundaries", {})
+    entries = accepted.get("entries", []) if isinstance(accepted, dict) else []
+    if not isinstance(entries, list):
+        return ["python_runtime_projection_inventory.json accepted_runtime_boundaries.entries must be a list for lifecycle dry-run proof"]
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            continue
+        primitive_refs = set(entry.get("primitive_refs", []))
+        audit = str(entry.get("generic_behavior_audit", ""))
+        if (
+            "payload.lifecycle-plan" not in primitive_refs
+            and "Default dry-run behavior is no longer generic deterministic runtime debt" not in audit
+        ):
+            continue
+        operation_path = REPO_ROOT / str(entry.get("operation_path", ""))
+        location = f"python_runtime_projection_inventory.json accepted_runtime_boundaries.entries[{index}]"
+        if not operation_path.is_file():
+            errors.append(f"{location} lifecycle dry-run proof operation_path does not exist: {operation_path}")
+            continue
+        profile = _operation_lifecycle_dry_run_profile(operation_path=operation_path)
+        if not profile or profile["default_dry_run_owner"] != "codegen":
+            errors.append(
+                f"{location} claims generated default dry-run planning but {operation_path.relative_to(REPO_ROOT).as_posix()} "
+                "does not route the default dry-run branch through payload.lifecycle-plan"
+            )
+    return errors
+
+
 def _generated_runtime_facade_package_runtime_bindings() -> list[dict[str, str]]:
     allowed_modules = {
         "agentic_workspace.workspace_runtime_primitives",
@@ -2983,6 +3104,7 @@ def _python_completion_blockers_report(ir: dict[str, object]) -> dict[str, objec
     blockers.extend(_validate_full_python_completion_executable_ownership(forced_full_ir))
     blockers.extend(_validate_python_runtime_projection_inventory(full_completion=True))
     blockers.extend(_validate_python_operation_execution_inventory(forced_full_ir))
+    blockers.extend(_validate_lifecycle_dry_run_generation())
 
     current_state = str(policy.get("current_state", ""))
     gate = policy.get("completion_gate", {})
@@ -2997,6 +3119,7 @@ def _python_completion_blockers_report(ir: dict[str, object]) -> dict[str, objec
         "blockers": blockers,
         "blocker_count": len(blockers),
         "accepted_runtime_boundary_metrics": _python_runtime_boundary_metrics(),
+        "lifecycle_dry_run_metrics": _lifecycle_dry_run_metrics(),
         "remaining_scope": "tier-6-final-python-completion-promotion" if blockers else "none",
         "next_owner": ("#892 / tier-6-final-python-completion-promotion" if blockers else "none"),
     }
@@ -3013,6 +3136,12 @@ def _print_python_completion_blockers_report(report: dict[str, object], *, outpu
     if isinstance(metrics, dict) and metrics.get("status") == "available":
         print(f"Accepted runtime symbols: {metrics.get('accepted_runtime_symbol_count')}")
         print(f"Accepted output-emission symbols: {metrics.get('accepted_output_emission_symbol_count')}")
+    lifecycle_metrics = report.get("lifecycle_dry_run_metrics", {})
+    if isinstance(lifecycle_metrics, dict) and lifecycle_metrics.get("status") == "available":
+        print(f"Lifecycle dry-run operations: {lifecycle_metrics.get('lifecycle_dry_run_operation_count')}")
+        print(f"Codegen-owned default dry-run operations: {lifecycle_metrics.get('codegen_default_dry_run_operation_count')}")
+        print(f"Package-runtime default dry-run operations: {lifecycle_metrics.get('package_runtime_default_dry_run_operation_count')}")
+        print(f"Operation-runtime default dry-run operations: {lifecycle_metrics.get('operation_runtime_default_dry_run_operation_count')}")
     blockers = report.get("blockers", [])
     if not isinstance(blockers, list) or not blockers:
         print("Blockers: none")
