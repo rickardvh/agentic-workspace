@@ -12835,6 +12835,23 @@ def _allow_ancillary_memory_feedback_path(path_classification: dict[str, Any]) -
     return path_classification
 
 
+def _allow_issue_scoped_planning_state_reconciliation(path_classification: dict[str, Any], *, issue_refs: list[str]) -> dict[str, Any]:
+    planning_paths = [str(path) for path in path_classification.get("planning_paths", []) if isinstance(path, str) and path]
+    implementation_paths = [str(path) for path in path_classification.get("implementation_paths", []) if isinstance(path, str) and path]
+    if planning_paths != [".agentic-workspace/planning/state.toml"] or not implementation_paths or not issue_refs:
+        return path_classification
+    return {
+        **path_classification,
+        "dirty_shape": "implementation-with-planning-state-reconciliation",
+        "planning_paths": [],
+        "implementation_paths": implementation_paths,
+        "ancillary_paths": [*path_classification.get("ancillary_paths", []), ".agentic-workspace/planning/state.toml"],
+        "ancillary_rule": (
+            "Issue-scoped Planning state reconciliation may accompany implementation without making Planning recovery the primary work shape."
+        ),
+    }
+
+
 def _work_shape_facts_payload(
     *,
     path_classification: dict[str, Any],
@@ -13138,6 +13155,7 @@ def _planning_safety_gate_payload(
     path_classification = _planning_safety_path_classification(changed_paths)
     issue_refs = sorted(set(re.findall("#\\d+", task_text or "")))
     path_classification = _allow_ancillary_memory_feedback_path(path_classification)
+    path_classification = _allow_issue_scoped_planning_state_reconciliation(path_classification, issue_refs=issue_refs)
     promotion_command = _planning_safety_promotion_command(
         config=config,
         decomposition_delegation=decomposition_delegation if isinstance(decomposition_delegation, dict) else {},
@@ -13180,18 +13198,21 @@ def _planning_safety_gate_payload(
         reason = "Only planning surfaces are named; validate planning state before implementation."
         required_next_action = "validate-planning-state"
         workflow_sufficient = True
-    elif path_classification["implementation_paths"] and path_classification["scope_growth_detected"]:
-        status = "escalation-required"
-        decision = "planning-escalation-required"
-        reason = "Changed paths have outgrown direct/no-plan assumptions across implementation boundaries."
-        required_next_action = "create-or-promote-active-execplan"
-        workflow_sufficient = False
     elif path_classification["dirty_shape"] == "planning-plus-implementation":
         status = "violation"
         decision = "implementation-owner-missing"
         reason = "Implementation paths are mixed with planning recovery paths without active planning ownership."
         required_next_action = "checkpoint-planning-before-implementation"
         workflow_sufficient = False
+    elif path_classification["implementation_paths"] and path_classification["scope_growth_detected"]:
+        status = "attention"
+        decision = "agent-work-shape-decision-required"
+        reason = (
+            "Changed paths cross implementation boundaries; AW reports the scope facts and proof burden, and the agent owns "
+            "whether to continue direct or create planning."
+        )
+        required_next_action = "decide-work-shape-from-scope-facts"
+        workflow_sufficient = True
     else:
         status = "clear"
         decision = "direct-work-allowed"
@@ -17001,7 +17022,7 @@ def _defaults_payload() -> dict[str, Any]:
                 "the trust question is planning-surface shape or drift only",
             ],
             "enough_proof": [
-                "agentic-workspace summary --target ./repo --verbose --format json",
+                "agentic-workspace summary --target ./repo --format json",
                 "agentic-workspace doctor --target ./repo --modules planning --format json",
             ],
             "proof_responsibility": "local-closeout",

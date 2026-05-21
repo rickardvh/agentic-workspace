@@ -18,4 +18,5 @@ queued_items = []
 [roadmap]
 lanes = []
 candidates = [
+  { id = "github-1092-workspace-surface-reuse-and-abstraction-pressure", maturity = "candidate", status = "next", priority = "P1", refs = "GitHub #1092", title = "[Workspace]: Surface reuse and abstraction pressure before agents copy local code", outcome = "Route the upstream issue into a bounded Agentic Workspace slice before implementation.", reason = "Open upstream issue from refreshed external intent evidence; priority P1 inferred from inferred-lane.", promotion_signal = "Promote when this issue is selected for implementation or grouped into a bounded lane.", suggested_first_slice = "Inspect the issue body, choose the smallest workflow shape, and record exact proof before closeout." }
 ]

@@ -1421,11 +1421,14 @@ def test_implement_flags_scope_growth_without_active_execplan(tmp_path: Path, ca
 
     payload = json.loads(capsys.readouterr().out)
     gate = _start_planning_safety_gate(payload)
-    assert gate["status"] == "escalation-required"
+    assert gate["status"] == "attention"
+    assert gate["decision"] == "agent-work-shape-decision-required"
+    assert gate["implementation_allowed"] is True
+    assert gate["work_shape_facts"]["hard_blockers"] == []
     assert gate["changed_path_classification"]["dirty_shape"] == "implementation-only"
     assert "generated artifacts changed with source or tests" in gate["changed_path_classification"]["scope_growth_reasons"]
-    assert _start_workflow_sufficiency(payload)["decision"] == "planning-escalation-required"
-    assert payload["next"]["action"] == "Create or promote an active execplan before continuing implementation."
+    assert _start_workflow_sufficiency(payload)["decision"] == "enough-for-bounded-implementation"
+    assert payload["next"]["action"] != "Create or promote an active execplan before continuing implementation."
 
 
 def test_implement_allows_routine_pr_comment_repair_without_plan_scaffold(tmp_path: Path, capsys) -> None:
@@ -1555,6 +1558,30 @@ def test_implement_distinguishes_planning_recovery_from_mixed_wip(tmp_path: Path
     planning_only = _start_planning_safety_gate(json.loads(capsys.readouterr().out))
     assert planning_only["status"] == "clear"
     assert planning_only["changed_path_classification"]["dirty_shape"] == "planning-only"
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                ".agentic-workspace/planning/state.toml",
+                "generated/workspace/python/cli.py",
+                "tests/test_workspace_cli.py",
+                "--task",
+                "Implement #424 and refresh candidate state",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    issue_scoped = _start_planning_safety_gate(json.loads(capsys.readouterr().out))
+    assert issue_scoped["status"] == "attention"
+    assert issue_scoped["implementation_allowed"] is True
+    assert issue_scoped["changed_path_classification"]["dirty_shape"] == "implementation-with-planning-state-reconciliation"
+    assert issue_scoped["changed_path_classification"]["ancillary_paths"] == [".agentic-workspace/planning/state.toml"]
 
 
 def test_implement_does_not_require_active_plan_delegation_for_direct_task(tmp_path: Path, capsys) -> None:

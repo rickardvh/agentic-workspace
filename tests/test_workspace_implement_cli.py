@@ -93,9 +93,11 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(tmp_pat
     assert payload["path_boundaries"][0]["authority"] == "payload"
     assert payload["path_boundaries"][0]["requires_attention"] is True
     assert payload["authority_markers"][0]["safe_to_edit"] is False
-    assert payload["next_allowed_action"] == "Create or promote an active execplan before continuing implementation."
-    assert payload["planning_safety_gate"]["status"] == "escalation-required"
-    assert payload["planning_safety_gate"]["decision"] == "planning-escalation-required"
+    assert payload["next_allowed_action"] == "Resolve boundary warnings before editing."
+    assert payload["planning_safety_gate"]["status"] == "attention"
+    assert payload["planning_safety_gate"]["decision"] == "agent-work-shape-decision-required"
+    assert payload["planning_safety_gate"]["implementation_allowed"] is True
+    assert payload["planning_safety_gate"]["work_shape_facts"]["hard_blockers"] == []
 
 
 def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_path: Path, capsys) -> None:
