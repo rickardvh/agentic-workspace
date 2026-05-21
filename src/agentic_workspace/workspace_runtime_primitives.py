@@ -12850,6 +12850,11 @@ def _work_shape_facts_payload(
         "suggested_shape": suggested_shape,
         "confidence": confidence,
         "agent_decision_required": workflow_sufficient,
+        "judgment_boundary": {
+            "aw_owns": ["hard blockers", "changed-path facts", "active planning state", "proof candidates"],
+            "agent_owns": ["user intent", "semantic work shape", "completion judgment when no hard blocker applies"],
+            "rule": "AW exposes factual affordances and blockers; the agent owns engineering judgment over those facts.",
+        },
         "stop_conditions": [
             "changed paths widen beyond the current bounded roots",
             "proof expands beyond the selected proof route",

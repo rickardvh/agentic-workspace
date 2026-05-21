@@ -1459,6 +1459,13 @@ def test_implement_allows_routine_pr_comment_repair_without_plan_scaffold(tmp_pa
     assert gate["work_shape_facts"]["hard_blockers"] == []
     assert gate["work_shape_facts"]["agent_decision_required"] is True
     assert gate["work_shape_facts"]["suggested_shape"] == "direct"
+    assert gate["work_shape_facts"]["judgment_boundary"]["aw_owns"] == [
+        "hard blockers",
+        "changed-path facts",
+        "active planning state",
+        "proof candidates",
+    ]
+    assert "semantic work shape" in gate["work_shape_facts"]["judgment_boundary"]["agent_owns"]
     assert gate["changed_path_classification"]["scope_growth_detected"] is False
     assert gate["changed_path_classification"]["ancillary_paths"] == [".agentic-workspace/memory/repo/current/routing-feedback.md"]
     assert _start_workflow_sufficiency(payload)["decision"] == "enough-for-bounded-implementation"
