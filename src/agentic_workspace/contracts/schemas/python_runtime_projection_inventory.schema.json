@@ -50,24 +50,36 @@
       "additionalProperties": false,
       "required": [
         "completion_rule",
+        "required_granularity",
+        "status",
         "entries"
       ],
       "properties": {
         "completion_rule": {
           "type": "string",
           "minLength": 1,
-          "description": "Rule for accepting package-domain runtime source and generated facade bridges under full Python generated CLI completion."
+          "description": "Rule for accepting exact package-domain runtime source symbols under full Python generated CLI completion."
+        },
+        "required_granularity": {
+          "const": "source-symbol",
+          "description": "Whole-file package runtime or generated facade acceptance is not sufficient for full Python completion."
+        },
+        "status": {
+          "enum": [
+            "exact-symbol-proof-required",
+            "exact-symbol-proof-satisfied"
+          ],
+          "description": "Whether exact symbol-level proof is still required or satisfied."
         },
         "entries": {
           "type": "array",
-          "minItems": 1,
           "items": {
             "$ref": "#/$defs/accepted_runtime_boundary"
           },
-          "description": "Package-domain runtime source files and generated facade bridges accepted as permanent non-generic runtime boundaries."
+          "description": "Exact source-symbol package-domain runtime boundaries."
         }
       },
-      "description": "Accepted package-domain runtime boundaries that do not block full Python completion when audited."
+      "description": "Exact package-domain runtime boundaries. Whole-file runtime source or generated facade entries are not accepted."
     },
     "entries": {
       "type": "array",
@@ -160,46 +172,70 @@
     },
     "accepted_runtime_boundary": {
       "type": "object",
-      "description": "One accepted package-domain runtime source file or generated facade bridge.",
+      "description": "One exact accepted package-domain runtime source symbol reached through a generated facade wrapper.",
       "additionalProperties": false,
       "required": [
-        "path",
-        "boundary_kind",
-        "current_owner",
-        "source_of_truth",
-        "permanence_status",
+        "facade_path",
+        "facade_symbol",
+        "source_module",
+        "source_symbol",
+        "owner_package",
+        "operation_ids",
+        "primitive_refs",
         "runtime_boundary_class",
-        "runtime_boundary_reason",
+        "why_not_generic_deterministic",
         "conformance_ref",
-        "what_would_make_portable_later",
-        "generic_behavior_audit",
-        "blocks_full_completion",
-        "why_not_blocking"
+        "status",
+        "generic_behavior_audit"
       ],
       "properties": {
-        "path": {
+        "facade_path": {
           "type": "string",
-          "pattern": "^(src/agentic_workspace/(workspace_runtime_primitives|doctor)|packages/(planning/src/repo_planning_bootstrap/(installer|runtime_projection)|memory/src/repo_memory_bootstrap/(installer|runtime_primitives))|generated/(workspace/python/primitives/workspace_runtime|planning/python/primitives/(planning_installer|planning_runtime)|memory/python/primitives/memory_runtime))\\.py$",
-          "description": "Repo-relative accepted runtime boundary path."
+          "pattern": "^generated/(workspace/python/primitives/workspace_runtime|planning/python/primitives/(planning_installer|planning_runtime)|memory/python/primitives/memory_runtime)\\.py$",
+          "description": "Generated runtime facade path containing the wrapper."
         },
-        "boundary_kind": {
+        "facade_symbol": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+          "description": "Generated facade wrapper symbol."
+        },
+        "source_module": {
           "enum": [
-            "package-runtime-source",
-            "generated-runtime-facade-bridge"
+            "agentic_workspace.workspace_runtime_primitives",
+            "agentic_workspace.doctor",
+            "repo_planning_bootstrap.installer",
+            "repo_planning_bootstrap.runtime_projection",
+            "repo_memory_bootstrap.installer",
+            "repo_memory_bootstrap.runtime_primitives"
           ],
-          "description": "Whether this is shipped package-domain source or a generated facade bridge to that source."
+          "description": "Package-domain source module imported by the generated facade wrapper."
         },
-        "current_owner": {
+        "source_symbol": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+          "description": "Exact package-domain source symbol imported by the generated facade wrapper."
+        },
+        "owner_package": {
           "type": "string",
           "minLength": 1
         },
-        "source_of_truth": {
-          "type": "string",
-          "minLength": 1
+        "operation_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Generated operation ids allowed to reach this source symbol."
         },
-        "permanence_status": {
-          "const": "accepted-permanent-package-domain-boundary",
-          "description": "Accepted permanence classification required before this boundary can stop blocking full completion."
+        "primitive_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Runtime primitive refs allowed to reach this source symbol."
         },
         "runtime_boundary_class": {
           "enum": [
@@ -211,7 +247,7 @@
           ],
           "description": "Non-generic package-domain runtime classification."
         },
-        "runtime_boundary_reason": {
+        "why_not_generic_deterministic": {
           "type": "string",
           "minLength": 1
         },
@@ -219,19 +255,14 @@
           "type": "string",
           "minLength": 1
         },
-        "what_would_make_portable_later": {
-          "type": "string",
-          "minLength": 1
+        "status": {
+          "enum": [
+            "accepted-permanent-package-domain-boundary",
+            "migration-required-before-full-completion"
+          ],
+          "description": "Only accepted-permanent-package-domain-boundary can support full Python completion."
         },
         "generic_behavior_audit": {
-          "type": "string",
-          "minLength": 1
-        },
-        "blocks_full_completion": {
-          "const": false,
-          "description": "Accepted permanent runtime boundaries must not block full completion."
-        },
-        "why_not_blocking": {
           "type": "string",
           "minLength": 1
         }

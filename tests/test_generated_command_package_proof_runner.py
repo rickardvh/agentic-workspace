@@ -120,7 +120,7 @@ def test_generated_python_conformance_uses_contract_artifacts() -> None:
     assert memory_skills.expected_fields == {"mode": "skills"}
 
 
-def test_full_python_completion_rejects_unaccepted_runtime_source_and_facade_imports(monkeypatch) -> None:
+def test_full_python_completion_rejects_whole_file_runtime_boundary_acceptance(monkeypatch) -> None:
     checker = _load_checker()
     ir = copy.deepcopy(checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT))
     ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
@@ -129,14 +129,12 @@ def test_full_python_completion_rejects_unaccepted_runtime_source_and_facade_imp
 
     def fake_manifest() -> dict[str, object]:
         payload = copy.deepcopy(original_manifest())
-        accepted = payload["accepted_runtime_boundaries"]
-        accepted["entries"] = [
-            entry
-            for entry in accepted["entries"]
-            if entry["path"]
-            not in {
-                "src/agentic_workspace/workspace_runtime_primitives.py",
-                "generated/workspace/python/primitives/workspace_runtime.py",
+        payload["accepted_runtime_boundaries"]["entries"] = [
+            {
+                "path": "src/agentic_workspace/workspace_runtime_primitives.py",
+                "boundary_kind": "package-runtime-source",
+                "runtime_boundary_class": "package-specific-judgment",
+                "status": "accepted-permanent-package-domain-boundary",
             }
         ]
         return payload
@@ -145,32 +143,34 @@ def test_full_python_completion_rejects_unaccepted_runtime_source_and_facade_imp
 
     errors = checker._validate_full_python_completion_executable_ownership(ir)
 
-    assert any("accepted_runtime_boundaries missing entries" in error for error in errors)
+    assert any("whole-file runtime boundary acceptance" in error for error in errors)
     assert any("unaccepted package-domain runtime/lifecycle source is still present" in error for error in errors)
     assert any("generated runtime facades still bridge to unaccepted package-owned runtime helpers" in error for error in errors)
 
 
-def test_current_python_completion_state_is_full_after_accepted_runtime_boundary_proof() -> None:
+def test_current_python_completion_state_stays_blocked_until_exact_symbol_proof() -> None:
     checker = _load_checker()
     ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
 
-    assert ir["generation_policy"]["python_cli_completion"]["current_state"] == "full-generated-cli-complete"
-    assert ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] == "satisfied"
+    assert ir["generation_policy"]["python_cli_completion"]["current_state"] == "product-runtime-source-generation-incomplete"
+    assert ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] == "pending"
 
 
-def test_python_completion_blocker_report_allows_current_full_claim() -> None:
+def test_python_completion_blocker_report_requires_exact_symbol_runtime_boundaries() -> None:
     checker = _load_checker()
     ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
 
     report = checker._python_completion_blockers_report(ir)
 
     assert report["kind"] == "python-completion-blockers/v1"
-    assert report["current_state"] == "full-generated-cli-complete"
-    assert report["completion_gate_state"] == "satisfied"
-    assert report["completion_claim_allowed"] is True
-    assert report["false_completion_claim_would_fail"] is False
-    assert report["blockers"] == []
-    assert report["remaining_scope"] == "none"
+    assert report["current_state"] == "product-runtime-source-generation-incomplete"
+    assert report["completion_gate_state"] == "pending"
+    assert report["completion_claim_allowed"] is False
+    assert report["false_completion_claim_would_fail"] is True
+    blockers = "\n".join(report["blockers"])
+    assert "exact accepted source-symbol boundary entries" in blockers
+    assert "unaccepted package-domain runtime/lifecycle source is still present" in blockers
+    assert report["remaining_scope"] == "tier-6-final-python-completion-promotion"
 
 
 def test_python_function_call_stays_out_of_portable_completion_coverage() -> None:
@@ -187,10 +187,10 @@ def test_python_completion_blocker_report_has_json_cli_mode(capsys) -> None:
     assert status == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "python-completion-blockers/v1"
-    assert payload["completion_claim_allowed"] is True
+    assert payload["completion_claim_allowed"] is False
     assert payload["blocker_count"] == len(payload["blockers"])
-    assert payload["remaining_scope"] == "none"
-    assert payload["next_owner"] == "none"
+    assert payload["remaining_scope"] == "tier-6-final-python-completion-promotion"
+    assert payload["next_owner"] == "#892 / tier-6-final-python-completion-promotion"
 
 
 def test_memory_list_commands_are_direct_generated_python_projections() -> None:

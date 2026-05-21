@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import contextlib
 import copy
 import importlib
@@ -1345,12 +1346,10 @@ def _validate_python_runtime_projection_inventory(*, full_completion: bool) -> l
                 f"python_runtime_projection_inventory.json tracks {relative_path} as {provenance_status!r} "
                 f"with blocking_full_completion={blocking_full_completion!r}"
             )
-    boundary_errors, _accepted_boundary_paths = _validate_python_completion_accepted_runtime_boundaries()
-    errors.extend(boundary_errors)
     return errors
 
 
-def _validate_python_completion_accepted_runtime_boundaries() -> tuple[list[str], set[str]]:
+def _validate_python_completion_accepted_runtime_boundaries(*, require_exact: bool = True) -> tuple[list[str], set[str]]:
     errors: list[str] = []
     try:
         inventory = python_runtime_projection_inventory_manifest()
@@ -1364,81 +1363,125 @@ def _validate_python_completion_accepted_runtime_boundaries() -> tuple[list[str]
     if not isinstance(entries, list) or not all(isinstance(entry, dict) for entry in entries):
         return ["python_runtime_projection_inventory.json accepted_runtime_boundaries.entries must be a list of objects"], set()
 
-    expected_paths = set(PYTHON_FULL_COMPLETION_BLOCKING_RUNTIME_SOURCE_PATHS) | set(
-        PYTHON_FULL_COMPLETION_ACCEPTED_RUNTIME_FACADE_PATHS
-    )
-    by_path = {str(entry.get("path")): entry for entry in entries}
-    missing_paths = sorted(expected_paths - set(by_path))
-    extra_paths = sorted(set(by_path) - expected_paths)
-    if missing_paths:
-        errors.append(
-            "python_runtime_projection_inventory.json accepted_runtime_boundaries missing entries: "
-            f"{missing_paths!r}"
+    if str(accepted.get("required_granularity", "")) != "source-symbol":
+        errors.append("python_runtime_projection_inventory.json accepted_runtime_boundaries must require source-symbol granularity")
+
+    facade_bindings = _generated_runtime_facade_package_runtime_bindings()
+    expected_keys = {
+        (
+            binding["facade_path"],
+            binding["facade_symbol"],
+            binding["source_module"],
+            binding["source_symbol"],
         )
-    if extra_paths:
+        for binding in facade_bindings
+    }
+    accepted_keys: set[tuple[str, str, str, str]] = set()
+    source_path_by_module = {
+        "agentic_workspace.workspace_runtime_primitives": "src/agentic_workspace/workspace_runtime_primitives.py",
+        "agentic_workspace.doctor": "src/agentic_workspace/doctor.py",
+        "repo_planning_bootstrap.installer": "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "repo_planning_bootstrap.runtime_projection": "packages/planning/src/repo_planning_bootstrap/runtime_projection.py",
+        "repo_memory_bootstrap.installer": "packages/memory/src/repo_memory_bootstrap/installer.py",
+        "repo_memory_bootstrap.runtime_primitives": "packages/memory/src/repo_memory_bootstrap/runtime_primitives.py",
+    }
+    source_path_keys: dict[str, set[tuple[str, str, str, str]]] = {path: set() for path in source_path_by_module.values()}
+    for key in expected_keys:
+        source_path = source_path_by_module.get(key[2])
+        if source_path:
+            source_path_keys[source_path].add(key)
+
+    for index, entry in enumerate(entries):
+        location = f"python_runtime_projection_inventory.json accepted_runtime_boundaries.entries[{index}]"
+        if "path" in entry or entry.get("boundary_kind") in {"package-runtime-source", "generated-runtime-facade-bridge"}:
+            errors.append(f"{location} uses whole-file runtime boundary acceptance; exact source-symbol entries are required")
+            continue
+        key = (
+            str(entry.get("facade_path", "")),
+            str(entry.get("facade_symbol", "")),
+            str(entry.get("source_module", "")),
+            str(entry.get("source_symbol", "")),
+        )
+        if key not in expected_keys:
+            errors.append(f"{location} does not match a generated runtime facade package-runtime call: {key!r}")
+        for field in (
+            "owner_package",
+            "operation_ids",
+            "primitive_refs",
+            "runtime_boundary_class",
+            "why_not_generic_deterministic",
+            "conformance_ref",
+            "status",
+            "generic_behavior_audit",
+        ):
+            value = entry.get(field)
+            if isinstance(value, list):
+                missing = not value or not all(isinstance(item, str) and item.strip() for item in value)
+            else:
+                missing = not str(value or "").strip()
+            if missing:
+                errors.append(f"{location} must include non-empty {field}")
+        boundary_class = str(entry.get("runtime_boundary_class", ""))
+        if boundary_class in PYTHON_OPERATION_FULL_COMPLETION_BLOCKING_BOUNDARY_CLASSES:
+            errors.append(f"{location} cannot accept generic deterministic runtime debt")
+        if str(entry.get("status", "")) != PYTHON_ACCEPTED_RUNTIME_BOUNDARY_PERMANENCE_STATUS:
+            errors.append(
+                f"{location} must declare status={PYTHON_ACCEPTED_RUNTIME_BOUNDARY_PERMANENCE_STATUS!r} "
+                "before full Python completion can be claimed"
+            )
+        accepted_keys.add(key)
+
+    missing_keys = sorted(expected_keys - accepted_keys)
+    if require_exact and missing_keys:
         errors.append(
-            "python_runtime_projection_inventory.json accepted_runtime_boundaries contains unexpected entries: "
-            f"{extra_paths!r}"
+            "Tier 6 final Python completion promotion remains blocked until generated runtime facade "
+            f"package-runtime calls have exact accepted source-symbol boundary entries: {missing_keys!r}"
         )
 
     accepted_nonblocking_paths: set[str] = set()
-    for relative_path, entry in sorted(by_path.items()):
-        if relative_path not in expected_paths:
-            continue
-        expected_kind = (
-            "package-runtime-source"
-            if relative_path in PYTHON_FULL_COMPLETION_BLOCKING_RUNTIME_SOURCE_PATHS
-            else "generated-runtime-facade-bridge"
-        )
-        if entry.get("boundary_kind") != expected_kind:
-            errors.append(
-                f"python_runtime_projection_inventory.json accepted runtime boundary {relative_path} "
-                f"must declare boundary_kind={expected_kind!r}"
-            )
-        if not (REPO_ROOT / relative_path).is_file():
-            errors.append(
-                f"python_runtime_projection_inventory.json accepted runtime boundary {relative_path} does not exist"
-            )
-        if entry.get("permanence_status") != PYTHON_ACCEPTED_RUNTIME_BOUNDARY_PERMANENCE_STATUS:
-            errors.append(
-                f"python_runtime_projection_inventory.json accepted runtime boundary {relative_path} "
-                f"must declare permanence_status={PYTHON_ACCEPTED_RUNTIME_BOUNDARY_PERMANENCE_STATUS!r}"
-            )
-        if entry.get("blocks_full_completion") is not False:
-            errors.append(
-                f"python_runtime_projection_inventory.json accepted runtime boundary {relative_path} "
-                "must declare blocks_full_completion=false"
-            )
-        boundary_class = str(entry.get("runtime_boundary_class", ""))
-        if boundary_class not in PYTHON_OPERATION_ACCEPTED_BOUNDARY_CLASSES:
-            errors.append(
-                f"python_runtime_projection_inventory.json accepted runtime boundary {relative_path} "
-                f"must declare runtime_boundary_class in {sorted(PYTHON_OPERATION_ACCEPTED_BOUNDARY_CLASSES)!r}"
-            )
-        if boundary_class in PYTHON_OPERATION_FULL_COMPLETION_BLOCKING_BOUNDARY_CLASSES:
-            errors.append(
-                f"python_runtime_projection_inventory.json accepted runtime boundary {relative_path} "
-                "cannot classify generic deterministic behavior as accepted permanent runtime"
-            )
-        for field in (
-            "current_owner",
-            "source_of_truth",
-            "runtime_boundary_reason",
-            "conformance_ref",
-            "what_would_make_portable_later",
-            "generic_behavior_audit",
-            "why_not_blocking",
-        ):
-            if not str(entry.get(field, "")).strip():
-                errors.append(
-                    f"python_runtime_projection_inventory.json accepted runtime boundary {relative_path} "
-                    f"must include {field}"
-                )
-        if relative_path not in missing_paths and relative_path not in extra_paths and not any(
-            relative_path in error for error in errors
-        ):
-            accepted_nonblocking_paths.add(relative_path)
+    if require_exact and not errors:
+        for facade_path in PYTHON_FULL_COMPLETION_ACCEPTED_RUNTIME_FACADE_PATHS:
+            facade_keys = {key for key in expected_keys if key[0] == facade_path}
+            if facade_keys and facade_keys <= accepted_keys:
+                accepted_nonblocking_paths.add(facade_path)
+        for source_path, keys in source_path_keys.items():
+            if keys and keys <= accepted_keys:
+                accepted_nonblocking_paths.add(source_path)
     return errors, accepted_nonblocking_paths
+
+
+def _generated_runtime_facade_package_runtime_bindings() -> list[dict[str, str]]:
+    allowed_modules = {
+        "agentic_workspace.workspace_runtime_primitives",
+        "agentic_workspace.doctor",
+        "repo_planning_bootstrap.installer",
+        "repo_planning_bootstrap.runtime_projection",
+        "repo_memory_bootstrap.installer",
+        "repo_memory_bootstrap.runtime_primitives",
+    }
+    bindings: list[dict[str, str]] = []
+    for relative_path in PYTHON_FULL_COMPLETION_ACCEPTED_RUNTIME_FACADE_PATHS:
+        path = REPO_ROOT / relative_path
+        if not path.is_file():
+            continue
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=relative_path)
+        for node in tree.body:
+            if not isinstance(node, ast.FunctionDef):
+                continue
+            for child in ast.walk(node):
+                if isinstance(child, ast.ImportFrom) and child.module in allowed_modules:
+                    for alias in child.names:
+                        if alias.name == "*":
+                            continue
+                        bindings.append(
+                            {
+                                "facade_path": relative_path,
+                                "facade_symbol": node.name,
+                                "source_module": child.module,
+                                "source_symbol": alias.name,
+                            }
+                        )
+    return sorted(bindings, key=lambda item: (item["facade_path"], item["facade_symbol"], item["source_module"], item["source_symbol"]))
 
 
 def _tracked_python_source_files() -> list[str]:

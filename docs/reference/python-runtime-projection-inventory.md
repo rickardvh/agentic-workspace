@@ -16,7 +16,9 @@ Inventory proving whether generated Python runtime projection files are rendered
 | `purpose` | string | yes |  | Human-readable purpose for tracking generated Python runtime projection provenance. |  |  |
 | `completion_rule` | string | yes |  | Rule that determines whether runtime projection provenance can support full Python generated CLI completion. |  |  |
 | `allowed_provenance_statuses` | array of enum `"rendered-by-command-generation"`, `"transitional-generated-output-debt"` | yes |  | Allowed provenance status values for runtime projection entries. |  |  |
-| `accepted_runtime_boundaries` | object | yes |  | Accepted package-domain runtime boundaries that do not block full Python completion when audited. |  |  |
-| `accepted_runtime_boundaries.completion_rule` | string | yes |  | Rule for accepting package-domain runtime source and generated facade bridges under full Python generated CLI completion. |  |  |
-| `accepted_runtime_boundaries.entries` | array of ref `#/$defs/accepted_runtime_boundary` | yes |  | Package-domain runtime source files and generated facade bridges accepted as permanent non-generic runtime boundaries. |  |  |
+| `accepted_runtime_boundaries` | object | yes |  | Exact package-domain runtime boundaries. Whole-file runtime source or generated facade entries are not accepted. |  |  |
+| `accepted_runtime_boundaries.completion_rule` | string | yes |  | Rule for accepting exact package-domain runtime source symbols under full Python generated CLI completion. |  |  |
+| `accepted_runtime_boundaries.required_granularity` | const `"source-symbol"` | yes |  | Whole-file package runtime or generated facade acceptance is not sufficient for full Python completion. |  |  |
+| `accepted_runtime_boundaries.status` | enum `"exact-symbol-proof-required"`, `"exact-symbol-proof-satisfied"` | yes |  | Whether exact symbol-level proof is still required or satisfied. |  |  |
+| `accepted_runtime_boundaries.entries` | array of ref `#/$defs/accepted_runtime_boundary` | yes |  | Exact source-symbol package-domain runtime boundaries. |  |  |
 | `entries` | array of ref `#/$defs/entry` | yes |  | Runtime projection files that must be accounted for before Python generated CLI completion can be claimed. |  |  |
