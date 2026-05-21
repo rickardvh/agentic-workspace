@@ -18,5 +18,4 @@ queued_items = []
 [roadmap]
 lanes = []
 candidates = [
-  { id = "github-1076-dogfooding-build-duplicate-member-warnings-shoul", maturity = "candidate", status = "next", priority = "P3", refs = "GitHub #1076", title = "[Dogfooding]: Build duplicate-member warnings should be structured validation signals", outcome = "Route the upstream issue into a bounded Agentic Workspace slice before implementation.", reason = "Open prioritized upstream issue from refreshed external intent evidence.", promotion_signal = "Promote when this issue is selected for implementation or grouped into a bounded lane.", suggested_first_slice = "Inspect the issue body, choose the smallest workflow shape, and record exact proof before closeout." },
 ]
