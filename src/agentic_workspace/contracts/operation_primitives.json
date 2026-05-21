@@ -960,6 +960,18 @@
       "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
     },
     {
+      "id": "memory.promotion_report.load",
+      "summary": "Load Memory promotion or remediation candidates from package-owned Memory note policy.",
+      "kind": "memory-runtime",
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "memory package runtime boundary",
+      "tier_reason": "Promotion candidate selection depends on Memory note metadata policy, remediation grouping, and package-owned judgment rather than portable target-executor behavior.",
+      "conformance_ref": "memory.promotion-report.process",
+      "migration_path": "Extract deterministic note scanning or grouping into schema-backed Tier 1 primitives only after promotion/remediation policy is modeled as data.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; the primitive replaces the generic python.function.call bridge with a named Memory domain boundary so future targets can report unsupported/domain-runtime behavior explicitly."
+    },
+    {
       "id": "python.function.call",
       "summary": "Call a checked-in Python runtime function declared by operation IR.",
       "kind": "external-runtime",

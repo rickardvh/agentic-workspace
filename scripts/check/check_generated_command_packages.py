@@ -28,6 +28,7 @@ for SOURCE_ROOT in (
     if str(SOURCE_ROOT) not in sys.path:
         sys.path.insert(0, str(SOURCE_ROOT))
 
+from jsonschema import Draft202012Validator  # noqa: E402
 from workspace_command_generation import (  # noqa: E402
     SCHEMA_PATH,
     SOURCE_PATH,
@@ -177,6 +178,7 @@ PYTHON_FULL_COMPLETION_BLOCKING_RUNTIME_SOURCE_PATHS = (
     "packages/planning/src/repo_planning_bootstrap/installer.py",
     "packages/planning/src/repo_planning_bootstrap/runtime_projection.py",
     "packages/memory/src/repo_memory_bootstrap/installer.py",
+    "packages/memory/src/repo_memory_bootstrap/runtime_search.py",
     "packages/memory/src/repo_memory_bootstrap/runtime_primitives.py",
 )
 PYTHON_FULL_COMPLETION_ACCEPTED_RUNTIME_FACADE_PATHS = (
@@ -201,6 +203,7 @@ GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST = {
         "historical generated target-layout migration context"
     ),
     "packages/command-generation/src/command_generation/generated_package_loader.py": "legacy loader compatibility wrappers and legacy layout fallback",
+    "src/agentic_workspace/cli.py": "source-checkout fallback to checked-in generated workspace CLI package",
     "src/agentic_workspace/workspace_runtime_primitives.py": "legacy parser helper compatibility wrapper",
     "scripts/check/check_generated_command_packages.py": "static compatibility allowlist and obsolete-layout guards",
     "tests/test_command_generation_artifacts.py": "obsolete target-specific runtime guard",
@@ -212,6 +215,12 @@ GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST = {
 GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST_PREFIXES = {
     ".agentic-workspace/planning/execplans/archive/": "historical planning evidence",
     "docs/reviews/": "historical review evidence",
+}
+DOMAIN_RUNTIME_PRIMITIVE_SOURCE_CALLS = {
+    "memory.promotion_report.load": {
+        "import_module": "repo_memory_bootstrap.installer",
+        "function": "promotion_report",
+    }
 }
 PYTHON_REQUIRED_RUNTIME_PROJECTION_OUTPUTS = {
     "generated/workspace/python/cli.py": (
@@ -1408,6 +1417,7 @@ def _validate_python_completion_accepted_runtime_boundaries(*, require_exact: bo
         "repo_planning_bootstrap.installer": "packages/planning/src/repo_planning_bootstrap/installer.py",
         "repo_planning_bootstrap.runtime_projection": "packages/planning/src/repo_planning_bootstrap/runtime_projection.py",
         "repo_memory_bootstrap.installer": "packages/memory/src/repo_memory_bootstrap/installer.py",
+        "repo_memory_bootstrap.runtime_search": "packages/memory/src/repo_memory_bootstrap/runtime_search.py",
         "repo_memory_bootstrap.runtime_primitives": "packages/memory/src/repo_memory_bootstrap/runtime_primitives.py",
     }
     source_path_keys: dict[str, set[tuple[str, str, str, str, str]]] = {path: set() for path in source_path_by_module.values()}
@@ -1531,30 +1541,249 @@ def _python_runtime_boundary_metrics() -> dict[str, object]:
     if not isinstance(entries, list):
         return {"status": "unavailable", "error": "accepted_runtime_boundaries.entries is not a list"}
     class_counts: dict[str, int] = {}
+    package_counts: dict[str, int] = {}
+    binding_kind_counts: dict[str, int] = {}
     output_emission_symbols: list[dict[str, str]] = []
+    python_bridge_symbols: list[dict[str, str]] = []
+    generic_debt_symbols: list[dict[str, str]] = []
+    current_symbol_ids: set[str] = set()
     for entry in entries:
         if not isinstance(entry, dict):
             continue
+        current_symbol_ids.add(_accepted_runtime_symbol_id(entry))
         boundary_class = str(entry.get("runtime_boundary_class", "unknown") or "unknown")
         class_counts[boundary_class] = class_counts.get(boundary_class, 0) + 1
+        owner_package = str(entry.get("owner_package", "unknown") or "unknown")
+        package_counts[owner_package] = package_counts.get(owner_package, 0) + 1
+        binding_kind = str(entry.get("binding_kind", "unknown") or "unknown")
+        binding_kind_counts[binding_kind] = binding_kind_counts.get(binding_kind, 0) + 1
         source_symbol = str(entry.get("source_symbol", ""))
+        operation_id = str(entry.get("operation_id", ""))
+        source_module = str(entry.get("source_module", ""))
+        primitive_refs = entry.get("primitive_refs", [])
+        primitive_ref_strings = [str(ref) for ref in primitive_refs] if isinstance(primitive_refs, list) else []
         if "emit" in source_symbol:
             output_emission_symbols.append(
                 {
-                    "binding_kind": str(entry.get("binding_kind", "runtime-facade-call")),
+                    "binding_kind": binding_kind,
                     "facade_path": str(entry.get("facade_path", "")),
                     "facade_symbol": str(entry.get("facade_symbol", "")),
                     "source_symbol": source_symbol,
                     "runtime_boundary_class": boundary_class,
                 }
             )
+        if "python.function.call" in primitive_ref_strings:
+            python_bridge_symbols.append(
+                {
+                    "operation_id": operation_id,
+                    "source_module": source_module,
+                    "source_symbol": source_symbol,
+                    "runtime_boundary_class": boundary_class,
+                }
+            )
+        if boundary_class in PYTHON_OPERATION_FULL_COMPLETION_BLOCKING_BOUNDARY_CLASSES:
+            generic_debt_symbols.append(
+                {
+                    "operation_id": operation_id,
+                    "source_module": source_module,
+                    "source_symbol": source_symbol,
+                    "runtime_boundary_class": boundary_class,
+                }
+            )
+    baseline_obj = accepted.get("baseline_symbols", []) if isinstance(accepted, dict) else []
+    baseline_symbol_ids = {str(item) for item in baseline_obj} if isinstance(baseline_obj, list) else set()
     return {
         "status": "available",
         "accepted_runtime_symbol_count": sum(class_counts.values()),
+        "accepted_runtime_symbol_count_by_package": dict(sorted(package_counts.items())),
         "accepted_runtime_symbol_count_by_class": dict(sorted(class_counts.items())),
+        "accepted_runtime_symbol_count_by_binding_kind": dict(sorted(binding_kind_counts.items())),
+        "output_fallback_symbol_count": len(output_emission_symbols),
+        "python_bridge_step_count": len(python_bridge_symbols),
+        "generic_debt_symbol_count": len(generic_debt_symbols),
+        "baseline_symbol_count": len(baseline_symbol_ids),
+        "new_symbols_since_baseline": sorted(current_symbol_ids - baseline_symbol_ids),
+        "removed_symbols_since_baseline": sorted(baseline_symbol_ids - current_symbol_ids),
         "accepted_output_emission_symbol_count": len(output_emission_symbols),
         "accepted_output_emission_symbols": output_emission_symbols,
+        "python_bridge_symbols": python_bridge_symbols,
+        "generic_debt_symbols": generic_debt_symbols,
     }
+
+
+def _accepted_runtime_symbol_id(entry: dict[str, object]) -> str:
+    binding_kind = str(entry.get("binding_kind", "runtime-facade-call"))
+    if binding_kind == "operation-function-call":
+        return "|".join(
+            (
+                binding_kind,
+                str(entry.get("operation_path", "")),
+                str(entry.get("operation_id", "")),
+                str(entry.get("source_module", "")),
+                str(entry.get("source_symbol", "")),
+            )
+        )
+    return "|".join(
+        (
+            binding_kind,
+            str(entry.get("facade_path", "")),
+            str(entry.get("facade_symbol", "")),
+            str(entry.get("source_module", "")),
+            str(entry.get("source_symbol", "")),
+        )
+    )
+
+
+def _condition_requires_value(condition: object, *, value_name: str, expected: object) -> bool:
+    if not isinstance(condition, dict):
+        return False
+    keys = set(condition)
+    if keys == {"value", "equals"}:
+        return condition.get("value") == value_name and condition.get("equals") == expected
+    if keys == {"all"}:
+        items = condition.get("all")
+        return isinstance(items, list) and any(_condition_requires_value(item, value_name=value_name, expected=expected) for item in items)
+    if keys == {"any"}:
+        items = condition.get("any")
+        return (
+            isinstance(items, list)
+            and bool(items)
+            and all(_condition_requires_value(item, value_name=value_name, expected=expected) for item in items)
+        )
+    if keys == {"not"}:
+        return _condition_requires_value(condition.get("not"), value_name=value_name, expected=not bool(expected))
+    return False
+
+
+def _operation_lifecycle_dry_run_profile(*, operation_path: Path) -> dict[str, object] | None:
+    operation = json.loads(operation_path.read_text(encoding="utf-8"))
+    operation_id = str(operation.get("id", ""))
+    if not operation_id.endswith(".lifecycle"):
+        return None
+    inputs = operation.get("inputs", [])
+    has_dry_run_input = (
+        any(isinstance(item, dict) and item.get("name") == "dry_run" for item in inputs) if isinstance(inputs, list) else False
+    )
+    if not has_dry_run_input:
+        return None
+    steps = operation.get("ir_plan", {}).get("steps", [])
+    if not isinstance(steps, list):
+        steps = []
+    codegen_dry_run_steps: list[str] = []
+    package_runtime_dry_run_steps: list[str] = []
+    for step in steps:
+        if not isinstance(step, dict):
+            continue
+        primitive = str(step.get("uses", ""))
+        condition = step.get("when")
+        if primitive == "payload.lifecycle-plan" and _condition_requires_value(condition, value_name="dry_run", expected=True):
+            codegen_dry_run_steps.append(str(step.get("id", primitive)))
+        if primitive == "python.function.call":
+            if condition is None or not _condition_requires_value(condition, value_name="dry_run", expected=False):
+                package_runtime_dry_run_steps.append(str(step.get("id", primitive)))
+    default_dry_run_owner = (
+        "codegen" if codegen_dry_run_steps else "package-runtime" if package_runtime_dry_run_steps else "operation-runtime"
+    )
+    return {
+        "operation_id": operation_id,
+        "operation_path": operation_path.relative_to(REPO_ROOT).as_posix(),
+        "default_dry_run_owner": default_dry_run_owner,
+        "codegen_dry_run_steps": codegen_dry_run_steps,
+        "package_runtime_dry_run_steps": package_runtime_dry_run_steps,
+    }
+
+
+def _lifecycle_dry_run_metrics() -> dict[str, object]:
+    operation_roots = [
+        REPO_ROOT / "generated" / "memory" / "python" / "operations",
+        REPO_ROOT / "generated" / "planning" / "python" / "operations",
+    ]
+    profiles: list[dict[str, object]] = []
+    for operation_root in operation_roots:
+        if not operation_root.is_dir():
+            continue
+        for operation_path in sorted(operation_root.glob("*.json")):
+            profile = _operation_lifecycle_dry_run_profile(operation_path=operation_path)
+            if profile is not None:
+                profiles.append(profile)
+    codegen_owned = [profile for profile in profiles if profile["default_dry_run_owner"] == "codegen"]
+    package_owned = [profile for profile in profiles if profile["default_dry_run_owner"] == "package-runtime"]
+    operation_runtime_owned = [profile for profile in profiles if profile["default_dry_run_owner"] == "operation-runtime"]
+    return {
+        "status": "available",
+        "lifecycle_dry_run_operation_count": len(profiles),
+        "codegen_default_dry_run_operation_count": len(codegen_owned),
+        "package_runtime_default_dry_run_operation_count": len(package_owned),
+        "operation_runtime_default_dry_run_operation_count": len(operation_runtime_owned),
+        "codegen_default_dry_run_operations": codegen_owned,
+        "package_runtime_default_dry_run_operations": package_owned,
+        "operation_runtime_default_dry_run_operations": operation_runtime_owned,
+    }
+
+
+def _validate_declarative_view_specs() -> list[str]:
+    errors: list[str] = []
+    schema_path = REPO_ROOT / "src" / "agentic_workspace" / "contracts" / "schemas" / "view_spec.schema.json"
+    view_spec_root = REPO_ROOT / "src" / "agentic_workspace" / "contracts" / "view_specs"
+    try:
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        return [f"view spec schema is missing or invalid: {exc}"]
+    for spec_path in sorted(view_spec_root.glob("*.json")):
+        try:
+            spec = json.loads(spec_path.read_text(encoding="utf-8"))
+            Draft202012Validator(schema).validate(spec)
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"{spec_path.relative_to(REPO_ROOT).as_posix()} is not a valid view spec: {exc}")
+            continue
+        operation_id = str(spec.get("operation_id", ""))
+        generated_operation = (
+            REPO_ROOT / "generated" / "memory" / "python" / "operations" / f"{operation_id}.json"
+        )
+        if not generated_operation.is_file():
+            errors.append(f"{spec_path.relative_to(REPO_ROOT).as_posix()} references missing generated operation {operation_id!r}")
+            continue
+        operation_text = generated_operation.read_text(encoding="utf-8")
+        for primitive_ref in spec.get("primitive_refs", []):
+            if f'"uses": "{primitive_ref}"' not in operation_text:
+                errors.append(
+                    f"{spec_path.relative_to(REPO_ROOT).as_posix()} primitive {primitive_ref!r} is not present in generated operation {operation_id}"
+                )
+    return errors
+
+
+def _validate_lifecycle_dry_run_generation() -> list[str]:
+    errors: list[str] = []
+    try:
+        inventory = python_runtime_projection_inventory_manifest()
+    except Exception as exc:  # noqa: BLE001
+        return [f"python_runtime_projection_inventory.json is missing or invalid for lifecycle dry-run proof: {exc}"]
+    accepted = inventory.get("accepted_runtime_boundaries", {})
+    entries = accepted.get("entries", []) if isinstance(accepted, dict) else []
+    if not isinstance(entries, list):
+        return ["python_runtime_projection_inventory.json accepted_runtime_boundaries.entries must be a list for lifecycle dry-run proof"]
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            continue
+        primitive_refs = set(entry.get("primitive_refs", []))
+        audit = str(entry.get("generic_behavior_audit", ""))
+        if (
+            "payload.lifecycle-plan" not in primitive_refs
+            and "Default dry-run behavior is no longer generic deterministic runtime debt" not in audit
+        ):
+            continue
+        operation_path = REPO_ROOT / str(entry.get("operation_path", ""))
+        location = f"python_runtime_projection_inventory.json accepted_runtime_boundaries.entries[{index}]"
+        if not operation_path.is_file():
+            errors.append(f"{location} lifecycle dry-run proof operation_path does not exist: {operation_path}")
+            continue
+        profile = _operation_lifecycle_dry_run_profile(operation_path=operation_path)
+        if not profile or profile["default_dry_run_owner"] != "codegen":
+            errors.append(
+                f"{location} claims generated default dry-run planning but {operation_path.relative_to(REPO_ROOT).as_posix()} "
+                "does not route the default dry-run branch through payload.lifecycle-plan"
+            )
+    return errors
 
 
 def _generated_runtime_facade_package_runtime_bindings() -> list[dict[str, str]]:
@@ -1564,6 +1793,7 @@ def _generated_runtime_facade_package_runtime_bindings() -> list[dict[str, str]]
         "repo_planning_bootstrap.installer",
         "repo_planning_bootstrap.runtime_projection",
         "repo_memory_bootstrap.installer",
+        "repo_memory_bootstrap.runtime_search",
         "repo_memory_bootstrap.runtime_primitives",
     }
     metadata = _python_runtime_boundary_metadata()
@@ -1601,6 +1831,7 @@ def _generated_operation_package_runtime_bindings() -> list[dict[str, object]]:
         "repo_planning_bootstrap.installer",
         "repo_planning_bootstrap.runtime_projection",
         "repo_memory_bootstrap.installer",
+        "repo_memory_bootstrap.runtime_search",
         "repo_memory_bootstrap.runtime_primitives",
     }
     metadata = _python_runtime_boundary_metadata()
@@ -1650,6 +1881,9 @@ def _operation_python_function_calls(value: object) -> list[dict[str, object]]:
     if isinstance(value, dict):
         if value.get("import_module") and value.get("function"):
             calls.append(value)
+        primitive_source_call = DOMAIN_RUNTIME_PRIMITIVE_SOURCE_CALLS.get(str(value.get("uses", "")))
+        if primitive_source_call is not None:
+            calls.append(primitive_source_call)
         for nested in value.values():
             calls.extend(_operation_python_function_calls(nested))
     elif isinstance(value, list):
@@ -2152,7 +2386,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         if direct_operation_id in memory_operation_executor_text:
             errors.append(f"{direct_operation_id} must be executed by its direct generated command module, not memory run_operation_ir")
     if "_handle_memory_promotion_report_load" in memory_operation_executor_text:
-        errors.append("memory promotion-report must execute through declared python.function.call, not a runtime facade handler")
+        errors.append("memory promotion-report must execute through declared memory.promotion_report.load, not a runtime facade handler")
     if "_assemble_memory_operation_payload" in memory_operation_executor_text:
         errors.append("memory operation IR executor must not keep the dead payload.assemble runtime bridge for direct commands")
     for marker in (
@@ -2983,6 +3217,8 @@ def _python_completion_blockers_report(ir: dict[str, object]) -> dict[str, objec
     blockers.extend(_validate_full_python_completion_executable_ownership(forced_full_ir))
     blockers.extend(_validate_python_runtime_projection_inventory(full_completion=True))
     blockers.extend(_validate_python_operation_execution_inventory(forced_full_ir))
+    blockers.extend(_validate_lifecycle_dry_run_generation())
+    blockers.extend(_validate_declarative_view_specs())
 
     current_state = str(policy.get("current_state", ""))
     gate = policy.get("completion_gate", {})
@@ -2997,6 +3233,7 @@ def _python_completion_blockers_report(ir: dict[str, object]) -> dict[str, objec
         "blockers": blockers,
         "blocker_count": len(blockers),
         "accepted_runtime_boundary_metrics": _python_runtime_boundary_metrics(),
+        "lifecycle_dry_run_metrics": _lifecycle_dry_run_metrics(),
         "remaining_scope": "tier-6-final-python-completion-promotion" if blockers else "none",
         "next_owner": ("#892 / tier-6-final-python-completion-promotion" if blockers else "none"),
     }
@@ -3012,7 +3249,17 @@ def _print_python_completion_blockers_report(report: dict[str, object], *, outpu
     metrics = report.get("accepted_runtime_boundary_metrics", {})
     if isinstance(metrics, dict) and metrics.get("status") == "available":
         print(f"Accepted runtime symbols: {metrics.get('accepted_runtime_symbol_count')}")
+        print(f"Accepted runtime symbols by package: {metrics.get('accepted_runtime_symbol_count_by_package')}")
+        print(f"Accepted runtime symbols by class: {metrics.get('accepted_runtime_symbol_count_by_class')}")
         print(f"Accepted output-emission symbols: {metrics.get('accepted_output_emission_symbol_count')}")
+        print(f"Python bridge steps: {metrics.get('python_bridge_step_count')}")
+        print(f"Generic debt symbols: {metrics.get('generic_debt_symbol_count')}")
+    lifecycle_metrics = report.get("lifecycle_dry_run_metrics", {})
+    if isinstance(lifecycle_metrics, dict) and lifecycle_metrics.get("status") == "available":
+        print(f"Lifecycle dry-run operations: {lifecycle_metrics.get('lifecycle_dry_run_operation_count')}")
+        print(f"Codegen-owned default dry-run operations: {lifecycle_metrics.get('codegen_default_dry_run_operation_count')}")
+        print(f"Package-runtime default dry-run operations: {lifecycle_metrics.get('package_runtime_default_dry_run_operation_count')}")
+        print(f"Operation-runtime default dry-run operations: {lifecycle_metrics.get('operation_runtime_default_dry_run_operation_count')}")
     blockers = report.get("blockers", [])
     if not isinstance(blockers, list) or not blockers:
         print("Blockers: none")

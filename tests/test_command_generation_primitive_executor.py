@@ -453,6 +453,35 @@ def test_python_function_call_rejects_missing_value_bindings(primitive_context: 
         )
 
 
+def test_memory_promotion_report_load_is_named_domain_primitive(
+    monkeypatch: pytest.MonkeyPatch, primitive_context: PrimitiveContext
+) -> None:
+    from repo_memory_bootstrap import installer
+
+    def fake_promotion_report(**kwargs: object) -> dict[str, object]:
+        return {"kind": "memory-promotion-report/test", "kwargs": kwargs}
+
+    monkeypatch.setattr(installer, "promotion_report", fake_promotion_report)
+
+    result = execute_primitive(
+        "memory.promotion_report.load",
+        values={"target": "repo", "notes": ["note.md"], "mode": "remediation"},
+        arguments={
+            "kwargs": {
+                "target": {"value": "target"},
+                "notes": {"value": "notes"},
+                "mode": {"value": "mode"},
+            }
+        },
+        context=primitive_context,
+    )
+
+    assert result == {
+        "kind": "memory-promotion-report/test",
+        "kwargs": {"target": "repo", "notes": ["note.md"], "mode": "remediation"},
+    }
+
+
 def test_run_operation_steps_executes_declared_dataflow(primitive_context: PrimitiveContext) -> None:
     operation = {
         "ir_plan": {

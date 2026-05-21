@@ -107,6 +107,18 @@
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
+      "pattern": "src/agentic_workspace/contracts/view_specs/*.json",
+      "format": "json",
+      "owner": "workspace-contracts",
+      "status": "schema-backed",
+      "schema_or_validator": "src/agentic_workspace/contracts/schemas/view_spec.schema.json",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Declarative view specs describe generated report/view projections and are checked against generated operation primitive refs.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
+    },
+    {
       "pattern": "src/agentic_workspace/contracts/*.json",
       "format": "json",
       "owner": "workspace-contracts",

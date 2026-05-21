@@ -77,7 +77,7 @@
         "uses": "python.function.call",
         "description": "Load Memory search results.",
         "arguments": {
-          "import_module": "repo_memory_bootstrap.installer",
+          "import_module": "repo_memory_bootstrap.runtime_search",
           "function": "search_memory",
           "kwargs": {
             "target": {

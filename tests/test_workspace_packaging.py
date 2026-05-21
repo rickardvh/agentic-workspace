@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import tomllib
 from pathlib import Path
 from zipfile import ZipFile
 
@@ -176,6 +177,13 @@ def test_installed_workspace_wheel_imports_cli_module() -> None:
         )
 
     assert result.returncode == 0, result.stderr
+
+
+def test_workspace_runtime_entrypoint_stays_off_command_generation() -> None:
+    pyproject = tomllib.loads((WORKSPACE_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+
+    assert "command-generation" not in pyproject["project"]["dependencies"]
+    assert pyproject["project"]["scripts"]["agentic-workspace"] == "agentic_workspace.cli:main"
 
 
 def test_installed_workspace_stack_runs_fresh_repo_cli_sequence() -> None:

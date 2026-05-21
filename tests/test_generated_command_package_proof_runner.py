@@ -199,6 +199,68 @@ def test_python_completion_blocker_report_accepts_exact_symbol_runtime_boundarie
     assert report["false_completion_claim_would_fail"] is False
     assert report["blockers"] == []
     assert report["remaining_scope"] == "none"
+    runtime_metrics = report["accepted_runtime_boundary_metrics"]
+    assert runtime_metrics["status"] == "available"
+    assert runtime_metrics["accepted_runtime_symbol_count"] == sum(runtime_metrics["accepted_runtime_symbol_count_by_package"].values())
+    assert runtime_metrics["accepted_runtime_symbol_count"] == sum(runtime_metrics["accepted_runtime_symbol_count_by_class"].values())
+    assert runtime_metrics["python_bridge_step_count"] == 0
+    assert runtime_metrics["python_bridge_symbols"] == []
+    assert runtime_metrics["generic_debt_symbol_count"] == 0
+    assert runtime_metrics["baseline_symbol_count"] == runtime_metrics["accepted_runtime_symbol_count"]
+    assert runtime_metrics["new_symbols_since_baseline"] == [
+        "operation-function-call|generated/memory/python/operations/memory.search.report.json|memory.search.report|"
+        "repo_memory_bootstrap.runtime_search|search_memory"
+    ]
+    assert runtime_metrics["removed_symbols_since_baseline"] == [
+        "operation-function-call|generated/memory/python/operations/memory.search.report.json|memory.search.report|"
+        "repo_memory_bootstrap.installer|search_memory"
+    ]
+    lifecycle_metrics = report["lifecycle_dry_run_metrics"]
+    assert lifecycle_metrics["status"] == "available"
+    assert lifecycle_metrics["codegen_default_dry_run_operation_count"] >= 3
+    assert "memory.install.lifecycle" in {
+        operation["operation_id"] for operation in lifecycle_metrics["codegen_default_dry_run_operations"]
+    }
+
+
+def test_lifecycle_dry_run_generation_regression_is_blocked(monkeypatch) -> None:
+    checker = _load_checker()
+    inventory = copy.deepcopy(checker.python_runtime_projection_inventory_manifest())
+    entry = next(
+        item for item in inventory["accepted_runtime_boundaries"]["entries"] if item.get("operation_id") == "memory.install.lifecycle"
+    )
+    entry["operation_path"] = "generated/planning/python/operations/planning.install.lifecycle.json"
+    monkeypatch.setattr(checker, "python_runtime_projection_inventory_manifest", lambda: inventory)
+
+    errors = checker._validate_lifecycle_dry_run_generation()
+
+    assert any("does not route the default dry-run branch through payload.lifecycle-plan" in error for error in errors)
+
+
+def test_runtime_budget_metrics_compare_against_recorded_baseline(monkeypatch) -> None:
+    checker = _load_checker()
+    inventory = copy.deepcopy(checker.python_runtime_projection_inventory_manifest())
+    accepted = inventory["accepted_runtime_boundaries"]
+    current_symbols = [checker._accepted_runtime_symbol_id(entry) for entry in accepted["entries"] if isinstance(entry, dict)]
+    accepted["baseline_symbols"] = current_symbols[:-1] + [
+        "operation-function-call|generated/memory/python/operations/retired.report.json|retired.report|"
+        "repo_memory_bootstrap.installer|retired_runtime_symbol"
+    ]
+    monkeypatch.setattr(checker, "python_runtime_projection_inventory_manifest", lambda: inventory)
+
+    runtime_metrics = checker._python_runtime_boundary_metrics()
+
+    assert runtime_metrics["new_symbols_since_baseline"] == [current_symbols[-1]]
+    assert runtime_metrics["removed_symbols_since_baseline"] == [
+        "operation-function-call|generated/memory/python/operations/retired.report.json|retired.report|"
+        "repo_memory_bootstrap.installer|retired_runtime_symbol"
+    ]
+
+
+def test_declarative_view_specs_match_generated_operations() -> None:
+    checker = _load_checker()
+
+    assert checker._validate_declarative_view_specs() == []
 
 
 def test_python_function_call_stays_out_of_portable_completion_coverage() -> None:
@@ -219,6 +281,13 @@ def test_python_completion_blocker_report_has_json_cli_mode(capsys) -> None:
     assert payload["blocker_count"] == len(payload["blockers"])
     assert payload["remaining_scope"] == "none"
     assert payload["next_owner"] == "none"
+    runtime_metrics = payload["accepted_runtime_boundary_metrics"]
+    assert runtime_metrics["accepted_runtime_symbol_count_by_package"]
+    assert runtime_metrics["output_fallback_symbol_count"] == runtime_metrics["accepted_output_emission_symbol_count"]
+    assert runtime_metrics["python_bridge_step_count"] == 0
+    assert runtime_metrics["python_bridge_symbols"] == []
+    assert runtime_metrics["generic_debt_symbol_count"] == 0
+    assert payload["lifecycle_dry_run_metrics"]["codegen_default_dry_run_operation_count"] >= 3
 
 
 def test_memory_list_commands_are_direct_generated_python_projections() -> None:

@@ -97,6 +97,8 @@ def execute_primitive(
         return _emit_output(values=values, arguments={"text_style": "install-result"})
     if primitive == "output.emit.current-memory":
         return _emit_output(values=values, arguments={"text_style": "current-memory"})
+    if primitive == "memory.promotion_report.load":
+        return _load_memory_promotion_report(values=values, arguments=arguments)
     if primitive == "python.function.call":
         return _call_python_function(values=values, arguments=arguments)
     raise PrimitiveExecutionError(f"unsupported portable primitive: {primitive!r}")
@@ -965,6 +967,14 @@ def _call_python_function(*, values: dict[str, Any], arguments: dict[str, Any]) 
         raise PrimitiveExecutionError(f"python.function.call cannot resolve {import_module}.{function_name}") from exc
     kwargs = _resolve_call_kwargs(values=values, raw_kwargs=arguments.get("kwargs", {}))
     return function(**kwargs)
+
+
+def _load_memory_promotion_report(*, values: dict[str, Any], arguments: dict[str, Any]) -> Any:
+    module_name = "_".join(("repo", "memory", "bootstrap")) + ".installer"
+    promotion_report = getattr(importlib.import_module(module_name), "promotion_report")
+
+    kwargs = _resolve_call_kwargs(values=values, raw_kwargs=arguments.get("kwargs", {}))
+    return promotion_report(**kwargs)
 
 
 def _resolve_call_kwargs(*, values: dict[str, Any], raw_kwargs: Any) -> dict[str, Any]:

@@ -494,13 +494,12 @@
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "memory.promotion-report.process",
       "domain_runtime_primitive_refs": [
-        "python.function.call"
+        "memory.promotion_report.load"
       ],
       "runtime_boundary_class": "package-specific-judgment",
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while python.function.call invokes the package-domain promotion_report function. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
-      "external_adapter_note": "The python.function.call primitive is external-adapter debt for Python-only execution of the package-domain promotion_report function; it is not portable primitive coverage and must be replaced or explicitly modeled before a future non-Python target can claim completion."
+      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while memory.promotion_report.load names the package-domain promotion report boundary. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
     },
     {
       "operation_id": "memory.prompt.render",

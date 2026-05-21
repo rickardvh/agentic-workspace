@@ -121,6 +121,7 @@ from repo_memory_bootstrap._installer_shared import (
     MemoryNoteRecord,
     RepoDetectionError,
 )
+from repo_memory_bootstrap.runtime_search import search_memory  # noqa: F401
 
 
 def _add_contract_surface_summary(
@@ -2146,59 +2147,6 @@ def sync_memory(
             category="manual-review",
         )
     result.sync_summary = _build_sync_summary(result=result)
-    return result
-
-
-def search_memory(
-    *,
-    query: str,
-    target: str | Path | None = None,
-) -> InstallResult:
-    target_root = resolve_target_root(target)
-    result = _new_result(target_root, dry_run=True, message=f"Memory search results for '{query}'")
-
-    memory_dirs = ["memory", ".agentic-workspace/memory"]
-    found_any = False
-
-    for mdir in memory_dirs:
-        root = target_root / mdir
-        if not root.exists():
-            continue
-        for path in sorted(root.rglob("*.md")):
-            try:
-                content = path.read_text(encoding="utf-8")
-                if query.lower() in content.lower():
-                    # Find the first matching line for detail
-                    match_line = ""
-                    for line in content.splitlines():
-                        if query.lower() in line.lower():
-                            match_line = line.strip()
-                            break
-
-                    result.add(
-                        "found",
-                        path,
-                        f"matched query: {match_line}",
-                        role="memory-search",
-                        safety="safe",
-                        source=path.relative_to(target_root).as_posix(),
-                        category="search-result",
-                    )
-                    found_any = True
-            except (UnicodeDecodeError, PermissionError):
-                continue
-
-    if not found_any:
-        result.add(
-            "not found",
-            target_root / Path(".agentic-workspace/memory/repo/index.md"),
-            f"no matches found for '{query}' in memory notes",
-            role="memory-search",
-            safety="safe",
-            source=".agentic-workspace/memory/repo/index.md",
-            category="search-result",
-        )
-
     return result
 
 
