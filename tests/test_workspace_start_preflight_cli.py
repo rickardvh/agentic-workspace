@@ -570,6 +570,10 @@ maintainer_mode = true
         "repo_friction",
         "successful_completion_cost",
     ]
+    relative_target = os.path.relpath(target.resolve(), Path.cwd().resolve()).replace("\\", "/")
+    assert maintainer_mode["primary_next_action"]["command"] == (
+        f"agentic-workspace report --target {relative_target} --section improvement_intake --format json"
+    )
     assert maintainer_mode["primary_next_action"]["summary"].startswith("Use compact dogfooding report routes")
 
 

@@ -243,8 +243,9 @@ maintainer_mode = true
         "repo_friction",
         "successful_completion_cost",
     ]
+    relative_target = os.path.relpath(target.resolve(), Path.cwd().resolve()).replace("\\", "/")
     assert maintainer_mode["primary_next_action"]["command"] == (
-        "agentic-workspace report --target ./repo --section improvement_intake --format json"
+        f"agentic-workspace report --target {relative_target} --section improvement_intake --format json"
     )
     assert "maintainer_mode" in _report_context(payload)["report_profile"]["decision_grade_fields"]
 
@@ -2144,7 +2145,31 @@ def test_external_intent_refresh_github_applies_prioritized_candidates(tmp_path:
                     "closedAt": None,
                     "body": "",
                     "comments": 0,
-                }
+                },
+                {
+                    "number": 66,
+                    "title": "Codegen lane",
+                    "state": "OPEN",
+                    "url": "https://github.com/acme/project/issues/66",
+                    "labels": [{"name": "planning"}, {"name": "codegen"}],
+                    "createdAt": "2026-04-01T00:00:00Z",
+                    "updatedAt": "2026-04-27T00:00:00Z",
+                    "closedAt": None,
+                    "body": "## Issue kind\n\nParent direction / lane\n",
+                    "comments": 0,
+                },
+                {
+                    "number": 77,
+                    "title": "Deferred codegen",
+                    "state": "OPEN",
+                    "url": "https://github.com/acme/project/issues/77",
+                    "labels": [{"name": "planning"}, {"name": "codegen"}, {"name": "status/deferred"}],
+                    "createdAt": "2026-04-01T00:00:00Z",
+                    "updatedAt": "2026-04-27T00:00:00Z",
+                    "closedAt": None,
+                    "body": "## Issue kind\n\nChild slice\n",
+                    "comments": 0,
+                },
             ]
         )
 
@@ -2169,11 +2194,14 @@ def test_external_intent_refresh_github_applies_prioritized_candidates(tmp_path:
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["planning_candidate_apply"]["status"] == "applied"
-    assert payload["planning_candidate_apply"]["applied_count"] == 1
+    assert payload["planning_candidate_apply"]["applied_count"] == 2
     state_text = (target / ".agentic-workspace" / "planning" / "state.toml").read_text(encoding="utf-8")
     assert "GitHub #44" in state_text
     assert "GitHub #55" in state_text
+    assert "GitHub #66" in state_text
+    assert "GitHub #77" not in state_text
     assert 'priority = "P2"' in state_text
+    assert 'priority = "P1"' in state_text
 
 
 def test_external_intent_refresh_github_compacts_old_unreferenced_closed_cache_items(tmp_path: Path, monkeypatch, capsys) -> None:

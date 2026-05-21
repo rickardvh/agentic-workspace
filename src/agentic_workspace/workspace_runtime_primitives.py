@@ -14,6 +14,7 @@ import fnmatch
 import hashlib
 import io
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -229,8 +230,9 @@ def _agentic_workspace_package_root() -> Path | None:
 
 
 def _invoked_cli_identity_payload(*, target_root: Path | None = None, compact: bool = False) -> dict[str, Any]:
-    module_path = Path(load_generated_command_module_for_entrypoint("agentic-workspace", "cli.py").__file__).resolve()
+    module_file = load_generated_command_module_for_entrypoint("agentic-workspace", "cli.py").__file__
     package_root = _agentic_workspace_package_root()
+    module_path = Path(module_file).resolve() if module_file is not None else package_root or Path.cwd().resolve()
     argv0 = sys.argv[0] if sys.argv else ""
     argv0_path = Path(argv0).resolve() if argv0 else None
     path_entry = shutil.which("agentic-workspace")
@@ -1070,6 +1072,7 @@ def _enforce_preflight_gate(*, parser: Any, args: argparse.Namespace, command_na
     issued_at_epoch = _parse_preflight_token(token)
     if issued_at_epoch is None:
         parser.error(str(_PREFLIGHT_STRICT_GATE_POLICY["invalid_token_error"]))
+        return
     max_age_seconds = int(getattr(args, "preflight_max_age_seconds", DEFAULT_PREFLIGHT_MAX_AGE_SECONDS))
     if max_age_seconds <= 0:
         parser.error(str(_PREFLIGHT_STRICT_GATE_POLICY["non_positive_max_age_error"]))
@@ -1077,6 +1080,7 @@ def _enforce_preflight_gate(*, parser: Any, args: argparse.Namespace, command_na
     age_seconds = now_epoch - issued_at_epoch
     if age_seconds < 0:
         parser.error(str(_PREFLIGHT_STRICT_GATE_POLICY["future_token_error"]))
+        return
     if age_seconds > max_age_seconds:
         parser.error(
             str(_PREFLIGHT_STRICT_GATE_POLICY["stale_token_error_template"]).format(
@@ -1480,6 +1484,7 @@ def _run_planning_front_door_adapter(args: argparse.Namespace) -> int:
         return _run_planning_front_door(args)
     except ImportError:
         build_generated_parser().error("The planning module must be installed to use planning subcommands.")
+        return 2
 
 
 def _run_memory_front_door_adapter(args: argparse.Namespace) -> int:
@@ -1494,6 +1499,7 @@ def _run_memory_front_door_adapter(args: argparse.Namespace) -> int:
         return _run_memory_front_door(args)
     except ImportError:
         build_generated_parser().error("The memory module must be installed to use memory subcommands.")
+        return 2
 
 
 def _print_planning_help(payload: dict[str, Any]) -> None:
@@ -1612,11 +1618,26 @@ def _operating_posture_payload(*, config: WorkspaceConfig, surface: str, compact
     return payload
 
 
-def _maintainer_mode_payload(*, config: WorkspaceConfig, compact: bool = False) -> dict[str, Any]:
+def _command_target_arg(target_root: Path | None) -> str:
+    if target_root is None:
+        return "."
+    try:
+        relative = os.path.relpath(target_root.resolve(), Path.cwd().resolve())
+    except OSError:
+        relative = target_root.as_posix()
+    if relative == ".":
+        return "."
+    return Path(relative).as_posix()
+
+
+def _maintainer_mode_payload(*, config: WorkspaceConfig, target_root: Path | None = None, compact: bool = False) -> dict[str, Any]:
+    target_arg = _command_target_arg(target_root)
 
     def report_command(section: str) -> str:
-        return _command_with_cli_invoke(
-            command=f"agentic-workspace report --target ./repo --section {section} --format json", cli_invoke=config.cli_invoke
+        return str(
+            _command_with_cli_invoke(
+                command=f"agentic-workspace report --target {target_arg} --section {section} --format json", cli_invoke=config.cli_invoke
+            )
         )
 
     report_routes = [
@@ -1650,7 +1671,7 @@ def _maintainer_mode_payload(*, config: WorkspaceConfig, compact: bool = False) 
         "rule": "When enabled, ordinary start/report surfaces expose compact dogfooding report routes. They remain read-only routing and do not install source-checkout-only workflows into host repos.",
         "preferred_local_config": ".agentic-workspace/config.local.toml",
         "host_repo_boundary": "Use host-repo evidence as signal; route package fixes in the package source checkout, issue tracker, docs, checks, or Memory.",
-        "dogfooding_reports": report_routes if not compact else report_routes[:3],
+        "dogfooding_reports": report_routes if not compact else [{"section": route["section"]} for route in report_routes[:3]],
     }
     if config.maintainer_mode:
         payload["primary_next_action"] = {
@@ -4740,6 +4761,8 @@ def _module_safe_lifecycle_repair_action(*, report: dict[str, Any], target_root:
 def _lifecycle_cli_invoke(*, config: WorkspaceConfig, invocation_root: Path | None = None) -> str:
     if config.cli_invoke_source != "product-default":
         return config.cli_invoke
+    if config.target_root is None:
+        return config.cli_invoke
     invocation_root = invocation_root or Path.cwd()
     try:
         if invocation_root.resolve() == config.target_root.resolve():
@@ -5457,7 +5480,7 @@ def _run_report_command(
             surface="report",
         ),
         "operating_posture": _operating_posture_payload(config=config, surface="report"),
-        "maintainer_mode": _maintainer_mode_payload(config=config),
+        "maintainer_mode": _maintainer_mode_payload(config=config, target_root=target_root),
         "config_enforcement": _config_enforcement_payload(config=config),
         "config_effect_audit": _config_effect_audit_payload(config=config),
         "branch_workflow_posture": branch_workflow_posture,
@@ -5564,7 +5587,7 @@ def _run_report_router_command(
             surface="report",
         ),
         "operating_posture": _operating_posture_payload(config=config, surface="report"),
-        "maintainer_mode": _maintainer_mode_payload(config=config, compact=True),
+        "maintainer_mode": _maintainer_mode_payload(config=config, target_root=target_root, compact=True),
         "report_profile": _report_profile_payload(cli_invoke=config.cli_invoke),
         "config_enforcement": _config_enforcement_payload(config=config),
         "config_effect_audit": _config_effect_audit_payload(config=config),
@@ -8657,6 +8680,20 @@ def _planning_candidate_priority_from_labels(labels: Sequence[str]) -> str | Non
     return None
 
 
+def _planning_candidate_priority_from_item(item: dict[str, Any]) -> tuple[str | None, str]:
+    priority = _planning_candidate_priority_from_labels([str(label) for label in item.get("labels", [])])
+    if priority is not None:
+        return priority, "label"
+    if str(item.get("kind", "")) == "lane":
+        return "P1", "inferred-lane"
+    if str(item.get("kind", "")) == "slice":
+        return "P2", "inferred-slice"
+    labels = {str(label).strip().lower() for label in item.get("labels", []) if str(label).strip()}
+    if "planning" in labels:
+        return "P2", "inferred-planning"
+    return None, "missing"
+
+
 def _existing_planning_candidate_refs(*, target_root: Path) -> set[str]:
     state_path = target_root / ".agentic-workspace" / "planning" / "state.toml"
     if not state_path.exists():
@@ -8683,9 +8720,9 @@ def _planning_candidate_suggestions_from_external_items(*, target_root: Path, it
         if item.get("status") != "open":
             continue
         labels = [str(label) for label in item.get("labels", []) if str(label).strip()]
-        if "status/deferred" in labels or "codegen" in labels:
+        if "status/deferred" in labels:
             continue
-        priority = _planning_candidate_priority_from_labels(labels)
+        priority, priority_source = _planning_candidate_priority_from_item(item)
         if priority is None:
             continue
         ref = str(item.get("id", "")).strip()
@@ -8703,7 +8740,9 @@ def _planning_candidate_suggestions_from_external_items(*, target_root: Path, it
                 "refs": f"GitHub {ref}",
                 "title": title,
                 "outcome": "Route the upstream issue into a bounded Agentic Workspace slice before implementation.",
-                "reason": "Open prioritized upstream issue from refreshed external intent evidence.",
+                "reason": "Open prioritized upstream issue from refreshed external intent evidence."
+                if priority_source == "label"
+                else f"Open upstream issue from refreshed external intent evidence; priority {priority} inferred from {priority_source}.",
                 "promotion_signal": "Promote when this issue is selected for implementation or grouped into a bounded lane.",
                 "suggested_first_slice": "Inspect the issue body, choose the smallest workflow shape, and record exact proof before closeout.",
             }
@@ -8714,9 +8753,8 @@ def _planning_candidate_suggestions_from_external_items(*, target_root: Path, it
         "rule": "Use these schema-valid rows as command-owned intake suggestions; do not hand-edit planning state without checking for duplicate refs.",
         "excluded": [
             "closed issues",
-            "unprioritized issues",
+            "unprioritized non-planning issues",
             "status/deferred issues",
-            "codegen issues",
             "refs already in planning candidates",
         ],
         "candidate_count": len(candidates),
@@ -10787,7 +10825,7 @@ def _start_payload(
         "memory_consult": _memory_consult_payload(
             target_root=target_root, changed_paths=changed_paths, compact=True, cli_invoke=config.cli_invoke
         ),
-        "maintainer_mode": _maintainer_mode_payload(config=config, compact=True),
+        "maintainer_mode": _maintainer_mode_payload(config=config, target_root=target_root, compact=True),
         "continuation_state": _compact_continuation_state_contract(cli_invoke=config.cli_invoke),
         "operating_posture": _operating_posture_payload(config=config, surface="start", compact=True),
         "skill_routing": _guidance_with_cli_invoke(
@@ -10954,9 +10992,11 @@ def _start_payload(
         proof_payload = _proof_selection_for_changed_paths(
             changed_paths=normalized_paths, target_root=target_root, include_durable_intent=False
         )
-        proof_command = _command_with_cli_invoke(
-            command=f"agentic-workspace proof --changed {' '.join(normalized_paths)} --format json",
-            cli_invoke=config.cli_invoke,
+        proof_command = str(
+            _command_with_cli_invoke(
+                command=f"agentic-workspace proof --changed {' '.join(normalized_paths)} --format json",
+                cli_invoke=config.cli_invoke,
+            )
         )
         payload["immediate_next_allowed_action"] = {
             "action": "select-changed-path-proof",
@@ -10982,9 +11022,11 @@ def _start_payload(
         repair_profile = _compact_repair_plan_profile(
             changed_paths=normalized_paths,
             task_text=task_text,
-            proof_command=_command_with_cli_invoke(
-                command=f"agentic-workspace proof --changed {' '.join(normalized_paths)} --format json",
-                cli_invoke=config.cli_invoke,
+            proof_command=str(
+                _command_with_cli_invoke(
+                    command=f"agentic-workspace proof --changed {' '.join(normalized_paths)} --format json",
+                    cli_invoke=config.cli_invoke,
+                )
             ),
         )
         if repair_profile["status"] == "direct-no-plan":
@@ -11485,7 +11527,7 @@ def _start_tiny_payload_fast(
             ),
         },
         "memory_consult": _tiny_memory_consult_payload(config=config),
-        "maintainer_mode": _maintainer_mode_payload(config=config, compact=True),
+        "maintainer_mode": _maintainer_mode_payload(config=config, target_root=target_root, compact=True),
         "continuation_state": _compact_continuation_state_contract(cli_invoke=config.cli_invoke),
         "operating_posture": _operating_posture_payload(config=config, surface="start", compact=True),
         "skill_routing": _guidance_with_cli_invoke(
@@ -11625,9 +11667,11 @@ def _start_tiny_payload_fast(
         }
     normalized_paths = _normalize_changed_paths(changed_paths)
     if normalized_paths and not active_planning_present:
-        proof_command = _command_with_cli_invoke(
-            command=f"agentic-workspace proof --changed {' '.join(normalized_paths)} --format json",
-            cli_invoke=config.cli_invoke,
+        proof_command = str(
+            _command_with_cli_invoke(
+                command=f"agentic-workspace proof --changed {' '.join(normalized_paths)} --format json",
+                cli_invoke=config.cli_invoke,
+            )
         )
         payload["immediate_next_allowed_action"] = {
             "action": "select-changed-path-proof",
@@ -11648,9 +11692,11 @@ def _start_tiny_payload_fast(
             payload["repair_plan_profile"] = repair_profile
         payload["path_boundaries"] = [_boundary_warning_for_path(path) for path in normalized_paths]
     elif normalized_paths:
-        proof_command = _command_with_cli_invoke(
-            command=f"agentic-workspace proof --changed {' '.join(normalized_paths)} --format json",
-            cli_invoke=config.cli_invoke,
+        proof_command = str(
+            _command_with_cli_invoke(
+                command=f"agentic-workspace proof --changed {' '.join(normalized_paths)} --format json",
+                cli_invoke=config.cli_invoke,
+            )
         )
         payload["proof"] = _proof_selection_for_changed_paths(
             changed_paths=normalized_paths, target_root=target_root, include_durable_intent=False
@@ -19687,7 +19733,7 @@ _MANUAL_VERIFICATION_TEMPLATES: dict[str, dict[str, Any]] = {
 
 
 def _manual_verification_templates_for_intents(*, proof_intents: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    intent_types = _dedupe((str(intent.get("type", "manual-verification")) for intent in proof_intents if isinstance(intent, dict)))
+    intent_types = _dedupe([str(intent.get("type", "manual-verification")) for intent in proof_intents if isinstance(intent, dict)])
     if not intent_types:
         intent_types = ["manual-verification"]
     templates: list[dict[str, Any]] = []
@@ -22677,7 +22723,7 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "maintainer_mode_source": config.maintainer_mode_source,
             "cli_invoke": config.cli_invoke,
             "cli_invoke_source": config.cli_invoke_source,
-            "maintainer_mode_detail": _maintainer_mode_payload(config=config),
+            "maintainer_mode_detail": _maintainer_mode_payload(config=config, target_root=config.target_root),
             "workflow_artifact_adapter": _workflow_artifact_profile_payload(config.workflow_artifact_profile),
             "agent_configuration_substrate": {
                 "canonical_doc": _agent_configuration_system_payload()["canonical_doc"],
