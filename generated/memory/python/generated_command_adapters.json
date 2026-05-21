@@ -22,8 +22,10 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
+          "path.target_root.resolve",
+          "payload.lifecycle-plan",
           "python.function.call",
-          "output.emit"
+          "output.emit.install-result"
         ]
       },
       "schemas": {
@@ -151,8 +153,11 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
+          "path.target_root.resolve",
           "memory.current.load",
-          "output.emit"
+          "payload.current-memory",
+          "output.emit",
+          "output.emit.current-memory"
         ]
       },
       "schemas": {
@@ -184,10 +189,9 @@
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
           "path.target_root.resolve",
-          "toml.table.counts",
-          "payload.assemble",
+          "payload.status",
           "memory.bootstrap.doctor.load",
-          "output.emit"
+          "output.emit.install-result"
         ]
       },
       "schemas": {
@@ -218,8 +222,10 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
+          "path.target_root.resolve",
+          "payload.lifecycle-plan",
           "python.function.call",
-          "output.emit"
+          "output.emit.install-result"
         ]
       },
       "schemas": {
@@ -250,8 +256,10 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
+          "path.target_root.resolve",
+          "payload.lifecycle-plan",
           "python.function.call",
-          "output.emit"
+          "output.emit.install-result"
         ]
       },
       "schemas": {
@@ -614,10 +622,9 @@
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
           "path.target_root.resolve",
-          "toml.table.counts",
-          "payload.assemble",
+          "payload.status",
           "memory.bootstrap.status.load",
-          "output.emit"
+          "output.emit.install-result"
         ]
       },
       "schemas": {
@@ -746,8 +753,7 @@
         "primitive_refs": [
           "path.target_root.resolve",
           "payload.verify",
-          "python.function.call",
-          "output.emit"
+          "output.emit.install-result"
         ]
       },
       "schemas": {

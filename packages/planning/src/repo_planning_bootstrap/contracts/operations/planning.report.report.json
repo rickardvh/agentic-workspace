@@ -68,12 +68,13 @@
   ],
   "proof": [
     "operation contract validates against operation.schema.json",
-    "process conformance remains compatible"
+    "process conformance remains compatible",
+    "tiny report text stays in generated output rather than package fallback"
   ],
   "migration_status": "runtime-consumed",
   "ir_plan": {
     "status": "representative",
-    "summary": "Planning report executes generated operation IR through codegen-owned primitive dataflow while planning runtime supplies report payload sources and text/json compatibility formatting.",
+    "summary": "Planning report executes generated operation IR through codegen-owned primitive dataflow while planning runtime supplies report payload sources and generated output owns tiny report text formatting.",
     "steps": [
       {
         "id": "load_report",

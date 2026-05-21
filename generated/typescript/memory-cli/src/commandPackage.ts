@@ -83,10 +83,9 @@ export const generatedCommandPackage = {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
           "path.target_root.resolve",
-          "toml.table.counts",
-          "payload.assemble",
+          "payload.status",
           "memory.bootstrap.status.load",
-          "output.emit"
+          "output.emit.install-result"
         ]
       },
       "schemas": {
@@ -180,10 +179,9 @@ export const generatedCommandPackage = {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
           "path.target_root.resolve",
-          "toml.table.counts",
-          "payload.assemble",
+          "payload.status",
           "memory.bootstrap.doctor.load",
-          "output.emit"
+          "output.emit.install-result"
         ]
       },
       "schemas": {
@@ -337,8 +335,10 @@ export const generatedCommandPackage = {
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
+          "path.target_root.resolve",
+          "payload.lifecycle-plan",
           "python.function.call",
-          "output.emit"
+          "output.emit.install-result"
         ]
       },
       "schemas": {
@@ -492,8 +492,10 @@ export const generatedCommandPackage = {
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
+          "path.target_root.resolve",
+          "payload.lifecycle-plan",
           "python.function.call",
-          "output.emit"
+          "output.emit.install-result"
         ]
       },
       "schemas": {
@@ -647,8 +649,10 @@ export const generatedCommandPackage = {
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
+          "path.target_root.resolve",
+          "payload.lifecycle-plan",
           "python.function.call",
-          "output.emit"
+          "output.emit.install-result"
         ]
       },
       "schemas": {
@@ -1541,7 +1545,7 @@ export const generatedCommandPackage = {
       },
       "projection_boundary": {
         "runtime_owned": [
-          "legacy current-memory inspection policy",
+          "legacy current-memory review policy",
           "module result assembly",
           "output emission"
         ],
@@ -1563,8 +1567,11 @@ export const generatedCommandPackage = {
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
+          "path.target_root.resolve",
           "memory.current.load",
-          "output.emit"
+          "payload.current-memory",
+          "output.emit",
+          "output.emit.current-memory"
         ]
       },
       "schemas": {
@@ -2303,8 +2310,7 @@ export const generatedCommandPackage = {
         "primitive_refs": [
           "path.target_root.resolve",
           "payload.verify",
-          "python.function.call",
-          "output.emit"
+          "output.emit.install-result"
         ]
       },
       "schemas": {

@@ -18,7 +18,7 @@
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "workspace config loading",
-        "workspace config text compatibility formatting"
+        "workspace config tiny/full text compatibility formatting"
       ],
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "config.report.process",
@@ -29,9 +29,9 @@
         "workspace.config.emit"
       ],
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior.",
+      "runtime_boundary_reason": "Operation dataflow and selected-output text are generated; package-domain primitive steps still own config loading and tiny/full config compatibility text.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (workspace.root.resolve, workspace.config.load, output.fields.select, workspace.config.emit) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, and generated output owns selected-output text. Domain primitive refs (workspace.root.resolve, workspace.config.load, output.fields.select, workspace.config.emit) remain explicit package-boundary calls for config loading, profile projection, and tiny/full text. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
     },
     {
       "operation_id": "defaults.report",
@@ -41,8 +41,7 @@
       "operation_contract": "operations/defaults.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
-        "workspace defaults payload source",
-        "workspace defaults text compatibility formatting"
+        "workspace defaults payload source"
       ],
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "defaults.report.process",
@@ -51,9 +50,9 @@
         "workspace.defaults.select"
       ],
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior.",
+      "runtime_boundary_reason": "Operation dataflow, defaults section selection, selected-output text, compact-answer text, and tiny-router text are generated; the package-domain primitive still owns the defaults payload source.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (workspace.defaults.load, workspace.defaults.select) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR, section selection, selected-output text, compact-answer text, and tiny-router text own deterministic output behavior, while workspace.defaults.load remains an explicit package-boundary payload source. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
     },
     {
       "operation_id": "delegation-outcome.append",
@@ -64,7 +63,7 @@
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "workspace.root.resolve",
-        "workspace operation compatibility formatting"
+        "local-only delegation outcome append"
       ],
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "delegation-outcome.append.process",
@@ -73,9 +72,9 @@
         "delegation.outcome.append"
       ],
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior.",
+      "runtime_boundary_reason": "Operation dataflow and text output are generated; package-domain primitive steps still own target resolution and the local-only append operation.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (workspace.root.resolve, delegation.outcome.append) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR, codegen-owned run_operation_steps, and generated output own the deterministic command result text, while workspace.root.resolve and delegation.outcome.append remain explicit package-boundary calls for target validation and local-only record append. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
     },
     {
       "operation_id": "doctor.report",
@@ -193,21 +192,20 @@
       "operation_contract": "operations/memory.doctor.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
-        "memory.bootstrap.doctor.load for verbose/text fallback",
-        "module-result text compatibility formatting"
+        "memory.bootstrap.doctor.load for verbose or strict ownership fallback"
       ],
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "memory.doctor.process",
       "domain_runtime_primitive_refs": [
         "path.target_root.resolve",
-        "toml.table.counts",
-        "payload.assemble",
-        "memory.bootstrap.doctor.load"
+        "payload.status",
+        "memory.bootstrap.doctor.load",
+        "output.emit.install-result"
       ],
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Non-verbose JSON doctor executes through codegen-owned portable primitives; package-domain runtime remains only for verbose/text compatibility output.",
-      "what_would_make_portable_later": "Replace the remaining verbose/text memory.bootstrap.doctor.load fallback with schema-backed output/template primitives or explicitly retire compatibility text output.",
-      "generic_behavior_audit": "Non-verbose JSON behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, toml.table.counts, payload.assemble, and output.emit. The remaining package-domain primitive is a compatibility fallback for verbose/text behavior and is not counted as portable codegen coverage."
+      "runtime_boundary_reason": "Non-strict, non-verbose text and JSON doctor executes through codegen-owned payload.status and output.emit.install-result primitives; package-domain runtime remains for verbose detail and strict doc ownership policy.",
+      "what_would_make_portable_later": "Replace the remaining verbose and strict-ownership memory.bootstrap.doctor.load fallback after those package-domain diagnostics are represented as schema-backed policy and output primitives.",
+      "generic_behavior_audit": "Non-strict, non-verbose text and JSON behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, payload.status, and output.emit.install-result over schema-backed Memory payload policy. The remaining package-domain primitive is a verbose/strict-policy fallback and is not counted as portable codegen coverage."
     },
     {
       "operation_id": "memory.capture-note.report",
@@ -238,18 +236,20 @@
       "operation_contract": "operations/memory.install.lifecycle.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
-        "memory.install.apply",
-        "module-result text/json compatibility formatting"
+        "memory.install.apply for mutation or customized install policy"
       ],
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "memory.install.lifecycle.dry-run.process",
       "domain_runtime_primitive_refs": [
-        "memory.install.apply"
+        "path.target_root.resolve",
+        "payload.lifecycle-plan",
+        "memory.install.apply",
+        "output.emit.install-result"
       ],
       "runtime_boundary_class": "mutation-orchestration",
-      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own Memory lifecycle policy and mutation safety behavior.",
-      "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.install.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "runtime_boundary_reason": "Default dry-run install planning executes through codegen-owned payload.lifecycle-plan and install-result output; package-domain runtime still owns mutation and customized install policy safety.",
+      "what_would_make_portable_later": "Move customized dry-run policy into schema-backed payload planning and model apply safety separately before replacing memory.install.apply for mutating paths.",
+      "generic_behavior_audit": "Default dry-run behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, payload.lifecycle-plan, and output.emit.install-result. The remaining package-domain primitive is a mutation/custom-policy fallback and is not counted as portable codegen coverage."
     },
     {
       "operation_id": "memory.init.lifecycle",
@@ -259,18 +259,20 @@
       "operation_contract": "operations/memory.init.lifecycle.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
-        "memory.init.apply",
-        "module-result text/json compatibility formatting"
+        "memory.init.apply for mutation or customized init policy"
       ],
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "memory.init.lifecycle.dry-run.process",
       "domain_runtime_primitive_refs": [
-        "memory.init.apply"
+        "path.target_root.resolve",
+        "payload.lifecycle-plan",
+        "memory.init.apply",
+        "output.emit.install-result"
       ],
       "runtime_boundary_class": "mutation-orchestration",
-      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own Memory lifecycle policy and mutation safety behavior.",
-      "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.init.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "runtime_boundary_reason": "Default dry-run init planning executes through codegen-owned payload.lifecycle-plan and install-result output; package-domain runtime still owns mutation and customized init policy safety.",
+      "what_would_make_portable_later": "Move customized dry-run policy into schema-backed payload planning and model apply safety separately before replacing memory.init.apply for mutating paths.",
+      "generic_behavior_audit": "Default dry-run behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, payload.lifecycle-plan, and output.emit.install-result. The remaining package-domain primitive is a mutation/custom-policy fallback and is not counted as portable codegen coverage."
     },
     {
       "operation_id": "memory.adopt.lifecycle",
@@ -280,18 +282,20 @@
       "operation_contract": "operations/memory.adopt.lifecycle.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
-        "memory.adopt.apply",
-        "module-result text/json compatibility formatting"
+        "memory.adopt.apply for mutation or customized adoption policy"
       ],
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "memory.adopt.lifecycle.dry-run.process",
       "domain_runtime_primitive_refs": [
-        "memory.adopt.apply"
+        "path.target_root.resolve",
+        "payload.lifecycle-plan",
+        "memory.adopt.apply",
+        "output.emit.install-result"
       ],
       "runtime_boundary_class": "mutation-orchestration",
-      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own Memory lifecycle policy and mutation safety behavior.",
-      "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as mutation-orchestration; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (memory.adopt.apply) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "runtime_boundary_reason": "Default dry-run adopt planning executes through codegen-owned payload.lifecycle-plan and install-result output; package-domain runtime still owns mutation and customized adoption policy safety.",
+      "what_would_make_portable_later": "Move customized dry-run policy into schema-backed payload planning and model apply safety separately before replacing memory.adopt.apply for mutating paths.",
+      "generic_behavior_audit": "Default dry-run behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, payload.lifecycle-plan, and output.emit.install-result. The remaining package-domain primitive is a mutation/custom-policy fallback and is not counted as portable codegen coverage."
     },
     {
       "operation_id": "memory.upgrade.lifecycle",
@@ -527,8 +531,8 @@
       "operation_contract": "operations/memory.report.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
-        "memory.report.load verbose/text fallback",
-        "module-result text compatibility formatting"
+        "memory.report.load verbose fallback",
+        "module-result verbose compatibility formatting"
       ],
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "memory.report.process",
@@ -539,9 +543,9 @@
         "memory.report.load"
       ],
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps; non-verbose JSON compact report behavior is portable primitive dataflow, while package-domain primitive fallback still owns verbose/text report behavior.",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps; non-verbose text/JSON compact report behavior is portable primitive dataflow, while package-domain primitive fallback still owns verbose report behavior.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Non-verbose JSON behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, toml.table.counts, payload.assemble, and output.emit. The remaining memory.report.load fallback is still explicit package-domain debt for verbose/text behavior, not portable codegen completion."
+      "generic_behavior_audit": "Non-verbose text/JSON behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, toml.table.counts, payload.assemble, and output.emit. The remaining memory.report.load fallback is still explicit package-domain debt for verbose behavior, not portable codegen completion."
     },
     {
       "operation_id": "memory.route-report.report",
@@ -551,8 +555,8 @@
       "operation_contract": "operations/memory.route-report.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
-        "memory.route_report.load verbose/text fallback",
-        "module-result text compatibility formatting"
+        "memory.route_report.load verbose fallback",
+        "module-result verbose compatibility formatting"
       ],
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "memory.route-report.process",
@@ -564,9 +568,9 @@
         "memory.route_report.load"
       ],
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps; portable primitives own the non-verbose JSON tiny route snapshot, while package-domain primitive fallback still owns verbose/text routing evaluation.",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps; portable primitives own the non-verbose text/JSON tiny route snapshot, while package-domain primitive fallback still owns verbose routing evaluation.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as package-specific-judgment for the remaining verbose/text fallback; generated operation IR now builds the non-verbose JSON tiny route snapshot from target-local files with path.target_root.resolve, filesystem.exists, filesystem.glob, and payload.assemble. The remaining memory.route_report.load fallback is still explicit package-domain debt for verbose/text behavior, not portable codegen completion."
+      "generic_behavior_audit": "Classified as package-specific-judgment for the remaining verbose fallback; generated operation IR now builds the non-verbose text/JSON tiny route snapshot from target-local files with path.target_root.resolve, filesystem.exists, filesystem.glob, payload.assemble, and output.emit. The remaining memory.route_report.load fallback is still explicit package-domain debt for verbose behavior, not portable codegen completion."
     },
     {
       "operation_id": "memory.route.report",
@@ -638,20 +642,18 @@
       "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.verify-payload.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
-      "hand_owned_runtime_code": [
-        "text-output runtime fallback through repo_memory_bootstrap.installer.verify_payload",
-        "module-result text compatibility formatting"
-      ],
-      "status": "domain-runtime-primitive-via-ir",
+      "hand_owned_runtime_code": [],
+      "status": "portable-codegen-primitive-executed",
       "conformance_ref": "memory.verify-payload.process",
-      "domain_runtime_primitive_refs": [
-        "python.function.call"
+      "portable_primitive_refs": [
+        "path.target_root.resolve",
+        "payload.verify",
+        "output.emit.install-result"
       ],
-      "external_adapter_note": "The non-json branch still calls repo_memory_bootstrap.installer.verify_payload through python.function.call, so that branch is external-adapter debt and not portable primitive coverage.",
-      "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "JSON operation dataflow is generated and executes payload verification through codegen-owned path.target_root.resolve, payload.verify, and output.emit using package-owned payload_verification.memory.json. Text output remains a declared runtime fallback until its formatting is represented by portable rendering primitives.",
-      "what_would_make_portable_later": "Replace the non-json python.function.call fallback with schema-backed text rendering primitives or declare text output out of scope for target-independent parity.",
-      "generic_behavior_audit": "Classified as package-specific-judgment only for the remaining text-output fallback. JSON payload verification policy execution is no longer generic deterministic runtime debt: package truth lives in payload_verification.memory.json and codegen-owned payload.verify executes file presence, forbidden files/prefixes, version markers, TOML metadata, guidance fragments, and module-result assembly."
+      "runtime_boundary_class": "portable-deterministic",
+      "runtime_boundary_reason": "Text and JSON operation dataflow is generated and executes payload verification through codegen-owned path.target_root.resolve, payload.verify, and output.emit.install-result using package-owned payload_verification.memory.json.",
+      "what_would_make_portable_later": "Already portable for the declared payload verification policy; package truth remains data-owned by payload_verification.memory.json.",
+      "generic_behavior_audit": "Text and JSON payload verification policy execution is no longer generic deterministic runtime debt: package truth lives in payload_verification.memory.json and codegen-owned payload.verify executes file presence, forbidden files/prefixes, version markers, TOML metadata, guidance fragments, module-result assembly, and install-result output."
     },
     {
       "operation_id": "memory.status.report",
@@ -668,14 +670,17 @@
       "conformance_ref": "memory.status.process",
       "domain_runtime_primitive_refs": [
         "path.target_root.resolve",
-        "toml.table.counts",
-        "payload.assemble",
-        "memory.bootstrap.status.load"
+        "payload.status",
+        "memory.bootstrap.status.load",
+        "output.emit.install-result"
       ],
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Non-verbose JSON status executes through codegen-owned portable primitives; package-domain runtime remains only for verbose/text compatibility output.",
-      "what_would_make_portable_later": "Replace the remaining verbose/text memory.bootstrap.status.load fallback with schema-backed output/template primitives or explicitly retire compatibility text output.",
-      "generic_behavior_audit": "Non-verbose JSON behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, toml.table.counts, payload.assemble, and output.emit. The remaining package-domain primitive is a compatibility fallback for verbose/text behavior and is not counted as portable codegen coverage."
+      "runtime_boundary_reason": "Non-verbose text and JSON status execute through codegen-owned payload status primitives backed by Memory-owned declarative payload policy; package-domain runtime remains only for verbose compatibility output.",
+      "what_would_make_portable_later": "Replace the remaining verbose memory.bootstrap.status.load fallback with schema-backed output/detail primitives or explicitly retire verbose compatibility output.",
+      "generic_behavior_audit": "Non-verbose text and JSON behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, payload.status, and output.emit.install-result over schema-backed Memory payload policy. The remaining package-domain primitive is a verbose compatibility fallback and is not counted as portable codegen coverage.",
+      "source_runtime_dependencies": [
+        "memory.bootstrap.status.load for verbose fallback"
+      ]
     },
     {
       "operation_id": "memory.sync-memory.report",
@@ -1095,7 +1100,7 @@
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "planning.report.load",
-        "module-result text/json compatibility formatting"
+        "verbose module-result compatibility formatting"
       ],
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "planning.report.process",
@@ -1103,9 +1108,9 @@
         "planning.report.load"
       ],
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior.",
+      "runtime_boundary_reason": "Operation dataflow and tiny report text are generated; package-domain primitive steps still own planning report payload source and verbose compatibility output.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while domain primitive refs (planning.report.load) remain explicit package-boundary calls. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR, codegen-owned run_operation_steps, and generated output own deterministic tiny report text, while planning.report.load remains an explicit package-boundary call for report payload construction and verbose detail. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
     },
     {
       "operation_id": "planning.status.report",

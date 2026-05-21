@@ -113,10 +113,111 @@ def _tiny_sectioned_payload(payload: dict[str, Any], *, common_sections: list[st
     }
 
 
+def _emit_tiny_sectioned_text(payload: dict[str, Any]) -> str:
+    lines = [str(payload.get('summary', ''))]
+    common_sections = payload.get('common_sections', [])
+    if common_sections:
+        lines.append('Common sections:')
+        lines.extend(f'- {section}' for section in common_sections)
+    detail_commands = payload.get('detail_commands', {})
+    if isinstance(detail_commands, dict) and detail_commands:
+        lines.append('Detail commands:')
+        lines.extend(f'- {key}: {value}' for key, value in detail_commands.items())
+    return '\n'.join(lines) + '\n'
+
+
+def _emit_compact_answer_text(payload: dict[str, Any]) -> str:
+    lines = [
+        f"Profile: {payload.get('profile')}",
+        f"Surface: {payload.get('surface')}",
+        f"Selector: {json.dumps(payload.get('selector', {}), sort_keys=True)}",
+        f"Matched: {payload.get('matched')}",
+        'Answer:',
+        json.dumps(_serialise_value(payload.get('answer')), indent=2),
+    ]
+    refs = payload.get('refs', [])
+    if refs:
+        lines.append('Refs:')
+        lines.extend(f'- {ref}' for ref in refs)
+    return '\n'.join(lines) + '\n'
+
+
+def _emit_selected_output_text(payload: dict[str, Any]) -> str:
+    lines = [
+        f"Kind: {payload.get('kind')}",
+        f"Source command: {payload.get('source_command')}",
+        'Values:',
+        json.dumps(_serialise_value(payload.get('values', {})), indent=2),
+    ]
+    missing = payload.get('missing', [])
+    if missing:
+        lines.append('Missing:')
+        lines.extend(f'- {item}' for item in missing)
+    return '\n'.join(lines) + '\n'
+
+
+def _emit_delegation_outcomes_text(payload: dict[str, Any]) -> str:
+    recorded = payload.get('recorded', {})
+    lines = [
+        f"Kind: {payload.get('kind')}",
+        f"Path: {payload.get('path')}",
+        f"Record count: {payload.get('record_count')}",
+        f"Rule: {payload.get('rule')}",
+    ]
+    if isinstance(recorded, dict):
+        lines.append('Recorded:')
+        for key in ('recorded_at', 'delegation_target', 'task_class', 'outcome', 'handoff_sufficiency', 'review_burden', 'escalation_required'):
+            if key in recorded:
+                lines.append(f'- {key}: {recorded[key]}')
+    return '\n'.join(lines) + '\n'
+
+
+def _emit_planning_module_report_text(payload: dict[str, Any]) -> str:
+    status = payload.get('status', {})
+    next_action = payload.get('next_action', {})
+    lines = [
+        f"Target: {payload.get('target_root')}",
+        f"Command: {payload.get('module', 'planning')}",
+        f"Health: {payload.get('health')}",
+    ]
+    if isinstance(status, dict):
+        lines.append(
+            'Status: '
+            f"{status.get('active_todo_count', 0)} active TODO / "
+            f"{status.get('queued_todo_count', 0)} queued TODO / "
+            f"{status.get('active_execplan_count', 0)} active execplans / "
+            f"{status.get('roadmap_lane_count', 0)} roadmap lanes / "
+            f"{status.get('roadmap_candidate_count', 0)} roadmap candidates"
+        )
+    if isinstance(next_action, dict):
+        lines.append(f"Next action: {next_action.get('summary', '')}")
+    return '\n'.join(lines) + '\n'
+
+
 def _emit_memory_operation_output(values: dict[str, Any], arguments: dict[str, Any], context: Any) -> Any:
     result = values['result']
     if str(values.get('format') or 'text') == 'json' and isinstance(result, dict):
         print(json.dumps(_serialise_value(values['result']), indent=2))
+        return None
+    if isinstance(result, dict) and (isinstance(result.get('route_report_summary'), dict) or result.get('kind') == 'memory-module-report/v1'):
+        from command_generation.primitive_executor import _emit_output
+
+        print(_emit_output(values=values, arguments=arguments), end='')
+        return None
+    if isinstance(result, dict) and result.get('kind') == 'agentic-workspace/defaults-router/v1':
+        print(_emit_tiny_sectioned_text(result), end='')
+        return None
+    if isinstance(result, dict) and result.get('profile') == 'compact-contract-answer/v1':
+        print(_emit_compact_answer_text(result), end='')
+        return None
+    if isinstance(result, dict) and result.get('kind') == 'agentic-workspace/selected-output/v1':
+        print(_emit_selected_output_text(result), end='')
+        return None
+    if isinstance(result, dict) and result.get('kind') == 'agentic-workspace/delegation-outcomes/v1':
+        print(_emit_delegation_outcomes_text(result), end='')
+        return None
+    if isinstance(result, dict) and result.get('kind') == 'planning-module-report/v1' and result.get('profile') == 'tiny':
+        print(_emit_planning_module_report_text(result), end='')
         return None
     from repo_memory_bootstrap.runtime_primitives import _emit_memory_operation_output as source_function
 

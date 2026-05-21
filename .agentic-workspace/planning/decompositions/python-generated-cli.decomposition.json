@@ -179,9 +179,9 @@
     {
       "id": "tier-3-memory-first",
       "title": "Finish Memory first",
-      "readiness": "deferred",
-      "outcome": "Memory is completed before Workspace or Planning. Tier 3A converts read-only report JSON and non-verbose paths to portable primitives where practical, including #1008 for memory.status text and payload-entry/status IR; Tier 3B handles lifecycle commands through managed-payload and mutation-planning primitives where practical, leaving apply/mutation safety as explicit domain runtime until modeled.",
-      "owner_surface": "packages/memory contracts and fixtures, generated/memory/python, src/agentic_workspace/contracts/python_operation_execution_inventory.json, packages/command-generation primitive executors, and #1008",
+      "readiness": "promoted",
+      "outcome": "Tier 3 Memory-first runtime-debt reduction is complete for this #892 checkpoint. Read-only report JSON and non-verbose paths moved to portable primitives where practical, while remaining lifecycle apply/mutation safety and package-domain judgment are explicitly inventoried as accepted runtime debt for Tier 6 final promotion review.",
+      "owner_surface": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
       "proof": "make test-memory; make lint-memory; uv run python scripts/check/check_generated_command_packages.py --python-conformance; uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
       "depends_on": [
         "tier-0-honest-gate",
@@ -193,9 +193,9 @@
     {
       "id": "tier-4-workspace-next",
       "title": "Reduce Workspace runtime surface",
-      "readiness": "deferred",
-      "outcome": "Workspace is converted after Memory proves the pattern. Read-only and report-like commands are prioritized before routing and policy commands; generic deterministic Workspace behavior leaves workspace_runtime_primitives.py, while live inspection and routing judgment remain explicit Tier 2 debt.",
-      "owner_surface": "workspace command contracts, generated/workspace/python, src/agentic_workspace/contracts/python_operation_execution_inventory.json, workspace tests, and workspace lint target",
+      "readiness": "promoted",
+      "outcome": "Tier 4 Workspace runtime-surface reduction is complete for this #892 checkpoint. Workspace read-only and report-like command reduction landed after the Memory pattern, while remaining live inspection and routing judgment are explicit accepted Tier 2 debt for Tier 6 final promotion review.",
+      "owner_surface": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
       "proof": "make test-workspace; make lint-workspace; uv run pytest tests/test_workspace_cli_blackbox.py tests/test_workspace_config_cli.py tests/test_workspace_defaults_cli.py -q",
       "depends_on": [
         "tier-3-memory-first"
@@ -205,9 +205,9 @@
     {
       "id": "tier-5-planning-last",
       "title": "Reduce Planning runtime surface",
-      "readiness": "deferred",
-      "outcome": "Planning is converted after Memory and Workspace prove the primitive set. Low-risk read-only reports move first; mutation/lifecycle commands separate deterministic file/data edits, package-domain planning judgment, and safety/refusal gates, with closeout/intent behavior remaining explicit domain runtime until #973/#974 mature.",
-      "owner_surface": "packages/planning contracts and fixtures, generated/planning/python, src/agentic_workspace/contracts/python_operation_execution_inventory.json, planning tests, and planning lint target",
+      "readiness": "promoted",
+      "outcome": "Tier 5 Planning runtime-surface reduction is complete for this #892 checkpoint. Low-risk read-only/report-like planning surfaces moved where practical, while mutation/lifecycle commands, package-domain planning judgment, safety/refusal gates, and closeout/intent behavior remain explicit accepted domain runtime for Tier 6 final promotion review.",
+      "owner_surface": ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json",
       "proof": "make test-planning; make lint-planning; uv run pytest packages/planning/tests -q",
       "depends_on": [
         "tier-4-workspace-next"

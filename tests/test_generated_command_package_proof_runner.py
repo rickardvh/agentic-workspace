@@ -128,8 +128,8 @@ def test_full_python_completion_rejects_runtime_source_and_command_runtime_impor
 
     errors = checker._validate_full_python_completion_executable_ownership(ir)
 
-    assert any("still owns generated CLI runtime/lifecycle behavior" in error for error in errors)
-    assert any("generated runtime facades still delegate to package-owned runtime helpers" in error for error in errors)
+    assert any("accepted package-domain runtime/lifecycle source is still present" in error for error in errors)
+    assert any("generated runtime facades still bridge to accepted package-owned runtime helpers" in error for error in errors)
 
 
 def test_current_python_completion_state_is_not_full_while_runtime_source_remains() -> None:
@@ -152,8 +152,15 @@ def test_python_completion_blocker_report_names_current_false_claim_blockers() -
     assert report["completion_claim_allowed"] is False
     assert report["false_completion_claim_would_fail"] is True
     blockers = "\n".join(report["blockers"])
-    assert "generated CLI runtime/lifecycle behavior" in blockers
-    assert "generated runtime facades still delegate to package-owned runtime helpers" in blockers
+    assert "Tier 6 final Python completion promotion remains blocked" in blockers
+    assert "accepted package-domain runtime/lifecycle source is still present" in blockers
+    assert "generated runtime facades still bridge to" in blockers
+
+
+def test_python_function_call_stays_out_of_portable_completion_coverage() -> None:
+    checker = _load_checker()
+
+    assert "python.function.call" not in checker.REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE
 
 
 def test_python_completion_blocker_report_has_json_cli_mode(capsys) -> None:
@@ -166,6 +173,8 @@ def test_python_completion_blocker_report_has_json_cli_mode(capsys) -> None:
     assert payload["kind"] == "python-completion-blockers/v1"
     assert payload["completion_claim_allowed"] is False
     assert payload["blocker_count"] == len(payload["blockers"])
+    assert payload["remaining_scope"] == "tier-6-final-python-completion-promotion"
+    assert payload["next_owner"] == "#892 / tier-6-final-python-completion-promotion"
 
 
 def test_memory_list_commands_are_direct_generated_python_projections() -> None:

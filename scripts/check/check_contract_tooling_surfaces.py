@@ -440,6 +440,8 @@ def _validate_operation_primitives(payload: dict[str, object]) -> list[str]:
             errors.append(f"primitive {primitive_id} missing valid taxonomy_tier")
         if primitive.get("portability") == "target-executor" and taxonomy_tier != "tier-1-portable-codegen":
             errors.append(f"target-executor primitive {primitive_id} must be classified tier-1-portable-codegen")
+        if primitive.get("portability") in {"domain-runtime", "external-adapter"} and taxonomy_tier == "tier-1-portable-codegen":
+            errors.append(f"non-portable primitive {primitive_id} must not be classified tier-1-portable-codegen")
         if taxonomy_tier == "tier-2-package-domain":
             missing_audit = sorted(field for field in tier_2_required_fields if not str(primitive.get(field, "")).strip())
             if missing_audit:
@@ -2146,6 +2148,5 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
 
 

@@ -43,6 +43,10 @@ from command_generation.generated_package_loader import (  # noqa: E402
 SelectedFields = Callable[[str], dict[str, object]]
 
 
+def _repo_relative(path: Path) -> str:
+    return os.path.relpath(path, REPO_ROOT).replace(os.sep, "/")
+
+
 class AdapterConformanceCase(NamedTuple):
     conformance_ref: str
     label: str
@@ -124,6 +128,7 @@ REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE = {
     "payload.assemble",
     "payload.verify",
     "output.emit",
+    "output.emit.install-result",
 }
 PYTHON_MODULE_SOURCE_EXECUTABLE_MARKERS = {
     "parser construction": ("argparse.ArgumentParser", ".add_subparsers(", ".add_parser("),
@@ -743,7 +748,7 @@ def _adapter_conformance_cases_by_package() -> tuple[dict[str, dict[str, Adapter
             continue
         contracts_by_id[contract_id] = _load_json(path)
 
-    ir = load_workspace_command_package_ir(repo_root=REPO_ROOT)
+    ir = _load_json("command_package_ir.json")
     cases_by_package: dict[str, dict[str, AdapterConformanceCase]] = {}
     for package in ir.get("packages", []):
         if not isinstance(package, dict):
@@ -1143,8 +1148,9 @@ def _validate_full_python_completion_executable_ownership(ir: dict[str, object])
     )
     if existing_runtime_source:
         errors.append(
-            "command_package_ir.json cannot claim full Python generated CLI completion while shipped module source "
-            f"still owns generated CLI runtime/lifecycle behavior: {existing_runtime_source!r}"
+            "Tier 6 final Python completion promotion remains blocked while accepted package-domain runtime/lifecycle "
+            "source is still present and must be proven permanent or retired: "
+            f"{existing_runtime_source!r}"
         )
     runtime_imports = _generated_command_module_package_runtime_imports()
     if runtime_imports:
@@ -1155,8 +1161,8 @@ def _validate_full_python_completion_executable_ownership(ir: dict[str, object])
     generated_runtime_facade_imports = _generated_runtime_facade_package_runtime_imports()
     if generated_runtime_facade_imports:
         errors.append(
-            "command_package_ir.json cannot claim full Python generated CLI completion while generated runtime facades "
-            f"still delegate to package-owned runtime helpers: {generated_runtime_facade_imports!r}"
+            "Tier 6 final Python completion promotion remains blocked while generated runtime facades still bridge to "
+            f"accepted package-owned runtime helpers: {generated_runtime_facade_imports!r}"
         )
     return errors
 
@@ -1533,7 +1539,12 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         "prompt.upgrade",
         "system-intent.sync",
     }
-    portable_primitive_operations = {"memory.list-files.report", "memory.list-skills.report", "planning.list-files.report"}
+    portable_primitive_operations = {
+        "memory.list-files.report",
+        "memory.list-skills.report",
+        "memory.verify-payload.report",
+        "planning.list-files.report",
+    }
     expected_primitive_executors = {
         "memory.list-files.report": "generated/memory/python/commands/memory_list_files_report.py",
         "memory.list-skills.report": "generated/memory/python/commands/memory_list_skills_report.py",
@@ -1676,12 +1687,14 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         for fragment in (
             '"uses": "path.target_root.resolve"',
             '"uses": "payload.verify"',
-            '"uses": "python.function.call"',
+            '"uses": "output.emit.install-result"',
             '"policy_root": "memory.contracts"',
             '"payload_root": "memory.package-payload"',
         ):
             if fragment not in verify_payload_text:
-                errors.append("generated memory verify-payload operation must retain portable JSON primitive plus explicit text fallback")
+                errors.append("generated memory verify-payload operation must retain portable payload verification primitives")
+        if '"uses": "python.function.call"' in verify_payload_text:
+            errors.append("generated memory verify-payload operation must not retain a text runtime fallback")
     else:
         errors.append("generated memory verify-payload operation is missing")
     if "repo_memory_bootstrap._installer_paths" in memory_operation_executor_text:
@@ -1938,6 +1951,7 @@ def _generated_cli_compatibility_allowlist_reason(relative_path: str) -> str | N
 
 def _validate_generated_cli_compatibility_vocabulary() -> list[str]:
     errors: list[str] = []
+    candidate_paths: list[str] = []
     if shutil.which("git"):
         completed = subprocess.run(
             ["git", "ls-files"],
@@ -1946,10 +1960,9 @@ def _validate_generated_cli_compatibility_vocabulary() -> list[str]:
             capture_output=True,
             check=False,
         )
-        if completed.returncode != 0:
-            return [f"cannot validate generated CLI compatibility vocabulary: git ls-files failed: {completed.stderr.strip()}"]
-        candidate_paths = [path.strip().replace("\\", "/") for path in completed.stdout.splitlines() if path.strip()]
-    else:
+        if completed.returncode == 0:
+            candidate_paths = [path.strip().replace("\\", "/") for path in completed.stdout.splitlines() if path.strip()]
+    if not candidate_paths:
         roots = (
             ".agentic-workspace",
             "docs",
@@ -1966,7 +1979,7 @@ def _validate_generated_cli_compatibility_vocabulary() -> list[str]:
             if root_path.is_file():
                 candidate_paths.append(root)
             elif root_path.is_dir():
-                candidate_paths.extend(path.relative_to(REPO_ROOT).as_posix() for path in root_path.rglob("*") if path.is_file())
+                candidate_paths.extend(_repo_relative(path) for path in root_path.rglob("*") if path.is_file())
     for relative_path in sorted(candidate_paths):
         if not relative_path.endswith((".py", ".json", ".toml", ".md")):
             continue
@@ -2552,8 +2565,9 @@ def _python_completion_blockers_report(ir: dict[str, object]) -> dict[str, objec
         "false_completion_claim_would_fail": bool(blockers),
         "blockers": blockers,
         "blocker_count": len(blockers),
+        "remaining_scope": "tier-6-final-python-completion-promotion" if blockers else "none",
         "next_owner": (
-            "promote the next #892 primitive/runtime migration slice"
+            "#892 / tier-6-final-python-completion-promotion"
             if blockers
             else "python_cli_completion may be promoted only with full proof rerun"
         ),

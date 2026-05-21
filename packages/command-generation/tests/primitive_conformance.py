@@ -141,6 +141,14 @@ def main() -> int:
         assert "Files" in emitted_text
         assert "- nested/beta.txt" in emitted_text
 
+        emitted_install_text = execute_primitive(
+            "output.emit.install-result",
+            values={"result": verify_payload, "format": "text"},
+            context=context,
+        )
+        assert "Payload verification" in emitted_install_text
+        assert ".agentic-workspace/memory/VERSION.md" in emitted_install_text
+
         operation = {
             "ir_plan": {
                 "steps": [
@@ -163,6 +171,56 @@ def main() -> int:
         }
         values = run_operation_steps(operation, initial_values={"format": "json"}, context=context)
         assert json.loads(values["emitted"])["actions"][0]["id"] == "review"
+
+        guarded_operation = {
+            "ir_plan": {
+                "steps": [
+                    {
+                        "id": "skip_text",
+                        "uses": "filesystem.exists",
+                        "when": {"value": "format", "equals": "text"},
+                        "arguments": {"root": "package", "path": "alpha.txt"},
+                        "outputs": ["skipped"],
+                    },
+                    {
+                        "id": "use_json",
+                        "uses": "filesystem.exists",
+                        "when": {
+                            "all": [
+                                {"value": "format", "equals": "json"},
+                                {"not": {"value": "missing", "present": True}},
+                            ]
+                        },
+                        "arguments": {"root": "package", "path": "alpha.txt"},
+                        "outputs": ["selected"],
+                    },
+                ]
+            }
+        }
+        guarded_values = run_operation_steps(guarded_operation, initial_values={"format": "json"}, context=context)
+        assert "skipped" not in guarded_values
+        assert guarded_values["selected"] is True
+
+        try:
+            run_operation_steps(
+                {
+                    "ir_plan": {
+                        "steps": [
+                            {
+                                "id": "mixed_guard",
+                                "uses": "payload.assemble",
+                                "when": {"value": "format", "equals": "json", "present": True},
+                            }
+                        ]
+                    }
+                },
+                initial_values={"format": "json"},
+                context=context,
+            )
+        except PrimitiveExecutionError as exc:
+            assert "exactly one" in str(exc)
+        else:
+            raise AssertionError("step when accepted mixed condition operators")
 
         try:
             execute_primitive(

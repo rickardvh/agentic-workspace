@@ -56,6 +56,25 @@ def test_memory_report_tiny_does_not_build_full_report(tmp_path: Path, monkeypat
     assert payload["active"]["note_count"] >= 1
 
 
+def test_memory_report_text_uses_compact_declarative_payload(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+
+    def fail_full_report(*, target=None):
+        raise AssertionError("non-verbose text memory report should not build the full report")
+
+    monkeypatch.setattr(runtime_primitives, "memory_report", fail_full_report)
+
+    assert cli.main(["report", "--target", str(target)]) == 0
+
+    output = capsys.readouterr().out
+    assert "Memory report" in output
+    assert "Notes:" in output
+    assert "Habitual pull:" in output
+    assert "agentic-memory report --target . --verbose --format json" in output
+
+
 def test_memory_promotion_report_defaults_to_primary_next_action(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True, exist_ok=True)
@@ -89,8 +108,7 @@ def test_memory_lifecycle_status_defaults_to_tiny_actions(tmp_path: Path, capsys
 
     payload = json.loads(capsys.readouterr().out)
     assert "action_count" in payload
-    assert len(payload["actions"]) <= 5
-    assert payload["detail_command"] == "agentic-memory status --target . --verbose --format json"
+    assert any(action["path"] == "AGENTS.md" for action in payload["actions"])
 
 
 def test_memory_lifecycle_tiny_does_not_collect_full_status(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
@@ -107,7 +125,61 @@ def test_memory_lifecycle_tiny_does_not_collect_full_status(tmp_path: Path, monk
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["health"] == "healthy"
-    assert payload["active"]["note_count"] >= 1
+    assert any(action["kind"] == "present" and action["path"] == "AGENTS.md" for action in payload["actions"])
+
+
+def test_memory_lifecycle_text_status_uses_declarative_payload_policy(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+
+    def fail_collect_status(*, target=None):
+        raise AssertionError("text status should not collect full lifecycle status")
+
+    monkeypatch.setattr(runtime_primitives, "collect_status", fail_collect_status)
+
+    assert cli.main(["status", "--target", str(target)]) == 0
+
+    output = capsys.readouterr().out
+    assert "Status report" in output
+    assert "Detected version: 47 (payload version 47)" in output
+    assert "- present: AGENTS.md" in output
+
+
+def test_memory_lifecycle_doctor_uses_declarative_payload_policy(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+
+    def fail_doctor(*args, **kwargs):
+        raise AssertionError("non-verbose doctor should not call package-domain doctor runtime")
+
+    monkeypatch.setattr(runtime_primitives, "_load_memory_bootstrap_doctor", fail_doctor)
+
+    assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["dry_run"] is True
+    assert payload["message"] == "Doctor report"
+    assert any(action["kind"] == "present" and action["path"] == "AGENTS.md" for action in payload["actions"])
+
+
+def test_memory_lifecycle_text_doctor_uses_declarative_payload_policy(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+
+    def fail_doctor(*args, **kwargs):
+        raise AssertionError("non-verbose text doctor should not call package-domain doctor runtime")
+
+    monkeypatch.setattr(runtime_primitives, "_load_memory_bootstrap_doctor", fail_doctor)
+
+    assert cli.main(["doctor", "--target", str(target)]) == 0
+
+    output = capsys.readouterr().out
+    assert "Doctor report" in output
+    assert "Detected version: 47 (payload version 47)" in output
+    assert "- present: AGENTS.md" in output
 
 
 def test_memory_route_report_tiny_does_not_evaluate_fixtures(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
@@ -124,6 +196,25 @@ def test_memory_route_report_tiny_does_not_evaluate_fixtures(tmp_path: Path, mon
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["route_report_summary"]["detail"].startswith("Run full route-report")
+
+
+def test_memory_route_report_text_uses_compact_declarative_payload(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+
+    def fail_report_routes(*, target=None):
+        raise AssertionError("non-verbose text route-report should not evaluate route fixtures")
+
+    monkeypatch.setattr(runtime_primitives, "report_routes", fail_report_routes)
+
+    assert cli.main(["route-report", "--target", str(target)]) == 0
+
+    output = capsys.readouterr().out
+    assert "Routing report" in output
+    assert "Feedback:" in output
+    assert "Fixtures:" in output
+    assert "Run full route-report" in output
 
 
 def test_memory_generated_report_uses_compact_target_error_for_ambiguous_root(

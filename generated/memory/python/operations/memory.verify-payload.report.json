@@ -15,8 +15,7 @@
   "guards": [
     "Verification must remain read-only.",
     "Generated code owns parser/help/dispatch shape.",
-    "JSON output must execute payload verification through the codegen-owned payload.verify primitive and package-owned policy JSON.",
-    "Text output may remain a declared python.function.call runtime fallback until text rendering is represented by portable primitives."
+    "Text and JSON output must execute payload verification through the codegen-owned payload.verify primitive and package-owned policy JSON."
   ],
   "id": "memory.verify-payload.report",
   "inputs": [
@@ -54,41 +53,13 @@
           "policy_root": "memory.contracts",
           "target_root_value": "target_root"
         },
-        "description": "Verify bundled memory payload files through package-owned payload verification policy when JSON output is requested.",
+        "description": "Verify bundled memory payload files through package-owned payload verification policy.",
         "id": "verify_payload_policy",
         "on_error": "fail",
         "outputs": [
           "result"
         ],
-        "uses": "payload.verify",
-        "when": {
-          "equals": "json",
-          "value": "format"
-        }
-      },
-      {
-        "arguments": {
-          "function": "verify_payload",
-          "import_module": "repo_memory_bootstrap.installer",
-          "kwargs": {
-            "target": {
-              "value": "target"
-            }
-          }
-        },
-        "description": "Preserve package runtime text formatting until text output is ported to declared rendering primitives.",
-        "id": "load_text_verification",
-        "on_error": "fail",
-        "outputs": [
-          "result"
-        ],
-        "uses": "python.function.call",
-        "when": {
-          "not": {
-            "equals": "json",
-            "value": "format"
-          }
-        }
+        "uses": "payload.verify"
       },
       {
         "arguments": {},
@@ -98,10 +69,10 @@
         "outputs": [
           "emitted"
         ],
-        "uses": "output.emit"
+        "uses": "output.emit.install-result"
       }
     ],
-    "summary": "Memory verify-payload JSON executes generated operation IR through codegen-owned primitive dataflow and package-owned payload verification policy; text output remains a declared package runtime fallback."
+    "summary": "Memory verify-payload text and JSON execute generated operation IR through codegen-owned primitive dataflow and package-owned payload verification policy."
   },
   "locality": {
     "network": "forbidden",
@@ -134,19 +105,14 @@
       "uses": "path.target_root.resolve"
     },
     {
-      "description": "Verify bundled memory payload files through package-owned payload verification policy when JSON output is requested.",
+      "description": "Verify bundled memory payload files through package-owned payload verification policy.",
       "id": "verify_payload_policy",
       "uses": "payload.verify"
     },
     {
-      "description": "Preserve package runtime text formatting until text output is ported to declared rendering primitives.",
-      "id": "load_text_verification",
-      "uses": "python.function.call"
-    },
-    {
       "description": "Emit memory payload verification result in the requested format.",
       "id": "emit_output",
-      "uses": "output.emit"
+      "uses": "output.emit.install-result"
     }
   ],
   "summary": "Verify bundled memory payload and generated operation resources against the package-owned declarative payload verification policy.",

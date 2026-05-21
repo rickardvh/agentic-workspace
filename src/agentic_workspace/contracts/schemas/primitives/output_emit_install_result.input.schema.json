@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/primitives/output_emit_install_result.input.schema.json",
+  "title": "output.emit.install-result input",
+  "type": "object",
+  "required": [
+    "values",
+    "arguments"
+  ],
+  "properties": {
+    "values": {
+      "type": "object"
+    },
+    "arguments": {
+      "type": "object",
+      "properties": {
+        "text_style": {
+          "const": "install-result"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

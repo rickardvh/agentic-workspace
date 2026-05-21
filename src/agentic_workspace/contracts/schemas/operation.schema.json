@@ -287,14 +287,7 @@
             "description": "Longer explanation or display text for this entry."
           },
           "when": {
-            "oneOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "object"
-              }
-            ],
+            "$ref": "#/$defs/step_when_guard",
             "description": "When guard used by this contract."
           },
           "inputs": {
@@ -385,14 +378,7 @@
                 "description": "Named outputs produced by this step."
               },
               "when": {
-                "oneOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "object"
-                  }
-                ],
+                "$ref": "#/$defs/step_when_guard",
                 "description": "A named boolean fact or input-presence guard; arbitrary expressions are not allowed."
               },
               "on_error": {
@@ -551,6 +537,97 @@
       },
       "additionalProperties": false,
       "description": "Surface access details used by this contract."
+    },
+    "step_when_guard": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "description": "Named boolean fact used for guarded step selection."
+        },
+        {
+          "type": "object",
+          "required": [
+            "all"
+          ],
+          "properties": {
+            "all": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/step_when_guard"
+              },
+              "minItems": 1
+            }
+          },
+          "additionalProperties": false,
+          "description": "Conjunction of simple guarded step selection conditions."
+        },
+        {
+          "type": "object",
+          "required": [
+            "any"
+          ],
+          "properties": {
+            "any": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/step_when_guard"
+              },
+              "minItems": 1
+            }
+          },
+          "additionalProperties": false,
+          "description": "Disjunction of simple guarded step selection conditions."
+        },
+        {
+          "type": "object",
+          "required": [
+            "not"
+          ],
+          "properties": {
+            "not": {
+              "$ref": "#/$defs/step_when_guard"
+            }
+          },
+          "additionalProperties": false,
+          "description": "Negation of a simple guarded step selection condition."
+        },
+        {
+          "type": "object",
+          "required": [
+            "value",
+            "equals"
+          ],
+          "properties": {
+            "value": {
+              "type": "string",
+              "minLength": 1
+            },
+            "equals": {}
+          },
+          "additionalProperties": false,
+          "description": "Literal equality check against a named operation value."
+        },
+        {
+          "type": "object",
+          "required": [
+            "value",
+            "present"
+          ],
+          "properties": {
+            "value": {
+              "type": "string",
+              "minLength": 1
+            },
+            "present": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "description": "Presence check against a named operation value."
+        }
+      ],
+      "description": "Limited guarded step selection. This is not an expression language: no loops, arbitrary predicates, computed conditions, or mixed operators."
     }
   },
   "x-agentic-workspace-doc-role": "contract-reference"

@@ -391,6 +391,27 @@ def test_output_emit_supports_json_and_text(primitive_context: PrimitiveContext)
     assert emitted_text == "Skills\n- review/SKILL.md\n"
 
 
+def test_output_emit_serializes_module_result_objects(primitive_context: PrimitiveContext) -> None:
+    class ModuleResult:
+        def to_dict(self) -> dict[str, object]:
+            return {
+                "dry_run": False,
+                "message": "Installed",
+                "actions": [{"kind": "create", "path": "AGENTS.md"}],
+            }
+
+    emitted_json = execute_primitive(
+        "output.emit.install-result", values={"result": ModuleResult(), "format": "json"}, context=primitive_context
+    )
+    emitted_text = execute_primitive(
+        "output.emit.install-result", values={"result": ModuleResult(), "format": "text"}, context=primitive_context
+    )
+
+    assert json.loads(emitted_json)["actions"][0]["path"] == "AGENTS.md"
+    assert "Installed" in emitted_text
+    assert "- create: AGENTS.md" in emitted_text
+
+
 def test_python_function_call_resolves_checked_in_arguments(primitive_context: PrimitiveContext) -> None:
     result = execute_primitive(
         "python.function.call",

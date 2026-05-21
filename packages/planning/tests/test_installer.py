@@ -22,6 +22,25 @@ def test_planning_report_defaults_to_tiny_profile(tmp_path: Path, capsys) -> Non
     assert payload["detail_commands"]["full"] == "agentic-planning report --target . --verbose --format json"
 
 
+def test_planning_report_tiny_text_uses_generated_output(tmp_path: Path, monkeypatch, capsys) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    install_bootstrap(target=target)
+
+    def fail_source_output(*_args, **_kwargs) -> None:
+        raise AssertionError("planning report tiny text should not fall back to package output")
+
+    monkeypatch.setattr(runtime_projection, "emit_planning_operation_output", fail_source_output)
+
+    assert planning_cli.main(["report", "--target", str(target), "--format", "text"]) == 0
+
+    text = capsys.readouterr().out
+    assert "Command: planning" in text
+    assert "Health:" in text
+    assert "Status:" in text
+    assert "Next action:" in text
+
+
 def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routing() -> None:
     readme_text = (Path(__file__).resolve().parents[1] / "README.md").read_text(encoding="utf-8")
     bootstrap_agents_text = (installer_mod.payload_root() / "AGENTS.template.md").read_text(encoding="utf-8")
