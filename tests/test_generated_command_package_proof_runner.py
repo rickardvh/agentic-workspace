@@ -230,6 +230,12 @@ def test_lifecycle_dry_run_generation_regression_is_blocked(monkeypatch) -> None
     assert any("does not route the default dry-run branch through payload.lifecycle-plan" in error for error in errors)
 
 
+def test_declarative_view_specs_match_generated_operations() -> None:
+    checker = _load_checker()
+
+    assert checker._validate_declarative_view_specs() == []
+
+
 def test_python_function_call_stays_out_of_portable_completion_coverage() -> None:
     checker = _load_checker()
 

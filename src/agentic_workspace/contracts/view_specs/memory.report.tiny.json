@@ -1,0 +1,30 @@
+{
+  "kind": "agentic-workspace/view-spec/v1",
+  "id": "memory.report.tiny",
+  "operation_id": "memory.report.report",
+  "output_profile": "tiny-json",
+  "primitive_refs": [
+    "path.target_root.resolve",
+    "toml.table.counts",
+    "payload.assemble",
+    "output.emit"
+  ],
+  "fields": [
+    {
+      "name": "kind",
+      "source": "literal"
+    },
+    {
+      "name": "target_root",
+      "source": "path.target_root.resolve"
+    },
+    {
+      "name": "status",
+      "source": "toml.table.counts"
+    },
+    {
+      "name": "next_action",
+      "source": "payload.assemble"
+    }
+  ]
+}

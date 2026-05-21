@@ -44,6 +44,7 @@ from command_generation.generated_package_loader import (  # noqa: E402
     load_generated_command_module_for_entrypoint,
     load_generated_command_package_for_entrypoint,
 )
+from jsonschema import Draft202012Validator  # noqa: E402
 
 SelectedFields = Callable[[str], dict[str, object]]
 
@@ -1690,6 +1691,37 @@ def _lifecycle_dry_run_metrics() -> dict[str, object]:
     }
 
 
+def _validate_declarative_view_specs() -> list[str]:
+    errors: list[str] = []
+    schema_path = REPO_ROOT / "src" / "agentic_workspace" / "contracts" / "schemas" / "view_spec.schema.json"
+    view_spec_root = REPO_ROOT / "src" / "agentic_workspace" / "contracts" / "view_specs"
+    try:
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        return [f"view spec schema is missing or invalid: {exc}"]
+    for spec_path in sorted(view_spec_root.glob("*.json")):
+        try:
+            spec = json.loads(spec_path.read_text(encoding="utf-8"))
+            Draft202012Validator(schema).validate(spec)
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"{spec_path.relative_to(REPO_ROOT).as_posix()} is not a valid view spec: {exc}")
+            continue
+        operation_id = str(spec.get("operation_id", ""))
+        generated_operation = (
+            REPO_ROOT / "generated" / "memory" / "python" / "operations" / f"{operation_id}.json"
+        )
+        if not generated_operation.is_file():
+            errors.append(f"{spec_path.relative_to(REPO_ROOT).as_posix()} references missing generated operation {operation_id!r}")
+            continue
+        operation_text = generated_operation.read_text(encoding="utf-8")
+        for primitive_ref in spec.get("primitive_refs", []):
+            if f'"uses": "{primitive_ref}"' not in operation_text:
+                errors.append(
+                    f"{spec_path.relative_to(REPO_ROOT).as_posix()} primitive {primitive_ref!r} is not present in generated operation {operation_id}"
+                )
+    return errors
+
+
 def _validate_lifecycle_dry_run_generation() -> list[str]:
     errors: list[str] = []
     try:
@@ -3154,6 +3186,7 @@ def _python_completion_blockers_report(ir: dict[str, object]) -> dict[str, objec
     blockers.extend(_validate_python_runtime_projection_inventory(full_completion=True))
     blockers.extend(_validate_python_operation_execution_inventory(forced_full_ir))
     blockers.extend(_validate_lifecycle_dry_run_generation())
+    blockers.extend(_validate_declarative_view_specs())
 
     current_state = str(policy.get("current_state", ""))
     gate = policy.get("completion_gate", {})
