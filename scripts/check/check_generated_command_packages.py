@@ -201,6 +201,7 @@ GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST = {
         "historical generated target-layout migration context"
     ),
     "packages/command-generation/src/command_generation/generated_package_loader.py": "legacy loader compatibility wrappers and legacy layout fallback",
+    "src/agentic_workspace/cli.py": "source-checkout fallback to checked-in generated workspace CLI package",
     "src/agentic_workspace/workspace_runtime_primitives.py": "legacy parser helper compatibility wrapper",
     "scripts/check/check_generated_command_packages.py": "static compatibility allowlist and obsolete-layout guards",
     "tests/test_command_generation_artifacts.py": "obsolete target-specific runtime guard",
@@ -1531,19 +1532,49 @@ def _python_runtime_boundary_metrics() -> dict[str, object]:
     if not isinstance(entries, list):
         return {"status": "unavailable", "error": "accepted_runtime_boundaries.entries is not a list"}
     class_counts: dict[str, int] = {}
+    package_counts: dict[str, int] = {}
+    binding_kind_counts: dict[str, int] = {}
     output_emission_symbols: list[dict[str, str]] = []
+    python_bridge_symbols: list[dict[str, str]] = []
+    generic_debt_symbols: list[dict[str, str]] = []
     for entry in entries:
         if not isinstance(entry, dict):
             continue
         boundary_class = str(entry.get("runtime_boundary_class", "unknown") or "unknown")
         class_counts[boundary_class] = class_counts.get(boundary_class, 0) + 1
+        owner_package = str(entry.get("owner_package", "unknown") or "unknown")
+        package_counts[owner_package] = package_counts.get(owner_package, 0) + 1
+        binding_kind = str(entry.get("binding_kind", "unknown") or "unknown")
+        binding_kind_counts[binding_kind] = binding_kind_counts.get(binding_kind, 0) + 1
         source_symbol = str(entry.get("source_symbol", ""))
+        operation_id = str(entry.get("operation_id", ""))
+        source_module = str(entry.get("source_module", ""))
+        primitive_refs = entry.get("primitive_refs", [])
+        primitive_ref_strings = [str(ref) for ref in primitive_refs] if isinstance(primitive_refs, list) else []
         if "emit" in source_symbol:
             output_emission_symbols.append(
                 {
-                    "binding_kind": str(entry.get("binding_kind", "runtime-facade-call")),
+                    "binding_kind": binding_kind,
                     "facade_path": str(entry.get("facade_path", "")),
                     "facade_symbol": str(entry.get("facade_symbol", "")),
+                    "source_symbol": source_symbol,
+                    "runtime_boundary_class": boundary_class,
+                }
+            )
+        if "python.function.call" in primitive_ref_strings:
+            python_bridge_symbols.append(
+                {
+                    "operation_id": operation_id,
+                    "source_module": source_module,
+                    "source_symbol": source_symbol,
+                    "runtime_boundary_class": boundary_class,
+                }
+            )
+        if boundary_class in PYTHON_OPERATION_FULL_COMPLETION_BLOCKING_BOUNDARY_CLASSES:
+            generic_debt_symbols.append(
+                {
+                    "operation_id": operation_id,
+                    "source_module": source_module,
                     "source_symbol": source_symbol,
                     "runtime_boundary_class": boundary_class,
                 }
@@ -1551,9 +1582,18 @@ def _python_runtime_boundary_metrics() -> dict[str, object]:
     return {
         "status": "available",
         "accepted_runtime_symbol_count": sum(class_counts.values()),
+        "accepted_runtime_symbol_count_by_package": dict(sorted(package_counts.items())),
         "accepted_runtime_symbol_count_by_class": dict(sorted(class_counts.items())),
+        "accepted_runtime_symbol_count_by_binding_kind": dict(sorted(binding_kind_counts.items())),
+        "output_fallback_symbol_count": len(output_emission_symbols),
+        "python_bridge_step_count": len(python_bridge_symbols),
+        "generic_debt_symbol_count": len(generic_debt_symbols),
+        "new_symbols_since_baseline": [],
+        "removed_symbols_since_baseline": [],
         "accepted_output_emission_symbol_count": len(output_emission_symbols),
         "accepted_output_emission_symbols": output_emission_symbols,
+        "python_bridge_symbols": python_bridge_symbols,
+        "generic_debt_symbols": generic_debt_symbols,
     }
 
 
@@ -3135,7 +3175,11 @@ def _print_python_completion_blockers_report(report: dict[str, object], *, outpu
     metrics = report.get("accepted_runtime_boundary_metrics", {})
     if isinstance(metrics, dict) and metrics.get("status") == "available":
         print(f"Accepted runtime symbols: {metrics.get('accepted_runtime_symbol_count')}")
+        print(f"Accepted runtime symbols by package: {metrics.get('accepted_runtime_symbol_count_by_package')}")
+        print(f"Accepted runtime symbols by class: {metrics.get('accepted_runtime_symbol_count_by_class')}")
         print(f"Accepted output-emission symbols: {metrics.get('accepted_output_emission_symbol_count')}")
+        print(f"Python bridge steps: {metrics.get('python_bridge_step_count')}")
+        print(f"Generic debt symbols: {metrics.get('generic_debt_symbol_count')}")
     lifecycle_metrics = report.get("lifecycle_dry_run_metrics", {})
     if isinstance(lifecycle_metrics, dict) and lifecycle_metrics.get("status") == "available":
         print(f"Lifecycle dry-run operations: {lifecycle_metrics.get('lifecycle_dry_run_operation_count')}")

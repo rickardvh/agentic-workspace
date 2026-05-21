@@ -199,6 +199,14 @@ def test_python_completion_blocker_report_accepts_exact_symbol_runtime_boundarie
     assert report["false_completion_claim_would_fail"] is False
     assert report["blockers"] == []
     assert report["remaining_scope"] == "none"
+    runtime_metrics = report["accepted_runtime_boundary_metrics"]
+    assert runtime_metrics["status"] == "available"
+    assert runtime_metrics["accepted_runtime_symbol_count"] == sum(runtime_metrics["accepted_runtime_symbol_count_by_package"].values())
+    assert runtime_metrics["accepted_runtime_symbol_count"] == sum(runtime_metrics["accepted_runtime_symbol_count_by_class"].values())
+    assert runtime_metrics["python_bridge_step_count"] == len(runtime_metrics["python_bridge_symbols"])
+    assert runtime_metrics["generic_debt_symbol_count"] == 0
+    assert runtime_metrics["new_symbols_since_baseline"] == []
+    assert runtime_metrics["removed_symbols_since_baseline"] == []
     lifecycle_metrics = report["lifecycle_dry_run_metrics"]
     assert lifecycle_metrics["status"] == "available"
     assert lifecycle_metrics["codegen_default_dry_run_operation_count"] >= 3
@@ -239,6 +247,11 @@ def test_python_completion_blocker_report_has_json_cli_mode(capsys) -> None:
     assert payload["blocker_count"] == len(payload["blockers"])
     assert payload["remaining_scope"] == "none"
     assert payload["next_owner"] == "none"
+    runtime_metrics = payload["accepted_runtime_boundary_metrics"]
+    assert runtime_metrics["accepted_runtime_symbol_count_by_package"]
+    assert runtime_metrics["output_fallback_symbol_count"] == runtime_metrics["accepted_output_emission_symbol_count"]
+    assert runtime_metrics["python_bridge_step_count"] == len(runtime_metrics["python_bridge_symbols"])
+    assert runtime_metrics["generic_debt_symbol_count"] == 0
     assert payload["lifecycle_dry_run_metrics"]["codegen_default_dry_run_operation_count"] >= 3
 
 
