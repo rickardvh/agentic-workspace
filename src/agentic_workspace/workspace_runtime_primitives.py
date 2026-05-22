@@ -12445,9 +12445,11 @@ def _reuse_pressure_payload(
             ),
         }
 
-    findings: list[dict[str, Any]] = []
+    raw_findings: list[dict[str, Any]] = []
     for changed_path in normalized_paths:
-        findings.extend(_reuse_pressure_findings_for_path(target_root=target_root, changed_path=changed_path))
+        raw_findings.extend(_reuse_pressure_findings_for_path(target_root=target_root, changed_path=changed_path))
+    findings = [finding for finding in raw_findings if finding.get("prominence") != "weak"]
+    weak_hints = [finding for finding in raw_findings if finding.get("prominence") == "weak"]
     state = _reuse_pressure_state(findings)
     recording_options = _reuse_pressure_recording_options(normalized_paths=normalized_paths, state=state, cli_invoke=cli_invoke)
     payload = {
@@ -12456,7 +12458,9 @@ def _reuse_pressure_payload(
         "state": state,
         "finding_count": len(findings),
         "findings": findings[:8],
-        "summary": _reuse_pressure_summary(state=state, finding_count=len(findings)),
+        "weak_hint_count": len(weak_hints),
+        "weak_hints": weak_hints[:5],
+        "summary": _reuse_pressure_summary(state=state, finding_count=len(findings), weak_hint_count=len(weak_hints)),
         "memory_signals": _reuse_pressure_memory_signals(target_root=target_root, changed_paths=normalized_paths, cli_invoke=cli_invoke),
         "recording_options": recording_options,
         "next_decision_options": recording_options["options"],
@@ -12510,14 +12514,23 @@ def _reuse_pressure_python_findings(*, target_root: Path, changed_path: str, pat
     findings.extend(special_case_findings)
     if findings:
         return findings
-    sibling_candidates = _sibling_helper_candidates(path=path, target_root=target_root)
+    sibling_candidates = _sibling_helper_candidates(
+        path=path, target_root=target_root, changed_tokens=_reuse_pressure_tokens(path=path, text=text)
+    )
     if sibling_candidates:
+        candidate_paths = [candidate["path"] for candidate in sibling_candidates]
+        has_token_overlap = any(candidate.get("matched_tokens") for candidate in sibling_candidates)
         findings.append(
             {
-                "state": "similar_pattern_candidate",
+                "state": "similar_pattern_candidate" if has_token_overlap else "weak_pattern_hint",
                 "changed_path": changed_path,
-                "candidate_paths": sibling_candidates[:5],
-                "why": "Nearby module files define helpers or classes that may already express the local pattern.",
+                "kind": "sibling_helper_hint",
+                "prominence": "normal" if has_token_overlap else "weak",
+                "candidate_paths": candidate_paths[:5],
+                "matched_tokens": sorted({token for candidate in sibling_candidates for token in candidate.get("matched_tokens", [])})[:8],
+                "why": "Nearby module files share changed-path tokens and may express the same local pattern."
+                if has_token_overlap
+                else "Nearby module files define helpers or classes, but no changed-path token overlap was found.",
             }
         )
     return findings
@@ -12650,8 +12663,8 @@ def _find_definition_matches(*, target_root: Path, name: str, exclude: Path) -> 
     return matches
 
 
-def _sibling_helper_candidates(*, path: Path, target_root: Path) -> list[str]:
-    candidates: list[str] = []
+def _sibling_helper_candidates(*, path: Path, target_root: Path, changed_tokens: set[str]) -> list[dict[str, Any]]:
+    candidates: list[dict[str, Any]] = []
     for sibling in sorted(path.parent.glob("*.py")):
         if sibling == path:
             continue
@@ -12660,8 +12673,44 @@ def _sibling_helper_candidates(*, path: Path, target_root: Path) -> list[str]:
         except UnicodeDecodeError:
             continue
         if re.search(r"^\s*(?:def|class)\s+[A-Za-z_][A-Za-z0-9_]*", text, flags=re.MULTILINE):
-            candidates.append(sibling.relative_to(target_root).as_posix())
+            sibling_tokens = _reuse_pressure_tokens(path=sibling, text=text)
+            candidates.append(
+                {
+                    "path": sibling.relative_to(target_root).as_posix(),
+                    "matched_tokens": sorted(changed_tokens & sibling_tokens)[:8],
+                }
+            )
     return candidates
+
+
+def _reuse_pressure_tokens(*, path: Path, text: str) -> set[str]:
+    del text
+    tokens: set[str] = set()
+    path_text = path.stem
+    stopwords = {
+        "agentic",
+        "args",
+        "class",
+        "command",
+        "false",
+        "none",
+        "path",
+        "payload",
+        "return",
+        "self",
+        "target",
+        "test",
+        "tests",
+        "true",
+        "value",
+        "workspace",
+    }
+    for raw_token in re.findall(r"[A-Za-z][A-Za-z0-9_]{3,}", path_text):
+        for token in re.split(r"_+", raw_token):
+            lowered = token.lower()
+            if len(lowered) >= 4 and lowered not in stopwords:
+                tokens.add(lowered)
+    return tokens
 
 
 def _iter_reuse_scan_files(target_root: Path) -> list[Path]:
@@ -12769,7 +12818,9 @@ def _compact_reuse_pressure_payload(payload: dict[str, Any]) -> dict[str, Any]:
     for finding in payload.get("findings", [])[:4]:
         if not isinstance(finding, dict):
             continue
-        compact_finding = {key: finding[key] for key in ("state", "changed_path", "kind", "symbol", "pattern", "why") if key in finding}
+        compact_finding = {
+            key: finding[key] for key in ("state", "changed_path", "kind", "symbol", "pattern", "matched_tokens", "why") if key in finding
+        }
         candidate_paths = finding.get("candidate_paths")
         if isinstance(candidate_paths, list):
             compact_finding["candidate_paths"] = candidate_paths[:3]
@@ -12806,6 +12857,16 @@ def _compact_reuse_pressure_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "summary": payload.get("summary"),
         "finding_count": payload.get("finding_count", 0),
         "findings": compact_findings,
+        "weak_hint_count": payload.get("weak_hint_count", 0),
+        "weak_hints": [
+            {
+                key: hint[key]
+                for key in ("changed_path", "kind", "candidate_paths", "matched_tokens", "why")
+                if isinstance(hint, dict) and key in hint
+            }
+            for hint in payload.get("weak_hints", [])[:2]
+            if isinstance(hint, dict)
+        ],
         "allowed_outcomes": payload.get("allowed_outcomes", []),
         "memory_signals": compact_memory,
         "recording_options": {
@@ -12913,8 +12974,10 @@ def _reuse_pressure_state(findings: list[dict[str, Any]]) -> str:
     return "none_found"
 
 
-def _reuse_pressure_summary(*, state: str, finding_count: int) -> str:
+def _reuse_pressure_summary(*, state: str, finding_count: int, weak_hint_count: int = 0) -> str:
     if state == "none_found":
+        if weak_hint_count:
+            return f"No actionable reuse pressure found; {weak_hint_count} weak sibling hint(s) available for optional context."
         return "No cheap reuse or abstraction pressure found for the changed paths."
     return f"{finding_count} reuse-pressure finding(s) surfaced; inspect before adding another local implementation."
 

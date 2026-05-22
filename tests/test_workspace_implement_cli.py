@@ -1043,6 +1043,78 @@ def test_implement_reuse_pressure_keeps_small_direct_task_unblocked(tmp_path: Pa
     assert payload["values"]["context.workflow_sufficiency"]["decision"] == "enough-for-bounded-implementation"
 
 
+def test_implement_reuse_pressure_demotes_generic_sibling_helpers_to_weak_hints(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / "src" / "sample_app" / "alpha.py",
+        "def build_invoice(total):\n    return total\n",
+    )
+    _write(
+        tmp_path / "src" / "sample_app" / "beta.py",
+        "def render_dashboard(rows):\n    return rows\n",
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/sample_app/alpha.py",
+                "--select",
+                "reuse_pressure",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    reuse_pressure = json.loads(capsys.readouterr().out)["values"]["reuse_pressure"]
+    assert reuse_pressure["state"] == "none_found"
+    assert reuse_pressure["finding_count"] == 0
+    assert reuse_pressure["weak_hint_count"] == 1
+    assert reuse_pressure["weak_hints"][0]["kind"] == "sibling_helper_hint"
+    options = {option["id"]: option for option in reuse_pressure["next_decision_options"]}
+    assert options["route-extraction-follow-up"]["allowed"] is False
+
+
+def test_implement_reuse_pressure_promotes_token_matched_sibling_helper(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / "src" / "sample_app" / "invoice_format.py",
+        "def invoice_currency(total):\n    return f'${total}'\n",
+    )
+    _write(
+        tmp_path / "src" / "sample_app" / "invoice_parse.py",
+        "def parse_invoice_total(raw):\n    return int(raw)\n",
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/sample_app/invoice_format.py",
+                "--select",
+                "reuse_pressure",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    reuse_pressure = json.loads(capsys.readouterr().out)["values"]["reuse_pressure"]
+    assert reuse_pressure["state"] == "similar_pattern_candidate"
+    assert reuse_pressure["findings"][0]["kind"] == "sibling_helper_hint"
+    assert "invoice" in reuse_pressure["findings"][0]["matched_tokens"]
+    assert reuse_pressure["weak_hint_count"] == 0
+
+
 def test_implement_selector_reports_available_fields_for_missing_selector(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
 
