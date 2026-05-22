@@ -126,6 +126,16 @@ def main() -> int:
             ".agentic-workspace/memory/VERSION.md",
         }
 
+        status_payload = execute_primitive(
+            "payload.status",
+            values={"target_root": target_root},
+            arguments={"policy_root": "contracts", "policy_path": "payload.json", "target_root_value": "target_root"},
+            context=context,
+        )
+        assert status_payload["message"] == "Status report"
+        assert status_payload["bootstrap_version"] == 3
+        assert status_payload["active"]["status"] in {"missing", "present"}
+
         emitted_json = execute_primitive(
             "output.emit",
             values={"result": skill_payload, "format": "json"},

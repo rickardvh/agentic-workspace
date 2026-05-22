@@ -63,11 +63,6 @@
       "description": "Assemble Memory status from declarative payload status policy."
     },
     {
-      "id": "load_verbose_status",
-      "uses": "memory.bootstrap.status.load",
-      "description": "Load the package-domain status report only when verbose output is requested."
-    },
-    {
       "id": "emit_output",
       "uses": "output.emit.install-result",
       "description": "Emit Memory status as JSON or install-result text without package-runtime formatting."
@@ -83,16 +78,12 @@
   "migration_status": "runtime-consumed",
   "ir_plan": {
     "status": "representative",
-    "summary": "Memory status non-verbose text and JSON execute generated operation IR through a schema-backed payload.status primitive. Verbose status behavior remains package-domain source runtime.",
+    "summary": "Memory status text, JSON, and verbose-compatible output execute generated operation IR through a schema-backed payload.status primitive.",
     "steps": [
       {
         "id": "resolve_target_root",
         "uses": "path.target_root.resolve",
         "description": "Resolve the target root for target-local memory status checks.",
-        "when": {
-          "value": "verbose",
-          "equals": false
-        },
         "arguments": {
           "must_exist": true,
           "must_be_dir": true
@@ -105,32 +96,13 @@
       {
         "id": "assemble_status",
         "uses": "payload.status",
-        "description": "Assemble Memory status from declarative payload status policy for non-verbose output.",
-        "when": {
-          "equals": false,
-          "value": "verbose"
-        },
+        "description": "Assemble Memory status from declarative payload status policy.",
         "arguments": {
           "policy_root": "memory.contracts",
           "policy_path": "payload_verification.memory.json",
           "target_root_value": "target_root",
-          "message": "Status report",
-          "detail_command": "agentic-memory status --target . --verbose --format json"
+          "message": "Status report"
         },
-        "outputs": [
-          "result"
-        ],
-        "on_error": "fail"
-      },
-      {
-        "id": "load_verbose_status",
-        "uses": "memory.bootstrap.status.load",
-        "description": "Load the package-domain status report only when verbose output is requested.",
-        "when": {
-          "equals": true,
-          "value": "verbose"
-        },
-        "arguments": {},
         "outputs": [
           "result"
         ],

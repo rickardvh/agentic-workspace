@@ -145,6 +145,50 @@ active_items = [
     assert any(action.kind == "archived" and action.path == unique_archive_path for action in result.actions)
 
 
+def test_close_item_skips_oversized_retained_archive_and_still_closes(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "src/agentic_workspace/contracts/structured_file_inventory.json",
+        json.dumps(
+            {
+                "entries": [
+                    {
+                        "pattern": ".agentic-workspace/planning/execplans/archive/*.plan.json",
+                        "schema_or_validator": ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
+                        "owner": "planning",
+                        "guardrails": {"max_bytes": 10},
+                    }
+                ]
+            }
+        )
+        + "\n",
+    )
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "plan-alpha", title = "Plan alpha", status = "completed", path = ".agentic-workspace/planning/execplans/plan-alpha.plan.json" },
+]
+""",
+    )
+    live_path = tmp_path / ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
+    archive_path = tmp_path / ".agentic-workspace/planning/execplans/archive/plan-alpha.plan.json"
+    _write_execplan_record(live_path, status="completed")
+
+    result = close_planning_item("plan-alpha", target=tmp_path)
+    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
+
+    assert any(warning["warning_class"] == "archive_retention_skipped_by_size_guardrail" for warning in result.warnings)
+    assert any(action.kind == "retention skipped" for action in result.actions)
+    assert any(action.kind == "closed" and action.path == live_path for action in result.actions)
+    assert not live_path.exists()
+    assert not archive_path.exists()
+    assert state["todo"]["active_items"] == []
+
+
 def test_close_item_runtime_cli_outputs_json(tmp_path: Path, capsys) -> None:
     _write(
         tmp_path / ".agentic-workspace/planning/state.toml",

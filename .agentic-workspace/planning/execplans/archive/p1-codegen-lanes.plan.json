@@ -1,0 +1,280 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Implement P1 codegen planning lanes",
+  "canonical_core": {
+    "requested_outcome": "Implement P1 codegen lanes #1008, #1004, #1003, #999, and #972 under parent #892.",
+    "hard_constraints": "Keep scope to P1 codegen completion issues; do not close #892 parent or implement lower-priority/codegen-extraction lanes.",
+    "agent_may_decide": "Decide whether stale child issues are superseded, but document the decision under each GitHub issue and validate generated artifacts.",
+    "escalate_when": "A fix requires changing non-P1 lanes, broad command-generation extraction, or parent #892 completion semantics.",
+    "next_action": "Publish the PR and monitor CI.",
+    "proof_expectations": [
+      "uv run python scripts/generate/generate_command_packages.py --check",
+      "uv run python scripts/generate/generate_command_adapters.py --check",
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "uv run python packages/command-generation/tests/primitive_conformance.py",
+      "uv run python scripts/check/check_contract_tooling_surfaces.py",
+      "uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_workspace_defaults_cli.py tests/test_contract_tooling.py -q",
+      "uv run agentic-memory status --target .",
+      "uv run agentic-memory status --target . --verbose --format json",
+      "uv run agentic-workspace defaults",
+      "uv run agentic-workspace doctor --target . --modules planning --format json"
+    ],
+    "touched_scope": [
+      "packages/command-generation/src/command_generation/generator.py",
+      "packages/command-generation/tests/primitive_conformance.py",
+      "packages/command-generation/schemas/command_package_ir.schema.json",
+      "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.status.report.json",
+      "scripts/check/check_generated_command_packages.py",
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "src/agentic_workspace/contracts/command_adapter_generation.json",
+      "src/agentic_workspace/contracts/command_package_ir.json",
+      "src/agentic_workspace/contracts/operations/defaults.report.json",
+      "src/agentic_workspace/contracts/operations/memory.status.report.json",
+      "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+      "src/agentic_workspace/contracts/python_runtime_projection_inventory.json",
+      "src/agentic_workspace/contracts/schemas/command_package_ir.schema.json",
+      "src/agentic_workspace/contracts/workspace_defaults/payload.json",
+      "pyproject.toml",
+      "tests/test_generated_command_package_proof_runner.py",
+      "generated/typescript/memory-cli/src/commandPackage.ts",
+      "generated/typescript/workspace-cli/src/commandPackage.ts"
+    ],
+    "completion_criteria": [
+      "#1003: workspace defaults payload truth is externalized to src/agentic_workspace/contracts/workspace_defaults/payload.json and copied into generated/workspace/python/_contracts/payload.json; generated workspace defaults load from generated resources instead of importing the source defaults loader.",
+      "#1008: memory status text, JSON, and verbose-compatible output execute through generated operation IR using payload.status; the generated memory runtime no longer exposes _load_memory_bootstrap_status.",
+      "#1004: generated memory list file/skill projections resolve only generated _payload/_skills roots, with source package paths retained only as resource-copy sources.",
+      "#972: shipped-source executable proof uses AST behavior detection instead of literal keyword matching, with a regression test for prose keyword false positives.",
+      "#999: defaults text/json routes remain verified and the tiny defaults router no longer loads the full defaults prose by default.",
+      "#892 remains open as the parent Python completion/codegen epic; this P1 lane is complete and documented under child issues and parent issue."
+    ],
+    "continuation_owner": "#892 / remaining non-P1 codegen epic lanes",
+    "closeout_decision": "archive-but-keep-lane-open"
+  },
+  "goal": [
+    "Complete P1 child issues #1008, #1004, #1003, #999, and #972; keep parent #892 open."
+  ],
+  "non_goals": [
+    "Do not close #892.",
+    "Do not implement lower-priority/codegen-extraction lanes."
+  ],
+  "active_milestone": {
+    "id": "p1-codegen-lanes",
+    "status": "completed",
+    "scope": "P1 codegen child lane",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "touched_paths": [
+    "packages/command-generation/src/command_generation/generator.py",
+    "packages/command-generation/tests/primitive_conformance.py",
+    "packages/command-generation/schemas/command_package_ir.schema.json",
+    "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.status.report.json",
+    "scripts/check/check_generated_command_packages.py",
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "src/agentic_workspace/contracts/command_adapter_generation.json",
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    "src/agentic_workspace/contracts/operations/defaults.report.json",
+    "src/agentic_workspace/contracts/operations/memory.status.report.json",
+    "src/agentic_workspace/contracts/python_operation_execution_inventory.json",
+    "src/agentic_workspace/contracts/python_runtime_projection_inventory.json",
+    "src/agentic_workspace/contracts/schemas/command_package_ir.schema.json",
+    "src/agentic_workspace/contracts/workspace_defaults/payload.json",
+    "pyproject.toml",
+    "tests/test_generated_command_package_proof_runner.py",
+    "generated/typescript/memory-cli/src/commandPackage.ts",
+    "generated/typescript/workspace-cli/src/commandPackage.ts"
+  ],
+  "validation_commands": [
+    "uv run python scripts/generate/generate_command_packages.py --check",
+    "uv run python scripts/generate/generate_command_adapters.py --check",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python packages/command-generation/tests/primitive_conformance.py",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py",
+    "uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_workspace_defaults_cli.py tests/test_contract_tooling.py -q",
+    "uv run agentic-memory status --target .",
+    "uv run agentic-memory status --target . --verbose --format json",
+    "uv run agentic-workspace defaults",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "completion_criteria": [
+    "#1003: workspace defaults payload truth is externalized to src/agentic_workspace/contracts/workspace_defaults/payload.json and copied into generated/workspace/python/_contracts/payload.json; generated workspace defaults load from generated resources instead of importing the source defaults loader.",
+    "#1008: memory status text, JSON, and verbose-compatible output execute through generated operation IR using payload.status; the generated memory runtime no longer exposes _load_memory_bootstrap_status.",
+    "#1004: generated memory list file/skill projections resolve only generated _payload/_skills roots, with source package paths retained only as resource-copy sources.",
+    "#972: shipped-source executable proof uses AST behavior detection instead of literal keyword matching, with a regression test for prose keyword false positives.",
+    "#999: defaults text/json routes remain verified and the tiny defaults router no longer loads the full defaults prose by default.",
+    "#892 remains open as the parent Python completion/codegen epic; this P1 lane is complete and documented under child issues and parent issue."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "#892 Python/codegen completion epic",
+    "this slice completes the larger intended outcome": "no; it completes the P1 child lane only",
+    "continuation surface": "#892 / remaining non-P1 codegen epic lanes"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "#892 / remaining non-P1 codegen epic lanes",
+    "activation trigger": "After this PR merges and the next priority/codegen-extraction lane is selected."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "",
+    "decision command": "agentic-planning delegation-decision",
+    "recorded at": "2026-05-22T11:58:36+00:00"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "delegate-exploration",
+    "route skipped reason": "not skipped",
+    "expected savings": "Reusable Spark worker triaged P1 candidates and found live #1008/#1004 residue, saving local context before implementation.",
+    "actual friction": "Useful, but output arrived after initial implementation and required reconciliation against local evidence.",
+    "proof result": "Subagent findings were applied where supported by local code and validated by generated package proof/tests.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "execution_run": {
+    "run status": "implemented",
+    "executor": "Codex with reusable Spark exploration subagent",
+    "handoff source": "GitHub #1008 #1004 #1003 #999 #972 #892 plus active execplan p1-codegen-lanes",
+    "what happened": "Implemented generated-resource workspace defaults, retired generated memory status source fallback, removed generated memory list source fallback candidates, tightened AST behavior proof, and kept compact-answer source helpers for remaining source consumers.",
+    "scope touched": "packages/command-generation/src/command_generation/generator.py, packages/command-generation/tests/primitive_conformance.py, packages/command-generation/schemas/command_package_ir.schema.json, packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.status.report.json, scripts/check/check_generated_command_packages.py, src/agentic_workspace/workspace_runtime_primitives.py, src/agentic_workspace/contracts/command_adapter_generation.json, src/agentic_workspace/contracts/command_package_ir.json, src/agentic_workspace/contracts/operations/defaults.report.json, src/agentic_workspace/contracts/operations/memory.status.report.json, src/agentic_workspace/contracts/python_operation_execution_inventory.json, src/agentic_workspace/contracts/python_runtime_projection_inventory.json, src/agentic_workspace/contracts/schemas/command_package_ir.schema.json, src/agentic_workspace/contracts/workspace_defaults/payload.json, pyproject.toml, tests/test_generated_command_package_proof_runner.py, generated/memory/python/**, generated/workspace/python/**, generated/typescript/memory-cli/src/commandPackage.ts, generated/typescript/workspace-cli/src/commandPackage.ts",
+    "changed surfaces": "command package IR/contracts, generated workspace/memory packages, checker/tests, workspace defaults source payload storage, planning execplan/state",
+    "validations run": "uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/generate/generate_command_adapters.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python packages/command-generation/tests/primitive_conformance.py; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_workspace_defaults_cli.py tests/test_contract_tooling.py -q; uv run agentic-memory status --target .; uv run agentic-memory status --target . --verbose --format json; uv run agentic-workspace defaults; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "result for continuation": "P1 child lane ready for PR; #892 remains open for remaining codegen epic work.",
+    "next step": "Document under issues, commit, push, create PR, and watch CI."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; limited to P1 child issues and generated artifacts needed by those contracts",
+    "proof status": "focused proof passed locally",
+    "intent served": "yes for P1 lane; parent #892 intentionally remains open",
+    "config compliance": "AW start/implement/summary/doctor used; delegation decision recorded after reusable worker triage",
+    "misinterpretation risk": "low; subagent initially exposed that #1008/#1004 were not fully closed, and local implementation corrected that",
+    "follow-on decision": "#892 remains continuation owner"
+  },
+  "proof_report": {
+    "validation proof": "uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/generate/generate_command_adapters.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python packages/command-generation/tests/primitive_conformance.py; uv run python scripts/check/check_contract_tooling_surfaces.py; uv run pytest tests/test_generated_command_package_proof_runner.py tests/test_workspace_defaults_cli.py tests/test_contract_tooling.py -q; uv run agentic-memory status --target .; uv run agentic-memory status --target . --verbose --format json; uv run agentic-workspace defaults; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "All listed focused proof commands passed locally except CI is still remote pending until PR."
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement P1 lanes in full with discretion for stale/superseded issues and document changes under issues.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "P1 child lane #1008 #1004 #1003 #999 #972 implemented and locally validated; #892 parent remains open.",
+    "unsolved intent passed to": "#892 / remaining non-P1 codegen epic lanes"
+  },
+  "execution_summary": {
+    "outcome delivered": "P1 codegen lane implemented and validated locally.",
+    "validation confirmed": "yes, via focused pytest, static proof, primitive conformance, contract tooling, generation freshness, and smoke commands",
+    "follow-on routed to": "#892 / remaining non-P1 codegen epic lanes",
+    "post-work posterity capture": "GitHub issue comments pending before PR publication",
+    "knowledge promoted (Memory/Docs/Config)": "No durable memory note yet; dogfooding signal to report: AW scaffold/changed-path planning warnings lagged actual active plan status until delegation decision was recorded.",
+    "resume from": "issue documentation and PR publication"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Source compact-answer helpers are shared by defaults/proof/ownership/report selectors and must not be deleted when extracting the defaults payload.",
+    "motivation worth preserving": "Prevents broad payload extraction from breaking source-owned selector surfaces.",
+    "canonical owner now": "current PR tests/checks",
+    "promotion trigger": "If compact-answer helper ownership changes again, move it behind a smaller shared runtime utility.",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "issue-scoped implementation only",
+    "target scope": "#892 child lane",
+    "proposed durable intent": "Prevents broad payload extraction from breaking source-owned selector surfaces.",
+    "confidence": "medium",
+    "needs review": "False",
+    "owner surface": "#892"
+  },
+  "closure_check": {
+    "closeout scope": "lane",
+    "slice status": "complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "The P1 child lane is complete, but #892 is the parent epic and still owns remaining non-P1/codegen-extraction work.",
+    "evidence carried forward": "Generated package proof, primitive conformance, contract tooling, defaults tests, and memory/defaults smoke commands passed locally.",
+    "reopen trigger": "CI failure, PR review comment, or evidence that a P1 child still depends on source fallback behavior."
+  },
+  "improvement_signal_review": {
+    "status": "signals_routed",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [
+      "AW implement reported \u201cCreate or promote an active execplan\u201d even while the active execplan existed; the real missing item was a delegation decision.",
+      "The reusable-worker result arrived after local implementation had started, making it useful but not smoothly synchronized with the orchestrator loop."
+    ],
+    "signals fixed": [],
+    "signals routed": [
+      "Report lesser dogfooding findings in final/issue comments; no new issue requested."
+    ],
+    "signals dismissed": [
+      "Generic reuse-pressure duplicate helper hints were not actionable for this generated/test-heavy slice."
+    ],
+    "next owner": "dogfooding feedback / future AW workflow tuning"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Report lesser dogfooding findings in final/issue comments; no new issue requested.",
+          "owner": "",
+          "source": "improvement_signal_review.signals routed"
+        },
+        {
+          "summary": "Generic reuse-pressure duplicate helper hints were not actionable for this generated/test-heavy slice.",
+          "owner": "",
+          "source": "improvement_signal_review.signals dismissed"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "#892 remains open for remaining non-P1/codegen-extraction work.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "No durable memory note yet; dogfooding signal to report: AW scaffold/changed-path planning warnings lagged actual active plan status until delegation decision was recorded.",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "Document implementation decisions under #1008, #1004, #1003, #999, #972, and parent #892 before PR publication.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-05-22: Scaffolded by agentic-planning new-plan.",
+    "2026-05-22: Recorded delegation decision route=delegate-exploration.",
+    "2026-05-22: Completed P1 codegen lane implementation; #892 remains parent continuation."
+  ],
+  "delegated_judgment": {
+    "requested outcome": "Implement P1 codegen lanes #1008, #1004, #1003, #999, and #972 under parent #892.",
+    "hard constraints": "Keep scope to P1 codegen completion issues; do not close #892 parent or implement lower-priority/codegen-extraction lanes.",
+    "agent may decide locally": "Decide whether stale child issues are superseded, but document the decision under each GitHub issue and validate generated artifacts.",
+    "escalate when": "A fix requires changing non-P1 lanes, broad command-generation extraction, or parent #892 completion semantics."
+  }
+}

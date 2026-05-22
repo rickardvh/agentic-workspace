@@ -213,10 +213,11 @@ def _load_workspace_operation_config(*args: Any, **kwargs: Any) -> Any:
     return source_function(*args, **kwargs)
 
 
-def _load_workspace_operation_defaults(*args: Any, **kwargs: Any) -> Any:
-    from agentic_workspace.workspace_runtime_primitives import _load_workspace_operation_defaults as source_function
+def _load_workspace_operation_defaults(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> dict[str, Any]:
+    from .resources import find_resource_root, read_json_object
 
-    return source_function(*args, **kwargs)
+    resource_root = find_resource_root(__file__, [('_contracts', 'payload.json')])
+    return read_json_object(resource_root, 'payload.json')
 
 
 def _load_workspace_operation_system_intent_config(*args: Any, **kwargs: Any) -> Any:

@@ -435,8 +435,17 @@
                           "enum": [
                             "target_root_resolve",
                             "sectioned_payload_select",
+                            "json_resource_load",
                             "json_output_with_source_fallback"
                           ]
+                        },
+                        "generated_root": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "required_marker": {
+                          "type": "string",
+                          "minLength": 1
                         },
                         "payload_value": {
                           "type": "string",

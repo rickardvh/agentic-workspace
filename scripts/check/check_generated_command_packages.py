@@ -137,17 +137,18 @@ REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE = {
     "filesystem.glob",
     "json.parse",
     "payload.assemble",
+    "payload.status",
     "payload.verify",
     "output.emit",
     "output.emit.install-result",
 }
-PYTHON_MODULE_SOURCE_EXECUTABLE_MARKERS = {
-    "parser construction": ("argparse.ArgumentParser", ".add_subparsers(", ".add_parser("),
-    "command parsing": (".parse_args(",),
-    "console entrypoint": ("def main(",),
-    "generated runtime dispatch": ("run_generated_command", "supports_generated_command", "_GENERATED_RUNTIME_HANDLERS"),
-    "runtime fallback dispatch": ("runtime_main", "_run_generated_cli_package_if_supported"),
-    "generic operation executor": ("def run_operation_ir(", "run_operation_steps("),
+PYTHON_EXECUTABLE_DISPATCH_NAMES = {
+    "run_generated_command": "generated runtime dispatch",
+    "supports_generated_command": "generated runtime dispatch",
+    "_GENERATED_RUNTIME_HANDLERS": "generated runtime dispatch",
+    "runtime_main": "runtime fallback dispatch",
+    "_run_generated_cli_package_if_supported": "runtime fallback dispatch",
+    "run_operation_steps": "generic operation executor",
 }
 PYTHON_SHIPPED_MODULE_SOURCE_ROOTS = (
     "src/agentic_workspace/",
@@ -1150,9 +1151,7 @@ def _validate_full_python_completion_executable_ownership(ir: dict[str, object])
         if not path.is_file():
             continue
         text = path.read_text(encoding="utf-8")
-        matched_categories = sorted(
-            category for category, markers in PYTHON_MODULE_SOURCE_EXECUTABLE_MARKERS.items() if any(marker in text for marker in markers)
-        )
+        matched_categories = _python_executable_behavior_categories(text)
         if matched_categories:
             errors.append(
                 "command_package_ir.json cannot claim full Python generated CLI completion while shipped module "
@@ -2048,6 +2047,52 @@ def _source_tree_python_files() -> list[str]:
     return sorted(paths)
 
 
+def _attribute_name(node: ast.AST) -> str:
+    parts: list[str] = []
+    current: ast.AST | None = node
+    while isinstance(current, ast.Attribute):
+        parts.append(current.attr)
+        current = current.value
+    if isinstance(current, ast.Name):
+        parts.append(current.id)
+    return ".".join(reversed(parts))
+
+
+def _python_executable_behavior_categories(text: str) -> list[str]:
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return ["unparseable-python-source"]
+
+    categories: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef):
+            if node.name == "main":
+                categories.add("console entrypoint")
+            if node.name == "run_operation_ir":
+                categories.add("generic operation executor")
+            continue
+        if isinstance(node, ast.Call):
+            function_name = _attribute_name(node.func)
+            if function_name == "argparse.ArgumentParser":
+                categories.add("parser construction")
+            elif function_name.endswith(".add_subparsers") or function_name.endswith(".add_parser"):
+                categories.add("subparser ownership")
+            elif function_name.endswith(".parse_args"):
+                categories.add("command parsing")
+            elif function_name in PYTHON_EXECUTABLE_DISPATCH_NAMES:
+                categories.add(PYTHON_EXECUTABLE_DISPATCH_NAMES[function_name])
+            continue
+        if isinstance(node, ast.Name) and node.id in PYTHON_EXECUTABLE_DISPATCH_NAMES:
+            categories.add(PYTHON_EXECUTABLE_DISPATCH_NAMES[node.id])
+        elif isinstance(node, ast.Attribute):
+            attribute_name = _attribute_name(node)
+            short_name = attribute_name.rsplit(".", 1)[-1]
+            if short_name in PYTHON_EXECUTABLE_DISPATCH_NAMES:
+                categories.add(PYTHON_EXECUTABLE_DISPATCH_NAMES[short_name])
+    return sorted(categories)
+
+
 def _validate_python_shipped_source_executable_retirement() -> list[str]:
     errors: list[str] = []
     tracked_sources = _tracked_python_source_files()
@@ -2062,9 +2107,7 @@ def _validate_python_shipped_source_executable_retirement() -> list[str]:
         if not path.is_file():
             continue
         text = path.read_text(encoding="utf-8")
-        matched_categories = sorted(
-            category for category, markers in PYTHON_MODULE_SOURCE_EXECUTABLE_MARKERS.items() if any(marker in text for marker in markers)
-        )
+        matched_categories = _python_executable_behavior_categories(text)
         if matched_categories:
             errors.append(
                 "tracked shipped Python source must stay retired from generated CLI executable ownership; "
@@ -2218,6 +2261,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
     portable_primitive_operations = {
         "memory.list-files.report",
         "memory.list-skills.report",
+        "memory.status.report",
         "memory.verify-payload.report",
         "planning.list-files.report",
     }
@@ -2311,7 +2355,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
             or "json.dumps(_serialise_value(values['result']), indent=2)" not in memory_runtime_text
         ):
             errors.append("generated memory runtime facade must emit dict JSON through generated-local code before source fallback")
-        for function_name in ("_load_memory_bootstrap_doctor", "_load_memory_bootstrap_status"):
+        for function_name in ("_load_memory_bootstrap_doctor",):
             function_marker = f"def {function_name}(*args: Any, **kwargs: Any) -> Any:"
             if function_marker not in memory_runtime_text:
                 errors.append(f"generated memory runtime facade must retain {function_name} source fallback for verbose/text behavior")
@@ -2319,6 +2363,8 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
             function_text = memory_runtime_text.split(function_marker, 1)[1].split("\ndef ", 1)[0]
             if "_tiny_lifecycle_payload_from_toml_table_counts(" in function_text:
                 errors.append(f"{function_name} JSON fast path must live in portable operation IR, not the generated memory runtime facade")
+        if "_load_memory_bootstrap_status" in memory_runtime_text:
+            errors.append("generated memory runtime facade must not retain retired memory status source fallback")
     if "_load_memory_promotion_report" in memory_runtime_text:
         errors.append("generated memory runtime facade must not keep the retired promotion-report runtime delegate")
     report_function_marker = "def _load_memory_report(*args: Any, **kwargs: Any) -> Any:"

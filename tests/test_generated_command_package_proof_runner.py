@@ -296,6 +296,28 @@ def test_memory_list_commands_are_direct_generated_python_projections() -> None:
     errors = checker._validate_direct_generated_python_command_projection()
 
     assert errors == []
+    list_files = (checker.REPO_ROOT / "generated/memory/python/commands/memory_list_files_report.py").read_text(encoding="utf-8")
+    list_skills = (checker.REPO_ROOT / "generated/memory/python/commands/memory_list_skills_report.py").read_text(encoding="utf-8")
+    assert "packages/memory/bootstrap" not in list_files
+    assert "packages/memory/skills" not in list_skills
+    assert "PAYLOAD_ROOT_CANDIDATES = (('_payload', 'AGENTS.template.md'),)" in list_files
+    assert "SKILLS_ROOT_CANDIDATES = (('_skills', 'REGISTRY.json'),)" in list_skills
+
+
+def test_memory_status_has_no_source_runtime_status_fallback() -> None:
+    checker = _load_checker()
+    command_package = json.loads((checker.REPO_ROOT / "generated/memory/python/command_package.json").read_text(encoding="utf-8"))
+    status_command = next(command for command in command_package["commands"] if command["adapter_id"] == "memory.status.cli")
+
+    assert "memory.bootstrap.status.load" not in status_command["runtime_binding"]["primitive_refs"]
+
+    operation = json.loads((checker.REPO_ROOT / "generated/memory/python/operations/memory.status.report.json").read_text(encoding="utf-8"))
+    assert "memory.bootstrap.status.load" not in json.dumps(operation)
+
+    runtime = (checker.REPO_ROOT / "generated/memory/python/primitives/memory_runtime.py").read_text(encoding="utf-8")
+    executor = (checker.REPO_ROOT / "generated/memory/python/primitives/operation_executor.py").read_text(encoding="utf-8")
+    assert "_load_memory_bootstrap_status" not in runtime
+    assert "_handle_memory_bootstrap_status_load" not in executor
 
 
 def test_generated_python_conformance_classifies_native_crashes(monkeypatch) -> None:
@@ -721,6 +743,19 @@ def test_static_generated_package_proof_rejects_full_completion_with_product_run
     )
 
 
+def test_generated_workspace_defaults_loader_uses_generated_resource() -> None:
+    checker = _load_checker()
+    runtime_path = checker.REPO_ROOT / "generated" / "workspace" / "python" / "primitives" / "workspace_runtime.py"
+    text = runtime_path.read_text(encoding="utf-8")
+    start = text.index("def _load_workspace_operation_defaults")
+    end = text.index("\ndef _load_workspace_operation_system_intent_config", start)
+    loader = text[start:end]
+
+    assert "read_json_object(resource_root, 'payload.json')" in loader
+    assert "agentic_workspace.workspace_runtime_primitives import _load_workspace_operation_defaults" not in loader
+    assert (checker.REPO_ROOT / "generated" / "workspace" / "python" / "_contracts" / "payload.json").is_file()
+
+
 def test_static_generated_package_proof_rejects_full_completion_when_runtime_outputs_are_not_rendered(monkeypatch) -> None:
     checker = _load_checker()
     ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
@@ -837,6 +872,31 @@ def test_static_generated_package_proof_rejects_shipped_source_cli_backslide(mon
     errors = checker._validate_python_shipped_source_executable_retirement()
 
     assert any(backslid_source in error and "parser construction" in error for error in errors)
+
+
+def test_static_generated_package_proof_uses_behavior_detection_not_plain_keywords(monkeypatch) -> None:
+    checker = _load_checker()
+    harmless_source = "src/agentic_workspace/harmless_notes.py"
+    original_read_text = checker.Path.read_text
+    original_is_file = checker.Path.is_file
+
+    def fake_read_text(self, *args, **kwargs):
+        if self.as_posix().endswith(harmless_source):
+            return 'TEXT = "argparse.ArgumentParser and def main are only prose here"\n'
+        return original_read_text(self, *args, **kwargs)
+
+    def fake_is_file(self):
+        if self.as_posix().endswith(harmless_source):
+            return True
+        return original_is_file(self)
+
+    monkeypatch.setattr(checker, "_tracked_python_source_files", lambda: [harmless_source])
+    monkeypatch.setattr(checker.Path, "read_text", fake_read_text)
+    monkeypatch.setattr(checker.Path, "is_file", fake_is_file)
+
+    errors = checker._validate_python_shipped_source_executable_retirement()
+
+    assert errors == []
 
 
 def test_static_generated_package_proof_accepts_current_shipped_source_retirement() -> None:
