@@ -11496,13 +11496,32 @@ def archive_execplan(
             has_record=has_record,
         )
         if archive_size_warning is not None:
-            result.warnings.append(archive_size_warning)
-            result.add(
-                "manual review",
-                destination_record,
-                "archive record would exceed the structured-file inventory max_bytes guardrail before write",
-            )
-            return result
+            if apply_cleanup:
+                result.warnings.append(
+                    {
+                        "warning_class": "archive_retention_skipped_by_size_guardrail",
+                        "path": archive_size_warning["path"],
+                        "message": (
+                            f"{archive_size_warning['message']} Completed-plan cleanup will continue without retaining "
+                            "the oversized archive record because closeout distillation is the canonical record."
+                        ),
+                    }
+                )
+                result.add(
+                    "retention skipped",
+                    destination_record,
+                    "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead",
+                )
+                retain_archive = False
+            else:
+                archive_size_warning["message"] += " Rerun without --retain-archive to close after distillation instead."
+                result.warnings.append(archive_size_warning)
+                result.add(
+                    "manual review",
+                    destination_record,
+                    "archive record would exceed the structured-file inventory max_bytes guardrail before write; rerun without --retain-archive to close after distillation",
+                )
+                return result
 
     if dry_run:
         _add_closeout_distillation_actions(
