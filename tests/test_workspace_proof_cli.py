@@ -193,6 +193,7 @@ def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
         "target_proof_capabilities",
         "manual_verification",
         "warnings",
+        "intent_proof",
         "detail_command",
         "proof_route_decision",
     }
@@ -1214,6 +1215,29 @@ def test_proof_changed_selector_includes_schema_reference_docs_for_workspace_sch
     assert options["claim-work-complete"]["allowed"] is False
     assert options["close-parent-lane"]["allowed"] is False
     assert options["stop-with-status"]["allowed"] is True
+
+
+def test_proof_changed_surfaces_compact_intent_proof_prompt(capsys) -> None:
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)
+    intent_proof = answer["intent_proof"]
+    assert intent_proof["status"] == "needs-agent-judgment"
+    assert intent_proof["regression_only_risk"] == "possible"
+    assert intent_proof["suggested_dimensions"]
+    assert "question" in intent_proof
+    assert "proof strength" not in json.dumps(answer["required_commands"]).lower()
 
 
 def test_proof_changed_selector_includes_planning_schema_reference_wrapper(capsys) -> None:

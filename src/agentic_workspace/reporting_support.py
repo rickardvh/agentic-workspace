@@ -269,6 +269,8 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
         package_evidence = package_evidence if isinstance(package_evidence, dict) else {}
         intent_check = answer.get("intent_satisfaction_check", {})
         intent_check = intent_check if isinstance(intent_check, dict) else {}
+        intent_proof_check = answer.get("intent_proof_check", {})
+        intent_proof_check = intent_proof_check if isinstance(intent_proof_check, dict) else {}
         terminal_action = answer.get("terminal_action", {})
         terminal_action = terminal_action if isinstance(terminal_action, dict) else {}
         durable_action = answer.get("durable_residue_action", {})
@@ -292,6 +294,11 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
             "checks": {
                 "package_workflow_evidence": compact_closeout_check(package_evidence),
                 "intent_satisfaction": compact_closeout_check(intent_check),
+                "intent_proof": {
+                    key: intent_proof_check.get(key)
+                    for key in ("status", "trust", "claim_boundary", "warning")
+                    if key in intent_proof_check
+                },
             },
             "durable_residue_action": {
                 key: durable_action.get(key) for key in ("action", "summary", "command", "risk", "next_proof") if key in durable_action

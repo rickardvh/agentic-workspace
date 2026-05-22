@@ -7,6 +7,7 @@ to generated/workspace/python/cli.py.
 from __future__ import annotations
 
 import argparse
+import ast
 import contextlib
 import copy
 import difflib
@@ -7263,6 +7264,7 @@ def _closeout_completion_options(
     strict_gate: dict[str, Any],
     intent_check: dict[str, Any],
     acceptance_reconciliation: dict[str, Any],
+    intent_proof_check: dict[str, Any] | None = None,
     durable_residue_action: dict[str, Any],
     lower_trust_closeout_count: int,
     cli_invoke: str,
@@ -7285,6 +7287,10 @@ def _closeout_completion_options(
     strict_blocking = bool(strict_gate.get("blocking"))
     intent_trust = str(intent_check.get("trust", "")).strip().lower()
     acceptance_trust = str(acceptance_reconciliation.get("trust", "")).strip().lower()
+    intent_proof_check = intent_proof_check if isinstance(intent_proof_check, dict) else {}
+    intent_proof_status = str(intent_proof_check.get("status", "not_recorded")).strip().lower() or "not_recorded"
+    intent_proof_supports_work = intent_proof_status in {"representative", "sufficient_for_claim"}
+    intent_proof_needs_review = intent_proof_status == "needs_review"
     larger_closure = closure_scope.get("larger_intent_closure", {})
     larger_closure = larger_closure if isinstance(larger_closure, dict) else {}
     larger_status = str(larger_closure.get("status", "")).strip().lower()
@@ -7329,15 +7335,27 @@ def _closeout_completion_options(
         completion_blockers.append("intent_satisfaction")
     if larger_intent_open and not continuation_owner:
         completion_blockers.append("continuation_owner")
+    if not intent_proof_supports_work:
+        completion_blockers.append("intent_proof")
 
-    claim_slice_allowed = proof_achieved and (not strict_blocking) and acceptance_ok and not residue_required
-    claim_work_allowed = claim_slice_allowed and intent_satisfied and (not larger_intent_open)
+    slice_blockers = [
+        field
+        for field in completion_blockers
+        if field not in {"intent_satisfaction", "intent_proof"} or intent_proof_status == "needs_review"
+    ]
+    claim_slice_allowed = (
+        proof_achieved and (not strict_blocking) and acceptance_ok and not residue_required and not intent_proof_needs_review
+    )
+    claim_work_allowed = claim_slice_allowed and intent_satisfied and (not larger_intent_open) and intent_proof_supports_work
     close_parent_allowed = claim_work_allowed and close_evidence
     route_residue_command = str(durable_residue_action.get("command", "")) or _command_with_cli_invoke(
         command="agentic-workspace report --target ./repo --section closeout_trust --format json", cli_invoke=cli_invoke
     )
     request_review_allowed = (
-        status in {"unavailable", "invalid"} or intent_trust == "needs-review" or str(strict_gate.get("status", "")) == "requires-review"
+        status in {"unavailable", "invalid"}
+        or intent_trust == "needs-review"
+        or intent_proof_needs_review
+        or str(strict_gate.get("status", "")) == "requires-review"
     )
     return [
         _completion_option(
@@ -7353,7 +7371,7 @@ def _closeout_completion_options(
             why="slice proof and closeout evidence support a bounded completion claim"
             if claim_slice_allowed
             else "slice completion is blocked until proof, strict closeout, acceptance, and residue evidence are reconciled",
-            blocking_fields=[field for field in completion_blockers if field != "intent_satisfaction"] or None,
+            blocking_fields=slice_blockers or None,
         ),
         _completion_option(
             "claim-work-complete",
@@ -7494,6 +7512,7 @@ def _report_closeout_trust_payload(
         gate = strict_gate(trust="unavailable", reason="planning module is not installed", active_planning_record=False)
         intent_check = _intent_satisfaction_check_payload(planning_report={}, target_root=target_root)
         acceptance_reconciliation = _acceptance_criteria_reconciliation_payload(planning_report={})
+        intent_proof_check = _intent_proof_check_payload(planning_report={}, target_root=target_root)
         residue_action = durable_residue_action(trust="unavailable")
         return {
             "status": "unavailable",
@@ -7502,6 +7521,7 @@ def _report_closeout_trust_payload(
             "package_workflow_evidence": _package_workflow_evidence_payload(planning_report={}),
             "intent_satisfaction_check": intent_check,
             "acceptance_criteria_reconciliation": acceptance_reconciliation,
+            "intent_proof_check": intent_proof_check,
             "historical_review_artifacts": _historical_review_artifacts_policy(
                 planning_report={}, intent_validation={}, target_root=target_root
             ),
@@ -7515,6 +7535,7 @@ def _report_closeout_trust_payload(
                 strict_gate=gate,
                 intent_check=intent_check,
                 acceptance_reconciliation=acceptance_reconciliation,
+                intent_proof_check=intent_proof_check,
                 durable_residue_action=residue_action,
                 lower_trust_closeout_count=1,
                 cli_invoke=cli_invoke,
@@ -7525,6 +7546,7 @@ def _report_closeout_trust_payload(
         gate = strict_gate(trust="unavailable", reason="planning intent validation is unavailable", active_planning_record=False)
         intent_check = _intent_satisfaction_check_payload(planning_report=planning_report, target_root=target_root)
         acceptance_reconciliation = _acceptance_criteria_reconciliation_payload(planning_report=planning_report)
+        intent_proof_check = _intent_proof_check_payload(planning_report=planning_report, target_root=target_root)
         residue_action = durable_residue_action(trust="unavailable")
         return {
             "status": "unavailable",
@@ -7533,6 +7555,7 @@ def _report_closeout_trust_payload(
             "package_workflow_evidence": _package_workflow_evidence_payload(planning_report=planning_report),
             "intent_satisfaction_check": intent_check,
             "acceptance_criteria_reconciliation": acceptance_reconciliation,
+            "intent_proof_check": intent_proof_check,
             "historical_review_artifacts": _historical_review_artifacts_policy(
                 planning_report=planning_report, intent_validation={}, target_root=target_root
             ),
@@ -7546,6 +7569,7 @@ def _report_closeout_trust_payload(
                 strict_gate=gate,
                 intent_check=intent_check,
                 acceptance_reconciliation=acceptance_reconciliation,
+                intent_proof_check=intent_proof_check,
                 durable_residue_action=residue_action,
                 lower_trust_closeout_count=1,
                 cli_invoke=cli_invoke,
@@ -7565,6 +7589,7 @@ def _report_closeout_trust_payload(
     package_workflow_evidence = _package_workflow_evidence_payload(planning_report=planning_report)
     intent_satisfaction_check = _intent_satisfaction_check_payload(planning_report=planning_report, target_root=target_root)
     acceptance_reconciliation = _acceptance_criteria_reconciliation_payload(planning_report=planning_report)
+    intent_proof_check = _intent_proof_check_payload(planning_report=planning_report, target_root=target_root)
     active_planning_record = package_workflow_evidence.get("status") == "present"
     package_absence_signals: list[str] = []
     if package_workflow_evidence.get("status") == "present" and package_workflow_evidence.get("trust") == "lower-trust":
@@ -7617,6 +7642,7 @@ def _report_closeout_trust_payload(
         "package_workflow_evidence": package_workflow_evidence,
         "intent_satisfaction_check": intent_satisfaction_check,
         "acceptance_criteria_reconciliation": acceptance_reconciliation,
+        "intent_proof_check": intent_proof_check,
         "historical_review_artifacts": _historical_review_artifacts_policy(
             planning_report=planning_report, intent_validation=intent_validation, target_root=target_root
         ),
@@ -7628,6 +7654,7 @@ def _report_closeout_trust_payload(
             strict_gate=gate,
             intent_check=intent_satisfaction_check,
             acceptance_reconciliation=acceptance_reconciliation,
+            intent_proof_check=intent_proof_check,
             durable_residue_action=residue_action,
             lower_trust_closeout_count=effective_lower_trust_count,
             cli_invoke=cli_invoke,
@@ -8152,6 +8179,7 @@ def _intent_satisfaction_check_payload(*, planning_report: dict[str, Any], targe
         }
     intent_continuity = planning_record.get("intent_continuity", {})
     required_continuation = planning_record.get("required_continuation", {})
+    raw_planning_record = _raw_active_planning_record_for_closeout(planning_record=planning_record, target_root=target_root)
     hierarchy_contract = active.get("hierarchy_contract", {}) if isinstance(active, dict) else {}
     resumable_contract = active.get("resumable_contract", {}) if isinstance(active, dict) else {}
     hierarchy_required = hierarchy_contract.get("required_continuation", {}) if isinstance(hierarchy_contract, dict) else {}
@@ -8159,6 +8187,10 @@ def _intent_satisfaction_check_payload(*, planning_report: dict[str, Any], targe
         intent_continuity = {}
     if not isinstance(required_continuation, dict):
         required_continuation = {}
+    if not intent_continuity and isinstance(raw_planning_record.get("intent_continuity"), dict):
+        intent_continuity = raw_planning_record["intent_continuity"]
+    if not required_continuation and isinstance(raw_planning_record.get("required_continuation"), dict):
+        required_continuation = raw_planning_record["required_continuation"]
     if not isinstance(hierarchy_required, dict):
         hierarchy_required = {}
     if not intent_continuity and hierarchy_required:
@@ -8186,9 +8218,13 @@ def _intent_satisfaction_check_payload(*, planning_report: dict[str, Any], targe
     proof_report = planning_record.get("proof_report", {})
     if not isinstance(proof_report, dict):
         proof_report = {}
+    if not proof_report and isinstance(raw_planning_record.get("proof_report"), dict):
+        proof_report = raw_planning_record["proof_report"]
     closure_check = planning_record.get("closure_check", {})
     if not isinstance(closure_check, dict):
         closure_check = {}
+    if not closure_check and isinstance(raw_planning_record.get("closure_check"), dict):
+        closure_check = raw_planning_record["closure_check"]
     hierarchy_closure = hierarchy_contract.get("closure_check", {}) if isinstance(hierarchy_contract, dict) else {}
     if not closure_check and isinstance(hierarchy_closure, dict):
         closure_check = hierarchy_closure
@@ -8323,6 +8359,109 @@ def _acceptance_criteria_reconciliation_payload(*, planning_report: dict[str, An
             "planning.active.planning_record.proof_expectations",
             "planning.active.planning_record.proof_report",
             "planning.active.planning_record.closure_check",
+        ],
+    }
+
+
+def _raw_active_planning_record_for_closeout(*, planning_record: dict[str, Any], target_root: Path | None) -> dict[str, Any]:
+    if target_root is None:
+        return {}
+    task = planning_record.get("task", {}) if isinstance(planning_record, dict) else {}
+    surface = str(task.get("surface", "")).strip() if isinstance(task, dict) else ""
+    if not surface:
+        active_summary = _fast_planning_active_summary(target_root=target_root)
+        surface = str(active_summary.get("active_execplan", "")).strip()
+    if not surface:
+        return {}
+    try:
+        target_resolved = target_root.resolve()
+        record_path = (target_root / surface).resolve()
+        record_path.relative_to(target_resolved)
+    except (OSError, ValueError):
+        return {}
+    if record_path.suffix.lower() != ".json" or not record_path.is_file():
+        return {}
+    try:
+        payload = json.loads(record_path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _intent_proof_check_payload(*, planning_report: dict[str, Any], target_root: Path | None = None) -> dict[str, Any]:
+    active = planning_report.get("active", {}) if isinstance(planning_report, dict) else {}
+    planning_record = active.get("planning_record", {}) if isinstance(active, dict) else {}
+    planning_record = planning_record if isinstance(planning_record, dict) else {}
+    raw_planning_record = _raw_active_planning_record_for_closeout(planning_record=planning_record, target_root=target_root)
+    if planning_record.get("status") != "present" and not raw_planning_record:
+        return {
+            "kind": "agentic-workspace/intent-proof-check/v1",
+            "status": "not_recorded",
+            "claim_boundary": "work",
+            "trust": "missing",
+            "warning": "no active planning record exposes intent-proof strength",
+            "rule": "Proof execution and intent-proof strength are separate; broad completion claims need representative or sufficient intent proof.",
+        }
+    proof_report = planning_record.get("proof_report", {})
+    proof_report = proof_report if isinstance(proof_report, dict) else {}
+    raw_proof_report = raw_planning_record.get("proof_report", {}) if isinstance(raw_planning_record, dict) else {}
+    raw_proof_report = raw_proof_report if isinstance(raw_proof_report, dict) else {}
+    raw_intent_proof = planning_record.get(
+        "intent_proof",
+        proof_report.get(
+            "intent_proof",
+            proof_report.get(
+                "intent proof",
+                raw_planning_record.get(
+                    "intent_proof",
+                    raw_proof_report.get("intent_proof", raw_proof_report.get("intent proof", {})),
+                ),
+            ),
+        ),
+    )
+    if isinstance(raw_intent_proof, str):
+        try:
+            parsed = json.loads(raw_intent_proof)
+        except json.JSONDecodeError:
+            try:
+                parsed = ast.literal_eval(raw_intent_proof)
+            except (SyntaxError, ValueError):
+                parsed = {"status": raw_intent_proof}
+        raw_intent_proof = parsed
+    raw_intent_proof = raw_intent_proof if isinstance(raw_intent_proof, dict) else {}
+    raw_status = str(raw_intent_proof.get("status", "")).strip().lower().replace("-", "_")
+    status = (
+        raw_status
+        if raw_status in {"not_recorded", "regression_only", "representative", "sufficient_for_claim", "needs_review"}
+        else "not_recorded"
+    )
+    claim_boundary = str(raw_intent_proof.get("claim_boundary", "work")).strip() or "work"
+    trust = "normal" if status in {"representative", "sufficient_for_claim"} else "review" if status == "needs_review" else "weak"
+    warning = ""
+    if status == "not_recorded":
+        warning = "proof execution may be recorded, but intent-proof strength was not recorded"
+    elif status == "regression_only":
+        warning = "proof may cover a local regression without representative user, consumer, boundary, or negative behavior"
+    elif status == "needs_review":
+        warning = "human/domain review is required to judge whether proof covers the intended behavior"
+    return {
+        "kind": "agentic-workspace/intent-proof-check/v1",
+        "status": status,
+        "claim_boundary": claim_boundary,
+        "trust": trust,
+        "warning": warning,
+        "intended_behavior": [str(item) for item in _list_payload(raw_intent_proof.get("intended_behavior")) if str(item).strip()][:5],
+        "proof_dimensions": [str(item) for item in _list_payload(raw_intent_proof.get("proof_dimensions")) if str(item).strip()][:5],
+        "unproven_after_tests": [str(item) for item in _list_payload(raw_intent_proof.get("unproven_after_tests")) if str(item).strip()][
+            :5
+        ],
+        "evidence": str(raw_intent_proof.get("evidence", raw_intent_proof.get("reason", ""))),
+        "rule": "Proof execution and intent-proof strength are separate; broad completion claims need representative or sufficient intent proof.",
+        "sources": [
+            "planning.active.planning_record.intent_proof",
+            "planning.active.planning_record.proof_report.intent_proof",
+            "planning.active.task.surface.raw_execplan.intent_proof",
+            "planning.active.task.surface.raw_execplan.proof_report.intent_proof",
         ],
     }
 
@@ -12987,7 +13126,13 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
     normalized_paths = _normalize_changed_paths(changed_paths)
     config = _load_workspace_config(target_root=target_root)
     proof = (
-        _proof_selection_for_changed_paths(changed_paths=normalized_paths, target_root=target_root, include_durable_intent=False)
+        _proof_selection_for_changed_paths(
+            changed_paths=normalized_paths,
+            target_root=target_root,
+            include_durable_intent=False,
+            task_text=task_text,
+            acceptance=_task_acceptance_payload(task_text=task_text, requested_outcomes=_extract_requested_outcomes(task_text)),
+        )
         if normalized_paths
         else copy.deepcopy(implementer_template["unknown_scope_proof"])
     )
@@ -13004,6 +13149,7 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
     acceptance = task_intent["acceptance"]
     promotion_guidance = task_intent["promotion_guidance"]
     if isinstance(proof, dict):
+        proof["intent_proof"] = _intent_proof_prompt_payload(task_text=task_text, acceptance=acceptance, claim_boundary="slice")
         proof["acceptance_guidance"] = {
             "status": "present" if acceptance.get("closeout_required") else "not-task-scoped",
             "rule": acceptance.get("proof_rule", "Proof should demonstrate acceptance satisfaction, not only command success."),
@@ -13194,6 +13340,11 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "acceptance_guidance": payload.get("proof", {}).get("acceptance_guidance", {})
             if isinstance(payload.get("proof"), dict)
             else {},
+            **(
+                {"intent_proof": payload.get("proof", {}).get("intent_proof")}
+                if isinstance(payload.get("proof"), dict) and payload.get("proof", {}).get("intent_proof")
+                else {}
+            ),
             "detail_command": "agentic-workspace proof --verbose --changed <paths> --format json",
         },
         "reuse_pressure": reuse_pressure,
@@ -18946,6 +19097,10 @@ def _select_proof_payload(
 def _tiny_proof_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if payload.get("profile") == "compact-contract-answer/v1":
         answer = payload.get("answer", {})
+        include_intent_proof = False
+        if isinstance(answer, dict) and answer.get("intent_proof"):
+            required_for_intent = [str(command) for command in _list_payload(answer.get("required_commands"))]
+            include_intent_proof = not required_for_intent or not all(command.startswith("git diff --") for command in required_for_intent)
         if isinstance(answer, dict) and isinstance(answer.get("proof_next_decision"), dict):
             next_decision = dict(answer["proof_next_decision"])
             next_decision.setdefault("target", payload.get("target"))
@@ -18969,6 +19124,8 @@ def _tiny_proof_payload(payload: dict[str, Any]) -> dict[str, Any]:
                     "kind": answer.get("proof_strategy", {}).get("kind"),
                     "selection_order": answer.get("proof_strategy", {}).get("selection_order", []),
                 }
+            if include_intent_proof:
+                next_decision["intent_proof"] = answer["intent_proof"]
             next_decision.setdefault("detail_command", "agentic-workspace proof --verbose --changed <paths> --format json")
             return next_decision
         required_commands = answer.get("required_commands", []) if isinstance(answer, dict) else []
@@ -18998,6 +19155,7 @@ def _tiny_proof_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "required": primary.get("required", bool(required_commands)),
             },
             "required_commands": required_commands,
+            **({"intent_proof": answer["intent_proof"]} if include_intent_proof else {}),
             **(
                 {"proof_command_adjustments": answer["proof_command_adjustments"]}
                 if isinstance(answer, dict) and answer.get("proof_command_adjustments")
@@ -20960,6 +21118,39 @@ def _proof_execution_evidence_summary(*, declared: Any, required_commands: list[
     }
 
 
+def _intent_proof_prompt_payload(
+    *, task_text: str | None = None, acceptance: dict[str, Any] | None = None, claim_boundary: str = "slice"
+) -> dict[str, Any]:
+    requested = _extract_requested_outcomes(task_text)
+    items = acceptance.get("items", []) if isinstance(acceptance, dict) else []
+    intended_behavior = [*requested]
+    if isinstance(items, list):
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            expectation = str(item.get("expectation", "")).strip()
+            if expectation and expectation not in intended_behavior:
+                intended_behavior.append(expectation)
+            if len(intended_behavior) >= 5:
+                break
+    status = "needs-agent-judgment"
+    return {
+        "kind": "agentic-workspace/intent-proof/v1",
+        "status": status,
+        "intended_behavior": intended_behavior[:5],
+        "claim_boundary": claim_boundary,
+        "regression_only_risk": "possible",
+        "question": "What intended behavior would remain unproven if the selected proof passes?",
+        "suggested_dimensions": [
+            "representative user path",
+            "negative or boundary case",
+            "integration or consumer behavior",
+        ],
+        "unproven_after_tests": [],
+        "rule": "Intent-proof is an agent judgment prompt; AW selects proof commands but does not score test quality automatically.",
+    }
+
+
 def _proof_completion_options(*, required_commands: list[str], manual_verification: dict[str, Any] | None) -> list[dict[str, Any]]:
     options: list[dict[str, Any]] = [
         _completion_option(
@@ -21010,7 +21201,12 @@ def _proof_completion_options(*, required_commands: list[str], manual_verificati
 
 
 def _proof_selection_for_changed_paths(
-    *, changed_paths: list[str], target_root: Path | None = None, include_durable_intent: bool = True
+    *,
+    changed_paths: list[str],
+    target_root: Path | None = None,
+    include_durable_intent: bool = True,
+    task_text: str | None = None,
+    acceptance: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     defaults = _defaults_payload()
     cli_invoke = DEFAULT_CLI_INVOKE
@@ -21437,6 +21633,7 @@ def _proof_selection_for_changed_paths(
         "unavailable_commands": unavailable_commands,
         "host_policy_blocked_commands": host_policy_blocked_commands,
         "proof_execution_evidence": proof_execution_evidence,
+        "intent_proof": _intent_proof_prompt_payload(task_text=task_text, acceptance=acceptance, claim_boundary="slice"),
         "proof_route_decision": proof_route_decision,
         "proof_route_explanation": proof_route_explanation,
         "proof_next_decision": proof_next_decision,

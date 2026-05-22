@@ -1604,6 +1604,92 @@ def test_report_closeout_trust_request_review_for_ambiguous_intent(tmp_path: Pat
     assert "intent_satisfaction" in options["claim-work-complete"]["blocking_fields"]
 
 
+def test_report_closeout_trust_blocks_work_claim_for_regression_only_intent_proof(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    plan = target / ".agentic-workspace" / "planning" / "execplans" / "intent-proof.plan.json"
+    _write_json(
+        plan,
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Intent Proof",
+            "active_milestone": {"id": "intent-proof", "status": "complete"},
+            "delegated_judgment": {
+                "requested outcome": "Close intent-proof work only when proof strength supports the completion claim.",
+                "hard constraints": "Do not treat regression-only proof as enough for a broad work claim.",
+                "agent may decide locally": "Exact closeout menu wording.",
+                "escalate when": "Intent-proof strength cannot be judged from available evidence.",
+            },
+            "immediate_next_action": ["Close only if intent proof supports the claim."],
+            "completion_criteria": ["Intent proof distinguishes regression-only proof from representative proof."],
+            "validation_commands": ["uv run agentic-workspace proof --target . --format json"],
+            "intent_continuity": {
+                "larger intended outcome": "Close intent-proof work.",
+                "this slice completes the larger intended outcome": "yes",
+                "continuation surface": "none",
+            },
+            "required_continuation": {
+                "required follow-on for the larger intended outcome": "no",
+                "owner surface": "none",
+                "activation trigger": "none",
+            },
+            "execution_run": {
+                "run status": "complete",
+                "executor": "test",
+                "handoff source": "uv run agentic-workspace preflight --format json",
+                "what happened": "Used agentic-workspace report --target . --format json and proof-selected validation.",
+                "scope touched": "test",
+                "changed surfaces": "test",
+                "validations run": "uv run agentic-workspace summary --format json; uv run agentic-workspace reconcile --format json",
+                "result for continuation": "close",
+                "next step": "close",
+            },
+            "proof_report": {
+                "validation proof": "uv run agentic-workspace proof passed",
+                "acceptance reconciliation": "requested intent-proof menu -> delivered closeout report evidence -> proof passed",
+                "proof achieved now": "yes",
+                'evidence for "proof achieved" state': "focused report test fixture",
+                "intent_proof": {
+                    "status": "regression_only",
+                    "claim_boundary": "work",
+                    "intended_behavior": ["intent-proof menu"],
+                    "proof_dimensions": ["local regression"],
+                    "unproven_after_tests": ["representative user path"],
+                },
+            },
+            "closure_check": {
+                "slice status": "complete",
+                "larger-intent status": "closed",
+                "closure decision": "archive-and-close",
+                "why this decision is honest": "The implementation proof passed.",
+                "evidence carried forward": "report closeout_trust",
+                "reopen trigger": "intent proof is weak",
+            },
+        },
+    )
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        "[todo]\n"
+        "active_items = [\n"
+        "  { id = 'intent-proof', title = 'Intent proof', surface = '.agentic-workspace/planning/execplans/intent-proof.plan.json' },\n"
+        "]\n"
+        "queued_items = []\n\n"
+        "[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
+
+    closeout = json.loads(capsys.readouterr().out)["answer"]
+    assert closeout["checks"]["intent_proof"]["status"] == "regression_only"
+    options = {option["id"]: option for option in closeout["completion_options"]}
+    assert options["claim-slice-complete"]["allowed"] is True
+    assert options["claim-work-complete"]["allowed"] is False
+    assert "intent_proof" in options["claim-work-complete"]["blocking_fields"]
+
+
 def test_report_closeout_trust_requires_external_negative_invariant_reconciliation(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
@@ -1671,6 +1757,12 @@ def test_report_closeout_trust_requires_external_negative_invariant_reconciliati
             "acceptance reconciliation": "requested #970 closeout -> delivered closeout report evidence -> proof passed",
             "proof achieved now": "yes",
             'evidence for "proof achieved" state': "focused report test fixture",
+            "intent_proof": {
+                "status": "representative",
+                "claim_boundary": "work",
+                "intended_behavior": ["#970 closeout"],
+                "proof_dimensions": ["negative invariant"],
+            },
         },
         "closure_check": {
             "slice status": "active",

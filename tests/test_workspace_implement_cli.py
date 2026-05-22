@@ -286,6 +286,10 @@ def test_implement_task_file_preserves_task_intent_for_acceptance_checks(tmp_pat
     assert context["acceptance_reconciliation"]["requested_outcomes"] == ["normalize_whitespace", "sentence_summary"]
     assert context["acceptance_reconciliation"]["acceptance_item_count"] >= 2
     assert context["objective_drift"]["missing_from_changed_surface"] == ["normalize_whitespace", "sentence_summary"]
+    intent_proof = payload["proof"]["intent_proof"]
+    assert intent_proof["status"] == "needs-agent-judgment"
+    assert intent_proof["regression_only_risk"] == "possible"
+    assert {"normalize_whitespace", "sentence_summary"} <= set(intent_proof["intended_behavior"])
 
 
 def test_implement_task_text_does_not_route_broad_issue_ingestion_to_planning(tmp_path: Path, capsys) -> None:
