@@ -889,6 +889,160 @@ def test_implement_reuse_pressure_ignores_dependency_cache_definitions(tmp_path:
     assert reuse_pressure["findings"] == []
 
 
+def test_implement_reuse_pressure_surfaces_repeated_special_case(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / "src" / "sample_app" / "legacy_a.py",
+        'def route_mode(mode):\n    if mode == "legacy":\n        return "old"\n    return "new"\n',
+    )
+    _write(
+        tmp_path / "src" / "sample_app" / "legacy_b.py",
+        'def display_mode(mode):\n    if mode == "legacy":\n        return "old"\n    return "new"\n',
+    )
+    _write(
+        tmp_path / "src" / "sample_app" / "legacy_c.py",
+        'def save_mode(mode):\n    if mode == "legacy":\n        return "old"\n    return "new"\n',
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/sample_app/legacy_c.py",
+                "--select",
+                "reuse_pressure",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    reuse_pressure = json.loads(capsys.readouterr().out)["values"]["reuse_pressure"]
+    assert reuse_pressure["state"] == "abstraction_pressure"
+    finding = reuse_pressure["findings"][0]
+    assert finding["kind"] == "repeated_special_case"
+    assert finding["candidate_paths"] == ["src/sample_app/legacy_a.py", "src/sample_app/legacy_b.py"]
+
+
+def test_implement_reuse_pressure_exposes_recording_and_routing_options(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / "src" / "sample_app" / "helpers.py",
+        "def normalize_text(value):\n    return value.strip()\n",
+    )
+    _write(
+        tmp_path / "src" / "sample_app" / "text.py",
+        "def normalize_text(value):\n    return ' '.join(value.split())\n",
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/sample_app/text.py",
+                "--select",
+                "reuse_pressure",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    reuse_pressure = json.loads(capsys.readouterr().out)["values"]["reuse_pressure"]
+    options = {option["id"]: option for option in reuse_pressure["next_decision_options"]}
+    assert options["record-duplication-accepted"]["resulting_state"] == "duplication_accepted_with_reason"
+    assert "reason" in options["record-duplication-accepted"]["requires"]
+    assert options["route-extraction-follow-up"]["resulting_state"] == "extraction_deferred_with_owner"
+    assert "owner" in options["route-extraction-follow-up"]["requires"]
+    recording_options = reuse_pressure["recording_options"]
+    assert any("memory capture-note" in command for command in recording_options["accept_duplication"]["commands"])
+    assert any("planning new-plan" in command for command in recording_options["route_extraction"]["commands"])
+    assert any("memory capture-note" in command for command in recording_options["route_extraction"]["commands"])
+
+
+def test_implement_reuse_pressure_surfaces_memory_boundary_notes(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "memory" / "repo" / "manifest.toml",
+        """
+version = 1
+
+[notes.".agentic-workspace/memory/repo/decisions/helper-boundaries.md"]
+note_type = "decision"
+surfaces = ["abstraction", "reuse"]
+routes_from = ["src/sample_app/*.py"]
+""",
+    )
+    _write(
+        tmp_path / "src" / "sample_app" / "text.py",
+        "def normalize_text(value):\n    return ' '.join(value.split())\n",
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/sample_app/text.py",
+                "--select",
+                "reuse_pressure",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    reuse_pressure = json.loads(capsys.readouterr().out)["values"]["reuse_pressure"]
+    assert reuse_pressure["memory_signals"]["status"] == "matched"
+    assert reuse_pressure["memory_signals"]["matches"][0]["path"] == ".agentic-workspace/memory/repo/decisions/helper-boundaries.md"
+    assert "memory route" in reuse_pressure["memory_signals"]["route_command"]
+
+
+def test_implement_reuse_pressure_keeps_small_direct_task_unblocked(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / "src" / "sample_app" / "single.py",
+        "def parse_one(value):\n    return int(value)\n",
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/sample_app/single.py",
+                "--select",
+                "reuse_pressure,context.workflow_sufficiency",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    reuse_pressure = payload["values"]["reuse_pressure"]
+    assert reuse_pressure["state"] == "none_found"
+    assert reuse_pressure["findings"] == []
+    options = {option["id"]: option for option in reuse_pressure["next_decision_options"]}
+    assert options["continue-direct"]["allowed"] is True
+    assert options["route-extraction-follow-up"]["allowed"] is False
+    assert payload["values"]["context.workflow_sufficiency"]["decision"] == "enough-for-bounded-implementation"
+
+
 def test_implement_selector_reports_available_fields_for_missing_selector(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
 

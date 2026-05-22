@@ -12440,12 +12440,16 @@ def _reuse_pressure_payload(
             "command": _command_with_cli_invoke(
                 command="agentic-workspace implement --changed <paths> --select reuse_pressure --format json", cli_invoke=cli_invoke
             ),
+            "recording_options": _reuse_pressure_recording_options(
+                normalized_paths=normalized_paths, state="changed-paths-required", cli_invoke=cli_invoke
+            ),
         }
 
     findings: list[dict[str, Any]] = []
     for changed_path in normalized_paths:
         findings.extend(_reuse_pressure_findings_for_path(target_root=target_root, changed_path=changed_path))
     state = _reuse_pressure_state(findings)
+    recording_options = _reuse_pressure_recording_options(normalized_paths=normalized_paths, state=state, cli_invoke=cli_invoke)
     payload = {
         **base,
         "status": "checked",
@@ -12453,27 +12457,12 @@ def _reuse_pressure_payload(
         "finding_count": len(findings),
         "findings": findings[:8],
         "summary": _reuse_pressure_summary(state=state, finding_count=len(findings)),
-        "recording_options": {
-            "accept_duplication": {
-                "state": "duplication_accepted_with_reason",
-                "requires": ["reason"],
-                "owner": "final answer, closeout record, Memory, Planning, issue, docs, tests, or contracts as appropriate",
-            },
-            "route_extraction": {
-                "state": "extraction_deferred_with_owner",
-                "owner_targets": ["Planning", "GitHub issue", "Memory", "docs", "tests", "contracts"],
-                "command": _command_with_cli_invoke(
-                    command="agentic-workspace memory capture-note <slug> --summary <text> --files <changed paths> --format json",
-                    cli_invoke=cli_invoke,
-                ),
-            },
-        },
+        "memory_signals": _reuse_pressure_memory_signals(target_root=target_root, changed_paths=normalized_paths, cli_invoke=cli_invoke),
+        "recording_options": recording_options,
+        "next_decision_options": recording_options["options"],
     }
     if compact:
-        return {
-            key: payload[key]
-            for key in ("kind", "status", "state", "summary", "finding_count", "findings", "allowed_outcomes", "recording_options")
-        }
+        return _compact_reuse_pressure_payload(payload)
     return payload
 
 
@@ -12482,8 +12471,14 @@ def _reuse_pressure_findings_for_path(*, target_root: Path, changed_path: str) -
     if not path.is_file():
         return []
     if path.suffix == ".py":
-        return _reuse_pressure_python_findings(target_root=target_root, changed_path=changed_path, path=path)
-    return _reuse_pressure_surface_findings(target_root=target_root, changed_path=changed_path, path=path)
+        return [
+            *_reuse_pressure_python_findings(target_root=target_root, changed_path=changed_path, path=path),
+            *_reuse_pressure_inventory_findings(target_root=target_root, changed_path=changed_path, path=path),
+        ]
+    return [
+        *_reuse_pressure_surface_findings(target_root=target_root, changed_path=changed_path, path=path),
+        *_reuse_pressure_inventory_findings(target_root=target_root, changed_path=changed_path, path=path),
+    ]
 
 
 def _reuse_pressure_python_findings(*, target_root: Path, changed_path: str, path: Path) -> list[dict[str, Any]]:
@@ -12511,6 +12506,8 @@ def _reuse_pressure_python_findings(*, target_root: Path, changed_path: str, pat
                 "why": f"{name} is already defined elsewhere in the repository.",
             }
         )
+    special_case_findings = _repeated_special_case_findings(target_root=target_root, changed_path=changed_path, path=path, text=text)
+    findings.extend(special_case_findings)
     if findings:
         return findings
     sibling_candidates = _sibling_helper_candidates(path=path, target_root=target_root)
@@ -12524,6 +12521,61 @@ def _reuse_pressure_python_findings(*, target_root: Path, changed_path: str, pat
             }
         )
     return findings
+
+
+def _repeated_special_case_findings(*, target_root: Path, changed_path: str, path: Path, text: str) -> list[dict[str, Any]]:
+    findings: list[dict[str, Any]] = []
+    for marker in _special_case_markers(text)[:8]:
+        matches = _find_special_case_matches(target_root=target_root, marker=marker, exclude=path)
+        if not matches:
+            continue
+        state = "abstraction_pressure" if len(matches) >= 2 else "similar_pattern_candidate"
+        findings.append(
+            {
+                "state": state,
+                "changed_path": changed_path,
+                "kind": "repeated_special_case",
+                "pattern": marker,
+                "candidate_paths": matches[:5],
+                "why": "The same conditional special case appears elsewhere; consider reusing or extracting the policy.",
+            }
+        )
+    return findings
+
+
+def _special_case_markers(text: str) -> list[str]:
+    markers: list[str] = []
+    seen: set[str] = set()
+    pattern = re.compile(
+        r"""^\s*(?:if|elif)\s+[^:\n]*?(?:==|!=| in | not in )\s+(?:"[^"]+"|'[^']+'|\{[^}\n]{1,80}\}|\[[^\]\n]{1,80}\])\s*:""",
+        flags=re.MULTILINE,
+    )
+    case_pattern = re.compile(r"""^\s*case\s+(?:"[^"]+"|'[^']+')\s*:""", flags=re.MULTILINE)
+    for match in [*pattern.finditer(text), *case_pattern.finditer(text)]:
+        marker = " ".join(match.group(0).strip().split())
+        if marker in seen:
+            continue
+        seen.add(marker)
+        markers.append(marker)
+    return markers
+
+
+def _find_special_case_matches(*, target_root: Path, marker: str, exclude: Path) -> list[str]:
+    matches: list[str] = []
+    marker_pattern = re.compile(rf"^\s*{re.escape(marker)}\s*$", flags=re.MULTILINE)
+    for candidate in _iter_reuse_scan_files(target_root):
+        if candidate == exclude or candidate.suffix != ".py":
+            continue
+        try:
+            text = candidate.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        normalized = "\n".join(" ".join(line.strip().split()) for line in text.splitlines())
+        if marker_pattern.search(normalized):
+            matches.append(candidate.relative_to(target_root).as_posix())
+            if len(matches) >= 8:
+                break
+    return matches
 
 
 def _reuse_pressure_surface_findings(*, target_root: Path, changed_path: str, path: Path) -> list[dict[str, Any]]:
@@ -12543,6 +12595,40 @@ def _reuse_pressure_surface_findings(*, target_root: Path, changed_path: str, pa
             "changed_path": changed_path,
             "candidate_paths": matches,
             "why": f"Other surfaces share the filename {path.name!r}.",
+        }
+    ]
+
+
+def _reuse_pressure_inventory_findings(*, target_root: Path, changed_path: str, path: Path) -> list[dict[str, Any]]:
+    path_parts = set(path.relative_to(target_root).parts if path.is_relative_to(target_root) else path.parts)
+    if not (path_parts & {"contracts", "schemas", "generated", "commands", "primitives"}):
+        return []
+    token_candidates = [path.stem, *re.split(r"[_\-.]+", path.stem)]
+    tokens = {token.lower() for token in token_candidates if len(token) >= 5}
+    inventory_paths = [
+        target_root / "src/agentic_workspace/contracts/command_package_ir.json",
+        target_root / "src/agentic_workspace/contracts/python_runtime_projection_inventory.json",
+        target_root / "src/agentic_workspace/contracts/structured_file_inventory.json",
+    ]
+    matches: list[str] = []
+    for inventory_path in inventory_paths:
+        if not inventory_path.is_file() or inventory_path == path:
+            continue
+        try:
+            haystack = inventory_path.read_text(encoding="utf-8").lower()
+        except UnicodeDecodeError:
+            continue
+        if any(token in haystack for token in tokens):
+            matches.append(inventory_path.relative_to(target_root).as_posix())
+    if not matches:
+        return []
+    return [
+        {
+            "state": "existing_helper_candidate",
+            "changed_path": changed_path,
+            "kind": "contract_or_inventory_candidate",
+            "candidate_paths": matches[:5],
+            "why": "Generated command, primitive, schema, or contract inventories mention related names; check ownership before adding a parallel surface.",
         }
     ]
 
@@ -12597,6 +12683,223 @@ def _iter_reuse_scan_files(target_root: Path) -> list[Path]:
             continue
         files.append(path)
     return sorted(files)
+
+
+def _reuse_pressure_recording_options(*, normalized_paths: list[str], state: str, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
+    changed_arg = " ".join(normalized_paths) if normalized_paths else "<changed paths>"
+    accepted_summary = "duplication accepted for now: <reason>; owner: <owner-or-none>"
+    deferred_summary = "extraction deferred: <what should be extracted>; owner: <owner>; trigger: <when>"
+    memory_accept = _command_with_cli_invoke(
+        command=(f'agentic-workspace memory capture-note --slug <slug> --summary "{accepted_summary}" --files {changed_arg} --format json'),
+        cli_invoke=cli_invoke,
+    )
+    memory_defer = _command_with_cli_invoke(
+        command=(f'agentic-workspace memory capture-note --slug <slug> --summary "{deferred_summary}" --files {changed_arg} --format json'),
+        cli_invoke=cli_invoke,
+    )
+    planning_defer = _command_with_cli_invoke(
+        command=('agentic-workspace planning new-plan --id <id> --title "Extract <reuse boundary>" --target . --queue --format json'),
+        cli_invoke=cli_invoke,
+    )
+    memory_route = _command_with_cli_invoke(
+        command=f"agentic-workspace memory route --files {changed_arg} --format json",
+        cli_invoke=cli_invoke,
+    )
+    pressure_found = state in {"existing_helper_candidate", "similar_pattern_candidate", "abstraction_pressure"}
+    return {
+        "kind": "agentic-workspace/reuse-pressure-recording-options/v1",
+        "rule": "Record the engineering decision only when duplication or deferred extraction should survive chat.",
+        "options": [
+            {
+                "id": "continue-direct",
+                "allowed": True,
+                "resulting_state": state,
+                "why": "Reuse pressure is advisory; small direct repairs can proceed when the agent has inspected the facts.",
+            },
+            {
+                "id": "reuse-existing-helper",
+                "allowed": pressure_found,
+                "resulting_state": state,
+                "why": "Allowed when a finding points at an existing helper, pattern, primitive, schema, contract, or inventory.",
+                "blocking_fields": [] if pressure_found else ["findings"],
+            },
+            {
+                "id": "record-duplication-accepted",
+                "allowed": True,
+                "resulting_state": "duplication_accepted_with_reason",
+                "requires": ["reason"],
+                "owner": "final answer, closeout record, Memory, Planning, issue, docs, tests, or contracts as appropriate",
+                "commands": [memory_accept],
+                "why": "Use when duplication is intentional because the domain is unstable, extraction would be premature, or the boundary is not yet clear.",
+            },
+            {
+                "id": "route-extraction-follow-up",
+                "allowed": pressure_found,
+                "resulting_state": "extraction_deferred_with_owner",
+                "requires": ["owner"],
+                "owner_targets": ["Planning", "GitHub issue", "Memory", "docs", "tests", "contracts"],
+                "commands": [planning_defer, memory_defer],
+                "why": "Use when extraction should not happen in the current patch but should not be lost.",
+                "blocking_fields": [] if pressure_found else ["findings"],
+            },
+            {
+                "id": "consult-memory-route",
+                "allowed": True,
+                "resulting_state": state,
+                "commands": [memory_route],
+                "why": "Use when the changed paths may intersect durable abstraction-boundary lessons.",
+            },
+        ],
+        "accept_duplication": {
+            "state": "duplication_accepted_with_reason",
+            "requires": ["reason"],
+            "owner": "final answer, closeout record, Memory, Planning, issue, docs, tests, or contracts as appropriate",
+            "commands": [memory_accept],
+        },
+        "route_extraction": {
+            "state": "extraction_deferred_with_owner",
+            "owner_targets": ["Planning", "GitHub issue", "Memory", "docs", "tests", "contracts"],
+            "commands": [planning_defer, memory_defer],
+        },
+    }
+
+
+def _compact_reuse_pressure_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    compact_findings: list[dict[str, Any]] = []
+    for finding in payload.get("findings", [])[:4]:
+        if not isinstance(finding, dict):
+            continue
+        compact_finding = {key: finding[key] for key in ("state", "changed_path", "kind", "symbol", "pattern", "why") if key in finding}
+        candidate_paths = finding.get("candidate_paths")
+        if isinstance(candidate_paths, list):
+            compact_finding["candidate_paths"] = candidate_paths[:3]
+        compact_findings.append(compact_finding)
+    memory_signals = payload.get("memory_signals", {})
+    compact_memory = (
+        {
+            "status": memory_signals.get("status"),
+            "note_count": memory_signals.get("note_count", 0),
+            "matches": memory_signals.get("matches", [])[:2],
+            "route_command": memory_signals.get("route_command"),
+        }
+        if isinstance(memory_signals, dict)
+        else {}
+    )
+    compact_options: list[dict[str, Any]] = []
+    for option in payload.get("next_decision_options", []):
+        if not isinstance(option, dict):
+            continue
+        compact_options.append(
+            {
+                key: option[key]
+                for key in ("id", "allowed", "resulting_state", "requires", "owner_targets", "blocking_fields")
+                if key in option
+            }
+        )
+    recording_options = payload.get("recording_options", {})
+    accept_duplication = recording_options.get("accept_duplication", {}) if isinstance(recording_options, dict) else {}
+    route_extraction = recording_options.get("route_extraction", {}) if isinstance(recording_options, dict) else {}
+    return {
+        "kind": payload.get("kind"),
+        "status": payload.get("status"),
+        "state": payload.get("state"),
+        "summary": payload.get("summary"),
+        "finding_count": payload.get("finding_count", 0),
+        "findings": compact_findings,
+        "allowed_outcomes": payload.get("allowed_outcomes", []),
+        "memory_signals": compact_memory,
+        "recording_options": {
+            "accept_duplication": {
+                "state": accept_duplication.get("state"),
+                "requires": accept_duplication.get("requires", []),
+                "commands": accept_duplication.get("commands", [])[:1],
+            },
+            "route_extraction": {
+                "state": route_extraction.get("state"),
+                "owner_targets": route_extraction.get("owner_targets", []),
+                "commands": route_extraction.get("commands", [])[:2],
+            },
+        },
+        "next_decision_options": compact_options,
+    }
+
+
+def _reuse_pressure_memory_signals(*, target_root: Path, changed_paths: list[str], cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
+    route_command = _command_with_cli_invoke(
+        command=f"agentic-workspace memory route --files {' '.join(changed_paths) if changed_paths else '<changed paths>'} --format json",
+        cli_invoke=cli_invoke,
+    )
+    manifest_path = target_root / ".agentic-workspace/memory/repo/manifest.toml"
+    if not manifest_path.is_file():
+        return {
+            "status": "unavailable",
+            "note_count": 0,
+            "matches": [],
+            "route_command": route_command,
+            "capture_command": _command_with_cli_invoke(
+                command="agentic-workspace memory capture-note --slug <slug> --summary <text> --files <changed paths> --format json",
+                cli_invoke=cli_invoke,
+            ),
+        }
+    try:
+        manifest = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return {"status": "invalid-manifest", "note_count": 0, "matches": [], "route_command": route_command}
+    notes = manifest.get("notes", {})
+    if not isinstance(notes, dict):
+        return {"status": "invalid-manifest", "note_count": 0, "matches": [], "route_command": route_command}
+    matches: list[dict[str, Any]] = []
+    for note_path, raw_note in notes.items():
+        if not isinstance(note_path, str) or not isinstance(raw_note, dict):
+            continue
+        reason = _reuse_pressure_memory_match_reason(changed_paths=changed_paths, note_path=note_path, note=raw_note)
+        if reason is None:
+            continue
+        matches.append(
+            {
+                "path": note_path,
+                "note_type": raw_note.get("note_type", ""),
+                "reason": reason,
+                "surfaces": raw_note.get("surfaces", []),
+            }
+        )
+        if len(matches) >= 5:
+            break
+    return {
+        "status": "matched" if matches else "none",
+        "note_count": len(matches),
+        "matches": matches,
+        "route_command": route_command,
+        "capture_command": _command_with_cli_invoke(
+            command=(
+                "agentic-workspace memory capture-note --slug <slug> --summary "
+                '"durable reuse/abstraction-boundary lesson: <lesson>" --files '
+                f"{' '.join(changed_paths) if changed_paths else '<changed paths>'} --format json"
+            ),
+            cli_invoke=cli_invoke,
+        ),
+    }
+
+
+def _reuse_pressure_memory_match_reason(*, changed_paths: list[str], note_path: str, note: dict[str, Any]) -> str | None:
+    keywords = {"abstraction", "boundary", "duplicate", "duplication", "extraction", "helper", "pattern", "reuse"}
+    haystack_values: list[str] = [note_path]
+    for key in ("surfaces", "subsystems", "routes_from", "stale_when", "memory_role", "promotion_target", "improvement_note"):
+        value = note.get(key)
+        if isinstance(value, str):
+            haystack_values.append(value)
+        elif isinstance(value, list):
+            haystack_values.extend(str(item) for item in value)
+    haystack = " ".join(haystack_values).lower()
+    if any(keyword in haystack for keyword in keywords):
+        return "memory metadata mentions reuse, duplication, abstraction, extraction, boundary, helper, or pattern"
+    route_patterns = [item for item in note.get("routes_from", []) if isinstance(item, str)]
+    stale_patterns = [item for item in note.get("stale_when", []) if isinstance(item, str)]
+    for changed_path in changed_paths:
+        for pattern in [*route_patterns, *stale_patterns]:
+            if fnmatch.fnmatch(changed_path, pattern):
+                return f"changed path matches memory route pattern {pattern!r}"
+    return None
 
 
 def _reuse_pressure_state(findings: list[dict[str, Any]]) -> str:
@@ -12866,7 +13169,12 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "acceptance": _tiny_acceptance_payload(payload.get("acceptance", {})),
             "acceptance_reconciliation": _tiny_acceptance_reconciliation(payload.get("acceptance_reconciliation", {})),
             "objective_drift": _tiny_objective_drift(payload.get("objective_drift", {})),
-            "reuse_pressure": reuse_pressure,
+            "reuse_pressure": {
+                "status": reuse_pressure.get("status") if isinstance(reuse_pressure, dict) else None,
+                "state": reuse_pressure.get("state") if isinstance(reuse_pressure, dict) else None,
+                "summary": reuse_pressure.get("summary") if isinstance(reuse_pressure, dict) else None,
+                "detail_selector": "reuse_pressure",
+            },
             "durable_intent_promotion": _tiny_task_intent_promotion_guidance(payload.get("durable_intent_promotion", {})),
             "routing": {
                 "work_shape": capability.get("work_shape"),
