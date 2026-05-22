@@ -84,7 +84,6 @@ export const generatedCommandPackage = {
         "primitive_refs": [
           "path.target_root.resolve",
           "payload.status",
-          "memory.bootstrap.status.load",
           "output.emit.install-result"
         ]
       },
@@ -2624,12 +2623,6 @@ export const generatedCommandPackage = {
           "handler": "runtime_handler",
           "import_module": "repo_memory_bootstrap.runtime_primitives",
           "primitive": "memory.bootstrap.doctor.load"
-        },
-        {
-          "function": "_load_memory_bootstrap_status",
-          "handler": "runtime_handler",
-          "import_module": "repo_memory_bootstrap.runtime_primitives",
-          "primitive": "memory.bootstrap.status.load"
         },
         {
           "function": "_load_memory_current",

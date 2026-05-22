@@ -39,7 +39,6 @@
       "operation-function-call|generated/planning/python/operations/planning.verify-payload.report.json|planning.verify-payload.report|repo_planning_bootstrap.installer|verify_payload",
       "runtime-facade-call|generated/memory/python/primitives/memory_runtime.py|_emit_memory_operation_output|repo_memory_bootstrap.runtime_primitives|_emit_memory_operation_output",
       "runtime-facade-call|generated/memory/python/primitives/memory_runtime.py|_load_memory_bootstrap_doctor|repo_memory_bootstrap.runtime_primitives|_load_memory_bootstrap_doctor",
-      "runtime-facade-call|generated/memory/python/primitives/memory_runtime.py|_load_memory_bootstrap_status|repo_memory_bootstrap.runtime_primitives|_load_memory_bootstrap_status",
       "runtime-facade-call|generated/memory/python/primitives/memory_runtime.py|_load_memory_current|repo_memory_bootstrap.runtime_primitives|_load_memory_current",
       "runtime-facade-call|generated/memory/python/primitives/memory_runtime.py|_load_memory_prompt|repo_memory_bootstrap.runtime_primitives|_load_memory_prompt",
       "runtime-facade-call|generated/memory/python/primitives/memory_runtime.py|_load_memory_report|repo_memory_bootstrap.runtime_primitives|_load_memory_report",
@@ -59,7 +58,6 @@
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_append_workspace_operation_delegation_outcome|agentic_workspace.workspace_runtime_primitives|_append_workspace_operation_delegation_outcome",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_emit_workspace_operation_output|agentic_workspace.workspace_runtime_primitives|_emit_workspace_operation_output",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_load_workspace_operation_config|agentic_workspace.workspace_runtime_primitives|_load_workspace_operation_config",
-      "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_load_workspace_operation_defaults|agentic_workspace.workspace_runtime_primitives|_load_workspace_operation_defaults",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_load_workspace_operation_system_intent_config|agentic_workspace.workspace_runtime_primitives|_load_workspace_operation_system_intent_config",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_read_or_create_workspace_operation_system_intent_mirror|agentic_workspace.workspace_runtime_primitives|_read_or_create_workspace_operation_system_intent_mirror",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_refresh_workspace_operation_system_intent_metadata|agentic_workspace.workspace_runtime_primitives|_refresh_workspace_operation_system_intent_metadata",
@@ -626,25 +624,6 @@
       {
         "binding_kind": "runtime-facade-call",
         "facade_path": "generated/memory/python/primitives/memory_runtime.py",
-        "facade_symbol": "_load_memory_bootstrap_status",
-        "source_module": "repo_memory_bootstrap.runtime_primitives",
-        "source_symbol": "_load_memory_bootstrap_status",
-        "owner_package": "memory package runtime boundary",
-        "operation_ids": [
-          "memory.status.report"
-        ],
-        "primitive_refs": [
-          "memory.bootstrap.status.load"
-        ],
-        "runtime_boundary_class": "package-specific-judgment",
-        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
-        "conformance_ref": "memory.status.process",
-        "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Non-verbose text and JSON behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, payload.status, and output.emit.install-result over schema-backed Memory payload policy. The remaining package-domain primitive is a verbose compatibility fallback and is not counted as portable codegen coverage."
-      },
-      {
-        "binding_kind": "runtime-facade-call",
-        "facade_path": "generated/memory/python/primitives/memory_runtime.py",
         "facade_symbol": "_load_memory_current",
         "source_module": "repo_memory_bootstrap.runtime_primitives",
         "source_symbol": "_load_memory_current",
@@ -1031,25 +1010,6 @@
         "conformance_ref": "config.report.process",
         "status": "accepted-permanent-package-domain-boundary",
         "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, and generated output owns selected-output text. Domain primitive refs (workspace.root.resolve, workspace.config.load, output.fields.select, workspace.config.emit) remain explicit package-boundary calls for config loading, profile projection, and tiny/full text. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
-      },
-      {
-        "binding_kind": "runtime-facade-call",
-        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
-        "facade_symbol": "_load_workspace_operation_defaults",
-        "source_module": "agentic_workspace.workspace_runtime_primitives",
-        "source_symbol": "_load_workspace_operation_defaults",
-        "owner_package": "workspace package runtime boundary",
-        "operation_ids": [
-          "defaults.report"
-        ],
-        "primitive_refs": [
-          "workspace.defaults.load"
-        ],
-        "runtime_boundary_class": "package-specific-judgment",
-        "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
-        "conformance_ref": "defaults.report.process",
-        "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR, section selection, selected-output text, compact-answer text, and tiny-router text own deterministic output behavior, while workspace.defaults.load remains an explicit package-boundary payload source. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
       },
       {
         "binding_kind": "runtime-facade-call",

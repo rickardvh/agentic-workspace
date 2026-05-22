@@ -41,7 +41,7 @@
       "operation_contract": "operations/defaults.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
-        "workspace defaults payload source"
+        "none for defaults payload truth; generated workspace runtime loads generated _contracts/payload.json and generated selection/output owns tiny-router, compact-answer, and selected-output text"
       ],
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "defaults.report.process",
@@ -50,9 +50,9 @@
         "workspace.defaults.select"
       ],
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Operation dataflow, defaults section selection, selected-output text, compact-answer text, and tiny-router text are generated; the package-domain primitive still owns the defaults payload source.",
+      "runtime_boundary_reason": "Operation dataflow, defaults payload loading, defaults section selection, selected-output text, compact-answer text, and tiny-router text are generated; product truth is stored in src/agentic_workspace/contracts/workspace_defaults/payload.json and copied into generated/workspace/python/_contracts.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR, section selection, selected-output text, compact-answer text, and tiny-router text own deterministic output behavior, while workspace.defaults.load remains an explicit package-boundary payload source. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "generic_behavior_audit": "Generated operation IR and codegen-owned run_operation_steps own defaults.report dataflow. workspace.defaults.load no longer imports agentic_workspace.workspace_runtime_primitives; generated/workspace/python/primitives/workspace_runtime.py reads generated _contracts/payload.json. workspace.defaults.select, selected-output text, compact-answer text, and tiny-router text remain generated output behavior, so the defaults payload source is no longer hidden generic deterministic source runtime debt."
     },
     {
       "operation_id": "delegation-outcome.append",
@@ -661,24 +661,19 @@
       "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.status.report.json",
       "primitive_executor": "packages/command-generation/src/command_generation/primitive_executor.py",
-      "hand_owned_runtime_code": [
-        "memory.bootstrap.status.load for verbose/text fallback",
-        "module-result text compatibility formatting"
-      ],
-      "status": "domain-runtime-primitive-via-ir",
+      "hand_owned_runtime_code": [],
+      "status": "portable-codegen-primitive-executed",
       "conformance_ref": "memory.status.process",
-      "domain_runtime_primitive_refs": [
+      "runtime_boundary_class": "none",
+      "runtime_boundary_reason": "Memory status text, JSON, and verbose-compatible output execute through generated operation IR using path.target_root.resolve, payload.status, and output.emit.install-result over generated package resources.",
+      "what_would_make_portable_later": "Already portable for the memory.status.report surface; broader verbose diagnostics belong to separate report/doctor surfaces.",
+      "generic_behavior_audit": "No remaining memory.bootstrap.status.load fallback is used by memory.status.report; generated operation IR owns the deterministic status dataflow and output.",
+      "source_runtime_dependencies": [],
+      "completion_blockers": [],
+      "portable_primitive_refs": [
         "path.target_root.resolve",
         "payload.status",
-        "memory.bootstrap.status.load",
         "output.emit.install-result"
-      ],
-      "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Non-verbose text and JSON status execute through codegen-owned payload status primitives backed by Memory-owned declarative payload policy; package-domain runtime remains only for verbose compatibility output.",
-      "what_would_make_portable_later": "Replace the remaining verbose memory.bootstrap.status.load fallback with schema-backed output/detail primitives or explicitly retire verbose compatibility output.",
-      "generic_behavior_audit": "Non-verbose text and JSON behavior is no longer generic deterministic runtime debt: it uses path.target_root.resolve, payload.status, and output.emit.install-result over schema-backed Memory payload policy. The remaining package-domain primitive is a verbose compatibility fallback and is not counted as portable codegen coverage.",
-      "source_runtime_dependencies": [
-        "memory.bootstrap.status.load for verbose fallback"
       ]
     },
     {

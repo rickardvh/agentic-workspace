@@ -28,7 +28,7 @@ from ..primitives.resources import (
 
 BOOTSTRAP_VERSION = 47
 PROJECT_MARKERS = ('pyproject.toml', 'package.json', 'Cargo.toml', '.hg')
-PAYLOAD_ROOT_CANDIDATES = (('_payload', 'AGENTS.template.md'), ('packages/memory/bootstrap', 'AGENTS.template.md'))
+PAYLOAD_ROOT_CANDIDATES = (('_payload', 'AGENTS.template.md'),)
 PAYLOAD_SOURCE_ROOTS = ('AGENTS.md', '.agentic-workspace', 'memory', 'docs')
 TARGET_PATH_REWRITES = (
     ('docs', '.agentic-workspace/docs'),

@@ -207,12 +207,6 @@ def _load_memory_bootstrap_doctor(*args: Any, **kwargs: Any) -> Any:
     return source_function(*args, **kwargs)
 
 
-def _load_memory_bootstrap_status(*args: Any, **kwargs: Any) -> Any:
-    from repo_memory_bootstrap.runtime_primitives import _load_memory_bootstrap_status as source_function
-
-    return source_function(*args, **kwargs)
-
-
 def _load_memory_current(*args: Any, **kwargs: Any) -> Any:
     from repo_memory_bootstrap.runtime_primitives import _load_memory_current as source_function
 
@@ -240,7 +234,6 @@ def _load_memory_route_report(*args: Any, **kwargs: Any) -> Any:
 __all__ = [
     '_emit_memory_operation_output',
     '_load_memory_bootstrap_doctor',
-    '_load_memory_bootstrap_status',
     '_load_memory_current',
     '_load_memory_prompt',
     '_load_memory_report',

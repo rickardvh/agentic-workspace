@@ -106,7 +106,6 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
             handlers={
                 'path.target_root.resolve': _handle_path_target_root_resolve,
                 'memory.bootstrap.doctor.load': _handle_memory_bootstrap_doctor_load,
-                'memory.bootstrap.status.load': _handle_memory_bootstrap_status_load,
                 'memory.current.load': _handle_memory_current_load,
                 'memory.prompt.render': _handle_memory_prompt_render,
                 'memory.report.load': _handle_memory_report_load,
@@ -150,12 +149,6 @@ def _handle_memory_bootstrap_doctor_load(values: dict[str, Any], arguments: dict
     from .memory_runtime import _load_memory_bootstrap_doctor
 
     return _load_memory_bootstrap_doctor(values, arguments, context)
-
-
-def _handle_memory_bootstrap_status_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from .memory_runtime import _load_memory_bootstrap_status
-
-    return _load_memory_bootstrap_status(values, arguments, context)
 
 
 def _handle_memory_current_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:

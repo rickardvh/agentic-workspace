@@ -1,0 +1,4035 @@
+{
+  "agent_aid_storage": {
+    "boundary_rules": [
+      "local-only helpers remain under the local integration area and must not become shared authority",
+      "checked-in candidate aids live under the candidate root until promoted or retired",
+      "promoted aids move to the strongest ordinary repo-native surface and should not require candidate storage",
+      "package-owned aids are shipped product surfaces, not host-repo custom aids",
+      "source-checkout-only maintainer aids must not be required in ordinary host repos",
+      "the model is repo-, agent-, tool-, and language-agnostic"
+    ],
+    "candidate_root": ".agentic-workspace/agent-aids",
+    "candidate_root_exists": false,
+    "candidate_subdirs": [
+      "scripts",
+      "skills",
+      "runbooks",
+      "prompts",
+      "checks",
+      "templates",
+      "module-components"
+    ],
+    "canonical_doc": ".agentic-workspace/docs/agent-aids-storage.md",
+    "command": "agentic-workspace defaults --section agent_aid_storage --format json",
+    "creation_affordance": {
+      "agent_may_create": true,
+      "aid_types": [
+        "script",
+        "runbook",
+        "template",
+        "prompt",
+        "check",
+        "compact-command-runner",
+        "shim"
+      ],
+      "authority_boundary": [
+        "aids help agents work; they do not silently become required workflow",
+        "candidate aids are advisory until promoted through ordinary repo review and proof surfaces",
+        "local-only aids are ignored by git, non-authoritative, and safe to delete"
+      ],
+      "creation_triggers": [
+        "the same command bundle or check sequence is run repeatedly",
+        "command output is noisy but the agent only needs pass/fail plus failure tail",
+        "handoff or closeout steps are reconstructed from memory across turns",
+        "a small template, prompt, runbook, wrapper, or shim would prevent rediscovery"
+      ],
+      "evidence_shape": {
+        "compact_output": "short pass/fail/actionable summary for the agent",
+        "full_evidence": "inspectable command log, artifact, manifest, or source file",
+        "manifest_required_for_checked_in": true,
+        "validation": "checked-in executable aids declare validation.commands and pass check_agent_aids"
+      },
+      "first_pattern": {
+        "command": "uv run python scripts/check/run_compact_command.py",
+        "failure_output": "failure or timeout header plus tailed command output",
+        "full_log_root": "scratch/command-logs",
+        "id": "compact-runner",
+        "makefile_variable": "COMPACT_RUN",
+        "success_output": "[ok] <label> (<duration>)",
+        "timeout_option": "--timeout-seconds <seconds>",
+        "timeout_rule": "Set the runner timeout below the outer tool timeout so compact failure evidence and logs survive.",
+        "use_for": "wrapping noisy recurring commands without hiding full failure evidence"
+      },
+      "first_steps": [
+        "name the repeated friction and decide local-only vs checked-in candidate",
+        "reuse COMPACT_RUN or the same compact-output/full-log pattern for noisy commands",
+        "if checked in, add a nearby manifest.json and run python scripts/check/check_agent_aids.py",
+        "keep the aid advisory until a promoted repo-native surface owns discovery and proof"
+      ],
+      "kind": "agentic-workspace/agent-created-aid-affordance/v1",
+      "storage_decision": {
+        "checked_in_candidate": ".agentic-workspace/agent-aids",
+        "local_only": ".agentic-workspace/local/integrations",
+        "prefer_checked_in_when": [
+          "the aid benefits any agent working in this repo",
+          "the aid is portable enough to review and run across ordinary repo environments",
+          "the aid captures repo-specific workflow knowledge that should survive machines and sessions"
+        ],
+        "prefer_local_only_when": [
+          "the aid depends on a specific agent runtime, subscription, account, credential, path, or shell setup",
+          "the aid is experimental scratch for one machine",
+          "the aid bridges private or machine-local state that must not become shared repo authority"
+        ],
+        "promoted_repo_native": "ordinary repo command, check, skill, runbook, prompt, template, or docs surface",
+        "rule": "Use local-only for machine/runtime-specific aids; use checked-in candidate storage for repo-shared aids that are still proving value; promote only after repeated usefulness or clear repo-general value.",
+        "runtime_artifact_shims": {
+          "artifact_classes": [
+            "internal-plan",
+            "check-bundle",
+            "handoff-state",
+            "runtime-export"
+          ],
+          "authoritative": false,
+          "bridge_rule": "Use runtime-native plans as private working memory when they help, but bridge decisions, scope, proof, and continuation into checked-in Agentic Workspace Planning before implementation handoff or closeout.",
+          "compact_output": "short agent-facing status, next action, and proof pointer",
+          "discovery": [
+            "agentic-workspace defaults --section agent_aid_storage --format json",
+            "agentic-workspace config --target ./repo --format json",
+            "agentic-workspace report --target ./repo --section agent_aids --format json"
+          ],
+          "full_evidence": "inspectable local artifact, manifest, command log, or exported source file",
+          "git_ignored": true,
+          "kind": "agentic-workspace/local-runtime-artifact-shim/v1",
+          "metadata_required": [
+            "kind",
+            "source_runtime",
+            "artifact_class",
+            "input_owner",
+            "output_target",
+            "authority",
+            "promotion_target",
+            "proof_command",
+            "created_at"
+          ],
+          "preferred_bridge_steps": [
+            "capture the runtime-native plan or todo list under the local integration area when it is useful evidence",
+            "summarize only durable intent, scope, proof, and next action into checked-in planning state",
+            "run agentic-workspace summary --format json after the bridge and resolve warnings before implementation"
+          ],
+          "promotion_boundary": [
+            "local shims never become shared authority by existing locally",
+            "promote only through checked-in planning, memory, agent-aid, docs, or repo-native review surfaces",
+            "record proof before treating shim output as repo-shared state",
+            "a runtime-native plan or todo list does not satisfy required Agentic Workspace Planning until bridged"
+          ],
+          "root": ".agentic-workspace/local/integrations",
+          "status": "local-only-pattern",
+          "use_for": [
+            "internal agent plans that need compact checked-in planning updates",
+            "runtime check bundles that need compact pass/fail plus inspectable logs",
+            "handoff or resume state that needs a bounded workspace continuation record",
+            "runtime-native planning systems that the agent is already optimized or hardwired to use"
+          ]
+        }
+      },
+      "summary": "Create a bounded aid when it would reduce repeated work, parsing cost, handoff cost, or error risk."
+    },
+    "discovery_command": "agentic-workspace report --target ./repo --section agent_aids --format json",
+    "executable_safety": {
+      "candidate_aid_check": "python scripts/check/check_agent_aids.py",
+      "candidate_aids_are_not": [
+        "canonical proof routes",
+        "required workflow entrypoints"
+      ],
+      "canonical_checks_are": "repo-owned checkers and proof routes that validate candidate metadata, not candidate aids themselves",
+      "canonical_proof_role_requires_status": "promoted",
+      "executable_types": [
+        "script",
+        "check"
+      ],
+      "hidden_required_workflow": "forbidden",
+      "high_risk_requires_review_when": [
+        "writes_repo",
+        "destructive",
+        "network"
+      ],
+      "non_cross_platform_requires": "portability_justification",
+      "platform_specific_checked_in_requires": "checked_in_scope_justification",
+      "repo_general_preference": "Prefer cross-platform wrappers for repo-shared validation; keep platform-specific helpers local unless justified.",
+      "rule": "Checked-in executable aids must declare safety, portability, validation, and proof-role metadata."
+    },
+    "manifest_check": "python scripts/check/check_agent_aids.py",
+    "manifest_kind": "agentic-workspace/agent-aid/v1",
+    "manifest_name": "manifest.json",
+    "manifest_required": "for checked-in shared aids",
+    "manifest_schema": "src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json",
+    "ordinary_startup": false,
+    "promotion_model": {
+      "discovery_after_promotion": {
+        "command_or_check": "agentic-workspace proof --changed ... --format json or repo-native check discovery",
+        "module_component": "module manifest resources/tools/prompts",
+        "runbook_prompt_template_docs": "agentic-workspace report --target ./repo --section agent_aids --format json until promoted surface owns discovery",
+        "skill": "agentic-workspace skills --target ./repo --task \"<task>\" --format json"
+      },
+      "discovery_route_required": true,
+      "portable_repo_general_rule": "Repo-shared executable canonical proof aids must be cross-platform.",
+      "retirement_required": "candidate manifests declare retention_after_promotion",
+      "rule": "Proven aids should move from candidate storage to the strongest repo-native surface and retire or shrink the candidate copy.",
+      "target_kinds": [
+        "command",
+        "check",
+        "skill",
+        "runbook",
+        "prompt",
+        "template",
+        "module-component",
+        "docs-contract"
+      ],
+      "trigger": "repeated successful use or clear repo-general value"
+    },
+    "status": "available-checked-in-candidate-area",
+    "storage_classes": [
+      {
+        "authority": "none",
+        "class": "local-only",
+        "git_ignored": true,
+        "root": ".agentic-workspace/local/integrations",
+        "use_for": "runtime-specific or machine-specific helpers that must be safe to delete"
+      },
+      {
+        "authority": "candidate aid metadata plus ordinary repo review",
+        "class": "checked-in-candidate",
+        "git_ignored": false,
+        "root": ".agentic-workspace/agent-aids",
+        "use_for": "repo-shared aids that are still proving value before promotion"
+      },
+      {
+        "authority": "the promoted surface's normal contract, tests, and ownership",
+        "class": "promoted-repo-native",
+        "git_ignored": false,
+        "root": "host repo canonical commands, checks, skills, runbooks, prompts, templates, or docs",
+        "use_for": "stable aids whose value no longer depends on candidate-aid storage"
+      },
+      {
+        "authority": "package contracts and release process",
+        "class": "package-owned",
+        "git_ignored": false,
+        "root": "package source or installed payload surfaces",
+        "use_for": "features shipped by the package, not host-repo local aids"
+      },
+      {
+        "authority": "source checkout tests and maintainer workflow",
+        "class": "source-checkout-only",
+        "git_ignored": false,
+        "root": "maintainer tooling in the package source checkout",
+        "use_for": "package-maintainer aids that must not appear as host-repo workflow requirements"
+      }
+    ],
+    "task_recommendation_command": "agentic-workspace skills --target ./repo --task \"<task>\" --format json"
+  },
+  "agent_configuration_queries": {
+    "canonical_doc": ".agentic-workspace/docs/workspace-config-contract.md",
+    "command": "agentic-workspace defaults --section agent_configuration_queries --format json",
+    "loading_rules": [
+      "prefer one compact answer over broad prose rereads",
+      "route from workspace defaults/config/ownership/report before opening module-local prose",
+      "load planning or memory details only when the compact answer points at active work or durable module-owned state",
+      "leave unrelated modules and subinstructions unloaded unless the current surface, proof lane, or active planning state makes them relevant"
+    ],
+    "query_classes": [
+      {
+        "ask_first": "agentic-workspace defaults --section startup --format json",
+        "id": "startup_path",
+        "question": "What is the startup path?",
+        "then_if_needed": [
+          "agentic-workspace config --target ./repo --format json",
+          "AGENTS.md"
+        ]
+      },
+      {
+        "ask_first": "agentic-workspace ownership --target ./repo --format json",
+        "id": "active_behavior_modules",
+        "question": "What behavior modules are active?",
+        "then_if_needed": [
+          "agentic-workspace modules --format json",
+          "agentic-workspace report --target ./repo --format json"
+        ]
+      },
+      {
+        "ask_first": "agentic-workspace ownership --target ./repo --format json",
+        "id": "proof_and_ownership_rules",
+        "question": "What proof and ownership rules apply here?",
+        "then_if_needed": [
+          "agentic-workspace defaults --section validation --format json",
+          "agentic-workspace report --target ./repo --format json"
+        ]
+      },
+      {
+        "ask_first": "agentic-workspace summary --format json",
+        "id": "repo_local_current_work",
+        "question": "What repo-local behavior is relevant to the current lane or surface?",
+        "then_if_needed": [
+          "agentic-workspace report --target ./repo --format json",
+          ".agentic-workspace/planning/execplans/<active>.md"
+        ]
+      },
+      {
+        "ask_first": "agentic-workspace defaults --section agent_configuration_queries --format json",
+        "id": "relevant_subinstructions",
+        "question": "Which subinstructions are relevant right now, and which can remain unloaded?",
+        "then_if_needed": [
+          "agentic-workspace report --target ./repo --format json",
+          "module-local docs or runbooks only for the modules and surfaces already in scope"
+        ]
+      }
+    ],
+    "rule": "Treat selective loading as a first-class design constraint: ask one compact configuration question first, then route to deeper module or doc surfaces only when the compact answer is insufficient.",
+    "stop_rule": "Stop after the first compact answer that settles the question; deeper reads are justified only when the compact answer points at a specific owner or active surface."
+  },
+  "agent_configuration_system": {
+    "adapter_surfaces": [
+      {
+        "role": "ordinary startup adapter over structured substrate",
+        "surface": "AGENTS.md"
+      },
+      {
+        "role": "public external install/adopt instructions",
+        "surface": "docs/agentic-workspace-install.md"
+      },
+      {
+        "role": "planning package-owned generation source over structured substrate",
+        "surface": ".agentic-workspace/planning/agent-manifest.json"
+      }
+    ],
+    "authority_map": [
+      {
+        "concern": "workspace policy",
+        "owner": "repo",
+        "surface": ".agentic-workspace/config.toml"
+      },
+      {
+        "concern": "shared substrate contract",
+        "owner": "workspace",
+        "surface": ".agentic-workspace/docs/workspace-config-contract.md"
+      },
+      {
+        "concern": "ownership and authority lookup",
+        "owner": "workspace",
+        "surface": ".agentic-workspace/OWNERSHIP.toml"
+      },
+      {
+        "concern": "module attachment metadata",
+        "owner": "workspace",
+        "surface": "workspace module descriptors"
+      },
+      {
+        "concern": "active execution state",
+        "owner": "planning",
+        "surface": ".agentic-workspace/planning/state.toml"
+      },
+      {
+        "concern": "durable understanding",
+        "owner": "memory",
+        "surface": ".agentic-workspace/memory/repo/"
+      }
+    ],
+    "canonical_doc": ".agentic-workspace/docs/workspace-config-contract.md",
+    "command": "agentic-workspace defaults --section agent_configuration_system --format json",
+    "configuration_classes": [
+      {
+        "ask_first": "agentic-workspace defaults --section startup --format json",
+        "id": "startup_and_adapter_policy",
+        "primary_owner": "workspace config plus workspace contract docs",
+        "summary": "startup entrypoint, prose-adapter role, and workflow-artifact profile"
+      },
+      {
+        "ask_first": "agentic-workspace config --target ./repo --format json",
+        "id": "workspace_policy",
+        "primary_owner": ".agentic-workspace/config.toml",
+        "summary": "repo-owned preset, update intent, improvement latitude, and optimization bias"
+      },
+      {
+        "ask_first": "agentic-workspace ownership --target ./repo --format json",
+        "id": "module_attachment",
+        "primary_owner": "module descriptors plus .agentic-workspace/OWNERSHIP.toml",
+        "summary": "which modules exist, what they own, and how they compose"
+      },
+      {
+        "ask_first": "agentic-workspace report --target ./repo --format json",
+        "id": "module_state",
+        "primary_owner": "planning and memory surfaces",
+        "summary": "active planning state and durable memory state that consume the substrate without moving ownership to workspace"
+      }
+    ],
+    "module_attachment_points": [
+      "descriptor lifecycle commands and install detection",
+      "workflow surfaces and generated artifacts",
+      "startup steps and sources of truth",
+      "capabilities, dependencies, and conflicts",
+      "module result-contract shape"
+    ],
+    "must_not": [
+      "treat planning as the owner of general workflow extension machinery",
+      "turn the workspace substrate into a scheduler or full workflow engine",
+      "let prose startup files become the primary authority again once the substrate can answer the question directly"
+    ],
+    "owner_rule": "Repo-owned config selects workspace policy; workspace-owned contract docs, ownership, and descriptors define the substrate shape.",
+    "owner_surface": ".agentic-workspace/config.toml",
+    "rule": "Treat Agentic Workspace as the repo-owned structured agent configuration substrate: workspace hosts the substrate, planning and memory attach as modules, and prose startup surfaces act as adapters.",
+    "selective_loading": {
+      "first_queries": [
+        "agentic-workspace defaults --section agent_configuration_system --format json",
+        "agentic-workspace config --target ./repo --format json",
+        "agentic-workspace ownership --target ./repo --format json",
+        "agentic-workspace modules --format json",
+        "agentic-workspace report --target ./repo --format json"
+      ],
+      "rule": "Prefer the smallest compact query that answers the current configuration question before opening broader prose."
+    }
+  },
+  "agent_configuration_workflow_extensions": {
+    "canonical_doc": ".agentic-workspace/docs/workspace-config-contract.md",
+    "command": "agentic-workspace defaults --section agent_configuration_workflow_extensions --format json",
+    "consumption_rule": [
+      "workspace owns declaration and reporting of repo-custom workflow obligations",
+      "planning consumes only the obligations relevant to the current touched scope",
+      "adapter surfaces may mention the mechanism but should not become the primary declaration home"
+    ],
+    "definition_format": {
+      "canonical_doc": ".agentic-workspace/docs/workspace-config-contract.md",
+      "composition": {
+        "conflict_rule": "Do not merge ownership; workspace reports applicable components and the owning module keeps domain behavior.",
+        "module_attachment_rule": "Components may mention planning, memory, workspace, startup, routing, adapter-surfaces, or system-intent tags, but they must not move module-owned state into workspace config.",
+        "selector": "stage plus intersection of scope_tags with current work tags"
+      },
+      "flexibility_boundary": {
+        "formalize": [
+          "component id and owner surface",
+          "activation stage",
+          "scope tags",
+          "declared commands or proof hooks",
+          "review or closure hint"
+        ],
+        "leave_flexible": [
+          "local implementation steps inside the bounded component",
+          "task-specific validation beyond declared minimum hooks",
+          "agent judgment about whether the component is sufficient for the current slice",
+          "module-owned domain rules"
+        ],
+        "must_not": [
+          "become a scheduler",
+          "replace active planning state",
+          "turn every repo preference into a durable component",
+          "move planning or memory domain ownership into workspace config"
+        ]
+      },
+      "migration_posture": {
+        "compatibility_rule": "Keep prose fallback for nuance, but prefer the formal component for startup, report, and defaults answers.",
+        "markdown_role": "Markdown workflow files remain adapters and explanatory runbooks when the contract is not yet expressible in the formal component shape.",
+        "promotion_rule": "Promote repeated, stable, stage-bound workflow expectations into workflow components when they need selective query, reporting, or review hooks."
+      },
+      "primary_component_family": {
+        "attachment_points": [
+          "repo-custom workflow additions",
+          "module-relevant proof or review hooks",
+          "startup, config, planning, memory, or adapter-surface scope tags"
+        ],
+        "fields": [
+          {
+            "field": "summary",
+            "purpose": "bounded repo-local expectation worth surfacing into active work",
+            "required": true
+          },
+          {
+            "field": "stage",
+            "purpose": "lifecycle position where the component applies",
+            "required": true
+          },
+          {
+            "field": "scope_tags",
+            "purpose": "module, surface, or work-scope tags that activate the component",
+            "required": true
+          },
+          {
+            "field": "commands",
+            "purpose": "bounded proof, refresh, or inspection commands expected at that stage",
+            "required": true
+          },
+          {
+            "field": "review_hint",
+            "purpose": "compact reminder for review, handoff, or closure surfaces",
+            "required": false
+          }
+        ],
+        "id": "workflow_obligation",
+        "owner_surface": ".agentic-workspace/config.toml [workflow_obligations]"
+      },
+      "rule": "Workflow structure is formal and queryable; component-step internals stay flexible unless a stronger contract is explicitly needed.",
+      "schema_version": "agentic-workspace/workflow-definition-format/v1"
+    },
+    "fields": [
+      {
+        "field": "summary",
+        "purpose": "bounded repo-local expectation worth surfacing into active work"
+      },
+      {
+        "field": "stage",
+        "purpose": "when the obligation matters"
+      },
+      {
+        "field": "force",
+        "purpose": "whether the matched obligation is informational, recommended, required, or blocking"
+      },
+      {
+        "field": "scope_tags",
+        "purpose": "which slices or surfaces should consider the obligation relevant"
+      },
+      {
+        "field": "commands",
+        "purpose": "bounded commands or checks the repo expects before the stage completes"
+      },
+      {
+        "field": "review_hint",
+        "purpose": "compact reminder for review or closure surfaces"
+      }
+    ],
+    "must_not": [
+      "turn workflow obligations into a general scheduler",
+      "move planning ownership into workspace config",
+      "encode every minor preference as a workflow obligation"
+    ],
+    "owner_surface": ".agentic-workspace/config.toml [workflow_obligations]",
+    "rule": "Declare small repo-custom workflow obligations in `.agentic-workspace/config.toml` so workspace owns the extension mechanism and planning only consumes relevant obligations.",
+    "supported_forces": [
+      "informational",
+      "recommended",
+      "required-before-closeout",
+      "blocking"
+    ],
+    "supported_stages": [
+      "pre-work",
+      "before-claiming-completion",
+      "before-commit",
+      "review",
+      "closeout"
+    ]
+  },
+  "assurance_onboarding": {
+    "command": "agentic-workspace defaults --section assurance_onboarding --format json",
+    "configured_profile_count": 0,
+    "has_test_data_policy": false,
+    "host_ref_count": 0,
+    "proof_command": "agentic-workspace proof --target ./repo --changed <paths> --format json",
+    "report_command": "agentic-workspace report --target ./repo --section closeout_trust --format json",
+    "rule": "Host repos own assurance truth; Agentic Workspace only routes levels, gates, refs, proof profiles, and compact evidence state.",
+    "smallest_useful_config": [
+      "[assurance]",
+      "default_level = \"medium\"",
+      "decision_record_target = \"docs/decisions/\"",
+      "",
+      "[assurance.proof_profiles.example]",
+      "required_commands = [\"uv run pytest tests -q\"]",
+      "optional_commands = []",
+      "review_aids = []"
+    ],
+    "states": {
+      "absent": "no host assurance profile is configured; low-risk installs stay cheap",
+      "partial": "some assurance fields exist, but add at least one proof profile plus a host-owned ref or test-data policy",
+      "usable": "at least one proof profile and one host-owned authority or test-data policy are configured"
+    },
+    "status": "absent"
+  },
+  "authority_hierarchy": {
+    "inspect": "agentic-workspace report --target ./repo --section authority_hierarchy --format json",
+    "kind": "agentic-workspace/authority-hierarchy/v1",
+    "ordered_authority": [
+      {
+        "authority": "enforceable-or-reviewable",
+        "examples": [
+          "source code",
+          "tests",
+          ".agentic-workspace/config.toml",
+          ".agentic-workspace/OWNERSHIP.toml"
+        ],
+        "rank": 1,
+        "surface_class": "code-tests-config"
+      },
+      {
+        "authority": "current-execution-or-product-intent",
+        "examples": [
+          "current issues",
+          "system/subsystem intent",
+          "active planning state"
+        ],
+        "rank": 2,
+        "surface_class": "accepted-current-intent"
+      },
+      {
+        "authority": "short-lived-operational",
+        "examples": [
+          "active execplan execution_run",
+          "context_budget",
+          "handoff packets"
+        ],
+        "rank": 3,
+        "surface_class": "compact-continuation-state"
+      },
+      {
+        "authority": "durable-knowledge",
+        "examples": [
+          "Memory decisions/invariants/runbooks",
+          "maintained docs"
+        ],
+        "rank": 4,
+        "surface_class": "durable-memory-and-docs"
+      },
+      {
+        "authority": "disposable-or-audit-only-unless-promoted",
+        "examples": [
+          "generated summaries",
+          "reviews",
+          "archives",
+          "old reports"
+        ],
+        "rank": 5,
+        "surface_class": "generated-and-historical-artifacts"
+      }
+    ],
+    "promotion_paths": {
+      "durable_trap_or_invariant": "Memory",
+      "future_work": "Planning state or an upstream issue",
+      "generated_summary": "discard unless it contains a decision, invariant, future work, or proof evidence worth promotion",
+      "settled_decision": "Memory decisions, system/subsystem intent, docs, or config depending on owner"
+    },
+    "rule": "Trust current source-of-truth surfaces before generated, historical, or advisory prose; promote useful findings into their owner surface instead of preserving chronological residue.",
+    "status": "present"
+  },
+  "clarification": {
+    "canonical_doc": ".agentic-workspace/docs/compact-contract-profile.md",
+    "command": "agentic-workspace defaults --section clarification --format json",
+    "examples": [
+      "vague task request",
+      "missing target surface",
+      "unclear proof boundary"
+    ],
+    "fallback": [
+      "Use the intent selector first, then clarification, report, and ownership/proof selectors as needed.",
+      "Stop or escalate when answering the question would rewrite the requested end state."
+    ],
+    "first_questions": [
+      "Which surface should change?",
+      "What proof would make the change safe?",
+      "Does the work belong in planning, memory, or workspace-level docs?"
+    ],
+    "mode": "minimal-interruption",
+    "repo_context": [
+      "Use .agentic-workspace/planning/state.toml or the active execplan when the prompt seems planning-shaped.",
+      "Use report before broad file reads when the prompt may touch several workspace surfaces.",
+      "Use ownership when the target surface or owner is unclear."
+    ],
+    "rule": "When a prompt is vague, ask the smallest repo-context question that removes the ambiguity."
+  },
+  "combined_install": {
+    "cli_availability_rule": "Use an installed `agentic-workspace` CLI first; install it if unavailable, and reserve uvx/pipx for explicit temporary fallback.",
+    "full_when": "Use --preset full only when both active-now planning and durable anti-rediscovery memory are worth the shared footprint.",
+    "operating_model": [
+      "Planning owns active-now state.",
+      "Memory owns durable anti-rediscovery knowledge.",
+      "Use the shared workspace lifecycle verbs as the normal operating path."
+    ],
+    "primary": "agentic-workspace install --target ./repo --preset <memory|planning|full>",
+    "secondary": [
+      "Direct package CLIs stay available, but they are not the normal path for combined installs."
+    ]
+  },
+  "compact_contract_profile": {
+    "answer_shape": [
+      "profile",
+      "surface",
+      "selector",
+      "matched",
+      "answer",
+      "refs"
+    ],
+    "canonical_doc": ".agentic-workspace/docs/compact-contract-profile.md",
+    "rule": "When one bounded answer is enough, prefer a narrow selector over a whole-surface dump.",
+    "selectors": {
+      "defaults": "agentic-workspace defaults --section <section> --format json",
+      "ownership_concern": "agentic-workspace ownership --target ./repo --concern <concern> --format json",
+      "ownership_path": "agentic-workspace ownership --target ./repo --path <repo-path> --format json",
+      "proof_current": "agentic-workspace proof --target ./repo --current --format json",
+      "proof_route": "agentic-workspace proof --target ./repo --route <id> --format json"
+    }
+  },
+  "completion": {
+    "prefer_surfaces": [
+      ".agentic-workspace/planning/state.toml",
+      ".agentic-workspace/planning/execplans/README.md"
+    ],
+    "rule": "When a completed slice came from state.toml, clear the matched queue residue in the same pass."
+  },
+  "compliance_economics": {
+    "boundary": "Agentic Workspace cannot force an arbitrary agent to think correctly or read the right file first; it can make nonconforming work harder to land, easier to detect, and cheaper to recover.",
+    "detail_command": "agentic-workspace report --target ./repo --section compliance_economics --format json",
+    "enforcement_levels": [
+      {
+        "example": "run start before editing",
+        "level": "prompt_instruction",
+        "strength": "weak"
+      },
+      {
+        "example": "next actions, warnings, proof lanes",
+        "level": "cli_workflow",
+        "strength": "moderate"
+      },
+      {
+        "example": "managed fences and ownership metadata",
+        "level": "file_ownership",
+        "strength": "moderate"
+      },
+      {
+        "example": "TOML/JSON state contracts",
+        "level": "schema_validity",
+        "strength": "strong"
+      },
+      {
+        "example": "required checks and protected branches",
+        "level": "tests_ci_permissions_review",
+        "strength": "strong"
+      }
+    ],
+    "evidence_not_cognition": [
+      "startup or preflight evidence",
+      "changed-path proof selection and execution evidence",
+      "ownership/schema/generated-surface freshness checks",
+      "handoff and closeout residue in checked-in state"
+    ],
+    "kind": "agentic-workspace/compliance-economics/v1",
+    "status": "present",
+    "target": [
+      "make the compliant path cheaper than bypass",
+      "make bypass or missing evidence visible",
+      "make recovery cheap when an agent goes off-path",
+      "leave irreversible safety to permissions, branch protection, CI, review, and runtime sandboxes"
+    ]
+  },
+  "config": {
+    "command": "agentic-workspace config --target ./repo --format json",
+    "path": ".agentic-workspace/config.toml",
+    "rules": [
+      "Missing fields use product defaults.",
+      "Normal update execution stays behind agentic-workspace.",
+      "Repo config may change module update intent without creating separate public module upgrade entrypoints."
+    ],
+    "supported_fields": [
+      "workspace.default_preset",
+      "workspace.agent_instructions_file",
+      "workspace.workflow_artifact_profile",
+      "workspace.improvement_latitude",
+      "workspace.optimization_bias",
+      "workspace.advanced_features",
+      "workspace.cli_invoke",
+      "system_intent.sources",
+      "system_intent.preferred_source",
+      "workflow_obligations.<name>.summary",
+      "workflow_obligations.<name>.stage",
+      "workflow_obligations.<name>.force",
+      "workflow_obligations.<name>.scope_tags",
+      "workflow_obligations.<name>.commands",
+      "workflow_obligations.<name>.review_hint",
+      "update.modules.<module>.source_type",
+      "update.modules.<module>.source_ref",
+      "update.modules.<module>.source_label",
+      "update.modules.<module>.recommended_upgrade_after_days"
+    ]
+  },
+  "continuation_state": {
+    "detail_command": "agentic-workspace summary --select planning_record.context_budget,planning_record.execution_run --format json",
+    "fields": [
+      "goal",
+      "current_branch_or_state",
+      "files_touched",
+      "known_failing_tests",
+      "next_intended_step",
+      "open_questions"
+    ],
+    "kind": "agentic-workspace/compact-continuation-state/v1",
+    "not_needed_when": "task is closed, next action is in active planning, or fact belongs in Memory/docs",
+    "owner": "active Planning execplan context_budget or execution_run",
+    "purpose": "Short-lived state for paused, restarted, or handed-off work.",
+    "status": "available",
+    "use_when": "paused, restarted, handed off, or next action would require rereading"
+  },
+  "delegated_judgment": {
+    "agent_may_decide": [
+      "bounded decomposition",
+      "narrower touched-path selection",
+      "tighter validation",
+      "skill or workflow selection",
+      "promotion to an execplan when direct execution stops being safe",
+      "residue routing into the correct checked-in surface"
+    ],
+    "canonical_doc": "docs/delegated-judgment-contract.md",
+    "escalate_when": [
+      "the better-looking solution changes the requested outcome",
+      "the better-looking solution changes the owned surface",
+      "the better-looking solution changes the time horizon",
+      "the requested path is blocked or unsafe as stated",
+      "validation would be meaningless without added scope",
+      "confidence is too low for silent continuation"
+    ],
+    "human_sets": [
+      "requested outcome",
+      "priorities",
+      "hard constraints",
+      "explicit approvals or prohibitions"
+    ],
+    "operational_follow_through": [
+      "use a checked-in execplan when the requested outcome must survive across sessions",
+      "preserve escalation boundaries in the machine-readable defaults when the task is broad enough to need them",
+      "route durable residue into the correct checked-in surface instead of leaving it in chat"
+    ],
+    "rule": "Improve means locally; do not silently rewrite ends locally."
+  },
+  "delegation_posture": {
+    "canonical_doc": ".agentic-workspace/docs/delegation-posture-contract.md",
+    "capability_posture_fields": [
+      "execution class",
+      "recommended strength",
+      "preferred location",
+      "delegation friendly",
+      "strong external reasoning",
+      "work shape",
+      "proof burden",
+      "risk flags",
+      "inspection evidence required",
+      "classification authority",
+      "self-assessment authority",
+      "why"
+    ],
+    "command": "agentic-workspace defaults --section delegation_posture --format json",
+    "config_controls": [
+      ".agentic-workspace/config.local.toml runtime.supports_internal_delegation",
+      ".agentic-workspace/config.local.toml runtime.strong_planner_available",
+      ".agentic-workspace/config.local.toml runtime.cheap_bounded_executor_available",
+      ".agentic-workspace/config.local.toml handoff.prefer_internal_delegation_when_available",
+      ".agentic-workspace/config.local.toml delegation_targets.<target>.*",
+      ".agentic-workspace/delegation-outcomes.json"
+    ],
+    "outcome_feedback_fields": [
+      "route chosen",
+      "route skipped reason",
+      "expected savings",
+      "actual friction",
+      "proof result",
+      "quality concern",
+      "decomposition adjustment"
+    ],
+    "post_decomposition_checkpoint": {
+      "required_fields": [
+        "slice id",
+        "route",
+        "reason",
+        "quality risk",
+        "token-saving class",
+        "read-first refs",
+        "write scope",
+        "proof burden",
+        "stop conditions",
+        "return contract"
+      ],
+      "route_candidates": [
+        "keep-local",
+        "delegate-exploration",
+        "delegate-implementation",
+        "delegate-validation",
+        "escalate-review",
+        "no-safe-route"
+      ],
+      "rule": "After a decomposition or execplan exists, revisit each bounded slice for safe token-saving or quality-improving routes."
+    },
+    "preferred_split": [
+      "planner",
+      "explorer",
+      "implementer",
+      "validator"
+    ],
+    "rule": "Use the effective mixed-agent posture to decide whether to keep work direct, split it into planner/explorer/implementer/validator subtasks, or escalate to a stronger planner.",
+    "secondary": [
+      "Do not treat config as a scheduler.",
+      "Do not delegate when the task stays cheap and direct.",
+      "Do not use weak targets for high-judgment work just to save tokens; escalate first.",
+      "Do not spend strong-agent budget on mechanical work when a safe cheaper route is configured.",
+      "Do not silently rewrite ends."
+    ]
+  },
+  "durable_intent": {
+    "canonical_doc": ".agentic-workspace/docs/system-intent-contract.md",
+    "command": "agentic-workspace defaults --section durable_intent --format json",
+    "decision_consumption": [
+      "start/preflight can surface compact relevant intent pressure before implementation",
+      "report --section durable_intent returns the inspectable projection",
+      "planning closeout asks whether task intent revealed durable intent worth promotion",
+      "proof/delegation should escalate when relevant intent implies compliance, accessibility, security, or high judgment"
+    ],
+    "intent_scopes": [
+      {
+        "closure": "can be satisfied and validated during implementation",
+        "id": "task",
+        "promotion": "classify at closeout; do not persist by default",
+        "role": "bounded goal for current work"
+      },
+      {
+        "closure": "not closed by one task; revised, superseded, or retired over time",
+        "id": "subsystem",
+        "registry": ".agentic-workspace/OWNERSHIP.toml [[subsystems]]",
+        "role": "durable direction for a component, module, concern, or owned surface",
+        "surface": ".agentic-workspace/system-intent/subsystems.toml"
+      },
+      {
+        "closure": "not active work; inspected and refined as understanding or requirements change",
+        "id": "system",
+        "role": "durable repo/system-wide direction, purpose, constraint, or invariant",
+        "surface": ".agentic-workspace/system-intent/intent.toml"
+      }
+    ],
+    "promotion_choices": [
+      "do-not-promote",
+      "memory",
+      "subsystem-intent",
+      "system-intent",
+      "refine-existing-intent",
+      "supersede-existing-intent"
+    ],
+    "promotion_rule": "Promotion from task evidence creates reviewable durable intent proposals with evidence and confidence; agents must not silently make inferred intent authoritative. Subsystem intent ids must already exist in .agentic-workspace/OWNERSHIP.toml [[subsystems]].",
+    "record_fields": [
+      "id",
+      "scope",
+      "status",
+      "summary",
+      "governing_intents",
+      "anti_intents",
+      "decision_tests",
+      "source_records",
+      "confidence",
+      "needs_review",
+      "supersedes",
+      "superseded_by",
+      "last_reviewed_at",
+      "open_questions"
+    ],
+    "rule": "Task intent is closable work; system and subsystem intent are durable, editable decision pressure with provenance."
+  },
+  "effective_authority": {
+    "authority_map": [
+      {
+        "authority_class": "authoritative",
+        "concern": "confirmed intent",
+        "owner": "human or live issue cluster",
+        "status": "runtime",
+        "surface": "current request and checked external-work evidence"
+      },
+      {
+        "authority_class": "authoritative",
+        "concern": "compiled system intent",
+        "owner": "workspace",
+        "status": "present",
+        "surface": ".agentic-workspace/system-intent/intent.toml"
+      },
+      {
+        "authority_class": "authoritative",
+        "concern": "compiled subsystem intent",
+        "owner": "workspace",
+        "status": "missing",
+        "surface": ".agentic-workspace/system-intent/subsystems.toml"
+      },
+      {
+        "authority_class": "authoritative",
+        "concern": "workspace policy",
+        "owner": "repo",
+        "status": "unknown",
+        "surface": ".agentic-workspace/config.toml"
+      },
+      {
+        "authority_class": "authoritative",
+        "concern": "active plan and continuation",
+        "owner": "planning",
+        "status": "absent",
+        "surface": ".agentic-workspace/planning/state.toml"
+      },
+      {
+        "authority_class": "authoritative",
+        "concern": "durable repo knowledge",
+        "owner": "memory",
+        "status": "absent",
+        "surface": ".agentic-workspace/memory/repo/"
+      },
+      {
+        "authority_class": "authoritative",
+        "concern": "surface ownership",
+        "owner": "workspace",
+        "status": "present",
+        "surface": ".agentic-workspace/OWNERSHIP.toml"
+      },
+      {
+        "authority_class": "derived",
+        "concern": "contract extraction and schema coverage",
+        "owner": "workspace",
+        "status": "present",
+        "surface": "src/agentic_workspace/contracts/contract_inventory.json"
+      },
+      {
+        "authority_class": "procedural-owned",
+        "concern": "runtime implementation",
+        "owner": "workspace",
+        "status": "present",
+        "surface": "generated/workspace/python/cli.py"
+      }
+    ],
+    "canonical_doc": ".agentic-workspace/docs/system-intent-contract.md",
+    "command": "agentic-workspace report --target ./repo --format json",
+    "current_work": {
+      "source": "none",
+      "status": "absent",
+      "surface": ""
+    },
+    "defaults_command": "agentic-workspace defaults --section effective_authority --format json",
+    "idle_context": [
+      {
+        "id": "no-active-planning-record",
+        "recommended_query": "agentic-workspace summary --format json",
+        "summary": "No active planning record is present; this is normal for idle or narrow direct work."
+      }
+    ],
+    "owner_choice_review": {
+      "concern_classes": [
+        {
+          "authority_class": "authoritative-policy",
+          "avoid_when": "The concern is only active-slice state, historical evidence, or implementation behavior.",
+          "id": "config_policy",
+          "owner_surface": ".agentic-workspace/config.toml",
+          "route_when": "The concern is a stable machine-readable repo default, posture, or workflow obligation."
+        },
+        {
+          "authority_class": "authoritative-contract",
+          "avoid_when": "The concern needs live filesystem inspection or imperative runtime behavior.",
+          "id": "contract_schema_authority",
+          "owner_surface": "src/agentic_workspace/contracts/",
+          "route_when": "The concern defines a reusable payload, schema, command contract, proof route, or generation source."
+        },
+        {
+          "authority_class": "active-direction",
+          "avoid_when": "The concern should remain true after the active lane closes without promotion.",
+          "id": "planning_active_state",
+          "owner_surface": ".agentic-workspace/planning/state.toml",
+          "route_when": "The concern is current continuation, active work, roadmap ordering, or slice-local execution state."
+        },
+        {
+          "authority_class": "interpretive-understanding",
+          "avoid_when": "The concern is a binding policy, active task, or validation rule.",
+          "id": "memory_durable_understanding",
+          "owner_surface": ".agentic-workspace/memory/repo/",
+          "route_when": "The concern is reusable repo understanding or learned context that informs future interpretation."
+        },
+        {
+          "authority_class": "historical-evidence",
+          "avoid_when": "The concern has been accepted as current plan, durable memory, or enforceable contract.",
+          "id": "review_evidence",
+          "owner_surface": ".agentic-workspace/planning/reviews/",
+          "route_when": "The concern is bounded review output, finding evidence, or issue-intake history."
+        },
+        {
+          "authority_class": "derived-generated",
+          "avoid_when": "The concern is the source contract or hand-written runtime primitive.",
+          "id": "generated_adapter_output",
+          "owner_surface": "generated/",
+          "route_when": "The concern is a generated mirror or runnable adapter derived from contracts."
+        },
+        {
+          "authority_class": "installed-payload",
+          "avoid_when": "The concern belongs to repo-owned startup instructions or local runtime implementation.",
+          "id": "package_payload",
+          "owner_surface": ".agentic-workspace/",
+          "route_when": "The concern is installed product-managed payload, managed fence content, or upgrade-replaceable module state."
+        },
+        {
+          "authority_class": "procedural-owned",
+          "avoid_when": "The concern can be expressed as a declarative contract, schema, or package payload.",
+          "id": "runtime_primitive_implementation",
+          "owner_surface": "generated/workspace/python/cli.py",
+          "route_when": "The concern needs imperative behavior, live repo inspection, subprocess execution, or mutation sequencing."
+        }
+      ],
+      "purpose": "Route each durable concern to one primary owner surface before adding or trusting another copy.",
+      "review_questions": [
+        "Is this a stable repo-wide policy, a behavior contract, current execution state, durable understanding, review evidence, generated mirror, package payload, or runtime primitive?",
+        "Which surface is allowed to be edited directly, and which surfaces must be regenerated, archived, or treated as derived?",
+        "Would putting this fact in a second visible place create duplicate authority instead of a useful adapter or proof?"
+      ]
+    },
+    "provenance": {
+      "contract_area_count": 38,
+      "contract_inventory": "src/agentic_workspace/contracts/contract_inventory.json",
+      "ownership": "agentic-workspace ownership --target ./repo --format json",
+      "report": "agentic-workspace report --target ./repo --format json",
+      "summary": "agentic-workspace summary --format json",
+      "system_intent_preferred_source": "",
+      "system_intent_sources": []
+    },
+    "rule": "Use this compact view to identify the current authority for intent, policy, active work, durable knowledge, checks, contracts, and runtime behavior before claiming system-intent alignment or closure.",
+    "status": "needs-review",
+    "system_intent_embodiment": {
+      "anti_framework_pressure": [
+        "remove an unnecessary surface",
+        "replace or merge with an existing compact surface",
+        "compress or background an existing surface",
+        "add a new durable surface only when the repeated cost and owner are explicit"
+      ],
+      "must_answer_before_closure": [
+        "Did the slice preserve the larger intended outcome, not only land a local implementation?",
+        "Where does unresolved continuation belong?",
+        "Did new durable surfaces pass the surface-value guardrail?",
+        "Which authoritative surfaces changed and which should remain untouched?"
+      ],
+      "status": "needs-review"
+    },
+    "unresolved_gaps": [
+      {
+        "id": "memory-not-installed",
+        "recommended_query": "agentic-workspace modules --format json",
+        "summary": "Durable Memory authority is absent; reusable learning has no shared module surface."
+      }
+    ]
+  },
+  "final_report_budget": {
+    "kind": "agentic-workspace/final-report-budget/v1",
+    "raw_output_rule": "Keep raw output only when it is necessary evidence; otherwise report the first real error or proof summary.",
+    "rule": "Summarize what changed the decision or proves completion; do not narrate obvious diffs or dump raw logs by default.",
+    "sections": [
+      "changed",
+      "intent_served",
+      "verified",
+      "unresolved"
+    ],
+    "status": "available"
+  },
+  "improvement_intake": {
+    "canonical_doc": "src/agentic_workspace/contracts/improvement_signal_contract.json",
+    "command": "agentic-workspace defaults --section improvement_intake --format json",
+    "payload": {
+      "advanced_review_route": {
+        "enabled": false,
+        "feature": "review_artifacts",
+        "rule": "Review findings are an improvement-intake subtype, but review artifact machinery remains advanced opt-in."
+      },
+      "allowed_destinations": [
+        "discard",
+        "active planning state or execplan",
+        "roadmap",
+        "Memory",
+        "canonical docs",
+        "config/check surface",
+        "issue follow-up"
+      ],
+      "audience_boundary": {
+        "rule": "Reusable host-repo diagnostics are shipped; package-development signals stay source-checkout-only.",
+        "source_checkout_only_subtypes": [],
+        "status": "target-repo"
+      },
+      "candidate_count": 0,
+      "command": "agentic-workspace report --target ./repo --section improvement_intake --format json",
+      "default_rule": "Treat setup findings, review findings, validation friction, and memory improvement signals as one intake question: what should happen to this signal, if anything? Package-development signals are added only in the package source checkout.",
+      "guardrails": [
+        "Do not auto-promote every signal to work.",
+        "Do not treat review artifacts as ordinary startup input.",
+        "Keep speculative findings transient unless a durable owner is clear.",
+        "Preserve provenance and confidence when a signal is routed."
+      ],
+      "improvement_signal_candidates": [],
+      "kind": "workspace-improvement-intake/v1",
+      "promotion_rule": "Preserve or promote only signals with a clear evidence source, confidence/trust signal, and durable owner; dismiss weak or speculative signals explicitly.",
+      "role": "router-not-backlog",
+      "routing_decision": [
+        {
+          "question": "Which subtype and evidence source produced the signal?",
+          "step": "classify"
+        },
+        {
+          "question": "Is there enough confidence, repetition, or explicit owner override to preserve it?",
+          "step": "admit-or-dismiss"
+        },
+        {
+          "question": "Should it become active planning, roadmap, Memory, docs, config/checks, issue follow-up, or be discarded?",
+          "step": "choose-owner"
+        },
+        {
+          "question": "Can the reviewer see the evidence and owner without reconstructing chat?",
+          "step": "prove"
+        }
+      ],
+      "setup_findings": {
+        "path": "tools/setup-findings.json",
+        "status": "not-evaluated"
+      },
+      "signal_contract": {
+        "candidate_kind": "workspace-improvement-signal-candidate/v1",
+        "closeout_statuses": [
+          "found",
+          "fixed",
+          "routed",
+          "dismissed",
+          "none"
+        ],
+        "command": "agentic-workspace defaults --section improvement_signal --format json",
+        "correct_by_design_review": {
+          "closeout_field": "correct_by_design_assessment",
+          "rule": "Validation should confirm correct construction, not teach agents how to construct the artifact or workflow after failure.",
+          "status": "required-when-relevant"
+        },
+        "required_fields": [
+          "kind",
+          "observed_during",
+          "symptom",
+          "cost",
+          "suspected_owner",
+          "likely_remediation",
+          "confidence",
+          "recurrence",
+          "immediate_action",
+          "retention"
+        ],
+        "validation_failure_classes": [
+          "user_or_content_error",
+          "environment_or_dependency_error",
+          "interface_design_error",
+          "unclear_proof_contract"
+        ]
+      },
+      "source_checkout_only": {
+        "hidden_subtype_count": 1,
+        "status": "hidden-outside-package-source-checkout"
+      },
+      "subtypes": [
+        {
+          "accepted_classes": [
+            "repo_friction_evidence",
+            "planning_candidate"
+          ],
+          "audience": "target-repo",
+          "confidence_field": "confidence",
+          "evidence_class": "agent-provided setup artifact",
+          "id": "setup_finding",
+          "primary_route": "repo_friction.external_evidence or planning promotion review",
+          "selector": "agentic-workspace setup --target ./repo --format json",
+          "source": "tools/setup-findings.json"
+        },
+        {
+          "advanced_feature": "review_artifacts",
+          "audience": "target-repo",
+          "confidence_field": "review mode and finding severity/trust",
+          "evidence_class": "bounded review finding",
+          "id": "review_finding",
+          "primary_route": "planning review promotion only when the review_artifacts advanced feature is enabled or explicitly selected",
+          "selector": "agentic-workspace report --target ./repo --section closeout_trust --format json",
+          "source": ".agentic-workspace/planning/reviews/"
+        },
+        {
+          "audience": "target-repo",
+          "classification": "user_or_content_error | environment_or_dependency_error | interface_design_error | unclear_proof_contract",
+          "confidence_field": "repeated failure against otherwise straightforward work",
+          "correct_by_design_remedies": [
+            "scaffold",
+            "writer_helper",
+            "alias",
+            "lifecycle_command",
+            "command",
+            "agent_aid"
+          ],
+          "evidence_class": "proof or validation friction",
+          "id": "validation_friction",
+          "primary_route": "repo_friction evidence, config/check improvement, or proof-route cleanup",
+          "repeat_route": "when interface-design or unclear-proof failures repeat, emit an improvement_signal_candidate instead of only adding validation prose",
+          "selector": "agentic-workspace defaults --section improvement_latitude --format json",
+          "source": "src/agentic_workspace/contracts/repo_friction_policy.json"
+        },
+        {
+          "audience": "target-repo",
+          "confidence_field": "memory_role=improvement_signal plus config_treatment",
+          "evidence_class": "durable memory note carrying upstream improvement pressure",
+          "id": "memory_improvement_signal",
+          "primary_route": "Memory note, config/check follow-up, docs clarification, or issue follow-up",
+          "selector": "agentic-workspace report --target ./repo --section repo_friction --format json",
+          "source": ".agentic-workspace/memory/WORKFLOW.md"
+        },
+        {
+          "audience": "target-repo",
+          "classification": "first_seen | repeated | human_confirmed",
+          "confidence_field": "recurrence plus affected invariant and proof-after result",
+          "correct_by_design_remedies": [
+            "remove_or_merge_wrong_path",
+            "affordance",
+            "scaffold",
+            "writer_helper",
+            "agent_aid",
+            "regression_test"
+          ],
+          "evidence_class": "repeated invariant/fault repair class",
+          "id": "repair_recurrence",
+          "primary_route": "correct-by-design remedy, agent aid, regression test, or issue follow-up",
+          "repeat_route": "when the same invariant/fault pair repeats, prefer making the right action cheaper before adding more diagnostic prose",
+          "selector": "agentic-workspace defaults --section repair_recovery --format json",
+          "source": "doctor.repair_actions or doctor.manual_review_actions"
+        }
+      ]
+    },
+    "rule": "Use one improvement-intake router before treating setup findings, review findings, validation friction, or memory improvement signals as separate mechanisms."
+  },
+  "improvement_latitude": {
+    "canonical_doc": ".agentic-workspace/docs/workspace-config-contract.md",
+    "command": "agentic-workspace defaults --section improvement_latitude --format json",
+    "decision_test": {
+      "broaden_proof_when": [
+        "the touched surface expands from local code cleanup into shared reporting, planning, or memory state",
+        "the improvement changes a generated or front-door surface that weaker agents may rely on directly",
+        "the concept-friction change alters user-visible routing, startup, or ownership guidance"
+      ],
+      "changed_task_when": [
+        "the improvement changes what counts as success instead of only changing the means",
+        "proof must broaden into another lane or owner before the change can be trusted",
+        "the work introduces new visible process, routing, tooling, or module responsibility",
+        "the friction signal is being used to justify standalone work that the current slice did not already own"
+      ],
+      "escalate_when": [
+        "the improvement would rewrite requested ends under a cleanup label",
+        "the change would create a new top-level concept or module to fix the friction",
+        "the available evidence is too weak to distinguish local means improvement from a different task"
+      ],
+      "stays_local_when": [
+        "the requested outcome still means the same thing after the improvement",
+        "the proof lane remains narrow enough to prove the change without cross-owner validation",
+        "ownership stays inside the current workspace/planning/memory boundary",
+        "the improvement reduces proven friction rather than creating a new capability branch"
+      ]
+    },
+    "default_mode": "conservative",
+    "evidence_classes": [
+      "large_file_hotspots",
+      "concept_surface_hotspots",
+      "planning_friction",
+      "validation_friction"
+    ],
+    "evidence_source": "agentic-workspace report --target ./repo --format json",
+    "examples": {
+      "repo_directed_improvement_next": [
+        "after the workspace already routes correctly, repeated shared friction still comes from unclear repo seams, tranche boundaries, or ownership and should be promoted as repo-directed follow-on work",
+        "when validation keeps bouncing across unclear seams or proof expectations, keep that visible as validation-friction evidence instead of treating it as just another one-off failure"
+      ],
+      "workspace_adaptation_first": [
+        "tighten a selector, recovery hint, or report field so the workspace points agents at the right repo surface without asking the repo to restructure itself"
+      ]
+    },
+    "friction_response_order": [
+      {
+        "action": "adapt-inside-workspace-first",
+        "rule": "Adapt inside Agentic Workspace first when the friction can be removed there safely and cheaply.",
+        "step": 1
+      },
+      {
+        "action": "promote-repo-directed-improvement-when-external",
+        "rule": "Promote repo-directed improvement only when the friction reflects a real repo problem that should not be masked by workspace adaptation.",
+        "step": 2
+      },
+      {
+        "action": "avoid-externalizing-honestly-absorbable-friction",
+        "rule": "Do not externalize friction to the user when Agentic Workspace can honestly absorb it itself.",
+        "step": 3
+      }
+    ],
+    "guardrail_test": {
+      "adapt_when": [
+        "the friction is genuinely about workspace fit, reporting, routing, selector design, recovery clarity, or contract wording",
+        "one bounded workspace change can remove the friction without hiding repo-owned structural problems"
+      ],
+      "keep_true": [
+        "new adaptation paths stay general",
+        "new adaptation paths stay bounded",
+        "new adaptation paths stay cheaper than repeated repo or user burden"
+      ],
+      "prefer": "one clear adaptation over accumulating many narrow special cases",
+      "surface_repo_friction_when": [
+        "the root problem is really unclear repo seams, tranche boundaries, validation friction, or ownership",
+        "repeated friction would otherwise require accumulating narrow workspace compensations"
+      ]
+    },
+    "incidental_finding_policy": {
+      "do_not_report": [
+        "one-off taste without operational evidence",
+        "speculation that cannot name a concrete friction source",
+        "noise already covered by an existing active plan or current report section"
+      ],
+      "report_how": [
+        "keep it compact and evidence-backed",
+        "separate acted-on improvements from reported-only findings",
+        "route repeated or high-confidence findings to planning, review evidence, Memory, docs, config, or agent aids"
+      ],
+      "report_when": [
+        "the finding affects future agent efficiency, safety, restart cost, handoff cost, proof clarity, or routing clarity",
+        "the finding is outside the current bounded action scope but has enough concrete evidence to be useful later",
+        "the finding explains why the agent did not widen the current task"
+      ],
+      "rule": "Agents should report incidental improvement findings they encounter, even when the current mode does not justify acting on them immediately.",
+      "status": "required-reporting"
+    },
+    "mode_interpretation": {
+      "none": "Repo-directed initiative stays off, but bounded workspace self-adaptation remains allowed.",
+      "proactive": "Prefer workspace adaptation first; use repo-directed action only when the root problem is genuinely external and the work stays bounded.",
+      "reporting": "Repo-directed follow-through stays reporting-only, but bounded workspace self-adaptation remains allowed."
+    },
+    "owner_rule": "Repo-friction policy and evidence remain workspace-level shared surfaces rather than a separate core module.",
+    "owner_surface": "workspace",
+    "policy_target": "repo-directed-improvement",
+    "policy_target_rule": "The improvement-latitude modes govern autonomous initiative directed at repo-owned or otherwise external surfaces.",
+    "repo_directed_improvement_threshold": {
+      "collaboration_bias": "In collaborative repos, prefer the higher bar: shared repeated evidence beats local agent taste before repo-directed change.",
+      "minimum_threshold": [
+        "at least two independent friction confirmations, or one bounded review artifact plus one repeated maintenance or dogfooding pass",
+        "evidence should point to the repo as the real source after honest workspace adaptation has already been tried or would become concealment"
+      ],
+      "not_enough": [
+        "one-off agent discomfort",
+        "one contributor or one model preferring a different repo shape",
+        "friction the workspace can still remove honestly inside its own surfaces"
+      ],
+      "promote_when": [
+        "repeated evidence shows the same repo-owned seam, boundary, ownership, or validation problem",
+        "further workspace adaptation would hide the repo problem instead of solving it honestly",
+        "the follow-on can stay bounded and explain why the repo change is more honest than another workspace-only patch"
+      ],
+      "status": "explicit-contract",
+      "summary": "Repo-directed improvement requires repeated shared evidence that the repo is the real friction source, not one-off agent preference or local discomfort."
+    },
+    "rule": "Repo-owned improvement latitude may widen means to reduce proven repo friction, but it must remain subordinate to delegated judgment, proof, and ownership.",
+    "supported_modes": [
+      {
+        "allows": [
+          "only the cleanup necessary to complete the requested work safely",
+          "ignoring incidental friction that does not block the current slice"
+        ],
+        "forbids": [
+          "agent-initiated cleanup prompted only by repo-friction evidence",
+          "turning incidental hotspots into side work during the current slice"
+        ],
+        "initiative_posture": "no-opportunistic-action",
+        "mode": "none",
+        "reporting_destinations": [
+          "agentic-workspace report --target ./repo --format json"
+        ],
+        "reporting_rule": "Surface friction passively through derived reporting only; do not create follow-on work on your own.",
+        "summary": "Do not perform opportunistic repo-friction reduction outside the explicitly requested work."
+      },
+      {
+        "allows": [
+          "recording notable friction in bounded reporting or review outputs",
+          "capturing durable follow-through in planning residue when the current slice already owns planning state",
+          "surfacing evidence-backed hotspots for later human-directed action"
+        ],
+        "forbids": [
+          "opportunistic cleanup outside the explicitly requested work",
+          "promoting friction into active work without a bounded promotion step"
+        ],
+        "initiative_posture": "reporting-only",
+        "mode": "reporting",
+        "reporting_destinations": [
+          "agentic-workspace report --target ./repo --format json",
+          "review outputs",
+          ".agentic-workspace/planning/state.toml or the active execplan when the current slice already owns planning residue"
+        ],
+        "reporting_rule": "Surface notable friction through bounded reporting or residue; do not act on it without explicit direction.",
+        "summary": "Notice and surface notable repo friction, but do not reduce it on the agent's own initiative."
+      },
+      {
+        "allows": [
+          "small local simplifications inside already-touched files",
+          "narrow helper extraction when proof and ownership stay unchanged",
+          "recording repeated friction as durable follow-on instead of widening the current slice"
+        ],
+        "forbids": [
+          "standalone cleanup work triggered by one hotspot alone",
+          "broad refactors or concept-pruning without explicit promotion"
+        ],
+        "initiative_posture": "local-touched-scope-only",
+        "mode": "conservative",
+        "reporting_destinations": [
+          "agentic-workspace report --target ./repo --format json",
+          ".agentic-workspace/planning/state.toml or the active execplan when repeated friction deserves promotion"
+        ],
+        "reporting_rule": "Use reporting to justify or defer bounded follow-on; do not treat one hotspot as permission for standalone cleanup.",
+        "summary": "Only reduce repo friction opportunistically inside already-touched scope; do not create standalone cleanup work from one hotspot alone."
+      },
+      {
+        "allows": [
+          "simplifying a touched hotspot during the current slice",
+          "small repo-friction reductions when repeated shared evidence is present and proof stays narrow",
+          "turning repeated friction into a bounded follow-on candidate"
+        ],
+        "forbids": [
+          "rewriting requested ends in the name of cleanup",
+          "treating one-off agent discomfort or local taste as enough evidence for repo-directed change",
+          "broad cross-owner refactors without promotion"
+        ],
+        "initiative_posture": "bounded-evidence-backed-action",
+        "mode": "balanced",
+        "reporting_destinations": [
+          "agentic-workspace report --target ./repo --format json",
+          ".agentic-workspace/planning/state.toml or the active execplan when friction should become bounded follow-on work"
+        ],
+        "reporting_rule": "Use reporting to preserve evidence and deferred cleanup residue whenever the current slice intentionally stops short.",
+        "summary": "Allow bounded friction reduction when evidence is clear and the extra work stays inside the current proof and ownership boundary."
+      },
+      {
+        "allows": [
+          "small standalone cleanup slices backed by repeated shared friction evidence",
+          "collapsing low-value local complexity before it grows further",
+          "promoting repeated friction into planning earlier"
+        ],
+        "forbids": [
+          "unsignaled broad redesign under a cleanup label",
+          "using one-off preference or single-agent discomfort as the proof threshold for repo-directed cleanup",
+          "using proactive mode as a scheduler or blanket refactor permission"
+        ],
+        "initiative_posture": "bounded-standalone-action-allowed",
+        "mode": "proactive",
+        "reporting_destinations": [
+          "agentic-workspace report --target ./repo --format json",
+          ".agentic-workspace/planning/state.toml or the active execplan when proactive cleanup stops before the larger opportunity is complete"
+        ],
+        "reporting_rule": "Use reporting to preserve evidence and unfinished bounded cleanup residue, not to justify hidden widening.",
+        "summary": "Allow bounded standalone friction reduction when evidence is strong and the work can still stay inside clear ownership and proof lanes."
+      }
+    ],
+    "validation_friction": {
+      "correct_by_design_remedy_order": [
+        "scaffold",
+        "writer_helper",
+        "alias",
+        "lifecycle_command",
+        "command",
+        "agent_aid",
+        "validation",
+        "docs"
+      ],
+      "distinguish_from": [
+        "ordinary bug-fixing where the failing check and expected fix are already clear",
+        "one-off broken tests or environment failures that do not reveal a repeated repo seam problem",
+        "genuinely difficult domains where the hard part is the domain logic itself rather than validation fit"
+      ],
+      "failure_classification": [
+        {
+          "class": "user_or_content_error",
+          "interface_design_signal": false,
+          "route": "fix content or implementation directly unless the same shape failure keeps recurring"
+        },
+        {
+          "class": "environment_or_dependency_error",
+          "interface_design_signal": false,
+          "route": "repair setup or dependency guidance only when the failure repeats across environments"
+        },
+        {
+          "class": "interface_design_error",
+          "interface_design_signal": true,
+          "route": "promote to correct-by-design remediation such as scaffold, writer helper, alias, lifecycle command, command, or agent aid"
+        },
+        {
+          "class": "unclear_proof_contract",
+          "interface_design_signal": true,
+          "route": "tighten proof selection or recovery guidance before adding more validation prose"
+        }
+      ],
+      "repeated_failure_signal": "Repeated interface-design or unclear-proof validation failures should produce an improvement signal with suspected_owner, likely_remediation, recurrence, and retention instead of only another repair note.",
+      "reporting_destinations": [
+        "repo_friction review output",
+        "bounded planning residue when a follow-on slice is justified",
+        "ordinary report output without implicit active work"
+      ],
+      "rule": "Treat validation friction as repo-friction evidence only when otherwise straightforward work keeps stalling at validation because repo seams, tranche boundaries, proof expectations, or rerun/re-entry paths stay unclear.",
+      "status": "explicit-contract",
+      "subtypes": [
+        "weak_seam",
+        "bad_tranche_boundary",
+        "unclear_proof_contract",
+        "validation_bounce_reentry"
+      ]
+    },
+    "workspace_self_adaptation": {
+      "applies_to": [
+        "reporting surfaces",
+        "routing and selector surfaces",
+        "recovery surfaces",
+        "workspace contract clarity"
+      ],
+      "bounded_by": [
+        "correctness",
+        "ownership",
+        "proof",
+        "portability"
+      ],
+      "rule": "Treat improvement_latitude as the policy for repo-directed initiative only; do not read it as a ban on bounded workspace self-improvement.",
+      "status": "allowed-with-bounds",
+      "summary": "Workspace-self-adaptation may reduce friction inside Agentic Workspace-owned surfaces under every improvement-latitude mode."
+    }
+  },
+  "improvement_signal": {
+    "canonical_doc": "src/agentic_workspace/contracts/improvement_signal_contract.json",
+    "command": "agentic-workspace defaults --section improvement_signal --format json",
+    "payload": {
+      "candidate_kind": "workspace-improvement-signal-candidate/v1",
+      "closeout_statuses": [
+        "found",
+        "fixed",
+        "routed",
+        "dismissed",
+        "none"
+      ],
+      "correct_by_design_review": {
+        "ask_when": [
+          "adding or materially changing package-owned command, report, planning, Memory, setup, or lifecycle surfaces",
+          "adding or materially changing schema-backed artifacts or generated adapters",
+          "closing a self-improvement slice that touched package operating surfaces",
+          "routing repeated validation friction"
+        ],
+        "closeout_field": "correct_by_design_assessment",
+        "preferred_remediation_order": [
+          "scaffold",
+          "writer_helper",
+          "alias",
+          "lifecycle_command",
+          "command",
+          "agent_aid",
+          "validation",
+          "docs"
+        ],
+        "questions": [
+          "Does the structure invite the right action before validation runs?",
+          "Can the interface make the wrong action impossible or unlikely?",
+          "Can a scaffold, writer helper, alias, lifecycle command, compact route, or agent aid construct the correct shape?",
+          "Can validation remain confirmatory rather than instructional?",
+          "If validation still teaches construction, where is the remedy signal routed?"
+        ],
+        "rule": "Validation should confirm correct construction, not teach agents how to construct the artifact or workflow after failure.",
+        "status": "required-when-relevant"
+      },
+      "destinations": [
+        "discard",
+        "active planning state or execplan",
+        "roadmap",
+        "Memory",
+        "canonical docs",
+        "config/check surface",
+        "issue follow-up"
+      ],
+      "guardrails": [
+        "A signal is not a work item until an owner and proof path are chosen.",
+        "Do not preserve low-confidence one-off discomfort without a clear owner.",
+        "Do not use Memory as active state for signals.",
+        "Prefer shrinking or deleting the signal residue after remediation unless it still prevents rediscovery."
+      ],
+      "kind": "workspace-improvement-signal-contract/v1",
+      "kinds": [
+        "workflow_cost",
+        "architecture_cost",
+        "footprint_cost",
+        "validation_friction",
+        "docs_routing",
+        "module_boundary",
+        "repeated_human_steering",
+        "weak_agent_failure",
+        "shipped_footprint",
+        "default_feature_creep"
+      ],
+      "likely_remediations": [
+        "docs",
+        "tests",
+        "validation",
+        "command",
+        "scaffold",
+        "writer_helper",
+        "alias",
+        "lifecycle_command",
+        "agent_aid",
+        "skill",
+        "refactor",
+        "module_split",
+        "remove",
+        "make_optional",
+        "unship",
+        "unknown"
+      ],
+      "required_fields": [
+        "kind",
+        "observed_during",
+        "symptom",
+        "cost",
+        "suspected_owner",
+        "likely_remediation",
+        "confidence",
+        "recurrence",
+        "immediate_action",
+        "retention"
+      ],
+      "role": "candidate-shape-not-backlog",
+      "rule": "Capture only compact remediation-oriented signals before deciding whether to fix, route, remember, review, or dismiss them.",
+      "validation_failure_classes": [
+        {
+          "class": "user_or_content_error",
+          "preferred_remediations": [
+            "tests",
+            "validation"
+          ],
+          "route": "fix the content or code directly; do not treat it as product/interface work by default",
+          "signal_rule": "The failing check clearly identifies invalid user content or an ordinary implementation bug."
+        },
+        {
+          "class": "environment_or_dependency_error",
+          "preferred_remediations": [
+            "docs",
+            "command",
+            "agent_aid"
+          ],
+          "route": "repair or document setup only when the failure repeats across environments",
+          "signal_rule": "The failure is caused by missing tools, local environment state, network state, or dependency setup."
+        },
+        {
+          "class": "interface_design_error",
+          "preferred_remediations": [
+            "scaffold",
+            "writer_helper",
+            "alias",
+            "lifecycle_command",
+            "command",
+            "agent_aid"
+          ],
+          "route": "prefer correct-by-design package surfaces before adding more validation text",
+          "signal_rule": "Otherwise straightforward work repeatedly fails because the package interface asks agents to hand-author, guess, rerun, or repair shape."
+        },
+        {
+          "class": "unclear_proof_contract",
+          "preferred_remediations": [
+            "alias",
+            "command",
+            "lifecycle_command",
+            "docs"
+          ],
+          "route": "tighten proof selection, recovery guidance, or a lifecycle command",
+          "signal_rule": "The failure is mainly about selecting, sequencing, or re-entering proof rather than fixing domain behavior."
+        }
+      ],
+      "validation_remedy_order": [
+        "fix clear user/content errors directly",
+        "repair environment/setup failures only when they are real blockers",
+        "for repeated interface-design failures, prefer scaffold, writer helper, alias, lifecycle command, command, or agent aid before adding more validation prose",
+        "promote to planning or issue follow-up only when the owner and proof path are clear"
+      ]
+    },
+    "rule": "Use the compact signal shape to capture friction before deciding whether to fix, route, remember, review, or dismiss it."
+  },
+  "install_profiles": {
+    "canonical_doc": "docs/which-package.md",
+    "cli_availability": {
+      "if_unavailable": "Install `agentic-workspace` into the target repo or its tool environment, then rerun the same lifecycle command.",
+      "preferred": "Use `agentic-workspace` already installed in the target repo's environment.",
+      "temporary_fallback": "`uvx` or `pipx run` may be used for explicit temporary/debug runs, but they are not the default host-repo install path.",
+      "why": "Startup and follow-on work rely on repeated CLI calls, so a stable installed command is cheaper and safer than one-shot no-install runners."
+    },
+    "command": "agentic-workspace defaults --section install_profiles --format json",
+    "default_answer": "Start with `memory` when durable repo knowledge is the main problem; choose `planning` for active execution continuity and `full` only when both are justified.",
+    "default_entrypoint": "agentic-workspace",
+    "lightweight_profile": {
+      "preset": "memory",
+      "summary": "Choose `memory` when you want the smallest useful shared core.",
+      "why": "It keeps the visible surface smaller than `planning` or `full` while still giving the repo durable knowledge and compact routing."
+    },
+    "partial_adoption": [
+      {
+        "combination": "memory only",
+        "primary_writable_surfaces": [
+          ".agentic-workspace/memory/repo/"
+        ],
+        "supported": true
+      },
+      {
+        "combination": "planning only",
+        "primary_writable_surfaces": [
+          ".agentic-workspace/planning/state.toml",
+          ".agentic-workspace/planning/execplans/"
+        ],
+        "supported": true
+      },
+      {
+        "combination": "memory + planning",
+        "primary_writable_surfaces": [
+          "Planning for active-now state",
+          "memory for durable knowledge"
+        ],
+        "supported": true
+      }
+    ],
+    "profiles": [
+      {
+        "good_fit": [
+          "subsystem knowledge is expensive to rediscover",
+          "recurring traps or operator sequences should be shared",
+          "the repo already has task tracking but lacks durable shared knowledge"
+        ],
+        "main_problem": "Stable repo knowledge keeps getting rediscovered.",
+        "preset": "memory",
+        "why": "Memory is the smallest useful operational profile for durable context and quiet routing."
+      },
+      {
+        "good_fit": [
+          "work spans many short sessions",
+          "active execution drifts without a checked-in queue",
+          "backlog tools exist, but active implementation still fragments"
+        ],
+        "main_problem": "Active work keeps drifting or fragmenting.",
+        "preset": "planning",
+        "why": "Planning gives a checked-in active queue and bounded execplans."
+      },
+      {
+        "good_fit": [
+          "the repo wants both restartable execution and lower rediscovery cost",
+          "agents are regular maintainers and need both active state and durable context"
+        ],
+        "main_problem": "You want both durable knowledge and checked-in execution.",
+        "preset": "full",
+        "why": "The workspace layer composes both modules through one lifecycle entrypoint."
+      }
+    ],
+    "recommendation_order": [
+      "memory",
+      "planning",
+      "full"
+    ],
+    "rule": "Use an installed public workspace entrypoint and choose the smallest preset that matches the repo's main operating problem."
+  },
+  "intent": {
+    "canonical_doc": ".agentic-workspace/docs/compact-contract-profile.md",
+    "command": "agentic-workspace defaults --section intent --format json",
+    "confirmed_intent": {
+      "source": "user request or explicit lifecycle directive",
+      "summary": "the human-owned request before workspace normalization"
+    },
+    "escalate_when": [
+      "the interpreted intent changes the requested outcome",
+      "the interpreted intent widens the owned surface or time horizon",
+      "the compact selector can no longer carry the user-end safely"
+    ],
+    "interpreted_intent": {
+      "source": "workspace normalization",
+      "summary": "the workspace-normalized request carried forward by lifecycle commands"
+    },
+    "rule": "Confirmed intent stays human-owned; interpreted intent must remain visibly inferred."
+  },
+  "lifecycle": {
+    "canonical_bootstrap_handoff_record": ".agentic-workspace/bootstrap-handoff.json",
+    "canonical_bootstrap_next_action": ".agentic-workspace/bootstrap-handoff.md",
+    "canonical_external_agent_handoff": "docs/agentic-workspace-install.md",
+    "cli_availability_rule": "Prefer the installed `agentic-workspace` command; if missing, install it before bootstrap instead of defaulting to uvx or pipx.",
+    "default_install_command": "agentic-workspace install --target ./repo --preset <memory|planning|full>",
+    "default_operating_commands": [
+      "agentic-workspace status --target ./repo",
+      "agentic-workspace doctor --target ./repo",
+      "agentic-workspace upgrade --target ./repo"
+    ],
+    "default_setup_posture": "smallest-viable-preset-first",
+    "primary_entrypoint": "agentic-workspace",
+    "secondary": [
+      "Package CLIs are for package-local maintainer work, advanced debugging, or explicit module-level control."
+    ],
+    "supported_intents": [
+      "set up this repo for Agentic Memory",
+      "set up this repo for Agentic Planning",
+      "set up this repo for both Planning and Memory"
+    ]
+  },
+  "mixed_agent": {
+    "agent_aid_storage": {
+      "boundary_rules": [
+        "local-only helpers remain under the local integration area and must not become shared authority",
+        "checked-in candidate aids live under the candidate root until promoted or retired",
+        "promoted aids move to the strongest ordinary repo-native surface and should not require candidate storage",
+        "package-owned aids are shipped product surfaces, not host-repo custom aids",
+        "source-checkout-only maintainer aids must not be required in ordinary host repos",
+        "the model is repo-, agent-, tool-, and language-agnostic"
+      ],
+      "candidate_root": ".agentic-workspace/agent-aids",
+      "candidate_root_exists": false,
+      "candidate_subdirs": [
+        "scripts",
+        "skills",
+        "runbooks",
+        "prompts",
+        "checks",
+        "templates",
+        "module-components"
+      ],
+      "canonical_doc": ".agentic-workspace/docs/agent-aids-storage.md",
+      "command": "agentic-workspace defaults --section agent_aid_storage --format json",
+      "creation_affordance": {
+        "agent_may_create": true,
+        "aid_types": [
+          "script",
+          "runbook",
+          "template",
+          "prompt",
+          "check",
+          "compact-command-runner",
+          "shim"
+        ],
+        "authority_boundary": [
+          "aids help agents work; they do not silently become required workflow",
+          "candidate aids are advisory until promoted through ordinary repo review and proof surfaces",
+          "local-only aids are ignored by git, non-authoritative, and safe to delete"
+        ],
+        "creation_triggers": [
+          "the same command bundle or check sequence is run repeatedly",
+          "command output is noisy but the agent only needs pass/fail plus failure tail",
+          "handoff or closeout steps are reconstructed from memory across turns",
+          "a small template, prompt, runbook, wrapper, or shim would prevent rediscovery"
+        ],
+        "evidence_shape": {
+          "compact_output": "short pass/fail/actionable summary for the agent",
+          "full_evidence": "inspectable command log, artifact, manifest, or source file",
+          "manifest_required_for_checked_in": true,
+          "validation": "checked-in executable aids declare validation.commands and pass check_agent_aids"
+        },
+        "first_pattern": {
+          "command": "uv run python scripts/check/run_compact_command.py",
+          "failure_output": "failure or timeout header plus tailed command output",
+          "full_log_root": "scratch/command-logs",
+          "id": "compact-runner",
+          "makefile_variable": "COMPACT_RUN",
+          "success_output": "[ok] <label> (<duration>)",
+          "timeout_option": "--timeout-seconds <seconds>",
+          "timeout_rule": "Set the runner timeout below the outer tool timeout so compact failure evidence and logs survive.",
+          "use_for": "wrapping noisy recurring commands without hiding full failure evidence"
+        },
+        "first_steps": [
+          "name the repeated friction and decide local-only vs checked-in candidate",
+          "reuse COMPACT_RUN or the same compact-output/full-log pattern for noisy commands",
+          "if checked in, add a nearby manifest.json and run python scripts/check/check_agent_aids.py",
+          "keep the aid advisory until a promoted repo-native surface owns discovery and proof"
+        ],
+        "kind": "agentic-workspace/agent-created-aid-affordance/v1",
+        "storage_decision": {
+          "checked_in_candidate": ".agentic-workspace/agent-aids",
+          "local_only": ".agentic-workspace/local/integrations",
+          "prefer_checked_in_when": [
+            "the aid benefits any agent working in this repo",
+            "the aid is portable enough to review and run across ordinary repo environments",
+            "the aid captures repo-specific workflow knowledge that should survive machines and sessions"
+          ],
+          "prefer_local_only_when": [
+            "the aid depends on a specific agent runtime, subscription, account, credential, path, or shell setup",
+            "the aid is experimental scratch for one machine",
+            "the aid bridges private or machine-local state that must not become shared repo authority"
+          ],
+          "promoted_repo_native": "ordinary repo command, check, skill, runbook, prompt, template, or docs surface",
+          "rule": "Use local-only for machine/runtime-specific aids; use checked-in candidate storage for repo-shared aids that are still proving value; promote only after repeated usefulness or clear repo-general value.",
+          "runtime_artifact_shims": {
+            "artifact_classes": [
+              "internal-plan",
+              "check-bundle",
+              "handoff-state",
+              "runtime-export"
+            ],
+            "authoritative": false,
+            "bridge_rule": "Use runtime-native plans as private working memory when they help, but bridge decisions, scope, proof, and continuation into checked-in Agentic Workspace Planning before implementation handoff or closeout.",
+            "compact_output": "short agent-facing status, next action, and proof pointer",
+            "discovery": [
+              "agentic-workspace defaults --section agent_aid_storage --format json",
+              "agentic-workspace config --target ./repo --format json",
+              "agentic-workspace report --target ./repo --section agent_aids --format json"
+            ],
+            "full_evidence": "inspectable local artifact, manifest, command log, or exported source file",
+            "git_ignored": true,
+            "kind": "agentic-workspace/local-runtime-artifact-shim/v1",
+            "metadata_required": [
+              "kind",
+              "source_runtime",
+              "artifact_class",
+              "input_owner",
+              "output_target",
+              "authority",
+              "promotion_target",
+              "proof_command",
+              "created_at"
+            ],
+            "preferred_bridge_steps": [
+              "capture the runtime-native plan or todo list under the local integration area when it is useful evidence",
+              "summarize only durable intent, scope, proof, and next action into checked-in planning state",
+              "run agentic-workspace summary --format json after the bridge and resolve warnings before implementation"
+            ],
+            "promotion_boundary": [
+              "local shims never become shared authority by existing locally",
+              "promote only through checked-in planning, memory, agent-aid, docs, or repo-native review surfaces",
+              "record proof before treating shim output as repo-shared state",
+              "a runtime-native plan or todo list does not satisfy required Agentic Workspace Planning until bridged"
+            ],
+            "root": ".agentic-workspace/local/integrations",
+            "status": "local-only-pattern",
+            "use_for": [
+              "internal agent plans that need compact checked-in planning updates",
+              "runtime check bundles that need compact pass/fail plus inspectable logs",
+              "handoff or resume state that needs a bounded workspace continuation record",
+              "runtime-native planning systems that the agent is already optimized or hardwired to use"
+            ]
+          }
+        },
+        "summary": "Create a bounded aid when it would reduce repeated work, parsing cost, handoff cost, or error risk."
+      },
+      "discovery_command": "agentic-workspace report --target ./repo --section agent_aids --format json",
+      "executable_safety": {
+        "candidate_aid_check": "python scripts/check/check_agent_aids.py",
+        "candidate_aids_are_not": [
+          "canonical proof routes",
+          "required workflow entrypoints"
+        ],
+        "canonical_checks_are": "repo-owned checkers and proof routes that validate candidate metadata, not candidate aids themselves",
+        "canonical_proof_role_requires_status": "promoted",
+        "executable_types": [
+          "script",
+          "check"
+        ],
+        "hidden_required_workflow": "forbidden",
+        "high_risk_requires_review_when": [
+          "writes_repo",
+          "destructive",
+          "network"
+        ],
+        "non_cross_platform_requires": "portability_justification",
+        "platform_specific_checked_in_requires": "checked_in_scope_justification",
+        "repo_general_preference": "Prefer cross-platform wrappers for repo-shared validation; keep platform-specific helpers local unless justified.",
+        "rule": "Checked-in executable aids must declare safety, portability, validation, and proof-role metadata."
+      },
+      "manifest_check": "python scripts/check/check_agent_aids.py",
+      "manifest_kind": "agentic-workspace/agent-aid/v1",
+      "manifest_name": "manifest.json",
+      "manifest_required": "for checked-in shared aids",
+      "manifest_schema": "src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json",
+      "ordinary_startup": false,
+      "promotion_model": {
+        "discovery_after_promotion": {
+          "command_or_check": "agentic-workspace proof --changed ... --format json or repo-native check discovery",
+          "module_component": "module manifest resources/tools/prompts",
+          "runbook_prompt_template_docs": "agentic-workspace report --target ./repo --section agent_aids --format json until promoted surface owns discovery",
+          "skill": "agentic-workspace skills --target ./repo --task \"<task>\" --format json"
+        },
+        "discovery_route_required": true,
+        "portable_repo_general_rule": "Repo-shared executable canonical proof aids must be cross-platform.",
+        "retirement_required": "candidate manifests declare retention_after_promotion",
+        "rule": "Proven aids should move from candidate storage to the strongest repo-native surface and retire or shrink the candidate copy.",
+        "target_kinds": [
+          "command",
+          "check",
+          "skill",
+          "runbook",
+          "prompt",
+          "template",
+          "module-component",
+          "docs-contract"
+        ],
+        "trigger": "repeated successful use or clear repo-general value"
+      },
+      "status": "available-checked-in-candidate-area",
+      "storage_classes": [
+        {
+          "authority": "none",
+          "class": "local-only",
+          "git_ignored": true,
+          "root": ".agentic-workspace/local/integrations",
+          "use_for": "runtime-specific or machine-specific helpers that must be safe to delete"
+        },
+        {
+          "authority": "candidate aid metadata plus ordinary repo review",
+          "class": "checked-in-candidate",
+          "git_ignored": false,
+          "root": ".agentic-workspace/agent-aids",
+          "use_for": "repo-shared aids that are still proving value before promotion"
+        },
+        {
+          "authority": "the promoted surface's normal contract, tests, and ownership",
+          "class": "promoted-repo-native",
+          "git_ignored": false,
+          "root": "host repo canonical commands, checks, skills, runbooks, prompts, templates, or docs",
+          "use_for": "stable aids whose value no longer depends on candidate-aid storage"
+        },
+        {
+          "authority": "package contracts and release process",
+          "class": "package-owned",
+          "git_ignored": false,
+          "root": "package source or installed payload surfaces",
+          "use_for": "features shipped by the package, not host-repo local aids"
+        },
+        {
+          "authority": "source checkout tests and maintainer workflow",
+          "class": "source-checkout-only",
+          "git_ignored": false,
+          "root": "maintainer tooling in the package source checkout",
+          "use_for": "package-maintainer aids that must not appear as host-repo workflow requirements"
+        }
+      ],
+      "task_recommendation_command": "agentic-workspace skills --target ./repo --task \"<task>\" --format json"
+    },
+    "capability_handoff_packets": {
+      "common_required_fields": [
+        "task_shape: direct, bounded, lane, or epic",
+        "route_reason: why this target or escalation route fits better than direct execution",
+        "inspected_context: exact files, commands, or planning state already inspected",
+        "allowed_write_scope: paths or surfaces the receiver may edit",
+        "proof_expectations: commands or checks that must remain true",
+        "stop_conditions: when the receiver must stop instead of guessing",
+        "return_contract: what evidence or answer the receiver must return"
+      ],
+      "packet_types": {
+        "exploration_probe": {
+          "must_not": "edit files, decide product direction, or synthesize beyond the assigned question.",
+          "receiver": "read-only explorer or cheaper inspection-capable target",
+          "use_when": "The current executor needs one bounded repo-inspection answer before planning, implementation, or validation can stay compact."
+        },
+        "manual_human_clarification": {
+          "must_not": "substitute an agent-preferred outcome for the requested outcome.",
+          "receiver": "human",
+          "use_when": "The next decision depends on human intent, ownership boundary, or acceptable autonomy."
+        },
+        "no_safe_route": {
+          "must_not": "force delegation merely because a target exists.",
+          "receiver": "current executor closeout or human triage",
+          "use_when": "No configured target can satisfy capability, proof, and human-control requirements."
+        },
+        "strong_reviewer_fallback": {
+          "must_not": "expand implementation scope during review without returning a new route decision.",
+          "receiver": "strong reviewer",
+          "use_when": "Implementation can proceed cheaply, but review or proof interpretation needs stronger reasoning."
+        },
+        "strong_target_downrouting": {
+          "must_not": "down-route when proof is unclear or the task has unresolved judgment.",
+          "receiver": "cheaper bounded executor with strong target retained as planner/reviewer fallback",
+          "use_when": "A strong target is overqualified for mechanical-follow-through work and a cheaper configured target fits."
+        },
+        "weak_target_escalation": {
+          "must_not": "execute the overmatched target as executor of record",
+          "receiver": "strong planner, human, or configured escalation target",
+          "use_when": "A weak or underfit target encounters boundary-shaping, reasoning-heavy, high-proof, or forbidden work."
+        }
+      },
+      "rule": "Use capability handoff packets when runtime_resolution exposes escalation, down-routing, or no-safe-route. Packets preserve quality first and token savings only when proof and scope remain safe."
+    },
+    "clarification_control": {
+      "default": "suggest",
+      "field": "clarification.mode",
+      "mode_semantics": {
+        "ask-first": "stop and ask when task intent, ownership, or required information is unclear",
+        "auto-continue": "continue with the best bounded interpretation unless a hard blocker is present",
+        "suggest": "surface the ask-human option without forcing it when uncertainty is material"
+      },
+      "supported_modes": [
+        "ask-first",
+        "suggest",
+        "auto-continue"
+      ]
+    },
+    "decision_order": [
+      "runtime/task inference",
+      "repo-owned policy",
+      "optional local machine/runtime override",
+      "explicit prompting when still unsafe"
+    ],
+    "delegated_run_guardrail": {
+      "closeout_gate": {
+        "default_trust": "normal",
+        "lower_trust_when": [
+          "target advisory review burden is high",
+          "target strength is weak",
+          "delegation outcome evidence trends negative"
+        ],
+        "required_when_lower_trust": [
+          "human review before closeout",
+          "explicit execution residue proving bounded scope and validations"
+        ]
+      },
+      "required_preflight_checks": [
+        "recover handoff-quality must_recover fields from checked-in state",
+        "confirm bounded owned-write scope and stop conditions are explicit",
+        "select a local delegation target profile or stay direct",
+        "declare whether closeout starts as normal or lower-trust"
+      ],
+      "rule": "Before delegating bounded implementation, emit one compact preflight answer and set closeout trust to lower-trust when weak-target signals are present.",
+      "strong_target_downrouting": {
+        "mode_actions": {
+          "auto": "delegate to the cheaper bounded executor when safety allows; otherwise stay direct",
+          "manual": "prepare a compact handoff for the cheaper target and stop",
+          "off": "stay direct; do not force delegation for cheap work",
+          "suggest": "recommend the cheaper bounded executor and keep the strong target as planner/reviewer fallback"
+        },
+        "quality_over_cost": "Down-routing is valid only when the task is bounded, mechanical, and cheaply provable.",
+        "rule": "A strong target should not monopolize mechanical-follow-through work when a configured cheaper bounded executor fits the task and proof remains clear. Prefer down-routing in suggest/auto modes, but keep execution quality and human control ahead of token saving."
+      },
+      "weak_target_escalation": {
+        "mode_actions": {
+          "auto": "route to a stronger configured target when safety allows; otherwise stop with manual-handoff",
+          "manual": "prepare a strong_handoff_packet and stop for human/runtime execution",
+          "off": "stay direct only for current-agent execution; do not delegate to the weak target",
+          "suggest": "recommend a stronger planner or handoff packet; do not execute the weak target automatically"
+        },
+        "quality_over_cost": "Cost saving is valid only after capability fit and proof expectations remain safe.",
+        "rule": "A weak target may save tokens only for work inside its advertised fit. When runtime_resolution marks a weak target below the recommended strength for boundary-shaping or reasoning-heavy work, the target must not execute directly; it must escalate, request a stronger planner, or return a compact manual handoff depending on delegation.mode."
+      }
+    },
+    "delegation_control": {
+      "default": "suggest",
+      "field": "delegation.mode",
+      "mode_semantics": {
+        "auto": "permit automatic delegation only when local safety and target rules allow it",
+        "manual": "prepare handoff packets or prompts only",
+        "off": "do not recommend local delegation targets",
+        "suggest": "recommend a target and rationale, but do not execute"
+      },
+      "quality_first_rule": "Delegation should improve quality where it matters and is worth the overhead; token saving is valid only when safe and not quality-compromising.",
+      "supported_modes": [
+        "off",
+        "manual",
+        "suggest",
+        "auto"
+      ]
+    },
+    "handoff_quality": {
+      "must_recover": [
+        "current intent",
+        "hard constraints",
+        "relevant durable context",
+        "proof expectations",
+        "immediate next action"
+      ]
+    },
+    "local_integration_area": {
+      "allowed_aid_kinds": [
+        "prompt helpers",
+        "export/import shims",
+        "local wrappers",
+        "native-workflow adapters",
+        "resumable handoff helpers",
+        "runtime scratch files"
+      ],
+      "authoritative": false,
+      "boundary_rules": [
+        "local-only and ignored by git",
+        "optional for ordinary workspace commands",
+        "non-authoritative for planning, memory, startup, review, and workflow state",
+        "safe to delete without changing repo-owned shared behavior",
+        "not a plugin registry or shared compatibility framework"
+      ],
+      "canonical_doc": ".agentic-workspace/docs/local-integration-area.md",
+      "example_subfolder": ".agentic-workspace/local/integrations/codex",
+      "exists": false,
+      "git_ignored": true,
+      "root": ".agentic-workspace/local/integrations",
+      "rule": "Vendor/runtime integration aids may live here to make local compliance cheaper, but shared workflow truth must stay in repo-owned workspace, planning, and memory surfaces.",
+      "runtime_artifact_shim_pattern": {
+        "artifact_classes": [
+          "internal-plan",
+          "check-bundle",
+          "handoff-state",
+          "runtime-export"
+        ],
+        "authoritative": false,
+        "bridge_rule": "Use runtime-native plans as private working memory when they help, but bridge decisions, scope, proof, and continuation into checked-in Agentic Workspace Planning before implementation handoff or closeout.",
+        "compact_output": "short agent-facing status, next action, and proof pointer",
+        "discovery": [
+          "agentic-workspace defaults --section agent_aid_storage --format json",
+          "agentic-workspace config --target ./repo --format json",
+          "agentic-workspace report --target ./repo --section agent_aids --format json"
+        ],
+        "full_evidence": "inspectable local artifact, manifest, command log, or exported source file",
+        "git_ignored": true,
+        "kind": "agentic-workspace/local-runtime-artifact-shim/v1",
+        "metadata_required": [
+          "kind",
+          "source_runtime",
+          "artifact_class",
+          "input_owner",
+          "output_target",
+          "authority",
+          "promotion_target",
+          "proof_command",
+          "created_at"
+        ],
+        "preferred_bridge_steps": [
+          "capture the runtime-native plan or todo list under the local integration area when it is useful evidence",
+          "summarize only durable intent, scope, proof, and next action into checked-in planning state",
+          "run agentic-workspace summary --format json after the bridge and resolve warnings before implementation"
+        ],
+        "promotion_boundary": [
+          "local shims never become shared authority by existing locally",
+          "promote only through checked-in planning, memory, agent-aid, docs, or repo-native review surfaces",
+          "record proof before treating shim output as repo-shared state",
+          "a runtime-native plan or todo list does not satisfy required Agentic Workspace Planning until bridged"
+        ],
+        "root": ".agentic-workspace/local/integrations",
+        "status": "local-only-pattern",
+        "use_for": [
+          "internal agent plans that need compact checked-in planning updates",
+          "runtime check bundles that need compact pass/fail plus inspectable logs",
+          "handoff or resume state that needs a bounded workspace continuation record",
+          "runtime-native planning systems that the agent is already optimized or hardwired to use"
+        ]
+      },
+      "scratch": {
+        "authoritative": false,
+        "exists": false,
+        "git_ignored": true,
+        "root": ".agentic-workspace/local/scratch",
+        "safe_to_delete": true,
+        "sign": "Go ahead and use this for whatever temporary working files you need.",
+        "status": "ready-local-only"
+      },
+      "status": "available-local-only",
+      "subfolder_convention": "<vendor-or-runtime>/"
+    },
+    "local_memory": {
+      "advisory_only": true,
+      "authoritative": false,
+      "controlled_by": ".agentic-workspace/config.local.toml",
+      "git_ignored": true,
+      "path": ".agentic-workspace/local/memory.toml",
+      "promotion_guidance": "Promote manually into checked-in Memory only when the knowledge is durable, shareable, non-private, and useful beyond this machine.",
+      "rule": "Machine-local repo memory may support same-machine continuity when explicitly enabled, but checked-in Memory remains the shared durable authority.",
+      "status": "available-local-only"
+    },
+    "local_outcome_artifact": {
+      "kind": "agentic-workspace/delegation-outcomes/v1",
+      "path": ".agentic-workspace/delegation-outcomes.json",
+      "rule": "local-only delegation outcome evidence used to derive advisory tuning suggestions over time"
+    },
+    "local_override": {
+      "intended_scope": [
+        "machine-specific capability posture",
+        "account- or cost-profile asymmetry",
+        "local execution preferences that do not redefine repo semantics",
+        "available delegation target hints that stay advisory and local-only"
+      ],
+      "path": ".agentic-workspace/config.local.toml",
+      "status": "supported-local-only",
+      "supported": true,
+      "supported_capability_classes": [
+        "boundary-shaping",
+        "reasoning-heavy",
+        "mixed",
+        "mechanical-follow-through"
+      ],
+      "supported_clarification_modes": [
+        "ask-first",
+        "suggest",
+        "auto-continue"
+      ],
+      "supported_delegation_modes": [
+        "off",
+        "manual",
+        "suggest",
+        "auto"
+      ],
+      "supported_fields": [
+        "workspace.cli_invoke",
+        "workspace.shared_config_path",
+        "workspace.maintainer_mode",
+        "runtime.supports_internal_delegation",
+        "runtime.strong_planner_available",
+        "runtime.cheap_bounded_executor_available",
+        "handoff.prefer_internal_delegation_when_available",
+        "safety.safe_to_auto_run_commands",
+        "safety.requires_human_verification_on_pr",
+        "delegation.mode",
+        "clarification.mode",
+        "local_memory.enabled",
+        "local_memory.path",
+        "delegation_targets.<target>.strength",
+        "delegation_targets.<target>.location",
+        "delegation_targets.<target>.confidence",
+        "delegation_targets.<target>.task_fit",
+        "delegation_targets.<target>.capability_classes",
+        "delegation_targets.<target>.execution_methods",
+        "delegation_targets.<target>.model_family",
+        "delegation_targets.<target>.provider",
+        "delegation_targets.<target>.context_capacity",
+        "delegation_targets.<target>.reasoning_profile",
+        "delegation_targets.<target>.cost_class",
+        "delegation_targets.<target>.latency_class",
+        "delegation_targets.<target>.safe_task_classes",
+        "delegation_targets.<target>.forbidden_task_classes",
+        "delegation_targets.<target>.escalation_target",
+        "delegation_targets.<target>.confidence_source",
+        "delegation_targets.<target>.last_evaluation",
+        "delegation_targets.<target>.human_control_modes"
+      ],
+      "supported_target_context_capacities": [
+        "small",
+        "medium",
+        "large",
+        "unknown"
+      ],
+      "supported_target_cost_classes": [
+        "cheap",
+        "standard",
+        "premium",
+        "unknown"
+      ],
+      "supported_target_execution_methods": [
+        "internal",
+        "cli",
+        "api",
+        "manual"
+      ],
+      "supported_target_latency_classes": [
+        "fast",
+        "standard",
+        "slow",
+        "unknown"
+      ],
+      "supported_target_locations": [
+        "local",
+        "external",
+        "either"
+      ],
+      "supported_target_reasoning_profiles": [
+        "weak",
+        "balanced",
+        "strong",
+        "unknown"
+      ],
+      "supported_target_strengths": [
+        "strong",
+        "medium",
+        "weak"
+      ]
+    },
+    "local_scratch": {
+      "authoritative": false,
+      "exists": false,
+      "git_ignored": true,
+      "root": ".agentic-workspace/local/scratch",
+      "safe_to_delete": true,
+      "sign": "Go ahead and use this for whatever temporary working files you need.",
+      "status": "ready-local-only"
+    },
+    "repo_policy": {
+      "path": ".agentic-workspace/config.toml",
+      "scope": [
+        "stable repo policy",
+        "reviewable checked-in defaults",
+        "ownership and validation boundaries"
+      ]
+    },
+    "rule": "Prefer runtime/task inference first, then stable policy, then explicit prompting.",
+    "runtime_inference": {
+      "report_when_behavior_changes": true,
+      "scope": [
+        "delegation strategy",
+        "model choice",
+        "reasoning depth",
+        "task shaping when safe"
+      ],
+      "tool_owned": true
+    },
+    "runtime_resolution": {
+      "confidence_levels": [
+        "high",
+        "medium",
+        "low"
+      ],
+      "posture_source_fields": [
+        "execution class",
+        "recommended strength",
+        "preferred location",
+        "delegation friendly",
+        "strong external reasoning",
+        "work shape",
+        "proof burden",
+        "risk flags",
+        "inspection evidence required"
+      ],
+      "resolution_algorithm": [
+        "weak target below recommended_strength on boundary-shaping or reasoning-heavy work -> escalate-before-execution; never treat the weak target as the executor of record",
+        "strong target above recommended_strength on mechanical-follow-through work -> delegate-down-when-safe if a cheaper fit exists; keep strong planner/reviewer fallback",
+        "strong_external_reasoning='preferred' \u2192 external-delegation if external targets exist, else stronger-reasoning, else manual-handoff",
+        "execution_class in (boundary-shaping, reasoning-heavy) or recommended_strength=strong \u2192 stronger-reasoning if available, else external-delegation, else manual-handoff",
+        "execution_class=mixed \u2192 stay-local if local profiles acceptable, else stronger-reasoning",
+        "execution_class=mechanical-follow-through or recommended_strength in (weak, medium) \u2192 stay-local",
+        "no posture \u2192 stay-local with confidence derived from cheap_bounded_executor_available"
+      ],
+      "resolution_categories": [
+        "stay-local",
+        "stronger-reasoning",
+        "external-delegation",
+        "manual-handoff"
+      ],
+      "rule": "Query runtime_resolution before delegating or escalating to get a compact answer that combines work semantics with local execution posture.",
+      "self_assessment": {
+        "authority": "advisory-only",
+        "cannot_override": [
+          "forbidden_task_classes",
+          "capability_mismatch",
+          "proof_burden=high",
+          "required_action=escalate-before-execution",
+          "delegation.mode human control"
+        ],
+        "may_influence": [
+          "handoff detail",
+          "review burden",
+          "suggested confidence tuning",
+          "whether to ask for stronger planning when structural signals are inconclusive"
+        ],
+        "rule": "A model's self-confidence or self-described capability may explain a route, but structural task signals, local target limits, proof burden, and human control remain higher authority."
+      }
+    },
+    "strong_handoff_packet": {
+      "after_receiving_answer": [
+        "Apply the answer to the current bounded task.",
+        "Do not reopen the full execplan or lane scope based on the answer alone.",
+        "Record the answer as a checked-in decision residue if it changes durable state."
+      ],
+      "optional_fields": [
+        "background: additional context that would materially help the strong model but is not strictly required",
+        "avoid: specific patterns or approaches the answer must not use"
+      ],
+      "required_fields": [
+        "context: one-paragraph summary of the current work and its bounded scope",
+        "question: the specific high-judgment question the strong model should answer",
+        "constraints: the hard constraints the answer must satisfy",
+        "expected_output: what a useful answer looks like (format and scope)",
+        "return_to: what the current executor should do with the answer once received"
+      ],
+      "rule": "Use the strong_handoff_packet template when manual-handoff is the runtime recommendation or when a bounded high-judgment question should be escalated to a strong general-purpose reasoning model. Keep the packet compact: one question, bounded constraints, no full context dump.",
+      "size_guidance": "Target under 500 tokens for the full packet. Escalate one question at a time.",
+      "when_to_use": [
+        "runtime_resolution recommendation is 'manual-handoff'",
+        "a boundary decision requires judgment beyond the current executor's reliable range",
+        "an architectural or domain question would benefit from a strong external perspective",
+        "review uncertainty is high enough that stronger reasoning would change the closeout decision"
+      ]
+    },
+    "success_measures": [
+      "lower long-run token cost",
+      "lower restart and handoff cost",
+      "cheap switching across agents and subscriptions",
+      "persisted shared knowledge beats rediscovery"
+    ]
+  },
+  "operating_questions": {
+    "canonical_doc": "docs/which-package.md",
+    "command": "agentic-workspace defaults --section operating_questions --format json",
+    "questions": [
+      {
+        "ask_first": "agentic-workspace defaults --section startup --format json",
+        "id": "startup_or_lifecycle_path",
+        "question": "How do I start, or which lifecycle path applies?",
+        "then_if_needed": [
+          "agentic-workspace config --target ./repo --format json",
+          ".agentic-workspace/docs/lifecycle-and-config-contract.md"
+        ]
+      },
+      {
+        "ask_first": "agentic-workspace summary --format json",
+        "id": "active_state",
+        "question": "What is active right now?",
+        "then_if_needed": [
+          ".agentic-workspace/planning/state.toml",
+          ".agentic-workspace/planning/execplans/"
+        ]
+      },
+      {
+        "ask_first": "agentic-workspace preflight --target ./repo --format json",
+        "id": "combined_workspace_state",
+        "question": "What does the combined workspace state look like?",
+        "then_if_needed": [
+          "agentic-workspace report --target ./repo --format json",
+          ".agentic-workspace/docs/reporting-contract.md",
+          "raw module files only when the report is insufficient"
+        ]
+      },
+      {
+        "ask_first": "agentic-workspace defaults --section proof_selection --format json",
+        "id": "proof_or_ownership_answer",
+        "question": "Which proof or ownership answer is enough?",
+        "then_if_needed": [
+          "agentic-workspace proof --target ./repo --format json",
+          "agentic-workspace ownership --target ./repo --format json",
+          ".agentic-workspace/docs/compact-contract-profile.md"
+        ]
+      },
+      {
+        "ask_first": "agentic-workspace setup --target ./repo --format json",
+        "id": "setup_or_handoff_home",
+        "question": "Where does setup or external handoff work live?",
+        "then_if_needed": [
+          "docs/agentic-workspace-install.md",
+          ".agentic-workspace/bootstrap-handoff.md",
+          ".agentic-workspace/bootstrap-handoff.json"
+        ]
+      },
+      {
+        "ask_first": "agentic-workspace config --target ./repo --format json",
+        "id": "mixed_agent_posture",
+        "question": "What mixed-agent posture is in effect here?",
+        "then_if_needed": [
+          ".agentic-workspace/docs/delegation-posture-contract.md"
+        ]
+      }
+    ],
+    "rule": "For routine operational lookup, ask the smallest question first and stop at the first compact surface that answers it.",
+    "stop_rule": "Do not reopen broader docs once one compact surface has answered the routine question."
+  },
+  "optimization_bias": {
+    "applies_to": [
+      "derived report rendering density",
+      "rendered human-facing views",
+      "durable residue style when canonical state is unchanged"
+    ],
+    "canonical_doc": ".agentic-workspace/docs/workspace-config-contract.md",
+    "command": "agentic-workspace defaults --section optimization_bias --format json",
+    "default_mode": "balanced",
+    "must_not_change": [
+      "execution method",
+      "reasoning depth",
+      "delegated-judgment boundaries",
+      "proof requirements",
+      "canonical state semantics"
+    ],
+    "owner_surface": "workspace",
+    "rule": "Repo-owned optimization bias may change output density and residue style, but it must not change execution method or canonical state semantics.",
+    "supported_modes": [
+      {
+        "allows": [
+          "preferring terse labels when machine-readable state already carries the contract",
+          "keeping follow-through and residue compact when explanation would only restate canonical fields",
+          "trimming repeated explanatory prose from rendered human views"
+        ],
+        "does_not_affect": [
+          "execution method",
+          "reasoning depth",
+          "delegated-judgment boundaries",
+          "proof requirements",
+          "canonical state semantics"
+        ],
+        "mode": "agent-efficiency",
+        "rendered_view_style": "minimal-prose",
+        "report_density": "compact",
+        "residue_density": "compact-carry-forward",
+        "summary": "Prefer terse durable outputs and low-token rendered views when canonical state would stay unchanged.",
+        "surface_boundary": {
+          "honors_bias": [
+            "derived report rendering density",
+            "rendered human-facing views",
+            "durable residue style when canonical truth is unchanged"
+          ],
+          "stays_invariant": [
+            "execution method",
+            "reasoning depth",
+            "delegated-judgment boundaries",
+            "proof requirements",
+            "ownership semantics",
+            "machine-readable report truth",
+            "canonical state semantics"
+          ]
+        }
+      },
+      {
+        "allows": [
+          "keeping machine-readable state terse",
+          "adding short explanatory labels in rendered human views",
+          "preserving compact residue with only the explanation needed to avoid rereading"
+        ],
+        "does_not_affect": [
+          "execution method",
+          "reasoning depth",
+          "delegated-judgment boundaries",
+          "proof requirements",
+          "canonical state semantics"
+        ],
+        "mode": "balanced",
+        "rendered_view_style": "brief-explanatory",
+        "report_density": "balanced",
+        "residue_density": "compact-with-brief-explanation",
+        "summary": "Keep durable outputs compact by default while preserving enough explanatory rendering for routine human inspection.",
+        "surface_boundary": {
+          "honors_bias": [
+            "derived report rendering density",
+            "rendered human-facing views",
+            "durable residue style when canonical truth is unchanged"
+          ],
+          "stays_invariant": [
+            "execution method",
+            "reasoning depth",
+            "delegated-judgment boundaries",
+            "proof requirements",
+            "ownership semantics",
+            "machine-readable report truth",
+            "canonical state semantics"
+          ]
+        }
+      },
+      {
+        "allows": [
+          "adding brief explanatory context around compact state",
+          "rendering section purpose more explicitly for human readers",
+          "keeping durable residue slightly more legible when terseness would force rereading"
+        ],
+        "does_not_affect": [
+          "execution method",
+          "reasoning depth",
+          "delegated-judgment boundaries",
+          "proof requirements",
+          "canonical state semantics"
+        ],
+        "mode": "human-legibility",
+        "rendered_view_style": "explicit-labels-and-context",
+        "report_density": "explanatory",
+        "residue_density": "legible-with-context",
+        "summary": "Prefer clearer explanatory rendering and more legible durable residue when truth would remain unchanged.",
+        "surface_boundary": {
+          "honors_bias": [
+            "derived report rendering density",
+            "rendered human-facing views",
+            "durable residue style when canonical truth is unchanged"
+          ],
+          "stays_invariant": [
+            "execution method",
+            "reasoning depth",
+            "delegated-judgment boundaries",
+            "proof requirements",
+            "ownership semantics",
+            "machine-readable report truth",
+            "canonical state semantics"
+          ]
+        }
+      }
+    ],
+    "surface_boundary": {
+      "honors_bias": [
+        "derived report rendering density",
+        "rendered human-facing views",
+        "durable residue style when canonical truth is unchanged"
+      ],
+      "stays_invariant": [
+        "execution method",
+        "reasoning depth",
+        "delegated-judgment boundaries",
+        "proof requirements",
+        "ownership semantics",
+        "machine-readable report truth",
+        "canonical state semantics"
+      ]
+    }
+  },
+  "ownership_mapping": {
+    "canonical_doc": ".agentic-workspace/docs/ownership-authority-contract.md",
+    "command": "agentic-workspace ownership --target ./repo --format json",
+    "default_routes": {
+      "compatibility_policy": ".agentic-workspace/docs/compatibility-policy.md",
+      "generated_surface_trust": ".agentic-workspace/docs/generated-surface-trust.md",
+      "ownership_ledger": ".agentic-workspace/OWNERSHIP.toml",
+      "workflow_contract": ".agentic-workspace/WORKFLOW.md",
+      "workspace_ownership": "agentic-workspace ownership --target ./repo --format json"
+    },
+    "ledger": ".agentic-workspace/OWNERSHIP.toml",
+    "rule": "Resolve the owner and authoritative surface before changing or trusting a contract.",
+    "secondary": [
+      "Read package-local docs only after the ownership map identifies the package as the primary owner."
+    ]
+  },
+  "prompt_routing": {
+    "canonical_doc": ".agentic-workspace/docs/compact-contract-profile.md",
+    "command": "agentic-workspace defaults --section prompt_routing --format json",
+    "escalate_when": [
+      "the proof lane is still unclear after one repo-context clarification",
+      "the owner inference would change the requested outcome",
+      "the prompt spans multiple owners and no narrow lane is enough"
+    ],
+    "owner_inference": [
+      ".agentic-workspace/planning/state.toml or an active execplan implies planning ownership.",
+      ".agentic-workspace/memory/repo/index.md or a runbook implies memory ownership.",
+      "workspace lifecycle defaults or routing docs imply workspace ownership."
+    ],
+    "proof_inference": [
+      "Use workspace_cli when the prompt changes the front-door workspace surface.",
+      "Use planning_surfaces when the prompt changes .agentic-workspace/planning/state.toml or execplans.",
+      "Use memory_payload when the prompt changes durable repo knowledge or routing notes."
+    ],
+    "route_by_class": [
+      {
+        "class": "workspace lifecycle change",
+        "owner_surface": "generated/workspace/python/cli.py",
+        "proof_lane": "workspace_cli"
+      },
+      {
+        "class": "planning state or contract change",
+        "owner_surface": ".agentic-workspace/planning/execplans/ or .agentic-workspace/planning/state.toml",
+        "proof_lane": "planning_surfaces"
+      },
+      {
+        "class": "durable repo knowledge change",
+        "owner_surface": ".agentic-workspace/memory/repo/",
+        "proof_lane": "memory_payload"
+      },
+      {
+        "broaden_with": [
+          "planning_surfaces"
+        ],
+        "class": "cross-cutting workspace contract",
+        "owner_surface": "docs/design-principles.md",
+        "proof_lane": "workspace_cli"
+      }
+    ],
+    "rule": "Map vague prompt classes to a proof lane and an owner before widening the task."
+  },
+  "proof_selection": {
+    "canonical_doc": ".agentic-workspace/docs/proof-surfaces-contract.md",
+    "command": "agentic-workspace defaults --section proof_selection --format json",
+    "construction_boundary": "Proof and validation confirm correct construction; repeated construction repair loops should route to interface/scaffold improvements instead of more validation prose.",
+    "recommended_lanes": [
+      {
+        "broaden_when": "The current workspace proof answer is not specific enough for the trust question.",
+        "enough_proof": "agentic-workspace proof --target ./repo --format json",
+        "escalate_when": "The proof question crosses into package-specific or repo-wide contract changes.",
+        "id": "workspace_proof",
+        "use_when": "The question is what proves the workspace contract here."
+      },
+      {
+        "broaden_when": "Current health alone does not answer the trust question.",
+        "enough_proof": "agentic-workspace proof --target ./repo --current --format json",
+        "escalate_when": "A deeper package or repo-wide proof lane is required.",
+        "id": "workspace_current",
+        "use_when": "The question is the current workspace health or installed-module state."
+      },
+      {
+        "broaden_when": "The narrower validation lane stops proving the touched contract or the change crosses boundaries.",
+        "enough_proof": "Use the narrowest validation lane from `validation` that covers the touched surface.",
+        "escalate_when": "Validation would be meaningless without broader scope.",
+        "id": "validation_lane",
+        "use_when": "The question is whether a touched contract change is proved by narrow validation."
+      }
+    ],
+    "rule": "Make proof choice cheap by naming the narrowest lane that still answers the trust question.",
+    "rule_of_thumb": [
+      "Prefer the smallest queryable proof answer first.",
+      "Broaden only when the narrow lane stops answering the trust question.",
+      "Escalate when proof would need broader scope than the current trust question justifies."
+    ]
+  },
+  "proof_surfaces": {
+    "canonical_doc": ".agentic-workspace/docs/proof-surfaces-contract.md",
+    "command": "agentic-workspace proof --target ./repo --format json",
+    "default_routes": {
+      "maintainer_surfaces": "make maintainer-surfaces",
+      "memory_payload": "uv run agentic-workspace upgrade --target . --modules memory",
+      "planning_payload": "uv run agentic-planning upgrade --target .",
+      "planning_surfaces": "agentic-workspace summary --target ./repo --format json",
+      "source_payload_install": "uv run pytest tests/test_source_payload_operational_install.py",
+      "workspace_doctor": "agentic-workspace doctor --target ./repo",
+      "workspace_proof": "agentic-workspace proof --target ./repo --format json",
+      "workspace_status": "agentic-workspace status --target ./repo"
+    },
+    "rule": "Use the narrowest proof lane that answers the current trust question.",
+    "secondary": [
+      "Use package-local tests or payload verification only when the trust question is package-specific."
+    ]
+  },
+  "recovery": {
+    "canonical_doc": "docs/environment-recovery-contract.md",
+    "effective_output_posture": {
+      "command": "agentic-workspace config --target ./repo --format json",
+      "field": "workspace.optimization_bias",
+      "rule": "When startup or recovery needs the effective repo output posture, inspect it through config instead of inferring it from rendered report density alone."
+    },
+    "handoff_surfaces": [
+      ".agentic-workspace/bootstrap-handoff.md",
+      ".agentic-workspace/bootstrap-handoff.json"
+    ],
+    "ordered_path": [
+      "agentic-workspace status --target ./repo",
+      "agentic-workspace doctor --target ./repo",
+      "agentic-workspace defaults --format json",
+      "agentic-workspace config --target ./repo --format json"
+    ],
+    "refresh_contract": [
+      "uv run agentic-workspace upgrade --target . --modules planning",
+      "uv run agentic-workspace upgrade --target . --modules memory"
+    ],
+    "rule": "Inspect state first, refresh contract second, re-run the narrowest proving lane third."
+  },
+  "relay": {
+    "canonical_doc": ".agentic-workspace/docs/delegation-posture-contract.md",
+    "command": "agentic-workspace defaults --section relay --format json",
+    "escalate_when": [
+      "the planner would need to rewrite the requested outcome",
+      "the cheap implementer would need broad repo rereads to stay safe",
+      "the routed Memory bridge is absent and the missing context is blocking"
+    ],
+    "execution_methods": [
+      {
+        "id": "internal delegation",
+        "when": "the runtime supports delegation and the local posture prefers it"
+      },
+      {
+        "id": "external cli or api",
+        "when": "another bounded executor is available outside the current runtime"
+      },
+      {
+        "id": "single-agent fallback",
+        "when": "delegation is unavailable or the handoff would cost more than it saves"
+      }
+    ],
+    "explorer_role": {
+      "does": [
+        "inspect only the listed files, commands, or planning surfaces",
+        "return compact evidence, uncertainty, and the next recommended read",
+        "stop before editing, broad synthesis, or product-shape decisions"
+      ],
+      "summary": "answer one bounded repo-inspection question without owning writes or implementation direction."
+    },
+    "hand_off_order": [
+      "intent",
+      "clarification",
+      "prompt_routing",
+      "relay"
+    ],
+    "handoff_command": "agentic-workspace planning handoff --format json",
+    "implementer_role": {
+      "does": [
+        "follow the compact interpreted contract",
+        "stop or escalate when the scope expands",
+        "mirror durable follow-through into checked-in surfaces"
+      ],
+      "summary": "execute the narrow contract without widening the requested end state, whether the executor is internal or external."
+    },
+    "memory_bridge": {
+      "borrow_from": [
+        ".agentic-workspace/memory/repo/index.md",
+        ".agentic-workspace/memory/repo/runbooks/"
+      ],
+      "fallback": [
+        "continue from checked-in docs when routed Memory is absent",
+        "route missing durable context back into Memory when the work reveals repeated gaps"
+      ],
+      "summary": "when routed Memory is installed, borrow durable repo understanding before freezing the compact contract."
+    },
+    "planner_role": {
+      "does": [
+        "clarify the request with the smallest repo-context follow-up",
+        "choose the narrow proof lane and owner surface",
+        "preserve escalation boundaries before the handoff freezes"
+      ],
+      "summary": "shape confirmed and interpreted intent, choose the proof lane, and freeze the smallest safe contract."
+    },
+    "rule": "Use a strong planner to normalize the vague prompt, then hand compact exploration, implementation, or validation contracts to bounded executors without prescribing the execution method.",
+    "selection_rule": "Use the effective mixed-agent posture from agentic-workspace config, then keep the same handoff contract whether execution stays internal, external over cli or api, or direct.",
+    "worker_boundary": {
+      "orchestrator_owns_by_default": [
+        "lane shaping",
+        "roadmap routing",
+        "issue closure",
+        "product-shape decisions"
+      ],
+      "worker_owns_by_default": [
+        "read-only exploration for one explicit question when assigned",
+        "bounded implementation inside the delegated write scope",
+        "narrow validation named by the handoff",
+        "cleanup and commit only when explicitly assigned and still bounded"
+      ]
+    }
+  },
+  "repair_recovery": {
+    "command": "agentic-workspace defaults --section repair_recovery --format json",
+    "fault_classes": [
+      {
+        "escalation": "ask for human intent when content authority is ambiguous",
+        "id": "user_content_fault",
+        "likely_owner": "repo owner",
+        "repairability": "manual-review-first"
+      },
+      {
+        "escalation": "manual review when ownership or intent is unclear",
+        "id": "agent_operation_fault",
+        "likely_owner": "current agent",
+        "repairability": "safe helper when the affected surface is managed or generated"
+      },
+      {
+        "escalation": "create an improvement signal when the same class repeats",
+        "id": "package_affordance_fault",
+        "likely_owner": "package maintainers",
+        "repairability": "route to interface/scaffold/helper improvement"
+      },
+      {
+        "escalation": "capture command, invariant, actual state, affected surfaces, reproduction, and regression-test hint",
+        "id": "package_command_bug",
+        "likely_owner": "package maintainers",
+        "repairability": "safe repair may recover state, but the command path needs regression work"
+      },
+      {
+        "escalation": "do not treat stale provider data as current execution pressure",
+        "id": "stale_external_evidence",
+        "likely_owner": "evidence adapter or operator",
+        "repairability": "refresh or mark stale before acting on counts"
+      },
+      {
+        "escalation": "manual review when generated and source surfaces disagree ambiguously",
+        "id": "generated_artifact_drift",
+        "likely_owner": "generator or agent operation",
+        "repairability": "regenerate from declared source when source authority is clear"
+      },
+      {
+        "escalation": "do not overwrite local owner edits without explicit intent",
+        "id": "ambiguous_ownership",
+        "likely_owner": "repo owner",
+        "repairability": "manual-review-only"
+      },
+      {
+        "escalation": "manual review if shared state may already depend on it",
+        "id": "local_only_leakage",
+        "likely_owner": "agent/runtime integration",
+        "repairability": "move or remove from shared authority when unambiguous"
+      }
+    ],
+    "invariants": [
+      {
+        "fault_classes": [
+          "agent_operation_fault",
+          "package_command_bug"
+        ],
+        "id": "workspace.required_surface_present",
+        "owner": "workspace",
+        "repair_class": "safe-deterministic",
+        "severity": "warning"
+      },
+      {
+        "fault_classes": [
+          "agent_operation_fault",
+          "ambiguous_ownership"
+        ],
+        "id": "workspace.startup_pointer_present",
+        "owner": "repo",
+        "repair_class": "manual-review",
+        "severity": "warning"
+      },
+      {
+        "fault_classes": [
+          "agent_operation_fault",
+          "package_command_bug"
+        ],
+        "id": "planning.active_execplan_exists",
+        "owner": "planning",
+        "repair_class": "safe-deterministic-when-row-is-stale",
+        "severity": "warning"
+      },
+      {
+        "fault_classes": [
+          "agent_operation_fault",
+          "package_affordance_fault",
+          "package_command_bug"
+        ],
+        "id": "planning.no_closed_work_in_live_state",
+        "owner": "planning",
+        "repair_class": "safe-deterministic-when-closeout-is-unambiguous",
+        "severity": "warning"
+      },
+      {
+        "fault_classes": [
+          "user_content_fault",
+          "agent_operation_fault",
+          "package_command_bug"
+        ],
+        "id": "structured.schema_valid",
+        "owner": "surface owner",
+        "repair_class": "manual-review-unless-generated",
+        "severity": "error"
+      },
+      {
+        "fault_classes": [
+          "agent_operation_fault",
+          "package_affordance_fault"
+        ],
+        "id": "memory.no_active_task_state",
+        "owner": "memory",
+        "repair_class": "route-to-planning-or-discard",
+        "severity": "warning"
+      },
+      {
+        "fault_classes": [
+          "local_only_leakage"
+        ],
+        "id": "local_only.not_shared_authority",
+        "owner": "workspace",
+        "repair_class": "manual-review",
+        "severity": "warning"
+      },
+      {
+        "fault_classes": [
+          "stale_external_evidence",
+          "package_command_bug"
+        ],
+        "id": "external_evidence.aggregates_match_items",
+        "owner": "evidence adapter",
+        "repair_class": "safe-deterministic-when-items-are-authoritative",
+        "severity": "warning"
+      }
+    ],
+    "kind": "workspace-repair-recovery-taxonomy/v1",
+    "operational_affordance_rule": "Repair output should show current fault summary, one primary safe next action when possible, resolved command, risk, dry-run/apply distinction, proof_after, and do_not guidance.",
+    "package_command_bug_signal": {
+      "required_fields": [
+        "command_run",
+        "expected_invariant",
+        "actual_broken_state",
+        "affected_surfaces",
+        "safe_repair_available",
+        "reproduction_command",
+        "suggested_regression_test"
+      ],
+      "route": "improvement_signal candidate or issue follow-up when a package-owned command violates its postcondition"
+    },
+    "pr_check_inspection": {
+      "default_summary_fields": [
+        "failing check or job name",
+        "failing command or inferred local reproduction command",
+        "exact error lines",
+        "run URL",
+        "artifact or log pointer for deeper detail"
+      ],
+      "post_push_attach_delay": {
+        "rule": "Immediately missing checks after push are neither success nor failure; use bounded retry/backoff before asking for manual sleep/retry.",
+        "state": "pending_attach"
+      },
+      "status": "source-checkout-maintainer-guidance",
+      "surface_boundary": "Treat gh-fix-ci helpers as source-checkout maintainer tooling unless a target repo explicitly installs or advertises a reusable diagnostic.",
+      "verbose_only": [
+        "unrelated passing-job tail content",
+        "full mixed log snippets"
+      ]
+    },
+    "recurrence_to_improvement": {
+      "first_seen": "repair or review the state without promoting product work by default",
+      "human_confirmed": "route to issue, planning, config/check, docs, or agent aid with provenance",
+      "preferred_remedies": [
+        "remove_or_merge_wrong_path",
+        "affordance",
+        "scaffold",
+        "writer_helper",
+        "agent_aid",
+        "regression_test"
+      ],
+      "repeated": "ask whether the wrong path can be removed, merged, scaffolded, or made obvious"
+    },
+    "repair_action_shape": {
+      "required_fields": [
+        "id",
+        "invariant",
+        "fault_class",
+        "severity",
+        "owner",
+        "safe_to_apply",
+        "risk",
+        "command",
+        "dry_run",
+        "proof_after",
+        "current_fault_summary",
+        "do_not"
+      ],
+      "rule": "Prefer one primary next action, with detail available in repair_actions or manual_review_actions."
+    },
+    "role": "compact diagnostic vocabulary, not a backlog"
+  },
+  "root_cli_authority": {
+    "command": "agentic-workspace defaults --section root_cli_authority --format json",
+    "current_audit": [
+      {
+        "evidence": "install/init/upgrade/uninstall perform dry-run planning, conservative writes, deletion safeguards, local-only preservation, and preflight-gated mutation.",
+        "id": "lifecycle-execution",
+        "next_review": "Keep lifecycle command shape and effect hints contract-backed; do not extract mutation primitives without a dedicated lifecycle generation slice.",
+        "responsibility_class": "runtime-primitives",
+        "status": "legitimate-runtime-ownership"
+      },
+      {
+        "evidence": "report/status/doctor combine live module detection, resolved config, installed-surface checks, and planning summaries; report-router shaping lives in agentic_workspace.reporting_support.",
+        "id": "report-status-doctor-assembly",
+        "next_review": "Keep stable report sections covered by report contracts and keep cli.py limited to command wiring plus live payload assembly.",
+        "responsibility_class": "derived-renderers",
+        "status": "legitimate-runtime-ownership"
+      },
+      {
+        "evidence": "cli_commands.json, cli_option_groups.json, command_adapter_generation.json, generated/python/*/generated_command_adapters.json, and command package checks cover selected command shapes.",
+        "id": "parser-and-dispatch",
+        "next_review": "Direct parser changes must prove they are runtime glue or update the command contracts and generated adapters.",
+        "responsibility_class": "generated-dispatch-bridges",
+        "status": "guarded-interface-authority"
+      },
+      {
+        "evidence": "setup, prompt, skills, system-intent, and note-delegation-outcome still have root CLI interface shape or guidance behavior that is not fully represented as generated adapter metadata.",
+        "id": "support-command-surfaces",
+        "next_review": "Select the next read-only support command for command_adapter_generation or add a guard that keeps direct edits classified.",
+        "responsibility_class": "remaining-interface-authority",
+        "status": "extract-or-guard-candidate"
+      }
+    ],
+    "direct_cli_edit_routing": {
+      "allowed_when": [
+        "runtime primitive implementation or live workspace inspection changes",
+        "dispatch glue while a command is not yet covered by generated adapters",
+        "urgent migration exceptions with proof output naming why definitions were insufficient"
+      ],
+      "review_requires": [
+        "agentic-workspace proof direct_cli_edit_review for any generated/workspace/python/cli.py change",
+        "root_cli_authority audit check when the edit changes interface or report authority",
+        "command generation or contract-surface validation when command semantics change"
+      ],
+      "route_to_contract_when": [
+        "visible command names, option semantics, help text source, effect hints, schema refs, conformance refs, or generated package metadata change",
+        "a stable report/defaults field becomes cross-adapter authority",
+        "a direct edit would be repeated by another generated target"
+      ]
+    },
+    "next_extraction_or_guard_candidates": [
+      {
+        "candidate_type": "extract-interface-authority",
+        "id": "support-command-contract-coverage",
+        "owner_surface": "src/agentic_workspace/contracts/command_adapter_generation.json",
+        "provenance": "Closed historical audit work identified this candidate; it is not the live owner for future extraction work.",
+        "provenance_issue": "#410",
+        "tracking_role": "historical-provenance",
+        "tracking_status": "closed",
+        "why": "Support commands are the next visible root CLI surfaces whose command/interface semantics can move out of cli.py without touching runtime primitives."
+      },
+      {
+        "candidate_type": "add-guard-check",
+        "id": "report-section-schema-guard",
+        "owner_surface": "src/agentic_workspace/contracts/report_contract.json",
+        "provenance": "Closed historical audit work identified this candidate; it is not the live owner for future guard work.",
+        "provenance_issue": "#410",
+        "tracking_role": "historical-provenance",
+        "tracking_status": "closed",
+        "why": "New stable report sections should be reviewed as report contract/schema authority instead of becoming hidden interface authority in cli.py."
+      },
+      {
+        "candidate_type": "expand-generated-adapter",
+        "id": "package-support-command-manifest-pattern",
+        "owner_surface": "src/agentic_workspace/contracts/command_package_ir.json",
+        "provenance": "Closed historical audit work identified this candidate; it is not the live owner for future package support-command work.",
+        "provenance_issue": "#410",
+        "tracking_role": "historical-provenance",
+        "tracking_status": "closed",
+        "why": "Planning and memory package support commands need the same interface-authority routing before broad non-Python generation expands."
+      }
+    ],
+    "responsibility_classes": [
+      {
+        "allowed_owner": "generated/workspace/python/cli.py and runtime helper modules",
+        "authority_class": "allowed-root-runtime",
+        "extract_or_guard_when": "Stable command shape, effect hints, schemas, or reusable wording can be expressed in contracts without owning live behavior.",
+        "id": "runtime-primitives",
+        "route_when": "The behavior performs live repo inspection, subprocess execution, mutation sequencing, preflight token evaluation, or output emission mechanics."
+      },
+      {
+        "allowed_owner": "generated/workspace/python/cli.py as renderer over contract and live module payloads",
+        "authority_class": "derived-renderer",
+        "extract_or_guard_when": "A rendered field becomes stable enough to require schema, operation contract, or report-contract coverage.",
+        "id": "derived-renderers",
+        "route_when": "The output assembles current config, module reports, planning state, or contract manifests into a compact answer."
+      },
+      {
+        "allowed_owner": "generated adapters and command-package IR",
+        "authority_class": "generated-dispatch-bridge",
+        "extract_or_guard_when": "A direct CLI edit changes command identity, option semantics, effect hints, schema refs, or generated adapter metadata.",
+        "id": "generated-dispatch-bridges",
+        "route_when": "Parser/help/dispatch wiring is already backed by command_adapter_generation.json, command_package_ir.json, operation contracts, and conformance refs."
+      },
+      {
+        "allowed_owner": "contracts, schemas, command-package IR, or explicit follow-on issue",
+        "authority_class": "remaining-interface-authority",
+        "extract_or_guard_when": "The same shape must be consumed by generated packages, non-Python adapters, weak-agent routing, or contract checks.",
+        "id": "remaining-interface-authority",
+        "route_when": "The concern is visible command shape, option semantics, stable help/source wording, or reusable interface policy still encoded in root CLI code."
+      }
+    ],
+    "rule": "Direct root CLI edits are acceptable for runtime primitives and live inspection, but command/interface authority should be contract-backed, generated, or tracked as an extraction/guard candidate."
+  },
+  "setup": {
+    "canonical_doc": "docs/jumpstart-contract.md",
+    "command": "agentic-workspace setup --target ./repo --format json",
+    "phase": "post-bootstrap",
+    "rule": "Setup is a bounded post-bootstrap phase that stays separate from init.",
+    "scope": [
+      "orient from a compact report first",
+      "keep follow-through bounded and reviewable"
+    ],
+    "secondary": [
+      "Do not widen init.",
+      "Do not collapse setup into the proof backlog.",
+      "Do not turn setup into generic analysis."
+    ]
+  },
+  "setup_findings_promotion": {
+    "accepted_classes": [
+      {
+        "class": "repo_friction_evidence",
+        "preserve_when": [
+          "confidence is at least 0.75",
+          "the finding has a repo-relative path or explicit refs",
+          "the finding would reduce rediscovery if it survived the current setup pass"
+        ],
+        "promote_to": "agentic-workspace report --target ./repo --format json repo_friction.external_evidence",
+        "required_for_promotion": [
+          "path_or_refs"
+        ],
+        "summary": "Evidence-backed structural or routing friction worth preserving as shared workspace evidence.",
+        "transient_when": [
+          "the finding has no grounding path or refs",
+          "confidence is below 0.75",
+          "the finding only restates report output already present elsewhere"
+        ]
+      },
+      {
+        "class": "planning_candidate",
+        "preserve_when": [
+          "confidence is at least 0.75",
+          "the finding includes a bounded next_action",
+          "the finding would still matter after the current session or agent ends"
+        ],
+        "promote_to": ".agentic-workspace/planning/state.toml or .agentic-workspace/planning/execplans/ after bounded planning review",
+        "required_for_promotion": [
+          "next_action"
+        ],
+        "summary": "A bounded follow-on or handoff candidate worth preserving as explicit planning promotion guidance.",
+        "transient_when": [
+          "the finding lacks a bounded next_action",
+          "confidence is below 0.75",
+          "the finding is only generic analysis with no clear planning owner"
+        ]
+      }
+    ],
+    "accepted_kind": "workspace-setup-findings/v1",
+    "artifact_path": "tools/setup-findings.json",
+    "canonical_doc": "docs/setup-findings-contract.md",
+    "command": "agentic-workspace setup --target ./repo --format json",
+    "preserve_rule": "Promote only evidence-backed repo-friction findings or bounded planning candidates; leave everything else transient.",
+    "primary_router": "agentic-workspace defaults --section improvement_intake --format json",
+    "rule": "Setup may accept one optional agent-produced findings artifact, but it should preserve only the classes that reduce rediscovery and have a clear durable owner.",
+    "schema_path": "src/agentic_workspace/contracts/schemas/setup_findings.schema.json",
+    "secondary": [
+      "Do not build a workspace-owned analyzer.",
+      "Do not auto-write planning or memory state from setup input.",
+      "Do not preserve findings that have no durable owner or bounded next action."
+    ]
+  },
+  "skill_discovery": {
+    "primary": [
+      "agentic-workspace skills --target ./repo --format json",
+      "agentic-workspace skills --target ./repo --task \"<task>\" --format json"
+    ],
+    "secondary": [
+      "Read skill registries or SKILL.md files directly only when debugging, authoring, or validating skills."
+    ]
+  },
+  "startup": {
+    "canonical_doc": ".agentic-workspace/docs/minimum-operating-model.md",
+    "context_router": {
+      "first_view": "start",
+      "kind": "workspace-context-router-family/v1",
+      "non_goal": "Do not add a new command layer or require agents to run every view.",
+      "rule": "Use the smallest view that answers the question.",
+      "views": [
+        {
+          "command": "agentic-workspace start --target ./repo --format json",
+          "use_when": "repo entry",
+          "view": "start"
+        },
+        {
+          "command": "agentic-workspace summary --format json",
+          "use_when": "active work or handoff",
+          "view": "summary"
+        },
+        {
+          "command": "agentic-workspace report --target ./repo --format json",
+          "use_when": "diagnostics or sections",
+          "view": "report"
+        },
+        {
+          "command": "agentic-workspace defaults --section <section> --format json",
+          "use_when": "policy or defaults",
+          "view": "defaults"
+        },
+        {
+          "command": "agentic-workspace preflight --format json",
+          "use_when": "takeover or recovery",
+          "view": "preflight"
+        }
+      ]
+    },
+    "default_canonical_agent_instructions_file": "AGENTS.md",
+    "default_cli_invoke": "agentic-workspace",
+    "escalation_cues": [
+      {
+        "boundary": "workspace",
+        "cue": "The question is startup order, lifecycle behavior, config, ownership, or combined workspace state.",
+        "load_next": [
+          "agentic-workspace defaults --section startup --format json",
+          "agentic-workspace config --target ./repo --format json",
+          "agentic-workspace report --target ./repo --format json"
+        ],
+        "why": "Workspace-level surfaces own routing, lifecycle orchestration, and cross-module coordination."
+      },
+      {
+        "boundary": "planning",
+        "cue": "The task needs active sequencing, blockers, proof expectations, promotion decisions, or cross-session continuation.",
+        "load_next": [
+          "agentic-workspace summary --format json",
+          "agentic-workspace summary --format json --verbose",
+          ".agentic-workspace/planning/state.toml only when the summary points there",
+          ".agentic-workspace/planning/execplans/ only when the summary points at an active execplan"
+        ],
+        "why": "Planning owns active execution state and near-term follow-through."
+      },
+      {
+        "boundary": "memory",
+        "cue": "The work keeps rediscovering repo facts, prior decisions, failure modes, or domain context that should survive the current slice.",
+        "load_next": [
+          ".agentic-workspace/memory/repo/",
+          ".agentic-workspace/memory/WORKFLOW.md"
+        ],
+        "why": "Memory owns durable anti-rediscovery knowledge instead of active execution state."
+      }
+    ],
+    "external_handoff": {
+      "rule": "Use the public install doc to bootstrap or adopt the workspace, then return to the configured startup entrypoint for ordinary repo work.",
+      "surface": "docs/agentic-workspace-install.md",
+      "when": "external install or adopt first contact"
+    },
+    "fallbacks": [
+      "If the current agent does not natively look for `AGENTS.md`, inspect `agentic-workspace config --target ./repo --format json` and follow the configured startup file; if the CLI is unavailable, fall back to `AGENTS.md` or another supported startup file already present.",
+      "If you need takeover guidance plus live state together, prefer `agentic-workspace preflight --format json` before running multiple compact queries or rereading repo prose.",
+      "If the question is active planning recovery rather than startup order, prefer the tiny default `agentic-workspace summary --format json` before raw planning state or execplan prose; use `--verbose` only when the tiny router is insufficient."
+    ],
+    "first_queries": [
+      {
+        "command": "agentic-workspace start --task \"<task>\" --format json",
+        "field": "immediate_next_allowed_action",
+        "question": "What is the ordinary first-contact path?",
+        "why": "start bundles ordinary startup routing, active-state summary, and task-specific skill recommendations"
+      },
+      {
+        "command": "agentic-workspace defaults --section startup --format json",
+        "question": "What is the ordinary repo startup path?",
+        "why": "startup defaults carry reference routing when start is unavailable or insufficient"
+      },
+      {
+        "command": "agentic-workspace config --target ./repo --format json",
+        "field": "workspace.agent_instructions_file",
+        "question": "Which startup file is canonical here?",
+        "why": "repo config is authoritative when the startup filename differs from the default `AGENTS.md`"
+      },
+      {
+        "command": "agentic-workspace summary --format json",
+        "field": "planning_record",
+        "question": "What is active right now?",
+        "why": "active-state recovery should come from the compact planning summary before raw planning prose"
+      }
+    ],
+    "primary": [
+      "For ordinary first contact, run `agentic-workspace start --task \"<task>\" --format json`.",
+      "Use `agentic-workspace implement --changed <paths> --format json` when changed paths are already known.",
+      "For takeover or recovery context, run `agentic-workspace preflight --format json`.",
+      "Read the configured root startup file from `agentic-workspace config --target ./repo --format json` (default `AGENTS.md`).",
+      "Use `agentic-workspace summary --format json` only when current planning state matters before opening raw planning files.",
+      "Open `.agentic-workspace/planning/state.toml` or an active execplan only when compact output points there."
+    ],
+    "secondary": [
+      "Use `agentic-workspace summary --format json` before checking raw planning state for promotion work.",
+      "Read package-local `AGENTS.md` only for the package being edited.",
+      "Read memory only when installed and the task needs durable context."
+    ],
+    "skill_routing": {
+      "advanced_route_rule": "Review and external-intake skills are surfaced only when the repo enables the matching reusable diagnostic feature. Source-checkout-only maintainer skills stay outside shipped feature tiers.",
+      "available_advanced_route_command": "agentic-workspace modules --target ./repo --format json",
+      "fallback_when_skills_unavailable": [
+        "follow AGENTS.md and .agentic-workspace/WORKFLOW.md",
+        "use agentic-workspace start --task \"<task>\" --format json for ordinary first contact",
+        "use agentic-workspace summary --format json before raw planning reads"
+      ],
+      "preferred_routes": [
+        {
+          "fallback": "agentic-workspace summary --format json",
+          "skill": "planning-reporting",
+          "task_shape": "active planning report, restart, or proof posture"
+        },
+        {
+          "fallback": "agentic-workspace doctor --target ./repo --modules planning --format json",
+          "skill": "bootstrap-upgrade",
+          "task_shape": "managed planning bootstrap upgrade"
+        }
+      ],
+      "query": "agentic-workspace skills --target ./repo --task \"<task>\" --format json",
+      "rule": "Prefer task-specific package skills when the runtime supports them; keep compact CLI and workflow docs as the fallback. Advanced host-repo diagnostics are opt-in.",
+      "status": "advisory"
+    },
+    "supported_agent_instructions_files": [
+      "AGENTS.md",
+      "CLAUDE.md",
+      "GEMINI.md",
+      ".cursorrules"
+    ],
+    "surface_roles": [
+      {
+        "edit_rule": "edit directly when repo startup policy changes",
+        "kind": "canonical",
+        "owner": "repo",
+        "role": "canonical ordinary repo startup entrypoint",
+        "surface": "AGENTS.md"
+      },
+      {
+        "edit_rule": "edit directly only when maintaining planning state or when compact output points here",
+        "kind": "canonical",
+        "owner": "repo",
+        "role": "planning source behind compact summary, not ordinary first-contact reading",
+        "surface": ".agentic-workspace/planning/state.toml"
+      },
+      {
+        "edit_rule": "keep bounded to external bootstrap and adopt flow",
+        "kind": "canonical",
+        "owner": "repo",
+        "role": "public external install/adopt instructions",
+        "surface": "docs/agentic-workspace-install.md"
+      },
+      {
+        "edit_rule": "update through the common CLI and package-managed installers",
+        "kind": "managed",
+        "owner": "planning package",
+        "role": "planning package-owned generation source",
+        "surface": ".agentic-workspace/planning/agent-manifest.json"
+      }
+    ],
+    "tiny_safe_model": {
+      "deeper_reads_become_valid_when": [
+        "the active summary points at an execplan or raw planning detail is still needed for direct planning maintenance",
+        "startup or routing ambiguity survives the compact startup answer",
+        "the task crosses a planning, memory, or lifecycle boundary that the small model cannot settle safely"
+      ],
+      "entry_query": "agentic-workspace start --task \"<task>\" --format json",
+      "entrypoint": "AGENTS.md",
+      "first_compact_queries": [
+        "agentic-workspace start --target ./repo --task \"<task>\" --format json",
+        "agentic-workspace implement --changed <paths> --format json",
+        "agentic-workspace config --target ./repo --format json",
+        "agentic-workspace summary --format json"
+      ],
+      "summary": "Start from one repo entrypoint, one ordinary startup query, and conditional deeper reads."
+    },
+    "top_level_capabilities": [
+      {
+        "capability_unlocked": "compact defaults/config/report guidance plus authoritative workspace contracts",
+        "escalate_when": "the task crosses config, install/adopt, ownership, or cross-module coordination boundaries",
+        "module": "workspace",
+        "owns": "startup, lifecycle, routing, and combined workspace reporting"
+      },
+      {
+        "capability_unlocked": "summary, active queue state, execplans, and planning validation surfaces",
+        "escalate_when": "the task needs milestones, blockers, queue updates, or explicit continuation semantics",
+        "module": "planning",
+        "owns": "active execution state, sequencing, proof expectations, and promotion-ready follow-through"
+      },
+      {
+        "capability_unlocked": "routed memory notes and memory workflow guidance",
+        "escalate_when": "relevant repo understanding should persist beyond the current chat or implementation slice",
+        "module": "memory",
+        "owns": "durable repo knowledge, routed decisions, failure modes, and anti-rediscovery context"
+      }
+    ],
+    "vague_outcome_route": {
+      "answer_contract": [
+        "state the inferred intended outcome",
+        "state the concrete first slice and non-goals before editing",
+        "say you will proceed on that interpretation unless corrected",
+        "name the first repo-visible surface or compact command to inspect",
+        "define satisfaction evidence before choosing an implementation",
+        "separate one possible solution from the intended outcome"
+      ],
+      "applies_to_current_task": false,
+      "compact_commands": [
+        "agentic-workspace preflight --target . --task \"<task>\" --format json",
+        "agentic-workspace start --target . --task \"<task>\" --format json",
+        "agentic-workspace skills --target . --task \"<task>\" --format json"
+      ],
+      "first_surface": "startup_guidance.primary_next_action from preflight or immediate_next_allowed_action from start",
+      "raw_read_rule": "Open raw .agentic-workspace files only after compact output points there or the CLI is unavailable.",
+      "rule": "For vague outcome prompts, resolve intent and satisfaction evidence from compact CLI output before raw workspace reads.",
+      "status": "available"
+    },
+    "work_intent_gate": {
+      "assurance_rule": "Assess assurance from risk and scope signals; high-risk lane or epic work records adaptive_assurance when Planning is installed.",
+      "external_tracker_rule": "GitHub, Linear, Jira, Notion, and similar trackers are optional intake evidence; checked-in planning remains execution authority.",
+      "levels": [
+        {
+          "id": "direct",
+          "required_surface": "chat plus narrow code/docs context",
+          "use_when": "One coherent local pass can finish safely and validation is obvious."
+        },
+        {
+          "id": "bounded",
+          "required_surface": "configured planning or handoff surface when restart cost matters",
+          "use_when": "The task is one slice but needs explicit done-when, proof, or short continuation state."
+        },
+        {
+          "id": "lane",
+          "required_surface": "Planning active item plus schema-backed execplan created by package command when installed; otherwise equivalent durable handoff surface",
+          "use_when": "The work spans milestones, managed payloads, proof scope, or handoff risk."
+        },
+        {
+          "id": "epic",
+          "required_surface": "schema-backed decomposition record first when Planning provides one; split into bounded lanes before implementation execplans",
+          "use_when": "The request contains multiple lanes or needs product shaping before implementation."
+        }
+      ],
+      "planning_mutation_rule": "Use compact CLI for orientation and proof selection; use package lifecycle commands such as `agentic-workspace planning new-plan`, `promote-to-plan`, and `archive-plan` for planning mutations when available; edit checked-in planning records directly only for bounded content/fallback edits, then rerun summary.",
+      "rule": "Choose the smallest workflow shape before implementation; when Planning is installed, broad work should become checked-in planning before edits."
+    },
+    "workflow_recovery": [
+      "When takeover or recovery is unclear, prefer `agentic-workspace start --task \"<task>\" --format json`, then `agentic-workspace preflight --format json`, `agentic-workspace defaults --section startup --format json`, `agentic-workspace config --target ./repo --format json`, and `agentic-workspace summary --format json` before broader prose or repo-local workaround guidance."
+    ]
+  },
+  "surface_value_guardrail": {
+    "applies_to": [
+      "checked-in contract or schema surfaces",
+      "memory and local-only memory surfaces",
+      "workspace or module report surfaces",
+      "workflow, adapter, and generated startup surfaces"
+    ],
+    "authority_classes": [
+      {
+        "class": "authoritative",
+        "test": "other surfaces should defer to it for this concern"
+      },
+      {
+        "class": "derived",
+        "test": "it can be regenerated or reconstructed from a stronger source"
+      },
+      {
+        "class": "adapter",
+        "test": "it routes a specific tool or audience into stronger structured surfaces"
+      },
+      {
+        "class": "procedural-owned",
+        "test": "runtime code owns behavior until it is extracted into a contract"
+      }
+    ],
+    "canonical_doc": ".agentic-workspace/docs/system-intent-contract.md",
+    "command": "agentic-workspace defaults --section surface_value_guardrail --format json",
+    "first_contact_budget": {
+      "ordinary_entry": "AGENTS.md -> agentic-workspace report --target ./repo --format json",
+      "review_test": [
+        "does the new surface make the package easier to enter, recover, verify, or trust?",
+        "does it remove, merge, compress, or background an existing surface?",
+        "can a reviewer see the improvement without reconstructing chat?"
+      ],
+      "status": "active",
+      "warning": "Do not add another first-contact surface unless it replaces, merges, compresses, or backgrounds an existing route."
+    },
+    "owner_surface": "workspace",
+    "preference_order": [
+      "remove an unnecessary surface",
+      "replace or merge with an existing compact surface",
+      "compress or background an existing surface",
+      "add a new durable surface only when the repeated cost and owner are explicit"
+    ],
+    "review_gate": {
+      "answer_field": "surface_value_review",
+      "flags_additive_only_when": [
+        "the changed durable path does not currently exist under the target",
+        "the change appears to add a new first-line docs, contract, schema, workflow, adapter, report, memory, or planning surface",
+        "no repeated-cost, ownership, discovery, and validation answer is visible"
+      ],
+      "ordinary_path": "agentic-workspace proof --target ./repo --changed <paths> --format json",
+      "rule": "Durable-surface changes should carry an inspectable answer during ordinary proof selection."
+    },
+    "review_result": {
+      "accept_when": [
+        "the repeated cost is real and likely to recur",
+        "ownership and authority class are explicit",
+        "discovery starts from an existing compact query or selector",
+        "validation or drift checks are named"
+      ],
+      "reject_when": [
+        "the surface mainly makes a concept feel cleaner locally",
+        "agents would need another first-line thing to remember",
+        "the same result can be achieved by compressing, replacing, or backgrounding an existing surface"
+      ]
+    },
+    "rule": "New durable contract, memory, report, workflow, adapter, or local-only surfaces must show that they lower repeated future cost more than they increase product feel.",
+    "value_questions": [
+      "what repeated cost does this remove?",
+      "which existing surface does it replace, compress, merge, or make cheaper?",
+      "who owns it and is it authoritative, derived, adapter, or procedural-owned?",
+      "how does an agent discover it without broad rereading?",
+      "how does it remain removable, low-residue, or backgrounded?",
+      "what drift or review check keeps it trustworthy?"
+    ]
+  },
+  "system_intent": {
+    "authority_ladder": [
+      {
+        "layer": "confirmed request or live issue cluster",
+        "owns": "the larger user or product outcome"
+      },
+      {
+        "layer": "delegated judgment and intent continuity",
+        "owns": "the bounded slice and its mapping back to the larger outcome"
+      },
+      {
+        "layer": "closure check and required continuation",
+        "owns": "whether the slice archives, whether the larger outcome is still open, and where continuation now lives"
+      }
+    ],
+    "canonical_doc": ".agentic-workspace/docs/system-intent-contract.md",
+    "checked_in_execplan_rule": "Use a checked-in execplan whenever later proof, intent validation, or follow-through would be expensive or ambiguous to reconstruct from chat alone.",
+    "command": "agentic-workspace defaults --section system_intent --format json",
+    "durable_intent_command": "agentic-workspace defaults --section durable_intent --format json",
+    "mirror_fields": [
+      "summary",
+      "governing_intents",
+      "anti_intents",
+      "decision_tests",
+      "open_questions",
+      "interpretation_notes",
+      "confidence",
+      "needs_review",
+      "source_records"
+    ],
+    "mirror_surface": ".agentic-workspace/system-intent/intent.toml",
+    "recoverability": {
+      "ask_first": [
+        "agentic-workspace defaults --section system_intent --format json",
+        "agentic-workspace summary --format json",
+        "agentic-workspace report --target ./repo --format json"
+      ],
+      "must_answer": [
+        "what larger outcome the active slice serves",
+        "whether the larger outcome is actually closed",
+        "where required continuation lives now",
+        "what evidence justified the closure decision"
+      ]
+    },
+    "reinterpretation_boundary": {
+      "allowed": [
+        "tighten means and validation",
+        "choose a smaller first slice",
+        "route required continuation into one checked-in owner"
+      ],
+      "must_not": [
+        "treat a bounded slice as if it closed the larger outcome without explicit evidence",
+        "leave required continuation only in drift prose or chat",
+        "replace the confirmed outcome with a cheaper substitute silently"
+      ]
+    },
+    "rule": "Keep the larger requested outcome explicit even when the active slice is narrower, and make closure decisions name that difference honestly.",
+    "source_declaration_surface": ".agentic-workspace/config.toml [system_intent]",
+    "subsystem_surface": ".agentic-workspace/system-intent/subsystems.toml",
+    "sync_behavior": "Refresh source hints and source-record metadata only; interpreted intent fields remain agent-owned and human-correctable.",
+    "sync_command": "agentic-workspace system-intent --target ./repo --sync --format json",
+    "workflow_surface": ".agentic-workspace/system-intent/WORKFLOW.md"
+  },
+  "validation": {
+    "construction_boundary": {
+      "route_repeated_repair_to": [
+        "scaffold",
+        "writer_helper",
+        "alias",
+        "lifecycle_command",
+        "compact_route",
+        "agent_aid"
+      ],
+      "rule": "Validation should confirm correct construction, not teach agents how to construct the artifact or workflow after failure."
+    },
+    "default_routes": {
+      "maintainer_surfaces": "make maintainer-surfaces",
+      "memory_package": "make test-memory",
+      "planning_package": "make test-planning",
+      "workspace_cli": "make test-workspace"
+    },
+    "escalation_rule": "Broaden validation only when the narrower lane stops proving the touched contract or the change crosses boundaries.",
+    "lanes": [
+      {
+        "broaden_when": [
+          "the change also alters runtime CLI behavior outside generated metadata",
+          "the change also touches package installer behavior beyond generated package surfaces"
+        ],
+        "ci_relationship": "CI may repeat generated-package proof; local closeout should run this lane serially to avoid package-build contention.",
+        "enough_proof": [
+          "uv run python scripts/check/check_generated_command_packages.py",
+          "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
+          "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
+          "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker"
+        ],
+        "escalate_when": [
+          "generated package proof no longer covers the changed implementation boundary"
+        ],
+        "execution_mode": "serial",
+        "id": "generated_command_packages",
+        "proof_responsibility": "local-serial",
+        "recovery_signal": "Generated adapter/package changes must route back through command-package checks and conformance proof instead of being trusted as hand edits.",
+        "weak_agent_safe_routing": {
+          "checks": [
+            "help output includes supported commands and routing status",
+            "unsupported command errors include recovery guidance",
+            "runtime handoff failures include recovery guidance"
+          ],
+          "rule": "Generated targets are weak-agent safe only when command_package_ir selects weak-agent-safe-adapter and generated-package static plus conformance proof pass.",
+          "status": "proof-gated"
+        },
+        "when": [
+          "command-package IR, generator, or generated Python/TypeScript package outputs change",
+          "the trust question is generated package freshness or non-Python package conformance"
+        ]
+      },
+      {
+        "broaden_when": [
+          "the change also alters command contracts, generated packages, or package payloads"
+        ],
+        "enough_proof": [
+          "agentic-workspace defaults --section root_cli_authority --format json"
+        ],
+        "escalate_when": [
+          "the proof output cannot classify the CLI file as source, generator, projection, or hand-owned executable code",
+          "a generated or projection target lacks a named source contract and regeneration path"
+        ],
+        "id": "cli_authority",
+        "recovery_signal": "Use cli_authority_review to decide whether the edit is allowed runtime work or must route back to source contracts and regeneration.",
+        "when": [
+          "generated, projected, or executable CLI files change",
+          "the trust question is whether direct CLI editing is allowed for this slice"
+        ]
+      },
+      {
+        "broaden_when": [
+          "the change also touches runtime CLI behavior, report/startup rendering, generated adapters, or package payloads"
+        ],
+        "enough_proof": [
+          "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+          "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+          "uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py"
+        ],
+        "escalate_when": [
+          "contract-only validation no longer proves the touched behavior boundary"
+        ],
+        "id": "contract_tooling",
+        "recovery_signal": "Contract/check-only changes should use focused contract and inventory proof before broad workspace CLI tests.",
+        "when": [
+          "workspace contract, schema, or contract-check surfaces change without runtime behavior changes",
+          "the trust question is contract freshness, schema validation, or inventory/check policy"
+        ]
+      },
+      {
+        "broaden_when": [
+          "the change promotes an aid into a canonical proof route or repo-native checker",
+          "the change also touches runtime CLI behavior, generated adapters, or package payloads"
+        ],
+        "enough_proof": [
+          "uv run python scripts/check/check_agent_aids.py --quiet-success"
+        ],
+        "escalate_when": [
+          "candidate aid metadata no longer proves the workflow boundary",
+          "a candidate aid is being treated as a required workflow entrypoint"
+        ],
+        "id": "agent_aid_manifests",
+        "recovery_signal": "Candidate aid changes should validate manifest safety and portability metadata; do not execute candidate aids as canonical proof until they are promoted.",
+        "when": [
+          "checked-in candidate agent aids or their manifests change",
+          "the trust question is candidate aid metadata, ownership, safety, portability, and proof-role policy"
+        ]
+      },
+      {
+        "broaden_when": [
+          "the docs change updates generated maintainer surfaces, schema reference docs, or package payloads",
+          "the docs change describes behavior whose implementation also changed or needs executable proof"
+        ],
+        "ci_relationship": "CI is not expected to prove docs intent; local diff review owns the trust question.",
+        "enough_proof": [
+          "git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md packages/command-generation/README.md"
+        ],
+        "escalate_when": [
+          "the documentation outcome cannot be verified from the diff and nearby docs alone"
+        ],
+        "execution_mode": "review",
+        "id": "repo_docs_review",
+        "proof_kind": "diff-review",
+        "proof_responsibility": "local-closeout",
+        "recovery_signal": "Docs-only wording changes should use compact diff review; broaden to maintainer or code proof when the docs are generated, adapter-owned, or coupled to behavior changes.",
+        "when": [
+          "ordinary repository documentation changes without code, generated docs, or adapter surfaces",
+          "the trust question is whether the docs diff satisfies the requested outcome without adding misleading guidance"
+        ]
+      },
+      {
+        "broaden_when": [
+          "the change also touches generated maintainer docs",
+          "the change also touches installed package payloads or shared orchestration boundaries"
+        ],
+        "ci_relationship": "CI may repeat broad tests; local proof should run the selected targeted lane before closeout.",
+        "enough_proof": [
+          "make test-workspace",
+          "make lint-workspace"
+        ],
+        "escalate_when": [
+          "the narrow lane cannot prove the change on its own",
+          "package or repo-wide behavior is now part of the trust question"
+        ],
+        "execution_mode": "parallel-ok",
+        "id": "workspace_cli",
+        "proof_kind": "targeted-test",
+        "proof_responsibility": "local-closeout",
+        "recovery_signal": "Direct workspace CLI changes need workspace CLI proof and, for interface changes, review against generated command contracts.",
+        "when": [
+          "root workspace CLI changes",
+          "root tests changes",
+          "root src/agentic_workspace changes"
+        ]
+      },
+      {
+        "broaden_when": [
+          "the change also touches root workspace orchestration",
+          "the change also affects generated maintainer surfaces or installed contract boundaries"
+        ],
+        "ci_relationship": "CI may repeat package tests; local proof should run the selected targeted lane before closeout.",
+        "enough_proof": [
+          "make test-planning",
+          "make lint-planning"
+        ],
+        "escalate_when": [
+          "the package-local lane no longer covers the trust question",
+          "the change crosses package, payload, and root install boundaries together"
+        ],
+        "execution_mode": "parallel-ok",
+        "id": "planning_package",
+        "proof_kind": "targeted-test",
+        "proof_responsibility": "local-closeout",
+        "when": [
+          "package-local planning source or tests change",
+          "the behavior remains inside packages/planning"
+        ]
+      },
+      {
+        "broaden_when": [
+          "the change also touches root workspace orchestration",
+          "the change also affects generated maintainer surfaces or installed contract boundaries"
+        ],
+        "ci_relationship": "CI may repeat package tests; local proof should run the selected targeted lane before closeout.",
+        "enough_proof": [
+          "make test-memory",
+          "make lint-memory"
+        ],
+        "escalate_when": [
+          "the package-local lane no longer covers the trust question",
+          "the change crosses package, payload, and root install boundaries together"
+        ],
+        "execution_mode": "parallel-ok",
+        "id": "memory_package",
+        "proof_kind": "targeted-test",
+        "proof_responsibility": "local-closeout",
+        "when": [
+          "package-local memory source or tests change",
+          "the behavior remains inside packages/memory"
+        ]
+      },
+      {
+        "broaden_when": [
+          "the same change also edits generated maintainer docs or workspace CLI behavior"
+        ],
+        "ci_relationship": "CI may not have the live planning state being edited; local proof owns this check.",
+        "enough_proof": [
+          "agentic-workspace summary --target ./repo --format json",
+          "agentic-workspace doctor --target ./repo --modules planning --format json"
+        ],
+        "escalate_when": [
+          "the planning-surface lane no longer proves the touched contract by itself"
+        ],
+        "execution_mode": "parallel-ok",
+        "id": "planning_surfaces",
+        "proof_responsibility": "local-closeout",
+        "when": [
+          ".agentic-workspace/planning/state.toml or execplans change without broader code changes",
+          "the trust question is planning-surface shape or drift only"
+        ]
+      },
+      {
+        "broaden_when": [
+          "the same change also alters root workspace CLI behavior or package-local logic"
+        ],
+        "ci_relationship": "CI may repeat maintainer-surface checks; local proof owns generated-surface freshness before closeout.",
+        "enough_proof": [
+          "make maintainer-surfaces"
+        ],
+        "escalate_when": [
+          "source, payload, and installed-surface boundaries all changed together"
+        ],
+        "execution_mode": "parallel-ok",
+        "id": "maintainer_surfaces",
+        "proof_responsibility": "local-closeout",
+        "when": [
+          "generated maintainer docs, startup routing, or installed contract mirrors change",
+          "the trust question is generated-surface freshness or startup-policy consistency"
+        ]
+      }
+    ],
+    "rule": "Run the narrowest proving lane that matches the touched surface.",
+    "secondary": [
+      "Use broader package or repo-wide lanes only when the change crosses boundaries or invalidates the narrower proof."
+    ]
+  },
+  "workflow_artifact_adapters": {
+    "canonical_doc": ".agentic-workspace/docs/workspace-config-contract.md",
+    "command": "agentic-workspace defaults --section workflow_artifact_adapters --format json",
+    "default_profile": "repo-owned",
+    "rule": "Runtime-native planning artifacts may exist, but durable cross-agent state must project back into .agentic-workspace/planning/state.toml and .agentic-workspace/planning/execplans before handoff or review.",
+    "supported_profiles": [
+      {
+        "canonical_surfaces": [
+          ".agentic-workspace/planning/state.toml",
+          ".agentic-workspace/planning/execplans/"
+        ],
+        "handoff_rule": "Use repo-owned planning surfaces directly for restart, review, and cross-agent continuation.",
+        "native_artifacts": [],
+        "profile": "repo-owned",
+        "summary": "Use only the repo-owned planning surfaces; do not rely on native runtime artifacts.",
+        "sync_rule": ".agentic-workspace/planning/state.toml and .agentic-workspace/planning/execplans stay authoritative; no extra runtime artifact should carry durable state."
+      },
+      {
+        "canonical_surfaces": [
+          ".agentic-workspace/planning/state.toml",
+          ".agentic-workspace/planning/execplans/"
+        ],
+        "handoff_rule": "Treat native artifacts as local execution aids; treat .agentic-workspace/planning/state.toml and .agentic-workspace/planning/execplans as the only cross-agent source of truth.",
+        "native_artifacts": [
+          "implementation_plan.md",
+          "task.md",
+          "walkthrough.md"
+        ],
+        "profile": "gemini",
+        "summary": "Allow Gemini-style native workflow artifacts as runtime scratchpads, but project durable state back into repo-owned planning before handoff or review.",
+        "sync_rule": "Before review, handoff, or session end, mirror the durable execution state into .agentic-workspace/planning/state.toml and the active execplan instead of leaving it only in native artifacts."
+      }
+    ]
+  },
+  "workflow_sufficiency": {
+    "command": "agentic-workspace start --select workflow_sufficiency --format json",
+    "not_evaluated_means": "Run the named detail command before treating absence as permission to skip obligations.",
+    "nothing_more_needed_means": [
+      "no extra package read is needed for the current step",
+      "no raw workspace file should be opened unless a selector or proof failure points there",
+      "the agent may proceed with the bounded next action and selected proof"
+    ],
+    "rule": "A package surface should say when the current packet is enough and when proof, ownership, or closeout evidence is still required."
+  }
+}

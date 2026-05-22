@@ -42,7 +42,7 @@
     "steps": [
       {
         "arguments": {},
-        "description": "Load the workspace default-route and policy payload.",
+        "description": "Load the generated workspace default-route and policy payload resource.",
         "id": "load_defaults",
         "outputs": [
           "defaults_payload"
@@ -68,7 +68,7 @@
         "uses": "output.emit"
       }
     ],
-    "summary": "Defaults report executes generated operation IR through codegen-owned primitive dataflow; workspace runtime supplies the defaults payload source while generated output owns tiny-router, compact-answer, and selected-output text formatting."
+    "summary": "Defaults report executes generated operation IR through codegen-owned primitive dataflow; generated workspace output loads the defaults payload from generated _contracts/payload.json and owns tiny-router, compact-answer, and selected-output text formatting."
   },
   "locality": {
     "network": "forbidden",
@@ -82,6 +82,7 @@
   "proof": [
     "operation contract validates against operation.schema.json",
     "defaults command tests remain compatible",
+    "defaults payload truth is stored as a declarative JSON resource and copied into generated workspace output",
     "defaults selected-output text and tiny-router text stay in generated output rather than package fallback"
   ],
   "reads": [

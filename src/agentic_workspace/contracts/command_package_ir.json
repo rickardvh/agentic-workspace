@@ -261,6 +261,13 @@
         "entrypoint": "agentic-workspace",
         "runtime_module_file": "cli",
         "render_runtime_module": true,
+        "resource_copies": [
+          {
+            "source_root": "src/agentic_workspace/contracts/workspace_defaults",
+            "generated_root": "_contracts",
+            "required_marker": "payload.json"
+          }
+        ],
         "operation_executor": {
           "module_file": "primitives.operation_executor",
           "supported_operation_ids": [
@@ -561,6 +568,13 @@
               {
                 "function": "_resolve_workspace_operation_target_root",
                 "implementation": "target_root_resolve"
+              },
+              {
+                "function": "_load_workspace_operation_defaults",
+                "implementation": "json_resource_load",
+                "generated_root": "_contracts",
+                "required_marker": "payload.json",
+                "relative_path": "payload.json"
               },
               {
                 "function": "_select_workspace_operation_defaults",
@@ -8125,12 +8139,6 @@
               "import_module": "repo_memory_bootstrap.runtime_primitives"
             },
             {
-              "primitive": "memory.bootstrap.status.load",
-              "handler": "runtime_handler",
-              "function": "_load_memory_bootstrap_status",
-              "import_module": "repo_memory_bootstrap.runtime_primitives"
-            },
-            {
               "primitive": "memory.current.load",
               "handler": "runtime_handler",
               "function": "_load_memory_current",
@@ -8238,7 +8246,6 @@
             "primitive_refs": [
               "path.target_root.resolve",
               "payload.status",
-              "memory.bootstrap.status.load",
               "output.emit.install-result"
             ]
           },

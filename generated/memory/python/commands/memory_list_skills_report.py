@@ -20,7 +20,7 @@ from ..primitives.resources import find_resource_root, read_json_object
 # Regenerate with: uv run python scripts/generate/generate_command_packages.py
 
 
-SKILLS_ROOT_CANDIDATES = (('_skills', 'REGISTRY.json'), ('packages/memory/skills', 'REGISTRY.json'))
+SKILLS_ROOT_CANDIDATES = (('_skills', 'REGISTRY.json'),)
 
 
 def _action_for_skill(skill: dict[str, Any], skills_root: Path) -> dict[str, str]:

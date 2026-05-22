@@ -4310,6 +4310,13 @@ export const generatedCommandPackage = {
             "implementation": "target_root_resolve"
           },
           {
+            "function": "_load_workspace_operation_defaults",
+            "generated_root": "_contracts",
+            "implementation": "json_resource_load",
+            "relative_path": "payload.json",
+            "required_marker": "payload.json"
+          },
+          {
             "common_sections": [
               "startup",
               "proof_surfaces",
@@ -4526,6 +4533,13 @@ export const generatedCommandPackage = {
       ]
     },
     "render_runtime_module": true,
+    "resource_copies": [
+      {
+        "generated_root": "_contracts",
+        "required_marker": "payload.json",
+        "source_root": "src/agentic_workspace/contracts/workspace_defaults"
+      }
+    ],
     "runtime_module_file": "cli",
     "runtime_module_handlers": [
       {

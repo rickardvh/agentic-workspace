@@ -623,7 +623,6 @@
         "primitive_refs": [
           "path.target_root.resolve",
           "payload.status",
-          "memory.bootstrap.status.load",
           "output.emit.install-result"
         ]
       },

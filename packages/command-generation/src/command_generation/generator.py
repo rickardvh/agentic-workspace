@@ -439,7 +439,7 @@ def _python_memory_list_skills_command_module(
         "# DO NOT EDIT DIRECTLY.\n"
         f"# Command behavior changes belong in {source_path} and the referenced operation contract.\n"
         f"# Regenerate with: {regenerate_command}\n\n\n"
-        "SKILLS_ROOT_CANDIDATES = (('_skills', 'REGISTRY.json'), ('packages/memory/skills', 'REGISTRY.json'))\n\n\n"
+        "SKILLS_ROOT_CANDIDATES = (('_skills', 'REGISTRY.json'),)\n\n\n"
         "def _action_for_skill(skill: dict[str, Any], skills_root: Path) -> dict[str, str]:\n"
         "    skill_id = str(skill.get('id', '')).strip()\n"
         "    relative = Path(str(skill.get('path', '')).strip())\n"
@@ -535,7 +535,7 @@ def _python_memory_list_files_command_module(
         f"# Regenerate with: {regenerate_command}\n\n"
         "BOOTSTRAP_VERSION = 47\n"
         "PROJECT_MARKERS = ('pyproject.toml', 'package.json', 'Cargo.toml', '.hg')\n"
-        "PAYLOAD_ROOT_CANDIDATES = (('_payload', 'AGENTS.template.md'), ('packages/memory/bootstrap', 'AGENTS.template.md'))\n"
+        "PAYLOAD_ROOT_CANDIDATES = (('_payload', 'AGENTS.template.md'),)\n"
         "PAYLOAD_SOURCE_ROOTS = ('AGENTS.md', '.agentic-workspace', 'memory', 'docs')\n"
         "TARGET_PATH_REWRITES = (\n"
         "    ('docs', '.agentic-workspace/docs'),\n"
@@ -1188,6 +1188,16 @@ def _python_local_runtime_generated_function(
             "    if select is not None:\n"
             f"        payload = _select_payload_fields(payload, select=str(select), source_command={source_command!r})\n"
             "    return _serialise_value(payload)\n"
+        )
+    if implementation == "json_resource_load":
+        generated_root = str(override["generated_root"])
+        required_marker = str(override["required_marker"])
+        relative_path = str(override.get("relative_path") or required_marker)
+        return (
+            f"def {function}(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> dict[str, Any]:\n"
+            "    from .resources import find_resource_root, read_json_object\n\n"
+            f"    resource_root = find_resource_root(__file__, [({generated_root!r}, {required_marker!r})])\n"
+            f"    return read_json_object(resource_root, {relative_path!r})\n"
         )
     if implementation == "json_output_with_source_fallback":
         return (

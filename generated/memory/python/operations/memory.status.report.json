@@ -47,45 +47,22 @@
         "outputs": [
           "target_root"
         ],
-        "uses": "path.target_root.resolve",
-        "when": {
-          "equals": false,
-          "value": "verbose"
-        }
+        "uses": "path.target_root.resolve"
       },
       {
         "arguments": {
-          "detail_command": "agentic-memory status --target . --verbose --format json",
           "message": "Status report",
           "policy_path": "payload_verification.memory.json",
           "policy_root": "memory.contracts",
           "target_root_value": "target_root"
         },
-        "description": "Assemble Memory status from declarative payload status policy for non-verbose output.",
+        "description": "Assemble Memory status from declarative payload status policy.",
         "id": "assemble_status",
         "on_error": "fail",
         "outputs": [
           "result"
         ],
-        "uses": "payload.status",
-        "when": {
-          "equals": false,
-          "value": "verbose"
-        }
-      },
-      {
-        "arguments": {},
-        "description": "Load the package-domain status report only when verbose output is requested.",
-        "id": "load_verbose_status",
-        "on_error": "fail",
-        "outputs": [
-          "result"
-        ],
-        "uses": "memory.bootstrap.status.load",
-        "when": {
-          "equals": true,
-          "value": "verbose"
-        }
+        "uses": "payload.status"
       },
       {
         "arguments": {},
@@ -98,7 +75,7 @@
         "uses": "output.emit.install-result"
       }
     ],
-    "summary": "Memory status non-verbose text and JSON execute generated operation IR through a schema-backed payload.status primitive. Verbose status behavior remains package-domain source runtime."
+    "summary": "Memory status text, JSON, and verbose-compatible output execute generated operation IR through a schema-backed payload.status primitive."
   },
   "locality": {
     "network": "forbidden",
@@ -134,11 +111,6 @@
       "description": "Assemble Memory status from declarative payload status policy.",
       "id": "assemble_status",
       "uses": "payload.status"
-    },
-    {
-      "description": "Load the package-domain status report only when verbose output is requested.",
-      "id": "load_verbose_status",
-      "uses": "memory.bootstrap.status.load"
     },
     {
       "description": "Emit Memory status as JSON or install-result text without package-runtime formatting.",
