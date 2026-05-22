@@ -271,6 +271,8 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
         intent_check = intent_check if isinstance(intent_check, dict) else {}
         intent_proof_check = answer.get("intent_proof_check", {})
         intent_proof_check = intent_proof_check if isinstance(intent_proof_check, dict) else {}
+        architecture_decision = answer.get("architecture_decision_closeout", {})
+        architecture_decision = architecture_decision if isinstance(architecture_decision, dict) else {}
         terminal_action = answer.get("terminal_action", {})
         terminal_action = terminal_action if isinstance(terminal_action, dict) else {}
         durable_action = answer.get("durable_residue_action", {})
@@ -298,6 +300,9 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
                     key: intent_proof_check.get(key)
                     for key in ("status", "trust", "claim_boundary", "warning")
                     if key in intent_proof_check
+                },
+                "architecture_decision": {
+                    key: architecture_decision.get(key) for key in ("status", "configured", "decision_refs") if key in architecture_decision
                 },
             },
             "durable_residue_action": {

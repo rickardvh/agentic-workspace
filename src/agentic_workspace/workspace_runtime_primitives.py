@@ -1481,6 +1481,8 @@ def _run_planning_front_door_adapter(args: argparse.Namespace) -> int:
         else:
             _print_planning_help(payload)
         return 0
+    if getattr(args, "planning_command", None) in {"decision-scaffold", "decision-promote"}:
+        return _run_planning_decision_adapter(args)
     try:
         return _run_planning_front_door(args)
     except ImportError:
@@ -1629,6 +1631,13 @@ def _command_target_arg(target_root: Path | None) -> str:
     if relative == ".":
         return "."
     return Path(relative).as_posix()
+
+
+def _repo_relative_path(path: Path, target_root: Path) -> str:
+    try:
+        return path.resolve().relative_to(target_root.resolve()).as_posix()
+    except (OSError, ValueError):
+        return path.as_posix()
 
 
 def _maintainer_mode_payload(*, config: WorkspaceConfig, target_root: Path | None = None, compact: bool = False) -> dict[str, Any]:
@@ -5454,6 +5463,9 @@ def _run_report_command(
     closeout_trust = _report_closeout_trust_payload(
         module_reports=module_reports, target_root=target_root, config=config, cli_invoke=config.cli_invoke
     )
+    decision_pressure = _decision_pressure_payload(
+        target_root=target_root, config=config, module_reports=module_reports, cli_invoke=config.cli_invoke
+    )
     surface_value_guardrail = _surface_value_guardrail_payload()
     external_work_delta = _external_work_delta_payload(target_root=target_root)
     external_work_reconciliation = _external_work_reconciliation_payload(
@@ -5510,6 +5522,7 @@ def _run_report_command(
         "compliance_economics": _compliance_economics_payload(cli_invoke=config.cli_invoke),
         "final_report_budget": _final_report_budget_payload(),
         "findings": aggregated_findings,
+        "decision_pressure": decision_pressure,
         "closeout_trust": closeout_trust,
         "successful_completion_cost": _successful_completion_cost_payload(target_root=target_root, cli_invoke=config.cli_invoke),
         "external_work_reconciliation": external_work_reconciliation,
@@ -5531,6 +5544,207 @@ def _run_report_command(
         report_payload=payload, module_reports=module_reports, findings=aggregated_findings
     )
     return payload
+
+
+def _decision_slug(value: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", value.strip().lower())
+    slug = re.sub(r"-+", "-", slug).strip("-")
+    return slug or "decision"
+
+
+def _decision_target_info(*, target_root: Path, config: WorkspaceConfig) -> dict[str, Any]:
+    target = str(config.assurance.decision_record_target or "").strip()
+    statuses = list(config.assurance.decision_record_statuses) or ["proposed", "accepted", "superseded", "dismissed"]
+    if not target:
+        return {
+            "status": "not-configured",
+            "configured": False,
+            "target": "",
+            "exists": False,
+            "format": config.assurance.decision_record_format or "markdown",
+            "template": config.assurance.decision_record_template or "adr-lite",
+            "id_convention": "slug-title",
+            "statuses": statuses,
+            "configuration_fields": [
+                "assurance.decision_record_target",
+                "assurance.decision_record_format",
+                "assurance.decision_record_template",
+                "assurance.decision_record_statuses",
+            ],
+        }
+    target_path = (target_root / target).resolve()
+    try:
+        target_path.relative_to(target_root.resolve())
+        inside_target = True
+    except ValueError:
+        inside_target = False
+    suffix = target_path.suffix.lower()
+    inferred_format = config.assurance.decision_record_format or ("json" if suffix == ".json" else "markdown")
+    return {
+        "status": "configured" if inside_target else "invalid-target",
+        "configured": True,
+        "target": target,
+        "exists": target_path.exists(),
+        "target_kind": "file" if suffix else "directory",
+        "format": inferred_format,
+        "template": config.assurance.decision_record_template or "adr-lite",
+        "id_convention": "slug-title",
+        "statuses": statuses,
+        "inside_target": inside_target,
+        "configuration_fields": [
+            "assurance.decision_record_target",
+            "assurance.decision_record_format",
+            "assurance.decision_record_template",
+            "assurance.decision_record_statuses",
+        ],
+    }
+
+
+def _decision_record_index(*, target_root: Path, config: WorkspaceConfig) -> dict[str, Any]:
+    info = _decision_target_info(target_root=target_root, config=config)
+    target = str(info.get("target", ""))
+    if not target or not bool(info.get("inside_target", True)):
+        return {"status": "unavailable", "decision_count": 0, "sample": []}
+    target_path = target_root / target
+    paths: list[Path] = []
+    if target_path.is_dir():
+        paths = sorted([path for path in target_path.iterdir() if path.suffix.lower() in {".md", ".markdown", ".json"}])
+    elif target_path.is_file():
+        paths = [target_path]
+    sample = []
+    for path in paths[:5]:
+        try:
+            first_line = path.read_text(encoding="utf-8-sig").splitlines()[0].strip()
+        except (OSError, IndexError):
+            first_line = ""
+        sample.append({"id": path.stem, "path": _repo_relative_path(path, target_root), "title": first_line.lstrip("# ").strip()})
+    return {"status": "present" if paths else "empty", "decision_count": len(paths), "sample": sample}
+
+
+def _decision_pressure_from_planning(planning_record: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(planning_record, dict):
+        return {"architecture_decision_promotion": {}, "decision_refs": [], "candidate_count": 0}
+    promotion = planning_record.get("architecture_decision_promotion", {})
+    promotion = promotion if isinstance(promotion, dict) else {}
+    traceability_refs = planning_record.get("traceability_refs", {})
+    decision_refs = []
+    if isinstance(traceability_refs, dict):
+        decision_refs = [str(item).strip() for item in _list_payload(traceability_refs.get("decision_refs")) if str(item).strip()]
+    return {
+        "architecture_decision_promotion": promotion,
+        "decision_refs": decision_refs,
+        "candidate_count": 1 if promotion else 0,
+    }
+
+
+def _decision_pressure_from_memory(module_reports: list[dict[str, Any]]) -> dict[str, Any]:
+    memory_report = next((report for report in module_reports if isinstance(report, dict) and report.get("module") == "memory"), None)
+    consult = memory_report.get("habitual_pull", {}) if isinstance(memory_report, dict) else {}
+    promotion_pressure = consult.get("promotion_pressure", {}) if isinstance(consult, dict) else {}
+    if not isinstance(promotion_pressure, dict):
+        return {"status": "unavailable", "candidate_count": 0, "sample": []}
+    sample = []
+    for item in _list_payload(promotion_pressure.get("sample")):
+        if not isinstance(item, dict):
+            continue
+        haystack = " ".join(str(item.get(key, "")) for key in ("promotion_target", "preferred_remediation", "path")).lower()
+        if any(token in haystack for token in ("decision", "architecture", "adr")):
+            sample.append(item)
+    return {
+        "status": "attention" if sample else str(promotion_pressure.get("status", "quiet")),
+        "candidate_count": len(sample),
+        "sample": sample[:3],
+        "source_status": promotion_pressure.get("status", ""),
+    }
+
+
+def _decision_closeout_state(*, planning_pressure: dict[str, Any], config_info: dict[str, Any]) -> dict[str, Any]:
+    promotion = planning_pressure.get("architecture_decision_promotion", {})
+    promotion = promotion if isinstance(promotion, dict) else {}
+    decision_refs = [str(item) for item in _list_payload(planning_pressure.get("decision_refs")) if str(item).strip()]
+    raw_status = str(promotion.get("status", promotion.get("decision", ""))).strip().lower().replace("-", "_")
+    if decision_refs or raw_status in {"promoted", "accepted", "recorded"}:
+        status = "promoted"
+    elif raw_status in {"dismissed", "not_adr_worthy", "not_needed", "no_decision"}:
+        status = "dismissed"
+    elif promotion:
+        status = "candidate_unpromoted"
+    else:
+        status = "no_decision"
+    return {
+        "status": status,
+        "configured": bool(config_info.get("configured")),
+        "decision_refs": decision_refs,
+        "rule": "Closeout should distinguish no decision, dismissed candidate, unpromoted candidate, and promoted decision evidence.",
+    }
+
+
+def _decision_pressure_payload(
+    *, target_root: Path, config: WorkspaceConfig, module_reports: list[dict[str, Any]], cli_invoke: str = DEFAULT_CLI_INVOKE
+) -> dict[str, Any]:
+    config_info = _decision_target_info(target_root=target_root, config=config)
+    index = _decision_record_index(target_root=target_root, config=config)
+    planning_record = _active_planning_record(module_reports=module_reports)
+    planning_pressure = _decision_pressure_from_planning(planning_record)
+    memory_pressure = _decision_pressure_from_memory(module_reports)
+    closeout_state = _decision_closeout_state(planning_pressure=planning_pressure, config_info=config_info)
+    scaffold_command = _command_with_cli_invoke(
+        command='agentic-workspace planning decision-scaffold --title "<title>" --summary "<decision>" --target ./repo --format json',
+        cli_invoke=cli_invoke,
+    )
+    task = planning_record.get("task", {}) if isinstance(planning_record, dict) else {}
+    plan_surface = str(task.get("surface", "")).strip() if isinstance(task, dict) else ""
+    promote_command = ""
+    if plan_surface:
+        promote_command = _command_with_cli_invoke(
+            command=f"agentic-workspace planning decision-promote --from-plan {plan_surface} --target ./repo --format json",
+            cli_invoke=cli_invoke,
+        )
+    pressure_count = int(planning_pressure.get("candidate_count", 0)) + int(memory_pressure.get("candidate_count", 0))
+    return {
+        "kind": "agentic-workspace/decision-pressure/v1",
+        "status": "attention" if pressure_count else "configured" if config_info.get("configured") else "not-configured",
+        "configuration": config_info,
+        "existing_decisions": index,
+        "planning_pressure": planning_pressure,
+        "memory_pressure": memory_pressure,
+        "closeout_decision_state": closeout_state,
+        "actions": {
+            "scaffold": {
+                "available": bool(config_info.get("configured") and config_info.get("inside_target", True)),
+                "command": scaffold_command if config_info.get("configured") else "",
+                "why": "Create a host decision record through AW instead of hand-editing the target file.",
+            },
+            "promote_from_plan": {
+                "available": bool(config_info.get("configured") and plan_surface),
+                "command": promote_command,
+                "why": "Promote active planning architecture_decision_promotion into the configured decision target.",
+            },
+        },
+        "rule": "Agent owns architecture judgment; AW preserves and routes decision records without forcing every task to create one.",
+    }
+
+
+def _architecture_decision_closeout_payload(
+    *, planning_report: dict[str, Any], target_root: Path | None, config: WorkspaceConfig | None
+) -> dict[str, Any]:
+    config_info = (
+        _decision_target_info(target_root=target_root, config=config)
+        if target_root is not None and config is not None
+        else {"configured": False, "status": "not-configured"}
+    )
+    active = planning_report.get("active", {}) if isinstance(planning_report, dict) else {}
+    planning_record = active.get("planning_record", {}) if isinstance(active, dict) else {}
+    if not isinstance(planning_record, dict) or planning_record.get("status") != "present":
+        planning_record = {}
+    pressure = _decision_pressure_from_planning(planning_record)
+    closeout_state = _decision_closeout_state(planning_pressure=pressure, config_info=config_info)
+    return {
+        "kind": "agentic-workspace/architecture-decision-closeout/v1",
+        **closeout_state,
+        "promotion": pressure.get("architecture_decision_promotion", {}),
+        "rule": "Architecture decisions are optional, but closeout should not hide an unpromoted decision candidate.",
+    }
 
 
 def _run_report_router_command(
@@ -7513,6 +7727,7 @@ def _report_closeout_trust_payload(
         intent_check = _intent_satisfaction_check_payload(planning_report={}, target_root=target_root)
         acceptance_reconciliation = _acceptance_criteria_reconciliation_payload(planning_report={})
         intent_proof_check = _intent_proof_check_payload(planning_report={}, target_root=target_root)
+        architecture_decision_closeout = _architecture_decision_closeout_payload(planning_report={}, target_root=target_root, config=config)
         residue_action = durable_residue_action(trust="unavailable")
         return {
             "status": "unavailable",
@@ -7522,6 +7737,7 @@ def _report_closeout_trust_payload(
             "intent_satisfaction_check": intent_check,
             "acceptance_criteria_reconciliation": acceptance_reconciliation,
             "intent_proof_check": intent_proof_check,
+            "architecture_decision_closeout": architecture_decision_closeout,
             "historical_review_artifacts": _historical_review_artifacts_policy(
                 planning_report={}, intent_validation={}, target_root=target_root
             ),
@@ -7547,6 +7763,9 @@ def _report_closeout_trust_payload(
         intent_check = _intent_satisfaction_check_payload(planning_report=planning_report, target_root=target_root)
         acceptance_reconciliation = _acceptance_criteria_reconciliation_payload(planning_report=planning_report)
         intent_proof_check = _intent_proof_check_payload(planning_report=planning_report, target_root=target_root)
+        architecture_decision_closeout = _architecture_decision_closeout_payload(
+            planning_report=planning_report, target_root=target_root, config=config
+        )
         residue_action = durable_residue_action(trust="unavailable")
         return {
             "status": "unavailable",
@@ -7556,6 +7775,7 @@ def _report_closeout_trust_payload(
             "intent_satisfaction_check": intent_check,
             "acceptance_criteria_reconciliation": acceptance_reconciliation,
             "intent_proof_check": intent_proof_check,
+            "architecture_decision_closeout": architecture_decision_closeout,
             "historical_review_artifacts": _historical_review_artifacts_policy(
                 planning_report=planning_report, intent_validation={}, target_root=target_root
             ),
@@ -7590,6 +7810,9 @@ def _report_closeout_trust_payload(
     intent_satisfaction_check = _intent_satisfaction_check_payload(planning_report=planning_report, target_root=target_root)
     acceptance_reconciliation = _acceptance_criteria_reconciliation_payload(planning_report=planning_report)
     intent_proof_check = _intent_proof_check_payload(planning_report=planning_report, target_root=target_root)
+    architecture_decision_closeout = _architecture_decision_closeout_payload(
+        planning_report=planning_report, target_root=target_root, config=config
+    )
     active_planning_record = package_workflow_evidence.get("status") == "present"
     package_absence_signals: list[str] = []
     if package_workflow_evidence.get("status") == "present" and package_workflow_evidence.get("trust") == "lower-trust":
@@ -7643,6 +7866,7 @@ def _report_closeout_trust_payload(
         "intent_satisfaction_check": intent_satisfaction_check,
         "acceptance_criteria_reconciliation": acceptance_reconciliation,
         "intent_proof_check": intent_proof_check,
+        "architecture_decision_closeout": architecture_decision_closeout,
         "historical_review_artifacts": _historical_review_artifacts_policy(
             planning_report=planning_report, intent_validation=intent_validation, target_root=target_root
         ),
@@ -19498,6 +19722,156 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
     payload = _select_report_payload(payload, profile=profile, section=section)
     payload = _rewrite_module_cli_commands(payload)
     _emit_payload(payload=payload, format_name=args.format)
+    return 0
+
+
+def _decision_record_path(*, target_root: Path, config: WorkspaceConfig, title: str, decision_id: str | None) -> tuple[str, Path]:
+    info = _decision_target_info(target_root=target_root, config=config)
+    if not info.get("configured"):
+        raise WorkspaceUsageError("decision scaffold requires [assurance] decision_record_target in .agentic-workspace/config.toml.")
+    if not info.get("inside_target", True):
+        raise WorkspaceUsageError("decision_record_target must stay inside the target repository.")
+    target = str(info.get("target", ""))
+    slug = _decision_slug(decision_id or title)
+    configured_path = target_root / target
+    if str(info.get("target_kind")) == "file":
+        return (slug, configured_path)
+    return (slug, configured_path / f"{slug}.md")
+
+
+def _decision_scaffold_payload(
+    *,
+    target_root: Path,
+    config: WorkspaceConfig,
+    title: str,
+    summary: str,
+    status: str,
+    decision_id: str | None,
+    source: str,
+    dry_run: bool,
+) -> dict[str, Any]:
+    title = title.strip()
+    if not title:
+        raise WorkspaceUsageError("decision scaffold requires --title.")
+    summary = summary.strip() or "TODO: record the decision."
+    decision_id_value, path = _decision_record_path(target_root=target_root, config=config, title=title, decision_id=decision_id)
+    if path.exists() and not dry_run:
+        raise WorkspaceUsageError(f"{_repo_relative_path(path, target_root)} already exists; choose a different --decision-id.")
+    today = date.today().isoformat()
+    content = "\n".join(
+        [
+            f"# {title}",
+            "",
+            f"- id: {decision_id_value}",
+            f"- status: {status}",
+            f"- date: {today}",
+            f"- source: {source}",
+            "",
+            "## Decision",
+            "",
+            summary,
+            "",
+            "## Context",
+            "",
+            "TODO: record the constraints or evidence that made this decision durable.",
+            "",
+            "## Consequences",
+            "",
+            "TODO: record the expected follow-through, tradeoffs, and revisit trigger.",
+            "",
+        ]
+    )
+    if not dry_run:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+    return {
+        "kind": "agentic-workspace/decision-record-scaffold/v1",
+        "status": "dry-run" if dry_run else "created",
+        "id": decision_id_value,
+        "path": _repo_relative_path(path, target_root),
+        "title": title,
+        "decision_status": status,
+        "source": source,
+        "rule": "Decision records are host-owned docs; AW only scaffolds them through the configured target.",
+    }
+
+
+def _decision_promote_from_plan_payload(
+    *,
+    target_root: Path,
+    config: WorkspaceConfig,
+    plan: str,
+    title: str,
+    summary: str,
+    status: str,
+    decision_id: str | None,
+    dry_run: bool,
+) -> dict[str, Any]:
+    plan_path = (target_root / plan).resolve()
+    try:
+        plan_path.relative_to(target_root.resolve())
+    except ValueError:
+        raise WorkspaceUsageError("--from-plan must stay inside the target repository.") from None
+    if not plan_path.is_file():
+        raise WorkspaceUsageError(f"{plan} does not exist.")
+    try:
+        plan_payload = json.loads(plan_path.read_text(encoding="utf-8-sig"))
+    except json.JSONDecodeError as exc:
+        raise WorkspaceUsageError(f"{plan} is not valid JSON: {exc}") from exc
+    if not isinstance(plan_payload, dict):
+        raise WorkspaceUsageError(f"{plan} must contain a JSON object.")
+    promotion = plan_payload.get("architecture_decision_promotion", {})
+    promotion = promotion if isinstance(promotion, dict) else {}
+    promoted_title = title.strip() or str(promotion.get("title") or promotion.get("decision") or plan_payload.get("title") or "").strip()
+    promoted_summary = (
+        summary.strip()
+        or str(promotion.get("summary") or promotion.get("decision") or promotion.get("rationale") or "").strip()
+        or f"Promoted from {plan}."
+    )
+    payload = _decision_scaffold_payload(
+        target_root=target_root,
+        config=config,
+        title=promoted_title,
+        summary=promoted_summary,
+        status=status,
+        decision_id=decision_id,
+        source=f"planning:{plan}",
+        dry_run=dry_run,
+    )
+    payload["promotion_source"] = {"kind": "planning", "path": plan, "architecture_decision_promotion": promotion}
+    return payload
+
+
+def _run_planning_decision_adapter(args: argparse.Namespace) -> int:
+    target_root = _resolve_target_root(getattr(args, "target", None))
+    _validate_target_root(command_name="planning", target_root=target_root)
+    config = _load_workspace_config(target_root=target_root)
+    command = str(getattr(args, "planning_command", "") or "")
+    if command == "decision-scaffold":
+        payload = _decision_scaffold_payload(
+            target_root=target_root,
+            config=config,
+            title=str(getattr(args, "title", "") or ""),
+            summary=str(getattr(args, "summary", "") or ""),
+            status=str(getattr(args, "status", "") or "proposed"),
+            decision_id=getattr(args, "decision_id", None),
+            source="agentic-workspace decision scaffold",
+            dry_run=bool(getattr(args, "dry_run", False)),
+        )
+    elif command == "decision-promote":
+        payload = _decision_promote_from_plan_payload(
+            target_root=target_root,
+            config=config,
+            plan=str(getattr(args, "from_plan", "") or ""),
+            title=str(getattr(args, "title", "") or ""),
+            summary=str(getattr(args, "summary", "") or ""),
+            status=str(getattr(args, "status", "") or "proposed"),
+            decision_id=getattr(args, "decision_id", None),
+            dry_run=bool(getattr(args, "dry_run", False)),
+        )
+    else:
+        raise WorkspaceUsageError("planning decision support requires decision-scaffold or decision-promote.")
+    _emit_payload(payload=payload, format_name=getattr(args, "format", "text"))
     return 0
 
 

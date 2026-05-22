@@ -62,6 +62,7 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `branch_workflow_posture` | object | yes |  | Branch and worktree posture relevant to safe continuation. |  |  |
 | `local_memory` | object | yes |  | Machine-local memory configuration and advisory state. |  |  |
 | `memory_consult` | object | yes |  | Recommended checked-in Memory lookup route for the current report. |  |  |
+| `reuse_pressure` | object | yes |  | Entry point for changed-path reuse and abstraction-pressure facts. |  |  |
 | `agent_aids` | object | yes |  | Reusable agent aid availability, manifest coverage, and startup role information. |  |  |
 | `agent_configuration_system` | object | yes |  | How repo-owned agent configuration classes are represented in this workspace. |  |  |
 | `agent_configuration_queries` | object | yes |  | Compact queries agents should ask before opening broader configuration docs. |  |  |
@@ -78,6 +79,7 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `effective_authority` | object | yes |  | Resolved authority hierarchy for workspace, module, and repo-owned surfaces. |  |  |
 | `operational_compression` | object | yes |  | Compression signals that keep ordinary agent startup and reporting cheap. |  |  |
 | `successful_completion_cost` | object | yes |  | Recent model CLI evaluation cost, package-read overhead, and rework signals for advisory optimization decisions. |  |  |
+| `decision_pressure` | object | yes |  | Host architecture-decision configuration, existing decision index, promotion pressure, and command-owned scaffold routes. |  |  |
 | `maintenance_pressure` | object | yes |  | Maintainer-facing pressure signals and optional follow-up routes. |  |  |
 | `closeout_trust` | object | yes |  | Trust signals for whether recent or current work can be safely closed. |  |  |
 | `external_work_reconciliation` | object | yes |  | Provider-agnostic reconciliation between checked-in planning and external work evidence. |  |  |

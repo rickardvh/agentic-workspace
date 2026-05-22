@@ -57,6 +57,114 @@ def test_report_reuse_pressure_section_routes_to_changed_path_evaluation(tmp_pat
     }
 
 
+def test_report_decision_pressure_shows_unconfigured_repo(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["report", "--target", str(target), "--section", "decision_pressure", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert answer["kind"] == "agentic-workspace/decision-pressure/v1"
+    assert answer["status"] == "not-configured"
+    assert answer["configuration"]["configured"] is False
+    assert answer["actions"]["scaffold"]["available"] is False
+
+
+def test_decision_pressure_scaffolds_configured_decision_record(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        'schema_version = 1\n\n[assurance]\ndecision_record_target = "docs/decisions/"\n',
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "decision_pressure", "--format", "json"]) == 0
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert answer["status"] == "configured"
+    assert answer["configuration"]["target"] == "docs/decisions/"
+    assert answer["existing_decisions"]["decision_count"] == 0
+    assert "planning decision-scaffold" in answer["actions"]["scaffold"]["command"]
+
+    assert (
+        cli.main(
+            [
+                "planning",
+                "decision-scaffold",
+                "--target",
+                str(target),
+                "--title",
+                "Use decision records",
+                "--summary",
+                "Durable architecture decisions use host-owned decision records.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["status"] == "created"
+    assert payload["path"] == "docs/decisions/use-decision-records.md"
+    assert (target / payload["path"]).is_file()
+
+
+def test_report_decision_pressure_surfaces_planning_promotion_candidate(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--preset", "planning"]) == 0
+    capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        'schema_version = 1\n\n[workspace]\ndefault_preset = "planning"\n\n[assurance]\ndecision_record_target = "docs/decisions/"\n',
+    )
+    plan = target / ".agentic-workspace" / "planning" / "execplans" / "decision.plan.json"
+    _write_json(
+        plan,
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Decision candidate",
+            "active_milestone": {"id": "decision-candidate", "status": "active"},
+            "delegated_judgment": {
+                "requested outcome": "Promote stable architecture decision support.",
+                "hard constraints": "Do not leave decision residue only in planning.",
+                "agent may decide locally": "Scaffold wording.",
+                "escalate when": "Decision is not architecture-worthy.",
+            },
+            "immediate_next_action": ["Promote the decision candidate."],
+            "completion_criteria": ["Decision pressure is inspectable."],
+            "validation_commands": ["uv run agentic-workspace report --section decision_pressure --format json"],
+            "architecture_decision_promotion": {
+                "status": "candidate",
+                "title": "Use host decision records",
+                "decision": "Architecture decisions should be promoted to configured host records.",
+            },
+        },
+    )
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        "[todo]\n"
+        "active_items = [\n"
+        "  { id = 'decision-candidate', title = 'Decision candidate', surface = '.agentic-workspace/planning/execplans/decision.plan.json' },\n"
+        "]\n"
+        "queued_items = []\n\n"
+        "[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "decision_pressure", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert answer["status"] == "attention"
+    assert answer["planning_pressure"]["architecture_decision_promotion"]["status"] == "candidate"
+    assert answer["closeout_decision_state"]["status"] == "candidate_unpromoted"
+    assert answer["actions"]["promote_from_plan"]["available"] is True
+    assert "planning decision-promote --from-plan" in answer["actions"]["promote_from_plan"]["command"]
+
+
 def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

@@ -34,6 +34,7 @@
     "maintenance_pressure",
     "operational_compression",
     "successful_completion_cost",
+    "decision_pressure",
     "closeout_trust",
     "external_work_reconciliation",
     "external_work_delta",

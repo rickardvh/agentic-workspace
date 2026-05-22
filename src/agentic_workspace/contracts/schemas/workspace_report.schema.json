@@ -37,6 +37,7 @@
     "maintenance_pressure",
     "operational_compression",
     "successful_completion_cost",
+    "decision_pressure",
     "closeout_trust",
     "external_work_reconciliation",
     "external_work_delta",
@@ -241,6 +242,10 @@
     "successful_completion_cost": {
       "type": "object",
       "description": "Recent model CLI evaluation cost, package-read overhead, and rework signals for advisory optimization decisions."
+    },
+    "decision_pressure": {
+      "type": "object",
+      "description": "Host architecture-decision configuration, existing decision index, promotion pressure, and command-owned scaffold routes."
     },
     "maintenance_pressure": {
       "type": "object",

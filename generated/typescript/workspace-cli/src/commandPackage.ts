@@ -1017,6 +1017,142 @@ export const generatedCommandPackage = {
             ]
           },
           {
+            "help": "Create a host architecture decision record scaffold through the configured decision target.",
+            "name": "decision-scaffold",
+            "options": [
+              {
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path.",
+                "name": "target"
+              },
+              {
+                "flags": [
+                  "--title"
+                ],
+                "help": "Decision title.",
+                "name": "title",
+                "required": true
+              },
+              {
+                "default": "",
+                "flags": [
+                  "--summary"
+                ],
+                "help": "Short decision statement.",
+                "name": "summary"
+              },
+              {
+                "flags": [
+                  "--decision-id"
+                ],
+                "help": "Optional stable decision id; defaults to a slug of --title.",
+                "name": "decision_id"
+              },
+              {
+                "default": "proposed",
+                "flags": [
+                  "--status"
+                ],
+                "help": "Decision status to write into the scaffold.",
+                "name": "status"
+              },
+              {
+                "action": "store_true",
+                "flags": [
+                  "--dry-run"
+                ],
+                "help": "Show the planned decision record without writing it.",
+                "name": "dry_run"
+              },
+              {
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "flags": [
+                  "--format"
+                ],
+                "help": "Output format.",
+                "name": "format"
+              }
+            ]
+          },
+          {
+            "help": "Promote a planning architecture-decision candidate into the configured decision target.",
+            "name": "decision-promote",
+            "options": [
+              {
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path.",
+                "name": "target"
+              },
+              {
+                "flags": [
+                  "--from-plan"
+                ],
+                "help": "Repo-relative planning execplan JSON path.",
+                "name": "from_plan",
+                "required": true
+              },
+              {
+                "default": "",
+                "flags": [
+                  "--title"
+                ],
+                "help": "Override promoted decision title.",
+                "name": "title"
+              },
+              {
+                "default": "",
+                "flags": [
+                  "--summary"
+                ],
+                "help": "Override promoted decision statement.",
+                "name": "summary"
+              },
+              {
+                "flags": [
+                  "--decision-id"
+                ],
+                "help": "Optional stable decision id; defaults to a slug of the promoted title.",
+                "name": "decision_id"
+              },
+              {
+                "default": "proposed",
+                "flags": [
+                  "--status"
+                ],
+                "help": "Decision status to write into the promoted scaffold.",
+                "name": "status"
+              },
+              {
+                "action": "store_true",
+                "flags": [
+                  "--dry-run"
+                ],
+                "help": "Show the planned decision record without writing it.",
+                "name": "dry_run"
+              },
+              {
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "flags": [
+                  "--format"
+                ],
+                "help": "Output format.",
+                "name": "format"
+              }
+            ]
+          },
+          {
             "help": "Emit the compact delegated-worker handoff derived from active planning state.",
             "name": "handoff",
             "options": [

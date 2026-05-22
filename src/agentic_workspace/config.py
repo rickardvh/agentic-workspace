@@ -312,6 +312,9 @@ class AssuranceConfig:
     proof_profiles: tuple[AssuranceProofProfile, ...]
     test_data_policy: dict[str, Any]
     decision_record_target: str | None
+    decision_record_format: str | None
+    decision_record_template: str | None
+    decision_record_statuses: tuple[str, ...]
     invariant_registry: str | None
     risk_registry: str | None
 
@@ -622,6 +625,9 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
         "proof_profiles",
         "test_data_policy",
         "decision_record_target",
+        "decision_record_format",
+        "decision_record_template",
+        "decision_record_statuses",
         "invariant_registry",
         "risk_registry",
     }
@@ -661,6 +667,8 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
     if not isinstance(raw_test_data_policy, dict):
         raise WorkspaceUsageError(f"{config_path.as_posix()} [assurance.test_data_policy] section must be a table.")
     decision_record_target = raw_assurance.get("decision_record_target")
+    decision_record_format = raw_assurance.get("decision_record_format")
+    decision_record_template = raw_assurance.get("decision_record_template")
     invariant_registry = raw_assurance.get("invariant_registry")
     risk_registry = raw_assurance.get("risk_registry")
     return (
@@ -673,6 +681,11 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
             proof_profiles=tuple(profile for profile in profiles if profile.id),
             test_data_policy={str(key): value for key, value in raw_test_data_policy.items()},
             decision_record_target=str(decision_record_target).strip() if decision_record_target is not None else None,
+            decision_record_format=str(decision_record_format).strip() if decision_record_format is not None else None,
+            decision_record_template=str(decision_record_template).strip() if decision_record_template is not None else None,
+            decision_record_statuses=require_optional_string_list(
+                payload=raw_assurance, key="decision_record_statuses", config_path=config_path
+            ),
             invariant_registry=str(invariant_registry).strip() if invariant_registry is not None else None,
             risk_registry=str(risk_registry).strip() if risk_registry is not None else None,
         ),

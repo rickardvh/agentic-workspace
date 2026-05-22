@@ -226,6 +226,37 @@
             "docs/decisions/"
           ]
         },
+        "decision_record_format": {
+          "description": "Host-declared file format for durable decision records.",
+          "type": "string",
+          "minLength": 1,
+          "examples": [
+            "markdown"
+          ]
+        },
+        "decision_record_template": {
+          "description": "Optional host template id or repo-relative template path for decision scaffolds.",
+          "type": "string",
+          "minLength": 1,
+          "examples": [
+            "adr-lite"
+          ]
+        },
+        "decision_record_statuses": {
+          "description": "Optional accepted status values for decision records.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "examples": [
+            [
+              "proposed",
+              "accepted",
+              "dismissed"
+            ]
+          ]
+        },
         "invariant_registry": {
           "description": "Path to the repo invariant registry used during higher-assurance work.",
           "type": "string",

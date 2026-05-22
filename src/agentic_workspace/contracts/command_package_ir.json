@@ -1637,6 +1637,142 @@
                 ]
               },
               {
+                "name": "decision-scaffold",
+                "help": "Create a host architecture decision record scaffold through the configured decision target.",
+                "options": [
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "title",
+                    "flags": [
+                      "--title"
+                    ],
+                    "required": true,
+                    "help": "Decision title."
+                  },
+                  {
+                    "name": "summary",
+                    "flags": [
+                      "--summary"
+                    ],
+                    "default": "",
+                    "help": "Short decision statement."
+                  },
+                  {
+                    "name": "decision_id",
+                    "flags": [
+                      "--decision-id"
+                    ],
+                    "help": "Optional stable decision id; defaults to a slug of --title."
+                  },
+                  {
+                    "name": "status",
+                    "flags": [
+                      "--status"
+                    ],
+                    "default": "proposed",
+                    "help": "Decision status to write into the scaffold."
+                  },
+                  {
+                    "name": "dry_run",
+                    "flags": [
+                      "--dry-run"
+                    ],
+                    "action": "store_true",
+                    "help": "Show the planned decision record without writing it."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
+                ]
+              },
+              {
+                "name": "decision-promote",
+                "help": "Promote a planning architecture-decision candidate into the configured decision target.",
+                "options": [
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "from_plan",
+                    "flags": [
+                      "--from-plan"
+                    ],
+                    "required": true,
+                    "help": "Repo-relative planning execplan JSON path."
+                  },
+                  {
+                    "name": "title",
+                    "flags": [
+                      "--title"
+                    ],
+                    "default": "",
+                    "help": "Override promoted decision title."
+                  },
+                  {
+                    "name": "summary",
+                    "flags": [
+                      "--summary"
+                    ],
+                    "default": "",
+                    "help": "Override promoted decision statement."
+                  },
+                  {
+                    "name": "decision_id",
+                    "flags": [
+                      "--decision-id"
+                    ],
+                    "help": "Optional stable decision id; defaults to a slug of the promoted title."
+                  },
+                  {
+                    "name": "status",
+                    "flags": [
+                      "--status"
+                    ],
+                    "default": "proposed",
+                    "help": "Decision status to write into the promoted scaffold."
+                  },
+                  {
+                    "name": "dry_run",
+                    "flags": [
+                      "--dry-run"
+                    ],
+                    "action": "store_true",
+                    "help": "Show the planned decision record without writing it."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
+                ]
+              },
+              {
                 "name": "handoff",
                 "help": "Emit the compact delegated-worker handoff derived from active planning state.",
                 "options": [
