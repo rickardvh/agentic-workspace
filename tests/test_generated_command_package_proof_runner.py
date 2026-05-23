@@ -186,6 +186,23 @@ def test_current_python_completion_state_is_satisfied_by_exact_symbol_proof() ->
     assert ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] == "satisfied"
 
 
+def test_command_generation_extraction_readiness_is_inventory_backed() -> None:
+    checker = _load_checker()
+    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+
+    assert checker._validate_command_generation_extraction_readiness(ir) == []
+
+
+def test_command_generation_extraction_readiness_rejects_uninventoried_product_literals() -> None:
+    checker = _load_checker()
+    ir = copy.deepcopy(checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT))
+    ir["generation_policy"]["extraction_readiness"]["accepted_couplings"] = []
+
+    errors = checker._validate_command_generation_extraction_readiness(ir)
+
+    assert any("product-specific literals without extraction-readiness inventory" in error for error in errors)
+
+
 def test_python_completion_blocker_report_accepts_exact_symbol_runtime_boundaries() -> None:
     checker = _load_checker()
     ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)

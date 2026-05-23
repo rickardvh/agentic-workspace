@@ -46,6 +46,7 @@
         "custom_codegen_boundary",
         "shell_adapter_policy",
         "direct_cli_edit_policy",
+        "extraction_readiness",
         "generated_package_maturity",
         "python_cli_completion",
         "non_python_runtime_binding"
@@ -85,6 +86,85 @@
           "type": "string",
           "minLength": 1,
           "description": "Direct cli edit policy text value used by this contract."
+        },
+        "extraction_readiness": {
+          "type": "object",
+          "required": [
+            "status",
+            "owner",
+            "rule",
+            "accepted_couplings"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "ready",
+                "ready-with-inventoried-product-coupling",
+                "blocked"
+              ],
+              "description": "Extraction readiness status for reusable command-generation code."
+            },
+            "owner": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Issue, lane, or owner responsible for this extraction boundary."
+            },
+            "rule": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Mechanical rule the extraction-readiness audit enforces."
+            },
+            "accepted_couplings": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "kind",
+                  "paths",
+                  "owner",
+                  "reason",
+                  "migration_path"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9][a-z0-9-]*$",
+                    "description": "Stable accepted coupling id."
+                  },
+                  "kind": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Coupling class."
+                  },
+                  "paths": {
+                    "$ref": "#/$defs/non_empty_strings",
+                    "description": "Repo-relative source paths where the coupling is allowed."
+                  },
+                  "owner": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Issue, lane, or module that owns retiring or preserving this coupling."
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Why this coupling is currently accepted."
+                  },
+                  "migration_path": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "How this coupling should move if it stops being accepted."
+                  }
+                },
+                "additionalProperties": false,
+                "description": "One explicitly accepted command-generation extraction coupling."
+              },
+              "description": "Explicit inventory of remaining product coupling in reusable command-generation code."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Mechanical extraction-readiness boundary for the command-generation package."
         },
         "generated_package_maturity": {
           "type": "object",

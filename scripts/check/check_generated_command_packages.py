@@ -219,6 +219,21 @@ GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST_PREFIXES = {
     ".agentic-workspace/planning/execplans/archive/": "historical planning evidence",
     "docs/reviews/": "historical review evidence",
 }
+COMMAND_GENERATION_SOURCE_ROOT = "packages/command-generation/src/command_generation"
+COMMAND_GENERATION_FORBIDDEN_PRODUCT_IMPORT_ROOTS = (
+    "agentic_workspace",
+    "repo_planning_bootstrap",
+    "repo_memory_bootstrap",
+)
+COMMAND_GENERATION_PRODUCT_LITERAL_TOKENS = (
+    "agentic-workspace",
+    "agentic-planning",
+    "agentic-memory",
+    ".agentic-workspace",
+    "workspace.",
+    "planning.",
+    "memory.",
+)
 DOMAIN_RUNTIME_PRIMITIVE_SOURCE_CALLS = {
     "memory.promotion_report.load": {
         "import_module": "repo_memory_bootstrap.installer",
@@ -2712,6 +2727,88 @@ def _validate_generated_cli_compatibility_vocabulary() -> list[str]:
     return errors
 
 
+def _source_import_roots(text: str) -> set[str]:
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return {"<unparseable>"}
+    roots: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            roots.update(alias.name.split(".", 1)[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            roots.add(node.module.split(".", 1)[0])
+    return roots
+
+
+def _command_generation_source_files() -> list[Path]:
+    source_root = REPO_ROOT / COMMAND_GENERATION_SOURCE_ROOT
+    return sorted(path for path in source_root.rglob("*.py") if path.is_file())
+
+
+def _accepted_extraction_coupling_paths(ir: dict[str, object]) -> tuple[set[str], list[str]]:
+    errors: list[str] = []
+    policy = ir.get("generation_policy", {})
+    if not isinstance(policy, dict):
+        return set(), ["command_package_ir generation_policy must be an object"]
+    readiness = policy.get("extraction_readiness", {})
+    if not isinstance(readiness, dict):
+        return set(), ["command_package_ir generation_policy.extraction_readiness must be an object"]
+    if str(readiness.get("owner", "")).strip() != "#1100":
+        errors.append("command-generation extraction_readiness owner must be #1100")
+    if str(readiness.get("status", "")).strip() not in {"ready", "ready-with-inventoried-product-coupling"}:
+        errors.append("command-generation extraction_readiness status must not be blocked")
+    couplings = readiness.get("accepted_couplings", [])
+    if not isinstance(couplings, list):
+        return set(), errors + ["command-generation extraction_readiness.accepted_couplings must be a list"]
+    accepted_paths: set[str] = set()
+    for index, coupling in enumerate(couplings):
+        if not isinstance(coupling, dict):
+            errors.append(f"command-generation extraction coupling {index} must be an object")
+            continue
+        location = f"command-generation extraction coupling {coupling.get('id', index)!r}"
+        for field in ("id", "kind", "owner", "reason", "migration_path"):
+            if not str(coupling.get(field, "")).strip():
+                errors.append(f"{location} must declare {field}")
+        paths = coupling.get("paths", [])
+        if not isinstance(paths, list) or not paths:
+            errors.append(f"{location} must declare at least one path")
+            continue
+        for raw_path in paths:
+            relative_path = str(raw_path)
+            if not relative_path.startswith(f"{COMMAND_GENERATION_SOURCE_ROOT}/"):
+                errors.append(f"{location} path is outside command-generation source: {relative_path}")
+                continue
+            if not (REPO_ROOT / relative_path).is_file():
+                errors.append(f"{location} path does not exist: {relative_path}")
+                continue
+            accepted_paths.add(relative_path)
+    return accepted_paths, errors
+
+
+def _validate_command_generation_extraction_readiness(ir: dict[str, object]) -> list[str]:
+    accepted_paths, errors = _accepted_extraction_coupling_paths(ir)
+    product_literal_paths: set[str] = set()
+    for source_path in _command_generation_source_files():
+        relative_path = _repo_relative(source_path)
+        text = source_path.read_text(encoding="utf-8")
+        forbidden_imports = sorted(set(COMMAND_GENERATION_FORBIDDEN_PRODUCT_IMPORT_ROOTS) & _source_import_roots(text))
+        if forbidden_imports:
+            errors.append(f"{relative_path} imports product modules inside reusable command-generation source: {forbidden_imports!r}")
+        if any(token in text for token in COMMAND_GENERATION_PRODUCT_LITERAL_TOKENS):
+            product_literal_paths.add(relative_path)
+    missing_inventory = sorted(product_literal_paths - accepted_paths)
+    if missing_inventory:
+        errors.append(
+            "command-generation source contains product-specific literals without extraction-readiness inventory: "
+            f"{missing_inventory!r}"
+        )
+    stale_inventory = sorted(accepted_paths - product_literal_paths)
+    if stale_inventory:
+        errors.append(f"command-generation extraction-readiness inventory is stale for paths without product literals: {stale_inventory!r}")
+    return errors
+
+
 def _run_adapter_conformance(*, require_node: bool) -> list[str]:
     errors: list[str] = []
     node = shutil.which("node")
@@ -2930,6 +3027,7 @@ def _validate_static_surfaces() -> list[str]:
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         errors.append(f"command-package IR validation failed: {exc}")
     else:
+        errors.extend(_validate_command_generation_extraction_readiness(ir))
         errors.extend(_validate_generated_operation_cli_inputs(ir))
         maturity_policy = ir.get("generation_policy", {}).get("generated_package_maturity", {})
         level_ids = {level.get("id") for level in maturity_policy.get("levels", []) if isinstance(level, dict)}

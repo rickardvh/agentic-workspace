@@ -18,6 +18,33 @@
     "custom_codegen_boundary": "Custom generation code should stay small: validated IR loading, target rendering, freshness checks, and no-direct-edit sentinels.",
     "shell_adapter_policy": "Issue #909 evaluation selects Bash as the first additional generated command transport candidate and keeps it deferred. Promotion may start only with parser/help projection from canonical command artifacts, then black-box conformance for runtime handoff; PowerShell remains deferred until the Bash boundary and proof route are proven. Shell-family targets are downstream projections for thin wrappers, help, argument validation, completion metadata, and runtime handoff only; they must not own runtime primitive behavior.",
     "direct_cli_edit_policy": "Interface shape, generated package metadata, adapter wiring, and shipped CLI behavior must move through contracts, IR, generators, and regenerated outputs instead of package-local executable cli.py files; direct cli.py edits or other direct edits to package-local executable Python are transitional debt unless they are explicitly classified package-unique primitive implementations outside the generated CLI behavior surface.",
+    "extraction_readiness": {
+      "status": "ready-with-inventoried-product-coupling",
+      "owner": "#1100",
+      "rule": "Reusable command-generation source must not import Agentic Workspace product modules. Product-specific literals in command-generation source require explicit accepted-coupling inventory with owner, reason, and migration path.",
+      "accepted_couplings": [
+        {
+          "id": "generated-package-resource-projections",
+          "kind": "temporary-generated-resource-projection",
+          "paths": [
+            "packages/command-generation/src/command_generation/generator.py"
+          ],
+          "owner": "#1100 / #892 tier-7-command-generation-extraction-readiness",
+          "reason": "The generator still renders a small set of generated package-resource command projections and product-shaped output helpers while the operation IR primitives are being normalized.",
+          "migration_path": "Move remaining projection facts into operation contracts, command package IR, or target-local generated resources, then render them through generic command-generation primitives without package-name branches."
+        },
+        {
+          "id": "generic-output-compatibility-renderers",
+          "kind": "accepted-output-compatibility-boundary",
+          "paths": [
+            "packages/command-generation/src/command_generation/primitive_executor.py"
+          ],
+          "owner": "#892 python completion lane",
+          "reason": "The primitive executor owns generic JSON/text emission and keeps compact compatibility renderers for current memory and planning report payload shapes already routed through generated operation IR.",
+          "migration_path": "Keep only schema-generic output rendering in command-generation; move package-specific text compatibility to generated target-local resources or package runtime handlers when the compatibility surface stops being universal enough to share."
+        }
+      ]
+    },
     "generated_package_maturity": {
       "routing_rule": "Weak agents may use only generated targets whose maturity level explicitly allows weak-agent routing; proof fixtures and parser/help proofs are inspection artifacts, not usable CLI surfaces.",
       "levels": [
