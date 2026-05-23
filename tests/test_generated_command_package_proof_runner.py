@@ -221,6 +221,26 @@ def test_generated_python_version_output_is_contract_backed() -> None:
         assert package_payload["version_metadata"]["source"] == "python-package-metadata"
 
 
+def test_planning_generated_force_includes_are_payload_classified() -> None:
+    checker = _load_checker()
+
+    assert checker._validate_planning_generated_force_include_classification() == []
+
+
+def test_planning_generated_force_include_classification_names_missing_surface(monkeypatch) -> None:
+    checker = _load_checker()
+    expected, source_errors = checker._planning_generated_force_include_sources()
+    assert source_errors == []
+    missing_path = sorted(expected)[0]
+    payload = copy.deepcopy(checker._planning_payload_surface_classification())
+    payload["surfaces"] = [surface for surface in payload["surfaces"] if surface.get("source_path") != missing_path]
+    monkeypatch.setattr(checker, "_planning_payload_surface_classification", lambda: payload)
+
+    errors = checker._validate_planning_generated_force_include_classification()
+
+    assert any(missing_path in error for error in errors)
+
+
 def test_python_completion_blocker_report_accepts_exact_symbol_runtime_boundaries() -> None:
     checker = _load_checker()
     ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)

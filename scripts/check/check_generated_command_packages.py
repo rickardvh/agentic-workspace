@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import tomllib
 from pathlib import Path
 from typing import Callable, NamedTuple
 
@@ -2727,6 +2728,66 @@ def _validate_generated_cli_compatibility_vocabulary() -> list[str]:
     return errors
 
 
+def _planning_payload_surface_classification() -> dict[str, object]:
+    path = REPO_ROOT / "packages" / "planning" / "payload-surface-classification.json"
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _planning_wheel_force_include_entries() -> dict[str, str]:
+    pyproject_path = REPO_ROOT / "packages" / "planning" / "pyproject.toml"
+    payload = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
+    current: object = payload
+    for key in ("tool", "hatch", "build", "targets", "wheel", "force-include"):
+        if not isinstance(current, dict):
+            return {}
+        current = current.get(key, {})
+    if not isinstance(current, dict):
+        return {}
+    return {str(source): str(destination) for source, destination in current.items()}
+
+
+def _planning_generated_force_include_sources() -> tuple[set[str], list[str]]:
+    errors: list[str] = []
+    package_root = REPO_ROOT / "packages" / "planning"
+    sources: set[str] = set()
+
+    def should_count(path: Path) -> bool:
+        return "__pycache__" not in path.parts and path.suffix != ".pyc"
+
+    for source in _planning_wheel_force_include_entries():
+        source_path = (package_root / source).resolve()
+        try:
+            relative_source = source_path.relative_to(REPO_ROOT).as_posix()
+        except ValueError:
+            continue
+        if not relative_source.startswith("generated/planning/python/"):
+            continue
+        if source_path.is_dir():
+            sources.update(_repo_relative(path) for path in source_path.rglob("*") if path.is_file() and should_count(path))
+        elif source_path.is_file() and should_count(source_path):
+            sources.add(relative_source)
+        else:
+            errors.append(f"planning wheel generated force-include source does not exist: {relative_source}")
+    return sources, errors
+
+
+def _validate_planning_generated_force_include_classification() -> list[str]:
+    expected, errors = _planning_generated_force_include_sources()
+    payload = _planning_payload_surface_classification()
+    surfaces = payload.get("surfaces", [])
+    if not isinstance(surfaces, list):
+        return errors + ["packages/planning/payload-surface-classification.json surfaces must be a list"]
+    classified = {str(surface.get("source_path", "")) for surface in surfaces if isinstance(surface, dict)}
+    missing = sorted(expected - classified)
+    if missing:
+        errors.append(
+            "packages/planning/payload-surface-classification.json is missing generated wheel force-include surfaces: "
+            + ", ".join(missing[:12])
+            + (" ..." if len(missing) > 12 else "")
+        )
+    return errors
+
+
 def _source_import_roots(text: str) -> set[str]:
     try:
         tree = ast.parse(text)
@@ -3212,6 +3273,7 @@ def _validate_static_surfaces() -> list[str]:
         errors.extend(_validate_python_runtime_handler_boundary())
         errors.extend(_validate_generated_python_target_layout())
         errors.extend(_validate_direct_generated_python_command_projection())
+        errors.extend(_validate_planning_generated_force_include_classification())
         errors.extend(_validate_generated_python_commands_absent_from_handwritten_parsers())
         errors.extend(_validate_generated_cli_compatibility_vocabulary())
         forbidden_generated_entrypoints = [
