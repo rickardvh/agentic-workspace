@@ -2909,5 +2909,10 @@
       "package_name": "@agentic-workspace/memory-cli",
       "test_environment": "docker"
     }
-  ]
+  ],
+  "version_metadata": {
+    "distribution": "agentic-memory",
+    "fallback_version": "0.3.11",
+    "source": "python-package-metadata"
+  }
 }

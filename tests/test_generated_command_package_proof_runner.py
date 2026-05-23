@@ -203,6 +203,24 @@ def test_command_generation_extraction_readiness_rejects_uninventoried_product_l
     assert any("product-specific literals without extraction-readiness inventory" in error for error in errors)
 
 
+def test_generated_python_version_output_is_contract_backed() -> None:
+    checker = _load_checker()
+    root = checker.REPO_ROOT
+    generated_roots = [
+        root / "generated" / "workspace" / "python",
+        root / "generated" / "planning" / "python",
+        root / "generated" / "memory" / "python",
+    ]
+
+    for generated_root in generated_roots:
+        cli_text = (generated_root / "cli.py").read_text(encoding="utf-8")
+        package_payload = json.loads((generated_root / "command_package.json").read_text(encoding="utf-8"))
+        assert "0.0.0-generated" not in cli_text
+        assert "def generated_package_version()" in cli_text
+        assert "package_version(distribution)" in cli_text
+        assert package_payload["version_metadata"]["source"] == "python-package-metadata"
+
+
 def test_python_completion_blocker_report_accepts_exact_symbol_runtime_boundaries() -> None:
     checker = _load_checker()
     ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)

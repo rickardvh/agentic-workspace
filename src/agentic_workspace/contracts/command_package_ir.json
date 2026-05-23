@@ -284,6 +284,11 @@
       "id": "root-workspace",
       "program": "agentic-workspace",
       "package_role": "root-workspace-cli",
+      "version_metadata": {
+        "source": "python-package-metadata",
+        "distribution": "agentic-workspace",
+        "fallback_version": "0.0.0"
+      },
       "python_runtime_binding": {
         "entrypoint": "agentic-workspace",
         "runtime_module_file": "cli",
@@ -4971,6 +4976,11 @@
       "id": "planning-bootstrap",
       "program": "agentic-planning",
       "package_role": "planning-module-cli",
+      "version_metadata": {
+        "source": "python-package-metadata",
+        "distribution": "agentic-planning",
+        "fallback_version": "0.1.2"
+      },
       "python_runtime_binding": {
         "entrypoint": "agentic-planning",
         "runtime_module_file": "cli",
@@ -7882,6 +7892,11 @@
       "id": "memory-bootstrap",
       "program": "agentic-memory",
       "package_role": "memory-module-cli",
+      "version_metadata": {
+        "source": "python-package-metadata",
+        "distribution": "agentic-memory",
+        "fallback_version": "0.3.11"
+      },
       "python_runtime_binding": {
         "entrypoint": "agentic-memory",
         "runtime_module_file": "cli",

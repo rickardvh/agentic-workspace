@@ -2907,5 +2907,10 @@
       "package_name": "@agentic-workspace/planning-cli",
       "test_environment": "docker"
     }
-  ]
+  ],
+  "version_metadata": {
+    "distribution": "agentic-planning",
+    "fallback_version": "0.1.2",
+    "source": "python-package-metadata"
+  }
 }

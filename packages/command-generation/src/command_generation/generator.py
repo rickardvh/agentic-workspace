@@ -70,6 +70,15 @@ def _runtime_module_file_for_package(package: dict[str, Any]) -> str:
     return configured.removesuffix(".py")
 
 
+def _version_metadata_for_package(package: dict[str, Any]) -> dict[str, Any]:
+    metadata = package.get("version_metadata", {})
+    return metadata if isinstance(metadata, dict) else {}
+
+
+def _version_fallback_for_package(package: dict[str, Any]) -> str:
+    return str(_version_metadata_for_package(package).get("fallback_version") or "0.0.0")
+
+
 def _operation_executor_binding(package: dict[str, Any]) -> dict[str, Any]:
     binding = package.get("python_runtime_binding", {})
     if not isinstance(binding, dict):
@@ -1521,6 +1530,7 @@ def _python_runtime_adapter_module(
         "import difflib\n"
         "import json\n"
         "from collections.abc import Callable\n"
+        "from importlib.metadata import PackageNotFoundError, version as package_version\n"
         "from importlib.resources import files\n"
         "from pathlib import Path\n"
         "from typing import Any\n\n"
@@ -1545,6 +1555,17 @@ def _python_runtime_adapter_module(
         f"_GENERATED_RUNNABLE = {runnable}\n\n"
         "RuntimeHandler = Callable[[str, argparse.Namespace], int]\n"
         "_GENERATED_RUNTIME_HANDLERS: dict[str, RuntimeHandler] = {}\n\n\n"
+        "def generated_package_version() -> str:\n"
+        '    metadata = GENERATED_COMMAND_PACKAGE.get("version_metadata", {})\n'
+        "    if not isinstance(metadata, dict):\n"
+        '        return "0.0.0"\n'
+        '    distribution = str(metadata.get("distribution", "")).strip()\n'
+        "    if distribution:\n"
+        "        try:\n"
+        "            return package_version(distribution)\n"
+        "        except PackageNotFoundError:\n"
+        "            pass\n"
+        '    return str(metadata.get("fallback_version") or "0.0.0")\n\n\n'
         "class GeneratedArgumentParser(argparse.ArgumentParser):\n"
         "    def error(self, message: str) -> None:\n"
         "        if 'invalid choice' in message and 'command' in message:\n"
@@ -1691,7 +1712,7 @@ def _python_runtime_adapter_module(
         '        "Recovery: use one of the supported generated commands or route back to the canonical Python CLI."\n'
         "    )\n"
         f"    parser = GeneratedArgumentParser(prog={json.dumps(package['program'])}, description={json.dumps(package.get('summary', ''))}, epilog=epilog, formatter_class=argparse.RawDescriptionHelpFormatter)\n"
-        f"    parser.add_argument('--version', action='version', version='%(prog)s 0.0.0-generated')\n"
+        "    parser.add_argument('--version', action='version', version=f'%(prog)s {generated_package_version()}')\n"
         '    subparsers = parser.add_subparsers(dest="command", required=True)\n'
         "    for command in _GENERATED_ADAPTER_COMMANDS:\n"
         '        interface = command["interface"]\n'
@@ -1745,7 +1766,7 @@ def _typescript_package_json(
     runtime_command = _runtime_command_for_package(package, runtime_binding)
     payload = {
         "name": target["package_name"],
-        "version": "0.0.0-generated",
+        "version": _version_fallback_for_package(package),
         "private": True,
         "type": "module",
         "files": ["src", "resources"],

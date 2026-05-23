@@ -3117,6 +3117,18 @@ def _validate_static_surfaces() -> list[str]:
                 )
             if package.get("program") != program:
                 errors.append(f"command_package_ir.json package {package_id!r} program drifted from {program!r}")
+            version_metadata = package.get("version_metadata", {})
+            if not isinstance(version_metadata, dict):
+                errors.append(f"command_package_ir.json package {package_id!r} is missing version_metadata")
+            else:
+                if version_metadata.get("source") != "python-package-metadata":
+                    errors.append(f"command_package_ir.json package {package_id!r} version_metadata source is not python-package-metadata")
+                if version_metadata.get("distribution") != program:
+                    errors.append(
+                        f"command_package_ir.json package {package_id!r} version_metadata distribution drifted from {program!r}"
+                    )
+                if not str(version_metadata.get("fallback_version", "")).strip():
+                    errors.append(f"command_package_ir.json package {package_id!r} version_metadata fallback_version is missing")
             if python_target.get("generated_root") != generated_root:
                 errors.append(
                     f"command_package_ir.json package {package_id!r} Python generated_root drifted from {generated_root!r}; "
@@ -3138,6 +3150,10 @@ def _validate_static_surfaces() -> list[str]:
                     errors.append(f"{generated_root}/cli.py does not route through generated command modules")
                 if "_GENERATED_WEAK_AGENT_ROUTING = 'allowed-mutation-with-review'" not in generated_text:
                     errors.append(f"{generated_root}/cli.py does not advertise mutation review routing")
+                if "0.0.0-generated" in generated_text:
+                    errors.append(f"{generated_root}/cli.py hardcodes generated placeholder version output")
+                if "def generated_package_version()" not in generated_text or "package_version(distribution)" not in generated_text:
+                    errors.append(f"{generated_root}/cli.py does not derive --version from package metadata")
             for resource_name in ("command_package.json", "adapter_commands.json"):
                 resource_path = REPO_ROOT / generated_root / resource_name
                 if not resource_path.is_file():

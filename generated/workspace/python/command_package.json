@@ -4683,5 +4683,10 @@
       "package_name": "AgenticWorkspace.PowerShell",
       "test_environment": "docker"
     }
-  ]
+  ],
+  "version_metadata": {
+    "distribution": "agentic-workspace",
+    "fallback_version": "0.0.0",
+    "source": "python-package-metadata"
+  }
 }
