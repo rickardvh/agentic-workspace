@@ -56,6 +56,10 @@
   "bin": {
     "agentic-planning": "./src/cli.mjs"
   },
+  "files": [
+    "src",
+    "resources"
+  ],
   "name": "@agentic-workspace/planning-cli",
   "private": true,
   "scripts": {

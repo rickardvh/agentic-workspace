@@ -56,6 +56,10 @@
   "bin": {
     "agentic-workspace": "./src/cli.mjs"
   },
+  "files": [
+    "src",
+    "resources"
+  ],
   "name": "@agentic-workspace/workspace-cli",
   "private": true,
   "scripts": {

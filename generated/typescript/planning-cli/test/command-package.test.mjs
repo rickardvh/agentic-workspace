@@ -5,13 +5,15 @@ import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
 
 const source = readFileSync(new URL('../src/commandPackage.ts', import.meta.url), 'utf8');
+const commandPackage = JSON.parse(readFileSync(new URL('../resources/command_package.json', import.meta.url), 'utf8'));
 const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
-test('generated package metadata exposes expected commands', () => {
+test('generated package resource exposes expected commands', () => {
   const expected = ["adopt", "archive-plan", "close-item", "closeout", "create-review", "delegation-decision", "doctor", "handoff", "init", "install", "intake-artifact", "list-files", "new-plan", "promote-to-plan", "prompt", "reconcile", "report", "status", "summary", "uninstall", "upgrade", "verify-payload"];
-  for (const command of expected) {
-    assert.match(source, new RegExp(`\"name\": \\"${command}\\"`));
-  }
+  assert.deepEqual(commandPackage.commands.map((command) => command.command.name).sort(), expected);
+  assert.match(source, /resources\/command_package\.json/);
+  assert.doesNotMatch(source, /adapter_id/);
+  assert.deepEqual(packageJson.files, ['src', 'resources']);
 });
 
 test('generated package metadata exposes maturity and weak-agent routing status', () => {

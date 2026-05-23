@@ -824,6 +824,18 @@
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
+      "pattern": "src/agentic_workspace/contracts/workspace_defaults/payload.json",
+      "format": "json",
+      "owner": "workspace-contracts",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "generated command package checks",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Workspace defaults payload is canonical contract data copied into generated workspace resources.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by generated workspace defaults behavior."
+    },
+    {
       "pattern": "generated/typescript/*/package.json",
       "format": "json",
       "owner": "generated-command-adapters",
@@ -839,6 +851,40 @@
         "source contracts and templates"
       ],
       "routed_to": "#539"
+    },
+    {
+      "pattern": "generated/typescript/*/resources/command_package.json",
+      "format": "json",
+      "owner": "generated-command-adapters",
+      "status": "generated-derived",
+      "schema_or_validator": "generated command package checks",
+      "editable_by_agents": false,
+      "generated": true,
+      "notes": "Generated TypeScript command-package resources are adapter outputs derived from command_package_ir.json.",
+      "storage_class": "generated-required-adapter",
+      "checked_in_justification": "Checked in so generated TypeScript package source can load command metadata as data instead of embedding large executable literals.",
+      "reconstructable_from": [
+        "uv run python scripts/generate/generate_command_packages.py",
+        "src/agentic_workspace/contracts/command_package_ir.json"
+      ],
+      "routed_to": "#929"
+    },
+    {
+      "pattern": "generated/workspace/python/_contracts/**/*.json",
+      "format": "json",
+      "owner": "generated-command-adapters",
+      "status": "generated-derived",
+      "schema_or_validator": "generated command package checks",
+      "editable_by_agents": false,
+      "generated": true,
+      "notes": "Generated Workspace contract resource mirrors are adapter outputs copied from workspace-owned package contracts.",
+      "storage_class": "generated-required-adapter",
+      "checked_in_justification": "Checked in so generated Python packages can load package-owned contract resources at runtime without depending on source-tree contract paths.",
+      "reconstructable_from": [
+        "uv run python scripts/generate/generate_command_packages.py",
+        "src/agentic_workspace/contracts/workspace_defaults"
+      ],
+      "routed_to": "#1005"
     },
     {
       "pattern": "generated/workspace/plugins/*/.codex-plugin/plugin.json",
@@ -1153,6 +1199,16 @@
       "max_bytes": 250000
     },
     {
+      "pattern": "generated/workspace/python/_contracts/**/*.json",
+      "source_command": "uv run python scripts/generate/generate_command_packages.py",
+      "named_consumer": "generated Workspace Python contract resource loaders",
+      "checked_in_justification": "Generated Workspace contract mirrors are kept as files so runtime-consumed operations load workspace-owned policy IR from the generated package.",
+      "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
+      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "removal_or_demotion_path": "demote only after generated Python packages no longer need packaged Workspace contract artifacts",
+      "max_bytes": 250000
+    },
+    {
       "pattern": "generated/memory/python/_contracts/**/*.json",
       "source_command": "uv run python scripts/generate/generate_command_packages.py",
       "named_consumer": "generated Memory Python contract resource loaders",
@@ -1201,6 +1257,16 @@
       "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
       "removal_or_demotion_path": "demote to generated-on-demand once publishing no longer requires checked-in generated package metadata",
       "max_bytes": 5000
+    },
+    {
+      "pattern": "generated/typescript/*/resources/command_package.json",
+      "source_command": "uv run python scripts/generate/generate_command_packages.py",
+      "named_consumer": "generated TypeScript command-package resource loader",
+      "checked_in_justification": "Generated TypeScript command-package resources are kept as files so executable adapter source stays thin and does not embed large JSON blocks.",
+      "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
+      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "removal_or_demotion_path": "demote to generated-on-demand once publishing no longer requires checked-in generated TypeScript resource files",
+      "max_bytes": 250000
     },
     {
       "pattern": "generated/workspace/plugins/*/.codex-plugin/plugin.json",

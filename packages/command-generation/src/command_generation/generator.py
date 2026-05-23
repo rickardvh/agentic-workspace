@@ -1748,6 +1748,7 @@ def _typescript_package_json(
         "version": "0.0.0-generated",
         "private": True,
         "type": "module",
+        "files": ["src", "resources"],
         "bin": {entrypoint: "./src/cli.mjs" for entrypoint in target["entrypoints"]} if _is_runnable_typescript_target(target) else {},
         "scripts": {"test": "node --test test/command-package.test.mjs"},
         "agenticWorkspace": {
@@ -1768,16 +1769,17 @@ def _typescript_package_json(
 
 
 def _typescript_module(package: dict[str, Any], *, source_path: str, regenerate_command: str) -> str:
-    rendered = _json_block(package)
     return (
         "// Generated command package metadata.\n"
         f"// Source: {source_path}\n"
         f"// Program: {package['program']}\n"
         f"// Regenerate with: {regenerate_command}\n"
         "// DO NOT EDIT DIRECTLY.\n\n"
-        f"export const generatedCommandPackage = {rendered} as const;\n"
-        "\n"
-        "export type GeneratedCommandPackage = typeof generatedCommandPackage;\n"
+        "import { readFileSync } from 'node:fs';\n\n"
+        "export type GeneratedCommandPackage = Record<string, unknown>;\n\n"
+        "export const generatedCommandPackage = JSON.parse(\n"
+        "  readFileSync(new URL('../resources/command_package.json', import.meta.url), 'utf8'),\n"
+        ") as GeneratedCommandPackage;\n"
     )
 
 
@@ -1890,13 +1892,15 @@ def _typescript_test(package: dict[str, Any], target: dict[str, Any]) -> str:
     body = imports + (
         "\n"
         "const source = readFileSync(new URL('../src/commandPackage.ts', import.meta.url), 'utf8');\n"
+        "const commandPackage = JSON.parse(readFileSync(new URL('../resources/command_package.json', import.meta.url), 'utf8'));\n"
         "const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));\n"
         "\n"
-        "test('generated package metadata exposes expected commands', () => {\n"
+        "test('generated package resource exposes expected commands', () => {\n"
         f"  const expected = {rendered_expected};\n"
-        "  for (const command of expected) {\n"
-        '    assert.match(source, new RegExp(`\\"name\\": \\\\"${command}\\\\"`));\n'
-        "  }\n"
+        "  assert.deepEqual(commandPackage.commands.map((command) => command.command.name).sort(), expected);\n"
+        "  assert.match(source, /resources\\/command_package\\.json/);\n"
+        "  assert.doesNotMatch(source, /adapter_id/);\n"
+        "  assert.deepEqual(packageJson.files, ['src', 'resources']);\n"
         "});\n"
         "\n"
         "test('generated package metadata exposes maturity and weak-agent routing status', () => {\n"
@@ -2097,6 +2101,7 @@ def render_outputs(
                         _typescript_module(package, source_path=source_path, regenerate_command=regenerate_command),
                     )
                 )
+                outputs.append(GeneratedOutput(root / "resources" / "command_package.json", _json_block(package) + "\n"))
                 outputs.append(GeneratedOutput(root / "test" / "command-package.test.mjs", _typescript_test(package, target)))
                 if _is_runnable_typescript_target(target):
                     outputs.append(

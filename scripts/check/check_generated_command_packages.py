@@ -3142,14 +3142,45 @@ def _validate_static_surfaces() -> list[str]:
         errors.append("generated/typescript/Dockerfile.conformance is missing")
     for package in ("workspace-cli", "planning-cli", "memory-cli"):
         package_root = REPO_ROOT / "generated" / "typescript" / package
-        for relative in ("package.json", "src/commandPackage.ts", "test/command-package.test.mjs"):
+        for relative in ("package.json", "src/commandPackage.ts", "resources/command_package.json", "test/command-package.test.mjs"):
             if not (package_root / relative).is_file():
                 errors.append(f"generated/typescript/{package}/{relative} is missing")
         package_json_path = package_root / "package.json"
+        command_package_resource_path = package_root / "resources" / "command_package.json"
+        command_package_resource: dict[str, object] | None = None
+        if command_package_resource_path.is_file():
+            try:
+                command_package_resource = json.loads(command_package_resource_path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as exc:
+                errors.append(f"generated/typescript/{package}/resources/command_package.json is invalid JSON: {exc}")
+        command_package_source_path = package_root / "src" / "commandPackage.ts"
+        if command_package_source_path.is_file():
+            source_text = command_package_source_path.read_text(encoding="utf-8")
+            if "resources/command_package.json" not in source_text:
+                errors.append(f"generated/typescript/{package}/src/commandPackage.ts does not load generated resource JSON")
+            if '"commands": [' in source_text or "adapter_id" in source_text:
+                errors.append(f"generated/typescript/{package}/src/commandPackage.ts embeds command-package payload instead of loading resources")
         if package_json_path.is_file():
             payload = json.loads(package_json_path.read_text(encoding="utf-8"))
             metadata = payload.get("agenticWorkspace", {})
             maturity = metadata.get("maturity", {})
+            expected_package = next(
+                (
+                    item
+                    for item in load_workspace_command_package_ir(repo_root=REPO_ROOT).get("packages", [])
+                    if any(
+                        isinstance(target, dict)
+                        and target.get("kind") == "typescript"
+                        and Path(str(target.get("generated_root", ""))).name == package
+                        for target in item.get("targets", [])
+                    )
+                ),
+                None,
+            )
+            if command_package_resource is not None and expected_package is not None and command_package_resource != expected_package:
+                errors.append(f"generated/typescript/{package}/resources/command_package.json drifted from command_package_ir.json")
+            if payload.get("files") != ["src", "resources"]:
+                errors.append(f"generated/typescript/{package}/package.json does not include generated resources")
             is_runnable = maturity.get("id") in {
                 "runnable-read-only-adapter",
                 "weak-agent-safe-adapter",
