@@ -1,0 +1,300 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Assemble compact task contract view (#1118)",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Assemble a compact task-contract view from existing task intent, acceptance, autonomy/escalation, proof expectations, and stop-condition surfaces.",
+    "hard_constraints": "Do not add new durable task-contract state in this first slice; the view must be assembled from existing source surfaces and keep small direct work cheap.",
+    "agent_may_decide": "Exact command/selector home, payload field names, compact-vs-verbose placement, and focused tests.",
+    "escalate_when": "The implementation needs a new durable Planning artifact, provider-specific session state, a broad task manager, or a change that makes ordinary direct work heavier.",
+    "next_action": "Inspect current start/implement/proof/closeout task-intent surfaces, choose the smallest existing command/selector home, implement the assembled view, and validate task-present, task-absent, and changed-path cases.",
+    "proof_expectations": [
+      "Focused tests prove the task-contract view names intent, acceptance, autonomy/escalation, proof expectations, stop conditions, source fields, and missing fields.",
+      "Workspace test and lint targets pass."
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "tests/test_workspace_implement_cli.py",
+      "tests/test_workspace_start_preflight_cli.py",
+      "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
+      "docs/reference/implementer-context.md"
+    ],
+    "completion_criteria": [
+      "Assemble compact task contract view (#1118) is implemented, validated, and closed out honestly."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "GitHub #1118"
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+    "outcome": "Assemble a compact task-contract view from existing task intent, acceptance, autonomy/escalation, proof expectations, and stop-condition surfaces.",
+    "constraints": "Do not add new durable task-contract state in this first slice; the view must be assembled from existing source surfaces and keep small direct work cheap.",
+    "latitude": "Exact command/selector home, payload field names, compact-vs-verbose placement, and focused tests.",
+    "escalation": "Escalate when the implementation needs a new durable Planning artifact, provider-specific session state, a broad task manager, or a change that makes ordinary direct work heavier."
+    },
+    "execution": {
+      "milestone": "github-1118-task-contract-view",
+      "status": "active",
+    "next_step": "Inspect current start/implement/proof/closeout task-intent surfaces, choose the smallest existing command/selector home, implement the assembled view, and validate task-present, task-absent, and changed-path cases.",
+    "proof": "Focused task-contract tests plus make test-workspace and make lint-workspace."
+    },
+    "scope": {
+      "touched": [
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "tests/test_workspace_implement_cli.py",
+      "tests/test_workspace_start_preflight_cli.py",
+      "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
+      "docs/reference/implementer-context.md"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "GitHub #1118",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Assemble compact task contract view (#1118)",
+    "inferred intended outcome": "GitHub #1118",
+    "chosen concrete what": "Add an assembled task-contract view to an existing Workspace command/selector, sourced from existing intent, acceptance, delegation/autonomy, proof, and stop-condition fields.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Workspace runtime primitives, implement/start CLI tests, implementer/start contract schemas, and generated schema reference docs if schema fields change.",
+    "max changed files": "6",
+    "required validation commands": "make test-workspace; make lint-workspace; make schema-reference-docs when schema/reference docs change.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Implement #1118 by composing existing task-intent, acceptance, autonomy/escalation, proof, and stop-condition fields into one compact view without new durable task state.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Assemble a compact task-contract view from existing task intent, acceptance, autonomy/escalation, proof expectations, and stop-condition surfaces.",
+    "hard constraints": "Do not add new durable task-contract state in this first slice; the view must be assembled from existing source surfaces and keep small direct work cheap.",
+    "agent may decide locally": "Exact command/selector home, payload field names, compact-vs-verbose placement, and focused tests.",
+    "escalate when": "The implementation needs a new durable Planning artifact, provider-specific session state, a broad task manager, or a change that makes ordinary direct work heavier."
+  },
+  "post_decomposition_delegation": {
+    "status": "pending",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "GitHub #1118",
+      "label": "GitHub #1118",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "github-1118-task-contract-view",
+    "status": "active",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Inspect current start/implement/proof/closeout task-intent surfaces, choose the smallest existing command/selector home, implement the assembled view, and validate task-present, task-absent, and changed-path cases."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "tests/test_workspace_implement_cli.py",
+    "tests/test_workspace_start_preflight_cli.py",
+    "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
+    "docs/reference/implementer-context.md"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "make test-workspace",
+    "make lint-workspace",
+    "make schema-reference-docs"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Assemble compact task contract view (#1118) is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "not-run-yet",
+    "executor": "",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "execution has not started",
+    "scope touched": "none yet",
+    "changed surfaces": "none yet; execution has not changed files",
+    "validations run": "pending",
+    "result for continuation": "continue from this scaffolded execplan",
+    "next step": "Inspect current start/implement/proof/closeout task-intent surfaces, choose the smallest existing command/selector home, implement the assembled view, and validate task-present, task-absent, and changed-path cases."
+  },
+  "finished_run_review": {
+    "review status": "pending",
+    "scope respected": "pending",
+    "proof status": "pending",
+    "intent served": "pending",
+    "config compliance": "pending",
+    "misinterpretation risk": "pending",
+    "follow-on decision": "pending"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "pending",
+    "route skipped reason": "pending",
+    "expected savings": "pending",
+    "actual friction": "pending",
+    "proof result": "pending",
+    "quality concern": "pending",
+    "decomposition adjustment": "pending"
+  },
+  "proof_report": {
+    "validation proof": "pending",
+    "proof achieved now": "pending",
+    "evidence for \"proof achieved\" state": ""
+  },
+  "intent_satisfaction": {
+    "original intent": "GitHub #1118",
+    "was original intent fully satisfied?": "pending",
+    "evidence of intent satisfaction": "",
+    "unsolved intent passed to": "none yet"
+  },
+  "execution_summary": {
+    "outcome delivered": "not completed yet",
+    "validation confirmed": "pending",
+    "follow-on routed to": "none yet",
+    "post-work posterity capture": "pending",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "current milestone"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "pending",
+    "larger-intent status": "pending",
+    "closure decision": "pending",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "",
+    "evidence carried forward": "",
+    "reopen trigger": ""
+  },
+  "improvement_signal_review": {
+    "status": "not_checked",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-24: Scaffolded by agentic-planning new-plan."
+  ]
+}
