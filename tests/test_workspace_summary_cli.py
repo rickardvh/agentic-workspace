@@ -531,3 +531,8 @@ candidates = []
     assert reconciliation["freshness"]["refresh_metadata"]["adapter"] == "manual-fixture"
     assert reconciliation["freshness"]["path"] == ".agentic-workspace/local/cache/external-intent-evidence.json"
     assert reconciliation["external_work_state"]["open_count"] == 1
+    routine = reconciliation["routine_reconciliation"]
+    assert routine["status"] == "available"
+    assert "issue created or updated" in routine["after_events"]
+    assert "external-intent refresh-github" in routine["command"]
+    assert "checked-in planning remains the primary owner" in routine["rule"]

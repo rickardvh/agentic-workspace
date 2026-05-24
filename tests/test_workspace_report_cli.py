@@ -345,6 +345,15 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert payload["repo_friction"]["external_evidence"] == []
     assert payload["repo_friction"]["capture_shortcut"]["status"] == "available"
     assert "observed friction" in payload["repo_friction"]["capture_shortcut"]["minimum_record"]
+    memory_options = payload["repo_friction"]["memory_capture_options"]
+    assert memory_options["status"] == "available"
+    assert [item["id"] for item in memory_options["options"]] == [
+        "capture-memory",
+        "create-issue",
+        "fix-directly",
+        "report-only",
+    ]
+    assert "memory capture-note" in memory_options["options"][0]["command"]
     assert "surface_value_guardrail" in payload["schema"]["shared_fields"]
     assert payload["surface_value_guardrail"]["preference_order"][0] == "remove an unnecessary surface"
     assert payload["surface_value_guardrail"]["first_contact_budget"]["status"] == "active"
@@ -1386,6 +1395,7 @@ def test_report_section_selector_returns_external_work_reconciliation(tmp_path: 
         ".agentic-workspace/planning/execplans/<lane>.plan.json",
     ]
     assert "do not duplicate active state" in promotion_action["state_rule"]
+    assert "external-intent refresh-github" in answer["routine_reconciliation"]["command"]
     assert answer["workspace_report_view"]["delta_section"] == "external_work_delta"
 
 

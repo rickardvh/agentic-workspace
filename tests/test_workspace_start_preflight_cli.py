@@ -2283,6 +2283,24 @@ def test_start_routine_issue_intake_uses_skill_without_execplan(tmp_path: Path, 
     assert "task_recommendations" not in _start_skill_routing(payload)
 
 
+def test_start_surfaces_repo_local_uv_cache_guidance_for_uv_run(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / ".agentic-workspace" / "config.local.toml",
+        'schema_version = 1\n\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n',
+    )
+
+    assert cli.main(["start", "--target", str(target), "--task", "Inspect workflow", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    guidance = payload["context"]["uv_cache_guidance"]
+    assert guidance["status"] == "available"
+    assert guidance["recommended_env"] == "UV_CACHE_DIR=.uv-cache"
+    assert guidance["example"].startswith("UV_CACHE_DIR=.uv-cache uv run agentic-workspace start")
+
+
 def test_init_creates_managed_workspace_local_agent_instructions(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

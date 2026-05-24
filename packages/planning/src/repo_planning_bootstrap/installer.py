@@ -2997,6 +2997,7 @@ def _roadmap_ordered_batch_guidance(*, roadmap_lanes: list[dict[str, Any]], road
                 "priority": str(lane.get("priority", "")).strip(),
                 "issues": [str(issue).strip() for issue in issues if str(issue).strip()] if isinstance(issues, list) else [],
                 "suggested_first_slice": str(lane.get("suggested_first_slice", "")).strip(),
+                "starter_slice_guidance": _starter_slice_guidance(lane),
                 "promotion_command": (
                     f"agentic-planning promote-to-plan {lane_id} --target . --format json"
                     if lane_id
@@ -3023,6 +3024,7 @@ def _roadmap_ordered_batch_guidance(*, roadmap_lanes: list[dict[str, Any]], road
                     "priority": str(candidate.get("priority", "")).strip(),
                     "issues": sorted(set(issue_refs)),
                     "suggested_first_slice": str(candidate.get("suggested_first_slice", "")).strip(),
+                    "starter_slice_guidance": _starter_slice_guidance(candidate),
                     "promotion_command": (
                         f"agentic-planning promote-to-plan {candidate_id} --target . --format json"
                         if candidate_id
@@ -3035,6 +3037,22 @@ def _roadmap_ordered_batch_guidance(*, roadmap_lanes: list[dict[str, Any]], road
         "rule": "When the user asks for an ordered batch or all planned lanes, promote and implement candidates in this listed order instead of picking an unrelated issue.",
         "items": items,
         "first_promotion_command": items[0]["promotion_command"] if items else "",
+    }
+
+
+def _starter_slice_guidance(item: dict[str, Any]) -> dict[str, Any]:
+    suggested = str(item.get("suggested_first_slice", "")).strip()
+    if not suggested:
+        return {}
+    full_intent = str(item.get("outcome") or item.get("title") or item.get("summary") or item.get("id") or "").strip()
+    return {
+        "kind": "planning/starter-slice-guidance/v1",
+        "starter_slice": suggested,
+        "starter_slice_rule": "Suggested first slice is starter guidance, not completion scope.",
+        "full_intent_boundary": full_intent,
+        "continue_until": (
+            "Continue after the starter slice until the full intent boundary is satisfied or durable residue and continuation owner are recorded."
+        ),
     }
 
 
@@ -3535,13 +3553,15 @@ def _compact_candidate_items(items: Any, *, max_items: int = 3) -> list[dict[str
     for item in items[:max_items]:
         if not isinstance(item, dict):
             continue
-        compact.append(
-            {
-                key: item[key]
-                for key in ("id", "title", "summary", "status", "priority", "refs", "promotion_signal", "suggested_first_slice")
-                if key in item and item[key] not in ("", [], {}, None)
-            }
-        )
+        compact_item = {
+            key: item[key]
+            for key in ("id", "title", "summary", "status", "priority", "refs", "promotion_signal", "suggested_first_slice")
+            if key in item and item[key] not in ("", [], {}, None)
+        }
+        starter_guidance = _starter_slice_guidance(item)
+        if starter_guidance:
+            compact_item["starter_slice_guidance"] = starter_guidance
+        compact.append(compact_item)
     return compact
 
 
@@ -3596,11 +3616,15 @@ def _planning_summary_best_matching_candidate(roadmap: dict[str, Any], *, tokens
         return None
     if "friction" in tokens and candidates and isinstance(candidates[0], dict):
         first = candidates[0]
-        return {
+        result = {
             key: first[key]
             for key in ("id", "title", "status", "priority", "refs", "promotion_signal", "suggested_first_slice")
             if key in first and first[key] not in ("", [], {}, None)
         }
+        starter_guidance = _starter_slice_guidance(first)
+        if starter_guidance:
+            result["starter_slice_guidance"] = starter_guidance
+        return result
     best: tuple[int, dict[str, Any]] | None = None
     for item in candidates:
         if not isinstance(item, dict):
@@ -3613,11 +3637,15 @@ def _planning_summary_best_matching_candidate(roadmap: dict[str, Any], *, tokens
             best = (score, item)
     if best is None:
         return None
-    return {
+    result = {
         key: best[1][key]
         for key in ("id", "title", "status", "priority", "refs", "promotion_signal", "suggested_first_slice")
         if key in best[1] and best[1][key] not in ("", [], {}, None)
     }
+    starter_guidance = _starter_slice_guidance(best[1])
+    if starter_guidance:
+        result["starter_slice_guidance"] = starter_guidance
+    return result
 
 
 def _planning_summary_task_scoped_projection(
@@ -4553,6 +4581,7 @@ def _compact_external_work_reconciliation(reconciliation: Any) -> dict[str, Any]
         "external_work_state": reconciliation.get("external_work_state", {}),
         "closeout_state": reconciliation.get("closeout_state", {}),
         "landed_open_state": reconciliation.get("landed_open_state", {}),
+        "routine_reconciliation": reconciliation.get("routine_reconciliation", {}),
         "recommended_next_action": reconciliation.get("recommended_next_action", ""),
         "detail": "Use `agentic-workspace summary --format json --verbose` for provider rules and source detail.",
     }
@@ -5233,6 +5262,9 @@ def _planning_state_item_summary(*, bucket_path: str, item: dict[str, Any]) -> d
         summary["refs"] = refs
     if issues:
         summary["issues"] = issues
+    starter_guidance = _starter_slice_guidance(item)
+    if starter_guidance:
+        summary["starter_slice_guidance"] = starter_guidance
     for key in (
         "adaptive_assurance",
         "traceability_refs",
@@ -5742,6 +5774,19 @@ def _intent_validation_contract(
         "next_proof": "rerun summary and planning doctor after promotion; active_count should be one for a broad active lane",
     }
     promotion_action["run"] = promotion_action["command"]
+    routine_reconciliation = {
+        "kind": "planning/github-planning-routine-reconciliation/v1",
+        "status": "available",
+        "after_events": [
+            "issue created or updated",
+            "issue closed or reopened",
+            "pull request opened, merged, or updated",
+            "planning state changed after external work changed",
+        ],
+        "command": EXTERNAL_INTENT_REFRESH_COMMAND,
+        "then": "Run agentic-workspace summary --format json and reconcile external_work_reconciliation before choosing the next lane.",
+        "rule": "Refreshing GitHub evidence is routine after tracker mutations; checked-in planning remains the primary owner.",
+    }
 
     external_work_reconciliation = {
         "kind": "planning-external-work-reconciliation/v1",
@@ -5794,6 +5839,7 @@ def _intent_validation_contract(
             "landed_open_issue_reconciliation",
         ],
         "promotion_action": promotion_action,
+        "routine_reconciliation": routine_reconciliation,
         "recommended_next_action": recommended_next_action,
     }
 
@@ -9837,11 +9883,73 @@ def _closeout_value_needs_normalization(value: Any) -> bool:
     return value.strip().lower() in {"", "pending", "not_checked", "not-run-yet", "not run yet", "todo", "tbd"}
 
 
-def _prepared_canonical_core_closeout(*, record: dict[str, Any], normalized_closure: str, routed_unsolved_intent: str) -> dict[str, Any]:
+def _closeout_sequence_needs_normalization(value: Any) -> bool:
+    if not value:
+        return True
+    if isinstance(value, str):
+        text = value.strip().lower()
+    elif isinstance(value, list):
+        text = json.dumps(value, sort_keys=True).lower()
+    else:
+        return False
+    return any(token in text for token in ("fill in", "pending", "not-run-yet", "not run yet", "todo", "tbd"))
+
+
+def _prepared_canonical_core_closeout(
+    *,
+    record: dict[str, Any],
+    normalized_closure: str,
+    routed_unsolved_intent: str,
+    validation_evidence: str = "",
+    outcome_delivered: str = "",
+) -> dict[str, Any]:
     canonical_core = dict(_record_section_dict(record, "canonical_core") or {})
+    proof = validation_evidence.strip() or "closeout proof recorded in proof_report."
+    outcome = outcome_delivered.strip() or "bounded slice closeout completed."
+    if _closeout_sequence_needs_normalization(canonical_core.get("proof_expectations")):
+        canonical_core["proof_expectations"] = [proof]
+    if _closeout_sequence_needs_normalization(canonical_core.get("touched_scope")):
+        canonical_core["touched_scope"] = ["closeout scope recorded in closure_check and generated_closeout."]
+    if _closeout_sequence_needs_normalization(canonical_core.get("completion_criteria")):
+        canonical_core["completion_criteria"] = [outcome]
     canonical_core["closeout_decision"] = normalized_closure
     canonical_core["continuation_owner"] = routed_unsolved_intent if normalized_closure == "archive-but-keep-lane-open" else "none"
     return canonical_core
+
+
+def _prepared_machine_readable_contract_closeout(*, record: dict[str, Any], validation_evidence: str) -> dict[str, Any]:
+    contract = dict(_record_section_dict(record, "machine_readable_contract") or {})
+    intent = dict(contract.get("intent", {})) if isinstance(contract.get("intent"), dict) else {}
+    execution = dict(contract.get("execution", {})) if isinstance(contract.get("execution"), dict) else {}
+    scope = dict(contract.get("scope", {})) if isinstance(contract.get("scope"), dict) else {}
+    proof = validation_evidence.strip() or "closeout proof recorded in proof_report."
+    if _closeout_sequence_needs_normalization(intent.get("proof")):
+        intent["proof"] = proof
+    if _closeout_sequence_needs_normalization(execution.get("proof")):
+        execution["proof"] = proof
+    if _closeout_sequence_needs_normalization(scope.get("touched")):
+        scope["touched"] = ["closeout scope recorded in closure_check and generated_closeout."]
+    if intent:
+        contract["intent"] = intent
+    if execution:
+        contract["execution"] = execution
+    if scope:
+        contract["scope"] = scope
+    return contract
+
+
+def _prepared_execution_bounds_closeout(*, record: dict[str, Any], validation_evidence: str) -> dict[str, Any]:
+    bounds = dict(_record_section_dict(record, "execution_bounds") or {})
+    proof = validation_evidence.strip() or "closeout proof recorded in proof_report."
+    replacements = {
+        "allowed paths": "closeout scope recorded in closure_check and generated_closeout.",
+        "max changed files": "closed slice; no further writes expected without reopening a fresh plan.",
+        "required validation commands": proof,
+    }
+    for key, replacement in replacements.items():
+        if _closeout_sequence_needs_normalization(bounds.get(key)):
+            bounds[key] = replacement
+    return bounds
 
 
 def _prepared_iterative_follow_through(
@@ -9949,9 +10057,14 @@ def _prepared_improvement_signal_review(record: dict[str, Any]) -> dict[str, Any
         elif prepared["signals dismissed"]:
             prepared["status"] = "signals_dismissed"
         else:
-            prepared["status"] = "no_signal_found"
+            prepared["status"] = "not_checked"
     if _closeout_value_needs_normalization(prepared.get("next owner")):
-        prepared["next owner"] = "none" if prepared["status"] == "no_signal_found" else "see routed signal owner"
+        if prepared["status"] == "not_checked":
+            prepared["next owner"] = "agent closeout reflection"
+        elif prepared["status"] == "no_signal_found":
+            prepared["next owner"] = "none"
+        else:
+            prepared["next owner"] = "see routed signal owner"
     return prepared
 
 
@@ -10259,7 +10372,21 @@ def _prepare_execplan_closeout(
         record=record,
         normalized_closure=normalized_closure,
         routed_unsolved_intent=routed_unsolved_intent,
+        validation_evidence=validation_evidence,
+        outcome_delivered=str(execution_summary.get("outcome delivered", "")).strip(),
     )
+    patch["machine_readable_contract"] = _prepared_machine_readable_contract_closeout(
+        record=record,
+        validation_evidence=validation_evidence,
+    )
+    patch["execution_bounds"] = _prepared_execution_bounds_closeout(
+        record=record,
+        validation_evidence=validation_evidence,
+    )
+    if _closeout_sequence_needs_normalization(record.get("touched_paths")):
+        patch["touched_paths"] = ["closeout scope recorded in closure_check and generated_closeout."]
+    if _closeout_sequence_needs_normalization(record.get("validation_commands")):
+        patch["validation_commands"] = [validation_evidence or "closeout proof recorded in proof_report."]
     patch["iterative_follow_through"] = _prepared_iterative_follow_through(
         record=record,
         proof_now=proof_now,

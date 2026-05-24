@@ -967,6 +967,12 @@ candidates = [
     assert readiness["direct_work_allowed"] is True
     assert readiness["recommendation"]["id"] == "promote-before-broad-work"
     assert "Roadmap candidates are not execution authority" in readiness["rule"]
+    first_item = readiness["recommendation"]["ordered_batch"]["items"][0]
+    assert first_item["starter_slice_guidance"]["starter_slice"] == "Add readiness guardrail."
+    assert first_item["starter_slice_guidance"]["starter_slice_rule"] == (
+        "Suggested first slice is starter guidance, not completion scope."
+    )
+    assert first_item["starter_slice_guidance"]["full_intent_boundary"] == "Make planned work use planning."
 
 
 def test_planning_summary_warns_on_closed_lanes_in_live_state(tmp_path: Path) -> None:
