@@ -27,6 +27,7 @@ Cheap implementer context for a bounded changed-path scope.
 | `path_boundaries` | array of ref `#/$defs/path_boundary` | yes |  | Path-specific ownership and locality constraints for the changed paths. |  |  |
 | `authority_markers` | array of ref `#/$defs/authority_marker` | yes |  | Authority markers relevant to the implementation scope. |  |  |
 | `change_impact` | object | yes |  | Changed-path ownership, generatedness, authority, related contract, and proof-impact projection. |  |  |
+| `task_contract` | object | yes |  | Compact assembled task contract view covering intent, acceptance, autonomy/escalation, proof expectations, and stop conditions. |  |  |
 | `task_intent` | object | yes |  | Task-intent carry-forward packet used to derive acceptance, proof guidance, objective-drift checks, and closeout prompts. |  |  |
 | `acceptance` | ref `#/$defs/task_acceptance` | yes |  | Definition-of-done expectations inferred from task intent. |  |  |
 | `acceptance.kind` | const `"agentic-workspace/task-acceptance/v1"` | yes |  | Discriminator for the task-intent acceptance payload. |  |  |
