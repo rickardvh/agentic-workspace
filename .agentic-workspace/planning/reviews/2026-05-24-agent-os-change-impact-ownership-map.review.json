@@ -1,0 +1,73 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Agent OS ROI review: change impact and ownership map",
+  "date": "2026-05-24",
+  "classification": "contract-integrity",
+  "goal": [
+    "Capture the ROI case for change-impact and ownership guidance from issue #1115.",
+    "Keep the review bounded to future-work discovery."
+  ],
+  "scope": [
+    "Issue #1115 ROI point 2: change impact and ownership map.",
+    "Changed-path routing, ownership/authority mapping, generated-surface awareness, and likely proof surfaces."
+  ],
+  "non_goals": [
+    "Do not build a dependency graph or ownership index in this review.",
+    "Do not change ownership contracts."
+  ],
+  "review_mode": {
+    "mode": "contract-integrity",
+    "review question": "Would a changed-path impact map materially reduce wrong-owner edits and missed proof obligations?",
+    "default finding cap": "1",
+    "inputs inspected first": "Issue #1115 body, implement changed-path classification, docs/agent-os-capabilities.md ownership and generated-surface sections"
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace implement --changed <ten review artifact paths> --task \"Create one planning review artifact for each of the ten agent OS capability ROI points from issue #1115\" --format json",
+    "evidence sources": "GitHub #1115; implement changed_path_classification; docs/agent-os-capabilities.md"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1115",
+      "label": "Parent direction issue",
+      "role": "source lane"
+    },
+    {
+      "kind": "doc",
+      "target": "docs/agent-os-capabilities.md",
+      "label": "Ownership / Authority Mapping",
+      "role": "capability doctrine"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Changed-path impact mapping is a high-ROI bridge between ownership and proof",
+      "summary": "The implement output already classifies changed paths and selects proof, but agents still need a richer explanation of owner module, related contracts, generated surfaces, docs, and likely tests for a proposed change.",
+      "evidence": "For these review artifacts, implement classified the change as planning-only, identified the exact planning paths, detected issue #1115, and selected planning summary plus planning doctor proof. Issue #1115 asks for the same path-to-owner and path-to-proof explanation as its second ROI item.",
+      "risk if unchanged": "Agents can make locally plausible edits while missing the real authority surface, generated-source dependency, or consumer proof that should have shaped the change.",
+      "suggested action": "Create a child slice that extends changed-path routing with an owner/impact explanation assembled from existing ownership, module, generated-surface, and proof metadata.",
+      "confidence": "high",
+      "source": "mixed",
+      "promotion target": "GitHub child issue under #1115; Workspace Composition plus Ownership / Authority Mapping",
+      "promotion trigger": "Promote when a change touches multiple owner surfaces, generated outputs, or a proof miss that an impact map could have predicted.",
+      "post-remediation note shape": "stub pointing to the impact-map child issue and the command output that owns the explanation"
+    }
+  ],
+  "recommendation": {
+    "promote": "Second child slice after task contract, or pair with proof-confidence work if implementation surfaces overlap.",
+    "defer": "Keep inactive until the parent lane is selected.",
+    "dismiss": "Do not dismiss; ownership uncertainty is a recurring agent-cost source."
+  },
+  "retention": {
+    "closeout shape": "stub",
+    "trigger": "A child issue or planning candidate captures impact-map scope.",
+    "proof surface": "Ownership command output, implement changed-path routing, and child slice validation."
+  },
+  "validation_commands": [
+    "uv run agentic-workspace summary --target . --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "drift_log": [
+    "2026-05-24: Review record created from issue #1115 ROI point 2."
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Agent OS ROI review: memory freshness and contradiction handling",
+  "date": "2026-05-24",
+  "classification": "memory-boundary",
+  "goal": [
+    "Capture the ROI case for memory contradiction, freshness, and decay handling.",
+    "Keep Memory ownership distinct from Planning and Workspace composition."
+  ],
+  "scope": [
+    "Issue #1115 ROI point 8: memory contradiction, freshness, and decay handling.",
+    "Stale notes, superseded traps, contradiction warnings, authority, affected paths, and invalidation triggers."
+  ],
+  "non_goals": [
+    "Do not update memory notes in this review.",
+    "Do not use memory as issue tracking or active planning."
+  ],
+  "review_mode": {
+    "mode": "memory-boundary",
+    "review question": "Would freshness and contradiction metadata make Agentic Memory safer as an anti-rediscovery layer?",
+    "default finding cap": "1",
+    "inputs inspected first": "Issue #1115 body, memory index, startup memory consultation recommendation"
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace start --task \"Create one planning review artifact for each of the ten agent OS capability ROI points from issue #1115\" --format json; Get-Content .agentic-workspace/memory/repo/index.md",
+    "evidence sources": "GitHub #1115; .agentic-workspace/memory/repo/index.md; startup memory.read_first"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1115",
+      "label": "Parent direction issue",
+      "role": "source lane"
+    },
+    {
+      "kind": "memory",
+      "target": ".agentic-workspace/memory/repo/index.md",
+      "label": "Memory index",
+      "role": "boundary and loading policy"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Memory needs freshness and contradiction signals to stay trustworthy",
+      "summary": "The memory index is clear that memory is anti-rediscovery, not a tracker or broad handbook. That boundary becomes stronger if notes can expose freshness, supersession, contradiction, affected paths, and invalidation triggers when routed into a task.",
+      "evidence": "Startup recommended reading the memory index without bulk-reading memory. The index says Memory is not a task tracker, issue mirror, or broad fallback handbook, and that loading should stay small. Issue #1115 identifies freshness/contradiction handling as the key next value for memory.",
+      "risk if unchanged": "Agents may over-trust stale memory, miss superseded guidance, or avoid memory because freshness and contradiction risk are invisible.",
+      "suggested action": "Create a child slice in Agentic Memory for freshness/contradiction metadata and Workspace route warnings, preserving Memory's anti-rediscovery boundary.",
+      "confidence": "medium-high",
+      "source": "mixed",
+      "promotion target": "GitHub child issue under #1115; Agentic Memory with Workspace surfacing",
+      "promotion trigger": "Promote when stale or contradictory notes cause repeated wrong routing, or when memory route output needs authority/freshness warnings.",
+      "post-remediation note shape": "stub pointing to Memory freshness contract and route output"
+    }
+  ],
+  "recommendation": {
+    "promote": "Good Memory-owned child slice when memory trust becomes the selected bottleneck.",
+    "defer": "Keep inactive behind higher-ROI task/proof/ownership slices.",
+    "dismiss": "Do not dismiss; memory trust is core to anti-rediscovery value."
+  },
+  "retention": {
+    "closeout shape": "stub",
+    "trigger": "Memory freshness/contradiction work is promoted or explicitly dismissed.",
+    "proof surface": "Memory route/report output and memory validation."
+  },
+  "validation_commands": [
+    "uv run agentic-workspace summary --target . --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "drift_log": [
+    "2026-05-24: Review record created from issue #1115 ROI point 8."
+  ]
+}

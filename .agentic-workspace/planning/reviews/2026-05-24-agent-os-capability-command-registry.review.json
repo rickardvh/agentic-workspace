@@ -1,0 +1,73 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Agent OS ROI review: capability command and tool registry",
+  "date": "2026-05-24",
+  "classification": "skill-system",
+  "goal": [
+    "Capture the ROI case for a richer capability, command, and tool registry.",
+    "Keep the finding scoped to discovery and routing rather than external plugin productization."
+  ],
+  "scope": [
+    "Issue #1115 ROI point 6: capability, command, and tool registry.",
+    "Commands, skills, adapters, proof surfaces, inputs, outputs, and automation safety."
+  ],
+  "non_goals": [
+    "Do not define external plugin support in this review.",
+    "Do not change skill registries or command declarations."
+  ],
+  "review_mode": {
+    "mode": "skill-system",
+    "review question": "Would a composed capability registry make command/tool selection cheaper and safer for agents?",
+    "default finding cap": "1",
+    "inputs inspected first": "Issue #1115 body, startup skills projection, docs/agent-os-capabilities.md capability/module registry section"
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace start --task \"Create one planning review artifact for each of the ten agent OS capability ROI points from issue #1115\" --format json",
+    "evidence sources": "GitHub #1115; startup skills.catalog counts and command; docs/agent-os-capabilities.md"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1115",
+      "label": "Parent direction issue",
+      "role": "source lane"
+    },
+    {
+      "kind": "doc",
+      "target": "docs/agent-os-capabilities.md",
+      "label": "Capability / Module Registry",
+      "role": "capability doctrine"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Capability registry value is broader than module availability",
+      "summary": "Startup already reports available skill registries and counts, but an agent still has to infer what commands, adapters, proof surfaces, inputs, outputs, and safety constraints apply to a task.",
+      "evidence": "The startup payload exposed a skill catalog with 33 skills, source counts, and a command for task-specific skill search. Issue #1115 ranks richer command/tool discovery as high ROI and asks for inputs, outputs, and automation safety to be visible.",
+      "risk if unchanged": "Agents may miss a relevant first-party command, use a generic shell path where a managed command exists, or overuse tools without understanding their safety and output contracts.",
+      "suggested action": "Create a child slice that composes module-owned command/skill/adaptor declarations into a task-routable capability registry, initially for first-party surfaces only.",
+      "confidence": "medium-high",
+      "source": "mixed",
+      "promotion target": "GitHub child issue under #1115; Capability / Module Registry with Workspace Composition",
+      "promotion trigger": "Promote when task-specific discovery remains expensive despite skills output, or when command-generation extraction needs a shared declaration surface.",
+      "post-remediation note shape": "stub pointing to registry contract and discovery command output"
+    }
+  ],
+  "recommendation": {
+    "promote": "High-value but probably after task/proof/ownership basics unless command discovery becomes the active bottleneck.",
+    "defer": "Keep as review evidence until a concrete registry consumer is selected.",
+    "dismiss": "Do not dismiss; the existing skills projection demonstrates a partial version of the need."
+  },
+  "retention": {
+    "closeout shape": "stub",
+    "trigger": "A child issue or registry contract owns capability discovery scope.",
+    "proof surface": "Workspace skills/modules output and registry validation."
+  },
+  "validation_commands": [
+    "uv run agentic-workspace summary --target . --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "drift_log": [
+    "2026-05-24: Review record created from issue #1115 ROI point 6."
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Agent OS ROI review: review audit lane promotion rules",
+  "date": "2026-05-24",
+  "classification": "review-promotion",
+  "goal": [
+    "Capture the ROI case for review/audit promotion rules.",
+    "Use the current request itself as evidence for why review findings need disciplined routing."
+  ],
+  "scope": [
+    "Issue #1115 ROI point 9: review / audit lane with promotion rules.",
+    "Finding capture, severity/confidence, routing to fix-now, planning, memory, docs, checks, issue, or dismissal."
+  ],
+  "non_goals": [
+    "Do not promote every #1115 review finding into planning.",
+    "Do not make review artifacts ordinary startup input."
+  ],
+  "review_mode": {
+    "mode": "review-promotion",
+    "review question": "Does the review lane need explicit promotion rules to avoid becoming another planning system?",
+    "default finding cap": "1",
+    "inputs inspected first": "Issue #1115 body, reviews README, planning-review-pass skill"
+  },
+  "review_method": {
+    "commands used": "Get-Content .agentic-workspace/planning/reviews/README.md; Get-Content .agentic-workspace/planning/skills/planning-review-pass/SKILL.md; uv run agentic-workspace planning create-review --slug <slug> --title <title> --scope <scope> --classification agent-os-roi --format json",
+    "evidence sources": "GitHub #1115; review artifact README; planning-review-pass operating rules; ten created review artifacts"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1115",
+      "label": "Parent direction issue",
+      "role": "source lane"
+    },
+    {
+      "kind": "doc",
+      "target": ".agentic-workspace/planning/reviews/README.md",
+      "label": "Review artifacts contract",
+      "role": "review lane policy"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Review/audit lane value depends on disciplined promotion and retention",
+      "summary": "This request creates ten review artifacts from one parent issue. That is useful only because the review lane explicitly separates capture from roadmap promotion and requires confidence, source class, promotion target, trigger, and retention shape.",
+      "evidence": "The review README says review artifacts are separate from friction-confirmed planning input and should not automatically become active execution. The planning-review-pass skill says not to add findings directly to active planning unless requested. Issue #1115 ranks review/audit promotion rules ninth, with emphasis on preventing review residue from becoming another planning system.",
+      "risk if unchanged": "Review records can become hidden backlog, duplicate planning, or persist after their findings have been promoted, dismissed, or superseded.",
+      "suggested action": "Create a child slice only if promotion discipline itself proves weak; otherwise keep review/audit as an optional/extraction candidate with strict retention rules.",
+      "confidence": "high",
+      "source": "mixed",
+      "promotion target": "GitHub child issue under #1115 only if promotion discipline needs product work; otherwise retain in review lane",
+      "promotion trigger": "Promote when multiple review artifacts become stale backlog or when findings repeatedly lack explicit route/dismissal decisions.",
+      "post-remediation note shape": "delete or stub after promotion hygiene is enforced"
+    }
+  ],
+  "recommendation": {
+    "promote": "Do not promote immediately from #1115 alone.",
+    "defer": "Keep as review evidence and promotion hygiene guardrail.",
+    "dismiss": "Dismiss only if later audit shows existing review retention and promotion rules are already sufficient."
+  },
+  "retention": {
+    "closeout shape": "shrink",
+    "trigger": "The ten #1115 review artifacts are promoted, dismissed, or explicitly retained.",
+    "proof surface": "Review README, planning-review-pass skill, and any review-promotion audit."
+  },
+  "validation_commands": [
+    "uv run agentic-workspace summary --target . --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "drift_log": [
+    "2026-05-24: Review record created from issue #1115 ROI point 9."
+  ]
+}

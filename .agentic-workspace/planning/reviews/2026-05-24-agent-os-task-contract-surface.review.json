@@ -1,0 +1,73 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Agent OS ROI review: task contract surface",
+  "date": "2026-05-24",
+  "classification": "context-cost",
+  "goal": [
+    "Capture the ROI case for a first-class task contract surface from issue #1115.",
+    "Keep the finding as review evidence for later slicing, without activating implementation."
+  ],
+  "scope": [
+    "Issue #1115 ROI point 1: task contract surface.",
+    "Existing startup and implement outputs that already expose task intent, acceptance, autonomy, escalation, and proof hints."
+  ],
+  "non_goals": [
+    "Do not define a new planning schema in this review.",
+    "Do not promote the issue into active work."
+  ],
+  "review_mode": {
+    "mode": "context-cost",
+    "review question": "Would a durable task contract reduce repeated task reconstruction cost enough to justify a child slice?",
+    "default finding cap": "1",
+    "inputs inspected first": "Issue #1115 body, start output for this task, implement output for these review artifacts, docs/agent-os-capabilities.md"
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace start --task \"Create one planning review artifact for each of the ten agent OS capability ROI points from issue #1115\" --format json; uv run agentic-workspace implement --changed <ten review artifact paths> --task \"Create one planning review artifact for each of the ten agent OS capability ROI points from issue #1115\" --format json",
+    "evidence sources": "GitHub #1115; startup task acceptance payload; implement acceptance_reconciliation and proof selection payload; docs/agent-os-capabilities.md"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1115",
+      "label": "Parent direction issue",
+      "role": "source lane"
+    },
+    {
+      "kind": "doc",
+      "target": "docs/agent-os-capabilities.md",
+      "label": "Agent OS capabilities",
+      "role": "long-horizon doctrine"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Task contract surface is the highest-ROI agent OS slice",
+      "summary": "Every non-trivial task requires reconstructing user intent, acceptance, constraints, autonomy, escalation triggers, and proof expectations. Current startup and implement outputs expose much of this, but the contract is distributed across transient command output rather than a durable first-class surface.",
+      "evidence": "The startup payload for this request included inferred acceptance, delegation posture, and proceed/clarify guidance. The implement payload for these review files added changed-path scope, acceptance reconciliation, planning safety, proof commands, and stop conditions. Issue #1115 identifies the same reconstruction problem as the top ROI capability.",
+      "risk if unchanged": "Agents keep spending context and judgment on reconstructing the same task boundary, and context loss can separate the final work from the original acceptance and escalation terms.",
+      "suggested action": "Create a child issue that defines a compact task-contract view assembled from existing planning/workspace outputs before adding new state.",
+      "confidence": "high",
+      "source": "mixed",
+      "promotion target": "GitHub child issue under #1115; likely Agentic Planning contract with Workspace Composition exposure",
+      "promotion trigger": "Promote when a task needs restartable acceptance/autonomy/proof state beyond one command response, or when repeated closeout reviews cite task-boundary reconstruction.",
+      "post-remediation note shape": "stub pointing to the task-contract child issue and any canonical schema or command output"
+    }
+  ],
+  "recommendation": {
+    "promote": "Make this the first child slice if #1115 is decomposed.",
+    "defer": "Keep inactive until the parent lane is selected for slicing.",
+    "dismiss": "Do not dismiss; this is already supported by live workflow friction and current command payload shape."
+  },
+  "retention": {
+    "closeout shape": "stub",
+    "trigger": "A child issue or planning candidate captures the task-contract scope.",
+    "proof surface": "The child issue, task-contract command/schema, and closeout proof for that slice."
+  },
+  "validation_commands": [
+    "uv run agentic-workspace summary --target . --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "drift_log": [
+    "2026-05-24: Review record created from issue #1115 ROI point 1."
+  ]
+}

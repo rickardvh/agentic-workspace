@@ -1,0 +1,73 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Agent OS ROI review: environment and session state view",
+  "date": "2026-05-24",
+  "classification": "maintainer-workflow",
+  "goal": [
+    "Capture the ROI case for a compact environment and session state view.",
+    "Keep durable repo guidance separate from ephemeral local session facts."
+  ],
+  "scope": [
+    "Issue #1115 ROI point 5: environment and session state view.",
+    "Runtime constraints, cache guidance, ports/dev servers, env vars, recent command failures, and recovery paths."
+  ],
+  "non_goals": [
+    "Do not add local session state files in this review.",
+    "Do not make ephemeral state part of planning or memory."
+  ],
+  "review_mode": {
+    "mode": "maintainer-workflow",
+    "review question": "Would a compact workbench view reduce environment rediscovery and recovery cost?",
+    "default finding cap": "1",
+    "inputs inspected first": "Issue #1115 body, startup uv cache guidance, prior command failure output"
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace start --task \"Create one planning review artifact for each of the ten agent OS capability ROI points from issue #1115\" --format json; make maintainer-surfaces",
+    "evidence sources": "GitHub #1115; startup uv_cache_guidance; maintainer-surfaces failure log path and remediation command"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1115",
+      "label": "Parent direction issue",
+      "role": "source lane"
+    },
+    {
+      "kind": "doc",
+      "target": "docs/agent-os-capabilities.md",
+      "label": "Environment / Recovery Guidance",
+      "role": "capability doctrine"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Environment and session state is underweighted for ordinary agent throughput",
+      "summary": "Startup already exposes some environment guidance, such as repo-local uv cache advice, and failed commands produce log paths and remediation commands. A single compact workbench view would make those signals easier to consume without converting ephemeral state into durable planning.",
+      "evidence": "The startup payload included `uv_cache_guidance` with a repo-local cache recommendation. The earlier maintainer proof failure reported a full log path and exact `make render-schema-reference` remediation. Issue #1115 identifies runtime constraints, recent failures, ports, servers, env vars, and recovery paths as high ROI.",
+      "risk if unchanged": "Agents repeatedly rediscover environment constraints, lose useful recent failure context, or put transient workbench details into durable planning or memory surfaces.",
+      "suggested action": "Create a child slice for a Workspace-composed environment/session view that separates checked-in recovery guidance from local/generated ephemeral facts.",
+      "confidence": "medium-high",
+      "source": "mixed",
+      "promotion target": "GitHub child issue under #1115; Workspace Composition plus Environment / Recovery Guidance",
+      "promotion trigger": "Promote when environment friction repeats, when dev-server/browser workflows become common, or when command-failure recovery context is repeatedly reconstructed.",
+      "post-remediation note shape": "stub pointing to the workbench-view owner and local-state policy"
+    }
+  ],
+  "recommendation": {
+    "promote": "Good follow-on after task/proof/generated-surface slices, or earlier if environment friction becomes dominant.",
+    "defer": "Keep inactive until repeated environment rediscovery or explicit maintainer priority.",
+    "dismiss": "Do not dismiss; preserve as a parent-lane review signal."
+  },
+  "retention": {
+    "closeout shape": "stub",
+    "trigger": "A child issue defines the durable-versus-ephemeral environment view boundary.",
+    "proof surface": "Workspace report/start output and doctor/recovery command evidence."
+  },
+  "validation_commands": [
+    "uv run agentic-workspace summary --target . --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "drift_log": [
+    "2026-05-24: Review record created from issue #1115 ROI point 5."
+  ]
+}
