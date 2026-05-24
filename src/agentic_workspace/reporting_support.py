@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 from collections.abc import Callable
 from difflib import get_close_matches
 from pathlib import Path
@@ -94,30 +95,70 @@ def output_contract_payload(
     }
 
 
-def _command_with_cli_invoke(command: str, *, cli_invoke: str) -> str:
+def _target_arg_from_payload(payload: dict[str, Any]) -> str:
+    target = str(payload.get("target") or ".")
+    if target == ".":
+        return "."
+    try:
+        relative = os.path.relpath(Path(target).resolve(), Path.cwd().resolve())
+    except OSError:
+        relative = target
+    if relative == ".":
+        return "."
+    return Path(relative).as_posix()
+
+
+def _command_with_cli_invoke(command: str, *, cli_invoke: str, target_arg: str = "./repo") -> str:
+    command = command.replace("--target ./repo", f"--target {target_arg}")
     if cli_invoke == DEFAULT_CLI_INVOKE or not command.startswith(DEFAULT_CLI_INVOKE):
         return command
     return f"{cli_invoke}{command.removeprefix(DEFAULT_CLI_INVOKE)}"
 
 
-def _localize_command_fields(value: Any, *, cli_invoke: str) -> Any:
+def _is_command_field(key: str) -> bool:
+    return (
+        key
+        in {
+            "after_write",
+            "detail",
+            "first_command",
+            "inspect",
+            "next_command",
+            "one_compact_check",
+            "ordinary_entry",
+            "preferred_mutation_command_template",
+            "query",
+            "recover_by",
+            "recover_by_default",
+            "reference_command",
+            "required_next_inspection",
+            "run",
+            "selection_path",
+            "selector",
+        }
+        or key == "command"
+        or key.endswith("_command")
+    )
+
+
+def _localize_command_fields(value: Any, *, cli_invoke: str, target_arg: str = "./repo") -> Any:
     if isinstance(value, dict):
         localized: dict[str, Any] = {}
         for key, nested in value.items():
-            if isinstance(nested, str) and (key == "command" or key == "recover_by" or key.endswith("_command")):
-                localized[key] = _command_with_cli_invoke(nested, cli_invoke=cli_invoke)
-            elif key == "commands" and isinstance(nested, list):
+            if isinstance(nested, str) and _is_command_field(key):
+                localized[key] = _command_with_cli_invoke(nested, cli_invoke=cli_invoke, target_arg=target_arg)
+            elif key in {"commands", "consult"} and isinstance(nested, list):
                 localized[key] = [
-                    _command_with_cli_invoke(item, cli_invoke=cli_invoke)
+                    _command_with_cli_invoke(item, cli_invoke=cli_invoke, target_arg=target_arg)
                     if isinstance(item, str)
-                    else _localize_command_fields(item, cli_invoke=cli_invoke)
+                    else _localize_command_fields(item, cli_invoke=cli_invoke, target_arg=target_arg)
                     for item in nested
                 ]
             else:
-                localized[key] = _localize_command_fields(nested, cli_invoke=cli_invoke)
+                localized[key] = _localize_command_fields(nested, cli_invoke=cli_invoke, target_arg=target_arg)
         return localized
     if isinstance(value, list):
-        return [_localize_command_fields(item, cli_invoke=cli_invoke) for item in value]
+        return [_localize_command_fields(item, cli_invoke=cli_invoke, target_arg=target_arg) for item in value]
     return value
 
 
@@ -197,6 +238,7 @@ def select_report_payload(
     context_router: dict[str, Any],
     cli_invoke: str = DEFAULT_CLI_INVOKE,
 ) -> dict[str, Any]:
+    target_arg = _target_arg_from_payload(payload)
     if section:
         if profile != "router":
             raise WorkspaceUsageError("report detail selectors are mutually exclusive; use either --verbose or --section.")
@@ -206,7 +248,7 @@ def select_report_payload(
         selector = {"section": section}
         if resolved_section != section:
             selector["resolved_section"] = resolved_section
-        answer = _compact_report_section_answer(resolved_section, answer, cli_invoke=cli_invoke)
+        answer = _compact_report_section_answer(resolved_section, answer, cli_invoke=cli_invoke, target_arg=target_arg)
         return compact_answer(
             surface="report",
             selector=selector,
@@ -239,7 +281,7 @@ def _resolve_report_section(payload: dict[str, Any], section: str) -> tuple[str,
     return section, None
 
 
-def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str) -> Any:
+def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str, target_arg: str = "./repo") -> Any:
     if section == "closeout_trust" and isinstance(answer, dict):
 
         def compact_closeout_check(value: dict[str, Any]) -> dict[str, Any]:
@@ -284,8 +326,9 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
         detail_command = _command_with_cli_invoke(
             "agentic-workspace report --target ./repo --verbose --format json",
             cli_invoke=cli_invoke,
+            target_arg=target_arg,
         )
-        return {
+        compact_answer = {
             "status": answer.get("status", ""),
             "trust": answer.get("trust", ""),
             "strict_closeout_gate": strict_gate,
@@ -321,6 +364,7 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
             },
             "detail": detail_command,
         }
+        return _localize_command_fields(compact_answer, cli_invoke=cli_invoke, target_arg=target_arg)
     if section == "agent_aids" and isinstance(answer, dict):
         storage = answer.get("storage", {})
         storage = storage if isinstance(storage, dict) else {}
@@ -371,6 +415,7 @@ def _unknown_report_section_message(section: str, payload: dict[str, Any]) -> st
 def report_router_payload(
     payload: dict[str, Any], *, context_router: dict[str, Any], cli_invoke: str = DEFAULT_CLI_INVOKE
 ) -> dict[str, Any]:
+    target_arg = _target_arg_from_payload(payload)
     findings = [finding for finding in payload.get("findings", []) if isinstance(finding, dict)]
     findings_by_severity: dict[str, int] = {}
     findings_by_module: dict[str, int] = {}
@@ -392,19 +437,26 @@ def report_router_payload(
                 "summary": str(task_shape.get("summary", "")),
                 "source": "execution_shape",
             }
-    section_hints = report_section_hints(payload, cli_invoke=cli_invoke)
+    section_hints = report_section_hints(payload, cli_invoke=cli_invoke, target_arg=target_arg)
     compact_section_hints = _compact_report_section_hints(section_hints)
     profile_payload = dict(payload.get("report_profile", report_profile_payload(context_router=context_router, cli_invoke=cli_invoke)))
+    profile_payload = _localize_command_fields(profile_payload, cli_invoke=cli_invoke, target_arg=target_arg)
     profile_payload = _compact_report_profile(profile_payload)
     profile_payload["ordinary_agent_path"] = _ordinary_agent_path_payload(payload=payload, findings=findings, cli_invoke=cli_invoke)
     profile_payload["detail_sections"] = {
         "config_enforcement": _command_with_cli_invoke(
-            "agentic-workspace report --target ./repo --section config_enforcement --format json", cli_invoke=cli_invoke
+            "agentic-workspace report --target ./repo --section config_enforcement --format json",
+            cli_invoke=cli_invoke,
+            target_arg=target_arg,
         ),
         "config_effect_audit": _command_with_cli_invoke(
-            "agentic-workspace report --target ./repo --section config_effect_audit --format json", cli_invoke=cli_invoke
+            "agentic-workspace report --target ./repo --section config_effect_audit --format json",
+            cli_invoke=cli_invoke,
+            target_arg=target_arg,
         ),
-        "feature_tier": _command_with_cli_invoke("agentic-workspace modules --target ./repo --format json", cli_invoke=cli_invoke),
+        "feature_tier": _command_with_cli_invoke(
+            "agentic-workspace modules --target ./repo --format json", cli_invoke=cli_invoke, target_arg=target_arg
+        ),
     }
     decision_grade_fields = list(profile_payload.get("decision_grade_fields", []))
     if "report_profile.ordinary_agent_path" not in decision_grade_fields:
@@ -431,10 +483,12 @@ def report_router_payload(
         "schema": {
             "schema_version": "workspace-report-router-schema/v1",
             "full_profile_command": _command_with_cli_invoke(
-                "agentic-workspace report --target ./repo --verbose --format json", cli_invoke=cli_invoke
+                "agentic-workspace report --target ./repo --verbose --format json", cli_invoke=cli_invoke, target_arg=target_arg
             ),
             "section_command": _command_with_cli_invoke(
-                "agentic-workspace report --target ./repo --section <section> --format json", cli_invoke=cli_invoke
+                "agentic-workspace report --target ./repo --section <section> --format json",
+                cli_invoke=cli_invoke,
+                target_arg=target_arg,
             ),
             "principle": "route first, inspect deep sections only when needed",
         },
@@ -472,10 +526,12 @@ def report_router_payload(
         },
         "deeper_detail": {
             "full_profile_command": _command_with_cli_invoke(
-                "agentic-workspace report --target ./repo --verbose --format json", cli_invoke=cli_invoke
+                "agentic-workspace report --target ./repo --verbose --format json", cli_invoke=cli_invoke, target_arg=target_arg
             ),
             "section_command": _command_with_cli_invoke(
-                "agentic-workspace report --target ./repo --section <section> --format json", cli_invoke=cli_invoke
+                "agentic-workspace report --target ./repo --section <section> --format json",
+                cli_invoke=cli_invoke,
+                target_arg=target_arg,
             ),
             "high_volume_sections": profile_payload.get("high_volume_sections", []),
             "omitted_section_hint_count": max(0, len(section_hints) - len(compact_section_hints)),
@@ -529,7 +585,7 @@ def report_router_payload(
             ],
         },
     }
-    return _localize_command_fields(compact_payload, cli_invoke=cli_invoke)
+    return _localize_command_fields(compact_payload, cli_invoke=cli_invoke, target_arg=target_arg)
 
 
 def _compact_report_profile(value: dict[str, Any]) -> dict[str, Any]:
@@ -885,7 +941,10 @@ def _off_happy_path_recovery_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) ->
     }
 
 
-def report_section_hints(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CLI_INVOKE) -> list[dict[str, Any]]:
+def report_section_hints(
+    payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CLI_INVOKE, target_arg: str | None = None
+) -> list[dict[str, Any]]:
+    target_arg = target_arg or _target_arg_from_payload(payload)
     section_purposes = {
         "effective_authority": "authority, current work, system-intent pressure, idle context, and unresolved gaps",
         "execution_shape": "default execution posture and planning-backed work guidance",
@@ -967,7 +1026,9 @@ def report_section_hints(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_C
                     "purpose": purpose,
                     "why_now": why_now.get(section, "inspect when this section is named by compact routing output"),
                     "command": _command_with_cli_invoke(
-                        f"agentic-workspace report --target ./repo --section {section} --format json", cli_invoke=cli_invoke
+                        f"agentic-workspace report --target ./repo --section {section} --format json",
+                        cli_invoke=cli_invoke,
+                        target_arg=target_arg,
                     ),
                     "volume": "high" if section in {"module_reports", "reports", "registry", "config"} else "normal",
                     **({"advanced_feature": advanced_feature} if advanced_feature else {}),

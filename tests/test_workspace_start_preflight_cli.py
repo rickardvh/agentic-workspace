@@ -767,7 +767,8 @@ candidates = [
     payload = json.loads(capsys.readouterr().out)
     action = _start_primary_action(payload)
     assert action["action"] == "inspect-closeout-trust-before-completion-answer"
-    assert action["command"] == "agentic-workspace report --target ./repo --section closeout_trust --format json"
+    relative_target = os.path.relpath(target.resolve(), Path.cwd().resolve()).replace("\\", "/")
+    assert action["command"] == f"agentic-workspace report --target {relative_target} --section closeout_trust --format json"
     packet = payload["next_safe_action"]
     _assert_next_safe_action_valid(packet)
     assert packet["preferred_cli_effect"] == "reporting"

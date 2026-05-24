@@ -14,6 +14,39 @@ def _report_drill_down(payload: dict[str, object]) -> dict[str, object]:
     return drill_down if isinstance(drill_down, dict) else payload
 
 
+def _machine_command_values(value: object, *, key: str = "") -> list[str]:
+    command_keys = {
+        "after_write",
+        "command",
+        "consult",
+        "detail",
+        "detail_command",
+        "first_command",
+        "inspect",
+        "next_command",
+        "one_compact_check",
+        "ordinary_entry",
+        "query",
+        "recover_by",
+        "recover_by_default",
+        "reference_command",
+        "required_next_inspection",
+        "run",
+        "selection_path",
+        "selector",
+    }
+    values: list[str] = []
+    if isinstance(value, dict):
+        for nested_key, nested in value.items():
+            values.extend(_machine_command_values(nested, key=str(nested_key)))
+    elif isinstance(value, list):
+        for nested in value:
+            values.extend(_machine_command_values(nested, key=key))
+    elif isinstance(value, str) and (key in command_keys or key.endswith("_command") or key == "commands" or key == "consult"):
+        values.append(value)
+    return values
+
+
 def test_report_surfaces_config_ownership_drift_diagnostic(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
@@ -393,9 +426,10 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     payload = json.loads(capsys.readouterr().out)
     context = _report_context(payload)
     drill_down = _report_drill_down(payload)
+    relative_target = os.path.relpath(target.resolve(), Path.cwd().resolve()).replace("\\", "/")
     assert payload["kind"] == "workspace-report-router/v1"
-    assert payload["schema"]["full_profile_command"] == "agentic-workspace report --target ./repo --verbose --format json"
-    assert payload["schema"]["section_command"] == "agentic-workspace report --target ./repo --section <section> --format json"
+    assert payload["schema"]["full_profile_command"] == f"agentic-workspace report --target {relative_target} --verbose --format json"
+    assert payload["schema"]["section_command"] == f"agentic-workspace report --target {relative_target} --section <section> --format json"
     assert set(payload) <= {"kind", "schema", "command", "target", "health", "next_action", "context", "drill_down"}
     assert context["report_profile"]["default_profile"] == "router"
     assert context["report_profile"]["full_profile"] == "full"
@@ -403,19 +437,21 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert context["report_profile"]["full_profile_cost"]["expected_cost"] == "high"
     assert context["report_profile"]["context_router"]["first_view"] == "start"
     assert context["report_profile"]["detail_sections"]["config_enforcement"].endswith(
-        "agentic-workspace report --target ./repo --section config_enforcement --format json"
+        f"agentic-workspace report --target {relative_target} --section config_enforcement --format json"
     )
     assert context["report_profile"]["detail_sections"]["config_effect_audit"].endswith(
-        "agentic-workspace report --target ./repo --section config_effect_audit --format json"
+        f"agentic-workspace report --target {relative_target} --section config_effect_audit --format json"
     )
-    assert context["report_profile"]["detail_sections"]["feature_tier"].endswith("agentic-workspace modules --target ./repo --format json")
+    assert context["report_profile"]["detail_sections"]["feature_tier"].endswith(
+        f"agentic-workspace modules --target {relative_target} --format json"
+    )
     assert "config_enforcement" not in context["report_profile"]
     assert "config_effect_audit" not in context["report_profile"]
     assert context["report_profile"]["decision_grade_fields"][0] == "health"
     ordinary_path = context["report_profile"]["ordinary_agent_path"]
-    assert ordinary_path["entry_command"] == "agentic-workspace start --target ./repo --format json"
+    assert ordinary_path["entry_command"] == f"agentic-workspace start --target {relative_target} --format json"
     assert ordinary_path["current_work_command"] == "agentic-workspace summary --format json"
-    assert ordinary_path["proof_command"] == "agentic-workspace proof --target ./repo --changed <paths> --format json"
+    assert ordinary_path["proof_command"] == f"agentic-workspace proof --target {relative_target} --changed <paths> --format json"
     recovery = ordinary_path["off_happy_path_recovery"]
     assert recovery["kind"] == "workspace-off-happy-path-recovery/v1"
     assert set(recovery["scenario_ids"]) >= {
@@ -425,10 +461,11 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
         "direct-generated-adapter-edit",
         "hand-authored-durable-artifact",
     }
-    assert recovery["recover_by_default"] == "agentic-workspace start --target ./repo --format json"
+    assert recovery["recover_by_default"] == f"agentic-workspace start --target {relative_target} --format json"
     assert "report_profile.ordinary_agent_path" in context["report_profile"]["decision_grade_fields"]
     guard = context["report_profile"]["router_shape_guard"]
     assert guard["status"] == "active"
+
     assert len(payload) <= guard["max_top_level_fields"]
     assert "feature_tier" not in context["report_profile"]
     assert "report_profile.feature_tier" not in context["report_profile"]["decision_grade_fields"]
@@ -481,7 +518,7 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert "idle context" in section_hints["effective_authority"]["purpose_summary"]
     assert "idle state" in section_hints["effective_authority"]["why_now"]
     assert section_hints["effective_authority"]["command"] == (
-        "agentic-workspace report --target ./repo --section effective_authority --format json"
+        f"agentic-workspace report --target {relative_target} --section effective_authority --format json"
     )
     assert len(json.dumps(payload, sort_keys=True)) < 30000
 
@@ -498,7 +535,7 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert historical_reviews["status"] == "evidence-only"
     assert "not ordinary operating input" in historical_reviews["role"]
     assert "retention_policy_status" in historical_reviews
-    assert historical_reviews["detail"].endswith("report --target ./repo --verbose --format json")
+    assert historical_reviews["detail"].endswith(f"report --target {relative_target} --verbose --format json")
 
     assert cli.main(["report", "--target", str(target), "--section", "operating_posture", "--format", "json"]) == 0
     posture_payload = json.loads(capsys.readouterr().out)
@@ -506,6 +543,23 @@ def test_report_default_profile_returns_router_before_deep_detail(tmp_path: Path
     assert posture["kind"] == "agentic-workspace/operating-posture/v1"
     assert posture["closeout_nudge"]["field"] == "improvement_signal_review"
     assert posture["boundaries"]["not_blanket_refactor_permission"] is True
+
+
+def test_report_commands_use_resolved_target_not_repo_placeholder(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
+    router_payload = json.loads(capsys.readouterr().out)
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
+    closeout_payload = json.loads(capsys.readouterr().out)
+
+    command_values = _machine_command_values(router_payload) + _machine_command_values(closeout_payload)
+    assert command_values
+    assert not [value for value in command_values if "--target ./repo" in value]
 
 
 def test_report_tiny_profile_alias_returns_router(tmp_path: Path, capsys) -> None:
@@ -570,15 +624,18 @@ def test_report_router_uses_resolved_cli_invoke_for_copyable_commands(tmp_path: 
 
     payload = json.loads(capsys.readouterr().out)
     context = _report_context(payload)
-    assert payload["schema"]["full_profile_command"] == "uv run agentic-workspace report --target ./repo --verbose --format json"
-    assert context["report_profile"]["default_command"] == "uv run agentic-workspace report --target ./repo --format json"
+    relative_target = os.path.relpath(target.resolve(), Path.cwd().resolve()).replace("\\", "/")
+    assert payload["schema"]["full_profile_command"] == (
+        f"uv run agentic-workspace report --target {relative_target} --verbose --format json"
+    )
+    assert context["report_profile"]["default_command"] == f"uv run agentic-workspace report --target {relative_target} --format json"
     ordinary_path = context["report_profile"]["ordinary_agent_path"]
-    assert ordinary_path["entry_command"] == "uv run agentic-workspace start --target ./repo --format json"
-    assert ordinary_path["state_command"] == "uv run agentic-workspace report --target ./repo --format json"
+    assert ordinary_path["entry_command"] == f"uv run agentic-workspace start --target {relative_target} --format json"
+    assert ordinary_path["state_command"] == f"uv run agentic-workspace report --target {relative_target} --format json"
     assert ordinary_path["current_work_command"] == "uv run agentic-workspace summary --format json"
-    assert ordinary_path["proof_command"] == "uv run agentic-workspace proof --target ./repo --changed <paths> --format json"
+    assert ordinary_path["proof_command"] == f"uv run agentic-workspace proof --target {relative_target} --changed <paths> --format json"
     recovery = ordinary_path["off_happy_path_recovery"]
-    assert recovery["recover_by_default"] == "uv run agentic-workspace start --target ./repo --format json"
+    assert recovery["recover_by_default"] == f"uv run agentic-workspace start --target {relative_target} --format json"
     assert _report_drill_down(payload)["section_hints"][0]["command"].startswith("uv run agentic-workspace report ")
     if "maintenance_pressure" in payload:
         assert payload["maintenance_pressure"]["subcategories"][0]["section_command"].startswith("uv run agentic-workspace report ")

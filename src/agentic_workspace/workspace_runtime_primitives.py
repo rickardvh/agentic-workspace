@@ -17,6 +17,7 @@ import io
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -10316,6 +10317,31 @@ def _tiny_adaptive_routing_payload(
     }
 
 
+def _preferred_cli_effect(preferred_cli: str) -> str:
+    try:
+        tokens = shlex.split(preferred_cli)
+    except ValueError:
+        tokens = preferred_cli.split()
+    semantic_tokens: list[str] = []
+    skip_option_value = False
+    for token in tokens:
+        if skip_option_value:
+            skip_option_value = False
+            continue
+        if token.startswith("--"):
+            if "=" not in token:
+                skip_option_value = True
+            continue
+        semantic_tokens.append(token)
+    if any(token in {"proof", "pytest", "test", "lint", "ruff"} for token in semantic_tokens):
+        return "validating"
+    if any(token in {"promote-to-plan", "new-plan", "archive-plan", "close-item", "delegation-decision"} for token in semantic_tokens):
+        return "mutating"
+    if any(token in {"report", "summary", "status", "doctor", "start", "preflight", "skills"} for token in semantic_tokens):
+        return "reporting"
+    return "read-only"
+
+
 def _next_safe_action_packet(
     *,
     immediate: dict[str, Any],
@@ -10358,14 +10384,7 @@ def _next_safe_action_packet(
     memory_status = str((memory_consult or {}).get("status", "unknown"))
     command_effect = "none"
     if preferred_cli:
-        if "proof" in preferred_cli or "test" in preferred_cli or "lint" in preferred_cli:
-            command_effect = "validating"
-        elif any(token in preferred_cli for token in ("promote-to-plan", "new-plan", "archive-plan", "close-item", "delegation-decision")):
-            command_effect = "mutating"
-        elif any(token in preferred_cli for token in ("report", "summary", "status", "doctor", "start", "preflight", "skills")):
-            command_effect = "reporting"
-        else:
-            command_effect = "read-only"
+        command_effect = _preferred_cli_effect(preferred_cli)
     closure_blockers = sorted(set(forbidden_actions))
     continuation_owner_required = action in {
         "inspect-closeout-trust-before-completion-answer",
@@ -10941,8 +10960,9 @@ def _is_completion_status_task(task_text: str | None) -> bool:
 
 
 def _completion_closeout_inspection_payload(*, target_root: Path, config: WorkspaceConfig, task_text: str | None) -> dict[str, Any]:
+    target_arg = _command_target_arg(target_root)
     command = _command_with_cli_invoke(
-        command="agentic-workspace report --target ./repo --section closeout_trust --format json", cli_invoke=config.cli_invoke
+        command=f"agentic-workspace report --target {target_arg} --section closeout_trust --format json", cli_invoke=config.cli_invoke
     )
     if not _is_completion_status_task(task_text):
         return {"status": "not-applicable", "reason": "current task is not completion/status oriented", "detail_command": command}
