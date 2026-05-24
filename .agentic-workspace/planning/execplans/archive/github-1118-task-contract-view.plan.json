@@ -31,9 +31,20 @@
     "agent_may_decide": "Exact command/selector home, payload field names, compact-vs-verbose placement, and focused tests.",
     "escalate_when": "The implementation needs a new durable Planning artifact, provider-specific session state, a broad task manager, or a change that makes ordinary direct work heavier.",
     "next_action": "Inspect current start/implement/proof/closeout task-intent surfaces, choose the smallest existing command/selector home, implement the assembled view, and validate task-present, task-absent, and changed-path cases.",
-    "proof_expectations": "['Focused tests prove the task-contract view names intent, acceptance, autonomy/escalation, proof expectations, stop conditions, source fields, and missing fields.', 'Workspace test and lint targets pass.']",
-    "touched_scope": "['src/agentic_workspace/workspace_runtime_primitives.py', 'tests/test_workspace_implement_cli.py', 'tests/test_workspace_start_preflight_cli.py', 'src/agentic_workspace/contracts/schemas/implementer_context.schema.json', 'docs/reference/implementer-context.md']",
-    "completion_criteria": "['Assemble compact task contract view (#1118) is implemented, validated, and closed out honestly.']",
+    "proof_expectations": [
+      "Focused tests prove the task-contract view names intent, acceptance, autonomy/escalation, proof expectations, stop conditions, source fields, and missing fields.",
+      "Workspace test and lint targets pass."
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "tests/test_workspace_implement_cli.py",
+      "tests/test_workspace_start_preflight_cli.py",
+      "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
+      "docs/reference/implementer-context.md"
+    ],
+    "completion_criteria": [
+      "Assemble compact task contract view (#1118) is implemented, validated, and closed out honestly."
+    ],
     "continuation_owner": "none",
     "closeout_decision": "archive-and-close"
   },
@@ -45,14 +56,26 @@
   ],
   "machine_readable_contract": {
     "intent": {
-      "proof": "make test-workspace; make lint-workspace; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make maintainer-surfaces; make schema-reference-docs"
+      "outcome": "Assemble a compact task-contract view from existing task intent, acceptance, autonomy/escalation, proof expectations, and stop-condition surfaces.",
+      "constraints": "Do not add new durable task-contract state in this first slice; the view must be assembled from existing source surfaces and keep small direct work cheap.",
+      "latitude": "Exact command/selector home, payload field names, compact-vs-verbose placement, and focused tests.",
+      "escalation": "Escalate when the implementation needs a new durable Planning artifact, provider-specific session state, a broad task manager, or a change that makes ordinary direct work heavier."
     },
     "execution": {
+      "milestone": "github-1118-task-contract-view",
+      "status": "completed",
+      "next_step": "archive this execplan",
       "proof": "make test-workspace; make lint-workspace; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make maintainer-surfaces; make schema-reference-docs"
     },
     "scope": {
       "touched": [
-        "closeout scope recorded in closure_check and generated_closeout."
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "tests/test_workspace_implement_cli.py",
+        "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
+        "docs/reference/implementer-context.md"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
       ]
     }
   },
@@ -229,7 +252,7 @@
     "target scope": "archive",
     "proposed durable intent": "Closeout reviewed durable residue and found no live follow-up.",
     "confidence": "low",
-    "needs review": "True",
+    "needs review": true,
     "owner surface": "archive"
   },
   "closure_check": {
