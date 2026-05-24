@@ -1869,6 +1869,96 @@ def test_report_closeout_trust_blocks_work_claim_for_regression_only_intent_proo
     assert "intent_proof" in options["claim-work-complete"]["blocking_fields"]
 
 
+def test_report_closeout_trust_allows_work_claim_for_sufficient_intent_proof(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    plan = target / ".agentic-workspace" / "planning" / "execplans" / "direct-proof.plan.json"
+    _write_json(
+        plan,
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Direct Proof",
+            "active_milestone": {"id": "direct-proof", "status": "complete"},
+            "delegated_judgment": {
+                "requested outcome": "Record proportionate proof for a small direct change.",
+                "hard constraints": "Do not require broad integration proof for this direct slice.",
+                "agent may decide locally": "Exact compact closeout wording.",
+                "escalate when": "Proof no longer covers the requested behavior.",
+            },
+            "immediate_next_action": ["Close when direct proof supports the claim."],
+            "completion_criteria": ["Direct proof supports the requested behavior."],
+            "validation_commands": ["uv run pytest tests/test_direct.py"],
+            "intent_continuity": {
+                "larger intended outcome": "Record proportionate direct proof.",
+                "this slice completes the larger intended outcome": "yes",
+                "continuation surface": "none",
+            },
+            "required_continuation": {
+                "required follow-on for the larger intended outcome": "no",
+                "owner surface": "none",
+                "activation trigger": "none",
+            },
+            "execution_run": {
+                "run status": "complete",
+                "executor": "test",
+                "handoff source": "uv run agentic-workspace preflight --format json",
+                "what happened": "Used agentic-workspace report --target . --format json and proof-selected validation.",
+                "scope touched": "test",
+                "changed surfaces": "test",
+                "validations run": "uv run agentic-workspace summary --format json; uv run agentic-workspace proof --format json; uv run pytest tests/test_direct.py",
+                "result for continuation": "close",
+                "next step": "close",
+            },
+            "proof_report": {
+                "validation proof": "uv run agentic-workspace proof passed; uv run pytest tests/test_direct.py passed",
+                "acceptance reconciliation": "requested direct proof -> delivered focused direct test -> proof passed",
+                "proof achieved now": "yes",
+                'evidence for "proof achieved" state': "focused direct test fixture",
+                "intent_proof": {
+                    "status": "sufficient_for_claim",
+                    "claim_boundary": "work",
+                    "intended_behavior": ["direct behavior"],
+                    "proof_dimensions": ["focused direct behavior"],
+                    "unproven_after_tests": [],
+                },
+            },
+            "closure_check": {
+                "slice status": "complete",
+                "larger-intent status": "closed",
+                "closure decision": "archive-and-close",
+                "why this decision is honest": "The focused direct proof is sufficient for the work claim.",
+                "evidence carried forward": "report closeout_trust",
+                "reopen trigger": "direct proof no longer covers requested behavior",
+            },
+        },
+    )
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        "[todo]\n"
+        "active_items = [\n"
+        "  { id = 'direct-proof', title = 'Direct proof', surface = '.agentic-workspace/planning/execplans/direct-proof.plan.json' },\n"
+        "]\n"
+        "queued_items = []\n\n"
+        "[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
+
+    closeout = json.loads(capsys.readouterr().out)["answer"]
+    assert closeout["checks"]["intent_proof"]["status"] == "sufficient_for_claim"
+    assert closeout["proof_confidence"]["confidence"] == "high"
+    assert closeout["proof_confidence"]["claim_boundary"] == "work"
+    assert closeout["proof_confidence"]["proven_dimensions"] == ["focused direct behavior"]
+    assert closeout["proof_confidence"]["unproven_dimensions"] == []
+    assert closeout["proof_confidence"]["residual_risk"]
+    options = {option["id"]: option for option in closeout["completion_options"]}
+    assert options["claim-slice-complete"]["allowed"] is True
+    assert options["claim-work-complete"]["allowed"] is True
+
+
 def test_report_closeout_trust_requires_external_negative_invariant_reconciliation(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
