@@ -180,6 +180,87 @@ def test_implement_groups_generated_reuse_pressure_under_source_owner(tmp_path: 
     assert [item["kind"] for item in payload["findings"]] == ["generated_artifact_source_owner"]
 
 
+def test_implement_selector_surfaces_changed_path_impact_map(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "OWNERSHIP.toml",
+        "schema_version = 1\n\n"
+        "[[authority_surfaces]]\n"
+        'concern = "startup-instructions"\n'
+        'surface = "AGENTS.md"\n'
+        'owner = "repo"\n'
+        'ownership = "repo_owned"\n'
+        'authority = "primary"\n'
+        'summary = "startup"\n\n'
+        "[[module_roots]]\n"
+        'module = "planning"\n'
+        'path = ".agentic-workspace/planning/"\n'
+        'ownership = "module_managed"\n'
+        'uninstall_policy = "remove-managed-files-only"\n\n'
+        "[[subsystems]]\n"
+        'id = "workspace-runtime"\n'
+        'paths = ["src/agentic_workspace/**"]\n'
+        'owns = ["workspace runtime behavior"]\n'
+        'does_not_own = ["planning state semantics"]\n'
+        'proof = ["uv run pytest tests/test_workspace_implement_cli.py -q"]\n'
+        'escalate_when = ["runtime contract changes"]\n',
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "generated/workspace/python/command_package.json",
+                ".agentic-workspace/planning/state.toml",
+                "scratch/unknown.adapter",
+                "--select",
+                "change_impact",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    impact = json.loads(capsys.readouterr().out)["values"]["change_impact"]
+    by_path = {item["path"]: item for item in impact["paths"]}
+    source = by_path["src/agentic_workspace/workspace_runtime_primitives.py"]
+    assert source["owner"] == "subsystem:workspace-runtime"
+    assert source["surface_origin"] == "source-authored"
+    assert source["related"]["subsystems"][0]["id"] == "workspace-runtime"
+    assert "subsystem:workspace-runtime" in source["related"]["proof_lanes"]
+
+    generated = by_path["generated/workspace/python/command_package.json"]
+    assert generated["surface_origin"] == "generated"
+    assert generated["signal"] == "hard_blocker"
+    assert generated["safe_to_edit"] is False
+    assert generated["canonical_source"] == "src/agentic_workspace/contracts/command_package_ir.json"
+    assert generated["refresh_command"] == "uv run python scripts/check/check_generated_command_packages.py"
+    assert "cli_authority" in generated["related"]["proof_lanes"]
+
+    managed = by_path[".agentic-workspace/planning/state.toml"]
+    assert managed["owner"] == "planning"
+    assert managed["surface_origin"] == "managed"
+    assert managed["matched_by"] == "module_root"
+
+    unknown = by_path["scratch/unknown.adapter"]
+    assert unknown["owner"] == "unknown"
+    assert unknown["ownership_matched"] is False
+    assert unknown["signal"] == "warning"
+    assert "No explicit ownership ledger match" in unknown["warnings"][0]
+
+    assert impact["generated_path_count"] == 1
+    assert impact["managed_path_count"] == 1
+    assert impact["unknown_path_count"] == 1
+    assert impact["hard_blocker_count"] == 1
+    assert impact["proof_impact"]["required_commands"]
+
+
 def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
