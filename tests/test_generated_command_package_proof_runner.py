@@ -426,6 +426,7 @@ def test_generated_python_conformance_reports_crash_retry_recovery(monkeypatch) 
     checker = _load_checker()
     registries, errors = checker._adapter_conformance_cases_by_package()
     assert errors == []
+    checker.RECOVERED_CONFORMANCE_RETRIES.clear()
     monkeypatch.setenv("AGENTIC_GENERATED_CONFORMANCE_CONTAINER", "python")
 
     message = checker._format_generated_adapter_retry_recovery(
@@ -440,6 +441,58 @@ def test_generated_python_conformance_reports_crash_retry_recovery(monkeypatch) 
     assert "proof_surface=generated-python-docker-conformance" in message
     assert "conformance_ref=doctor.report.process" in message
     assert "first_exit=-11" in message
+    assert "recovery_record=" in message
+    assert checker.RECOVERED_CONFORMANCE_RETRIES[-1]["conformance_ref"] == "doctor.report.process"
+
+
+def test_generated_python_conformance_strict_retry_recovery_fails(monkeypatch) -> None:
+    checker = _load_checker()
+    registries, errors = checker._adapter_conformance_cases_by_package()
+    assert errors == []
+    case = registries["root-workspace"]["doctor.report.process"]
+    calls = []
+
+    def fake_cases():
+        return {"root-workspace": {"doctor.report.process": case}}, []
+
+    def fake_capture(command, *, cwd, env):
+        calls.append(command)
+        if len(calls) == 1:
+            return subprocess.CompletedProcess(command, -11, stdout="", stderr="")
+        return subprocess.CompletedProcess(command, 0, stdout='{"status": "ok"}\n', stderr="")
+
+    monkeypatch.setattr(checker, "_adapter_conformance_cases_by_package", fake_cases)
+    monkeypatch.setattr(checker, "_capture", fake_capture)
+    monkeypatch.setenv("AGENTIC_GENERATED_STRICT_RETRY_RECOVERY", "1")
+
+    errors = checker._run_python_adapter_conformance()
+
+    assert any("runtime crash recovered after retry" in error for error in errors)
+    assert len(calls) == 2
+
+
+def test_python_docker_conformance_strict_retry_recovery_sets_container_env(monkeypatch) -> None:
+    checker = _load_checker()
+    calls: list[list[str]] = []
+
+    def fake_run_step(command, **kwargs):
+        calls.append(command)
+        return 0
+
+    monkeypatch.setattr(checker.shutil, "which", lambda name: "docker" if name == "docker" else None)
+    monkeypatch.setattr(checker.subprocess, "run", lambda *args, **kwargs: subprocess.CompletedProcess(args[0], 0, "", ""))
+    monkeypatch.setattr(checker, "_run_docker_step", fake_run_step)
+
+    status = checker._run_docker(
+        "generated-python-test",
+        dockerfile="generated/python/Dockerfile.conformance",
+        proof_label="generated Python package Docker conformance proof",
+        require_docker=True,
+        strict_retry_recovery=True,
+    )
+
+    assert status == 0
+    assert ["docker", "run", "--rm", "-e", "AGENTIC_GENERATED_STRICT_RETRY_RECOVERY=1", "generated-python-test"] in calls
 
 
 def test_docker_proof_environment_failure_preserves_context() -> None:

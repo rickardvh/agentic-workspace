@@ -273,6 +273,7 @@ PYTHON_REQUIRED_RUNTIME_PROJECTION_OUTPUTS = {
         "operation-ir-executor",
     ),
 }
+RECOVERED_CONFORMANCE_RETRIES: list[dict[str, object]] = []
 
 
 def _run(command: list[str]) -> int:
@@ -487,12 +488,34 @@ def _format_generated_adapter_retry_recovery(
 ) -> str:
     _classification, detail = _exit_failure_classification(first_returncode)
     command_name = case.success_args[0] if case.success_args else "<entrypoint>"
+    record = {
+        "kind": "generated-adapter-retry-recovery/v1",
+        "status": "recovered",
+        "classification": "runtime-crash-or-proof-environment-residue",
+        "proof_surface": _generated_adapter_proof_surface(language=language),
+        "package": package_id,
+        "conformance_ref": case.conformance_ref,
+        "command": command_name,
+        "command_args": case.success_args,
+        "fixture": case.fixture_id,
+        "adapter_entrypoint": command[0],
+        "first_exit": first_returncode,
+        "detail": detail,
+        "strict_fail": _strict_retry_recovery_enabled(),
+    }
+    RECOVERED_CONFORMANCE_RETRIES.append(record)
     return (
         f"[warn] generated {language} adapter runtime crash recovered after retry: "
         f"proof_surface={_generated_adapter_proof_surface(language=language)}; package={package_id}; "
         f"conformance_ref={case.conformance_ref}; command={command_name}; command_args={case.success_args!r}; "
-        f"fixture={case.fixture_id}; adapter_entrypoint={command[0]!r}; first_exit={first_returncode}; detail={detail}"
+        f"fixture={case.fixture_id}; adapter_entrypoint={command[0]!r}; first_exit={first_returncode}; detail={detail}; "
+        f"recovery_record={json.dumps(record, sort_keys=True)}"
     )
+
+
+def _strict_retry_recovery_enabled() -> bool:
+    value = os.environ.get("AGENTIC_GENERATED_STRICT_RETRY_RECOVERY", "")
+    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _load_json(relative_path: str) -> dict[str, object]:
@@ -817,6 +840,7 @@ def _adapter_conformance_cases_by_package() -> tuple[dict[str, dict[str, Adapter
 
 
 def _run_python_adapter_conformance() -> list[str]:
+    RECOVERED_CONFORMANCE_RETRIES.clear()
     registries, registry_errors = _adapter_conformance_cases_by_package()
     if registry_errors:
         return registry_errors
@@ -859,15 +883,17 @@ def _run_python_adapter_conformance() -> list[str]:
                     if _is_runtime_crash_exit(process.returncode):
                         retry_process = _capture([*command, *case.success_args], cwd=fixture_root, env=env)
                         if retry_process.returncode == case.expected_exit:
-                            print(
-                                _format_generated_adapter_retry_recovery(
-                                    language="python",
-                                    package_id=package_id,
-                                    case=case,
-                                    command=command,
-                                    first_returncode=process.returncode,
-                                )
+                            recovery_message = _format_generated_adapter_retry_recovery(
+                                language="python",
+                                package_id=package_id,
+                                case=case,
+                                command=command,
+                                first_returncode=process.returncode,
                             )
+                            print(recovery_message)
+                            if _strict_retry_recovery_enabled():
+                                errors.append(recovery_message)
+                                continue
                             process = retry_process
                         else:
                             errors.append(
@@ -3392,7 +3418,14 @@ def _validate_static_surfaces() -> list[str]:
     return errors
 
 
-def _run_docker(tag: str, *, dockerfile: str, proof_label: str, require_docker: bool) -> int:
+def _run_docker(
+    tag: str,
+    *,
+    dockerfile: str,
+    proof_label: str,
+    require_docker: bool,
+    strict_retry_recovery: bool = False,
+) -> int:
     if shutil.which("docker") is None:
         print(
             _format_docker_proof_environment_failure(
@@ -3434,8 +3467,12 @@ def _run_docker(tag: str, *, dockerfile: str, proof_label: str, require_docker: 
     )
     if build:
         return build
+    run_command = ["docker", "run", "--rm"]
+    if strict_retry_recovery:
+        run_command.extend(["-e", "AGENTIC_GENERATED_STRICT_RETRY_RECOVERY=1"])
+    run_command.append(tag)
     return _run_docker_step(
-        ["docker", "run", "--rm", tag],
+        run_command,
         proof_label=proof_label,
         phase="docker-run",
         tag=tag,
@@ -3597,11 +3634,18 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Fail instead of skipping when Docker is unavailable.",
     )
+    parser.add_argument(
+        "--strict-retry-recovery",
+        action="store_true",
+        help="Fail when generated adapter conformance recovers after a native/runtime crash retry.",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
+    if args.strict_retry_recovery:
+        os.environ["AGENTIC_GENERATED_STRICT_RETRY_RECOVERY"] = "1"
     if args.python_completion_blockers:
         ir = load_workspace_command_package_ir(repo_root=REPO_ROOT)
         _print_python_completion_blockers_report(
@@ -3645,6 +3689,7 @@ def main(argv: list[str] | None = None) -> int:
             dockerfile="generated/python/Dockerfile.conformance",
             proof_label="generated Python package Docker conformance proof",
             require_docker=bool(args.require_docker),
+            strict_retry_recovery=bool(args.strict_retry_recovery),
         )
         if docker_status:
             return docker_status

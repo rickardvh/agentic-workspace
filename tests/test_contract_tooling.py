@@ -799,9 +799,17 @@ def test_generated_command_package_docker_flags_compose(monkeypatch) -> None:
     def fake_run(command: list[str]) -> int:
         return 0
 
-    def fake_run_docker(tag: str, *, dockerfile: str, proof_label: str, require_docker: bool) -> int:
+    def fake_run_docker(
+        tag: str,
+        *,
+        dockerfile: str,
+        proof_label: str,
+        require_docker: bool,
+        strict_retry_recovery: bool = False,
+    ) -> int:
         calls.append((tag, dockerfile, proof_label))
         assert require_docker is True
+        assert strict_retry_recovery is False
         return 0
 
     monkeypatch.setattr(module, "_run", fake_run)
