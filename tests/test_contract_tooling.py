@@ -111,6 +111,22 @@ def test_contract_inventory_declares_owner_choice_model() -> None:
     assert concern_classes["review_evidence"]["authority_class"] == "historical-evidence"
 
 
+def test_proof_selection_contract_owns_supplemental_lanes() -> None:
+    manifest = contract_tooling.proof_selection_rules_manifest()
+    lanes = {lane["id"]: lane for lane in manifest["supplemental_lanes"]}
+
+    assert {
+        "schema_reference_docs",
+        "planning_schema_reference_docs",
+        "planning_source_typecheck_ci_parity",
+    } <= lanes.keys()
+    assert lanes["planning_source_typecheck_ci_parity"]["path_match"] == {
+        "prefixes": ["packages/planning/src/"],
+        "extensions": [".py", ".pyi"],
+    }
+    assert lanes["planning_source_typecheck_ci_parity"]["enough_proof"] == ["make typecheck-planning"]
+
+
 def test_skill_specs_contract_models_startup_and_planning_behavior() -> None:
     manifest = contract_tooling.skill_specs_manifest()
     schema = contract_tooling.contract_schema("skill_spec.schema.json")

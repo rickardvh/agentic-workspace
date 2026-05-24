@@ -19776,6 +19776,38 @@ def _docs_only_reduction_lane(*, changed_path: str, matched_lane: str) -> str | 
     return None
 
 
+def _changed_paths_matching_contract_path_match(*, changed_paths: list[str], path_match: dict[str, Any]) -> list[str]:
+    exact = {str(item) for item in path_match.get("exact", []) if str(item).strip()}
+    prefixes = tuple(str(item) for item in path_match.get("prefixes", []) if str(item).strip())
+    extensions = tuple(str(item) for item in path_match.get("extensions", []) if str(item).strip())
+    matched: list[str] = []
+    for path in changed_paths:
+        in_scope = path in exact or (bool(prefixes) and path.startswith(prefixes))
+        if not in_scope:
+            continue
+        if extensions and not path.endswith(extensions):
+            continue
+        matched.append(path)
+    return matched
+
+
+def _supplemental_proof_lanes_for_changed_paths(*, changed_paths: list[str]) -> list[dict[str, Any]]:
+    supplemental_lanes: list[dict[str, Any]] = []
+    for raw_lane in _PROOF_SELECTION_RULES.get("supplemental_lanes", []):
+        if not isinstance(raw_lane, dict):
+            continue
+        path_match = raw_lane.get("path_match", {})
+        if not isinstance(path_match, dict):
+            continue
+        matched_paths = _changed_paths_matching_contract_path_match(changed_paths=changed_paths, path_match=path_match)
+        if not matched_paths:
+            continue
+        lane = {key: copy.deepcopy(value) for key, value in raw_lane.items() if key != "path_match"}
+        lane["matched_paths"] = matched_paths
+        supplemental_lanes.append(lane)
+    return supplemental_lanes
+
+
 def _makefile_targets(target_root: Path | None) -> set[str] | None:
     if target_root is None:
         return None
@@ -21067,61 +21099,7 @@ def _proof_selection_for_changed_paths(
             }
         )
     selected_lanes.extend(subsystem_lanes)
-    schema_reference_paths = [
-        path
-        for path in changed_paths
-        if path.startswith("src/agentic_workspace/contracts/schemas/") and path.endswith((".json", ".schema.json"))
-    ]
-    planning_schema_reference_paths = [
-        path
-        for path in changed_paths
-        if path.startswith("packages/planning/src/repo_planning_bootstrap/contracts/schemas/") and path.endswith((".json", ".schema.json"))
-    ]
-    planning_source_typecheck_paths = [
-        path for path in changed_paths if path.startswith("packages/planning/src/") and path.endswith((".py", ".pyi"))
-    ]
-    if schema_reference_paths:
-        selected_lanes.append(
-            {
-                "id": "schema_reference_docs",
-                "when": "changed workspace contract schema can affect generated docs/reference/*.md output",
-                "enough_proof": ["make schema-reference-docs"],
-                "proof_kind": "surface-check",
-                "proof_responsibility": "local-closeout",
-                "execution_mode": "parallel-ok",
-                "ci_relationship": "CI may repeat schema reference checks; local proof should catch stale generated reference docs before PR.",
-                "recovery_signal": "Schema metadata changes should prove generated reference docs directly instead of waiting for broad CI wrappers to teach the missing rule.",
-                "matched_paths": schema_reference_paths,
-            }
-        )
-    if planning_schema_reference_paths:
-        selected_lanes.append(
-            {
-                "id": "planning_schema_reference_docs",
-                "when": "changed Planning package schema can affect package schema reference or check-planning freshness",
-                "enough_proof": ["make check-planning"],
-                "proof_kind": "surface-check",
-                "proof_responsibility": "local-closeout",
-                "execution_mode": "parallel-ok",
-                "ci_relationship": "Planning CI may repeat package checks; local proof should include the package wrapper that owns schema-reference freshness.",
-                "recovery_signal": "Planning package schema changes should not rely on unrelated tests alone; use the package wrapper that owns reference-doc freshness.",
-                "matched_paths": planning_schema_reference_paths,
-            }
-        )
-    if planning_source_typecheck_paths:
-        selected_lanes.append(
-            {
-                "id": "planning_source_typecheck_ci_parity",
-                "when": "changed Planning package Python source can fail package CI typecheck even when tests and lint pass",
-                "enough_proof": ["make typecheck-planning"],
-                "proof_kind": "surface-check",
-                "proof_responsibility": "local-closeout",
-                "execution_mode": "parallel-ok",
-                "ci_relationship": "Planning CI includes typecheck through the package check wrapper; local source closeout should prove that obligation directly.",
-                "recovery_signal": "Planning source changes should not rely on tests and lint alone when type errors can fail CI.",
-                "matched_paths": planning_source_typecheck_paths,
-            }
-        )
+    selected_lanes.extend(_supplemental_proof_lanes_for_changed_paths(changed_paths=changed_paths))
     planning_assurance = _active_planning_assurance_for_proof(target_root=target_root)
     configured_profiles = {profile.id: profile for profile in (config.assurance.proof_profiles if config is not None else ())}
     concern_lanes: list[dict[str, Any]] = []

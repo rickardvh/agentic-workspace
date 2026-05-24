@@ -123,6 +123,102 @@
       "additionalProperties": false,
       "description": "Second-stage classifier that can downgrade docs-only path-prefix matches to review proof."
     },
+    "supplemental_lanes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "path_match",
+          "when",
+          "enough_proof",
+          "proof_kind",
+          "proof_responsibility",
+          "execution_mode"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable supplemental lane identifier."
+          },
+          "path_match": {
+            "type": "object",
+            "properties": {
+              "exact": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Exact repo-relative paths that activate this supplemental lane."
+              },
+              "prefixes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Repo-relative prefixes that activate this supplemental lane."
+              },
+              "extensions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Optional suffix filter for matched exact paths or prefixes."
+              }
+            },
+            "anyOf": [
+              {
+                "required": [
+                  "exact"
+                ]
+              },
+              {
+                "required": [
+                  "prefixes"
+                ]
+              }
+            ],
+            "additionalProperties": false,
+            "description": "Changed-path matcher for supplemental proof lanes."
+          },
+          "when": {
+            "type": "string",
+            "description": "Human-readable condition for this supplemental lane."
+          },
+          "enough_proof": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            },
+            "description": "Required proof commands added when this lane matches."
+          },
+          "proof_kind": {
+            "enum": ["diff-review", "surface-check", "targeted-test", "full-test"],
+            "description": "Proof kind for this supplemental lane."
+          },
+          "proof_responsibility": {
+            "type": "string",
+            "description": "Owner of proof execution responsibility."
+          },
+          "execution_mode": {
+            "type": "string",
+            "description": "Execution scheduling hint for this lane."
+          },
+          "ci_relationship": {
+            "type": "string",
+            "description": "Optional CI parity explanation."
+          },
+          "recovery_signal": {
+            "type": "string",
+            "description": "Optional explanation for why this lane exists."
+          }
+        },
+        "additionalProperties": false,
+        "description": "Contract-backed supplemental proof lane selected in addition to primary changed-path lanes."
+      },
+      "description": "Additional proof lanes for cross-cutting generated references, CI parity, or freshness obligations."
+    },
     "fallback_lane": {
       "type": "string",
       "description": "Fallback lane text value used by this contract."
