@@ -11617,6 +11617,7 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "acceptance_reconciliation",
         "objective_drift",
         "reuse_pressure",
+        "change_impact",
         "detail_commands",
         "path_boundaries",
         "drill_down",
@@ -13523,7 +13524,200 @@ def _reuse_pressure_summary(*, state: str, finding_count: int, weak_hint_count: 
     return f"{finding_count} reuse-pressure finding(s) surfaced; inspect before adding another local implementation."
 
 
-def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text: str | None = None) -> dict[str, Any]:
+def _change_impact_owner_guess(*, path: str, ownership_answer: dict[str, Any], authority_marker: dict[str, Any]) -> str:
+    owner = str(ownership_answer.get("owner", "") or "").strip()
+    if owner:
+        return owner
+    primary_subsystem = ownership_answer.get("primary_subsystem")
+    if isinstance(primary_subsystem, dict) and str(primary_subsystem.get("id", "")).strip():
+        return f"subsystem:{primary_subsystem['id']}"
+    normalized = path.replace("\\", "/").strip("/")
+    if normalized.startswith(("src/agentic_workspace/", "generated/workspace/")):
+        return "workspace"
+    for module_name in ("planning", "memory", "command-generation"):
+        if normalized.startswith(f"packages/{module_name}/") or normalized.startswith(f"generated/{module_name}/"):
+            return module_name
+    if normalized.startswith(("docs/", "tests/", "scripts/", "README.md")):
+        return "repo"
+    if authority_marker.get("authority") == "adapter":
+        return "repo"
+    return "unknown"
+
+
+def _change_impact_surface_origin(
+    *, path: str, authority_marker: dict[str, Any], ownership_answer: dict[str, Any], cli_classification: dict[str, Any] | None
+) -> str:
+    role = str(cli_classification.get("role", "")) if cli_classification else ""
+    normalized = path.replace("\\", "/").strip("/")
+    ownership = str(ownership_answer.get("ownership", "") or "")
+    authority = str(authority_marker.get("authority", "") or "")
+    if role == "projection":
+        return "generated"
+    if role in {"generator", "hand-owned-executable"}:
+        return "source-authored"
+    if normalized.startswith("generated/") or normalized.startswith("docs/reference/") or authority in {"generated-adapter", "payload"}:
+        return "generated"
+    if (
+        normalized.startswith(".agentic-workspace/")
+        or authority in {"managed", "canonical"}
+        or ownership
+        in {
+            "module_managed",
+            "managed_fence",
+            "workspace_shared",
+        }
+    ):
+        return "managed"
+    if authority in {"source", "repo-owned", "adapter"}:
+        return "source-authored"
+    return "unknown"
+
+
+def _change_impact_lane_ids_for_path(*, path: str, proof: dict[str, Any]) -> list[str]:
+    selected_lane_ids = [str(lane.get("id", "")) for lane in proof.get("selected_lanes", []) if isinstance(lane, dict)]
+    lane_ids: list[str] = []
+
+    def add(lane_id: str | None) -> None:
+        if lane_id and lane_id in selected_lane_ids and lane_id not in lane_ids:
+            lane_ids.append(lane_id)
+
+    for lane in proof.get("selected_lanes", []):
+        if not isinstance(lane, dict):
+            continue
+        matched_paths = lane.get("matched_paths", [])
+        subsystem = lane.get("subsystem", {})
+        subsystem_paths = subsystem.get("matched_paths", []) if isinstance(subsystem, dict) else []
+        if path in matched_paths or path in subsystem_paths:
+            add(str(lane.get("id", "")))
+    cli_classification = _cli_authority_classification_for_path(path)
+    if cli_classification:
+        add(str(_PROOF_SELECTION_RULES.get("cli_authority", {}).get("lane", "")))
+    for rule in _PROOF_SELECTION_RULES.get("rules", []):
+        exact_matches = set(rule.get("exact", []))
+        prefixes = tuple(rule.get("prefixes", []))
+        if path in exact_matches or path.startswith(prefixes):
+            matched_lane = str(rule.get("lane", ""))
+            add(_docs_only_reduction_lane(changed_path=path, matched_lane=matched_lane) or matched_lane)
+            break
+    if not lane_ids:
+        add(str(_PROOF_SELECTION_RULES.get("fallback_lane", "")))
+    return lane_ids
+
+
+def _change_impact_path_payload(*, path: str, ownership_payload: dict[str, Any], proof: dict[str, Any], cli_invoke: str) -> dict[str, Any]:
+    ownership_answer, ownership_matched = _ownership_answer_for_path(ownership_payload, repo_path=path)
+    authority_marker = _authority_marker_for_path(path)
+    boundary = _boundary_warning_for_path(path)
+    cli_classification = _cli_authority_classification_for_path(path)
+    surface_origin = _change_impact_surface_origin(
+        path=path, authority_marker=authority_marker, ownership_answer=ownership_answer, cli_classification=cli_classification
+    )
+    owner = _change_impact_owner_guess(path=path, ownership_answer=ownership_answer, authority_marker=authority_marker)
+    refresh_command = authority_marker.get("refresh_command")
+    if cli_classification and cli_classification.get("regeneration_path"):
+        refresh_command = cli_classification.get("regeneration_path")
+    canonical_source = authority_marker.get("canonical_source")
+    if cli_classification and cli_classification.get("source_contract"):
+        canonical_source = cli_classification.get("source_contract")
+    facts = [
+        f"owner={owner}",
+        f"surface_origin={surface_origin}",
+        f"authority={authority_marker.get('authority')}",
+    ]
+    warnings: list[str] = []
+    hard_blockers: list[str] = []
+    if boundary.get("warning"):
+        warnings.append(str(boundary["warning"]))
+    if surface_origin == "managed" and path.replace("\\", "/").strip("/").startswith(".agentic-workspace/planning/"):
+        warnings.append("Managed Planning state is command-owned mutation state; prefer Planning/AW commands over direct edits.")
+    if not ownership_matched:
+        warnings.append("No explicit ownership ledger match; using path and authority-marker inference.")
+    if cli_classification and not bool(cli_classification.get("direct_edit_allowed", True)):
+        hard_blockers.append("Generated projection is not a direct-edit surface; edit its source contract or generator and refresh it.")
+    elif not bool(authority_marker.get("safe_to_edit", True)):
+        hard_blockers.append("Authority marker says this path is not safe to edit directly; route through its canonical source.")
+    related_contracts = []
+    if cli_classification:
+        for key in ("source_contract", "generator_contract"):
+            value = str(cli_classification.get(key, "") or "").strip()
+            if value:
+                related_contracts.append(value)
+    related_subsystems = ownership_answer.get("subsystems", []) if isinstance(ownership_answer.get("subsystems"), list) else []
+    likely_proof_lanes = _change_impact_lane_ids_for_path(path=path, proof=proof)
+    signal = "hard_blocker" if hard_blockers else "warning" if warnings else "fact"
+    return {
+        "path": path,
+        "signal": signal,
+        "owner": owner,
+        "ownership": ownership_answer.get("ownership", "unknown"),
+        "ownership_matched": ownership_matched,
+        "matched_by": ownership_answer.get("matched_by", "none" if not ownership_matched else "unknown"),
+        "authority": authority_marker.get("authority"),
+        "surface_origin": surface_origin,
+        "safe_to_edit": bool(authority_marker.get("safe_to_edit", True)) and not hard_blockers,
+        "canonical_source": canonical_source,
+        "refresh_command": _command_with_cli_invoke(command=refresh_command, cli_invoke=cli_invoke) if refresh_command else None,
+        "facts": facts,
+        "warnings": warnings,
+        "hard_blockers": hard_blockers,
+        "related": {
+            "contracts_or_docs": related_contracts,
+            "subsystems": related_subsystems,
+            "proof_lanes": likely_proof_lanes,
+        },
+    }
+
+
+def _change_impact_payload(*, target_root: Path, changed_paths: list[str], proof: dict[str, Any], cli_invoke: str) -> dict[str, Any]:
+    if not changed_paths:
+        return {
+            "kind": "agentic-workspace/change-impact/v1",
+            "status": "unavailable",
+            "reason": "changed paths are required before ownership, generatedness, and proof impact can be projected",
+            "paths": [],
+            "facts": [],
+            "warnings": [],
+            "hard_blockers": [],
+        }
+    ownership_payload = _ownership_payload(target_root=target_root, descriptors=_module_operations())
+    paths = [
+        _change_impact_path_payload(path=path, ownership_payload=ownership_payload, proof=proof, cli_invoke=cli_invoke)
+        for path in changed_paths
+    ]
+    facts = [f"{item['path']}: {fact}" for item in paths for fact in item["facts"]]
+    warnings = [f"{item['path']}: {warning}" for item in paths for warning in item["warnings"]]
+    hard_blockers = [f"{item['path']}: {blocker}" for item in paths for blocker in item["hard_blockers"]]
+    generated_count = sum(1 for item in paths if item.get("surface_origin") == "generated")
+    managed_count = sum(1 for item in paths if item.get("surface_origin") == "managed")
+    unknown_count = sum(1 for item in paths if item.get("owner") == "unknown" or item.get("surface_origin") == "unknown")
+    return {
+        "kind": "agentic-workspace/change-impact/v1",
+        "status": "present",
+        "changed_paths": changed_paths,
+        "path_count": len(paths),
+        "generated_path_count": generated_count,
+        "managed_path_count": managed_count,
+        "unknown_path_count": unknown_count,
+        "warning_count": len(warnings),
+        "hard_blocker_count": len(hard_blockers),
+        "paths": paths,
+        "facts": facts,
+        "warnings": warnings,
+        "hard_blockers": hard_blockers,
+        "proof_impact": {
+            "selected_lanes": [str(lane.get("id", "")) for lane in proof.get("selected_lanes", []) if isinstance(lane, dict)],
+            "required_commands": list(proof.get("required_commands", [])),
+            "detail_command": _command_with_cli_invoke(
+                command="agentic-workspace proof --verbose --changed <paths> --format json", cli_invoke=cli_invoke
+            ),
+        },
+        "rule": "Change impact is advisory unless hard_blockers is non-empty; it composes ownership, authority markers, generated-surface guidance, subsystem hints, and proof selection for the changed paths.",
+    }
+
+
+def _implement_payload(
+    *, target_root: Path, changed_paths: list[str], task_text: str | None = None, include_change_impact: bool = True
+) -> dict[str, Any]:
     implementer_template = _CONTEXT_TEMPLATES["implementer_context"]
     normalized_paths = _normalize_changed_paths(changed_paths)
     config = _load_workspace_config(target_root=target_root)
@@ -13696,6 +13890,10 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
             "planning safety gate requires active planning ownership",
             *payload["handoff_requirements"]["stop_when"],
         ]
+    if include_change_impact:
+        payload["change_impact"] = _change_impact_payload(
+            target_root=target_root, changed_paths=normalized_paths, proof=proof, cli_invoke=config.cli_invoke
+        )
     return payload
 
 
@@ -13837,6 +14035,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "context.acceptance_reconciliation",
                 "context.objective_drift",
                 "context.reuse_pressure",
+                "change_impact",
                 "context.delegation_decision",
                 "context.routing",
             ],
@@ -18861,6 +19060,10 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
     return 0
 
 
+def _selector_requests_change_impact(select: str | None) -> bool:
+    return any(token == "change_impact" or token.startswith("change_impact.") for token in _selector_tokens(select))
+
+
 def _run_implement_context_adapter(args: argparse.Namespace) -> int:
     target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
     _validate_target_root(command_name="implement", target_root=target_root)
@@ -18869,9 +19072,19 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
         raise WorkspaceUsageError("Use either --task or --task-file, not both.")
     if not task_text:
         task_text = _read_task_text_from_file(target_root=target_root, task_file=getattr(args, "task_file", None))
-    payload = _implement_payload(target_root=target_root, changed_paths=list(getattr(args, "changed", []) or []), task_text=task_text)
-    if _diagnostic_profile(args, default="tiny") == "tiny":
-        payload = _tiny_implement_payload(payload)
+    profile = _diagnostic_profile(args, default="tiny")
+    change_impact_selected = _selector_requests_change_impact(getattr(args, "select", None))
+    full_payload = _implement_payload(
+        target_root=target_root,
+        changed_paths=list(getattr(args, "changed", []) or []),
+        task_text=task_text,
+        include_change_impact=(profile != "tiny" or change_impact_selected),
+    )
+    payload = full_payload
+    if profile == "tiny":
+        payload = _tiny_implement_payload(full_payload)
+        if change_impact_selected:
+            payload["change_impact"] = full_payload["change_impact"]
     if getattr(args, "select", None):
         payload = _select_payload_fields(payload, select=getattr(args, "select"), source_command="implement")
     _emit_payload(payload=payload, format_name=args.format)

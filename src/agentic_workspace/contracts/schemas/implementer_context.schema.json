@@ -14,6 +14,7 @@
     "package_boundary",
     "path_boundaries",
     "authority_markers",
+    "change_impact",
     "task_intent",
     "acceptance",
     "proof",
@@ -99,6 +100,11 @@
         "description": "One entry in the authority markers list."
       },
       "description": "Authority markers relevant to the implementation scope."
+    },
+    "change_impact": {
+      "type": "object",
+      "description": "Changed-path ownership, generatedness, authority, related contract, and proof-impact projection.",
+      "additionalProperties": true
     },
     "task_intent": {
       "type": "object",
