@@ -721,6 +721,32 @@ def test_proof_changed_validation_plan_uses_resolved_cli_invoke(tmp_path: Path, 
     assert step["run"] == f'uv run agentic-workspace summary --target "{expected_target}" --format json'
 
 
+def test_proof_tiny_detail_commands_use_resolved_cli_invoke(tmp_path: Path, capsys) -> None:
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        'schema_version = 1\n\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n',
+    )
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "README.md",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["detail_command"].startswith("uv run agentic-workspace proof ")
+    assert payload["next"]["command"] is None or not payload["next"]["command"].startswith("agentic-workspace ")
+
+
 def test_proof_changed_includes_active_assurance_concern_profiles(tmp_path: Path, capsys) -> None:
     from repo_planning_bootstrap import installer as planning_installer
 

@@ -186,6 +186,61 @@ def test_current_python_completion_state_is_satisfied_by_exact_symbol_proof() ->
     assert ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] == "satisfied"
 
 
+def test_command_generation_extraction_readiness_is_inventory_backed() -> None:
+    checker = _load_checker()
+    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+
+    assert checker._validate_command_generation_extraction_readiness(ir) == []
+
+
+def test_command_generation_extraction_readiness_rejects_uninventoried_product_literals() -> None:
+    checker = _load_checker()
+    ir = copy.deepcopy(checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT))
+    ir["generation_policy"]["extraction_readiness"]["accepted_couplings"] = []
+
+    errors = checker._validate_command_generation_extraction_readiness(ir)
+
+    assert any("product-specific literals without extraction-readiness inventory" in error for error in errors)
+
+
+def test_generated_python_version_output_is_contract_backed() -> None:
+    checker = _load_checker()
+    root = checker.REPO_ROOT
+    generated_roots = [
+        root / "generated" / "workspace" / "python",
+        root / "generated" / "planning" / "python",
+        root / "generated" / "memory" / "python",
+    ]
+
+    for generated_root in generated_roots:
+        cli_text = (generated_root / "cli.py").read_text(encoding="utf-8")
+        package_payload = json.loads((generated_root / "command_package.json").read_text(encoding="utf-8"))
+        assert "0.0.0-generated" not in cli_text
+        assert "def generated_package_version()" in cli_text
+        assert "package_version(distribution)" in cli_text
+        assert package_payload["version_metadata"]["source"] == "python-package-metadata"
+
+
+def test_planning_generated_force_includes_are_payload_classified() -> None:
+    checker = _load_checker()
+
+    assert checker._validate_planning_generated_force_include_classification() == []
+
+
+def test_planning_generated_force_include_classification_names_missing_surface(monkeypatch) -> None:
+    checker = _load_checker()
+    expected, source_errors = checker._planning_generated_force_include_sources()
+    assert source_errors == []
+    missing_path = sorted(expected)[0]
+    payload = copy.deepcopy(checker._planning_payload_surface_classification())
+    payload["surfaces"] = [surface for surface in payload["surfaces"] if surface.get("source_path") != missing_path]
+    monkeypatch.setattr(checker, "_planning_payload_surface_classification", lambda: payload)
+
+    errors = checker._validate_planning_generated_force_include_classification()
+
+    assert any(missing_path in error for error in errors)
+
+
 def test_python_completion_blocker_report_accepts_exact_symbol_runtime_boundaries() -> None:
     checker = _load_checker()
     ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
@@ -371,6 +426,7 @@ def test_generated_python_conformance_reports_crash_retry_recovery(monkeypatch) 
     checker = _load_checker()
     registries, errors = checker._adapter_conformance_cases_by_package()
     assert errors == []
+    checker.RECOVERED_CONFORMANCE_RETRIES.clear()
     monkeypatch.setenv("AGENTIC_GENERATED_CONFORMANCE_CONTAINER", "python")
 
     message = checker._format_generated_adapter_retry_recovery(
@@ -385,6 +441,58 @@ def test_generated_python_conformance_reports_crash_retry_recovery(monkeypatch) 
     assert "proof_surface=generated-python-docker-conformance" in message
     assert "conformance_ref=doctor.report.process" in message
     assert "first_exit=-11" in message
+    assert "recovery_record=" in message
+    assert checker.RECOVERED_CONFORMANCE_RETRIES[-1]["conformance_ref"] == "doctor.report.process"
+
+
+def test_generated_python_conformance_strict_retry_recovery_fails(monkeypatch) -> None:
+    checker = _load_checker()
+    registries, errors = checker._adapter_conformance_cases_by_package()
+    assert errors == []
+    case = registries["root-workspace"]["doctor.report.process"]
+    calls = []
+
+    def fake_cases():
+        return {"root-workspace": {"doctor.report.process": case}}, []
+
+    def fake_capture(command, *, cwd, env):
+        calls.append(command)
+        if len(calls) == 1:
+            return subprocess.CompletedProcess(command, -11, stdout="", stderr="")
+        return subprocess.CompletedProcess(command, 0, stdout='{"status": "ok"}\n', stderr="")
+
+    monkeypatch.setattr(checker, "_adapter_conformance_cases_by_package", fake_cases)
+    monkeypatch.setattr(checker, "_capture", fake_capture)
+    monkeypatch.setenv("AGENTIC_GENERATED_STRICT_RETRY_RECOVERY", "1")
+
+    errors = checker._run_python_adapter_conformance()
+
+    assert any("runtime crash recovered after retry" in error for error in errors)
+    assert len(calls) == 2
+
+
+def test_python_docker_conformance_strict_retry_recovery_sets_container_env(monkeypatch) -> None:
+    checker = _load_checker()
+    calls: list[list[str]] = []
+
+    def fake_run_step(command, **kwargs):
+        calls.append(command)
+        return 0
+
+    monkeypatch.setattr(checker.shutil, "which", lambda name: "docker" if name == "docker" else None)
+    monkeypatch.setattr(checker.subprocess, "run", lambda *args, **kwargs: subprocess.CompletedProcess(args[0], 0, "", ""))
+    monkeypatch.setattr(checker, "_run_docker_step", fake_run_step)
+
+    status = checker._run_docker(
+        "generated-python-test",
+        dockerfile="generated/python/Dockerfile.conformance",
+        proof_label="generated Python package Docker conformance proof",
+        require_docker=True,
+        strict_retry_recovery=True,
+    )
+
+    assert status == 0
+    assert ["docker", "run", "--rm", "-e", "AGENTIC_GENERATED_STRICT_RETRY_RECOVERY=1", "generated-python-test"] in calls
 
 
 def test_docker_proof_environment_failure_preserves_context() -> None:

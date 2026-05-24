@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import tomllib
 from pathlib import Path
 from typing import Callable, NamedTuple
 
@@ -219,6 +220,21 @@ GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST_PREFIXES = {
     ".agentic-workspace/planning/execplans/archive/": "historical planning evidence",
     "docs/reviews/": "historical review evidence",
 }
+COMMAND_GENERATION_SOURCE_ROOT = "packages/command-generation/src/command_generation"
+COMMAND_GENERATION_FORBIDDEN_PRODUCT_IMPORT_ROOTS = (
+    "agentic_workspace",
+    "repo_planning_bootstrap",
+    "repo_memory_bootstrap",
+)
+COMMAND_GENERATION_PRODUCT_LITERAL_TOKENS = (
+    "agentic-workspace",
+    "agentic-planning",
+    "agentic-memory",
+    ".agentic-workspace",
+    "workspace.",
+    "planning.",
+    "memory.",
+)
 DOMAIN_RUNTIME_PRIMITIVE_SOURCE_CALLS = {
     "memory.promotion_report.load": {
         "import_module": "repo_memory_bootstrap.installer",
@@ -257,6 +273,7 @@ PYTHON_REQUIRED_RUNTIME_PROJECTION_OUTPUTS = {
         "operation-ir-executor",
     ),
 }
+RECOVERED_CONFORMANCE_RETRIES: list[dict[str, object]] = []
 
 
 def _run(command: list[str]) -> int:
@@ -471,12 +488,34 @@ def _format_generated_adapter_retry_recovery(
 ) -> str:
     _classification, detail = _exit_failure_classification(first_returncode)
     command_name = case.success_args[0] if case.success_args else "<entrypoint>"
+    record = {
+        "kind": "generated-adapter-retry-recovery/v1",
+        "status": "recovered",
+        "classification": "runtime-crash-or-proof-environment-residue",
+        "proof_surface": _generated_adapter_proof_surface(language=language),
+        "package": package_id,
+        "conformance_ref": case.conformance_ref,
+        "command": command_name,
+        "command_args": case.success_args,
+        "fixture": case.fixture_id,
+        "adapter_entrypoint": command[0],
+        "first_exit": first_returncode,
+        "detail": detail,
+        "strict_fail": _strict_retry_recovery_enabled(),
+    }
+    RECOVERED_CONFORMANCE_RETRIES.append(record)
     return (
         f"[warn] generated {language} adapter runtime crash recovered after retry: "
         f"proof_surface={_generated_adapter_proof_surface(language=language)}; package={package_id}; "
         f"conformance_ref={case.conformance_ref}; command={command_name}; command_args={case.success_args!r}; "
-        f"fixture={case.fixture_id}; adapter_entrypoint={command[0]!r}; first_exit={first_returncode}; detail={detail}"
+        f"fixture={case.fixture_id}; adapter_entrypoint={command[0]!r}; first_exit={first_returncode}; detail={detail}; "
+        f"recovery_record={json.dumps(record, sort_keys=True)}"
     )
+
+
+def _strict_retry_recovery_enabled() -> bool:
+    value = os.environ.get("AGENTIC_GENERATED_STRICT_RETRY_RECOVERY", "")
+    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _load_json(relative_path: str) -> dict[str, object]:
@@ -801,6 +840,7 @@ def _adapter_conformance_cases_by_package() -> tuple[dict[str, dict[str, Adapter
 
 
 def _run_python_adapter_conformance() -> list[str]:
+    RECOVERED_CONFORMANCE_RETRIES.clear()
     registries, registry_errors = _adapter_conformance_cases_by_package()
     if registry_errors:
         return registry_errors
@@ -843,15 +883,17 @@ def _run_python_adapter_conformance() -> list[str]:
                     if _is_runtime_crash_exit(process.returncode):
                         retry_process = _capture([*command, *case.success_args], cwd=fixture_root, env=env)
                         if retry_process.returncode == case.expected_exit:
-                            print(
-                                _format_generated_adapter_retry_recovery(
-                                    language="python",
-                                    package_id=package_id,
-                                    case=case,
-                                    command=command,
-                                    first_returncode=process.returncode,
-                                )
+                            recovery_message = _format_generated_adapter_retry_recovery(
+                                language="python",
+                                package_id=package_id,
+                                case=case,
+                                command=command,
+                                first_returncode=process.returncode,
                             )
+                            print(recovery_message)
+                            if _strict_retry_recovery_enabled():
+                                errors.append(recovery_message)
+                                continue
                             process = retry_process
                         else:
                             errors.append(
@@ -2712,6 +2754,148 @@ def _validate_generated_cli_compatibility_vocabulary() -> list[str]:
     return errors
 
 
+def _planning_payload_surface_classification() -> dict[str, object]:
+    path = REPO_ROOT / "packages" / "planning" / "payload-surface-classification.json"
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _planning_wheel_force_include_entries() -> dict[str, str]:
+    pyproject_path = REPO_ROOT / "packages" / "planning" / "pyproject.toml"
+    payload = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
+    current: object = payload
+    for key in ("tool", "hatch", "build", "targets", "wheel", "force-include"):
+        if not isinstance(current, dict):
+            return {}
+        current = current.get(key, {})
+    if not isinstance(current, dict):
+        return {}
+    return {str(source): str(destination) for source, destination in current.items()}
+
+
+def _planning_generated_force_include_sources() -> tuple[set[str], list[str]]:
+    errors: list[str] = []
+    package_root = REPO_ROOT / "packages" / "planning"
+    sources: set[str] = set()
+
+    def should_count(path: Path) -> bool:
+        return "__pycache__" not in path.parts and path.suffix != ".pyc"
+
+    for source in _planning_wheel_force_include_entries():
+        source_path = (package_root / source).resolve()
+        try:
+            relative_source = source_path.relative_to(REPO_ROOT).as_posix()
+        except ValueError:
+            continue
+        if not relative_source.startswith("generated/planning/python/"):
+            continue
+        if source_path.is_dir():
+            sources.update(_repo_relative(path) for path in source_path.rglob("*") if path.is_file() and should_count(path))
+        elif source_path.is_file() and should_count(source_path):
+            sources.add(relative_source)
+        else:
+            errors.append(f"planning wheel generated force-include source does not exist: {relative_source}")
+    return sources, errors
+
+
+def _validate_planning_generated_force_include_classification() -> list[str]:
+    expected, errors = _planning_generated_force_include_sources()
+    payload = _planning_payload_surface_classification()
+    surfaces = payload.get("surfaces", [])
+    if not isinstance(surfaces, list):
+        return errors + ["packages/planning/payload-surface-classification.json surfaces must be a list"]
+    classified = {str(surface.get("source_path", "")) for surface in surfaces if isinstance(surface, dict)}
+    missing = sorted(expected - classified)
+    if missing:
+        errors.append(
+            "packages/planning/payload-surface-classification.json is missing generated wheel force-include surfaces: "
+            + ", ".join(missing[:12])
+            + (" ..." if len(missing) > 12 else "")
+        )
+    return errors
+
+
+def _source_import_roots(text: str) -> set[str]:
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return {"<unparseable>"}
+    roots: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            roots.update(alias.name.split(".", 1)[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            roots.add(node.module.split(".", 1)[0])
+    return roots
+
+
+def _command_generation_source_files() -> list[Path]:
+    source_root = REPO_ROOT / COMMAND_GENERATION_SOURCE_ROOT
+    return sorted(path for path in source_root.rglob("*.py") if path.is_file())
+
+
+def _accepted_extraction_coupling_paths(ir: dict[str, object]) -> tuple[set[str], list[str]]:
+    errors: list[str] = []
+    policy = ir.get("generation_policy", {})
+    if not isinstance(policy, dict):
+        return set(), ["command_package_ir generation_policy must be an object"]
+    readiness = policy.get("extraction_readiness", {})
+    if not isinstance(readiness, dict):
+        return set(), ["command_package_ir generation_policy.extraction_readiness must be an object"]
+    if str(readiness.get("owner", "")).strip() != "#1100":
+        errors.append("command-generation extraction_readiness owner must be #1100")
+    if str(readiness.get("status", "")).strip() not in {"ready", "ready-with-inventoried-product-coupling"}:
+        errors.append("command-generation extraction_readiness status must not be blocked")
+    couplings = readiness.get("accepted_couplings", [])
+    if not isinstance(couplings, list):
+        return set(), errors + ["command-generation extraction_readiness.accepted_couplings must be a list"]
+    accepted_paths: set[str] = set()
+    for index, coupling in enumerate(couplings):
+        if not isinstance(coupling, dict):
+            errors.append(f"command-generation extraction coupling {index} must be an object")
+            continue
+        location = f"command-generation extraction coupling {coupling.get('id', index)!r}"
+        for field in ("id", "kind", "owner", "reason", "migration_path"):
+            if not str(coupling.get(field, "")).strip():
+                errors.append(f"{location} must declare {field}")
+        paths = coupling.get("paths", [])
+        if not isinstance(paths, list) or not paths:
+            errors.append(f"{location} must declare at least one path")
+            continue
+        for raw_path in paths:
+            relative_path = str(raw_path)
+            if not relative_path.startswith(f"{COMMAND_GENERATION_SOURCE_ROOT}/"):
+                errors.append(f"{location} path is outside command-generation source: {relative_path}")
+                continue
+            if not (REPO_ROOT / relative_path).is_file():
+                errors.append(f"{location} path does not exist: {relative_path}")
+                continue
+            accepted_paths.add(relative_path)
+    return accepted_paths, errors
+
+
+def _validate_command_generation_extraction_readiness(ir: dict[str, object]) -> list[str]:
+    accepted_paths, errors = _accepted_extraction_coupling_paths(ir)
+    product_literal_paths: set[str] = set()
+    for source_path in _command_generation_source_files():
+        relative_path = _repo_relative(source_path)
+        text = source_path.read_text(encoding="utf-8")
+        forbidden_imports = sorted(set(COMMAND_GENERATION_FORBIDDEN_PRODUCT_IMPORT_ROOTS) & _source_import_roots(text))
+        if forbidden_imports:
+            errors.append(f"{relative_path} imports product modules inside reusable command-generation source: {forbidden_imports!r}")
+        if any(token in text for token in COMMAND_GENERATION_PRODUCT_LITERAL_TOKENS):
+            product_literal_paths.add(relative_path)
+    missing_inventory = sorted(product_literal_paths - accepted_paths)
+    if missing_inventory:
+        errors.append(
+            "command-generation source contains product-specific literals without extraction-readiness inventory: "
+            f"{missing_inventory!r}"
+        )
+    stale_inventory = sorted(accepted_paths - product_literal_paths)
+    if stale_inventory:
+        errors.append(f"command-generation extraction-readiness inventory is stale for paths without product literals: {stale_inventory!r}")
+    return errors
+
+
 def _run_adapter_conformance(*, require_node: bool) -> list[str]:
     errors: list[str] = []
     node = shutil.which("node")
@@ -2930,6 +3114,7 @@ def _validate_static_surfaces() -> list[str]:
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         errors.append(f"command-package IR validation failed: {exc}")
     else:
+        errors.extend(_validate_command_generation_extraction_readiness(ir))
         errors.extend(_validate_generated_operation_cli_inputs(ir))
         maturity_policy = ir.get("generation_policy", {}).get("generated_package_maturity", {})
         level_ids = {level.get("id") for level in maturity_policy.get("levels", []) if isinstance(level, dict)}
@@ -3019,6 +3204,18 @@ def _validate_static_surfaces() -> list[str]:
                 )
             if package.get("program") != program:
                 errors.append(f"command_package_ir.json package {package_id!r} program drifted from {program!r}")
+            version_metadata = package.get("version_metadata", {})
+            if not isinstance(version_metadata, dict):
+                errors.append(f"command_package_ir.json package {package_id!r} is missing version_metadata")
+            else:
+                if version_metadata.get("source") != "python-package-metadata":
+                    errors.append(f"command_package_ir.json package {package_id!r} version_metadata source is not python-package-metadata")
+                if version_metadata.get("distribution") != program:
+                    errors.append(
+                        f"command_package_ir.json package {package_id!r} version_metadata distribution drifted from {program!r}"
+                    )
+                if not str(version_metadata.get("fallback_version", "")).strip():
+                    errors.append(f"command_package_ir.json package {package_id!r} version_metadata fallback_version is missing")
             if python_target.get("generated_root") != generated_root:
                 errors.append(
                     f"command_package_ir.json package {package_id!r} Python generated_root drifted from {generated_root!r}; "
@@ -3040,6 +3237,10 @@ def _validate_static_surfaces() -> list[str]:
                     errors.append(f"{generated_root}/cli.py does not route through generated command modules")
                 if "_GENERATED_WEAK_AGENT_ROUTING = 'allowed-mutation-with-review'" not in generated_text:
                     errors.append(f"{generated_root}/cli.py does not advertise mutation review routing")
+                if "0.0.0-generated" in generated_text:
+                    errors.append(f"{generated_root}/cli.py hardcodes generated placeholder version output")
+                if "def generated_package_version()" not in generated_text or "package_version(distribution)" not in generated_text:
+                    errors.append(f"{generated_root}/cli.py does not derive --version from package metadata")
             for resource_name in ("command_package.json", "adapter_commands.json"):
                 resource_path = REPO_ROOT / generated_root / resource_name
                 if not resource_path.is_file():
@@ -3098,6 +3299,7 @@ def _validate_static_surfaces() -> list[str]:
         errors.extend(_validate_python_runtime_handler_boundary())
         errors.extend(_validate_generated_python_target_layout())
         errors.extend(_validate_direct_generated_python_command_projection())
+        errors.extend(_validate_planning_generated_force_include_classification())
         errors.extend(_validate_generated_python_commands_absent_from_handwritten_parsers())
         errors.extend(_validate_generated_cli_compatibility_vocabulary())
         forbidden_generated_entrypoints = [
@@ -3142,14 +3344,45 @@ def _validate_static_surfaces() -> list[str]:
         errors.append("generated/typescript/Dockerfile.conformance is missing")
     for package in ("workspace-cli", "planning-cli", "memory-cli"):
         package_root = REPO_ROOT / "generated" / "typescript" / package
-        for relative in ("package.json", "src/commandPackage.ts", "test/command-package.test.mjs"):
+        for relative in ("package.json", "src/commandPackage.ts", "resources/command_package.json", "test/command-package.test.mjs"):
             if not (package_root / relative).is_file():
                 errors.append(f"generated/typescript/{package}/{relative} is missing")
         package_json_path = package_root / "package.json"
+        command_package_resource_path = package_root / "resources" / "command_package.json"
+        command_package_resource: dict[str, object] | None = None
+        if command_package_resource_path.is_file():
+            try:
+                command_package_resource = json.loads(command_package_resource_path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as exc:
+                errors.append(f"generated/typescript/{package}/resources/command_package.json is invalid JSON: {exc}")
+        command_package_source_path = package_root / "src" / "commandPackage.ts"
+        if command_package_source_path.is_file():
+            source_text = command_package_source_path.read_text(encoding="utf-8")
+            if "resources/command_package.json" not in source_text:
+                errors.append(f"generated/typescript/{package}/src/commandPackage.ts does not load generated resource JSON")
+            if '"commands": [' in source_text or "adapter_id" in source_text:
+                errors.append(f"generated/typescript/{package}/src/commandPackage.ts embeds command-package payload instead of loading resources")
         if package_json_path.is_file():
             payload = json.loads(package_json_path.read_text(encoding="utf-8"))
             metadata = payload.get("agenticWorkspace", {})
             maturity = metadata.get("maturity", {})
+            expected_package = next(
+                (
+                    item
+                    for item in load_workspace_command_package_ir(repo_root=REPO_ROOT).get("packages", [])
+                    if any(
+                        isinstance(target, dict)
+                        and target.get("kind") == "typescript"
+                        and Path(str(target.get("generated_root", ""))).name == package
+                        for target in item.get("targets", [])
+                    )
+                ),
+                None,
+            )
+            if command_package_resource is not None and expected_package is not None and command_package_resource != expected_package:
+                errors.append(f"generated/typescript/{package}/resources/command_package.json drifted from command_package_ir.json")
+            if payload.get("files") != ["src", "resources"]:
+                errors.append(f"generated/typescript/{package}/package.json does not include generated resources")
             is_runnable = maturity.get("id") in {
                 "runnable-read-only-adapter",
                 "weak-agent-safe-adapter",
@@ -3185,7 +3418,14 @@ def _validate_static_surfaces() -> list[str]:
     return errors
 
 
-def _run_docker(tag: str, *, dockerfile: str, proof_label: str, require_docker: bool) -> int:
+def _run_docker(
+    tag: str,
+    *,
+    dockerfile: str,
+    proof_label: str,
+    require_docker: bool,
+    strict_retry_recovery: bool = False,
+) -> int:
     if shutil.which("docker") is None:
         print(
             _format_docker_proof_environment_failure(
@@ -3227,8 +3467,12 @@ def _run_docker(tag: str, *, dockerfile: str, proof_label: str, require_docker: 
     )
     if build:
         return build
+    run_command = ["docker", "run", "--rm"]
+    if strict_retry_recovery:
+        run_command.extend(["-e", "AGENTIC_GENERATED_STRICT_RETRY_RECOVERY=1"])
+    run_command.append(tag)
     return _run_docker_step(
-        ["docker", "run", "--rm", tag],
+        run_command,
         proof_label=proof_label,
         phase="docker-run",
         tag=tag,
@@ -3390,11 +3634,18 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Fail instead of skipping when Docker is unavailable.",
     )
+    parser.add_argument(
+        "--strict-retry-recovery",
+        action="store_true",
+        help="Fail when generated adapter conformance recovers after a native/runtime crash retry.",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
+    if args.strict_retry_recovery:
+        os.environ["AGENTIC_GENERATED_STRICT_RETRY_RECOVERY"] = "1"
     if args.python_completion_blockers:
         ir = load_workspace_command_package_ir(repo_root=REPO_ROOT)
         _print_python_completion_blockers_report(
@@ -3438,6 +3689,7 @@ def main(argv: list[str] | None = None) -> int:
             dockerfile="generated/python/Dockerfile.conformance",
             proof_label="generated Python package Docker conformance proof",
             require_docker=bool(args.require_docker),
+            strict_retry_recovery=bool(args.strict_retry_recovery),
         )
         if docker_status:
             return docker_status

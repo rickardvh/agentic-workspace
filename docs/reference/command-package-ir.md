@@ -23,6 +23,11 @@ Intermediate representation for generating command package metadata and language
 | `generation_policy.custom_codegen_boundary` | string | yes |  | Custom codegen boundary text value used by this contract. |  |  |
 | `generation_policy.shell_adapter_policy` | string | yes |  | Shell adapter policy text value used by this contract. |  |  |
 | `generation_policy.direct_cli_edit_policy` | string | yes |  | Direct cli edit policy text value used by this contract. |  |  |
+| `generation_policy.extraction_readiness` | object | yes |  | Mechanical extraction-readiness boundary for the command-generation package. |  |  |
+| `generation_policy.extraction_readiness.status` | enum `"ready"`, `"ready-with-inventoried-product-coupling"`, `"blocked"` | yes |  | Extraction readiness status for reusable command-generation code. |  |  |
+| `generation_policy.extraction_readiness.owner` | string | yes |  | Issue, lane, or owner responsible for this extraction boundary. |  |  |
+| `generation_policy.extraction_readiness.rule` | string | yes |  | Mechanical rule the extraction-readiness audit enforces. |  |  |
+| `generation_policy.extraction_readiness.accepted_couplings` | array of object | yes |  | Explicit inventory of remaining product coupling in reusable command-generation code. |  |  |
 | `generation_policy.generated_package_maturity` | object | yes |  | Generated package maturity details used by this contract. |  |  |
 | `generation_policy.generated_package_maturity.routing_rule` | string | yes |  | Routing rule text value used by this contract. |  |  |
 | `generation_policy.generated_package_maturity.levels` | array of ref `#/$defs/maturity_level` | yes |  | Ordered levels entries used by this contract. |  |  |

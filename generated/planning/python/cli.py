@@ -11,6 +11,7 @@ import argparse
 import difflib
 import json
 from collections.abc import Callable
+from importlib.metadata import PackageNotFoundError, version as package_version
 from importlib.resources import files
 from pathlib import Path
 from typing import Any
@@ -43,6 +44,19 @@ _GENERATED_RUNNABLE = True
 
 RuntimeHandler = Callable[[str, argparse.Namespace], int]
 _GENERATED_RUNTIME_HANDLERS: dict[str, RuntimeHandler] = {}
+
+
+def generated_package_version() -> str:
+    metadata = GENERATED_COMMAND_PACKAGE.get("version_metadata", {})
+    if not isinstance(metadata, dict):
+        return "0.0.0"
+    distribution = str(metadata.get("distribution", "")).strip()
+    if distribution:
+        try:
+            return package_version(distribution)
+        except PackageNotFoundError:
+            pass
+    return str(metadata.get("fallback_version") or "0.0.0")
 
 
 class GeneratedArgumentParser(argparse.ArgumentParser):
@@ -223,7 +237,7 @@ def build_generated_parser() -> argparse.ArgumentParser:
         "Recovery: use one of the supported generated commands or route back to the canonical Python CLI."
     )
     parser = GeneratedArgumentParser(prog="agentic-planning", description="", epilog=epilog, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('--version', action='version', version='%(prog)s 0.0.0-generated')
+    parser.add_argument('--version', action='version', version=f'%(prog)s {generated_package_version()}')
     subparsers = parser.add_subparsers(dest="command", required=True)
     for command in _GENERATED_ADAPTER_COMMANDS:
         interface = command["interface"]

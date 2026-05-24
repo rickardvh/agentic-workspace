@@ -799,9 +799,17 @@ def test_generated_command_package_docker_flags_compose(monkeypatch) -> None:
     def fake_run(command: list[str]) -> int:
         return 0
 
-    def fake_run_docker(tag: str, *, dockerfile: str, proof_label: str, require_docker: bool) -> int:
+    def fake_run_docker(
+        tag: str,
+        *,
+        dockerfile: str,
+        proof_label: str,
+        require_docker: bool,
+        strict_retry_recovery: bool = False,
+    ) -> int:
         calls.append((tag, dockerfile, proof_label))
         assert require_docker is True
+        assert strict_retry_recovery is False
         return 0
 
     monkeypatch.setattr(module, "_run", fake_run)
@@ -1509,11 +1517,13 @@ def test_generated_typescript_command_package_fixture_is_current() -> None:
     package_root = Path(__file__).resolve().parents[1] / "generated" / "typescript" / "workspace-cli"
     package_json = json.loads((package_root / "package.json").read_text(encoding="utf-8"))
     source_text = (package_root / "src" / "commandPackage.ts").read_text(encoding="utf-8")
+    resource_payload = json.loads((package_root / "resources" / "command_package.json").read_text(encoding="utf-8"))
     cli_text = (package_root / "src" / "cli.mjs").read_text(encoding="utf-8")
     test_text = (package_root / "test" / "command-package.test.mjs").read_text(encoding="utf-8")
 
     assert package_json["name"] == "@agentic-workspace/workspace-cli"
     assert package_json["bin"] == {"agentic-workspace": "./src/cli.mjs"}
+    assert package_json["files"] == ["src", "resources"]
     assert package_json["agenticWorkspace"]["generated"] is True
     assert package_json["agenticWorkspace"]["fixtureOnly"] is False
     assert package_json["agenticWorkspace"]["generationStatus"] == "mutation-capable-adapter"
@@ -1526,21 +1536,24 @@ def test_generated_typescript_command_package_fixture_is_current() -> None:
         == "generated parser/help with process handoff to canonical Python CLI"
     )
     assert package_json["agenticWorkspace"]["declaredEntrypoints"] == ["agentic-workspace"]
-    assert "defaults.report.cli" in source_text
-    assert "config.report.cli" in source_text
-    assert "modules.report.cli" in source_text
-    assert "start.context.cli" in source_text
-    assert "summary.report.cli" in source_text
-    assert "implement.context.cli" in source_text
-    assert "preflight.report.cli" in source_text
-    assert "proof.report.cli" in source_text
-    assert "ownership.report.cli" in source_text
-    assert "skills.report.cli" in source_text
-    assert "report.combined.cli" in source_text
-    assert "reconcile.report.cli" in source_text
-    assert "setup.guidance.cli" in source_text
-    assert "status.report.cli" in source_text
-    assert "doctor.report.cli" in source_text
+    adapter_ids = {command["adapter_id"] for command in resource_payload["commands"]}
+    assert "defaults.report.cli" in adapter_ids
+    assert "config.report.cli" in adapter_ids
+    assert "modules.report.cli" in adapter_ids
+    assert "start.context.cli" in adapter_ids
+    assert "summary.report.cli" in adapter_ids
+    assert "implement.context.cli" in adapter_ids
+    assert "preflight.report.cli" in adapter_ids
+    assert "proof.report.cli" in adapter_ids
+    assert "ownership.report.cli" in adapter_ids
+    assert "skills.report.cli" in adapter_ids
+    assert "report.combined.cli" in adapter_ids
+    assert "reconcile.report.cli" in adapter_ids
+    assert "setup.guidance.cli" in adapter_ids
+    assert "status.report.cli" in adapter_ids
+    assert "doctor.report.cli" in adapter_ids
+    assert "resources/command_package.json" in source_text
+    assert "adapter_id" not in source_text
     assert "DO NOT EDIT DIRECTLY" in source_text
     assert "maxBuffer: 16 * 1024 * 1024" in cli_text
     assert "function splitRuntimeCommand(commandLine)" in cli_text
@@ -1551,7 +1564,7 @@ def test_generated_typescript_command_package_fixture_is_current() -> None:
     assert "Weak-agent routing: allowed-mutation-with-review" in cli_text
     assert "Unsupported generated command" in cli_text
     assert "Adapter runtime handoff failed" in cli_text
-    assert "generated package metadata exposes expected commands" in test_text
+    assert "generated package resource exposes expected commands" in test_text
     assert "generated runnable adapter delegates supported command to runtime process" in test_text
     assert "generated runnable adapter exposes routing status and recovery guidance" in test_text
     assert "generated runnable adapter maps runtime handoff failure with recovery guidance" in test_text
@@ -1578,11 +1591,14 @@ def test_generated_typescript_package_adapters_are_runnable() -> None:
     for package, (package_name, entrypoint, runtime_command, maturity, weak_agent_routing) in packages.items():
         package_root = repo_root / "generated" / "typescript" / package
         package_json = json.loads((package_root / "package.json").read_text(encoding="utf-8"))
+        resource_payload = json.loads((package_root / "resources" / "command_package.json").read_text(encoding="utf-8"))
         cli_text = (package_root / "src" / "cli.mjs").read_text(encoding="utf-8")
         test_text = (package_root / "test" / "command-package.test.mjs").read_text(encoding="utf-8")
 
         assert package_json["name"] == package_name
         assert package_json["bin"] == {entrypoint: "./src/cli.mjs"}
+        assert package_json["files"] == ["src", "resources"]
+        assert resource_payload["program"] == runtime_command
         metadata = package_json["agenticWorkspace"]
         assert metadata["fixtureOnly"] is False
         assert metadata["generationStatus"] == maturity

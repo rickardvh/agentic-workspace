@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import tomllib
 from pathlib import Path
 
@@ -172,7 +173,10 @@ candidates = [
     assert closeout["trust"] == "lower-trust"
     assert closeout["strict_closeout_gate"]["status"] == "blocked"
     assert closeout["intent_satisfaction"]["trust"] == "follow-up-required"
-    assert closeout["required_next_inspection"] == "agentic-workspace report --target ./repo --section closeout_trust --format json"
+    relative_target = os.path.relpath(tmp_path.resolve(), Path.cwd().resolve()).replace("\\", "/")
+    assert closeout["required_next_inspection"] == (
+        f"agentic-workspace report --target {relative_target} --section closeout_trust --format json"
+    )
 
 
 def test_workspace_summary_json_accepts_verbose_detail(tmp_path: Path, capsys) -> None:

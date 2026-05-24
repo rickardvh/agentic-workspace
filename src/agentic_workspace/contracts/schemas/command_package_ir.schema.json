@@ -46,6 +46,7 @@
         "custom_codegen_boundary",
         "shell_adapter_policy",
         "direct_cli_edit_policy",
+        "extraction_readiness",
         "generated_package_maturity",
         "python_cli_completion",
         "non_python_runtime_binding"
@@ -85,6 +86,85 @@
           "type": "string",
           "minLength": 1,
           "description": "Direct cli edit policy text value used by this contract."
+        },
+        "extraction_readiness": {
+          "type": "object",
+          "required": [
+            "status",
+            "owner",
+            "rule",
+            "accepted_couplings"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "ready",
+                "ready-with-inventoried-product-coupling",
+                "blocked"
+              ],
+              "description": "Extraction readiness status for reusable command-generation code."
+            },
+            "owner": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Issue, lane, or owner responsible for this extraction boundary."
+            },
+            "rule": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Mechanical rule the extraction-readiness audit enforces."
+            },
+            "accepted_couplings": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "kind",
+                  "paths",
+                  "owner",
+                  "reason",
+                  "migration_path"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9][a-z0-9-]*$",
+                    "description": "Stable accepted coupling id."
+                  },
+                  "kind": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Coupling class."
+                  },
+                  "paths": {
+                    "$ref": "#/$defs/non_empty_strings",
+                    "description": "Repo-relative source paths where the coupling is allowed."
+                  },
+                  "owner": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Issue, lane, or module that owns retiring or preserving this coupling."
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Why this coupling is currently accepted."
+                  },
+                  "migration_path": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "How this coupling should move if it stops being accepted."
+                  }
+                },
+                "additionalProperties": false,
+                "description": "One explicitly accepted command-generation extraction coupling."
+              },
+              "description": "Explicit inventory of remaining product coupling in reusable command-generation code."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Mechanical extraction-readiness boundary for the command-generation package."
         },
         "generated_package_maturity": {
           "type": "object",
@@ -272,6 +352,7 @@
         "id",
         "program",
         "package_role",
+        "version_metadata",
         "operation_contract_root",
         "targets",
         "commands"
@@ -294,6 +375,32 @@
             "memory-module-cli"
           ],
           "description": "Allowed package role value for routing or validation."
+        },
+        "version_metadata": {
+          "type": "object",
+          "required": [
+            "source",
+            "distribution",
+            "fallback_version"
+          ],
+          "properties": {
+            "source": {
+              "const": "python-package-metadata",
+              "description": "Version source used by generated Python CLI --version output."
+            },
+            "distribution": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Python distribution name queried through importlib.metadata."
+            },
+            "fallback_version": {
+              "type": "string",
+              "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+.*$",
+              "description": "Contract fallback used when package metadata is unavailable in a source checkout."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Contract-backed source for generated Python CLI version output."
         },
         "operation_contract_root": {
           "type": "string",
@@ -402,6 +509,7 @@
             },
             "local_runtime_bindings": {
               "type": "array",
+              "description": "Generated-local runtime facade modules for remaining package-owned source delegates. Exported wrappers perform live source-module lookup at call time; monkeypatches applied to the facade stay local to that facade and are not patch-forwarded into source modules.",
               "items": {
                 "type": "object",
                 "required": [

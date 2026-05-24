@@ -163,6 +163,42 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     assert len(encoded) < 14500
 
 
+def test_implement_detail_commands_use_resolved_cli_invoke(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "Makefile", "test-workspace:\n\tpytest tests\n\nlint-workspace:\n\truff check src tests\n")
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        'schema_version = 1\n\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n',
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "README.md",
+                "--task",
+                "Update README wording",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    detail_commands = payload["drill_down"]["detail_commands"]
+    assert detail_commands["full_context"].startswith("uv run agentic-workspace implement ")
+    assert detail_commands["proof_detail"].startswith("uv run agentic-workspace proof ")
+    assert detail_commands["task_scoped_state"].startswith("uv run agentic-workspace summary ")
+    assert detail_commands["takeover_or_recovery"].startswith("uv run agentic-workspace preflight ")
+    assert payload["proof"]["detail_command"].startswith("uv run agentic-workspace proof ")
+    assert payload["context"]["reuse_pressure"]["status"] == "checked"
+
+
 def test_implement_accumulates_repeated_changed_flags(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)

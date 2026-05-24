@@ -56,11 +56,15 @@
   "bin": {
     "agentic-planning": "./src/cli.mjs"
   },
+  "files": [
+    "src",
+    "resources"
+  ],
   "name": "@agentic-workspace/planning-cli",
   "private": true,
   "scripts": {
     "test": "node --test test/command-package.test.mjs"
   },
   "type": "module",
-  "version": "0.0.0-generated"
+  "version": "0.1.2"
 }
