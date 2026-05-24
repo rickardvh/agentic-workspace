@@ -509,6 +509,7 @@
             },
             "local_runtime_bindings": {
               "type": "array",
+              "description": "Generated-local runtime facade modules for remaining package-owned source delegates. Exported wrappers perform live source-module lookup at call time; monkeypatches applied to the facade stay local to that facade and are not patch-forwarded into source modules.",
               "items": {
                 "type": "object",
                 "required": [

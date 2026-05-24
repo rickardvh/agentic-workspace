@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import types
 from pathlib import Path
 
 COMMAND_GENERATION_SRC = Path(__file__).resolve().parents[1] / "packages" / "command-generation" / "src"
@@ -13,7 +14,7 @@ if str(GENERATOR_SCRIPT_ROOT) not in sys.path:
 
 from workspace_command_generation import load_workspace_command_package_ir  # noqa: E402
 
-from command_generation import canonical_command_artifacts  # noqa: E402
+from command_generation import canonical_command_artifacts, generator  # noqa: E402
 
 
 def test_canonical_command_artifacts_expose_implementation_independent_truth() -> None:
@@ -76,3 +77,55 @@ def test_command_generation_package_does_not_hardcode_host_runtime_modules() -> 
     assert "agentic_workspace" not in text
     assert "repo_planning_bootstrap" not in text
     assert "repo_memory_bootstrap" not in text
+
+
+def test_generated_local_runtime_facade_documents_and_preserves_patch_semantics() -> None:
+    source_module = types.ModuleType("fake_source_runtime_for_facade")
+
+    def first_value() -> str:
+        return "first"
+
+    source_module.runtime_value = first_value
+    sys.modules[source_module.__name__] = source_module
+    try:
+        rendered = generator._python_local_runtime_binding_module(
+            {
+                "program": "demo-cli",
+                "python_runtime_binding": {
+                    "operation_executor": {
+                        "handlers": [
+                            {
+                                "primitive": "demo.value",
+                                "handler": "function_call",
+                                "import_module": source_module.__name__,
+                                "function": "runtime_value",
+                            }
+                        ]
+                    }
+                },
+            },
+            {
+                "source_import_module": source_module.__name__,
+                "module_file": "primitives.demo_runtime",
+            },
+            source_path="demo_ir.json",
+            regenerate_command="generate-demo",
+        )
+        assert "live source-module lookup at call time" in rendered
+        assert "not forwarded back into source modules" in rendered
+        facade_globals: dict[str, object] = {}
+        exec(rendered, facade_globals)
+
+        assert facade_globals["runtime_value"]() == "first"
+
+        def second_value() -> str:
+            return "second"
+
+        source_module.runtime_value = second_value
+        assert facade_globals["runtime_value"]() == "second"
+
+        facade_globals["runtime_value"] = lambda: "facade-only"
+        assert source_module.runtime_value() == "second"
+        assert facade_globals["runtime_value"]() == "facade-only"
+    finally:
+        sys.modules.pop(source_module.__name__, None)

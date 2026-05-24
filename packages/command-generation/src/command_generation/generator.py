@@ -1278,6 +1278,8 @@ def _python_local_runtime_binding_module(
         "from typing import Any\n\n"
         "# DO NOT EDIT DIRECTLY.\n"
         "# This generated-local seam makes remaining source-runtime delegates explicit per function.\n"
+        "# Export semantics: generated wrappers perform live source-module lookup at call time.\n"
+        "# Monkeypatching this facade is local to the facade; it is not forwarded back into source modules.\n"
         "# Replace individual bindings here with generated/codegen-owned primitives as those operations migrate.\n"
         f"# Regenerate with: {regenerate_command}\n\n" + helper_block + "\n\n".join(function_blocks) + "\n\n"
         "__all__ = [\n"

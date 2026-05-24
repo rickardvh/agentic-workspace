@@ -14,6 +14,8 @@ from typing import Any
 
 # DO NOT EDIT DIRECTLY.
 # This generated-local seam makes remaining source-runtime delegates explicit per function.
+# Export semantics: generated wrappers perform live source-module lookup at call time.
+# Monkeypatching this facade is local to the facade; it is not forwarded back into source modules.
 # Replace individual bindings here with generated/codegen-owned primitives as those operations migrate.
 # Regenerate with: uv run python scripts/generate/generate_command_packages.py
 
