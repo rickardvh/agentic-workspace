@@ -247,6 +247,9 @@ def test_implement_selector_surfaces_changed_path_impact_map(tmp_path: Path, cap
     assert managed["owner"] == "planning"
     assert managed["surface_origin"] == "managed"
     assert managed["matched_by"] == "module_root"
+    assert managed["signal"] == "warning"
+    assert managed["safe_to_edit"] is True
+    assert any("command-owned mutation" in warning for warning in managed["warnings"])
 
     unknown = by_path["scratch/unknown.adapter"]
     assert unknown["owner"] == "unknown"
@@ -259,6 +262,37 @@ def test_implement_selector_surfaces_changed_path_impact_map(tmp_path: Path, cap
     assert impact["unknown_path_count"] == 1
     assert impact["hard_blocker_count"] == 1
     assert impact["proof_impact"]["required_commands"]
+
+
+def test_implement_tiny_profile_does_not_compute_change_impact(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "README.md", "hello\n")
+
+    def fail_change_impact(**_: object) -> dict[str, object]:
+        raise AssertionError("ordinary tiny implement output should not build change_impact")
+
+    monkeypatch.setattr(cli, "_change_impact_payload", fail_change_impact)
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "README.md",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "implementer-context-tiny/v1"
+    assert "change_impact" not in payload
+    assert "change_impact" not in payload["context"]
 
 
 def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_path: Path, capsys) -> None:

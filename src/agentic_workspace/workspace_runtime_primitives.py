@@ -13628,6 +13628,8 @@ def _change_impact_path_payload(*, path: str, ownership_payload: dict[str, Any],
     hard_blockers: list[str] = []
     if boundary.get("warning"):
         warnings.append(str(boundary["warning"]))
+    if surface_origin == "managed" and path.replace("\\", "/").strip("/").startswith(".agentic-workspace/planning/"):
+        warnings.append("Managed Planning state is command-owned mutation state; prefer Planning/AW commands over direct edits.")
     if not ownership_matched:
         warnings.append("No explicit ownership ledger match; using path and authority-marker inference.")
     if cli_classification and not bool(cli_classification.get("direct_edit_allowed", True)):
@@ -13713,7 +13715,9 @@ def _change_impact_payload(*, target_root: Path, changed_paths: list[str], proof
     }
 
 
-def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text: str | None = None) -> dict[str, Any]:
+def _implement_payload(
+    *, target_root: Path, changed_paths: list[str], task_text: str | None = None, include_change_impact: bool = True
+) -> dict[str, Any]:
     implementer_template = _CONTEXT_TEMPLATES["implementer_context"]
     normalized_paths = _normalize_changed_paths(changed_paths)
     config = _load_workspace_config(target_root=target_root)
@@ -13750,9 +13754,6 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
         }
     vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
     implement_current_need = "changed-path-implementation" if normalized_paths else "unknown-scope-routing"
-    change_impact = _change_impact_payload(
-        target_root=target_root, changed_paths=normalized_paths, proof=proof, cli_invoke=config.cli_invoke
-    )
     payload = {
         "kind": "implementer-context/v1",
         "target": target_root.as_posix(),
@@ -13827,7 +13828,6 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
         "package_boundary": _package_boundary_payload(target_root=target_root),
         "path_boundaries": path_boundaries,
         "authority_markers": [_authority_marker_for_path(path) for path in normalized_paths or ["AGENTS.md"]],
-        "change_impact": change_impact,
         "task_intent": task_intent,
         "acceptance": acceptance,
         "durable_intent_promotion": promotion_guidance,
@@ -13890,6 +13890,10 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
             "planning safety gate requires active planning ownership",
             *payload["handoff_requirements"]["stop_when"],
         ]
+    if include_change_impact:
+        payload["change_impact"] = _change_impact_payload(
+            target_root=target_root, changed_paths=normalized_paths, proof=proof, cli_invoke=config.cli_invoke
+        )
     return payload
 
 
@@ -19056,6 +19060,10 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
     return 0
 
 
+def _selector_requests_change_impact(select: str | None) -> bool:
+    return any(token == "change_impact" or token.startswith("change_impact.") for token in _selector_tokens(select))
+
+
 def _run_implement_context_adapter(args: argparse.Namespace) -> int:
     target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
     _validate_target_root(command_name="implement", target_root=target_root)
@@ -19064,11 +19072,18 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
         raise WorkspaceUsageError("Use either --task or --task-file, not both.")
     if not task_text:
         task_text = _read_task_text_from_file(target_root=target_root, task_file=getattr(args, "task_file", None))
-    full_payload = _implement_payload(target_root=target_root, changed_paths=list(getattr(args, "changed", []) or []), task_text=task_text)
+    profile = _diagnostic_profile(args, default="tiny")
+    change_impact_selected = _selector_requests_change_impact(getattr(args, "select", None))
+    full_payload = _implement_payload(
+        target_root=target_root,
+        changed_paths=list(getattr(args, "changed", []) or []),
+        task_text=task_text,
+        include_change_impact=(profile != "tiny" or change_impact_selected),
+    )
     payload = full_payload
-    if _diagnostic_profile(args, default="tiny") == "tiny":
+    if profile == "tiny":
         payload = _tiny_implement_payload(full_payload)
-        if "change_impact" in _selector_tokens(getattr(args, "select", None)):
+        if change_impact_selected:
             payload["change_impact"] = full_payload["change_impact"]
     if getattr(args, "select", None):
         payload = _select_payload_fields(payload, select=getattr(args, "select"), source_command="implement")
