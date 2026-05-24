@@ -19930,7 +19930,7 @@ def _proof_intent_for_command_name(name: str) -> str | None:
         return "behavior-test"
     if name == "lint" or name.startswith("lint-") or name == "check":
         return "static-check"
-    if name == "typecheck" or name == "type-check":
+    if name == "typecheck" or name == "type-check" or name.startswith("typecheck-"):
         return "type-check"
     if name == "maintainer-surfaces":
         return "general-check"
@@ -20354,6 +20354,10 @@ def _generic_proof_role_for_make_target(target: str) -> str | None:
         return "test"
     if target.startswith("lint"):
         return "lint"
+    if target.startswith("typecheck"):
+        return "typecheck"
+    if target.startswith("check"):
+        return "check"
     if target in {"check", "typecheck"}:
         return target
     return None
@@ -20419,6 +20423,8 @@ def _project_root_replacement_for_make_command(
         "lint-workspace": "lint",
         "test-planning": "test",
         "lint-planning": "lint",
+        "check-planning": "check",
+        "typecheck-planning": "typecheck",
         "test-memory": "test",
         "lint-memory": "lint",
     }
@@ -20540,6 +20546,8 @@ def _adapt_make_proof_command_for_target(
         "lint-workspace": "lint",
         "test-planning": "test",
         "lint-planning": "lint",
+        "check-planning": "check",
+        "typecheck-planning": "typecheck",
         "test-memory": "test",
         "lint-memory": "lint",
     }
@@ -21069,6 +21077,9 @@ def _proof_selection_for_changed_paths(
         for path in changed_paths
         if path.startswith("packages/planning/src/repo_planning_bootstrap/contracts/schemas/") and path.endswith((".json", ".schema.json"))
     ]
+    planning_source_typecheck_paths = [
+        path for path in changed_paths if path.startswith("packages/planning/src/") and path.endswith((".py", ".pyi"))
+    ]
     if schema_reference_paths:
         selected_lanes.append(
             {
@@ -21095,6 +21106,20 @@ def _proof_selection_for_changed_paths(
                 "ci_relationship": "Planning CI may repeat package checks; local proof should include the package wrapper that owns schema-reference freshness.",
                 "recovery_signal": "Planning package schema changes should not rely on unrelated tests alone; use the package wrapper that owns reference-doc freshness.",
                 "matched_paths": planning_schema_reference_paths,
+            }
+        )
+    if planning_source_typecheck_paths:
+        selected_lanes.append(
+            {
+                "id": "planning_source_typecheck_ci_parity",
+                "when": "changed Planning package Python source can fail package CI typecheck even when tests and lint pass",
+                "enough_proof": ["make typecheck-planning"],
+                "proof_kind": "surface-check",
+                "proof_responsibility": "local-closeout",
+                "execution_mode": "parallel-ok",
+                "ci_relationship": "Planning CI includes typecheck through the package check wrapper; local source closeout should prove that obligation directly.",
+                "recovery_signal": "Planning source changes should not rely on tests and lint alone when type errors can fail CI.",
+                "matched_paths": planning_source_typecheck_paths,
             }
         )
     planning_assurance = _active_planning_assurance_for_proof(target_root=target_root)

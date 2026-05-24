@@ -107,6 +107,44 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(tmp_pat
     assert payload["planning_safety_gate"]["work_shape_facts"]["hard_blockers"] == []
 
 
+def test_implement_planning_source_includes_typecheck_ci_parity(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(
+        tmp_path / "Makefile",
+        "test-planning:\n\tpytest packages/planning/tests\n\n"
+        "lint-planning:\n\truff check packages/planning\n\n"
+        "typecheck-planning:\n\tmypy packages/planning/src\n",
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "packages/planning/src/repo_planning_bootstrap/installer.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["proof"]["required_commands"] == [
+        "make test-planning",
+        "make lint-planning",
+        "make typecheck-planning",
+    ]
+    assert payload["next"]["commands"] == [
+        "make test-planning",
+        "make lint-planning",
+        "make typecheck-planning",
+    ]
+
+
 def test_implement_groups_generated_reuse_pressure_under_source_owner(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)

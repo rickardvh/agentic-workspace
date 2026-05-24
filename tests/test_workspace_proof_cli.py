@@ -365,7 +365,10 @@ def test_proof_changed_uses_subrepo_makefile_for_package_paths(tmp_path: Path, c
     _init_git_repo(tmp_path)
     _write(tmp_path / "pyproject.toml", '[tool.uv.workspace]\nmembers = ["packages/other", "packages/planning"]\n')
     _write(tmp_path / "packages" / "other" / "Makefile", "test:\n\tfalse\n\nlint:\n\tfalse\n")
-    _write(tmp_path / "packages" / "planning" / "Makefile", "test:\n\tpytest\n\nlint:\n\truff check .\n")
+    _write(
+        tmp_path / "packages" / "planning" / "Makefile",
+        "test:\n\tpytest\n\nlint:\n\truff check .\n\ntypecheck:\n\tmypy src\n",
+    )
     _write(tmp_path / "packages" / "planning" / "src" / "repo_planning_bootstrap" / "installer.py", "VALUE = 1\n")
 
     assert (
@@ -385,13 +388,18 @@ def test_proof_changed_uses_subrepo_makefile_for_package_paths(tmp_path: Path, c
     )
 
     answer = json.loads(capsys.readouterr().out)["answer"]
-    assert answer["required_commands"] == ["cd packages/planning && make test", "cd packages/planning && make lint"]
+    assert answer["required_commands"] == [
+        "cd packages/planning && make test",
+        "cd packages/planning && make lint",
+        "cd packages/planning && make typecheck",
+    ]
     assert answer["target_proof_capabilities"]["make"] == {"available": False, "targets": []}
     project_roots = {project_root["path"]: project_root for project_root in answer["target_proof_capabilities"]["project_roots"]}
     assert project_roots["packages/other"]["changed_path_matched"] is False
     assert project_roots["packages/planning"]["changed_path_matched"] is True
-    assert project_roots["packages/planning"]["make"]["targets"] == ["lint", "test"]
+    assert project_roots["packages/planning"]["make"]["targets"] == ["lint", "test", "typecheck"]
     assert "cd packages/planning && make test" in answer["target_proof_capabilities"]["candidate_commands"]
+    assert "cd packages/planning && make typecheck" in answer["target_proof_capabilities"]["candidate_commands"]
     assert (
         answer["selected_commands"][0].items()
         >= {
@@ -418,6 +426,7 @@ def test_proof_changed_uses_subrepo_makefile_for_package_paths(tmp_path: Path, c
     assert first_step["command"] == "cd packages/planning && make test"
     assert first_step["cwd"] == "packages/planning"
     assert first_step["run"] == "make test"
+    assert answer["validation_plan"]["required"][2]["command"] == "cd packages/planning && make typecheck"
     assert answer.get("manual_verification") is None
 
 
@@ -1288,6 +1297,34 @@ def test_proof_changed_selector_includes_planning_schema_reference_wrapper(capsy
     assert "make check-planning" in answer["required_commands"]
 
 
+def test_proof_changed_selector_includes_planning_source_typecheck_ci_parity(capsys) -> None:
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--changed",
+                "packages/planning/src/repo_planning_bootstrap/installer.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    lane_ids = [lane["id"] for lane in answer["selected_lanes"]]
+    assert "planning_package" in lane_ids
+    assert "planning_source_typecheck_ci_parity" in lane_ids
+    assert "make typecheck-planning" in answer["required_commands"]
+    typecheck_lane = next(lane for lane in answer["selected_lanes"] if lane["id"] == "planning_source_typecheck_ci_parity")
+    assert typecheck_lane["matched_paths"] == ["packages/planning/src/repo_planning_bootstrap/installer.py"]
+    typecheck_step = next(step for step in answer["validation_plan"]["required"] if step["command"] == "make typecheck-planning")
+    assert typecheck_step["lane_id"] == "planning_source_typecheck_ci_parity"
+    typecheck_command = next(command for command in answer["selected_commands"] if command["command"] == "make typecheck-planning")
+    assert typecheck_command["intent_type"] == "static-check"
+
+
 def test_proof_changed_selector_flags_high_impact_skill_behavior_evidence(capsys) -> None:
     assert (
         cli.main(
@@ -1420,8 +1457,10 @@ def test_proof_changed_selector_escalates_for_cross_lane_changes(capsys) -> None
         "cli_authority",
         "generated_command_packages",
         "subsystem:workspace-cli-runtime",
+        "planning_source_typecheck_ci_parity",
     ]
     assert answer["escalate_when"][0] == "changed paths span multiple validation lanes; run all selected commands or split the work"
+    assert "make typecheck-planning" in answer["required_commands"]
     package_step = answer["validation_plan"]["required"][0]
     assert package_step["command"] == "make test-planning"
     assert package_step["cwd"] == "."
