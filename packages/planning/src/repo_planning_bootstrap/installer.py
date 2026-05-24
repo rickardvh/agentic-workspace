@@ -3553,7 +3553,7 @@ def _compact_candidate_items(items: Any, *, max_items: int = 3) -> list[dict[str
     for item in items[:max_items]:
         if not isinstance(item, dict):
             continue
-        compact_item = {
+        compact_item: dict[str, Any] = {
             key: item[key]
             for key in ("id", "title", "summary", "status", "priority", "refs", "promotion_signal", "suggested_first_slice")
             if key in item and item[key] not in ("", [], {}, None)
@@ -10335,7 +10335,7 @@ def _prepare_execplan_closeout(
         )
     )
 
-    patch = {
+    patch: dict[str, Any] = {
         "intent_satisfaction": {
             "original intent": original_intent,
             "was original intent fully satisfied?": normalized_intent_satisfied,
