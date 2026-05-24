@@ -99,6 +99,11 @@
       "source": "cli-option"
     },
     {
+      "name": "expect_planning_revision",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
       "name": "format",
       "required": false,
       "source": "cli-option"

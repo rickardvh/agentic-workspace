@@ -102,6 +102,8 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `skills` | object | no |  | Compact startup projection over skill routing, required skill, recommendations, and catalog drill-down. |  |  |
 | `context` | object | no |  | Supporting startup context for the primary next-safe-action decision, including compatibility projections for detail fields. |  |  |
 | `planning_safety_gate` | object | no |  | Planning ownership guard for broad, high-assurance, decomposed, or scope-widened work. |  |  |
+| `planning_revision` | object | no |  | Optimistic Planning state revision observed by this read surface. |  |  |
+| `active_plan_reliance` | object | no |  | Permission signal separating command-written integrity, planning freshness, and active-plan reliance. |  |  |
 | `continuation_state` | object | no |  | Compact continuation-state contract for preserving only unfinished or handoff-relevant work, not historical residue. |  |  |
 | `authority_hierarchy` | object | no |  | Authority and promotion-path guidance for deciding which repo surfaces are current instruction, durable memory, future work, or historical audit. |  |  |
 | `compliance_economics` | object | no |  | Boundary statement for what Agentic Workspace can enforce directly and where it instead makes noncompliance visible or costly. |  |  |

@@ -203,6 +203,14 @@
               "name": "overwrite"
             },
             {
+              "default": "",
+              "flags": [
+                "--expect-planning-revision"
+              ],
+              "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation.",
+              "name": "expect_planning_revision"
+            },
+            {
               "action": "store_true",
               "flags": [
                 "--dry-run"
@@ -249,6 +257,14 @@
               ],
               "help": "Optional generated plan slug override.",
               "name": "plan_slug"
+            },
+            {
+              "default": "",
+              "flags": [
+                "--expect-planning-revision"
+              ],
+              "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation.",
+              "name": "expect_planning_revision"
             },
             {
               "action": "store_true",
@@ -505,6 +521,14 @@
               "name": "continuation_summary"
             },
             {
+              "default": "",
+              "flags": [
+                "--expect-planning-revision"
+              ],
+              "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation.",
+              "name": "expect_planning_revision"
+            },
+            {
               "choices": [
                 "text",
                 "json"
@@ -632,6 +656,14 @@
               "name": "outcome_summary"
             },
             {
+              "default": "",
+              "flags": [
+                "--expect-planning-revision"
+              ],
+              "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation.",
+              "name": "expect_planning_revision"
+            },
+            {
               "action": "store_true",
               "flags": [
                 "--dry-run"
@@ -693,6 +725,14 @@
               ],
               "help": "Optional upstream issue reference tied to the closeout.",
               "name": "issue"
+            },
+            {
+              "default": "",
+              "flags": [
+                "--expect-planning-revision"
+              ],
+              "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation.",
+              "name": "expect_planning_revision"
             },
             {
               "action": "store_true",
@@ -869,6 +909,14 @@
               ],
               "help": "Any follow-up adjustment needed in the decomposition.",
               "name": "decomposition_adjustment"
+            },
+            {
+              "default": "",
+              "flags": [
+                "--expect-planning-revision"
+              ],
+              "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation.",
+              "name": "expect_planning_revision"
             },
             {
               "action": "store_true",

@@ -137,6 +137,8 @@ def test_preflight_command_active_only_returns_compact_planning_state(capsys) ->
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "preflight-response/v1"
     assert payload["mode"] == "active-state-only"
+    assert payload["planning_revision"]["revision_id"]
+    assert payload["active_plan_reliance"]["status"] in {"no-active-plan", "active-plan-present", "not-needed-for-current-task"}
     assert "planning_record" in payload
     assert "timestamp_hint" in payload
 
@@ -148,6 +150,8 @@ def test_preflight_command_full_returns_bundled_takeover_context(capsys) -> None
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "preflight-response/v1"
     assert payload["mode"] == "full-takeover-context"
+    assert payload["planning_revision"]["revision_id"]
+    assert payload["active_plan_reliance"]["permission_claim"]
     assert "startup_guidance" in payload
     assert "resolved_config" in payload
     assert "active_planning_state" in payload
@@ -1641,6 +1645,7 @@ queued_items = []
                 str(target),
                 "--task",
                 "Investigate how workflow obligations are currently enforced",
+                "--verbose",
                 "--format",
                 "json",
             ]
@@ -1653,6 +1658,7 @@ queued_items = []
     assert gate["decision"] == "planning-backed"
     assert gate["delegation_decision_required"] is False
     assert gate["active_delegation_requirement"]["status"] == "delegation-decision-not-needed-for-direct-task"
+    assert payload["active_plan_reliance"]["permission_claim"] == "direct-work-not-active-plan-continuation"
 
 
 def test_implement_requires_delegation_decision_for_active_decomposed_lane(tmp_path: Path, capsys) -> None:
@@ -1693,6 +1699,7 @@ queued_items = []
                 str(target),
                 "--task",
                 "Continue the decomposed mechanical lane implementation",
+                "--verbose",
                 "--format",
                 "json",
             ]
@@ -1705,6 +1712,8 @@ queued_items = []
     assert gate["status"] == "blocked"
     assert gate["decision"] == "delegation-decision-required"
     assert "planning delegation-decision" in gate["delegation_decision_command"]
+    assert "--expect-planning-revision" in gate["delegation_decision_command"]
+    assert gate["planning_revision"]["revision_id"] in gate["delegation_decision_command"]
     assert _start_workflow_sufficiency(payload)["decision"] == "delegation-decision-required"
 
     _write(
@@ -1731,14 +1740,63 @@ queued_items = []
                 str(target),
                 "--task",
                 "Continue the decomposed mechanical lane implementation",
+                "--verbose",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    recorded = _start_planning_safety_gate(json.loads(capsys.readouterr().out))
+    recorded_payload = json.loads(capsys.readouterr().out)
+    recorded = _start_planning_safety_gate(recorded_payload)
     assert recorded["status"] == "satisfied"
+    assert recorded_payload["active_plan_reliance"]["status"] == "command-written-state-observed"
+    assert recorded_payload["active_plan_reliance"]["permission_claim"] == "review-before-continuing-active-plan"
+    assert recorded_payload["planning_revision"]["revision_id"]
+
+
+def test_implement_does_not_promote_unmatched_decomposition_candidate(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(target / "src/changed.py", "VALUE = 1\n")
+    _write(
+        target / ".agentic-workspace/planning/decompositions/unrelated.decomposition.json",
+        json.dumps(
+            {
+                "kind": "planning-decomposition/v1",
+                "candidate_lanes": [
+                    {
+                        "id": "unrelated-lane",
+                        "title": "Unrelated lane",
+                        "readiness": "ready",
+                        "outcome": "Implement a different future lane.",
+                    }
+                ],
+            }
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(target),
+                "--changed",
+                "src/changed.py",
+                "--task",
+                "Implement planning revision guards for active-plan mutations",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    gate = _start_planning_safety_gate(json.loads(capsys.readouterr().out))
+    assert "planning new-plan" in gate["promotion_command"]
+    assert "promote-to-plan --item-id unrelated-lane" not in gate["promotion_command"]
 
 
 def test_implement_rejects_hand_edited_active_plan_delegation_decision(tmp_path: Path, capsys) -> None:
@@ -1932,6 +1990,7 @@ def test_planning_delegation_decision_front_door_keeps_plan_option() -> None:
         route="keep-local",
         skipped_reason="small coupled slice",
         target=".",
+        expect_planning_revision="abc123",
         dry_run=False,
         format="json",
     )
@@ -1940,6 +1999,7 @@ def test_planning_delegation_decision_front_door_keeps_plan_option() -> None:
 
     assert argv[0] == "delegation-decision"
     assert argv[argv.index("--plan") + 1] == "plan-alpha"
+    assert argv[argv.index("--expect-planning-revision") + 1] == "abc123"
 
 
 def test_planning_closeout_front_door_forwards_plan_positionally() -> None:

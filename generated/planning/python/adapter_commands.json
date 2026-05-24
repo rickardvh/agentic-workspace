@@ -178,6 +178,14 @@
           "name": "continuation_summary"
         },
         {
+          "default": "",
+          "flags": [
+            "--expect-planning-revision"
+          ],
+          "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation.",
+          "name": "expect_planning_revision"
+        },
+        {
           "choices": [
             "text",
             "json"
@@ -310,6 +318,14 @@
           "name": "outcome_summary"
         },
         {
+          "default": "",
+          "flags": [
+            "--expect-planning-revision"
+          ],
+          "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation.",
+          "name": "expect_planning_revision"
+        },
+        {
           "action": "store_true",
           "flags": [
             "--dry-run"
@@ -376,6 +392,14 @@
           ],
           "help": "Optional issue reference associated with the closure.",
           "name": "issue"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--expect-planning-revision"
+          ],
+          "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation.",
+          "name": "expect_planning_revision"
         },
         {
           "action": "store_true",
@@ -560,6 +584,14 @@
           ],
           "help": "Planning decomposition adjustment to record.",
           "name": "decomposition_adjustment"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--expect-planning-revision"
+          ],
+          "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation.",
+          "name": "expect_planning_revision"
         },
         {
           "action": "store_true",
@@ -879,6 +911,14 @@
           "name": "overwrite"
         },
         {
+          "default": "",
+          "flags": [
+            "--expect-planning-revision"
+          ],
+          "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation.",
+          "name": "expect_planning_revision"
+        },
+        {
           "action": "store_true",
           "flags": [
             "--dry-run"
@@ -1035,6 +1075,14 @@
           ],
           "help": "Optional plan slug for the created execplan.",
           "name": "plan_slug"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--expect-planning-revision"
+          ],
+          "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation.",
+          "name": "expect_planning_revision"
         },
         {
           "action": "store_true",
