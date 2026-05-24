@@ -774,6 +774,7 @@ def _report_router_external_work_reconciliation(value: Any) -> dict[str, Any]:
         "external_work_state": value.get("external_work_state", {}),
         "closeout_state": value.get("closeout_state", {}),
         "landed_open_state": value.get("landed_open_state", {}),
+        "routine_reconciliation": value.get("routine_reconciliation", {}),
         "recommended_next_action": value.get("recommended_next_action", ""),
         "section_command": "agentic-workspace report --target ./repo --section external_work_reconciliation --format json",
     }
@@ -1665,6 +1666,38 @@ def repo_friction_payload(
                 "action": "avoid-externalizing-honestly-absorbable-friction",
             },
         ],
+        "memory_capture_options": {
+            "kind": "agentic-workspace/dogfooding-memory-capture-options/v1",
+            "status": "available",
+            "rule": "Use Memory for repeated AW friction that should shape future agent behavior but does not yet need a standalone issue.",
+            "quiet_when": "no concrete repeated friction, proof, routing, restart, handoff, or validation signal was observed",
+            "options": [
+                {
+                    "id": "capture-memory",
+                    "allowed": True,
+                    "command": (
+                        f"{cli_invoke} memory capture-note --slug <slug> --summary "
+                        '"AW dogfooding finding: <evidence-backed lesson>" --files <relevant paths> --format json'
+                    ),
+                    "why": "repeated dogfooding evidence should be available to future tasks without relying on chat recall",
+                },
+                {
+                    "id": "create-issue",
+                    "allowed": True,
+                    "why": "use when the finding needs product work, prioritization, or review",
+                },
+                {
+                    "id": "fix-directly",
+                    "allowed": True,
+                    "why": "use when the current bounded task already owns the AW surface and proof remains narrow",
+                },
+                {
+                    "id": "report-only",
+                    "allowed": True,
+                    "why": "use when evidence is useful but not yet repeated enough for Memory or issue routing",
+                },
+            ],
+        },
         "guardrail_test": {
             "adapt_when": [
                 "workspace fit and contract clarity are the real friction source",

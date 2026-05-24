@@ -8825,6 +8825,25 @@ def _external_work_reconciliation_payload(
         if command:
             action["command"] = _command_with_cli_invoke(command=command, cli_invoke=cli_invoke)
             action["run"] = action["command"]
+    payload.setdefault(
+        "routine_reconciliation",
+        {
+            "kind": "planning/github-planning-routine-reconciliation/v1",
+            "status": "available",
+            "after_events": [
+                "issue created or updated",
+                "issue closed or reopened",
+                "pull request opened, merged, or updated",
+                "planning state changed after external work changed",
+            ],
+            "command": _command_with_cli_invoke(
+                command="agentic-workspace external-intent refresh-github --target . --state all --format json",
+                cli_invoke=cli_invoke,
+            ),
+            "then": _command_with_cli_invoke(command="agentic-workspace summary --format json", cli_invoke=cli_invoke),
+            "rule": "Refreshing GitHub evidence is routine after tracker mutations; checked-in planning remains the primary owner.",
+        },
+    )
     payload.setdefault("detail_sections", ["current_external_work", "closeout_reconciliation", "landed_open_issue_reconciliation"])
     return payload
 
@@ -11777,6 +11796,13 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         },
         "memory": payload.get("memory_consult", {}),
     }
+    uv_guidance = payload.get("uv_cache_guidance", {})
+    if not (isinstance(uv_guidance, dict) and uv_guidance.get("status") == "available"):
+        cli_invocation = payload.get("cli_invocation", {})
+        primary = str(cli_invocation.get("primary", "")) if isinstance(cli_invocation, dict) else ""
+        uv_guidance = _uv_cache_guidance_payload(cli_invoke=primary)
+    if isinstance(uv_guidance, dict) and uv_guidance.get("status") == "available":
+        context["uv_cache_guidance"] = uv_guidance
     if "task_intent" in payload:
         task_intent = payload["task_intent"]
         context["task"] = {
@@ -11860,6 +11886,19 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     if isinstance(maintainer_mode, dict) and maintainer_mode.get("status") == "enabled":
         context["maintainer_mode"] = maintainer_mode
     return selected
+
+
+def _uv_cache_guidance_payload(*, cli_invoke: str) -> dict[str, Any]:
+    if "uv run" not in cli_invoke:
+        return {"status": "not-needed"}
+    return {
+        "kind": "agentic-workspace/uv-cache-guidance/v1",
+        "status": "available",
+        "trigger": "configured CLI invocation uses uv run",
+        "recommended_env": "UV_CACHE_DIR=.uv-cache",
+        "rule": "For source-checkout dogfooding, prefer a repo-local uv cache when user-local cache permissions make routine AW commands require escalation.",
+        "example": f"UV_CACHE_DIR=.uv-cache {cli_invoke} start --target . --format json",
+    }
 
 
 def _start_tiny_payload_fast(
@@ -12857,6 +12896,16 @@ def _reuse_pressure_payload(
     raw_findings: list[dict[str, Any]] = []
     for changed_path in normalized_paths:
         raw_findings.extend(_reuse_pressure_findings_for_path(target_root=target_root, changed_path=changed_path))
+    generated_aggregation = _generated_reuse_pressure_aggregation(changed_paths=normalized_paths)
+    if generated_aggregation.get("status") == "present":
+        generated_paths = set(generated_aggregation.get("changed_generated_paths", []))
+        raw_findings = [
+            finding
+            for finding in raw_findings
+            if str(finding.get("changed_path", "")) not in generated_paths
+            or finding.get("kind") not in {"contract_or_inventory_candidate", "", None}
+        ]
+        raw_findings.extend(generated_aggregation.get("findings", []))
     findings = [finding for finding in raw_findings if finding.get("prominence") != "weak"]
     weak_hints = [finding for finding in raw_findings if finding.get("prominence") == "weak"]
     state = _reuse_pressure_state(findings)
@@ -12874,9 +12923,72 @@ def _reuse_pressure_payload(
         "recording_options": recording_options,
         "next_decision_options": recording_options["options"],
     }
+    if generated_aggregation.get("status") == "present":
+        payload["generated_artifact_aggregation"] = generated_aggregation
     if compact:
         return _compact_reuse_pressure_payload(payload)
     return payload
+
+
+def _generated_reuse_pressure_owner(changed_path: str) -> dict[str, Any] | None:
+    if not changed_path.startswith("generated/"):
+        return None
+    parts = changed_path.split("/")
+    owner_id = "generated"
+    source_owner = "src/agentic_workspace/contracts/command_package_ir.json"
+    if len(parts) >= 3 and parts[1] in {"workspace", "planning", "memory"}:
+        owner_id = f"{parts[1]}-{parts[2]}-command-package"
+    elif len(parts) >= 3 and parts[1] == "typescript":
+        owner_id = f"typescript-{parts[2]}-command-package" if len(parts) >= 4 else "typescript-command-packages"
+    return {
+        "owner_id": owner_id,
+        "source_owner": source_owner,
+        "rule": "Generated artifacts inherit reuse review from their source contract/generator owner.",
+    }
+
+
+def _generated_reuse_pressure_aggregation(*, changed_paths: list[str]) -> dict[str, Any]:
+    grouped: dict[str, dict[str, Any]] = {}
+    for changed_path in changed_paths:
+        owner = _generated_reuse_pressure_owner(changed_path)
+        if owner is None:
+            continue
+        group = grouped.setdefault(
+            str(owner["owner_id"]),
+            {
+                "owner_id": owner["owner_id"],
+                "source_owner": owner["source_owner"],
+                "changed_generated_count": 0,
+                "sample_changed_generated_paths": [],
+            },
+        )
+        group["changed_generated_count"] += 1
+        if len(group["sample_changed_generated_paths"]) < 5:
+            group["sample_changed_generated_paths"].append(changed_path)
+    if not grouped:
+        return {"status": "absent"}
+    owner_groups = list(grouped.values())
+    findings = [
+        {
+            "state": "existing_helper_candidate",
+            "changed_path": str(group["source_owner"]),
+            "kind": "generated_artifact_source_owner",
+            "owner_id": str(group["owner_id"]),
+            "generated_artifact_count": int(group["changed_generated_count"]),
+            "sample_generated_paths": list(group["sample_changed_generated_paths"]),
+            "candidate_paths": [str(group["source_owner"])],
+            "why": "Generated fan-out is grouped under the source contract/generator owner instead of warning once per generated artifact.",
+        }
+        for group in owner_groups
+    ]
+    return {
+        "status": "present",
+        "rule": "Generated output reuse pressure is reviewed at the source owner; generated file fan-out is audit detail.",
+        "owner_group_count": len(owner_groups),
+        "owner_groups": owner_groups,
+        "changed_generated_paths": [path for path in changed_paths if path.startswith("generated/")],
+        "findings": findings,
+    }
 
 
 def _reuse_pressure_findings_for_path(*, target_root: Path, changed_path: str) -> list[dict[str, Any]]:
@@ -13259,7 +13371,7 @@ def _compact_reuse_pressure_payload(payload: dict[str, Any]) -> dict[str, Any]:
     recording_options = payload.get("recording_options", {})
     accept_duplication = recording_options.get("accept_duplication", {}) if isinstance(recording_options, dict) else {}
     route_extraction = recording_options.get("route_extraction", {}) if isinstance(recording_options, dict) else {}
-    return {
+    compact = {
         "kind": payload.get("kind"),
         "status": payload.get("status"),
         "state": payload.get("state"),
@@ -13292,6 +13404,23 @@ def _compact_reuse_pressure_payload(payload: dict[str, Any]) -> dict[str, Any]:
         },
         "next_decision_options": compact_options,
     }
+    if "generated_artifact_aggregation" in payload:
+        aggregation = payload["generated_artifact_aggregation"]
+        if isinstance(aggregation, dict):
+            compact_generated_findings = [
+                {
+                    key: finding[key]
+                    for key in ("state", "changed_path", "kind", "owner_id", "generated_artifact_count", "candidate_paths")
+                    if isinstance(finding, dict) and key in finding
+                }
+                for finding in aggregation.get("findings", [])
+                if isinstance(finding, dict)
+            ]
+            compact["generated_artifact_aggregation"] = {
+                key: aggregation[key] for key in ("status", "owner_group_count") if key in aggregation
+            }
+            compact["generated_artifact_aggregation"]["findings"] = compact_generated_findings
+    return compact
 
 
 def _reuse_pressure_memory_signals(*, target_root: Path, changed_paths: list[str], cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
@@ -13599,6 +13728,14 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         if payload.get("changed_paths")
         else payload.get("reuse_pressure", {})
     )
+    if isinstance(reuse_pressure, dict):
+        reuse_pressure = dict(reuse_pressure)
+    context_reuse_pressure = {
+        "status": reuse_pressure.get("status") if isinstance(reuse_pressure, dict) else None,
+        "state": reuse_pressure.get("state") if isinstance(reuse_pressure, dict) else None,
+        "summary": reuse_pressure.get("summary") if isinstance(reuse_pressure, dict) else None,
+        "detail_selector": "reuse_pressure",
+    }
     detail_commands = {
         "full_context": _command_with_cli_invoke(
             command="agentic-workspace implement --verbose --changed <paths> --format json", cli_invoke=config.cli_invoke
@@ -13628,14 +13765,12 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             if isinstance(payload.get("proof"), dict)
             else "proof-selection/v1",
             "required_commands": payload.get("required_validation_commands", []),
+            "tiny_surface_compatibility_review": payload.get("proof", {}).get("tiny_surface_compatibility_review", {})
+            if isinstance(payload.get("proof"), dict)
+            else {},
             "acceptance_guidance": payload.get("proof", {}).get("acceptance_guidance", {})
             if isinstance(payload.get("proof"), dict)
             else {},
-            **(
-                {"intent_proof": payload.get("proof", {}).get("intent_proof")}
-                if isinstance(payload.get("proof"), dict) and payload.get("proof", {}).get("intent_proof")
-                else {}
-            ),
             "detail_command": _command_with_cli_invoke(
                 command="agentic-workspace proof --verbose --changed <paths> --format json", cli_invoke=config.cli_invoke
             ),
@@ -13676,12 +13811,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "acceptance": _tiny_acceptance_payload(payload.get("acceptance", {})),
             "acceptance_reconciliation": _tiny_acceptance_reconciliation(payload.get("acceptance_reconciliation", {})),
             "objective_drift": _tiny_objective_drift(payload.get("objective_drift", {})),
-            "reuse_pressure": {
-                "status": reuse_pressure.get("status") if isinstance(reuse_pressure, dict) else None,
-                "state": reuse_pressure.get("state") if isinstance(reuse_pressure, dict) else None,
-                "summary": reuse_pressure.get("summary") if isinstance(reuse_pressure, dict) else None,
-                "detail_selector": "reuse_pressure",
-            },
+            "reuse_pressure": context_reuse_pressure,
             "durable_intent_promotion": _tiny_task_intent_promotion_guidance(payload.get("durable_intent_promotion", {})),
             "routing": {
                 "work_shape": capability.get("work_shape"),
@@ -13709,6 +13839,15 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             ],
         },
     }
+    compatibility_review = projected["proof"].get("tiny_surface_compatibility_review", {})
+    if not (isinstance(compatibility_review, dict) and compatibility_review.get("status") == "required"):
+        projected["proof"].pop("tiny_surface_compatibility_review", None)
+    task_argument_mode = payload.get("task_intent", {}).get("task_argument_mode") if isinstance(payload.get("task_intent"), dict) else ""
+    intent_proof = payload.get("proof", {}).get("intent_proof") if isinstance(payload.get("proof"), dict) else None
+    acceptance_reconciliation = payload.get("acceptance_reconciliation", {})
+    requested_outcomes = acceptance_reconciliation.get("requested_outcomes", []) if isinstance(acceptance_reconciliation, dict) else []
+    if (task_argument_mode == "task-file" or requested_outcomes) and intent_proof:
+        projected["proof"]["intent_proof"] = intent_proof
     if isinstance(planning_safety_gate, dict):
         compact_gate = _selector_first_planning_safety_gate(planning_safety_gate)
         compact_gate.pop("planning_revision", None)
@@ -19637,6 +19776,38 @@ def _docs_only_reduction_lane(*, changed_path: str, matched_lane: str) -> str | 
     return None
 
 
+def _changed_paths_matching_contract_path_match(*, changed_paths: list[str], path_match: dict[str, Any]) -> list[str]:
+    exact = {str(item) for item in path_match.get("exact", []) if str(item).strip()}
+    prefixes = tuple(str(item) for item in path_match.get("prefixes", []) if str(item).strip())
+    extensions = tuple(str(item) for item in path_match.get("extensions", []) if str(item).strip())
+    matched: list[str] = []
+    for path in changed_paths:
+        in_scope = path in exact or (bool(prefixes) and path.startswith(prefixes))
+        if not in_scope:
+            continue
+        if extensions and not path.endswith(extensions):
+            continue
+        matched.append(path)
+    return matched
+
+
+def _supplemental_proof_lanes_for_changed_paths(*, changed_paths: list[str]) -> list[dict[str, Any]]:
+    supplemental_lanes: list[dict[str, Any]] = []
+    for raw_lane in _PROOF_SELECTION_RULES.get("supplemental_lanes", []):
+        if not isinstance(raw_lane, dict):
+            continue
+        path_match = raw_lane.get("path_match", {})
+        if not isinstance(path_match, dict):
+            continue
+        matched_paths = _changed_paths_matching_contract_path_match(changed_paths=changed_paths, path_match=path_match)
+        if not matched_paths:
+            continue
+        lane = {key: copy.deepcopy(value) for key, value in raw_lane.items() if key != "path_match"}
+        lane["matched_paths"] = matched_paths
+        supplemental_lanes.append(lane)
+    return supplemental_lanes
+
+
 def _makefile_targets(target_root: Path | None) -> set[str] | None:
     if target_root is None:
         return None
@@ -19791,7 +19962,7 @@ def _proof_intent_for_command_name(name: str) -> str | None:
         return "behavior-test"
     if name == "lint" or name.startswith("lint-") or name == "check":
         return "static-check"
-    if name == "typecheck" or name == "type-check":
+    if name == "typecheck" or name == "type-check" or name.startswith("typecheck-"):
         return "type-check"
     if name == "maintainer-surfaces":
         return "general-check"
@@ -20215,6 +20386,10 @@ def _generic_proof_role_for_make_target(target: str) -> str | None:
         return "test"
     if target.startswith("lint"):
         return "lint"
+    if target.startswith("typecheck"):
+        return "typecheck"
+    if target.startswith("check"):
+        return "check"
     if target in {"check", "typecheck"}:
         return target
     return None
@@ -20280,6 +20455,8 @@ def _project_root_replacement_for_make_command(
         "lint-workspace": "lint",
         "test-planning": "test",
         "lint-planning": "lint",
+        "check-planning": "check",
+        "typecheck-planning": "typecheck",
         "test-memory": "test",
         "lint-memory": "lint",
     }
@@ -20401,6 +20578,8 @@ def _adapt_make_proof_command_for_target(
         "lint-workspace": "lint",
         "test-planning": "test",
         "lint-planning": "lint",
+        "check-planning": "check",
+        "typecheck-planning": "typecheck",
         "test-memory": "test",
         "lint-memory": "lint",
     }
@@ -20715,6 +20894,97 @@ def _proof_completion_options(*, required_commands: list[str], manual_verificati
     return options
 
 
+def _proof_command_tier(command: str, *, lane: str = "") -> str:
+    text = command.lower()
+    lane_text = lane.lower()
+    if " --docker" in text or "require-docker" in text or "conformance" in text:
+        return "environmental" if "docker" in text else "generated_contract"
+    if "check_generated_command_packages.py" in text or "generated_command_packages" in lane_text:
+        return "generated_contract"
+    if text.startswith("git diff --"):
+        return "manual_review"
+    if "schema-reference" in text or "check_contract" in text or "check_structured" in text:
+        return "contract_surface"
+    return "must_run"
+
+
+def _proof_command_tiers(*, selected_commands: list[dict[str, Any]], required_commands: list[str]) -> dict[str, Any]:
+    commands_by_text = {str(command.get("command", "")): command for command in selected_commands}
+    tiers: dict[str, list[dict[str, Any]]] = {}
+    for command in required_commands:
+        selected = commands_by_text.get(str(command), {})
+        tier = _proof_command_tier(str(command), lane=str(selected.get("lane", "")))
+        tiers.setdefault(tier, []).append(
+            {
+                "command": str(command),
+                "lane": str(selected.get("lane", "")),
+                "obligation": str(selected.get("intent_type", "")) or "prove changed-path behavior or surface",
+            }
+        )
+    ordered = [
+        {"id": tier_id, "commands": tiers[tier_id]}
+        for tier_id in ("must_run", "contract_surface", "generated_contract", "environmental", "manual_review")
+        if tier_id in tiers
+    ]
+    return {
+        "kind": "agentic-workspace/proof-command-tiers/v1",
+        "status": "present" if ordered else "empty",
+        "rule": "Tiers explain proof obligation and cost; they do not relax required_commands.",
+        "tiers": ordered,
+    }
+
+
+def _transient_validation_retry_guidance(*, required_commands: list[str]) -> dict[str, Any]:
+    sensitive = [
+        command
+        for command in required_commands
+        if any(token in command for token in ("--conformance", "--docker", "node --test", "check_generated_command_packages.py"))
+    ]
+    return {
+        "kind": "agentic-workspace/transient-validation-retry/v1",
+        "status": "available" if sensitive else "not-needed",
+        "retry_limit": 1,
+        "applies_to": sensitive,
+        "likely_transient_signatures": [
+            "process crash without deterministic assertion",
+            "toolchain import traceback during adapter bootstrap",
+            "Docker or Node runtime startup failure that passes on immediate rerun",
+        ],
+        "rule": "Retry at most once for runtime/toolchain-looking failures; deterministic test assertions remain hard failures.",
+        "closeout_note": "If the retry passes, report the first failure and successful bounded retry instead of pretending the first run passed.",
+    }
+
+
+def _tiny_surface_compatibility_review(changed_paths: list[str]) -> dict[str, Any]:
+    risky_paths = [
+        path
+        for path in changed_paths
+        if path
+        in {
+            "src/agentic_workspace/workspace_runtime_primitives.py",
+            "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
+            "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
+        }
+        or path.startswith("tests/test_workspace_start_preflight_cli.py")
+        or path.startswith("tests/test_workspace_implement_cli.py")
+        or path.startswith("tests/test_workspace_summary_cli.py")
+    ]
+    if not risky_paths:
+        return {"status": "not-applicable"}
+    return {
+        "kind": "agentic-workspace/tiny-surface-compatibility-review/v1",
+        "status": "required",
+        "changed_paths": risky_paths,
+        "rule": "New facts usually belong behind selector, verbose, or nested context unless they are essential to the tiny next action.",
+        "risk": "Tiny/default start, implement, preflight, and summary payloads are weak-agent startup contracts with size and shape budgets.",
+        "expected_proof": [
+            "focused tiny/default payload shape tests",
+            "size-budget assertions when existing tests define one",
+            "selector/full-surface assertion for any new diagnostic field",
+        ],
+    }
+
+
 def _proof_selection_for_changed_paths(
     *,
     changed_paths: list[str],
@@ -20829,44 +21099,7 @@ def _proof_selection_for_changed_paths(
             }
         )
     selected_lanes.extend(subsystem_lanes)
-    schema_reference_paths = [
-        path
-        for path in changed_paths
-        if path.startswith("src/agentic_workspace/contracts/schemas/") and path.endswith((".json", ".schema.json"))
-    ]
-    planning_schema_reference_paths = [
-        path
-        for path in changed_paths
-        if path.startswith("packages/planning/src/repo_planning_bootstrap/contracts/schemas/") and path.endswith((".json", ".schema.json"))
-    ]
-    if schema_reference_paths:
-        selected_lanes.append(
-            {
-                "id": "schema_reference_docs",
-                "when": "changed workspace contract schema can affect generated docs/reference/*.md output",
-                "enough_proof": ["make schema-reference-docs"],
-                "proof_kind": "surface-check",
-                "proof_responsibility": "local-closeout",
-                "execution_mode": "parallel-ok",
-                "ci_relationship": "CI may repeat schema reference checks; local proof should catch stale generated reference docs before PR.",
-                "recovery_signal": "Schema metadata changes should prove generated reference docs directly instead of waiting for broad CI wrappers to teach the missing rule.",
-                "matched_paths": schema_reference_paths,
-            }
-        )
-    if planning_schema_reference_paths:
-        selected_lanes.append(
-            {
-                "id": "planning_schema_reference_docs",
-                "when": "changed Planning package schema can affect package schema reference or check-planning freshness",
-                "enough_proof": ["make check-planning"],
-                "proof_kind": "surface-check",
-                "proof_responsibility": "local-closeout",
-                "execution_mode": "parallel-ok",
-                "ci_relationship": "Planning CI may repeat package checks; local proof should include the package wrapper that owns schema-reference freshness.",
-                "recovery_signal": "Planning package schema changes should not rely on unrelated tests alone; use the package wrapper that owns reference-doc freshness.",
-                "matched_paths": planning_schema_reference_paths,
-            }
-        )
+    selected_lanes.extend(_supplemental_proof_lanes_for_changed_paths(changed_paths=changed_paths))
     planning_assurance = _active_planning_assurance_for_proof(target_root=target_root)
     configured_profiles = {profile.id: profile for profile in (config.assurance.proof_profiles if config is not None else ())}
     concern_lanes: list[dict[str, Any]] = []
@@ -21152,6 +21385,9 @@ def _proof_selection_for_changed_paths(
         "proof_route_decision": proof_route_decision,
         "proof_route_explanation": proof_route_explanation,
         "proof_next_decision": proof_next_decision,
+        "proof_command_tiers": _proof_command_tiers(selected_commands=selected_commands, required_commands=required_commands),
+        "transient_validation_retry": _transient_validation_retry_guidance(required_commands=required_commands),
+        "tiny_surface_compatibility_review": _tiny_surface_compatibility_review(changed_paths),
         "selected_lanes": [
             {
                 "id": lane["id"],

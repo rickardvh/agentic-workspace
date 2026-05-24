@@ -60,6 +60,13 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(tmp_pat
         "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
         "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
     ]
+    proof_tiers = {tier["id"]: tier["commands"] for tier in payload["proof"]["proof_command_tiers"]["tiers"]}
+    assert proof_tiers["generated_contract"][0]["command"] == "uv run python scripts/check/check_generated_command_packages.py"
+    assert any(item["command"].endswith("--require-docker") for item in proof_tiers["environmental"])
+    retry = payload["proof"]["transient_validation_retry"]
+    assert retry["status"] == "available"
+    assert retry["retry_limit"] == 1
+    assert "uv run python scripts/check/check_generated_command_packages.py --python-conformance" in retry["applies_to"]
     unavailable_commands = {item["command"] for item in payload["proof"]["unavailable_commands"]}
     assert {
         "make test-planning",
@@ -98,6 +105,79 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(tmp_pat
     assert payload["planning_safety_gate"]["decision"] == "agent-work-shape-decision-required"
     assert payload["planning_safety_gate"]["implementation_allowed"] is True
     assert payload["planning_safety_gate"]["work_shape_facts"]["hard_blockers"] == []
+
+
+def test_implement_planning_source_includes_typecheck_ci_parity(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(
+        tmp_path / "Makefile",
+        "test-planning:\n\tpytest packages/planning/tests\n\n"
+        "lint-planning:\n\truff check packages/planning\n\n"
+        "typecheck-planning:\n\tmypy packages/planning/src\n",
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "packages/planning/src/repo_planning_bootstrap/installer.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["proof"]["required_commands"] == [
+        "make test-planning",
+        "make lint-planning",
+        "make typecheck-planning",
+    ]
+    assert payload["next"]["commands"] == [
+        "make test-planning",
+        "make lint-planning",
+        "make typecheck-planning",
+    ]
+
+
+def test_implement_groups_generated_reuse_pressure_under_source_owner(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "generated" / "workspace" / "python" / "command_package.json", "{}")
+    _write(tmp_path / "generated" / "workspace" / "python" / "adapter_commands.json", "{}")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "generated/workspace/python/command_package.json",
+                "generated/workspace/python/adapter_commands.json",
+                "--select",
+                "reuse_pressure",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)["values"]["reuse_pressure"]
+    aggregation = payload["generated_artifact_aggregation"]
+    assert aggregation["status"] == "present"
+    assert aggregation["owner_group_count"] == 1
+    finding = aggregation["findings"][0]
+    assert finding["kind"] == "generated_artifact_source_owner"
+    assert finding["changed_path"] == "src/agentic_workspace/contracts/command_package_ir.json"
+    assert finding["generated_artifact_count"] == 2
+    assert [item["kind"] for item in payload["findings"]] == ["generated_artifact_source_owner"]
 
 
 def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_path: Path, capsys) -> None:
@@ -230,6 +310,13 @@ def test_implement_accumulates_repeated_changed_flags(tmp_path: Path, capsys) ->
         "src/agentic_workspace/workspace_runtime_primitives.py",
         "tests/test_workspace_implement_cli.py",
     ]
+    compatibility_review = payload["proof"]["tiny_surface_compatibility_review"]
+    assert compatibility_review["status"] == "required"
+    assert compatibility_review["changed_paths"] == [
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "tests/test_workspace_implement_cli.py",
+    ]
+    assert "focused tiny/default payload shape tests" in compatibility_review["expected_proof"]
 
 
 def test_implement_package_cli_edits_select_generated_command_package_gate(capsys) -> None:

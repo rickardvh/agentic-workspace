@@ -97,7 +97,7 @@
         "generated/workspace/python/cli.py:_implement_payload",
         "scripts/check/check_contract_tooling_surfaces.py"
       ],
-      "notes": "Changed-path proof classification rules are manifest-backed so bounded implementer proof selection does not depend on inline Python path tables."
+      "notes": "Changed-path proof classification rules and supplemental proof lanes are manifest-backed so bounded implementer proof selection does not depend on inline Python path-policy tables."
     },
     {
       "area": "authority_marker_policy",
@@ -466,4 +466,3 @@
     }
   ]
 }
-

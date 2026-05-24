@@ -40,6 +40,7 @@
       "source": "generated/workspace/python/cli.py:_proof_selection_for_changed_paths",
       "candidate_content": [
         "path prefix to validation lane mapping",
+        "supplemental CI-parity and generated-reference proof lanes",
         "cross-lane escalation rule",
         "fallback workspace_cli lane"
       ],
@@ -47,7 +48,7 @@
       "future_owner": "JSON contract data",
       "authority_status": "authoritative",
       "extraction_readiness": "extracted",
-      "rationale": "Validation lane payloads are already contract-backed; the path classifier is now simple declarative mapping plus one procedural de-duplication step.",
+      "rationale": "Validation lane payloads, path classifier rules, and supplemental proof lanes are contract-backed; Python owns matching, command adaptation, de-duplication, and live capability checks.",
       "issue_hint": "#315"
     },
     {
@@ -198,5 +199,4 @@
     }
   ]
 }
-
 

@@ -33,6 +33,71 @@
     ],
     "rule": "Markdown-only package documentation edits use review proof unless behavior, generated payload, install contracts, or implementation semantics also changed."
   },
+  "supplemental_lanes": [
+    {
+      "id": "schema_reference_docs",
+      "path_match": {
+        "prefixes": [
+          "src/agentic_workspace/contracts/schemas/"
+        ],
+        "extensions": [
+          ".json",
+          ".schema.json"
+        ]
+      },
+      "when": "changed workspace contract schema can affect generated docs/reference/*.md output",
+      "enough_proof": [
+        "make schema-reference-docs"
+      ],
+      "proof_kind": "surface-check",
+      "proof_responsibility": "local-closeout",
+      "execution_mode": "parallel-ok",
+      "ci_relationship": "CI may repeat schema reference checks; local proof should catch stale generated reference docs before PR.",
+      "recovery_signal": "Schema metadata changes should prove generated reference docs directly instead of waiting for broad CI wrappers to teach the missing rule."
+    },
+    {
+      "id": "planning_schema_reference_docs",
+      "path_match": {
+        "prefixes": [
+          "packages/planning/src/repo_planning_bootstrap/contracts/schemas/"
+        ],
+        "extensions": [
+          ".json",
+          ".schema.json"
+        ]
+      },
+      "when": "changed Planning package schema can affect package schema reference or check-planning freshness",
+      "enough_proof": [
+        "make check-planning"
+      ],
+      "proof_kind": "surface-check",
+      "proof_responsibility": "local-closeout",
+      "execution_mode": "parallel-ok",
+      "ci_relationship": "Planning CI may repeat package checks; local proof should include the package wrapper that owns schema-reference freshness.",
+      "recovery_signal": "Planning package schema changes should not rely on unrelated tests alone; use the package wrapper that owns reference-doc freshness."
+    },
+    {
+      "id": "planning_source_typecheck_ci_parity",
+      "path_match": {
+        "prefixes": [
+          "packages/planning/src/"
+        ],
+        "extensions": [
+          ".py",
+          ".pyi"
+        ]
+      },
+      "when": "changed Planning package Python source can fail package CI typecheck even when tests and lint pass",
+      "enough_proof": [
+        "make typecheck-planning"
+      ],
+      "proof_kind": "surface-check",
+      "proof_responsibility": "local-closeout",
+      "execution_mode": "parallel-ok",
+      "ci_relationship": "Planning CI includes typecheck through the package check wrapper; local source closeout should prove that obligation directly.",
+      "recovery_signal": "Planning source changes should not rely on tests and lint alone when type errors can fail CI."
+    }
+  ],
   "rules": [
     {
       "id": "workspace-codegen-runtime",
@@ -229,5 +294,4 @@
     ]
   }
 }
-
 

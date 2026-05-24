@@ -579,10 +579,71 @@ candidates = []
     assert archived["iterative_follow_through"]["validation still needed"].lower() != "pending"
     assert archived["delegation_outcome_feedback"]["actual friction"] == "none recorded"
     assert archived["delegation_outcome_feedback"]["proof result"] != "pending"
-    assert archived["improvement_signal_review"]["status"] == "no_signal_found"
-    assert archived["improvement_signal_review"]["next owner"] == "none"
+    assert archived["improvement_signal_review"]["status"] == "not_checked"
+    assert archived["improvement_signal_review"]["next owner"] == "agent closeout reflection"
     assert "Intent satisfied: yes" in archived["generated_closeout"]["text"]
     assert "Archive decision: archive-and-close" in archived["generated_closeout"]["text"]
+    assert "Fill in" not in json.dumps(archived)
+
+
+def test_archive_plan_prepare_closeout_skips_oversized_retained_archive_after_distillation(tmp_path: Path, capsys) -> None:
+    _write(
+        tmp_path / "src/agentic_workspace/contracts/structured_file_inventory.json",
+        json.dumps(
+            {
+                "entries": [
+                    {
+                        "pattern": ".agentic-workspace/planning/execplans/archive/*.plan.json",
+                        "schema_or_validator": ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
+                        "owner": "planning",
+                        "guardrails": {"max_bytes": 10},
+                    }
+                ]
+            }
+        )
+        + "\n",
+    )
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "plan-alpha", status = "completed", surface = ".agentic-workspace/planning/execplans/plan-alpha.plan.json" },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="completed")
+
+    assert (
+        planning_cli.main(
+            [
+                "archive-plan",
+                "plan-alpha",
+                "--target",
+                str(tmp_path),
+                "--prepare-closeout",
+                "--apply-cleanup",
+                "--retain-archive",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    archived_record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json"
+
+    assert any(warning["warning_class"] == "archive_retention_skipped_by_size_guardrail" for warning in payload["warnings"])
+    assert any(action["kind"] == "retention skipped" for action in payload["actions"])
+    assert any(action["kind"] == "closeout distillation" for action in payload["actions"])
+    assert not archived_record_path.exists()
+    assert not record_path.exists()
 
 
 def test_archive_plan_prepare_closeout_handles_open_parent_lane(tmp_path: Path, capsys) -> None:

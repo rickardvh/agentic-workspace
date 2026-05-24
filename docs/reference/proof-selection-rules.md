@@ -22,6 +22,7 @@ Rules for selecting validation lanes from changed paths and task scope.
 | `docs_only_reducer.exact` | array of string | no |  | Exact repo-relative paths eligible for docs-only reduction. |  |  |
 | `docs_only_reducer.prefixes` | array of string | no |  | Repo-relative prefixes eligible for docs-only reduction. |  |  |
 | `docs_only_reducer.rule` | string | no |  | Human-readable reduction policy. |  |  |
+| `supplemental_lanes` | array of object | no |  | Additional proof lanes for cross-cutting generated references, CI parity, or freshness obligations. |  |  |
 | `fallback_lane` | string | yes |  | Fallback lane text value used by this contract. |  |  |
 | `cross_lane_escalation` | string | yes |  | Cross lane escalation text value used by this contract. |  |  |
 | `cli_authority` | object | no |  | Cli authority details used by this contract. |  |  |
