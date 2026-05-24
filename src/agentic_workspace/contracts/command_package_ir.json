@@ -993,6 +993,14 @@
                     "help": "Replace an existing scaffold with the same id."
                   },
                   {
+                    "name": "expect_planning_revision",
+                    "flags": [
+                      "--expect-planning-revision"
+                    ],
+                    "default": "",
+                    "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."
+                  },
+                  {
                     "name": "dry_run",
                     "flags": [
                       "--dry-run"
@@ -1039,6 +1047,14 @@
                       "--plan-slug"
                     ],
                     "help": "Optional generated plan slug override."
+                  },
+                  {
+                    "name": "expect_planning_revision",
+                    "flags": [
+                      "--expect-planning-revision"
+                    ],
+                    "default": "",
+                    "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."
                   },
                   {
                     "name": "dry_run",
@@ -1295,6 +1311,14 @@
                     "help": "Closeout distillation continuation bucket summary."
                   },
                   {
+                    "name": "expect_planning_revision",
+                    "flags": [
+                      "--expect-planning-revision"
+                    ],
+                    "default": "",
+                    "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."
+                  },
+                  {
                     "name": "format",
                     "flags": [
                       "--format"
@@ -1415,6 +1439,14 @@
                     "help": "Outcome delivered summary for the finished run."
                   },
                   {
+                    "name": "expect_planning_revision",
+                    "flags": [
+                      "--expect-planning-revision"
+                    ],
+                    "default": "",
+                    "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."
+                  },
+                  {
                     "name": "dry_run",
                     "flags": [
                       "--dry-run"
@@ -1483,6 +1515,14 @@
                       "--issue"
                     ],
                     "help": "Optional upstream issue reference tied to the closeout."
+                  },
+                  {
+                    "name": "expect_planning_revision",
+                    "flags": [
+                      "--expect-planning-revision"
+                    ],
+                    "default": "",
+                    "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."
                   },
                   {
                     "name": "dry_run",
@@ -1659,6 +1699,14 @@
                     ],
                     "default": "",
                     "help": "Any follow-up adjustment needed in the decomposition."
+                  },
+                  {
+                    "name": "expect_planning_revision",
+                    "flags": [
+                      "--expect-planning-revision"
+                    ],
+                    "default": "",
+                    "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."
                   },
                   {
                     "name": "dry_run",
@@ -5350,6 +5398,11 @@
               "default": ""
             },
             {
+              "name": "expect_planning_revision",
+              "arg": "expect_planning_revision",
+              "default": ""
+            },
+            {
               "name": "paths",
               "arg": "paths",
               "default": []
@@ -5714,6 +5767,14 @@
                 "help": "Closeout distillation continuation bucket summary."
               },
               {
+                "name": "expect_planning_revision",
+                "flags": [
+                  "--expect-planning-revision"
+                ],
+                "default": "",
+                "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."
+              },
+              {
                 "name": "format",
                 "flags": [
                   "--format"
@@ -5894,6 +5955,14 @@
                 "help": "Outcome delivered summary for the finished run."
               },
               {
+                "name": "expect_planning_revision",
+                "flags": [
+                  "--expect-planning-revision"
+                ],
+                "default": "",
+                "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."
+              },
+              {
                 "name": "dry_run",
                 "flags": [
                   "--dry-run"
@@ -5993,6 +6062,14 @@
                 ],
                 "default": "",
                 "help": "Optional issue reference associated with the closure."
+              },
+              {
+                "name": "expect_planning_revision",
+                "flags": [
+                  "--expect-planning-revision"
+                ],
+                "default": "",
+                "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."
               },
               {
                 "name": "dry_run",
@@ -6295,6 +6372,14 @@
                 ],
                 "default": "",
                 "help": "Planning decomposition adjustment to record."
+              },
+              {
+                "name": "expect_planning_revision",
+                "flags": [
+                  "--expect-planning-revision"
+                ],
+                "default": "",
+                "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."
               },
               {
                 "name": "dry_run",
@@ -6902,6 +6987,14 @@
                 "help": "Replace an existing scaffold with the same id."
               },
               {
+                "name": "expect_planning_revision",
+                "flags": [
+                  "--expect-planning-revision"
+                ],
+                "default": "",
+                "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."
+              },
+              {
                 "name": "dry_run",
                 "flags": [
                   "--dry-run"
@@ -7148,6 +7241,14 @@
                   "--plan-slug"
                 ],
                 "help": "Optional plan slug for the created execplan."
+              },
+              {
+                "name": "expect_planning_revision",
+                "flags": [
+                  "--expect-planning-revision"
+                ],
+                "default": "",
+                "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."
               },
               {
                 "name": "dry_run",

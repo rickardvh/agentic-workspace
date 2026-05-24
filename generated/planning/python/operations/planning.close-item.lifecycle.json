@@ -39,6 +39,11 @@
       "source": "cli-option"
     },
     {
+      "name": "expect_planning_revision",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
       "name": "dry_run",
       "required": false,
       "source": "cli-option"
@@ -59,6 +64,9 @@
           "kwargs": {
             "dry_run": {
               "value": "dry_run"
+            },
+            "expected_planning_revision": {
+              "value": "expect_planning_revision"
             },
             "issue": {
               "value": "issue"

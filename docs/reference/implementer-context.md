@@ -13,6 +13,8 @@ Cheap implementer context for a bounded changed-path scope.
 | (root) | object | yes |  | Cheap implementer context for a bounded changed-path scope. |  | x-agentic-workspace-doc-role: "contract-reference" |
 | `kind` | const `"implementer-context/v1"` | yes |  | Discriminator for the implementer context payload shape. |  |  |
 | `target` | string | yes |  | Resolved target repository for the implementation context. |  |  |
+| `planning_revision` | object | no |  | Optimistic Planning state revision observed by this implementer read surface. |  |  |
+| `active_plan_reliance` | object | no |  | Permission signal separating command-written integrity, planning freshness, and active-plan reliance. |  |  |
 | `adaptive_routing` | object | yes |  | Machine-readable need classification, read budget, and escalation detail commands for this implementer packet. |  |  |
 | `changed_paths` | array of string | yes |  | Changed paths used to select proof, ownership, and inspect scope. |  |  |
 | `inspect_files` | array of string | yes |  | Files the implementer should inspect before editing. |  |  |

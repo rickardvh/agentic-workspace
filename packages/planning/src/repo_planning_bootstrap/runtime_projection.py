@@ -67,6 +67,7 @@ def apply_planning_new_plan_operation(values: dict, _arguments: dict, _context):
         switch_active=bool(values.get("switch_active")),
         prep_only=bool(values.get("prep_only")),
         overwrite=bool(values.get("overwrite")),
+        expected_planning_revision=str(values.get("expect_planning_revision") or ""),
         dry_run=bool(values.get("dry_run")),
     )
 
@@ -91,6 +92,7 @@ def apply_planning_promote_to_plan_operation(values: dict, _arguments: dict, _co
         str(values.get("item_id") or ""),
         target=values.get("target"),
         plan_slug=values.get("plan_slug"),
+        expected_planning_revision=str(values.get("expect_planning_revision") or ""),
         dry_run=bool(values.get("dry_run")),
     )
 
@@ -101,6 +103,7 @@ def apply_planning_archive_plan_operation(values: dict, _arguments: dict, _conte
             str(values.get("parent_lane_closeout")),
             target=values.get("target"),
             dry_run=bool(values.get("dry_run")),
+            expected_planning_revision=str(values.get("expect_planning_revision") or ""),
             intent_satisfied=values.get("intent_satisfied"),
             intent_evidence=values.get("intent_evidence"),
             closure_reason=values.get("closure_reason"),
@@ -125,6 +128,7 @@ def apply_planning_archive_plan_operation(values: dict, _arguments: dict, _conte
         discard_summary=values.get("discard_summary"),
         continuation_summary=values.get("continuation_summary"),
         retain_archive=bool(values.get("retain_archive")),
+        expected_planning_revision=str(values.get("expect_planning_revision") or ""),
     )
 
 
@@ -144,6 +148,7 @@ def apply_planning_closeout_operation(values: dict, _arguments: dict, _context):
         changed_surfaces=values.get("changed_surfaces"),
         review_summary=values.get("review_summary"),
         outcome_summary=values.get("outcome_summary"),
+        expected_planning_revision=str(values.get("expect_planning_revision") or ""),
     )
 
 
@@ -158,6 +163,7 @@ def apply_planning_delegation_decision_operation(values: dict, _arguments: dict,
         proof_result=str(values.get("proof_result") or ""),
         quality_concern=str(values.get("quality_concern") or ""),
         decomposition_adjustment=str(values.get("decomposition_adjustment") or ""),
+        expected_planning_revision=str(values.get("expect_planning_revision") or ""),
         dry_run=bool(values.get("dry_run")),
     )
 

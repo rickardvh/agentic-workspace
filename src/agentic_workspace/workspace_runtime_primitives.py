@@ -1400,6 +1400,7 @@ def _planning_module_argv(args: argparse.Namespace) -> list[str]:
         ("--changed-surfaces", "changed_surfaces"),
         ("--review-summary", "review_summary"),
         ("--outcome-summary", "outcome_summary"),
+        ("--expect-planning-revision", "expect_planning_revision"),
     ):
         _append_option(argv, option, getattr(args, attr, None))
     if command == "delegation-decision":
@@ -9834,6 +9835,19 @@ def _run_preflight_command(
     )
     closeout_obligations = _closeout_workflow_obligations_payload(workflow_obligations)
     durable_intent = _intent_decision_projection(target_root=target_root, config=config, compact=True)
+    execution_posture = _execution_posture_payload(
+        config=config,
+        changed_paths=_normalize_changed_paths(changed_paths or []),
+        task_text=task_text,
+        target_root=target_root,
+    )
+    planning_safety_gate = _planning_safety_gate_payload(
+        target_root=target_root,
+        config=config,
+        changed_paths=_normalize_changed_paths(changed_paths or []),
+        task_text=task_text,
+        execution_posture=execution_posture,
+    )
     if active_only:
         active_payload = {
             "kind": "preflight-response/v1",
@@ -9841,6 +9855,8 @@ def _run_preflight_command(
             "target": target_root.as_posix(),
             "issued_at": issued_at,
             "preflight_token": preflight_token,
+            "planning_revision": planning_safety_gate.get("planning_revision", {}),
+            "active_plan_reliance": planning_safety_gate.get("active_plan_reliance", {}),
             "timestamp_hint": "Run this periodically to poll current active state without startup overhead.",
             "branch_workflow_posture": branch_workflow_posture,
             "local_memory": local_memory,
@@ -9884,6 +9900,8 @@ def _run_preflight_command(
         "target": target_root.as_posix(),
         "issued_at": issued_at,
         "preflight_token": preflight_token,
+        "planning_revision": planning_safety_gate.get("planning_revision", {}),
+        "active_plan_reliance": planning_safety_gate.get("active_plan_reliance", {}),
         "timestamp_hint": "Use this to bootstrap into an interrupted or takeover recovery.",
         "startup_guidance": {
             "context_router": _context_router_family_payload(cli_invoke=config.cli_invoke, compact=True),
@@ -10492,6 +10510,8 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             else "agentic-workspace modules --target ./repo --format json",
         },
         "active_state_summary": payload["active_state_summary"],
+        "planning_revision": payload.get("planning_revision", {}),
+        "active_plan_reliance": payload.get("active_plan_reliance", {}),
         "workflow_sufficiency": payload.get("workflow_sufficiency"),
         **({"planning_safety_gate": payload["planning_safety_gate"]} if "planning_safety_gate" in payload else {}),
         "package_boundary": payload["package_boundary"],
@@ -11086,6 +11106,7 @@ def _compact_repair_plan_profile(*, changed_paths: list[str], task_text: str | N
 _START_TINY_ONLY_SELECTORS = {
     "adaptive_routing",
     "active_state_summary",
+    "active_plan_reliance",
     "cli_invocation",
     "context_router",
     "closeout_trust_inspection",
@@ -11093,6 +11114,7 @@ _START_TINY_ONLY_SELECTORS = {
     "durable_intent",
     "immediate_next_allowed_action",
     "planning_safety_gate",
+    "planning_revision",
     "skill_routing",
     "task_intent",
     "workflow_sufficiency",
@@ -11277,6 +11299,8 @@ def _start_payload(
         task_text=task_text,
         execution_posture=execution_posture,
     )
+    payload["planning_revision"] = planning_safety_gate.get("planning_revision", {})
+    payload["active_plan_reliance"] = planning_safety_gate.get("active_plan_reliance", {})
     if planning_safety_gate["status"] not in {"satisfied", "clear"}:
         payload["planning_safety_gate"] = planning_safety_gate
     if not planning_safety_gate["workflow_sufficient"] and (not _is_config_posture_task(task_text)):
@@ -11688,6 +11712,8 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
         "promotion_command": gate.get("promotion_command"),
         "delegation_decision_command": gate.get("delegation_decision_command"),
         "new_plan_command": gate.get("new_plan_command"),
+        "planning_revision": gate.get("planning_revision"),
+        "active_plan_reliance": gate.get("active_plan_reliance"),
         "implementation_allowed": gate.get("implementation_allowed"),
         "delegation_decision_required": gate.get("delegation_decision_required"),
     }
@@ -11981,6 +12007,8 @@ def _start_tiny_payload_fast(
         task_text=task_text,
         execution_posture=execution_posture,
     )
+    payload["planning_revision"] = planning_safety_gate.get("planning_revision", {})
+    payload["active_plan_reliance"] = planning_safety_gate.get("active_plan_reliance", {})
     if planning_safety_gate["status"] not in {"satisfied", "clear"}:
         payload["planning_safety_gate"] = planning_safety_gate
     intent_acknowledgement = _intent_acknowledgement_payload(
@@ -13519,6 +13547,8 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
         },
         "execution_posture": execution_posture,
         "planning_safety_gate": planning_safety_gate,
+        "planning_revision": planning_safety_gate.get("planning_revision", {}),
+        "active_plan_reliance": planning_safety_gate.get("active_plan_reliance", {}),
         "delegation_decision": execution_posture["delegation_decision"],
         "durable_intent": _intent_decision_projection(target_root=target_root, config=config, changed_paths=normalized_paths, compact=True),
         "handoff_requirements": copy.deepcopy(implementer_template["handoff_requirements"]),
@@ -13680,7 +13710,10 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         },
     }
     if isinstance(planning_safety_gate, dict):
-        projected["context"]["planning_safety_gate"] = _selector_first_planning_safety_gate(planning_safety_gate)
+        compact_gate = _selector_first_planning_safety_gate(planning_safety_gate)
+        compact_gate.pop("planning_revision", None)
+        compact_gate.pop("active_plan_reliance", None)
+        projected["context"]["planning_safety_gate"] = compact_gate
     if isinstance(intent_acknowledgement, dict) and intent_acknowledgement.get("decision") == "proceed-with-stated-assumption":
         projected["context"]["intent_acknowledgement"] = {
             "decision": intent_acknowledgement.get("decision"),
@@ -13933,7 +13966,83 @@ def _work_shape_facts_payload(
     }
 
 
-def _planning_safety_promotion_command(*, config: WorkspaceConfig, decomposition_delegation: dict[str, Any], task_text: str | None) -> str:
+def _planning_revision_payload(*, target_root: Path) -> dict[str, Any]:
+    try:
+        from repo_planning_bootstrap.installer import planning_revision
+
+        revision = planning_revision(target_root)
+    except Exception as exc:  # pragma: no cover - defensive when the planning package is not importable
+        return {
+            "kind": "planning-revision/v1",
+            "status": "unavailable",
+            "revision_id": "",
+            "error": str(exc),
+            "rule": "Planning revision is unavailable; rerun a Planning read surface before active-plan-sensitive mutation.",
+        }
+    revision.setdefault("status", "observed")
+    return revision
+
+
+def _command_with_expected_planning_revision(command: str, *, planning_revision: dict[str, Any]) -> str:
+    revision_id = str(planning_revision.get("revision_id", "") or "").strip()
+    if not revision_id or "--expect-planning-revision" in command:
+        return command
+    addition = f" --expect-planning-revision {revision_id}"
+    if " --format " in command:
+        return command.replace(" --format ", f"{addition} --format ", 1)
+    return f"{command}{addition}"
+
+
+def _active_plan_reliance_payload(
+    *,
+    active_planning_present: bool,
+    active_delegation_requirement: dict[str, Any],
+    planning_revision: dict[str, Any],
+) -> dict[str, Any]:
+    revision_id = str(planning_revision.get("revision_id", "") or "")
+    requirement_status = str(active_delegation_requirement.get("status", "") or "unknown")
+    if not active_planning_present:
+        status = "no-active-plan"
+        permission_claim = "direct-work-no-active-plan"
+        integrity = "not-applicable"
+        reliance = "not-needed"
+    elif active_delegation_requirement.get("required"):
+        status = "blocked"
+        permission_claim = "blocked-until-active-plan-decision-recorded"
+        integrity = "missing-or-untrusted"
+        reliance = "do-not-continue-active-plan"
+    elif requirement_status == "delegation-decision-recorded":
+        status = "command-written-state-observed"
+        permission_claim = "review-before-continuing-active-plan"
+        integrity = "command-written-state"
+        reliance = "allowed-after-review-of-current-revision"
+    elif requirement_status == "delegation-decision-not-needed-for-direct-task":
+        status = "not-needed-for-current-task"
+        permission_claim = "direct-work-not-active-plan-continuation"
+        integrity = "not-applicable-to-current-task"
+        reliance = "active-plan-gate-not-relied-on"
+    else:
+        status = "active-plan-present"
+        permission_claim = "continue-active-plan-after-normal-review"
+        integrity = "not-required-by-current-facts"
+        reliance = "allowed-after-current-state-review"
+    return {
+        "kind": "agentic-workspace/active-plan-reliance/v1",
+        "status": status,
+        "permission_claim": permission_claim,
+        "integrity": integrity,
+        "freshness": {
+            "revision_id": revision_id,
+            "source": "planning_revision",
+        },
+        "reliance": reliance,
+        "requirement_status": requirement_status,
+    }
+
+
+def _planning_safety_promotion_command(
+    *, config: WorkspaceConfig, decomposition_delegation: dict[str, Any], task_text: str | None, planning_revision: dict[str, Any]
+) -> str:
     candidates = decomposition_delegation.get("candidates", []) if isinstance(decomposition_delegation, dict) else []
     if isinstance(candidates, list) and candidates:
         normalized_task = " ".join((task_text or "").lower().split())
@@ -13946,21 +14055,25 @@ def _planning_safety_promotion_command(*, config: WorkspaceConfig, decomposition
             if lane_id and (lane_id.lower() in normalized_task or title.lower() in normalized_task):
                 selected = candidate
                 break
-        if selected is None:
-            selected = next((candidate for candidate in candidates if isinstance(candidate, dict)), None)
         if isinstance(selected, dict):
             lane_id = str(selected.get("lane_id", "")).strip()
             if lane_id:
                 return str(
-                    _command_with_cli_invoke(
-                        command=f"agentic-workspace planning promote-to-plan --item-id {lane_id} --target . --format json",
-                        cli_invoke=config.cli_invoke,
+                    _command_with_expected_planning_revision(
+                        _command_with_cli_invoke(
+                            command=f"agentic-workspace planning promote-to-plan --item-id {lane_id} --target . --format json",
+                            cli_invoke=config.cli_invoke,
+                        ),
+                        planning_revision=planning_revision,
                     )
                 )
     return str(
-        _command_with_cli_invoke(
-            command="agentic-workspace planning new-plan --id <id> --title <title> --target . --activate --format json",
-            cli_invoke=config.cli_invoke,
+        _command_with_expected_planning_revision(
+            _command_with_cli_invoke(
+                command="agentic-workspace planning new-plan --id <id> --title <title> --target . --activate --format json",
+                cli_invoke=config.cli_invoke,
+            ),
+            planning_revision=planning_revision,
         )
     )
 
@@ -14002,14 +14115,18 @@ def _active_plan_delegation_requirement(
     if decision_recorded and _delegation_decision_has_command_provenance(delegation):
         return {"required": False, "status": "delegation-decision-recorded", "path": active_surface}
     if decision_recorded:
+        planning_revision = _planning_revision_payload(target_root=target_root)
         return {
             "required": True,
             "status": "delegation-decision-untrusted-shared-state",
             "path": active_surface,
             "current_status": status or "missing",
-            "command": _command_with_cli_invoke(
-                command="agentic-workspace planning delegation-decision --route keep-local --skipped-reason <reason> --target . --format json",
-                cli_invoke=config.cli_invoke,
+            "command": _command_with_expected_planning_revision(
+                _command_with_cli_invoke(
+                    command="agentic-workspace planning delegation-decision --route keep-local --skipped-reason <reason> --target . --format json",
+                    cli_invoke=config.cli_invoke,
+                ),
+                planning_revision=planning_revision,
             ),
             "rule": (
                 "A recorded delegation decision must carry command provenance; hand-edited active execplans are shared mutable "
@@ -14024,14 +14141,18 @@ def _active_plan_delegation_requirement(
     )
     if not required:
         return {"required": False, "status": "delegation-decision-not-needed", "path": active_surface}
+    planning_revision = _planning_revision_payload(target_root=target_root)
     return {
         "required": True,
         "status": "delegation-decision-required",
         "path": active_surface,
         "current_status": status or "missing",
-        "command": _command_with_cli_invoke(
-            command="agentic-workspace planning delegation-decision --route keep-local --skipped-reason <reason> --target . --format json",
-            cli_invoke=config.cli_invoke,
+        "command": _command_with_expected_planning_revision(
+            _command_with_cli_invoke(
+                command="agentic-workspace planning delegation-decision --route keep-local --skipped-reason <reason> --target . --format json",
+                cli_invoke=config.cli_invoke,
+            ),
+            planning_revision=planning_revision,
         ),
         "rule": "Decomposed, mechanical, lane, epic, or high-assurance active work must record a delegation route or keep-local reason before implementation proceeds.",
     }
@@ -14178,10 +14299,12 @@ def _planning_safety_gate_payload(
     issue_refs = sorted(set(re.findall("#\\d+", task_text or "")))
     path_classification = _allow_ancillary_memory_feedback_path(path_classification)
     path_classification = _allow_issue_scoped_planning_state_reconciliation(path_classification, issue_refs=issue_refs)
+    planning_revision = _planning_revision_payload(target_root=target_root)
     promotion_command = _planning_safety_promotion_command(
         config=config,
         decomposition_delegation=decomposition_delegation if isinstance(decomposition_delegation, dict) else {},
         task_text=task_text,
+        planning_revision=planning_revision,
     )
     active_delegation_requirement = _active_plan_delegation_requirement(
         target_root=target_root, active_summary=active_summary, config=config, task_text=task_text, execution_posture=execution_posture
@@ -14189,6 +14312,11 @@ def _planning_safety_gate_payload(
     active_parent_decomposition_requirement = _active_plan_parent_decomposition_requirement(
         target_root=target_root,
         active_summary=active_summary,
+    )
+    active_plan_reliance = _active_plan_reliance_payload(
+        active_planning_present=active_planning_present,
+        active_delegation_requirement=active_delegation_requirement,
+        planning_revision=planning_revision,
     )
     if active_planning_present and active_delegation_requirement.get("required"):
         status = "blocked"
@@ -14254,6 +14382,8 @@ def _planning_safety_gate_payload(
         "reason": reason,
         "required_next_action": required_next_action,
         "active_planning_present": active_planning_present,
+        "planning_revision": planning_revision,
+        "active_plan_reliance": active_plan_reliance,
         "active_state_summary": active_summary,
         "work_shape": work_shape or "unknown",
         "proof_burden": proof_burden or "unknown",
@@ -14286,7 +14416,10 @@ def _planning_safety_gate_payload(
         "active_parent_decomposition_requirement": active_parent_decomposition_requirement,
         "implementation_allowed": workflow_sufficient,
         "new_plan_command": _command_with_cli_invoke(
-            command="agentic-workspace planning new-plan --id <id> --title <title> --target . --activate --format json",
+            command=_command_with_expected_planning_revision(
+                "agentic-workspace planning new-plan --id <id> --title <title> --target . --activate --format json",
+                planning_revision=planning_revision,
+            ),
             cli_invoke=config.cli_invoke,
         ),
         "recovery_guidance": [

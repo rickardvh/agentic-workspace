@@ -31,6 +31,7 @@ from repo_planning_bootstrap.installer import (
     planning_handoff,
     planning_reconcile,
     planning_report,
+    planning_revision,
     planning_summary,
     promote_todo_item_to_execplan,
     record_delegation_decision,

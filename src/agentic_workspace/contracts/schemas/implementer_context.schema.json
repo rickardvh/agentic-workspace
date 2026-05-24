@@ -40,6 +40,16 @@
       "type": "string",
       "description": "Resolved target repository for the implementation context."
     },
+    "planning_revision": {
+      "type": "object",
+      "description": "Optimistic Planning state revision observed by this implementer read surface.",
+      "additionalProperties": true
+    },
+    "active_plan_reliance": {
+      "type": "object",
+      "description": "Permission signal separating command-written integrity, planning freshness, and active-plan reliance.",
+      "additionalProperties": true
+    },
     "adaptive_routing": {
       "type": "object",
       "description": "Machine-readable need classification, read budget, and escalation detail commands for this implementer packet."

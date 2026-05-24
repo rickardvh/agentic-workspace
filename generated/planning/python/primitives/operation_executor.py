@@ -121,6 +121,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'proof_result': getattr(args, 'proof_result', ''),
                 'quality_concern': getattr(args, 'quality_concern', ''),
                 'decomposition_adjustment': getattr(args, 'decomposition_adjustment', ''),
+                'expect_planning_revision': getattr(args, 'expect_planning_revision', ''),
                 'paths': getattr(args, 'paths', []),
             },
             context=PrimitiveContext(cwd=Path.cwd(), roots={}),

@@ -55,6 +55,11 @@
       "required": false
     },
     {
+      "name": "expect_planning_revision",
+      "source": "cli-option",
+      "required": false
+    },
+    {
       "name": "dry_run",
       "source": "cli-option",
       "required": false

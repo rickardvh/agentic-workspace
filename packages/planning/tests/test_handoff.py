@@ -47,6 +47,8 @@ candidates = []
         "knowledge_owner": "planning/docs",
         "handoff_ready": True,
     }
+    assert summary["planning_revision"]["revision_id"]
+    assert compact["planning_revision"]["revision_id"]
     assert summary["active_contract"]["role_metadata"] == expected_role_metadata
     assert summary["active_contract"]["next_role_needed"] == "implementation"
     assert summary["planning_record"]["role_metadata"] == expected_role_metadata
@@ -103,6 +105,42 @@ def test_delegation_decision_requires_skip_reason_for_keep_local(tmp_path: Path)
     result = record_delegation_decision(target=tmp_path, plan="active-plan", route="keep-local")
 
     assert any(action.kind == "manual review" and "--skipped-reason" in action.detail for action in result.actions)
+
+
+def test_delegation_decision_rejects_stale_expected_planning_revision(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/active-plan.plan.json"
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "active-plan", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/active-plan.plan.json", why_now = "prove stale revision protection." },
+]
+queued_items = []
+""",
+    )
+    _write_execplan_record(plan_path, item_id="active-plan", status="in-progress")
+    expected_revision = planning_revision(tmp_path)["revision_id"]
+
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["drift_log"].append("External planning edit after the read surface.")
+    plan_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+
+    result = record_delegation_decision(
+        target=tmp_path,
+        route="keep-local",
+        skipped_reason="would otherwise rely on stale planning state",
+        expected_planning_revision=expected_revision,
+    )
+
+    assert any(warning["warning_class"] == "planning_revision_mismatch" for warning in result.warnings)
+    assert any(action.kind == "manual review" and "revision changed" in action.detail for action in result.actions)
+    stale_record = json.loads(plan_path.read_text(encoding="utf-8"))
+    assert stale_record.get("post_decomposition_delegation", {}).get("status") != "recorded"
 
 
 def test_planning_summary_and_handoff_expose_structured_execplan_references(tmp_path: Path) -> None:

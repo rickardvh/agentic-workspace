@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import importlib.util
 import json
 import re
@@ -327,6 +328,74 @@ class InstallResult:
 
     def add(self, kind: str, path: Path, detail: str) -> None:
         self.actions.append(Action(kind=kind, path=path, detail=detail))
+
+
+def _short_file_hash(path: Path) -> str:
+    if not path.exists() or not path.is_file():
+        return "missing"
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()[:16]
+    except OSError:
+        return "unreadable"
+
+
+def planning_revision(target: str | Path | None = None) -> dict[str, Any]:
+    """Return a cheap optimistic revision for live Planning state.
+
+    The revision is evidence that the files a command inspected are still the
+    same files a later mutation expects. It is not a lock or ownership claim.
+    """
+    target_root = resolve_target_root(target)
+    state_path = target_root / PLANNING_STATE_PATH
+    state = _read_state_from_toml(target_root) or {}
+    active_items = _state_active_items(state) if isinstance(state, dict) else []
+    active_item = active_items[0] if active_items else {}
+    active_execplan_path = _active_execplan_record_path_from_state(target_root)
+    active_execplan_relative = _planning_surface_relative(target_root, active_execplan_path) if active_execplan_path is not None else ""
+    active_item_id = str(active_item.get("id", "")).strip() if isinstance(active_item, dict) else ""
+    active_item_surface = _active_execplan_reference(active_item) if isinstance(active_item, dict) else ""
+    components = {
+        "kind": "planning-revision/v1",
+        "state_path": PLANNING_STATE_PATH.as_posix(),
+        "state_hash": _short_file_hash(state_path),
+        "active_execplan": active_execplan_relative,
+        "active_execplan_hash": _short_file_hash(active_execplan_path) if active_execplan_path is not None else "missing",
+        "active_item_id": active_item_id,
+        "active_item_surface": active_item_surface,
+    }
+    revision_material = json.dumps(components, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return {
+        **components,
+        "revision_id": hashlib.sha256(revision_material).hexdigest()[:16],
+    }
+
+
+def _planning_revision_guard(
+    result: InstallResult,
+    *,
+    expected_planning_revision: str | None,
+    target_root: Path,
+) -> bool:
+    expected = str(expected_planning_revision or "").strip()
+    if not expected:
+        return True
+    current = planning_revision(target_root)
+    if expected == str(current.get("revision_id", "")):
+        return True
+    state_path = target_root / PLANNING_STATE_PATH
+    result.warnings.append(
+        {
+            "warning_class": "planning_revision_mismatch",
+            "path": PLANNING_STATE_PATH.as_posix(),
+            "message": f"Expected planning revision {expected}, but current revision is {current.get('revision_id', '')}.",
+            "expected_planning_revision": expected,
+            "current_planning_revision": str(current.get("revision_id", "")),
+            "suggested_fix": "Rerun summary, start, implement, or preflight, then retry the mutation with the refreshed revision.",
+        }
+    )
+    result.add("manual review", state_path, "planning revision changed before mutation; refresh planning context")
+    result.add("next safe action", state_path, "rerun summary/start/implement/preflight and retry with the refreshed revision")
+    return False
 
 
 def _planning_surface_relative(target_root: Path, path: Path) -> str:
@@ -1764,6 +1833,7 @@ def planning_summary(
         "schema": _planning_summary_schema(),
         "target_root": str(target_root),
         "adoption_mode": _detect_adoption_mode(target_root),
+        "planning_revision": planning_revision(target_root),
         "todo": {
             "line_count": todo_line_count,
             "item_count": todo_item_count,
@@ -3205,6 +3275,7 @@ def _planning_summary_compact_schema() -> dict[str, Any]:
             "autopilot_loop",
             "planning_surface_health",
             "projection_state",
+            "planning_revision",
             "planning_record",
             "active_contract",
             "resumable_contract",
@@ -3585,6 +3656,7 @@ def _planning_summary_task_scoped_projection(
             "rule": "Task-scoped summary keeps current planning state, matching signals, and detail commands; unrelated historical audit detail stays omitted.",
         },
         "target_root": compact_summary.get("target_root", ""),
+        "planning_revision": compact_summary.get("planning_revision", {}),
         "task_scope": {
             "status": "present",
             "task_text_available": bool(str(task_text or "").strip()),
@@ -3890,6 +3962,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
         "schema": _planning_summary_compact_schema(),
         "target_root": summary.get("target_root", ""),
         "adoption_mode": summary.get("adoption_mode", ""),
+        "planning_revision": summary.get("planning_revision", {}),
         "todo": {
             "line_count": todo.get("line_count", 0),
             "item_count": todo.get("item_count", 0),
@@ -8746,10 +8819,13 @@ def promote_todo_item_to_execplan(
     *,
     target: str | Path | None = None,
     plan_slug: str | None = None,
+    expected_planning_revision: str = "",
     dry_run: bool = False,
 ) -> InstallResult:
     target_root = resolve_target_root(target)
     result = InstallResult(target_root=target_root, message=f"Promote TODO item '{item_id}' to execplan", dry_run=dry_run)
+    if not _planning_revision_guard(result, expected_planning_revision=expected_planning_revision, target_root=target_root):
+        return result
     todo_path = target_root / ".agentic-workspace/planning/state.toml"
     state = _read_state_from_toml(target_root)
     compact_item = _compact_todo_item_from_state(state, item_id)
@@ -8894,11 +8970,14 @@ def create_execplan_scaffold(
     switch_active: bool = False,
     prep_only: bool = False,
     overwrite: bool = False,
+    expected_planning_revision: str = "",
     dry_run: bool = False,
 ) -> InstallResult:
     target_root = resolve_target_root(target)
     slug = _slugify(plan_id)
     result = InstallResult(target_root=target_root, message=f"Create execplan scaffold '{slug}'", dry_run=dry_run)
+    if not _planning_revision_guard(result, expected_planning_revision=expected_planning_revision, target_root=target_root):
+        return result
     if not slug:
         result.add("manual review", target_root / PLANNING_STATE_PATH, "--id must contain at least one alphanumeric character")
         return result
@@ -9231,10 +9310,13 @@ def record_delegation_decision(
     proof_result: str = "",
     quality_concern: str = "",
     decomposition_adjustment: str = "",
+    expected_planning_revision: str = "",
     dry_run: bool = False,
 ) -> InstallResult:
     target_root = resolve_target_root(target)
     result = InstallResult(target_root=target_root, message="Record planning delegation decision", dry_run=dry_run)
+    if not _planning_revision_guard(result, expected_planning_revision=expected_planning_revision, target_root=target_root):
+        return result
     plan_path = _resolve_execplan_path(target_root, plan) if plan else _active_execplan_record_path_from_state(target_root)
     if plan_path is None or not plan_path.exists():
         result.add("manual review", target_root / PLANNING_STATE_PATH, "no active execplan resolved; pass --plan explicitly")
@@ -9261,6 +9343,7 @@ def record_delegation_decision(
             "route chosen": route_value,
             "route skipped reason": skipped_reason.strip(),
             "decision command": "agentic-planning delegation-decision",
+            "planning revision observed": planning_revision(target_root).get("revision_id", ""),
             "recorded at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         }
     )
@@ -10313,6 +10396,7 @@ def archive_parent_lane_closeout(
     *,
     target: str | Path | None = None,
     dry_run: bool = False,
+    expected_planning_revision: str = "",
     intent_satisfied: str | None = None,
     intent_evidence: str | None = None,
     closure_reason: str | None = None,
@@ -10323,6 +10407,8 @@ def archive_parent_lane_closeout(
 ) -> InstallResult:
     target_root = resolve_target_root(target)
     result = InstallResult(target_root=target_root, message=f"Archive parent lane closeout '{parent_id}'", dry_run=dry_run)
+    if not _planning_revision_guard(result, expected_planning_revision=expected_planning_revision, target_root=target_root):
+        return result
     state = _read_state_from_toml(target_root)
     matched = _parent_lane_state_item(state, parent_id)
     state_path = target_root / PLANNING_STATE_PATH
@@ -10476,9 +10562,12 @@ def closeout_execplan(
     changed_surfaces: str | None = None,
     review_summary: str | None = None,
     outcome_summary: str | None = None,
+    expected_planning_revision: str = "",
 ) -> InstallResult:
     target_root = resolve_target_root(target)
     result = InstallResult(target_root=target_root, message=f"Close out execplan '{plan}'", dry_run=dry_run)
+    if not _planning_revision_guard(result, expected_planning_revision=expected_planning_revision, target_root=target_root):
+        return result
     normalized_claim = claim_level.strip().lower()
     normalized_intent = intent_status.strip().lower()
     normalized_residue = residue.strip().lower()
@@ -10796,6 +10885,7 @@ def close_planning_item(
     reason: str = "",
     issue: str = "",
     dry_run: bool = False,
+    expected_planning_revision: str = "",
 ) -> InstallResult:
     """Close a completed planning item through package-owned state mutation."""
     target_root = resolve_target_root(target)
@@ -10805,6 +10895,8 @@ def close_planning_item(
         message=f"Close planning item {item_id}",
         dry_run=dry_run,
     )
+    if not _planning_revision_guard(result, expected_planning_revision=expected_planning_revision, target_root=target_root):
+        return result
     if not item_id:
         result.add("manual review", target_root / PLANNING_STATE_PATH, "close-item requires a non-empty item id")
         return result
@@ -10894,9 +10986,12 @@ def archive_execplan(
     discard_summary: str | None = None,
     continuation_summary: str | None = None,
     retain_archive: bool = False,
+    expected_planning_revision: str = "",
 ) -> InstallResult:
     target_root = resolve_target_root(target)
     result = InstallResult(target_root=target_root, message=f"Archive execplan '{plan}'", dry_run=dry_run)
+    if not _planning_revision_guard(result, expected_planning_revision=expected_planning_revision, target_root=target_root):
+        return result
     plan_path = _resolve_execplan_path(target_root, plan)
     if plan_path is None or not plan_path.exists():
         result.add("manual review", target_root / plan, "execplan was not found")
@@ -11720,6 +11815,7 @@ def format_result_json(result: InstallResult) -> str:
         "message": result.message,
         "dry_run": result.dry_run,
         "bootstrap_version": result.bootstrap_version,
+        "planning_revision": planning_revision(result.target_root),
         "actions": [{"kind": action.kind, "path": str(action.path), "detail": action.detail} for action in result.actions],
         "warnings": result.warnings,
     }

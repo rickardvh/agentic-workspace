@@ -280,6 +280,16 @@
       "description": "Planning ownership guard for broad, high-assurance, decomposed, or scope-widened work.",
       "additionalProperties": true
     },
+    "planning_revision": {
+      "type": "object",
+      "description": "Optimistic Planning state revision observed by this read surface.",
+      "additionalProperties": true
+    },
+    "active_plan_reliance": {
+      "type": "object",
+      "description": "Permission signal separating command-written integrity, planning freshness, and active-plan reliance.",
+      "additionalProperties": true
+    },
     "continuation_state": {
       "type": "object",
       "description": "Compact continuation-state contract for preserving only unfinished or handoff-relevant work, not historical residue.",
