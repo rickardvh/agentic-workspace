@@ -1859,6 +1859,10 @@ def test_report_closeout_trust_blocks_work_claim_for_regression_only_intent_proo
 
     closeout = json.loads(capsys.readouterr().out)["answer"]
     assert closeout["checks"]["intent_proof"]["status"] == "regression_only"
+    assert closeout["proof_confidence"]["confidence"] == "low"
+    assert closeout["proof_confidence"]["proven_dimensions"] == ["local regression"]
+    assert closeout["proof_confidence"]["unproven_dimensions"] == ["representative user path"]
+    assert "local patch" in closeout["proof_confidence"]["residual_risk"]
     options = {option["id"]: option for option in closeout["completion_options"]}
     assert options["claim-slice-complete"]["allowed"] is True
     assert options["claim-work-complete"]["allowed"] is False
@@ -2001,6 +2005,8 @@ def test_report_closeout_trust_requires_external_negative_invariant_reconciliati
     assert options["claim-work-complete"]["allowed"] is True
     assert options["close-parent-lane"]["allowed"] is True
     assert options["route-residue"]["allowed"] is False
+    assert closeout["proof_confidence"]["confidence"] == "medium"
+    assert closeout["proof_confidence"]["proven_dimensions"] == ["negative invariant"]
 
 
 def test_report_closeout_trust_lowers_trust_for_open_package_owned_continuation_without_active_plan(tmp_path: Path, capsys) -> None:

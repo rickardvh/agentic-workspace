@@ -7737,6 +7737,7 @@ def _report_closeout_trust_payload(
             "intent_satisfaction_check": intent_check,
             "acceptance_criteria_reconciliation": acceptance_reconciliation,
             "intent_proof_check": intent_proof_check,
+            "proof_confidence": _proof_confidence_payload(intent_proof=intent_proof_check),
             "architecture_decision_closeout": architecture_decision_closeout,
             "historical_review_artifacts": _historical_review_artifacts_policy(
                 planning_report={}, intent_validation={}, target_root=target_root
@@ -7775,6 +7776,7 @@ def _report_closeout_trust_payload(
             "intent_satisfaction_check": intent_check,
             "acceptance_criteria_reconciliation": acceptance_reconciliation,
             "intent_proof_check": intent_proof_check,
+            "proof_confidence": _proof_confidence_payload(intent_proof=intent_proof_check),
             "architecture_decision_closeout": architecture_decision_closeout,
             "historical_review_artifacts": _historical_review_artifacts_policy(
                 planning_report=planning_report, intent_validation={}, target_root=target_root
@@ -7866,6 +7868,7 @@ def _report_closeout_trust_payload(
         "intent_satisfaction_check": intent_satisfaction_check,
         "acceptance_criteria_reconciliation": acceptance_reconciliation,
         "intent_proof_check": intent_proof_check,
+        "proof_confidence": _proof_confidence_payload(intent_proof=intent_proof_check),
         "architecture_decision_closeout": architecture_decision_closeout,
         "historical_review_artifacts": _historical_review_artifacts_policy(
             planning_report=planning_report, intent_validation=intent_validation, target_root=target_root
@@ -20845,6 +20848,62 @@ def _intent_proof_prompt_payload(
     }
 
 
+def _proof_confidence_payload(
+    *,
+    intent_proof: dict[str, Any],
+    proof_execution_evidence: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    intent_proof = intent_proof if isinstance(intent_proof, dict) else {}
+    proof_execution_evidence = proof_execution_evidence if isinstance(proof_execution_evidence, dict) else {}
+    status = str(intent_proof.get("status", "not_recorded")).strip().lower().replace("-", "_") or "not_recorded"
+    claim_boundary = str(intent_proof.get("claim_boundary", "slice")).strip() or "slice"
+    proven_dimensions = [str(item) for item in _list_payload(intent_proof.get("proof_dimensions")) if str(item).strip()][:5]
+    unproven_dimensions = [str(item) for item in _list_payload(intent_proof.get("unproven_after_tests")) if str(item).strip()][:5]
+    intended_behavior = [str(item) for item in _list_payload(intent_proof.get("intended_behavior")) if str(item).strip()][:5]
+    if status == "regression_only" and not proven_dimensions:
+        proven_dimensions = ["local regression behavior"]
+    if status in {"not_recorded", "needs_agent_judgment"} and not unproven_dimensions:
+        unproven_dimensions = intended_behavior or ["intended behavior has not been compared to proof"]
+    elif status == "regression_only" and not unproven_dimensions:
+        unproven_dimensions = [
+            "representative user path",
+            "negative or boundary case",
+            "integration or consumer behavior",
+        ]
+
+    confidence_by_status = {
+        "sufficient_for_claim": "high",
+        "representative": "medium",
+        "regression_only": "low",
+        "not_recorded": "low",
+        "needs_review": "needs-review",
+        "needs_agent_judgment": "needs-review",
+    }
+    residual_risk_by_status = {
+        "sufficient_for_claim": "Proof confidence supports the stated claim boundary; remaining risk is ordinary unlisted behavior.",
+        "representative": "Representative proof is present, but broader work or parent closure may still need closeout reconciliation.",
+        "regression_only": "Proof may cover the local patch while leaving representative user, boundary, or consumer behavior unproven.",
+        "not_recorded": "Proof execution may be recorded, but proof confidence was not recorded.",
+        "needs_review": "Human or domain review is required before treating proof as sufficient for the claim.",
+        "needs_agent_judgment": "Selected proof still needs agent judgment against the intended behavior before completion can be claimed.",
+    }
+    return {
+        "kind": "agentic-workspace/proof-confidence/v1",
+        "status": "present",
+        "source": "intent_proof",
+        "intent_proof_status": status,
+        "confidence": confidence_by_status.get(status, "needs-review"),
+        "claim_boundary": claim_boundary,
+        "proven_dimensions": proven_dimensions,
+        "unproven_dimensions": unproven_dimensions,
+        "residual_risk": residual_risk_by_status.get(
+            status, "Proof confidence cannot be classified from the available intent-proof evidence."
+        ),
+        "evidence_state": str(proof_execution_evidence.get("status", "")) or "unknown",
+        "rule": "Proof confidence interprets proof strength; it does not execute proof or score test quality automatically.",
+    }
+
+
 def _proof_completion_options(*, required_commands: list[str], manual_verification: dict[str, Any] | None) -> list[dict[str, Any]]:
     options: list[dict[str, Any]] = [
         _completion_option(
@@ -21335,6 +21394,7 @@ def _proof_selection_for_changed_paths(
         )
         for command in optional_commands
     ]
+    intent_proof = _intent_proof_prompt_payload(task_text=task_text, acceptance=acceptance, claim_boundary="slice")
     proof_selection = {
         "kind": "proof-selection/v1",
         "changed_paths": changed_paths,
@@ -21381,7 +21441,11 @@ def _proof_selection_for_changed_paths(
         "unavailable_commands": unavailable_commands,
         "host_policy_blocked_commands": host_policy_blocked_commands,
         "proof_execution_evidence": proof_execution_evidence,
-        "intent_proof": _intent_proof_prompt_payload(task_text=task_text, acceptance=acceptance, claim_boundary="slice"),
+        "intent_proof": intent_proof,
+        "proof_confidence": _proof_confidence_payload(
+            intent_proof=intent_proof,
+            proof_execution_evidence=proof_execution_evidence,
+        ),
         "proof_route_decision": proof_route_decision,
         "proof_route_explanation": proof_route_explanation,
         "proof_next_decision": proof_next_decision,
