@@ -12,9 +12,7 @@ work_items = []
 execplans = []
 
 [todo]
-active_items = [
-  { id = "github-1118-task-contract-view", title = "Assemble compact task contract view (#1118)", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/github-1118-task-contract-view.plan.json", why_now = "GitHub #1118", owner_role = "implementation", handoff_ready = true, refs = ["GitHub #1118"] },
-]
+active_items = []
 queued_items = []
 
 [roadmap]

@@ -15,6 +15,7 @@
     "path_boundaries",
     "authority_markers",
     "change_impact",
+    "task_contract",
     "task_intent",
     "acceptance",
     "proof",
@@ -104,6 +105,11 @@
     "change_impact": {
       "type": "object",
       "description": "Changed-path ownership, generatedness, authority, related contract, and proof-impact projection.",
+      "additionalProperties": true
+    },
+    "task_contract": {
+      "type": "object",
+      "description": "Compact assembled task contract view covering intent, acceptance, autonomy/escalation, proof expectations, and stop conditions.",
       "additionalProperties": true
     },
     "task_intent": {

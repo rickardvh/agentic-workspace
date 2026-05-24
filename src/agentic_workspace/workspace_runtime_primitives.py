@@ -11617,6 +11617,7 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "acceptance_reconciliation",
         "objective_drift",
         "reuse_pressure",
+        "task_contract",
         "change_impact",
         "detail_commands",
         "path_boundaries",
@@ -13715,8 +13716,146 @@ def _change_impact_payload(*, target_root: Path, changed_paths: list[str], proof
     }
 
 
+def _task_contract_payload(
+    *,
+    changed_paths: list[str],
+    task_intent: dict[str, Any],
+    acceptance: dict[str, Any],
+    proof: dict[str, Any],
+    execution_posture: dict[str, Any],
+    planning_safety_gate: dict[str, Any],
+    intent_acknowledgement: dict[str, Any],
+    handoff_requirements: dict[str, Any],
+) -> dict[str, Any]:
+    task_present = bool(task_intent.get("task_text_available"))
+    acceptance_items = acceptance.get("items", []) if isinstance(acceptance.get("items"), list) else []
+    capability = execution_posture.get("capability_posture", {}) if isinstance(execution_posture, dict) else {}
+    runtime_resolution = execution_posture.get("runtime_resolution", {}) if isinstance(execution_posture, dict) else {}
+    delegation_decision = execution_posture.get("delegation_decision", {}) if isinstance(execution_posture, dict) else {}
+    acceptance_guidance = proof.get("acceptance_guidance", {}) if isinstance(proof, dict) else {}
+    intent_proof = proof.get("intent_proof", {}) if isinstance(proof, dict) else {}
+    work_shape_facts = planning_safety_gate.get("work_shape_facts", {}) if isinstance(planning_safety_gate, dict) else {}
+
+    stop_conditions: list[str] = []
+    for source in (
+        handoff_requirements.get("stop_when") if isinstance(handoff_requirements, dict) else [],
+        work_shape_facts.get("stop_conditions") if isinstance(work_shape_facts, dict) else [],
+        proof.get("escalate_when") if isinstance(proof, dict) else [],
+    ):
+        if isinstance(source, list):
+            for item in source:
+                text = str(item).strip()
+                if text and text not in stop_conditions:
+                    stop_conditions.append(text)
+
+    missing_fields = []
+    if not task_present:
+        missing_fields.append("task_intent.task_text")
+    if not changed_paths:
+        missing_fields.append("changed_paths")
+    if not acceptance_items:
+        missing_fields.append("acceptance.items")
+    if not proof.get("required_commands"):
+        missing_fields.append("proof.required_commands")
+
+    return {
+        "kind": "agentic-workspace/task-contract/v1",
+        "status": "present" if not missing_fields else "present-with-gaps",
+        "authority": "assembled-view",
+        "rule": (
+            "Task contract assembles existing implement surfaces for orientation and closeout; it does not create durable "
+            "Planning state or override source fields."
+        ),
+        "changed_paths": changed_paths,
+        "source_fields": [
+            "changed_paths",
+            "task_intent",
+            "acceptance",
+            "proof",
+            "execution_posture",
+            "planning_safety_gate",
+            "intent_acknowledgement",
+            "handoff_requirements",
+        ],
+        "missing_fields": missing_fields,
+        "intent": {
+            "status": "present" if task_present else "absent",
+            "task_text_available": task_present,
+            "task_excerpt": task_intent.get("task_excerpt"),
+            "requested_outcomes": task_intent.get("requested_outcomes", []),
+            "task_argument_mode": task_intent.get("task_argument_mode"),
+            "source_fields": ["task_intent.task_text_available", "task_intent.requested_outcomes", "task_intent.task_excerpt"],
+            "missing_fields": [] if task_present else ["task_intent.task_text"],
+        },
+        "acceptance": {
+            "status": acceptance.get("status", "unknown"),
+            "closeout_required": bool(acceptance.get("closeout_required")),
+            "item_count": len(acceptance_items),
+            "requested_outcomes": acceptance.get("requested_outcomes", []),
+            "closeout_rule": acceptance.get("closeout_rule", ""),
+            "source_fields": ["acceptance.status", "acceptance.items", "acceptance.closeout_required", "acceptance.closeout_rule"],
+            "missing_fields": [] if acceptance_items else ["acceptance.items"],
+        },
+        "autonomy_and_escalation": {
+            "delegation_decision": delegation_decision.get("decision"),
+            "delegation_mode": delegation_decision.get("mode"),
+            "work_shape": capability.get("work_shape"),
+            "proof_burden": capability.get("proof_burden"),
+            "runtime_recommendation": runtime_resolution.get("recommendation") if isinstance(runtime_resolution, dict) else None,
+            "planning_safety": planning_safety_gate.get("status") if isinstance(planning_safety_gate, dict) else None,
+            "intent_acknowledgement": intent_acknowledgement.get("decision"),
+            "ask_human_when": intent_acknowledgement.get("ask_human_when"),
+            "source_fields": [
+                "execution_posture.delegation_decision",
+                "execution_posture.capability_posture",
+                "execution_posture.runtime_resolution",
+                "planning_safety_gate.status",
+                "intent_acknowledgement",
+            ],
+            "missing_fields": [],
+        },
+        "proof_expectations": {
+            "status": "present" if proof.get("required_commands") else "missing-required-commands",
+            "required_commands": proof.get("required_commands", []),
+            "intent_proof_status": intent_proof.get("status") if isinstance(intent_proof, dict) else None,
+            "acceptance_guidance": {
+                "status": acceptance_guidance.get("status") if isinstance(acceptance_guidance, dict) else None,
+                "closeout_required": acceptance_guidance.get("closeout_required") if isinstance(acceptance_guidance, dict) else None,
+                "acceptance_item_count": acceptance_guidance.get("acceptance_item_count")
+                if isinstance(acceptance_guidance, dict)
+                else None,
+            },
+            "broaden_when": proof.get("broaden_when", []),
+            "escalate_when": proof.get("escalate_when", []),
+            "source_fields": [
+                "proof.required_commands",
+                "proof.intent_proof.status",
+                "proof.acceptance_guidance",
+                "proof.broaden_when",
+                "proof.escalate_when",
+            ],
+            "missing_fields": [] if proof.get("required_commands") else ["proof.required_commands"],
+        },
+        "stop_conditions": {
+            "status": "present" if stop_conditions else "not-recorded",
+            "items": stop_conditions,
+            "source_fields": [
+                "handoff_requirements.stop_when",
+                "planning_safety_gate.work_shape_facts.stop_conditions",
+                "proof.escalate_when",
+            ],
+            "missing_fields": [] if stop_conditions else ["handoff_requirements.stop_when"],
+        },
+    }
+
+
 def _implement_payload(
-    *, target_root: Path, changed_paths: list[str], task_text: str | None = None, include_change_impact: bool = True
+    *,
+    target_root: Path,
+    changed_paths: list[str],
+    task_text: str | None = None,
+    include_change_impact: bool = True,
+    include_task_contract: bool = True,
 ) -> dict[str, Any]:
     implementer_template = _CONTEXT_TEMPLATES["implementer_context"]
     normalized_paths = _normalize_changed_paths(changed_paths)
@@ -13890,6 +14029,17 @@ def _implement_payload(
             "planning safety gate requires active planning ownership",
             *payload["handoff_requirements"]["stop_when"],
         ]
+    if include_task_contract:
+        payload["task_contract"] = _task_contract_payload(
+            changed_paths=normalized_paths,
+            task_intent=task_intent,
+            acceptance=acceptance,
+            proof=proof,
+            execution_posture=execution_posture,
+            planning_safety_gate=planning_safety_gate,
+            intent_acknowledgement=payload["intent_acknowledgement"],
+            handoff_requirements=payload["handoff_requirements"],
+        )
     if include_change_impact:
         payload["change_impact"] = _change_impact_payload(
             target_root=target_root, changed_paths=normalized_paths, proof=proof, cli_invoke=config.cli_invoke
@@ -14035,6 +14185,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "context.acceptance_reconciliation",
                 "context.objective_drift",
                 "context.reuse_pressure",
+                "task_contract",
                 "change_impact",
                 "context.delegation_decision",
                 "context.routing",
@@ -19064,6 +19215,10 @@ def _selector_requests_change_impact(select: str | None) -> bool:
     return any(token == "change_impact" or token.startswith("change_impact.") for token in _selector_tokens(select))
 
 
+def _selector_requests_task_contract(select: str | None) -> bool:
+    return any(token == "task_contract" or token.startswith("task_contract.") for token in _selector_tokens(select))
+
+
 def _run_implement_context_adapter(args: argparse.Namespace) -> int:
     target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
     _validate_target_root(command_name="implement", target_root=target_root)
@@ -19073,16 +19228,21 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
     if not task_text:
         task_text = _read_task_text_from_file(target_root=target_root, task_file=getattr(args, "task_file", None))
     profile = _diagnostic_profile(args, default="tiny")
-    change_impact_selected = _selector_requests_change_impact(getattr(args, "select", None))
+    selected_fields = getattr(args, "select", None)
+    change_impact_selected = _selector_requests_change_impact(selected_fields)
+    task_contract_selected = _selector_requests_task_contract(selected_fields)
     full_payload = _implement_payload(
         target_root=target_root,
         changed_paths=list(getattr(args, "changed", []) or []),
         task_text=task_text,
         include_change_impact=(profile != "tiny" or change_impact_selected),
+        include_task_contract=(profile != "tiny" or task_contract_selected),
     )
     payload = full_payload
     if profile == "tiny":
         payload = _tiny_implement_payload(full_payload)
+        if task_contract_selected:
+            payload["task_contract"] = full_payload["task_contract"]
         if change_impact_selected:
             payload["change_impact"] = full_payload["change_impact"]
     if getattr(args, "select", None):

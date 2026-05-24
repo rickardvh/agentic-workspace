@@ -31,22 +31,11 @@
     "agent_may_decide": "Exact command/selector home, payload field names, compact-vs-verbose placement, and focused tests.",
     "escalate_when": "The implementation needs a new durable Planning artifact, provider-specific session state, a broad task manager, or a change that makes ordinary direct work heavier.",
     "next_action": "Inspect current start/implement/proof/closeout task-intent surfaces, choose the smallest existing command/selector home, implement the assembled view, and validate task-present, task-absent, and changed-path cases.",
-    "proof_expectations": [
-      "Focused tests prove the task-contract view names intent, acceptance, autonomy/escalation, proof expectations, stop conditions, source fields, and missing fields.",
-      "Workspace test and lint targets pass."
-    ],
-    "touched_scope": [
-      "src/agentic_workspace/workspace_runtime_primitives.py",
-      "tests/test_workspace_implement_cli.py",
-      "tests/test_workspace_start_preflight_cli.py",
-      "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
-      "docs/reference/implementer-context.md"
-    ],
-    "completion_criteria": [
-      "Assemble compact task contract view (#1118) is implemented, validated, and closed out honestly."
-    ],
+    "proof_expectations": "['Focused tests prove the task-contract view names intent, acceptance, autonomy/escalation, proof expectations, stop conditions, source fields, and missing fields.', 'Workspace test and lint targets pass.']",
+    "touched_scope": "['src/agentic_workspace/workspace_runtime_primitives.py', 'tests/test_workspace_implement_cli.py', 'tests/test_workspace_start_preflight_cli.py', 'src/agentic_workspace/contracts/schemas/implementer_context.schema.json', 'docs/reference/implementer-context.md']",
+    "completion_criteria": "['Assemble compact task contract view (#1118) is implemented, validated, and closed out honestly.']",
     "continuation_owner": "none",
-    "closeout_decision": "pending"
+    "closeout_decision": "archive-and-close"
   },
   "goal": [
     "GitHub #1118"
@@ -56,27 +45,14 @@
   ],
   "machine_readable_contract": {
     "intent": {
-    "outcome": "Assemble a compact task-contract view from existing task intent, acceptance, autonomy/escalation, proof expectations, and stop-condition surfaces.",
-    "constraints": "Do not add new durable task-contract state in this first slice; the view must be assembled from existing source surfaces and keep small direct work cheap.",
-    "latitude": "Exact command/selector home, payload field names, compact-vs-verbose placement, and focused tests.",
-    "escalation": "Escalate when the implementation needs a new durable Planning artifact, provider-specific session state, a broad task manager, or a change that makes ordinary direct work heavier."
+      "proof": "make test-workspace; make lint-workspace; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make maintainer-surfaces; make schema-reference-docs"
     },
     "execution": {
-      "milestone": "github-1118-task-contract-view",
-      "status": "active",
-    "next_step": "Inspect current start/implement/proof/closeout task-intent surfaces, choose the smallest existing command/selector home, implement the assembled view, and validate task-present, task-absent, and changed-path cases.",
-    "proof": "Focused task-contract tests plus make test-workspace and make lint-workspace."
+      "proof": "make test-workspace; make lint-workspace; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make maintainer-surfaces; make schema-reference-docs"
     },
     "scope": {
       "touched": [
-      "src/agentic_workspace/workspace_runtime_primitives.py",
-      "tests/test_workspace_implement_cli.py",
-      "tests/test_workspace_start_preflight_cli.py",
-      "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
-      "docs/reference/implementer-context.md"
-      ],
-      "invariants": [
-        "Preserve the planning contract and keep the work bounded to this plan."
+        "closeout scope recorded in closure_check and generated_closeout."
       ]
     }
   },
@@ -94,7 +70,7 @@
     "what this slice enabled": "none yet",
     "intentionally deferred": "none",
     "discovered implications": "none yet",
-    "proof achieved now": "pending",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
     "validation still needed": "current milestone validation remains pending",
     "next likely slice": "continue the current milestone until the completion criteria are met"
   },
@@ -156,7 +132,7 @@
   ],
   "active_milestone": {
     "id": "github-1118-task-contract-view",
-    "status": "active",
+    "status": "completed",
     "scope": "Keep this execution thread bounded to the promoted TODO item.",
     "ready": "ready",
     "blocked": "none",
@@ -190,79 +166,80 @@
     "Assemble compact task contract view (#1118) is implemented, validated, and closed out honestly."
   ],
   "execution_run": {
-    "run status": "not-run-yet",
-    "executor": "",
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
     "handoff source": "agentic-planning new-plan",
-    "what happened": "execution has not started",
-    "scope touched": "none yet",
-    "changed surfaces": "none yet; execution has not changed files",
-    "validations run": "pending",
-    "result for continuation": "continue from this scaffolded execplan",
-    "next step": "Inspect current start/implement/proof/closeout task-intent surfaces, choose the smallest existing command/selector home, implement the assembled view, and validate task-present, task-absent, and changed-path cases."
+    "what happened": "Implemented compact task_contract view for implement output as an assembled, non-authoritative projection over existing intent, acceptance, autonomy, proof, and stop-condition surfaces.",
+    "scope touched": "implement runtime payloads, implementer-context schema/reference docs, implement CLI tests",
+    "changed surfaces": "src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_implement_cli.py; src/agentic_workspace/contracts/schemas/implementer_context.schema.json; docs/reference/implementer-context.md",
+    "validations run": "make test-workspace; make lint-workspace; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make maintainer-surfaces; make schema-reference-docs",
+    "result for continuation": "bounded closeout complete",
+    "next step": "archive this execplan"
   },
   "finished_run_review": {
-    "review status": "pending",
-    "scope respected": "pending",
-    "proof status": "pending",
-    "intent served": "pending",
-    "config compliance": "pending",
-    "misinterpretation risk": "pending",
-    "follow-on decision": "pending"
+    "review status": "complete",
+    "scope respected": "Task contract is available through --select task_contract and verbose implement output; default tiny implement remains cheap and only advertises the selector.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
   },
   "delegation_outcome_feedback": {
-    "route chosen": "pending",
-    "route skipped reason": "pending",
-    "expected savings": "pending",
-    "actual friction": "pending",
-    "proof result": "pending",
-    "quality concern": "pending",
-    "decomposition adjustment": "pending"
+    "route chosen": "not-delegated",
+    "route skipped reason": "No delegation route was recorded; prepare-closeout normalized archive-only residue.",
+    "expected savings": "none recorded",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
   },
   "proof_report": {
-    "validation proof": "pending",
-    "proof achieved now": "pending",
-    "evidence for \"proof achieved\" state": ""
+    "validation proof": "make test-workspace; make lint-workspace; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make maintainer-surfaces; make schema-reference-docs",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "make test-workspace; make lint-workspace; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make maintainer-surfaces; make schema-reference-docs"
   },
   "intent_satisfaction": {
     "original intent": "GitHub #1118",
-    "was original intent fully satisfied?": "pending",
-    "evidence of intent satisfaction": "",
-    "unsolved intent passed to": "none yet"
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "make test-workspace; make lint-workspace; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make maintainer-surfaces; make schema-reference-docs",
+    "unsolved intent passed to": "none"
   },
   "execution_summary": {
-    "outcome delivered": "not completed yet",
-    "validation confirmed": "pending",
-    "follow-on routed to": "none yet",
-    "post-work posterity capture": "pending",
-    "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "current milestone"
+    "outcome delivered": "Closes #1118 by assembling task intent, acceptance, autonomy/escalation, proof expectations, and stop conditions from existing implement surfaces without adding durable task-contract state.",
+    "validation confirmed": "make test-workspace; make lint-workspace; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make maintainer-surfaces; make schema-reference-docs",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "knowledge promoted (memory/docs/config)": "none",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
   },
   "durable_residue": {
     "status": "none",
-    "learned constraint": "none yet",
-    "motivation worth preserving": "none yet",
-    "canonical owner now": "none",
+    "learned constraint": "No future-relevant learning was identified beyond the closeout evidence.",
+    "motivation worth preserving": "Closeout reviewed durable residue and found no live follow-up.",
+    "canonical owner now": "archive",
     "promotion trigger": "none",
     "retention after promotion": "retain"
   },
   "task_intent_promotion": {
-    "decision": "pending",
+    "decision": "do-not-promote",
     "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
-    "evidence source": "",
-    "target scope": "",
-    "proposed durable intent": "",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "archive",
+    "proposed durable intent": "Closeout reviewed durable residue and found no live follow-up.",
     "confidence": "low",
-    "needs review": true,
-    "owner surface": ""
+    "needs review": "True",
+    "owner surface": "archive"
   },
   "closure_check": {
-    "slice status": "pending",
-    "larger-intent status": "pending",
-    "closure decision": "pending",
-    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
-    "why this decision is honest": "",
-    "evidence carried forward": "",
-    "reopen trigger": ""
+    "closeout scope": "lane",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a lane claim with intent-status satisfied.",
+    "evidence carried forward": "make test-workspace; make lint-workspace; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make maintainer-surfaces; make schema-reference-docs",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
   },
   "improvement_signal_review": {
     "status": "not_checked",
@@ -282,11 +259,17 @@
     "signals fixed": [],
     "signals routed": [],
     "signals dismissed": [],
-    "next owner": ""
+    "next owner": "agent closeout reflection"
   },
   "closeout_distillation": {
     "buckets": {
-      "discard": [],
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
       "continuation": [],
       "memory": [],
       "config_check": [],
@@ -296,5 +279,20 @@
   },
   "drift_log": [
     "2026-05-24: Scaffolded by agentic-planning new-plan."
-  ]
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: GitHub #1118\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: make test-workspace; make lint-workspace; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make maintainer-surfaces; make schema-reference-docs\nChanged surfaces: src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_implement_cli.py; src/agentic_workspace/contracts/schemas/implementer_context.schema.json; docs/reference/implementer-context.md\nDurable residue: none (archive)\nMemory learning: none\nFollow-up: none"
+  }
 }
