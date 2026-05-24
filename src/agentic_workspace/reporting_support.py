@@ -313,6 +313,8 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
         intent_check = intent_check if isinstance(intent_check, dict) else {}
         intent_proof_check = answer.get("intent_proof_check", {})
         intent_proof_check = intent_proof_check if isinstance(intent_proof_check, dict) else {}
+        proof_confidence = answer.get("proof_confidence", {})
+        proof_confidence = proof_confidence if isinstance(proof_confidence, dict) else {}
         architecture_decision = answer.get("architecture_decision_closeout", {})
         architecture_decision = architecture_decision if isinstance(architecture_decision, dict) else {}
         terminal_action = answer.get("terminal_action", {})
@@ -336,6 +338,11 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
             "summary": answer.get("summary", ""),
             "terminal_action": terminal_action,
             "completion_options": completion_options,
+            "proof_confidence": {
+                key: proof_confidence.get(key)
+                for key in ("status", "confidence", "claim_boundary", "proven_dimensions", "unproven_dimensions", "residual_risk")
+                if key in proof_confidence
+            },
             "checks": {
                 "package_workflow_evidence": compact_closeout_check(package_evidence),
                 "intent_satisfaction": compact_closeout_check(intent_check),

@@ -1275,6 +1275,30 @@ def test_proof_changed_surfaces_compact_intent_proof_prompt(capsys) -> None:
     assert "proof strength" not in json.dumps(answer["required_commands"]).lower()
 
 
+def test_proof_changed_verbose_surfaces_proof_confidence(capsys) -> None:
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    proof_confidence = answer["proof_confidence"]
+    assert proof_confidence["confidence"] == "needs-review"
+    assert proof_confidence["claim_boundary"] == "slice"
+    assert proof_confidence["proven_dimensions"] == []
+    assert proof_confidence["unproven_dimensions"]
+    assert "Selected proof" in proof_confidence["residual_risk"]
+
+
 def test_proof_changed_selector_includes_planning_schema_reference_wrapper(capsys) -> None:
     assert (
         cli.main(
