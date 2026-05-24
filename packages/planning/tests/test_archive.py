@@ -575,6 +575,20 @@ candidates = []
     assert payload["warnings"] == []
     assert archived["canonical_core"]["closeout_decision"] == "archive-and-close"
     assert archived["canonical_core"]["continuation_owner"] == "none"
+    assert archived["canonical_core"]["proof_expectations"] == ["uv run pytest tests/test_check_planning_surfaces.py"]
+    assert archived["canonical_core"]["touched_scope"] == ["closeout scope recorded in closure_check and generated_closeout."]
+    assert archived["canonical_core"]["completion_criteria"] == ["the bounded change is implemented and validated."]
+    assert archived["machine_readable_contract"]["intent"] == {
+        "outcome": "this item needs a bounded execution contract.",
+        "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+        "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+        "escalation": (
+            "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+        ),
+        "proof": "uv run pytest tests/test_check_planning_surfaces.py",
+    }
+    assert archived["machine_readable_contract"]["scope"]["touched"] == ["closeout scope recorded in closure_check and generated_closeout."]
+    assert archived["task_intent_promotion"]["needs review"] is True
     assert archived["iterative_follow_through"]["proof achieved now"] != "pending"
     assert archived["iterative_follow_through"]["validation still needed"].lower() != "pending"
     assert archived["delegation_outcome_feedback"]["actual friction"] == "none recorded"
@@ -800,6 +814,12 @@ candidates = []
     assert archived["finished_run_review"]["proof status"] == "passed"
     assert archived["execution_summary"]["outcome delivered"] == "closeout writer records real finish-run evidence before archiving."
     assert archived["proof_report"]["validation proof"] == "uv run pytest packages/planning/tests/test_archive.py -q"
+    assert archived["machine_readable_contract"]["intent"]["outcome"] == "this item needs a bounded execution contract."
+    assert archived["machine_readable_contract"]["intent"]["constraints"] == (
+        "Keep scope bounded to the promoted TODO item and its stated touched paths."
+    )
+    assert archived["machine_readable_contract"]["intent"]["proof"] == "uv run pytest packages/planning/tests/test_archive.py -q"
+    assert archived["task_intent_promotion"]["needs review"] is True
     options = {option["id"]: option for option in payload["completion_options"]}
     assert options["claim-slice-complete"]["allowed"] is True
     assert options["close-larger-intent"]["allowed"] is True
