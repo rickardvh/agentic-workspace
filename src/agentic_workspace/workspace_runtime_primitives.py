@@ -13443,10 +13443,18 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
             ],
             optional_sections=["path_boundaries", "execution_posture", "delegation_decision", "durable_intent", "handoff_requirements"],
             detail_commands={
-                "tiny_next_action": "agentic-workspace implement --changed <paths> --format json",
-                "proof_detail": "agentic-workspace proof --verbose --changed <paths> --format json",
-                "active_state": "agentic-workspace summary --changed <paths> --format json",
-                "takeover_or_recovery": "agentic-workspace preflight --format json",
+                "tiny_next_action": _command_with_cli_invoke(
+                    command="agentic-workspace implement --changed <paths> --format json", cli_invoke=config.cli_invoke
+                ),
+                "proof_detail": _command_with_cli_invoke(
+                    command="agentic-workspace proof --verbose --changed <paths> --format json", cli_invoke=config.cli_invoke
+                ),
+                "active_state": _command_with_cli_invoke(
+                    command="agentic-workspace summary --changed <paths> --format json", cli_invoke=config.cli_invoke
+                ),
+                "takeover_or_recovery": _command_with_cli_invoke(
+                    command="agentic-workspace preflight --format json", cli_invoke=config.cli_invoke
+                ),
             },
             when_to_escalate=[
                 "changed paths are missing or incomplete",
@@ -13484,8 +13492,10 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
             "minimum_before_editing": "Inspect the listed files, path boundaries, workflow obligations, and selected proof before editing."
             if normalized_paths
             else "Provide --changed paths or run preflight before broad implementation.",
-            "preflight_command": "agentic-workspace preflight --format json",
-            "summary_command": "agentic-workspace summary --format json",
+            "preflight_command": _command_with_cli_invoke(
+                command="agentic-workspace preflight --format json", cli_invoke=config.cli_invoke
+            ),
+            "summary_command": _command_with_cli_invoke(command="agentic-workspace summary --format json", cli_invoke=config.cli_invoke),
             "trust_note": "Skipping workspace orientation may be faster for this edit, but lowers continuation and review trust for planned or high-risk work.",
         },
         "continuation_state": _compact_continuation_state_contract(cli_invoke=config.cli_invoke),
@@ -13528,6 +13538,8 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
 
 
 def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    target_root = Path(str(payload.get("target", ".")))
+    config = _load_workspace_config(target_root=target_root)
     path_warnings = [
         {"path": item.get("path"), "authority": item.get("authority"), "warning": item.get("warning")}
         for item in payload.get("path_boundaries", [])
@@ -13549,18 +13561,25 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     intent_acknowledgement = payload.get("intent_acknowledgement", {})
     reuse_pressure = (
         _reuse_pressure_payload(
-            target_root=Path(str(payload.get("target", "."))),
+            target_root=target_root,
             changed_paths=payload.get("changed_paths", []),
             compact=True,
+            cli_invoke=config.cli_invoke,
         )
         if payload.get("changed_paths")
         else payload.get("reuse_pressure", {})
     )
     detail_commands = {
-        "full_context": "agentic-workspace implement --verbose --changed <paths> --format json",
-        "proof_detail": "agentic-workspace proof --verbose --changed <paths> --format json",
-        "task_scoped_state": "agentic-workspace summary --changed <paths> --format json",
-        "takeover_or_recovery": "agentic-workspace preflight --format json",
+        "full_context": _command_with_cli_invoke(
+            command="agentic-workspace implement --verbose --changed <paths> --format json", cli_invoke=config.cli_invoke
+        ),
+        "proof_detail": _command_with_cli_invoke(
+            command="agentic-workspace proof --verbose --changed <paths> --format json", cli_invoke=config.cli_invoke
+        ),
+        "task_scoped_state": _command_with_cli_invoke(
+            command="agentic-workspace summary --changed <paths> --format json", cli_invoke=config.cli_invoke
+        ),
+        "takeover_or_recovery": _command_with_cli_invoke(command="agentic-workspace preflight --format json", cli_invoke=config.cli_invoke),
     }
     projected = {
         "kind": "implementer-context-tiny/v1",
@@ -13587,7 +13606,9 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 if isinstance(payload.get("proof"), dict) and payload.get("proof", {}).get("intent_proof")
                 else {}
             ),
-            "detail_command": "agentic-workspace proof --verbose --changed <paths> --format json",
+            "detail_command": _command_with_cli_invoke(
+                command="agentic-workspace proof --verbose --changed <paths> --format json", cli_invoke=config.cli_invoke
+            ),
         },
         "reuse_pressure": reuse_pressure,
         "context": {
@@ -13859,6 +13880,7 @@ def _work_shape_facts_payload(
     decision: str,
     workflow_sufficient: bool,
     required_next_action: str,
+    cli_invoke: str = DEFAULT_CLI_INVOKE,
 ) -> dict[str, Any]:
     hard_blockers: list[str] = []
     if not workflow_sufficient:
@@ -13899,7 +13921,11 @@ def _work_shape_facts_payload(
             "proof expands beyond the selected proof route",
             "parent issue or lane intent changes",
         ],
-        "required_proof": ["run `agentic-workspace proof --changed <paths> --format json` and the selected commands"],
+        "required_proof": [
+            "run `"
+            + str(_command_with_cli_invoke(command="agentic-workspace proof --changed <paths> --format json", cli_invoke=cli_invoke))
+            + "` and the selected commands"
+        ],
         "status": status,
         "decision": decision,
         "required_next_action": required_next_action,
@@ -14250,6 +14276,7 @@ def _planning_safety_gate_payload(
             decision=decision,
             workflow_sufficient=workflow_sufficient,
             required_next_action=required_next_action,
+            cli_invoke=config.cli_invoke,
         ),
         "decomposition": {"status": decomposition_status or "unknown", "candidate_count": len(candidates), "candidates": candidates},
         "changed_path_classification": path_classification,
@@ -18288,7 +18315,7 @@ def _select_proof_payload(
     return payload
 
 
-def _tiny_proof_payload(payload: dict[str, Any]) -> dict[str, Any]:
+def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
     if payload.get("profile") == "compact-contract-answer/v1":
         answer = payload.get("answer", {})
         include_intent_proof = False
@@ -18320,7 +18347,13 @@ def _tiny_proof_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 }
             if include_intent_proof:
                 next_decision["intent_proof"] = answer["intent_proof"]
-            next_decision.setdefault("detail_command", "agentic-workspace proof --verbose --changed <paths> --format json")
+            next_decision.setdefault(
+                "detail_command",
+                _command_with_cli_invoke(
+                    command="agentic-workspace proof --verbose --changed <paths> --format json", cli_invoke=cli_invoke
+                ),
+            )
+            next_decision = _guidance_with_cli_invoke(value=next_decision, cli_invoke=cli_invoke)
             return next_decision
         required_commands = answer.get("required_commands", []) if isinstance(answer, dict) else []
         validation_plan = answer.get("validation_plan", {}) if isinstance(answer, dict) else {}
@@ -18337,7 +18370,7 @@ def _tiny_proof_payload(payload: dict[str, Any]) -> dict[str, Any]:
         warnings: list[dict[str, Any]] = []
         if isinstance(surface_value, dict) and surface_value.get("status") in {"blocked", "needs-review"}:
             warnings.append({"status": surface_value.get("status"), "summary": surface_value.get("summary") or surface_value.get("rule")})
-        return {
+        next_payload = {
             "kind": "proof-next-decision/v1",
             "target": payload.get("target"),
             "selector": payload.get("selector", {}),
@@ -18385,21 +18418,24 @@ def _tiny_proof_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 else {}
             ),
             "warnings": warnings,
-            "detail_command": "agentic-workspace proof --verbose --changed <paths> --format json",
+            "detail_command": _command_with_cli_invoke(
+                command="agentic-workspace proof --verbose --changed <paths> --format json", cli_invoke=cli_invoke
+            ),
         }
+        return _guidance_with_cli_invoke(value=next_payload, cli_invoke=cli_invoke)
     return {
         "kind": "proof-next-decision/v1",
         "target": payload.get("target"),
         "selector": {},
         "next": {
             "action": "select-proof-scope",
-            "command": "agentic-workspace proof --changed <paths> --format json",
+            "command": _command_with_cli_invoke(command="agentic-workspace proof --changed <paths> --format json", cli_invoke=cli_invoke),
             "run": None,
             "required": False,
         },
         "required_commands": [],
         "warnings": [],
-        "detail_command": "agentic-workspace proof --verbose --format json",
+        "detail_command": _command_with_cli_invoke(command="agentic-workspace proof --verbose --format json", cli_invoke=cli_invoke),
     }
 
 
@@ -18415,6 +18451,7 @@ def _emit_proof(
     select: str | None = None,
 ) -> None:
     normalized_paths = _normalize_changed_paths(changed_paths or [])
+    config = _load_workspace_config(target_root=target_root)
     if profile == "tiny" and normalized_paths:
         answer = _proof_selection_for_changed_paths(changed_paths=normalized_paths, target_root=target_root, include_durable_intent=False)
         payload = _tiny_proof_payload(
@@ -18423,7 +18460,8 @@ def _emit_proof(
                 "target": target_root.as_posix(),
                 "selector": {"changed": normalized_paths},
                 "answer": answer,
-            }
+            },
+            cli_invoke=config.cli_invoke,
         )
         if select:
             payload = _select_payload_fields(payload, select=select, source_command="proof")
@@ -18435,7 +18473,7 @@ def _emit_proof(
     payload = _proof_payload(target_root=target_root, descriptors=descriptors)
     payload = _select_proof_payload(payload, target_root=target_root, route=route, current_only=current_only, changed_paths=changed_paths)
     if profile == "tiny":
-        payload = _tiny_proof_payload(payload)
+        payload = _tiny_proof_payload(payload, cli_invoke=config.cli_invoke)
     if select:
         payload = _select_payload_fields(payload, select=select, source_command="proof")
     if format_name == "json":
