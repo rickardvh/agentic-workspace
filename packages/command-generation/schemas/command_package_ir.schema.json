@@ -1317,6 +1317,14 @@
           "additionalProperties": false,
           "description": "Optional operation identity for nested generated subcommands."
         },
+        "usage_error_hints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/usage_error_hint",
+            "description": "One targeted generated-parser usage hint."
+          },
+          "description": "Additional guidance appended when a generated parser usage error matches declared fragments."
+        },
         "subcommands": {
           "type": "array",
           "items": {
@@ -1328,6 +1336,39 @@
       },
       "additionalProperties": false,
       "description": "Generated parser-facing interface for migrated command surfaces."
+    },
+    "usage_error_hint": {
+      "type": "object",
+      "required": [
+        "when_message_contains",
+        "message"
+      ],
+      "properties": {
+        "when_message_contains": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "description": "All fragments that must appear in the parser error before the hint is appended."
+        },
+        "when_argv_contains": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Optional contiguous argv fragment sequence that must appear before the hint is appended."
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Short actionable guidance appended to the parser error."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Declarative generated-parser hint for common command misuse."
     },
     "argument": {
       "type": "object",

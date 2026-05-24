@@ -1180,6 +1180,17 @@
           "help": "Output format.",
           "name": "format"
         }
+      ],
+      "usage_error_hints": [
+        {
+          "message": "Memory task tip: 'memory route' routes touched files or explicit surfaces. For task-shaped memory consultation, run 'agentic-workspace start --task \"<task>\" --select memory_consult --format json' or 'agentic-workspace report --section memory_consult --format json'.",
+          "when_argv_contains": [
+            "route"
+          ],
+          "when_message_contains": [
+            "--task"
+          ]
+        }
       ]
     },
     "operation_id": "memory.route.report",

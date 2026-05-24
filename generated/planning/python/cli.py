@@ -60,7 +60,21 @@ def generated_package_version() -> str:
 
 
 class GeneratedArgumentParser(argparse.ArgumentParser):
+    _generated_current_argv: list[str] = []
+
+    def parse_args(self, args: list[str] | None = None, namespace: Any | None = None) -> argparse.Namespace:
+        self.__class__._generated_current_argv = list(args or [])
+        return super().parse_args(args, namespace)
+
     def error(self, message: str) -> None:
+        for hint in getattr(self, '_generated_usage_error_hints', []):
+            contains = hint.get('when_message_contains', [])
+            argv_contains = hint.get('when_argv_contains', [])
+            argv = self.__class__._generated_current_argv
+            if all(str(fragment) in message for fragment in contains) and _argv_contains_sequence(argv, argv_contains):
+                hint_text = str(hint.get('message', '')).strip()
+                if hint_text:
+                    message = f"{message}\n{hint_text}"
         if 'invalid choice' in message and 'command' in message:
             unknown = _extract_unknown_command(message)
             suggestions = difflib.get_close_matches(unknown, generated_command_names(), n=1, cutoff=0.55)
@@ -79,6 +93,15 @@ def _extract_unknown_command(message: str) -> str:
     if prefix not in message:
         return ''
     return message.split(prefix, 1)[1].split("'", 1)[0]
+
+
+def _argv_contains_sequence(argv: list[str], sequence: Any) -> bool:
+    if not isinstance(sequence, list) or not sequence:
+        return True
+    fragments = [str(fragment) for fragment in sequence]
+    if len(fragments) > len(argv):
+        return False
+    return any(argv[index:index + len(fragments)] == fragments for index in range(0, len(argv) - len(fragments) + 1))
 
 
 def generated_maturity() -> dict[str, object]:
@@ -213,6 +236,9 @@ def _add_interface_command(
         help=str(interface["help"]),
         description=str(interface["help"]),
     )
+    usage_error_hints = interface.get("usage_error_hints", [])
+    if isinstance(usage_error_hints, list):
+        command_parser._generated_usage_error_hints = [hint for hint in usage_error_hints if isinstance(hint, dict)]
     nested_operation_ref = interface.get("operation_ref", {})
     if isinstance(nested_operation_ref, dict):
         operation_id = str(nested_operation_ref.get("id", operation_id))
@@ -231,6 +257,14 @@ def _add_interface_command(
         _add_interface_command(child_subparsers, subcommand, operation_id, child_inherited_option_names)
 
 
+def _interface_usage_error_hints(interface: dict[str, Any]) -> list[dict[str, Any]]:
+    hints = [hint for hint in interface.get('usage_error_hints', []) if isinstance(hint, dict)]
+    for subcommand in interface.get('subcommands', []):
+        if isinstance(subcommand, dict):
+            hints.extend(_interface_usage_error_hints(subcommand))
+    return hints
+
+
 def build_generated_parser() -> argparse.ArgumentParser:
     epilog = (
         f"Weak-agent routing: {_GENERATED_WEAK_AGENT_ROUTING}\n"
@@ -238,10 +272,13 @@ def build_generated_parser() -> argparse.ArgumentParser:
     )
     parser = GeneratedArgumentParser(prog="agentic-planning", description="", epilog=epilog, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--version', action='version', version=f'%(prog)s {generated_package_version()}')
+    usage_error_hints: list[dict[str, Any]] = []
     subparsers = parser.add_subparsers(dest="command", required=True)
     for command in _GENERATED_ADAPTER_COMMANDS:
         interface = command["interface"]
+        usage_error_hints.extend(_interface_usage_error_hints(interface))
         _add_interface_command(subparsers, interface, str(command["operation_id"]))
+    parser._generated_usage_error_hints = usage_error_hints
     return parser
 
 

@@ -1569,7 +1569,19 @@ def _python_runtime_adapter_module(
         "            pass\n"
         '    return str(metadata.get("fallback_version") or "0.0.0")\n\n\n'
         "class GeneratedArgumentParser(argparse.ArgumentParser):\n"
+        "    _generated_current_argv: list[str] = []\n\n"
+        "    def parse_args(self, args: list[str] | None = None, namespace: Any | None = None) -> argparse.Namespace:\n"
+        "        self.__class__._generated_current_argv = list(args or [])\n"
+        "        return super().parse_args(args, namespace)\n\n"
         "    def error(self, message: str) -> None:\n"
+        "        for hint in getattr(self, '_generated_usage_error_hints', []):\n"
+        "            contains = hint.get('when_message_contains', [])\n"
+        "            argv_contains = hint.get('when_argv_contains', [])\n"
+        "            argv = self.__class__._generated_current_argv\n"
+        "            if all(str(fragment) in message for fragment in contains) and _argv_contains_sequence(argv, argv_contains):\n"
+        "                hint_text = str(hint.get('message', '')).strip()\n"
+        "                if hint_text:\n"
+        '                    message = f"{message}\\n{hint_text}"\n'
         "        if 'invalid choice' in message and 'command' in message:\n"
         "            unknown = _extract_unknown_command(message)\n"
         "            suggestions = difflib.get_close_matches(unknown, generated_command_names(), n=1, cutoff=0.55)\n"
@@ -1586,6 +1598,13 @@ def _python_runtime_adapter_module(
         "    if prefix not in message:\n"
         "        return ''\n"
         '    return message.split(prefix, 1)[1].split("\'", 1)[0]\n\n\n'
+        "def _argv_contains_sequence(argv: list[str], sequence: Any) -> bool:\n"
+        "    if not isinstance(sequence, list) or not sequence:\n"
+        "        return True\n"
+        "    fragments = [str(fragment) for fragment in sequence]\n"
+        "    if len(fragments) > len(argv):\n"
+        "        return False\n"
+        "    return any(argv[index:index + len(fragments)] == fragments for index in range(0, len(argv) - len(fragments) + 1))\n\n\n"
         "def generated_maturity() -> dict[str, object]:\n"
         "    return {\n"
         '        "id": _GENERATED_MATURITY_ID,\n'
@@ -1692,6 +1711,9 @@ def _python_runtime_adapter_module(
         '        help=str(interface["help"]),\n'
         '        description=str(interface["help"]),\n'
         "    )\n"
+        '    usage_error_hints = interface.get("usage_error_hints", [])\n'
+        "    if isinstance(usage_error_hints, list):\n"
+        "        command_parser._generated_usage_error_hints = [hint for hint in usage_error_hints if isinstance(hint, dict)]\n"
         '    nested_operation_ref = interface.get("operation_ref", {})\n'
         "    if isinstance(nested_operation_ref, dict):\n"
         '        operation_id = str(nested_operation_ref.get("id", operation_id))\n'
@@ -1708,6 +1730,12 @@ def _python_runtime_adapter_module(
         "    child_inherited_option_names = inherited_option_names | option_names\n"
         "    for subcommand in subcommands:\n"
         "        _add_interface_command(child_subparsers, subcommand, operation_id, child_inherited_option_names)\n\n\n"
+        "def _interface_usage_error_hints(interface: dict[str, Any]) -> list[dict[str, Any]]:\n"
+        "    hints = [hint for hint in interface.get('usage_error_hints', []) if isinstance(hint, dict)]\n"
+        "    for subcommand in interface.get('subcommands', []):\n"
+        "        if isinstance(subcommand, dict):\n"
+        "            hints.extend(_interface_usage_error_hints(subcommand))\n"
+        "    return hints\n\n\n"
         "def build_generated_parser() -> argparse.ArgumentParser:\n"
         "    epilog = (\n"
         '        f"Weak-agent routing: {_GENERATED_WEAK_AGENT_ROUTING}\\n"\n'
@@ -1715,10 +1743,13 @@ def _python_runtime_adapter_module(
         "    )\n"
         f"    parser = GeneratedArgumentParser(prog={json.dumps(package['program'])}, description={json.dumps(package.get('summary', ''))}, epilog=epilog, formatter_class=argparse.RawDescriptionHelpFormatter)\n"
         "    parser.add_argument('--version', action='version', version=f'%(prog)s {generated_package_version()}')\n"
+        "    usage_error_hints: list[dict[str, Any]] = []\n"
         '    subparsers = parser.add_subparsers(dest="command", required=True)\n'
         "    for command in _GENERATED_ADAPTER_COMMANDS:\n"
         '        interface = command["interface"]\n'
+        "        usage_error_hints.extend(_interface_usage_error_hints(interface))\n"
         '        _add_interface_command(subparsers, interface, str(command["operation_id"]))\n'
+        "    parser._generated_usage_error_hints = usage_error_hints\n"
         "    return parser\n\n\n"
         "def build_parser() -> argparse.ArgumentParser:\n"
         "    return build_generated_parser()\n\n\n"

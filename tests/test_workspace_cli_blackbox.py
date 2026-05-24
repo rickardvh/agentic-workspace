@@ -75,3 +75,22 @@ def test_blackbox_selector_conflict_guides_to_correct_usage() -> None:
 
     _assert_usage_error_without_traceback(result, expected="report detail selectors are mutually exclusive")
     assert "use either --verbose or --section" in result.stderr
+
+
+def test_blackbox_memory_route_task_misuse_guides_to_memory_consult() -> None:
+    result = _run_cli(
+        "memory",
+        "route",
+        "--target",
+        ".",
+        "--task",
+        "Prioritise open GitHub issues for planning intake",
+        "--format",
+        "json",
+        cwd=Path.cwd(),
+    )
+
+    _assert_usage_error_without_traceback(result, expected="Memory task tip")
+    assert "'memory route' routes touched files or explicit surfaces" in result.stderr
+    assert 'start --task "<task>" --select memory_consult --format json' in result.stderr
+    assert "report --section memory_consult --format json" in result.stderr
