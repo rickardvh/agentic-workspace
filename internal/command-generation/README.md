@@ -1,8 +1,8 @@
 # Agentic Command Generation
 
-Internal package boundary for generic command package generation.
+Internal source-checkout boundary for generic command package generation.
 
-This package owns rendering and freshness comparison for command package targets. Agentic Workspace remains the consumer: it owns command definitions, operation contracts, runtime primitives, and wrapper scripts that provide workspace-specific input.
+This code owns rendering and freshness comparison for command package targets. Agentic Workspace remains the consumer: it owns command definitions, operation contracts, runtime primitives, and wrapper scripts that provide workspace-specific input.
 
 ## Schemas
 
@@ -42,4 +42,4 @@ Stability criteria:
 - Docker/Node proof lanes are dedicated generated-package proof, not required for ordinary Python-only development.
 - Documentation can explain extraction status from this README and host wrapper names without reconstructing issue history.
 
-This package is intentionally internal for now. It is shaped so schema ownership, generic loaders, checks, and eventual lift-out criteria can move here without adding a first-contact product surface.
+This code is intentionally internal for now and does not expose a CLI. It is shaped so schema ownership, generic loaders, checks, and eventual lift-out criteria can move here without adding a first-contact product surface.

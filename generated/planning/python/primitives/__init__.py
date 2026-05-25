@@ -7,10 +7,10 @@ Regenerate with: uv run python scripts/generate/generate_command_packages.py
 from __future__ import annotations
 
 # DO NOT EDIT DIRECTLY.
-# Primitive implementations belong to command_generation. This module makes the target-local boundary explicit.
+# Primitive implementations are generated into this target-local package.
 # Regenerate with: uv run python scripts/generate/generate_command_packages.py
 
-from command_generation.primitive_executor import PrimitiveContext, PrimitiveExecutionError, execute_primitive, run_operation_steps
+from .primitive_executor import PrimitiveContext, PrimitiveExecutionError, execute_primitive, run_operation_steps
 
 __all__ = [
     "PrimitiveContext",

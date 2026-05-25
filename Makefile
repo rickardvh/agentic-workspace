@@ -13,7 +13,7 @@ COMPACT_RUN = uv run python scripts/check/run_compact_command.py
 	format format-workspace format-memory format-planning \
 	format-check format-check-workspace format-check-memory format-check-planning \
 	verify verify-workspace verify-memory verify-planning \
-	memory-freshness memory-freshness-strict recurring-friction-ledger planning-surfaces planning-surfaces-strict structured-file-inventory package-artifact-duplicates agent-aids source-payload-operational-install source-payload-operational-install-strict maintainer-surfaces maintainer-surfaces-strict render-agent-docs render-schema-reference schema-reference-docs absolute-paths \
+	memory-freshness memory-freshness-strict recurring-friction-ledger planning-surfaces planning-surfaces-strict structured-file-inventory package-artifact-duplicates agent-aids source-payload-operational-install source-payload-operational-install-strict maintainer-surfaces maintainer-surfaces-strict render-agent-docs render-schema-reference render-command-packages schema-reference-docs absolute-paths \
 	generated-command-packages generated-command-packages-docker \
 	check check-memory check-planning check-all
 
@@ -43,6 +43,7 @@ help:
 	@echo "  maintainer-surfaces  Run maintainer-surface freshness and liveness checks."
 	@echo "  render-agent-docs    Regenerate root planning docs from the managed manifest."
 	@echo "  render-schema-reference  Regenerate generated JSON Schema reference docs."
+	@echo "  render-command-packages  Regenerate generated command package CLIs."
 	@echo "  absolute-paths       Fail if tracked files contain absolute filesystem paths."
 	@echo "  generated-command-packages  Run generated command package proof with compact output."
 	@echo "  generated-command-packages-docker  Run generated command package Docker proof with compact output."
@@ -178,6 +179,9 @@ render-agent-docs:
 
 render-schema-reference:
 	@$(COMPACT_RUN) --label "render schema reference" -- uv run python scripts/generate/generate_schema_reference.py
+
+render-command-packages:
+	@$(COMPACT_RUN) --label "render command packages" -- uv run python scripts/generate/generate_command_packages.py
 
 schema-reference-docs:
 	@$(COMPACT_RUN) --label "schema reference docs" -- uv run python scripts/generate/generate_schema_reference.py --check --check-annotations

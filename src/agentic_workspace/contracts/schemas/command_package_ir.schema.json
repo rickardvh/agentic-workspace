@@ -417,7 +417,12 @@
             "entrypoint": {
               "type": "string",
               "minLength": 1,
-              "description": "Generated CLI entrypoint used by generic command_generation console handoff."
+              "description": "Generated CLI entrypoint used by package-local console handoff."
+            },
+            "default_runtime_command": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Host-owned Python runtime handoff command used by generated non-Python targets."
             },
             "runtime_module_file": {
               "type": "string",

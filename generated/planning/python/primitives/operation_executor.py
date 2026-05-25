@@ -11,7 +11,7 @@ import argparse
 from pathlib import Path
 from typing import Any
 
-from command_generation.primitive_executor import (
+from .primitive_executor import (
     PrimitiveContext,
     PrimitiveExecutionError,
     run_operation_steps,

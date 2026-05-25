@@ -188,7 +188,7 @@ def _emit_workspace_operation_output(values: dict[str, Any], arguments: dict[str
         print(json.dumps(_serialise_value(values['result']), indent=2))
         return None
     if isinstance(result, dict) and (isinstance(result.get('route_report_summary'), dict) or result.get('kind') == 'memory-module-report/v1' or (result.get('kind') == 'planning-module-report/v1' and result.get('profile') == 'tiny')):
-        from command_generation.primitive_executor import _emit_output
+        from .primitive_executor import _emit_output
 
         print(_emit_output(values=values, arguments=arguments), end='')
         return None

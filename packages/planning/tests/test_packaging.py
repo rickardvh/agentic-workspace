@@ -233,7 +233,7 @@ def test_installed_planning_wheel_imports_cli_module() -> None:
             [
                 sys.executable,
                 "-c",
-                "from repo_planning_bootstrap._generated_cli_package_impl import build_generated_parser",
+                "import repo_planning_bootstrap.cli; from repo_planning_bootstrap._generated_cli_package_impl import build_generated_parser",
             ],
             cwd=tmpdir_path,
             env={**os.environ, "PYTHONPATH": str(install_root)},
@@ -243,6 +243,13 @@ def test_installed_planning_wheel_imports_cli_module() -> None:
         )
 
     assert result.returncode == 0, result.stderr
+
+
+def test_planning_runtime_entrypoint_stays_off_command_generation() -> None:
+    pyproject = tomllib.loads((PLANNING_PACKAGE_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+
+    assert "command-generation" not in pyproject["project"]["dependencies"]
+    assert pyproject["project"]["scripts"]["agentic-planning"] == "repo_planning_bootstrap.cli:main"
 
 
 def test_payload_surface_classification_covers_package_payload_sources() -> None:

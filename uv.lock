@@ -14,27 +14,17 @@ members = [
 name = "agentic-memory"
 version = "0.3.11"
 source = { editable = "packages/memory" }
-dependencies = [
-    { name = "command-generation" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "command-generation", editable = "packages/command-generation" }]
 
 [[package]]
 name = "agentic-planning"
 version = "0.1.2"
 source = { editable = "packages/planning" }
 dependencies = [
-    { name = "command-generation" },
     { name = "jsonschema" },
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "command-generation", editable = "packages/command-generation" },
-    { name = "jsonschema", specifier = ">=4.0" },
-]
+requires-dist = [{ name = "jsonschema", specifier = ">=4.0" }]
 
 [[package]]
 name = "agentic-workspace"
@@ -146,7 +136,7 @@ wheels = [
 [[package]]
 name = "command-generation"
 version = "0.0.0"
-source = { editable = "packages/command-generation" }
+source = { editable = "internal/command-generation" }
 dependencies = [
     { name = "jsonschema" },
 ]

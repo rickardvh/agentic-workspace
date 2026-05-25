@@ -101,7 +101,7 @@
           "output.emit.install-result"
         ],
         "domain_runtime_extension_behavior": "Python generated packages may bridge explicit domain-runtime primitives through the declared runtime module binding; that bridge is not counted as shared primitive executor coverage.",
-        "conformance_ref": "packages/command-generation/tests/primitive_conformance.py and scripts/check/check_generated_command_packages.py --primitive-docker-conformance --require-docker",
+        "conformance_ref": "internal/command-generation/tests/primitive_conformance.py and scripts/check/check_generated_command_packages.py --primitive-docker-conformance --require-docker",
         "unsupported_behavior": "Unsupported primitive ids must fail as executor errors rather than silently falling back to package internals."
       },
       {

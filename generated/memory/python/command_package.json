@@ -2581,6 +2581,7 @@
   "package_role": "memory-module-cli",
   "program": "agentic-memory",
   "python_runtime_binding": {
+    "default_runtime_command": "python -c \"import sys; from repo_memory_bootstrap.cli import main; raise SystemExit(main(sys.argv[1:]))\"",
     "entrypoint": "agentic-memory",
     "local_runtime_bindings": [
       {
