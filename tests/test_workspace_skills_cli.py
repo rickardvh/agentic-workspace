@@ -382,6 +382,34 @@ def test_skills_command_recommends_memory_consultation_for_residue_routing(tmp_p
     assert payload["recommendations"][0]["source_kind"] == "installed-core-skills"
 
 
+def test_skills_command_routes_architecture_decision_tasks_to_planning_decision_path(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "skills",
+                "--target",
+                str(target),
+                "--task",
+                "database system migration architecture decision ADR record",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["recommendations"][0]["id"] == "planning-new-plan-tighten"
+    assert any("decision" in reason.lower() or "adr" in reason.lower() for reason in payload["recommendations"][0]["reasons"])
+
+
 def test_skills_command_recommends_review_skill_for_natural_review_request(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

@@ -219,7 +219,7 @@
           "default": false
         },
         "decision_record_target": {
-          "description": "Path for durable decision records when work requires one.",
+          "description": "Path for durable decision records when work requires one; explicit config wins, but conventional ADR directories may be discovered when this is unset.",
           "type": "string",
           "minLength": 1,
           "examples": [

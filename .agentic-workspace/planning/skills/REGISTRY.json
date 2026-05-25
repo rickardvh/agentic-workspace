@@ -86,16 +86,40 @@
       "stability": "package-managed",
       "summary": "create or tighten a schema-backed execplan scaffold before coding",
       "activation_hints": {
-        "verbs": ["create", "tighten", "promote", "fill", "prepare"],
-        "nouns": ["execplan", "new plan", "plan scaffold", "execution bounds", "validation commands"],
+        "verbs": ["create", "tighten", "promote", "fill", "prepare", "scaffold", "record"],
+        "nouns": [
+          "execplan",
+          "new plan",
+          "plan scaffold",
+          "execution bounds",
+          "validation commands",
+          "architecture decision",
+          "architectural decision",
+          "ADR",
+          "decision record",
+          "database migration",
+          "storage migration"
+        ],
         "phrases": [
           "tighten a new execplan",
           "create a valid plan",
           "before coding",
           "fill execution bounds",
-          "promote to plan"
+          "promote to plan",
+          "architecture decision",
+          "architectural decision",
+          "ADR record",
+          "decision record",
+          "database migration",
+          "storage migration"
         ],
-        "when": ["checked-in planning is required", "new-plan scaffold exists", "plan is too generic"]
+        "when": [
+          "checked-in planning is required",
+          "new-plan scaffold exists",
+          "plan is too generic",
+          "architecture decisions need decision-scaffold or decision-promote routing",
+          "database or storage migrations may need ADR promotion"
+        ]
       }
     },
     {

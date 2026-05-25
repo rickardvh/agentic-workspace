@@ -245,7 +245,7 @@
     },
     "decision_pressure": {
       "type": "object",
-      "description": "Host architecture-decision configuration, existing decision index, promotion pressure, and command-owned scaffold routes."
+      "description": "Host architecture-decision configuration or discovered ADR target, existing decision index, promotion pressure, and command-owned scaffold routes."
     },
     "maintenance_pressure": {
       "type": "object",

@@ -145,6 +145,53 @@ def test_decision_pressure_scaffolds_configured_decision_record(tmp_path: Path, 
     assert (target / payload["path"]).is_file()
 
 
+def test_decision_pressure_discovers_adr_directory_and_uses_template(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write(target / "docs" / "adr" / "README.md", "# ADRs\n", encoding="utf-8")
+    _write(
+        target / "docs" / "adr" / "TEMPLATE.md",
+        "# {{title}}\n\nStatus: {{status}}\n\nDate: {{date}}\n\n## Decision\n\n{{decision}}\n",
+        encoding="utf-8",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "decision_pressure", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert answer["status"] == "discovered"
+    assert answer["configuration"]["source"] == "discovered"
+    assert answer["configuration"]["target"] == "docs/adr/"
+    assert answer["configuration"]["template"] == "docs/adr/TEMPLATE.md"
+    assert answer["actions"]["scaffold"]["available"] is True
+
+    assert (
+        cli.main(
+            [
+                "planning",
+                "decision-scaffold",
+                "--target",
+                str(target),
+                "--title",
+                "Use MariaDB",
+                "--summary",
+                "Notana uses MariaDB as the application database.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["path"] == "docs/adr/use-mariadb.md"
+    assert payload["template_path"] == "docs/adr/TEMPLATE.md"
+    content = (target / payload["path"]).read_text(encoding="utf-8")
+    assert "# Use MariaDB" in content
+    assert "Notana uses MariaDB as the application database." in content
+
+
 def test_report_decision_pressure_surfaces_planning_promotion_candidate(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

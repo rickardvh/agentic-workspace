@@ -941,7 +941,7 @@
           ]
         },
         {
-          "help": "Create a host architecture decision record scaffold through the configured decision target.",
+          "help": "Create a host architecture decision record scaffold through the configured or discovered decision target.",
           "name": "decision-scaffold",
           "options": [
             {

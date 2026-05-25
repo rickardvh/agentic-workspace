@@ -55,7 +55,7 @@ Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.t
 | `assurance.agent_may_escalate` | boolean | no | `true` | Whether agents may raise assurance level when risk or scope warrants it. |  |  |
 | `assurance.agent_may_deescalate` | boolean | no | `false` | Whether agents may lower assurance level below the configured default. |  |  |
 | `assurance.strict_closeout` | boolean | no | `false` | Whether closeout should block when required proof references or gates are missing. |  |  |
-| `assurance.decision_record_target` | string | no |  | Path for durable decision records when work requires one. | `"docs/decisions/"` |  |
+| `assurance.decision_record_target` | string | no |  | Path for durable decision records when work requires one; explicit config wins, but conventional ADR directories may be discovered when this is unset. | `"docs/decisions/"` |  |
 | `assurance.decision_record_format` | string | no |  | Host-declared file format for durable decision records. | `"markdown"` |  |
 | `assurance.decision_record_template` | string | no |  | Optional host template id or repo-relative template path for decision scaffolds. | `"adr-lite"` |  |
 | `assurance.decision_record_statuses` | array of string | no |  | Optional accepted status values for decision records. | `["proposed", "accepted", "dismissed"]` |  |
