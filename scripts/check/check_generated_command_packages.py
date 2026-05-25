@@ -206,6 +206,8 @@ GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST = {
     ),
     "internal/command-generation/src/command_generation/generated_package_loader.py": "legacy loader compatibility wrappers and legacy layout fallback",
     "src/agentic_workspace/cli.py": "source-checkout fallback to checked-in generated workspace CLI package",
+    "packages/planning/src/repo_planning_bootstrap/cli.py": "source-checkout fallback to checked-in generated planning CLI package",
+    "packages/memory/src/repo_memory_bootstrap/cli.py": "source-checkout fallback to checked-in generated memory CLI package",
     "src/agentic_workspace/workspace_runtime_primitives.py": "legacy parser helper compatibility wrapper",
     "scripts/check/check_generated_command_packages.py": "static compatibility allowlist and obsolete-layout guards",
     "tests/test_command_generation_artifacts.py": "obsolete target-specific runtime guard",
