@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-COMMAND_GENERATION_SRC = REPO_ROOT / "packages" / "command-generation" / "src"
+COMMAND_GENERATION_SRC = REPO_ROOT / "internal" / "command-generation" / "src"
 if str(COMMAND_GENERATION_SRC) not in sys.path:
     sys.path.insert(0, str(COMMAND_GENERATION_SRC))
 
@@ -16,7 +16,7 @@ from command_generation import (  # noqa: E402
 )
 
 SOURCE_PATH = "src/agentic_workspace/contracts/command_package_ir.json"
-SCHEMA_PATH = "packages/command-generation/schemas/command_package_ir.schema.json"
+SCHEMA_PATH = "internal/command-generation/schemas/command_package_ir.schema.json"
 REGENERATE_COMMAND = "uv run python scripts/generate/generate_command_packages.py"
 
 

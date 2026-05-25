@@ -109,9 +109,9 @@ def test_generated_python_conformance_uses_contract_artifacts() -> None:
     planning_status = registries["planning-bootstrap"]["planning.status.process"]
     memory_skills = registries["memory-bootstrap"]["memory.list-skills.process"]
 
-    assert "main_for_entrypoint('agentic-workspace'" in checker._python_command_for_package("root-workspace")[-1]
-    assert "main_for_entrypoint('agentic-planning'" in checker._python_command_for_package("planning-bootstrap")[-1]
-    assert "main_for_entrypoint('agentic-memory'" in checker._python_command_for_package("memory-bootstrap")[-1]
+    assert "from agentic_workspace.cli import main" in checker._python_command_for_package("root-workspace")[-1]
+    assert "from repo_planning_bootstrap.cli import main" in checker._python_command_for_package("planning-bootstrap")[-1]
+    assert "from repo_memory_bootstrap.cli import main" in checker._python_command_for_package("memory-bootstrap")[-1]
     assert defaults.success_args == ["defaults", "--section", "startup", "--format", "json"]
     assert defaults.expected_exit == 0
     assert defaults.allow_stderr is False
@@ -1023,7 +1023,7 @@ def test_tracked_python_source_files_falls_back_without_git(monkeypatch) -> None
     sources = checker._tracked_python_source_files()
 
     assert "src/agentic_workspace/contract_tooling.py" in sources
-    assert "packages/command-generation/src/command_generation/generator.py" in sources
+    assert "internal/command-generation/src/command_generation/generator.py" in sources
 
 
 def test_static_generated_package_proof_rejects_satisfied_gate_for_non_full_state(monkeypatch) -> None:

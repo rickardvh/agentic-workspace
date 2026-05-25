@@ -4,7 +4,7 @@ import sys
 import types
 from pathlib import Path
 
-COMMAND_GENERATION_SRC = Path(__file__).resolve().parents[1] / "packages" / "command-generation" / "src"
+COMMAND_GENERATION_SRC = Path(__file__).resolve().parents[1] / "internal" / "command-generation" / "src"
 if str(COMMAND_GENERATION_SRC) not in sys.path:
     sys.path.insert(0, str(COMMAND_GENERATION_SRC))
 
@@ -63,7 +63,7 @@ def test_canonical_command_artifacts_exclude_target_specific_package_fields() ->
 
 
 def test_command_generation_package_does_not_hardcode_host_runtime_modules() -> None:
-    package_root = Path(__file__).resolve().parents[1] / "packages" / "command-generation"
+    package_root = Path(__file__).resolve().parents[1] / "internal" / "command-generation"
     target_specific_runtime = ("_generated_cli_package.py", "_operation_ir_executor.py", "_runtime_cli.py")
     assert not [
         path.relative_to(package_root).as_posix()

@@ -2,10 +2,10 @@ FROM python:3.12
 
 WORKDIR /work
 
-COPY packages/command-generation ./packages/command-generation
+COPY internal/command-generation ./internal/command-generation
 
-RUN python -m pip install --no-cache-dir ./packages/command-generation
+RUN python -m pip install --no-cache-dir ./internal/command-generation
 
-ENV PYTHONPATH=/work/packages/command-generation/src
+ENV PYTHONPATH=/work/internal/command-generation/src
 
-CMD ["python", "packages/command-generation/tests/primitive_conformance.py"]
+CMD ["python", "internal/command-generation/tests/primitive_conformance.py"]

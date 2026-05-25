@@ -812,7 +812,19 @@
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
-      "pattern": "packages/command-generation/schemas/*.schema.json",
+      "pattern": "internal/command-generation/pyproject.toml",
+      "format": "toml",
+      "owner": "command-generation",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "uv/build-backend packaging validation",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Internal command-generation source-checkout package metadata is validated by Python packaging tools.",
+      "storage_class": "platform-tooling",
+      "checked_in_justification": "Host repository tooling metadata consumed by the external platform or developer tools."
+    },
+    {
+      "pattern": "internal/command-generation/schemas/*.schema.json",
       "format": "json",
       "owner": "command-generation",
       "status": "schema-backed",

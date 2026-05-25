@@ -13,6 +13,7 @@ import copy
 import difflib
 import fnmatch
 import hashlib
+import importlib
 import io
 import json
 import os
@@ -27,7 +28,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, cast, overload
 
 from agentic_workspace import __version__, doctor
 from agentic_workspace import config as config_lib
@@ -130,14 +131,31 @@ from agentic_workspace.workspace_output import (
     _emit_report_text,
     _emit_setup_text,
 )
-from command_generation.generated_package_loader import (
-    load_generated_command_module_for_entrypoint,
-    load_generated_command_package_for_entrypoint,
-)
+
+_GENERATED_CLI_MODULES = {
+    "agentic-workspace": ("agentic_workspace._generated_cli_package_impl.cli", "generated.workspace.python.cli"),
+    "agentic-planning": ("repo_planning_bootstrap._generated_cli_package_impl.cli", "generated.planning.python.cli"),
+    "agentic-memory": ("repo_memory_bootstrap._generated_cli_package_impl.cli", "generated.memory.python.cli"),
+}
+
+
+def _load_generated_cli_module(entrypoint: str) -> Any:
+    try:
+        installed_module, source_module = _GENERATED_CLI_MODULES[entrypoint]
+    except KeyError as exc:
+        raise RuntimeError(f"unsupported generated CLI entrypoint: {entrypoint}") from exc
+    try:
+        return importlib.import_module(installed_module)
+    except ModuleNotFoundError as exc:
+        if exc.name != installed_module.rsplit(".cli", 1)[0]:
+            raise
+        repo_root = Path(__file__).resolve().parents[2]
+        sys.path.insert(0, str(repo_root))
+        return importlib.import_module(source_module)
 
 
 def build_generated_parser() -> Any:
-    return load_generated_command_package_for_entrypoint("agentic-workspace").build_generated_parser()
+    return _load_generated_cli_module("agentic-workspace").build_generated_parser()
 
 
 def build_generated_cli_package_parser() -> Any:
@@ -230,7 +248,7 @@ def _agentic_workspace_package_root() -> Path | None:
 
 
 def _invoked_cli_identity_payload(*, target_root: Path | None = None, compact: bool = False) -> dict[str, Any]:
-    module_file = load_generated_command_module_for_entrypoint("agentic-workspace", "cli.py").__file__
+    module_file = _load_generated_cli_module("agentic-workspace").__file__
     package_root = _agentic_workspace_package_root()
     module_path = Path(module_file).resolve() if module_file is not None else package_root or Path.cwd().resolve()
     argv0 = sys.argv[0] if sys.argv else ""
@@ -1452,9 +1470,7 @@ def _memory_module_argv(args: argparse.Namespace) -> list[str]:
 
 
 def _run_planning_front_door(args: argparse.Namespace) -> int:
-    from command_generation.generated_package_loader import load_generated_command_package_for_entrypoint
-
-    planning_main = load_generated_command_package_for_entrypoint("agentic-planning").main
+    planning_main = _load_generated_cli_module("agentic-planning").main
     buffer = io.StringIO()
     with contextlib.redirect_stdout(buffer):
         result = planning_main(_planning_module_argv(args))
@@ -1463,9 +1479,7 @@ def _run_planning_front_door(args: argparse.Namespace) -> int:
 
 
 def _run_memory_front_door(args: argparse.Namespace) -> int:
-    from command_generation.generated_package_loader import load_generated_command_package_for_entrypoint
-
-    memory_main = load_generated_command_package_for_entrypoint("agentic-memory").main
+    memory_main = _load_generated_cli_module("agentic-memory").main
     buffer = io.StringIO()
     with contextlib.redirect_stdout(buffer):
         result = memory_main(_memory_module_argv(args))
@@ -10234,7 +10248,11 @@ def _authority_marker_for_path(path_text: str) -> dict[str, Any]:
         return _authority_marker_payload(marker_id="memory-surface", normalized=normalized)
     if "/bootstrap/" in normalized or normalized.endswith("/bootstrap"):
         return _authority_marker_payload(marker_id="package-bootstrap-payload", normalized=normalized)
-    if normalized.startswith("src/agentic_workspace/") or normalized.startswith("packages/"):
+    if (
+        normalized.startswith("src/agentic_workspace/")
+        or normalized.startswith("packages/")
+        or normalized.startswith("internal/command-generation/")
+    ):
         return _authority_marker_payload(marker_id="source", normalized=normalized)
     if normalized.startswith(".agentic-workspace/"):
         return _authority_marker_payload(marker_id="managed-workspace-surface", normalized=normalized)
@@ -10281,6 +10299,8 @@ def _boundary_warning_for_path(path_text: str) -> dict[str, Any]:
         warning = "Installed workspace surfaces are shared operational state; verify ownership before editing."
     elif normalized.startswith("packages/") and "/src/" in normalized:
         warning = "Package source edits may need matching payload or installed-surface proof before closeout."
+    elif normalized.startswith("internal/command-generation/"):
+        warning = "Internal command-generation edits must be proven through generated package freshness and conformance checks."
     elif marker["authority"] == "generated-adapter":
         warning = "Generated adapter content should be refreshed from its canonical source rather than hand-edited."
     return {"path": normalized, "authority": marker["authority"], "warning": warning, "requires_attention": warning is not None}
@@ -15692,6 +15712,14 @@ def _execution_posture_payload(
             "Automatic execution is permitted only when local delegation control resolves to auto.",
         ],
     }
+
+
+@overload
+def _command_with_cli_invoke(*, command: str, cli_invoke: str) -> str: ...
+
+
+@overload
+def _command_with_cli_invoke(*, command: None, cli_invoke: str) -> None: ...
 
 
 def _command_with_cli_invoke(*, command: str | None, cli_invoke: str) -> str | None:

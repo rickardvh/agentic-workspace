@@ -51,14 +51,9 @@ def _weak_agent_routing_for_target(target: dict[str, Any], maturity_levels: dict
 
 
 def _runtime_command_for_package(package: dict[str, Any], runtime_binding: dict[str, Any]) -> str:
-    entrypoint = str(package.get("python_runtime_binding", {}).get("entrypoint") or package.get("program") or "")
-    if entrypoint:
-        snippet = (
-            "import sys; "
-            "from command_generation.console import main_for_entrypoint; "
-            f"raise SystemExit(main_for_entrypoint({entrypoint!r}, sys.argv[1:]))"
-        )
-        return "python -c " + json.dumps(snippet)
+    python_runtime_binding = package.get("python_runtime_binding", {})
+    if isinstance(python_runtime_binding, dict) and python_runtime_binding.get("default_runtime_command"):
+        return str(python_runtime_binding["default_runtime_command"])
     return str(runtime_binding["default_runtime_command"])
 
 
@@ -653,15 +648,30 @@ def _python_primitives_module(*, source_path: str, regenerate_command: str) -> s
         '"""\n\n'
         "from __future__ import annotations\n\n"
         "# DO NOT EDIT DIRECTLY.\n"
-        "# Primitive implementations belong to command_generation. This module makes the target-local boundary explicit.\n"
+        "# Primitive implementations are generated into this target-local package.\n"
         f"# Regenerate with: {regenerate_command}\n\n"
-        "from command_generation.primitive_executor import PrimitiveContext, PrimitiveExecutionError, execute_primitive, run_operation_steps\n\n"
+        "from .primitive_executor import PrimitiveContext, PrimitiveExecutionError, execute_primitive, run_operation_steps\n\n"
         "__all__ = [\n"
         '    "PrimitiveContext",\n'
         '    "PrimitiveExecutionError",\n'
         '    "execute_primitive",\n'
         '    "run_operation_steps",\n'
         "]\n"
+    )
+
+
+def _python_primitive_executor_module(*, source_path: str, regenerate_command: str) -> str:
+    primitive_executor_path = Path(__file__).with_name("primitive_executor.py")
+    primitive_executor = primitive_executor_path.read_text(encoding="utf-8")
+    return (
+        '"""Generated target-local primitive executor implementation.\n\n'
+        f"Source: {source_path}\n"
+        f"Regenerate with: {regenerate_command}\n"
+        '"""\n\n'
+        "# DO NOT EDIT DIRECTLY.\n"
+        "# Primitive behavior changes belong in command_generation.primitive_executor.\n"
+        f"# Regenerate with: {regenerate_command}\n\n"
+        f"{primitive_executor}"
     )
 
 
@@ -1216,7 +1226,7 @@ def _python_local_runtime_generated_function(
             "        print(json.dumps(_serialise_value(values['result']), indent=2))\n"
             "        return None\n"
             "    if isinstance(result, dict) and (isinstance(result.get('route_report_summary'), dict) or result.get('kind') == 'memory-module-report/v1' or (result.get('kind') == 'planning-module-report/v1' and result.get('profile') == 'tiny')):\n"
-            "        from command_generation.primitive_executor import _emit_output\n\n"
+            "        from .primitive_executor import _emit_output\n\n"
             "        print(_emit_output(values=values, arguments=arguments), end='')\n"
             "        return None\n"
             "    if isinstance(result, dict) and result.get('kind') == 'agentic-workspace/defaults-router/v1':\n"
@@ -1357,7 +1367,7 @@ def _python_operation_executor_module(
         f"{json_import}"
         "from pathlib import Path\n"
         "from typing import Any\n\n"
-        "from command_generation.primitive_executor import (\n"
+        "from .primitive_executor import (\n"
         "    PrimitiveContext,\n"
         "    PrimitiveExecutionError,\n"
         "    run_operation_steps,\n"
@@ -2092,6 +2102,12 @@ def render_outputs(
                             GeneratedOutput(
                                 root / "primitives" / "__init__.py",
                                 _python_primitives_module(source_path=source_path, regenerate_command=regenerate_command),
+                            )
+                        )
+                        outputs.append(
+                            GeneratedOutput(
+                                root / "primitives" / "primitive_executor.py",
+                                _python_primitive_executor_module(source_path=source_path, regenerate_command=regenerate_command),
                             )
                         )
                         outputs.append(

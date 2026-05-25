@@ -4355,6 +4355,7 @@
   "package_role": "root-workspace-cli",
   "program": "agentic-workspace",
   "python_runtime_binding": {
+    "default_runtime_command": "python -c \"import sys; from agentic_workspace.cli import main; raise SystemExit(main(sys.argv[1:]))\"",
     "entrypoint": "agentic-workspace",
     "local_runtime_bindings": [
       {

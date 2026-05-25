@@ -24,12 +24,12 @@
     "exact": [
       "packages/planning/README.md",
       "packages/memory/README.md",
-      "packages/command-generation/README.md"
+      "internal/command-generation/README.md"
     ],
     "prefixes": [
       "packages/planning/docs/",
       "packages/memory/docs/",
-      "packages/command-generation/docs/"
+      "internal/command-generation/docs/"
     ],
     "rule": "Markdown-only package documentation edits use review proof unless behavior, generated payload, install contracts, or implementation semantics also changed."
   },
@@ -133,7 +133,7 @@
         "generated/typescript/",
         "scripts/generate/generate_command_packages.py",
         "scripts/check/check_generated_command_packages.py",
-        "packages/command-generation/src/command_generation/"
+        "internal/command-generation/src/command_generation/"
       ]
     },
     {
@@ -142,7 +142,7 @@
       "exact": [
         "packages/planning/README.md",
         "packages/memory/README.md",
-        "packages/command-generation/README.md"
+        "internal/command-generation/README.md"
       ]
     },
     {
@@ -283,11 +283,11 @@
         "id": "python-generated-package-loader",
         "role": "generator",
         "prefixes": [
-          "packages/command-generation/src/command_generation/"
+          "internal/command-generation/src/command_generation/"
         ],
         "direct_edit_allowed": true,
         "source_contract": "src/agentic_workspace/contracts/command_package_ir.json",
-        "generator_contract": "packages/command-generation/src/command_generation/",
+        "generator_contract": "internal/command-generation/src/command_generation/",
         "regeneration_path": "uv run python scripts/generate/generate_command_packages.py",
         "edit_policy": "Package-local source must not own generated CLI bridges. Codegen-owned loader changes must prove generated package import behavior, generated output freshness, and packaging entry points."
       }

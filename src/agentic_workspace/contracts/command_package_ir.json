@@ -27,7 +27,7 @@
           "id": "generated-package-resource-projections",
           "kind": "temporary-generated-resource-projection",
           "paths": [
-            "packages/command-generation/src/command_generation/generator.py"
+            "internal/command-generation/src/command_generation/generator.py"
           ],
           "owner": "#1100 / #892 tier-7-command-generation-extraction-readiness",
           "reason": "The generator still renders a small set of generated package-resource command projections and product-shaped output helpers while the operation IR primitives are being normalized.",
@@ -37,7 +37,7 @@
           "id": "generic-output-compatibility-renderers",
           "kind": "accepted-output-compatibility-boundary",
           "paths": [
-            "packages/command-generation/src/command_generation/primitive_executor.py"
+            "internal/command-generation/src/command_generation/primitive_executor.py"
           ],
           "owner": "#892 python completion lane",
           "reason": "The primitive executor owns generic JSON/text emission and keeps compact compatibility renderers for current memory and planning report payload shapes already routed through generated operation IR.",
@@ -137,7 +137,7 @@
       ]
     },
     "python_cli_completion": {
-      "finish_line": "Python CLI completion means parser, dispatch, command/interface behavior, adapter metadata, conformance expectations, product-specific runtime binding, and generic deterministic file/data behavior are generated from implementation-independent contracts or IR into generated/python outputs and executed by codegen-owned primitive executors; packages/command-generation/src owns only generic generation, rendering, primitive execution, schema, freshness, and conformance machinery.",
+      "finish_line": "Python CLI completion means parser, dispatch, command/interface behavior, adapter metadata, conformance expectations, product-specific runtime binding, and generic deterministic file/data behavior are generated from implementation-independent contracts or IR into generated/python outputs and executed by codegen-owned primitive executors; internal/command-generation/src owns only generic generation, rendering, primitive execution, schema, freshness, and conformance machinery.",
       "current_state": "full-generated-cli-complete",
       "allowed_hand_owned_cli_responsibilities": [
         "live workspace inspection",
@@ -249,7 +249,7 @@
     },
     "non_python_runtime_binding": {
       "selected_model": "generated parser/help with process handoff to canonical Python CLI",
-      "default_runtime_command": "python -c \"import sys; from command_generation.console import main_for_entrypoint; raise SystemExit(main_for_entrypoint('agentic-workspace', sys.argv[1:]))\"",
+      "default_runtime_command": "python -c \"import sys; from agentic_workspace.cli import main; raise SystemExit(main(sys.argv[1:]))\"",
       "scope": "Read-only generated non-Python adapters may invoke the existing Python command surface as the runtime boundary; mutation-capable commands remain deferred until lifecycle dry-run, preflight, and refusal conformance are explicit.",
       "universal_contract_owns": [
         "command identity",
@@ -291,6 +291,7 @@
       },
       "python_runtime_binding": {
         "entrypoint": "agentic-workspace",
+        "default_runtime_command": "python -c \"import sys; from agentic_workspace.cli import main; raise SystemExit(main(sys.argv[1:]))\"",
         "runtime_module_file": "cli",
         "render_runtime_module": true,
         "resource_copies": [
@@ -5043,6 +5044,7 @@
       },
       "python_runtime_binding": {
         "entrypoint": "agentic-planning",
+        "default_runtime_command": "python -c \"import sys; from repo_planning_bootstrap.cli import main; raise SystemExit(main(sys.argv[1:]))\"",
         "runtime_module_file": "cli",
         "render_runtime_module": true,
         "local_runtime_bindings": [
@@ -8012,6 +8014,7 @@
       },
       "python_runtime_binding": {
         "entrypoint": "agentic-memory",
+        "default_runtime_command": "python -c \"import sys; from repo_memory_bootstrap.cli import main; raise SystemExit(main(sys.argv[1:]))\"",
         "runtime_module_file": "cli",
         "resource_copies": [
           {

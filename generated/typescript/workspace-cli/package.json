@@ -3,7 +3,7 @@
     "declaredEntrypoints": [
       "agentic-workspace"
     ],
-    "effectiveRuntimeCommand": "python -c \"import sys; from command_generation.console import main_for_entrypoint; raise SystemExit(main_for_entrypoint('agentic-workspace', sys.argv[1:]))\"",
+    "effectiveRuntimeCommand": "python -c \"import sys; from agentic_workspace.cli import main; raise SystemExit(main(sys.argv[1:]))\"",
     "fixtureOnly": false,
     "generated": true,
     "generationStatus": "mutation-capable-adapter",
@@ -21,7 +21,7 @@
     },
     "program": "agentic-workspace",
     "runtimeBinding": {
-      "default_runtime_command": "python -c \"import sys; from command_generation.console import main_for_entrypoint; raise SystemExit(main_for_entrypoint('agentic-workspace', sys.argv[1:]))\"",
+      "default_runtime_command": "python -c \"import sys; from agentic_workspace.cli import main; raise SystemExit(main(sys.argv[1:]))\"",
       "error_mapping": [
         "Generated adapter failures before process handoff are adapter failures.",
         "Non-zero exits returned by the delegated canonical process are runtime failures unless the conformance case expects the error.",

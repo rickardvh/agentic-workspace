@@ -1,8 +1,15 @@
 from __future__ import annotations
 
+# ruff: noqa: E402, I001
+
 import json
+import sys
 import tempfile
 from pathlib import Path
+
+COMMAND_GENERATION_SRC = Path(__file__).resolve().parents[1] / "src"
+if str(COMMAND_GENERATION_SRC) not in sys.path:
+    sys.path.insert(0, str(COMMAND_GENERATION_SRC))
 
 from command_generation.primitive_executor import PrimitiveContext, PrimitiveExecutionError, execute_primitive, run_operation_steps
 

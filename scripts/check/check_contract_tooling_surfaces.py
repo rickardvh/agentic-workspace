@@ -4,6 +4,7 @@ import argparse
 import ast
 import importlib.util
 import json
+import sys
 import tempfile
 from pathlib import Path
 
@@ -44,14 +45,18 @@ from agentic_workspace.contract_tooling import (
     workflow_definition_format_manifest,
     workspace_surfaces_manifest,
 )
-from command_generation.generated_package_loader import (
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+COMMAND_GENERATION_SRC = REPO_ROOT / "internal" / "command-generation" / "src"
+if str(COMMAND_GENERATION_SRC) not in sys.path:
+    sys.path.insert(0, str(COMMAND_GENERATION_SRC))
+
+from command_generation.generated_package_loader import (  # noqa: E402
     load_generated_command_module_for_entrypoint,
     load_generated_command_package_for_entrypoint,
 )
 
 generated_workspace_cli = load_generated_command_module_for_entrypoint("agentic-workspace", "cli.py")
-
-REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -76,12 +81,12 @@ def _validate(instance: object, schema_name: str) -> list[str]:
 
 def _validate_command_generation_schema_boundary() -> list[str]:
     workspace_schema = REPO_ROOT / "src" / "agentic_workspace" / "contracts" / "schemas" / "command_package_ir.schema.json"
-    package_schema = REPO_ROOT / "packages" / "command-generation" / "schemas" / "command_package_ir.schema.json"
+    package_schema = REPO_ROOT / "internal" / "command-generation" / "schemas" / "command_package_ir.schema.json"
     errors: list[str] = []
     if not package_schema.is_file():
-        return ["packages/command-generation/schemas/command_package_ir.schema.json is missing"]
+        return ["internal/command-generation/schemas/command_package_ir.schema.json is missing"]
     if workspace_schema.read_text(encoding="utf-8") != package_schema.read_text(encoding="utf-8"):
-        errors.append("packages/command-generation/schemas/command_package_ir.schema.json drifted from workspace validation schema")
+        errors.append("internal/command-generation/schemas/command_package_ir.schema.json drifted from workspace validation schema")
     return errors
 
 
@@ -2130,7 +2135,7 @@ def main(argv: list[str] | None = None) -> int:
         generated_adapter_statuses, _ = _generated_command_adapter_statuses()
         print("Contract tooling health report")
         print("- No contract-tooling drift warnings detected.")
-        print("- Command-generation schema boundary: packages/command-generation/schemas/command_package_ir.schema.json mirrors workspace validation schema.")
+        print("- Command-generation schema boundary: internal/command-generation/schemas/command_package_ir.schema.json mirrors workspace validation schema.")
         print("- Generated command adapter status:")
         for status in generated_adapter_statuses:
             commands = ", ".join(str(command) for command in status["command_surfaces"])
@@ -2148,5 +2153,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
-
