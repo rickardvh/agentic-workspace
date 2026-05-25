@@ -2308,6 +2308,170 @@ def _workspace_payload_bytes(relative: Path) -> bytes:
     return _workspace_payload_source(relative).read_bytes()
 
 
+def _host_ownership_ledger_text() -> str:
+    return """schema_version = 1
+
+[workspace]
+workflow_path = ".agentic-workspace/WORKFLOW.md"
+ownership_manifest_path = ".agentic-workspace/OWNERSHIP.toml"
+managed_root = ".agentic-workspace/"
+
+subsystems = []
+
+[ownership_classes.repo_owned]
+summary = "Repository-native state owned by the repo and not upgrade-replaceable by installed packages."
+
+[ownership_classes.managed_fence]
+summary = "Product-managed content inside an explicit fence in a repo-owned file."
+
+[ownership_classes.module_managed]
+summary = "Upgrade-replaceable content owned by one installed module under .agentic-workspace/."
+
+[[module_roots]]
+module = "workspace"
+path = ".agentic-workspace/"
+ownership = "module_managed"
+uninstall_policy = "remove-managed-files-only"
+
+[[module_roots]]
+module = "memory"
+path = ".agentic-workspace/memory/"
+ownership = "module_managed"
+uninstall_policy = "remove-managed-files-only"
+
+[[module_roots]]
+module = "planning"
+path = ".agentic-workspace/planning/"
+ownership = "module_managed"
+uninstall_policy = "remove-managed-files-only"
+
+[[managed_surfaces]]
+module = "workspace"
+path = ".agentic-workspace/WORKFLOW.md"
+kind = "workflow-contract"
+ownership = "module_managed"
+uninstall_policy = "remove-if-owned"
+
+[[managed_surfaces]]
+module = "workspace"
+path = ".agentic-workspace/OWNERSHIP.toml"
+kind = "ownership-ledger"
+ownership = "module_managed"
+uninstall_policy = "remove-if-owned"
+
+[[managed_surfaces]]
+module = "workspace"
+path = ".agentic-workspace/system-intent/WORKFLOW.md"
+kind = "system-intent-workflow"
+ownership = "module_managed"
+uninstall_policy = "remove-if-owned"
+
+[[managed_surfaces]]
+module = "memory"
+path = ".agentic-workspace/memory/**"
+kind = "module-root"
+ownership = "module_managed"
+uninstall_policy = "remove-if-owned"
+
+[[managed_surfaces]]
+module = "planning"
+path = ".agentic-workspace/planning/**"
+kind = "module-root"
+ownership = "module_managed"
+uninstall_policy = "remove-if-owned"
+
+[[fences]]
+name = "workspace-workflow-pointer"
+module = "workspace"
+file = "AGENTS.md"
+start = "<!-- agentic-workspace:workflow:start -->"
+end = "<!-- agentic-workspace:workflow:end -->"
+ownership = "managed_fence"
+uninstall_policy = "remove-fence-only"
+
+[[authority_surfaces]]
+concern = "startup-instructions"
+surface = "AGENTS.md"
+owner = "repo"
+ownership = "repo_owned"
+authority = "primary"
+summary = "Repo-level startup instructions and local operating constraints."
+
+[[authority_surfaces]]
+concern = "workspace-policy"
+surface = ".agentic-workspace/config.toml"
+owner = "repo"
+ownership = "repo_owned"
+authority = "primary"
+summary = "Repo-owned workspace policy, workflow obligations, and structured operating settings."
+
+[[authority_surfaces]]
+concern = "compact-planning-state"
+surface = ".agentic-workspace/planning/state.toml"
+owner = "planning"
+ownership = "module_managed"
+authority = "primary"
+summary = "Consolidated active queue and roadmap state owned by the planning package."
+
+[[authority_surfaces]]
+concern = "shared-workflow-contract"
+surface = ".agentic-workspace/WORKFLOW.md"
+owner = "workspace"
+ownership = "module_managed"
+authority = "primary"
+summary = "Shared workflow rules installed by the workspace layer."
+
+[[authority_surfaces]]
+concern = "ownership-ledger"
+surface = ".agentic-workspace/OWNERSHIP.toml"
+owner = "workspace"
+ownership = "module_managed"
+authority = "primary"
+summary = "Ownership ledger for managed paths, fences, and optional host-repo subsystem boundaries."
+
+[[authority_surfaces]]
+concern = "system-intent-mirror"
+surface = ".agentic-workspace/system-intent/intent.toml"
+owner = "workspace"
+ownership = "module_managed"
+authority = "primary"
+summary = "Workspace-owned mirrored system-intent contract consumed by package operations."
+
+[[authority_surfaces]]
+concern = "planning-install-tree"
+surface = ".agentic-workspace/planning/"
+owner = "planning"
+ownership = "module_managed"
+authority = "primary"
+summary = "Planning-owned installed workflow and helper surfaces."
+
+[[authority_surfaces]]
+concern = "memory-shared-support"
+surface = ".agentic-workspace/memory/"
+owner = "memory"
+ownership = "module_managed"
+authority = "primary"
+summary = "Memory-owned shared workflow, version, bootstrap, and skill support surfaces."
+
+[[authority_surfaces]]
+concern = "workspace-workflow-pointer"
+surface = "AGENTS.md#agentic-workspace:workflow"
+owner = "workspace"
+ownership = "managed_fence"
+authority = "fenced"
+summary = "Managed pointer block inside the repo-owned agent instructions file."
+
+[notes]
+purpose = "This file defines Agentic Workspace managed surfaces and optional host-repo ownership boundaries. Add host-specific [[subsystems]] entries here when useful."
+"""
+
+
+def _workspace_payload_bytes_for_target(relative: Path, *, target_root: Path) -> bytes:
+    if relative == Path(".agentic-workspace/OWNERSHIP.toml") and not _is_agentic_workspace_source_checkout(target_root):
+        return _host_ownership_ledger_text().encode("utf-8")
+    return _workspace_payload_bytes(relative)
+
+
 def _workspace_report(
     *,
     target_root: Path,
@@ -3579,7 +3743,7 @@ def _workspace_init_or_upgrade_report(
         actions.append(config_action)
     for relative in WORKSPACE_PAYLOAD_FILES:
         destination = target_root / relative
-        source_bytes = _workspace_payload_bytes(relative)
+        source_bytes = _workspace_payload_bytes_for_target(relative, target_root=target_root)
         existing = destination.exists()
         if not existing:
             if not dry_run:
@@ -3754,7 +3918,7 @@ def _workspace_uninstall_report(
         if not destination.exists():
             actions.append({"kind": "skipped", "path": destination.as_posix(), "detail": "already absent"})
             continue
-        if destination.read_bytes() == _workspace_payload_bytes(relative):
+        if destination.read_bytes() == _workspace_payload_bytes_for_target(relative, target_root=target_root):
             removable_candidates.append(relative)
             continue
         ambiguous_payloads.append(relative)
@@ -16416,7 +16580,51 @@ def _validate_intent_lifecycle_fields(*, surface: str, item: dict[str, Any]) -> 
         raise WorkspaceUsageError(f"{surface} confidence must be one of: {accepted}.")
 
 
-def _default_subsystem_intent_text() -> str:
+def _render_subsystem_intent_text(subsystems: list[dict[str, Any]]) -> str:
+    rule = "Subsystem intent is durable scoped decision pressure, not active task state by default."
+    lines = ["schema_version = 1", f'kind = "{SUBSYSTEM_INTENT_KIND}"', f"rule = {json.dumps(rule)}"]
+    if not subsystems:
+        lines.extend(["subsystems = []", ""])
+        return "\n".join(lines)
+    for subsystem in subsystems:
+        raw_records = subsystem.get("source_records", [])
+        records = raw_records if isinstance(raw_records, list) else []
+        source_records = [
+            "{ "
+            + ", ".join(
+                [
+                    f"source_type = {json.dumps(str(record.get('source_type', '')))}",
+                    f"ref = {json.dumps(str(record.get('ref', '')))}",
+                    f"summary = {json.dumps(str(record.get('summary', '')))}",
+                ]
+            )
+            + " }"
+            for record in records
+            if isinstance(record, dict)
+        ]
+        lines.extend(
+            [
+                "",
+                "[[subsystems]]",
+                f"id = {json.dumps(subsystem['id'])}",
+                f"scope = {json.dumps(subsystem['scope'])}",
+                f"status = {json.dumps(subsystem['status'])}",
+                f"summary = {json.dumps(subsystem['summary'])}",
+                f"governing_intents = {json.dumps(subsystem['governing_intents'])}",
+                f"anti_intents = {json.dumps(subsystem['anti_intents'])}",
+                f"decision_tests = {json.dumps(subsystem['decision_tests'])}",
+                f"confidence = {json.dumps(subsystem['confidence'])}",
+                f"needs_review = {('true' if subsystem['needs_review'] else 'false')}",
+                f"source_records = [{', '.join(source_records)}]",
+            ]
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _default_subsystem_intent_text(*, target_root: Path) -> str:
+    if not _is_agentic_workspace_source_checkout(target_root):
+        return _render_subsystem_intent_text([])
     subsystems: list[dict[str, Any]] = [
         {
             "id": "planning",
@@ -16474,42 +16682,7 @@ def _default_subsystem_intent_text() -> str:
             ],
         },
     ]
-    rule = "Subsystem intent is durable scoped decision pressure, not active task state by default."
-    lines = ["schema_version = 1", f'kind = "{SUBSYSTEM_INTENT_KIND}"', f"rule = {json.dumps(rule)}"]
-    for subsystem in subsystems:
-        raw_records = subsystem.get("source_records", [])
-        records = raw_records if isinstance(raw_records, list) else []
-        source_records = [
-            "{ "
-            + ", ".join(
-                [
-                    f"source_type = {json.dumps(str(record.get('source_type', '')))}",
-                    f"ref = {json.dumps(str(record.get('ref', '')))}",
-                    f"summary = {json.dumps(str(record.get('summary', '')))}",
-                ]
-            )
-            + " }"
-            for record in records
-            if isinstance(record, dict)
-        ]
-        lines.extend(
-            [
-                "",
-                "[[subsystems]]",
-                f"id = {json.dumps(subsystem['id'])}",
-                f"scope = {json.dumps(subsystem['scope'])}",
-                f"status = {json.dumps(subsystem['status'])}",
-                f"summary = {json.dumps(subsystem['summary'])}",
-                f"governing_intents = {json.dumps(subsystem['governing_intents'])}",
-                f"anti_intents = {json.dumps(subsystem['anti_intents'])}",
-                f"decision_tests = {json.dumps(subsystem['decision_tests'])}",
-                f"confidence = {json.dumps(subsystem['confidence'])}",
-                f"needs_review = {('true' if subsystem['needs_review'] else 'false')}",
-                f"source_records = [{', '.join(source_records)}]",
-            ]
-        )
-    lines.append("")
-    return "\n".join(lines)
+    return _render_subsystem_intent_text(subsystems)
 
 
 def _load_subsystem_intent(*, target_root: Path) -> dict[str, Any]:
@@ -16911,7 +17084,7 @@ def _sync_system_intent_mirror(*, target_root: Path, config: WorkspaceConfig, dr
         )
     subsystem_path = target_root / WORKSPACE_SUBSYSTEM_INTENT_PATH
     if not subsystem_path.exists():
-        subsystem_text = _default_subsystem_intent_text()
+        subsystem_text = _default_subsystem_intent_text(target_root=target_root)
         if not dry_run:
             subsystem_path.parent.mkdir(parents=True, exist_ok=True)
             subsystem_path.write_text(subsystem_text, encoding="utf-8")
