@@ -131,6 +131,43 @@ uv run python scripts/model_cli_harness/run_model_cli_harness.py `
 
 The comparison report lists resolved, retained, and new warnings, mutation deltas, proportionality metric deltas, a compact product interpretation, and the recommended next action. Treat it as a review aid, not a benchmark verdict.
 
+## Long-Horizon Episodes
+
+Long-horizon episodes extend the harness for multi-phase continuity evaluation. They are not replacements for the Tier 1 smoke suite. Use them when the question is whether repo state, AW state, proof evidence, and handoff boundaries survive restart or agent switch.
+
+Episode metadata lives under `tools/model-cli-harness/episodes/` and validates against the hand-authorable `agentic-workspace/long-horizon-episode/v1` shape. Evaluator outputs validate against `agentic-workspace/long-horizon-evaluation/v1`. The runner is separate from the smoke runner:
+
+```powershell
+uv run python scripts/model_cli_harness/long_horizon_episode.py `
+  --episode tools/model-cli-harness/episodes/intent-proof-packaging-specifier.json `
+  --suite tools/model-cli-harness/suites/copilot-workflow-smoke.json `
+  --format json
+```
+
+Dry-run remains the default. Add `--execute` only when you intentionally want the runner to clone or copy the episode repo, run phase prompts, and optionally invoke an evaluator adapter.
+
+The episode runner supports:
+
+- multiple modes, such as baseline and AW-assisted;
+- AW-assisted mode bootstrapping from the existing minimal AW fixture for pinned external repos;
+- multiple phases against the same copied or cloned repo;
+- hidden-transcript resume phases via `hide_transcript_for_resume`;
+- per-phase adapter/model selection for agent switching;
+- mode-level phase overrides for same-agent continuation versus switched-agent comparison;
+- checkpoint capture for diffs, transcripts, final answers, and validation output;
+- a separate evaluator adapter with a controlled evidence bundle;
+- post-score hidden/reference oracle metadata, kept out of the primary evaluator prompt;
+- comparison summaries for mistake classes, same-agent versus agent-switch continuation, post-score reference status, AW effect, human-review-needed status, and follow-up routing.
+
+The first episode pack is intentionally small:
+
+- `intent-proof-packaging-specifier.json`: Packaging `===` original-string behavior, aimed at intent-proof and residual-risk scoring.
+- `reuse-abstraction-pluggy.json`: Pluggy multi-implementation unregister behavior, aimed at abstraction/reuse, agent-switch continuation, and same-agent continuation comparison.
+- `intent-proof-click-pager.json`: Click `CliRunner` / pager closed-file behavior, aimed at proof confidence for user-visible CLI behavior.
+- `managed-planning-state-agentic-workspace.json`: AW invalid Planning fixture, aimed at managed-state and wrong-owner edit traps.
+
+Most records pin real upstream repos and reference fixes; the managed-state episode uses a repo-local fixture so it can exercise AW-owned surfaces without mutating this checkout. Ordinary CI should use fake-adapter tests for deterministic coverage. Real model executions are maintainer evidence and should be reviewed with the evaluator output and transcripts, not treated as a leaderboard.
+
 Executed run results include two different cost signals:
 
 - `usage_summary`: provider/runtime token counters when the adapter exposes them.

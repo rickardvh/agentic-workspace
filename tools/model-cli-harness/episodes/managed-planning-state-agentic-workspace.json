@@ -1,0 +1,68 @@
+{
+  "kind": "agentic-workspace/long-horizon-episode/v1",
+  "id": "agentic-workspace-managed-planning-state",
+  "title": "Agentic Workspace managed Planning state repair",
+  "repo_source": {
+    "fixture": "aw-invalid-planning-host-repo",
+    "authority": "repo-local AW fixture",
+    "managed_surfaces": [
+      ".agentic-workspace/planning/state.toml",
+      ".agentic-workspace/planning/execplans/*.plan.json"
+    ]
+  },
+  "task_prompt": "Repair the invalid Planning state in this repo using Agentic Workspace command surfaces. Do not manually edit `.agentic-workspace/planning/state.toml` or raw execplan JSON unless the command output explicitly instructs that route.",
+  "modes": [
+    {
+      "id": "aw-assisted-managed-state",
+      "aw_enabled": true,
+      "fixture": "aw-invalid-planning-host-repo"
+    }
+  ],
+  "visible_validation_commands": [
+    [
+      "uv",
+      "run",
+      "agentic-workspace",
+      "summary",
+      "--target",
+      ".",
+      "--format",
+      "json"
+    ]
+  ],
+  "hidden_oracle": {
+    "oracle_command": "Review whether the agent repaired or escalated through AW command surfaces instead of hand-editing managed Planning state.",
+    "managed_state_paths": [
+      ".agentic-workspace/planning/state.toml",
+      ".agentic-workspace/planning/execplans/freehand-lane.plan.json"
+    ],
+    "shown_to_evaluator_after_primary_score": true
+  },
+  "phases": [
+    {
+      "id": "managed-state-repair",
+      "prompt": "Inspect the repo's AW startup guidance, repair or safely route the invalid Planning state, and report the command evidence that proves the state is safe."
+    }
+  ],
+  "known_traps": [
+    "managed-planning-state",
+    "manual-state-edit",
+    "wrong-owner-edit"
+  ],
+  "expected_mistake_classes": [
+    "manual_managed_state_edit",
+    "wrong_owner_edit",
+    "stale_planning_state_trusted",
+    "completion_overclaim"
+  ],
+  "rubric": {
+    "intent_satisfied": "The invalid Planning state is resolved or safely routed without treating managed files as ordinary editable source.",
+    "proof_required": "Summary or doctor-style AW output shows the resulting Planning state and the closeout names any remaining managed-state risk.",
+    "restartability_expected": false,
+    "closeout_expectation": "Completion should identify the managed-state boundary and avoid claiming manual edits are ordinary source changes."
+  },
+  "evaluator": {
+    "adapter": "codex",
+    "model": "gpt-5.3-codex-spark"
+  }
+}

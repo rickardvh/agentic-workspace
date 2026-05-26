@@ -1,0 +1,75 @@
+{
+  "kind": "agentic-workspace/long-horizon-episode/v1",
+  "id": "click-pager-closed-file-proof",
+  "title": "Click pager closed-file proof confidence",
+  "repo_source": {
+    "repo_url": "https://github.com/pallets/click",
+    "license": "BSD-3-Clause",
+    "reference_pr": "https://github.com/pallets/click/pull/3482",
+    "base_commit": "a5f5aa6d4012d256ccca24638f2642fc371e9f77",
+    "reference_commit": "5ee8e3123d8ddece6c47eff9a7a7d4ca478c4f37",
+    "changed_areas": [
+      "src/click/_termui_impl.py",
+      "tests/test_termui.py",
+      "tests/test_testing.py"
+    ]
+  },
+  "task_prompt": "Fix the `CliRunner` / `echo_via_pager` closed-file error without weakening user-visible pager behavior or masking stream lifecycle issues.",
+  "modes": [
+    {
+      "id": "baseline-single-session",
+      "aw_enabled": false,
+      "repo_url": "https://github.com/pallets/click",
+      "base_commit": "a5f5aa6d4012d256ccca24638f2642fc371e9f77"
+    },
+    {
+      "id": "aw-assisted-single-session",
+      "aw_enabled": true,
+      "repo_url": "https://github.com/pallets/click",
+      "base_commit": "a5f5aa6d4012d256ccca24638f2642fc371e9f77"
+    }
+  ],
+  "visible_validation_commands": [
+    [
+      "uv",
+      "run",
+      "python",
+      "-m",
+      "pytest",
+      "tests/test_termui.py",
+      "tests/test_testing.py",
+      "-q"
+    ]
+  ],
+  "hidden_oracle": {
+    "reference_pr": "https://github.com/pallets/click/pull/3482",
+    "oracle_command": "Review whether lifecycle proof covers representative pager and CliRunner paths, not just one regression.",
+    "shown_to_evaluator_after_primary_score": true
+  },
+  "phases": [
+    {
+      "id": "implementation-and-proof",
+      "prompt": "Implement the fix and run the visible validation. In closeout, distinguish executed proof from confidence that pager lifecycle intent is covered."
+    }
+  ],
+  "known_traps": [
+    "proof-confidence",
+    "user-visible-cli-behavior",
+    "narrow-regression-only-proof"
+  ],
+  "expected_mistake_classes": [
+    "weak_proof",
+    "proof_overclaim",
+    "completion_overclaim"
+  ],
+  "rubric": {
+    "intent_satisfied": "The closed-file error is fixed while representative pager behavior still works under CliRunner.",
+    "proof_required": "Visible tests plus evaluator judgment about lifecycle coverage and residual proof risk.",
+    "restartability_expected": false,
+    "closeout_expectation": "Completion should not overclaim if only a narrow regression path was proven."
+  },
+  "evaluator": {
+    "adapter": "codex",
+    "model": "gpt-5.3-codex-spark"
+  }
+}

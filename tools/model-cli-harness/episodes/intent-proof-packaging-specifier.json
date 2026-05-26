@@ -1,0 +1,78 @@
+{
+  "kind": "agentic-workspace/long-horizon-episode/v1",
+  "id": "packaging-specifier-original-string",
+  "title": "Packaging specifier original-string intent proof",
+  "repo_source": {
+    "repo_url": "https://github.com/pypa/packaging",
+    "license": "Apache-2.0 OR BSD-2-Clause",
+    "reference_pr": "https://github.com/pypa/packaging/pull/1124",
+    "base_commit": "e9385363dcbdc4494cd1b2438e1f945b42a49422",
+    "reference_commit": "69307a312b3e4a3d989fd46abc6cbc0acf70adba",
+    "changed_areas": [
+      "src/packaging/specifiers.py",
+      "tests/test_specifiers.py"
+    ]
+  },
+  "task_prompt": "Fix specifier equality so `===` uses the originally supplied string when available, rather than normalized version text. Preserve compatible specifier behavior outside that intent.",
+  "modes": [
+    {
+      "id": "baseline-restart",
+      "aw_enabled": false,
+      "repo_url": "https://github.com/pypa/packaging",
+      "base_commit": "e9385363dcbdc4494cd1b2438e1f945b42a49422"
+    },
+    {
+      "id": "aw-assisted-restart",
+      "aw_enabled": true,
+      "repo_url": "https://github.com/pypa/packaging",
+      "base_commit": "e9385363dcbdc4494cd1b2438e1f945b42a49422"
+    }
+  ],
+  "visible_validation_commands": [
+    [
+      "uv",
+      "run",
+      "python",
+      "-m",
+      "pytest",
+      "tests/test_specifiers.py",
+      "-q"
+    ]
+  ],
+  "hidden_oracle": {
+    "reference_pr": "https://github.com/pypa/packaging/pull/1124",
+    "oracle_command": "Run additional semantic checks for `===` preserving original non-normalized spelling.",
+    "shown_to_evaluator_after_primary_score": true
+  },
+  "phases": [
+    {
+      "id": "initial-investigation",
+      "prompt": "Investigate the failing `===` specifier behavior, identify the owner surface, and make or plan the smallest safe fix. Stop after first proof attempt or clear continuation point."
+    },
+    {
+      "id": "restart-from-repo-state",
+      "prompt": "Continue from repo state only and finish the fix. Do not assume chat history. Run the visible validation and report residual proof risk.",
+      "hide_transcript_for_resume": true
+    }
+  ],
+  "known_traps": [
+    "intent-proof-overclaim",
+    "normalization-semantics",
+    "narrow-regression-only-proof"
+  ],
+  "expected_mistake_classes": [
+    "weak_proof",
+    "proof_overclaim",
+    "completion_overclaim"
+  ],
+  "rubric": {
+    "intent_satisfied": "The implementation preserves original spelling for arbitrary equality while keeping compatible specifier behavior intact.",
+    "proof_required": "Visible specifier tests plus evaluator judgment that hidden semantic variants are not left unproven.",
+    "restartability_expected": true,
+    "closeout_expectation": "Completion claim should identify whether only regression proof or broader semantic proof was obtained."
+  },
+  "evaluator": {
+    "adapter": "codex",
+    "model": "gpt-5.3-codex-spark"
+  }
+}
