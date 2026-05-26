@@ -267,7 +267,7 @@ def _invoked_cli_identity_payload(*, target_root: Path | None = None, compact: b
     else:
         source_class = "unknown"
         confidence = "low"
-    payload = {
+    payload: dict[str, Any] = {
         "kind": "agentic-workspace/invoked-cli-identity/v1",
         "package": "agentic-workspace",
         "version": __version__,
@@ -5733,10 +5733,29 @@ def _decision_slug(value: str) -> str:
 def _decision_target_info(*, target_root: Path, config: WorkspaceConfig) -> dict[str, Any]:
     target = str(config.assurance.decision_record_target or "").strip()
     statuses = list(config.assurance.decision_record_statuses) or ["proposed", "accepted", "superseded", "dismissed"]
+    discovered_target = ""
+    discovered_template = ""
+    discovered_source = ""
+    if not target:
+        for candidate in ("docs/adr", "docs/adrs", "adr", "adrs", "docs/decisions", "decisions"):
+            candidate_path = target_root / candidate
+            if not candidate_path.is_dir():
+                continue
+            readme_path = next((candidate_path / name for name in ("README.md", "readme.md") if (candidate_path / name).is_file()), None)
+            template_path = next(
+                (candidate_path / name for name in ("TEMPLATE.md", "template.md", "adr-template.md") if (candidate_path / name).is_file()),
+                None,
+            )
+            discovered_target = f"{candidate}/"
+            discovered_source = _repo_relative_path(readme_path or candidate_path, target_root)
+            discovered_template = _repo_relative_path(template_path, target_root) if template_path is not None else ""
+            target = discovered_target
+            break
     if not target:
         return {
             "status": "not-configured",
             "configured": False,
+            "source": "none",
             "target": "",
             "exists": False,
             "format": config.assurance.decision_record_format or "markdown",
@@ -5758,14 +5777,18 @@ def _decision_target_info(*, target_root: Path, config: WorkspaceConfig) -> dict
         inside_target = False
     suffix = target_path.suffix.lower()
     inferred_format = config.assurance.decision_record_format or ("json" if suffix == ".json" else "markdown")
+    configured = bool(config.assurance.decision_record_target)
+    source = "config" if configured else "discovered"
     return {
-        "status": "configured" if inside_target else "invalid-target",
+        "status": "configured" if configured and inside_target else "discovered" if inside_target else "invalid-target",
         "configured": True,
+        "source": source,
         "target": target,
         "exists": target_path.exists(),
         "target_kind": "file" if suffix else "directory",
         "format": inferred_format,
-        "template": config.assurance.decision_record_template or "adr-lite",
+        "template": config.assurance.decision_record_template or discovered_template or "adr-lite",
+        "discovered_from": discovered_source,
         "id_convention": "slug-title",
         "statuses": statuses,
         "inside_target": inside_target,
@@ -5818,7 +5841,9 @@ def _decision_pressure_from_planning(planning_record: dict[str, Any] | None) -> 
 def _decision_pressure_from_memory(module_reports: list[dict[str, Any]]) -> dict[str, Any]:
     memory_report = next((report for report in module_reports if isinstance(report, dict) and report.get("module") == "memory"), None)
     consult = memory_report.get("habitual_pull", {}) if isinstance(memory_report, dict) else {}
-    promotion_pressure = consult.get("promotion_pressure", {}) if isinstance(consult, dict) else {}
+    promotion_pressure = memory_report.get("promotion_pressure", {}) if isinstance(memory_report, dict) else {}
+    if not isinstance(promotion_pressure, dict) or not promotion_pressure:
+        promotion_pressure = consult.get("promotion_pressure", {}) if isinstance(consult, dict) else {}
     if not isinstance(promotion_pressure, dict):
         return {"status": "unavailable", "candidate_count": 0, "sample": []}
     sample = []
@@ -5857,6 +5882,14 @@ def _decision_closeout_state(*, planning_pressure: dict[str, Any], config_info: 
     }
 
 
+def _decision_command_placeholder_payload() -> dict[str, Any]:
+    return {
+        "target": "<repo>",
+        "is_placeholder": True,
+        "rule": "Replace <repo> with the resolved workspace target, or omit --target when running from the target repo.",
+    }
+
+
 def _decision_pressure_payload(
     *, target_root: Path, config: WorkspaceConfig, module_reports: list[dict[str, Any]], cli_invoke: str = DEFAULT_CLI_INVOKE
 ) -> dict[str, Any]:
@@ -5867,7 +5900,7 @@ def _decision_pressure_payload(
     memory_pressure = _decision_pressure_from_memory(module_reports)
     closeout_state = _decision_closeout_state(planning_pressure=planning_pressure, config_info=config_info)
     scaffold_command = _command_with_cli_invoke(
-        command='agentic-workspace planning decision-scaffold --title "<title>" --summary "<decision>" --target ./repo --format json',
+        command='agentic-workspace planning decision-scaffold --title "<title>" --summary "<decision>" --target <repo> --format json',
         cli_invoke=cli_invoke,
     )
     task = planning_record.get("task", {}) if isinstance(planning_record, dict) else {}
@@ -5875,13 +5908,17 @@ def _decision_pressure_payload(
     promote_command = ""
     if plan_surface:
         promote_command = _command_with_cli_invoke(
-            command=f"agentic-workspace planning decision-promote --from-plan {plan_surface} --target ./repo --format json",
+            command=f"agentic-workspace planning decision-promote --from-plan {plan_surface} --target <repo> --format json",
             cli_invoke=cli_invoke,
         )
     pressure_count = int(planning_pressure.get("candidate_count", 0)) + int(memory_pressure.get("candidate_count", 0))
     return {
         "kind": "agentic-workspace/decision-pressure/v1",
-        "status": "attention" if pressure_count else "configured" if config_info.get("configured") else "not-configured",
+        "status": "attention"
+        if pressure_count
+        else str(config_info.get("status", "configured"))
+        if config_info.get("configured")
+        else "not-configured",
         "configuration": config_info,
         "existing_decisions": index,
         "planning_pressure": planning_pressure,
@@ -5891,12 +5928,14 @@ def _decision_pressure_payload(
             "scaffold": {
                 "available": bool(config_info.get("configured") and config_info.get("inside_target", True)),
                 "command": scaffold_command if config_info.get("configured") else "",
+                "command_target": _decision_command_placeholder_payload() if config_info.get("configured") else {},
                 "why": "Create a host decision record through AW instead of hand-editing the target file.",
             },
             "promote_from_plan": {
                 "available": bool(config_info.get("configured") and plan_surface),
                 "command": promote_command,
-                "why": "Promote active planning architecture_decision_promotion into the configured decision target.",
+                "command_target": _decision_command_placeholder_payload() if promote_command else {},
+                "why": "Promote active planning architecture_decision_promotion into the configured or discovered decision target.",
             },
         },
         "rule": "Agent owns architecture judgment; AW preserves and routes decision records without forcing every task to create one.",
@@ -5917,12 +5956,23 @@ def _architecture_decision_closeout_payload(
         planning_record = {}
     pressure = _decision_pressure_from_planning(planning_record)
     closeout_state = _decision_closeout_state(planning_pressure=pressure, config_info=config_info)
-    return {
+    payload = {
         "kind": "agentic-workspace/architecture-decision-closeout/v1",
         **closeout_state,
         "promotion": pressure.get("architecture_decision_promotion", {}),
         "rule": "Architecture decisions are optional, but closeout should not hide an unpromoted decision candidate.",
     }
+    closeout_text = _planning_record_text_for_external_check(planning_record) if planning_record else ""
+    architecture_candidate = _architecture_decision_candidate_payload(
+        task_text=closeout_text,
+        target_root=target_root,
+        config=config,
+        changed_paths=[],
+        cli_invoke=config.cli_invoke if config is not None else DEFAULT_CLI_INVOKE,
+    )
+    if architecture_candidate.get("status") == "candidate":
+        payload["architecture_decision_candidate"] = architecture_candidate
+    return payload
 
 
 def _run_report_router_command(
@@ -11479,7 +11529,9 @@ def _start_payload(
     startup_review = _workspace_absence_startup_review(target_root=target_root, config=config)
     if startup_review["status"] == "attention":
         payload["startup_review"] = startup_review
-    task_intent = _task_intent_carry_forward_payload(task_text=task_text, cli_invoke=config.cli_invoke)
+    task_intent = _task_intent_carry_forward_payload(
+        task_text=task_text, cli_invoke=config.cli_invoke, target_root=target_root, config=config, changed_paths=changed_paths
+    )
     if task_intent["status"] == "present":
         payload["task_intent"] = task_intent
         payload["acceptance"] = task_intent["acceptance"]
@@ -12209,7 +12261,9 @@ def _start_tiny_payload_fast(
     startup_review = _workspace_absence_startup_review(target_root=target_root, config=config)
     if startup_review["status"] == "attention":
         payload["startup_review"] = startup_review
-    task_intent = _task_intent_carry_forward_payload(task_text=task_text, cli_invoke=config.cli_invoke)
+    task_intent = _task_intent_carry_forward_payload(
+        task_text=task_text, cli_invoke=config.cli_invoke, target_root=target_root, config=config, changed_paths=changed_paths
+    )
     if task_intent["status"] == "present":
         payload["task_intent"] = task_intent
         payload["acceptance"] = task_intent["acceptance"]
@@ -12731,7 +12785,105 @@ def _task_acceptance_payload(*, task_text: str | None, requested_outcomes: list[
     }
 
 
-def _task_intent_promotion_guidance_payload(*, task_text: str | None, acceptance: dict[str, Any] | None = None) -> dict[str, Any]:
+_ARCHITECTURE_DECISION_MARKERS = (
+    "adr",
+    "architecture decision",
+    "architectural decision",
+    "decision record",
+    "database system",
+    "database migration",
+    "storage migration",
+    "storage engine",
+    "schema strategy",
+    "security posture",
+    "compliance boundary",
+    "api contract",
+    "api boundary",
+    "domain boundary",
+)
+
+
+def _architecture_decision_signal(*, task_text: str | None, changed_paths: Sequence[str] = ()) -> dict[str, Any]:
+    normalized = " ".join(str(task_text or "").lower().split())
+    matched = [marker for marker in _ARCHITECTURE_DECISION_MARKERS if marker in normalized]
+    if any(marker in normalized for marker in ("migration", "migrate", "migrated", "migrating")) and any(
+        token in normalized for token in ("database", "storage", "schema")
+    ):
+        matched.append("migration + database/storage/schema")
+    if "change" in normalized and any(token in normalized for token in ("database", "storage engine", "schema", "api contract")):
+        matched.append("change + architecture surface")
+    decision_path_matches = [
+        path
+        for path in _normalize_changed_paths(list(changed_paths))
+        if any(part in path.lower().split("/") for part in ("adr", "adrs", "decisions"))
+    ]
+    return {
+        "status": "candidate" if matched or decision_path_matches else "not-detected",
+        "matched_markers": sorted(dict.fromkeys(matched))[:8],
+        "decision_path_matches": decision_path_matches[:6],
+    }
+
+
+def _architecture_decision_candidate_payload(
+    *,
+    task_text: str | None,
+    target_root: Path | None,
+    config: WorkspaceConfig | None,
+    changed_paths: Sequence[str] = (),
+    cli_invoke: str = DEFAULT_CLI_INVOKE,
+) -> dict[str, Any]:
+    signal = _architecture_decision_signal(task_text=task_text, changed_paths=changed_paths)
+    if signal["status"] != "candidate":
+        return {"status": "not-detected", "matched_markers": [], "decision_path_matches": []}
+    config_info = (
+        _decision_target_info(target_root=target_root, config=config)
+        if target_root is not None and config is not None
+        else {"configured": False, "status": "not-configured", "target": "", "source": "none"}
+    )
+    has_decision_target = bool(config_info.get("configured") and config_info.get("inside_target", True))
+    scaffold_command = _command_with_cli_invoke(
+        command='agentic-workspace planning decision-scaffold --title "<title>" --summary "<decision>" --target <repo> --format json',
+        cli_invoke=cli_invoke,
+    )
+    memory_command = _command_with_cli_invoke(
+        command=(
+            "agentic-workspace memory capture-note --slug <slug> --target <repo> --summary "
+            '"architecture_decision_candidate: <decision>; promotion_target: decision-record" '
+            "--files <changed paths> --format json"
+        ),
+        cli_invoke=cli_invoke,
+    )
+    return {
+        "status": "candidate",
+        "matched_markers": signal["matched_markers"],
+        "decision_path_matches": signal["decision_path_matches"],
+        "decision_target": {
+            key: config_info.get(key)
+            for key in ("status", "configured", "source", "target", "exists", "template", "discovered_from")
+            if key in config_info
+        },
+        "primary_route": "decision-record" if has_decision_target else "typed-memory-fallback",
+        "route": {
+            "target": str(config_info.get("target", "")) if has_decision_target else ".agentic-workspace/memory/repo/decisions/",
+            "command": scaffold_command if has_decision_target else memory_command,
+            "command_target": _decision_command_placeholder_payload(),
+            "why": "Route architecture decisions directly to the host decision-record target when one is configured or discoverable."
+            if has_decision_target
+            else "No decision-record target is configured or discoverable; preserve a typed promotion-ready memory candidate instead of a generic note.",
+        },
+        "rule": "This is an attention signal, not an instruction to force an ADR for every task.",
+    }
+
+
+def _task_intent_promotion_guidance_payload(
+    *,
+    task_text: str | None,
+    acceptance: dict[str, Any] | None = None,
+    target_root: Path | None = None,
+    config: WorkspaceConfig | None = None,
+    changed_paths: Sequence[str] = (),
+    cli_invoke: str = DEFAULT_CLI_INVOKE,
+) -> dict[str, Any]:
     task = " ".join(str(task_text or "").split())
     if not task:
         return {
@@ -12759,28 +12911,49 @@ def _task_intent_promotion_guidance_payload(*, task_text: str | None, acceptance
         "from now on",
     )
     matched = [marker for marker in durable_markers if marker in normalized]
-    status = "candidate" if matched else "no-durable-signal"
+    architecture_candidate = _architecture_decision_candidate_payload(
+        task_text=task,
+        target_root=target_root,
+        config=config,
+        changed_paths=changed_paths,
+        cli_invoke=cli_invoke,
+    )
+    status = "candidate" if matched or architecture_candidate.get("status") == "candidate" else "no-durable-signal"
     items = acceptance.get("items", []) if isinstance(acceptance, dict) else []
-    return {
+    route_options = [
+        {
+            "target": "memory",
+            "use_when": "The task revealed durable repo knowledge, traps, or decisions that future agents would otherwise rediscover.",
+        },
+        {"target": "subsystem-intent", "use_when": "The task describes a lasting direction or invariant for one owned subsystem."},
+        {"target": "system-intent", "use_when": "The task describes package-wide purpose, quality direction, or invariant behavior."},
+        {
+            "target": "docs",
+            "use_when": "The task changes user-facing explanation, reference behavior, or maintainable operating guidance.",
+        },
+    ]
+    if architecture_candidate.get("status") == "candidate":
+        route_options.insert(
+            0,
+            {
+                "target": "decision-record"
+                if architecture_candidate.get("primary_route") == "decision-record"
+                else "typed-memory-fallback",
+                "use_when": "The task appears to change durable architecture; prefer ADR/decision-record scaffold when available, otherwise preserve a typed promotion-ready memory candidate.",
+            },
+        )
+    payload: dict[str, Any] = {
         "kind": "agentic-workspace/task-intent-promotion-guidance/v1",
         "status": status,
         "matched_markers": matched[:6],
         "rule": "If task intent expresses a lasting direction rather than a finishable task, route the reusable part to Memory, docs, subsystem intent, or system intent before closeout.",
-        "route_options": [
-            {
-                "target": "memory",
-                "use_when": "The task revealed durable repo knowledge, traps, or decisions that future agents would otherwise rediscover.",
-            },
-            {"target": "subsystem-intent", "use_when": "The task describes a lasting direction or invariant for one owned subsystem."},
-            {"target": "system-intent", "use_when": "The task describes package-wide purpose, quality direction, or invariant behavior."},
-            {
-                "target": "docs",
-                "use_when": "The task changes user-facing explanation, reference behavior, or maintainable operating guidance.",
-            },
-        ],
+        "route_options": route_options,
         "acceptance_item_count": len(items) if isinstance(items, list) else 0,
         "closeout_question": "Does any acceptance item encode durable intent that should survive beyond this task?",
     }
+    if architecture_candidate.get("status") == "candidate":
+        payload["architecture_decision_candidate"] = architecture_candidate
+    return payload
 
 
 def _task_mentioned_existing_paths(*, task_text: str | None, target_root: Path) -> list[str]:
@@ -12811,12 +12984,26 @@ _TASK_INTENT_INLINE_COMMAND_MAX_CHARS = 1200
 _TASK_INTENT_SCRATCH_FILE = WORKSPACE_LOCAL_SCRATCH_ROOT_PATH / "task-intent.txt"
 
 
-def _task_intent_carry_forward_payload(*, task_text: str | None, cli_invoke: str) -> dict[str, Any]:
+def _task_intent_carry_forward_payload(
+    *,
+    task_text: str | None,
+    cli_invoke: str,
+    target_root: Path | None = None,
+    config: WorkspaceConfig | None = None,
+    changed_paths: Sequence[str] = (),
+) -> dict[str, Any]:
     task = str(task_text or "").strip()
     has_task = bool(task)
     requested_outcomes = _extract_requested_outcomes(task)
     acceptance = _task_acceptance_payload(task_text=task, requested_outcomes=requested_outcomes)
-    promotion_guidance = _task_intent_promotion_guidance_payload(task_text=task, acceptance=acceptance)
+    promotion_guidance = _task_intent_promotion_guidance_payload(
+        task_text=task,
+        acceptance=acceptance,
+        target_root=target_root,
+        config=config,
+        changed_paths=changed_paths,
+        cli_invoke=cli_invoke,
+    )
     command = "agentic-workspace implement --changed <paths> --format json"
     task_argument_mode = "absent"
     optional: dict[str, Any] = {}
@@ -14064,7 +14251,9 @@ def _implement_payload(
     planning_safety_gate = _planning_safety_gate_payload(
         target_root=target_root, config=config, changed_paths=normalized_paths, task_text=task_text, execution_posture=execution_posture
     )
-    task_intent = _task_intent_carry_forward_payload(task_text=task_text, cli_invoke=config.cli_invoke)
+    task_intent = _task_intent_carry_forward_payload(
+        task_text=task_text, cli_invoke=config.cli_invoke, target_root=target_root, config=config, changed_paths=normalized_paths
+    )
     acceptance = task_intent["acceptance"]
     promotion_guidance = task_intent["promotion_guidance"]
     if isinstance(proof, dict):
@@ -14453,7 +14642,7 @@ def _tiny_task_intent_promotion_guidance(value: Any) -> dict[str, Any]:
             "matched_markers": value.get("matched_markers", []),
         }
     route_options = value.get("route_options", [])
-    return {
+    compact = {
         "kind": value.get("kind", "agentic-workspace/task-intent-promotion-guidance/v1"),
         "status": value.get("status", "unknown"),
         "matched_markers": value.get("matched_markers", []),
@@ -14464,6 +14653,18 @@ def _tiny_task_intent_promotion_guidance(value: Any) -> dict[str, Any]:
         ],
         "closeout_question": value.get("closeout_question", ""),
     }
+    architecture_candidate = value.get("architecture_decision_candidate", {})
+    if isinstance(architecture_candidate, dict) and architecture_candidate.get("status") == "candidate":
+        route = architecture_candidate.get("route", {})
+        route = route if isinstance(route, dict) else {}
+        compact["architecture_decision_candidate"] = {
+            "status": "candidate",
+            "primary_route": architecture_candidate.get("primary_route", ""),
+            "matched_markers": architecture_candidate.get("matched_markers", []),
+            "decision_target": architecture_candidate.get("decision_target", {}),
+            "route": {key: route.get(key, "") for key in ("target", "command", "why")},
+        }
+    return compact
 
 
 def _tiny_objective_drift(value: Any) -> dict[str, Any]:
@@ -19596,30 +19797,62 @@ def _decision_record_path(*, target_root: Path, config: WorkspaceConfig, title: 
     return (slug, configured_path / f"{slug}.md")
 
 
-def _decision_scaffold_payload(
-    *,
-    target_root: Path,
-    config: WorkspaceConfig,
-    title: str,
-    summary: str,
-    status: str,
-    decision_id: str | None,
-    source: str,
-    dry_run: bool,
-) -> dict[str, Any]:
-    title = title.strip()
-    if not title:
-        raise WorkspaceUsageError("decision scaffold requires --title.")
-    summary = summary.strip() or "TODO: record the decision."
-    decision_id_value, path = _decision_record_path(target_root=target_root, config=config, title=title, decision_id=decision_id)
-    if path.exists() and not dry_run:
-        raise WorkspaceUsageError(f"{_repo_relative_path(path, target_root)} already exists; choose a different --decision-id.")
+def _decision_record_template_content(*, target_root: Path, config: WorkspaceConfig) -> tuple[str, str]:
+    info = _decision_target_info(target_root=target_root, config=config)
+    template = str(info.get("template", "")).strip()
+    if not template or template == "adr-lite":
+        return ("", "")
+    template_path = (target_root / template).resolve()
+    try:
+        template_path.relative_to(target_root.resolve())
+    except ValueError:
+        return ("", "")
+    if not template_path.is_file() or template_path.suffix.lower() not in {".md", ".markdown"}:
+        return ("", "")
+    try:
+        return (_repo_relative_path(template_path, target_root), template_path.read_text(encoding="utf-8-sig").strip())
+    except OSError:
+        return ("", "")
+
+
+def _render_decision_record_content(
+    *, target_root: Path, config: WorkspaceConfig, title: str, decision_id: str, summary: str, status: str, source: str
+) -> tuple[str, str]:
     today = date.today().isoformat()
+    template_path, template_content = _decision_record_template_content(target_root=target_root, config=config)
+    if template_content:
+        replacements = {
+            "{{title}}": title,
+            "{{ decision_title }}": title,
+            "{{decision_title}}": title,
+            "{{id}}": decision_id,
+            "{{ decision_id }}": decision_id,
+            "{{decision_id}}": decision_id,
+            "{{status}}": status,
+            "{{ status }}": status,
+            "{{date}}": today,
+            "{{ date }}": today,
+            "{{source}}": source,
+            "{{ source }}": source,
+            "{{summary}}": summary,
+            "{{ summary }}": summary,
+            "{{decision}}": summary,
+            "{{ decision }}": summary,
+        }
+        content = template_content
+        for marker, value in replacements.items():
+            content = content.replace(marker, value)
+        if title.lower() not in content.lower()[:240]:
+            content = f"# {title}\n\n{content}"
+        if summary not in content:
+            content = f"{content.rstrip()}\n\n## Decision\n\n{summary}"
+        content = f"{content.rstrip()}\n"
+        return (content, template_path)
     content = "\n".join(
         [
             f"# {title}",
             "",
-            f"- id: {decision_id_value}",
+            f"- id: {decision_id}",
             f"- status: {status}",
             f"- date: {today}",
             f"- source: {source}",
@@ -19638,6 +19871,36 @@ def _decision_scaffold_payload(
             "",
         ]
     )
+    return (content, "")
+
+
+def _decision_scaffold_payload(
+    *,
+    target_root: Path,
+    config: WorkspaceConfig,
+    title: str,
+    summary: str,
+    status: str,
+    decision_id: str | None,
+    source: str,
+    dry_run: bool,
+) -> dict[str, Any]:
+    title = title.strip()
+    if not title:
+        raise WorkspaceUsageError("decision scaffold requires --title.")
+    summary = summary.strip() or "TODO: record the decision."
+    decision_id_value, path = _decision_record_path(target_root=target_root, config=config, title=title, decision_id=decision_id)
+    if path.exists() and not dry_run:
+        raise WorkspaceUsageError(f"{_repo_relative_path(path, target_root)} already exists; choose a different --decision-id.")
+    content, template_path = _render_decision_record_content(
+        target_root=target_root,
+        config=config,
+        title=title,
+        decision_id=decision_id_value,
+        summary=summary,
+        status=status,
+        source=source,
+    )
     if not dry_run:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
@@ -19649,7 +19912,8 @@ def _decision_scaffold_payload(
         "title": title,
         "decision_status": status,
         "source": source,
-        "rule": "Decision records are host-owned docs; AW only scaffolds them through the configured target.",
+        "template_path": template_path,
+        "rule": "Decision records are host-owned docs; AW scaffolds them through the configured or discovered target.",
     }
 
 
@@ -24627,7 +24891,12 @@ def _skills_payload(*, target_root: Path | None, task_text: str | None) -> dict[
     visible_agent_aids = [aid for aid in agent_aids if aid["status"] != "retired"]
     agent_aid_recommendations = _recommend_agent_aids(task_text=task_text, aids=visible_agent_aids) if task_text else []
     skill_recommendation_payloads = [
-        {**_skill_payload(skill=recommendation.skill), "score": recommendation.score, "reasons": list(recommendation.reasons)}
+        {
+            **_skill_payload(skill=recommendation.skill),
+            "score": recommendation.score,
+            "reasons": list(recommendation.reasons),
+            "follow_up_guidance": list(recommendation.skill.activation_hints.when),
+        }
         for recommendation in recommendations
     ]
     return {
@@ -24636,7 +24905,11 @@ def _skills_payload(*, target_root: Path | None, task_text: str | None) -> dict[
         "skills": [_skill_payload(skill=skill) for skill in skills],
         "recommendations": skill_recommendation_payloads,
         "top_recommendations": [
-            {key: item.get(key) for key in ("id", "path", "score", "summary", "reasons") if item.get(key) not in ("", None)}
+            {
+                key: item.get(key)
+                for key in ("id", "path", "score", "summary", "reasons", "follow_up_guidance")
+                if item.get(key) not in ("", None)
+            }
             for item in skill_recommendation_payloads[:3]
         ],
         "agent_aids": visible_agent_aids,
