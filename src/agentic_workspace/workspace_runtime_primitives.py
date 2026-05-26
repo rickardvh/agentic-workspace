@@ -14611,6 +14611,7 @@ def _implement_payload(
     task_text: str | None = None,
     include_change_impact: bool = True,
     include_task_contract: bool = True,
+    include_assurance_requirements: bool = True,
 ) -> dict[str, Any]:
     implementer_template = _CONTEXT_TEMPLATES["implementer_context"]
     normalized_paths = _normalize_changed_paths(changed_paths)
@@ -14622,6 +14623,7 @@ def _implement_payload(
             include_durable_intent=False,
             task_text=task_text,
             acceptance=_task_acceptance_payload(task_text=task_text, requested_outcomes=_extract_requested_outcomes(task_text)),
+            include_assurance_requirements=include_assurance_requirements,
         )
         if normalized_paths
         else copy.deepcopy(implementer_template["unknown_scope_proof"])
@@ -14737,12 +14739,6 @@ def _implement_payload(
         "reuse_pressure": _reuse_pressure_payload(
             target_root=target_root, changed_paths=normalized_paths, cli_invoke=config.cli_invoke, compact=False
         ),
-        "assurance_requirements": _assurance_requirements_report_payload(
-            config=config,
-            active_planning_record=None,
-            task_text=task_text,
-            changed_paths=normalized_paths,
-        ),
         "orientation": {
             "status": "changed-path-context" if normalized_paths else "unknown-scope",
             "minimum_before_editing": "Inspect the listed files, path boundaries, workflow obligations, and selected proof before editing."
@@ -14806,6 +14802,13 @@ def _implement_payload(
     if include_change_impact:
         payload["change_impact"] = _change_impact_payload(
             target_root=target_root, changed_paths=normalized_paths, proof=proof, cli_invoke=config.cli_invoke
+        )
+    if include_assurance_requirements:
+        payload["assurance_requirements"] = _assurance_requirements_report_payload(
+            config=config,
+            active_planning_record=None,
+            task_text=task_text,
+            changed_paths=normalized_paths,
         )
     return payload
 
@@ -20041,6 +20044,7 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
         task_text=task_text,
         include_change_impact=(profile != "tiny" or change_impact_selected),
         include_task_contract=(profile != "tiny" or task_contract_selected),
+        include_assurance_requirements=(profile != "tiny" or assurance_requirements_selected),
     )
     payload = full_payload
     if profile == "tiny":
@@ -22293,6 +22297,7 @@ def _proof_selection_for_changed_paths(
     include_durable_intent: bool = True,
     task_text: str | None = None,
     acceptance: dict[str, Any] | None = None,
+    include_assurance_requirements: bool = True,
 ) -> dict[str, Any]:
     defaults = _defaults_payload()
     cli_invoke = DEFAULT_CLI_INVOKE
@@ -22423,11 +22428,15 @@ def _proof_selection_for_changed_paths(
                     "disallowed_commands": list(profile.disallowed_commands),
                 }
             )
-    active_assurance_requirements = _assurance_requirements_report_payload(
-        config=config,
-        active_planning_record=planning_assurance if planning_assurance.get("status") == "present" else None,
-        task_text=task_text,
-        changed_paths=changed_paths,
+    active_assurance_requirements = (
+        _assurance_requirements_report_payload(
+            config=config,
+            active_planning_record=planning_assurance if planning_assurance.get("status") == "present" else None,
+            task_text=task_text,
+            changed_paths=changed_paths,
+        )
+        if include_assurance_requirements
+        else {}
     )
     requirement_lanes: list[dict[str, Any]] = []
     existing_concern_profiles = {str(lane.get("proof_profile", "")) for lane in concern_lanes}
@@ -22716,7 +22725,6 @@ def _proof_selection_for_changed_paths(
         "learned_route_hints": learned_route_hints,
         "proof_intents": proof_intents,
         "configured_policy": configured_policy,
-        "assurance_requirements": active_assurance_requirements,
         "selected_commands": selected_commands,
         "unavailable_commands": unavailable_commands,
         "host_policy_blocked_commands": host_policy_blocked_commands,
@@ -22862,6 +22870,8 @@ def _proof_selection_for_changed_paths(
             },
             "rule": "Path lanes stay package-defined; concern profiles are host-configured and activated from active planning assurance fields.",
         }
+    if include_assurance_requirements:
+        proof_selection["assurance_requirements"] = active_assurance_requirements
     surface_value_review = _surface_value_review_for_changed_paths(changed_paths=changed_paths, target_root=target_root)
     if surface_value_review["durable_surface_count"]:
         proof_selection["surface_value_review"] = surface_value_review
