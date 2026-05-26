@@ -1,0 +1,536 @@
+"""Run long-horizon model CLI episodes with phases and evaluator review."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import shutil
+from pathlib import Path
+from typing import Any
+
+import run_model_cli_harness as harness
+
+EPISODE_KIND = "agentic-workspace/long-horizon-episode/v1"
+EVALUATION_KIND = "agentic-workspace/long-horizon-evaluation/v1"
+DEFAULT_EPISODE = harness.REPO_ROOT / "tools" / "model-cli-harness" / "episodes" / "intent-proof-packaging-specifier.json"
+DEFAULT_OUTPUT_ROOT = harness.DEFAULT_OUTPUT_ROOT / "long-horizon"
+AW_MODE_FIXTURE = harness.REPO_ROOT / "tools" / "model-cli-harness" / "fixtures" / "aw-minimal-host-repo"
+MISTAKE_CLASSES = {
+    "wrong_intent",
+    "premature_implementation",
+    "unnecessary_planning",
+    "missing_planning",
+    "wrong_owner_edit",
+    "generated_surface_direct_edit",
+    "manual_managed_state_edit",
+    "existing_helper_missed",
+    "duplicate_helper",
+    "bad_abstraction",
+    "weak_proof",
+    "proof_overclaim",
+    "completion_overclaim",
+    "memory_ignored",
+    "stale_memory_trusted",
+    "adr_candidate_missed",
+    "handoff_unusable",
+    "restart_failed",
+    "stale_planning_state_trusted",
+}
+
+
+def _string_list(value: Any, *, field: str) -> list[str]:
+    if value is None:
+        return []
+    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+        raise ValueError(f"{field} must be a list of strings")
+    return value
+
+
+def _list_of_commands(value: Any, *, field: str) -> list[list[str]]:
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        raise ValueError(f"{field} must be a list")
+    commands: list[list[str]] = []
+    for index, command in enumerate(value):
+        if not isinstance(command, list) or not all(isinstance(item, str) for item in command):
+            raise ValueError(f"{field}.{index} must be a string list command")
+        commands.append(command)
+    return commands
+
+
+def load_episode(path: Path) -> dict[str, Any]:
+    episode = harness._load_json(path)
+    validate_episode(episode)
+    return episode
+
+
+def validate_episode(episode: dict[str, Any]) -> None:
+    if episode.get("kind") != EPISODE_KIND:
+        raise ValueError(f"episode kind must be {EPISODE_KIND}")
+    for field in ("id", "title", "task_prompt"):
+        if not isinstance(episode.get(field), str) or not episode[field].strip():
+            raise ValueError(f"episode.{field} is required")
+    modes = episode.get("modes")
+    if not isinstance(modes, list) or not modes:
+        raise ValueError("episode.modes must be a non-empty list")
+    mode_ids: set[str] = set()
+    for index, mode in enumerate(modes):
+        if not isinstance(mode, dict):
+            raise ValueError(f"episode.modes.{index} must be an object")
+        mode_id = mode.get("id")
+        if not isinstance(mode_id, str) or not mode_id.strip():
+            raise ValueError(f"episode.modes.{index}.id is required")
+        if mode_id in mode_ids:
+            raise ValueError(f"duplicate episode mode id: {mode_id}")
+        mode_ids.add(mode_id)
+        if not isinstance(mode.get("fixture"), str) and not isinstance(mode.get("repo_url"), str):
+            raise ValueError(f"episode.modes.{mode_id} needs fixture or repo_url")
+    phases = episode.get("phases")
+    if not isinstance(phases, list) or not phases:
+        raise ValueError("episode.phases must be a non-empty list")
+    for index, phase in enumerate(phases):
+        if not isinstance(phase, dict):
+            raise ValueError(f"episode.phases.{index} must be an object")
+        for field in ("id", "prompt"):
+            if not isinstance(phase.get(field), str) or not phase[field].strip():
+                raise ValueError(f"episode.phases.{index}.{field} is required")
+        _list_of_commands(phase.get("validation_commands"), field=f"episode.phases.{index}.validation_commands")
+    _list_of_commands(episode.get("setup_commands"), field="episode.setup_commands")
+    _list_of_commands(episode.get("visible_validation_commands"), field="episode.visible_validation_commands")
+    for field in ("known_traps", "expected_mistake_classes"):
+        values = _string_list(episode.get(field), field=f"episode.{field}")
+        if field == "expected_mistake_classes":
+            unknown = sorted(set(values) - MISTAKE_CLASSES)
+            if unknown:
+                raise ValueError(f"unknown mistake classes: {', '.join(unknown)}")
+    rubric = episode.get("rubric")
+    if not isinstance(rubric, dict) or not rubric:
+        raise ValueError("episode.rubric must be a non-empty object")
+
+
+def validate_evaluation_result(result: dict[str, Any]) -> None:
+    if result.get("kind") != EVALUATION_KIND:
+        raise ValueError(f"evaluation kind must be {EVALUATION_KIND}")
+    for field in ("scenario", "mode", "result", "mistake_classes", "aw_effect", "evidence"):
+        if field not in result:
+            raise ValueError(f"evaluation.{field} is required")
+    outcome = result["result"]
+    if not isinstance(outcome, dict):
+        raise ValueError("evaluation.result must be an object")
+    for field in (
+        "intent_satisfied",
+        "scope_respected",
+        "proof_sufficient",
+        "proof_matches_intent",
+        "restartable_from_repo_state",
+        "completion_claim_honest",
+    ):
+        if field not in outcome:
+            raise ValueError(f"evaluation.result.{field} is required")
+    mistake_classes = _string_list(result.get("mistake_classes"), field="evaluation.mistake_classes")
+    unknown = sorted(set(mistake_classes) - MISTAKE_CLASSES)
+    if unknown:
+        raise ValueError(f"unknown evaluation mistake classes: {', '.join(unknown)}")
+    aw_effect = result["aw_effect"]
+    if not isinstance(aw_effect, dict):
+        raise ValueError("evaluation.aw_effect must be an object")
+    for field in ("helped", "hurt_or_overhead", "missed_affordance"):
+        _string_list(aw_effect.get(field), field=f"evaluation.aw_effect.{field}")
+    evidence = result["evidence"]
+    if not isinstance(evidence, list):
+        raise ValueError("evaluation.evidence must be a list")
+    for index, item in enumerate(evidence):
+        if not isinstance(item, dict) or not isinstance(item.get("kind"), str) or not isinstance(item.get("ref"), str):
+            raise ValueError(f"evaluation.evidence.{index} needs kind and ref")
+
+
+def _episode_paths(*, episode: dict[str, Any], mode_id: str, output_root: Path) -> harness.HarnessPaths:
+    model = str(episode.get("id", "episode"))
+    return harness._scenario_paths(
+        output_root=output_root,
+        suite_id="long-horizon",
+        scenario_id=f"{episode['id']}-{mode_id}",
+        adapter_id="episode",
+        model=model,
+    )
+
+
+def _bootstrap_aw_mode(repo_path: Path) -> None:
+    source_workspace = AW_MODE_FIXTURE / ".agentic-workspace"
+    target_workspace = repo_path / ".agentic-workspace"
+    if not target_workspace.exists():
+        shutil.copytree(source_workspace, target_workspace)
+    source_agents = (AW_MODE_FIXTURE / "AGENTS.md").read_text(encoding="utf-8").strip()
+    target_agents = repo_path / "AGENTS.md"
+    if target_agents.exists():
+        existing_agents = target_agents.read_text(encoding="utf-8")
+        if "<!-- agentic-workspace:workflow:start -->" not in existing_agents:
+            target_agents.write_text(existing_agents.rstrip() + "\n\n" + source_agents + "\n", encoding="utf-8")
+    else:
+        target_agents.write_text(source_agents + "\n", encoding="utf-8")
+    harness._prepare_source_checkout_invocation(repo_path)
+
+
+def _prepare_mode_repo(*, suite_path: Path, mode: dict[str, Any], paths: harness.HarnessPaths, execute: bool) -> None:
+    paths.run_root.mkdir(parents=True, exist_ok=False)
+    fixture = mode.get("fixture")
+    if isinstance(fixture, str):
+        fixture_path = (suite_path.parent / ".." / "fixtures" / fixture).resolve()
+        if not fixture_path.exists():
+            fixture_path = (harness.REPO_ROOT / fixture).resolve()
+        if not fixture_path.exists():
+            raise FileNotFoundError(f"fixture not found: {fixture}")
+        shutil.copytree(fixture_path, paths.repo_path)
+        if mode.get("aw_enabled"):
+            _bootstrap_aw_mode(paths.repo_path)
+        else:
+            harness._prepare_source_checkout_invocation(paths.repo_path)
+        return
+    repo_url = mode.get("repo_url")
+    base_commit = mode.get("base_commit")
+    if not isinstance(repo_url, str) or not isinstance(base_commit, str):
+        raise ValueError(f"mode {mode.get('id', '<unknown>')} needs fixture or repo_url/base_commit")
+    if not execute:
+        paths.repo_path.mkdir(parents=True)
+        (paths.repo_path / "PINNED-REPO.txt").write_text(f"{repo_url}\n{base_commit}\n", encoding="utf-8")
+        if mode.get("aw_enabled"):
+            _bootstrap_aw_mode(paths.repo_path)
+        return
+    result = harness._run_command(["git", "clone", repo_url, str(paths.repo_path)], cwd=paths.run_root, timeout_seconds=900)
+    if result["returncode"] != 0:
+        raise RuntimeError(f"git clone failed for {repo_url}: {result['stderr']}")
+    checkout = harness._run_command(["git", "checkout", base_commit], cwd=paths.repo_path, timeout_seconds=120)
+    if checkout["returncode"] != 0:
+        raise RuntimeError(f"git checkout failed for {base_commit}: {checkout['stderr']}")
+    if mode.get("aw_enabled"):
+        _bootstrap_aw_mode(paths.repo_path)
+
+
+def _adapter_command(
+    *,
+    suite: dict[str, Any],
+    adapter_id: str,
+    model: str | None,
+    replacements: dict[str, str],
+) -> tuple[list[str], str, dict[str, Any]]:
+    adapter = suite.get("adapters", {}).get(adapter_id)
+    if not isinstance(adapter, dict):
+        raise ValueError(f"adapter '{adapter_id}' is not defined")
+    resolved_model = model or str(adapter.get("default_model") or "default")
+    replacements = {**replacements, "model": resolved_model}
+    command_template = adapter.get("command")
+    if not isinstance(command_template, list) or not all(isinstance(item, str) for item in command_template):
+        raise ValueError(f"adapter '{adapter_id}' must define command as a string list")
+    return harness._render_list(command_template, replacements=replacements), resolved_model, adapter
+
+
+def _run_validation_commands(
+    *,
+    commands: list[list[str]],
+    replacements: dict[str, str],
+    cwd: Path,
+    execute: bool,
+    timeout_seconds: int,
+) -> list[dict[str, Any]]:
+    results: list[dict[str, Any]] = []
+    for command in commands:
+        rendered = harness._render_list(command, replacements=replacements)
+        if execute:
+            result = harness._run_command(rendered, cwd=cwd, timeout_seconds=timeout_seconds)
+            results.append(result)
+        else:
+            results.append({"status": "dry-run", "command": rendered})
+    return results
+
+
+def _phase_prompt(*, episode: dict[str, Any], mode: dict[str, Any], phase: dict[str, Any], prior_context: list[str]) -> tuple[str, bool]:
+    prompt_parts = [
+        str(episode["task_prompt"]).strip(),
+        f"Mode: {mode['id']}.",
+        str(phase["prompt"]).strip(),
+    ]
+    include_prior = bool(prior_context) and not bool(phase.get("hide_transcript_for_resume"))
+    if include_prior:
+        prompt_parts.append("Prior phase context:\n" + "\n\n".join(prior_context))
+    elif prior_context:
+        prompt_parts.append("Resume from repository state only. Do not assume prior chat history.")
+    return "\n\n".join(prompt_parts) + "\n", include_prior
+
+
+def _evaluation_prompt(*, episode: dict[str, Any], mode_result: dict[str, Any]) -> str:
+    hidden_oracle = episode.get("hidden_oracle")
+    evidence_bundle = {
+        "kind": "agentic-workspace/long-horizon-evidence-bundle/v1",
+        "episode": {
+            "id": episode["id"],
+            "title": episode["title"],
+            "rubric": episode.get("rubric", {}),
+            "known_traps": episode.get("known_traps", []),
+            "expected_mistake_classes": episode.get("expected_mistake_classes", []),
+        },
+        "mode_result": mode_result,
+        "hidden_oracle_excluded": hidden_oracle is not None,
+    }
+    return (
+        "Review this long-horizon episode evidence and return only a JSON object matching "
+        f"{EVALUATION_KIND}.\n\n"
+        + json.dumps(evidence_bundle, indent=2, sort_keys=True)
+    )
+
+
+def _parse_evaluation(text: str) -> dict[str, Any]:
+    payload = harness._json_document(text.strip())
+    if payload is None:
+        match = None
+        for candidate in text.splitlines():
+            candidate = candidate.strip()
+            if candidate.startswith("{") and candidate.endswith("}"):
+                match = candidate
+        if match:
+            payload = harness._json_document(match)
+    if payload is None:
+        raise ValueError("evaluator did not return a JSON object")
+    validate_evaluation_result(payload)
+    return payload
+
+
+def _comparison_summary(mode_results: list[dict[str, Any]]) -> dict[str, Any]:
+    mistake_classes_by_mode: dict[str, list[str]] = {}
+    aw_effect_by_mode: dict[str, dict[str, list[str]]] = {}
+    human_review_required = False
+    followups: list[dict[str, Any]] = []
+    for result in mode_results:
+        mode_id = result["mode_id"]
+        evaluation = result.get("evaluation", {}).get("payload")
+        if not isinstance(evaluation, dict):
+            continue
+        mistake_classes_by_mode[mode_id] = list(evaluation.get("mistake_classes", []))
+        aw_effect = evaluation.get("aw_effect", {})
+        if isinstance(aw_effect, dict):
+            aw_effect_by_mode[mode_id] = {
+                "helped": list(aw_effect.get("helped", [])),
+                "hurt_or_overhead": list(aw_effect.get("hurt_or_overhead", [])),
+                "missed_affordance": list(aw_effect.get("missed_affordance", [])),
+            }
+        human_review_required = human_review_required or bool(evaluation.get("human_review_required"))
+        followup = evaluation.get("recommended_followup")
+        if isinstance(followup, dict):
+            followups.append({"mode": mode_id, **followup})
+    all_classes = sorted({item for values in mistake_classes_by_mode.values() for item in values})
+    return {
+        "kind": "agentic-workspace/long-horizon-comparison/v1",
+        "status": "present" if mode_results else "absent",
+        "mode_count": len(mode_results),
+        "mistake_classes": all_classes,
+        "mistake_classes_by_mode": mistake_classes_by_mode,
+        "aw_effect_by_mode": aw_effect_by_mode,
+        "human_review_required": human_review_required,
+        "recommended_followups": followups,
+        "rule": "Comparison is review evidence, not a deterministic leaderboard.",
+    }
+
+
+def run_episode(
+    *,
+    episode_path: Path,
+    suite_path: Path = harness.DEFAULT_SUITE,
+    execute: bool = False,
+    output_root: Path = DEFAULT_OUTPUT_ROOT,
+    mode_filter: str | None = None,
+    evaluator: bool = True,
+    timeout_seconds: int = 900,
+) -> dict[str, Any]:
+    episode = load_episode(episode_path)
+    suite = harness._load_json(suite_path)
+    modes = [mode for mode in episode["modes"] if mode_filter is None or mode["id"] == mode_filter]
+    if not modes:
+        raise ValueError(f"mode '{mode_filter}' is not defined")
+    mode_results: list[dict[str, Any]] = []
+    for mode in modes:
+        paths = _episode_paths(episode=episode, mode_id=mode["id"], output_root=output_root)
+        _prepare_mode_repo(suite_path=suite_path, mode=mode, paths=paths, execute=execute)
+        replacements = {
+            "repo": str(paths.repo_path),
+            "run_root": str(paths.run_root),
+            "source_root": str(harness.REPO_ROOT),
+            "mode_id": str(mode["id"]),
+            "episode_id": str(episode["id"]),
+        }
+        setup_results = _run_validation_commands(
+            commands=_list_of_commands(episode.get("setup_commands"), field="episode.setup_commands"),
+            replacements=replacements,
+            cwd=paths.repo_path,
+            execute=execute,
+            timeout_seconds=timeout_seconds,
+        )
+        prior_context: list[str] = []
+        phase_results: list[dict[str, Any]] = []
+        previous_snapshot = harness._file_snapshot(paths.repo_path)
+        for phase in episode["phases"]:
+            phase_prompt, prior_included = _phase_prompt(episode=episode, mode=mode, phase=phase, prior_context=prior_context)
+            phase_share = paths.run_root / f"{phase['id']}.md"
+            phase_transcript = paths.run_root / f"{phase['id']}.transcript.jsonl"
+            phase_replacements = {
+                **replacements,
+                "phase_id": str(phase["id"]),
+                "share_path": str(phase_share),
+                "transcript_path": str(phase_transcript),
+                "prompt": phase_prompt,
+            }
+            command, resolved_model, adapter = _adapter_command(
+                suite=suite,
+                adapter_id=str(phase.get("adapter") or episode.get("default_adapter") or "copilot"),
+                model=phase.get("model") if isinstance(phase.get("model"), str) else None,
+                replacements=phase_replacements,
+            )
+            env = harness._adapter_environment(adapter, replacements=phase_replacements, isolate_provider_home=False)
+            preflight = harness._adapter_preflight(adapter, command=command, replacements=phase_replacements)
+            env = harness._prepend_env_path(env, preflight["path_prepend"])
+            result: dict[str, Any]
+            if execute:
+                result = harness._run_command(command, cwd=paths.repo_path, timeout_seconds=timeout_seconds, env=env)
+                result["status"] = harness._classify_result_status(result)
+                if phase_share.exists():
+                    result["final_message"] = phase_share.read_text(encoding="utf-8")
+                harness._copy_transcript(str(result.get("stdout", "")), phase_transcript)
+            else:
+                result = {"status": "dry-run", "command": command}
+            current_snapshot = harness._file_snapshot(paths.repo_path)
+            mutation_summary = harness._snapshot_diff(previous_snapshot, current_snapshot)
+            previous_snapshot = current_snapshot
+            validation_commands = _list_of_commands(
+                phase.get("validation_commands", episode.get("visible_validation_commands")),
+                field=f"phase.{phase['id']}.validation_commands",
+            )
+            validation_results = _run_validation_commands(
+                commands=validation_commands,
+                replacements=phase_replacements,
+                cwd=paths.repo_path,
+                execute=execute,
+                timeout_seconds=timeout_seconds,
+            )
+            final_message = str(result.get("final_message") or result.get("stdout") or "")
+            if final_message.strip():
+                prior_context.append(f"{phase['id']} final message:\n{final_message.strip()}")
+            phase_results.append(
+                {
+                    "phase_id": phase["id"],
+                    "adapter_id": str(phase.get("adapter") or episode.get("default_adapter") or "copilot"),
+                    "model": resolved_model,
+                    "prompt": phase_prompt,
+                    "prior_transcript_included": prior_included,
+                    "hide_transcript_for_resume": bool(phase.get("hide_transcript_for_resume")),
+                    "command": command,
+                    "preflight": preflight,
+                    "result": result,
+                    "mutation_summary": mutation_summary,
+                    "validation_results": validation_results,
+                    "checkpoint": {
+                        "transcript_path": str(phase_transcript),
+                        "share_path": str(phase_share),
+                        "repo_path": str(paths.repo_path),
+                    },
+                }
+            )
+        mode_result: dict[str, Any] = {
+            "mode_id": mode["id"],
+            "aw_enabled": bool(mode.get("aw_enabled", False)),
+            "repo_path": str(paths.repo_path),
+            "run_root": str(paths.run_root),
+            "setup_results": setup_results,
+            "phases": phase_results,
+        }
+        if evaluator and isinstance(episode.get("evaluator"), dict):
+            evaluator_config = episode["evaluator"]
+            evaluator_prompt = _evaluation_prompt(episode=episode, mode_result=mode_result)
+            evaluator_share = paths.run_root / "evaluator.md"
+            evaluator_replacements = {
+                **replacements,
+                "phase_id": "evaluator",
+                "share_path": str(evaluator_share),
+                "prompt": evaluator_prompt,
+            }
+            command, resolved_model, adapter = _adapter_command(
+                suite=suite,
+                adapter_id=str(evaluator_config.get("adapter") or episode.get("default_evaluator_adapter") or episode.get("default_adapter") or "copilot"),
+                model=evaluator_config.get("model") if isinstance(evaluator_config.get("model"), str) else None,
+                replacements=evaluator_replacements,
+            )
+            env = harness._adapter_environment(adapter, replacements=evaluator_replacements, isolate_provider_home=False)
+            preflight = harness._adapter_preflight(adapter, command=command, replacements=evaluator_replacements)
+            env = harness._prepend_env_path(env, preflight["path_prepend"])
+            if execute:
+                evaluator_result = harness._run_command(command, cwd=paths.repo_path, timeout_seconds=timeout_seconds, env=env)
+                if evaluator_share.exists():
+                    evaluator_result["final_message"] = evaluator_share.read_text(encoding="utf-8")
+                text = str(evaluator_result.get("final_message") or evaluator_result.get("stdout") or "")
+                try:
+                    evaluation_payload = _parse_evaluation(text)
+                    evaluation_status = "valid"
+                except ValueError as exc:
+                    evaluation_payload = {"error": str(exc)}
+                    evaluation_status = "invalid"
+            else:
+                evaluator_result = {"status": "dry-run", "command": command}
+                evaluation_payload = {"status": "not-run"}
+                evaluation_status = "not-run"
+            mode_result["evaluation"] = {
+                "status": evaluation_status,
+                "adapter_id": str(evaluator_config.get("adapter") or episode.get("default_evaluator_adapter") or episode.get("default_adapter") or "copilot"),
+                "model": resolved_model,
+                "prompt": evaluator_prompt,
+                "command": command,
+                "preflight": preflight,
+                "result": evaluator_result,
+                "payload": evaluation_payload,
+                "hidden_oracle_excluded": episode.get("hidden_oracle") is not None,
+            }
+        mode_results.append(mode_result)
+    payload = {
+        "kind": "agentic-workspace/long-horizon-run/v1",
+        "episode": str(episode_path),
+        "episode_id": episode["id"],
+        "execute": execute,
+        "mode_count": len(mode_results),
+        "modes": mode_results,
+        "comparison": _comparison_summary(mode_results),
+    }
+    output_root.mkdir(parents=True, exist_ok=True)
+    harness._write_json(output_root / f"{episode['id']}-summary.json", payload)
+    return payload
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--episode", type=Path, default=DEFAULT_EPISODE)
+    parser.add_argument("--suite", type=Path, default=harness.DEFAULT_SUITE)
+    parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
+    parser.add_argument("--mode", help="Run only one episode mode.")
+    parser.add_argument("--execute", action="store_true")
+    parser.add_argument("--no-evaluator", action="store_true")
+    parser.add_argument("--timeout-seconds", type=int, default=900)
+    parser.add_argument("--format", choices=("json", "text"), default="text")
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    payload = run_episode(
+        episode_path=args.episode,
+        suite_path=args.suite,
+        execute=args.execute,
+        output_root=args.output_root,
+        mode_filter=args.mode,
+        evaluator=not args.no_evaluator,
+        timeout_seconds=args.timeout_seconds,
+    )
+    if args.format == "json":
+        print(json.dumps(payload, indent=2, sort_keys=True))
+    else:
+        print(f"{payload['episode_id']}: {payload['mode_count']} mode(s), execute={payload['execute']}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

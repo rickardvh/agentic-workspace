@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/long-horizon-evaluation/v1",
+  "title": "Agentic Workspace long-horizon evaluation result",
+  "type": "object",
+  "required": [
+    "kind",
+    "scenario",
+    "mode",
+    "result",
+    "mistake_classes",
+    "aw_effect",
+    "evidence",
+    "human_review_required",
+    "recommended_followup"
+  ],
+  "properties": {
+    "kind": {
+      "const": "agentic-workspace/long-horizon-evaluation/v1"
+    },
+    "scenario": {
+      "type": "string",
+      "minLength": 1
+    },
+    "mode": {
+      "type": "string",
+      "minLength": 1
+    },
+    "result": {
+      "type": "object",
+      "required": [
+        "intent_satisfied",
+        "scope_respected",
+        "proof_sufficient",
+        "proof_matches_intent",
+        "restartable_from_repo_state",
+        "completion_claim_honest"
+      ],
+      "properties": {
+        "intent_satisfied": {
+          "enum": [
+            "yes",
+            "partial",
+            "no",
+            "unclear"
+          ]
+        },
+        "scope_respected": {
+          "type": "boolean"
+        },
+        "proof_sufficient": {
+          "type": "boolean"
+        },
+        "proof_matches_intent": {
+          "type": "boolean"
+        },
+        "restartable_from_repo_state": {
+          "type": "boolean"
+        },
+        "completion_claim_honest": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+    "mistake_classes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "aw_effect": {
+      "type": "object",
+      "required": [
+        "helped",
+        "hurt_or_overhead",
+        "missed_affordance"
+      ],
+      "properties": {
+        "helped": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "hurt_or_overhead": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "missed_affordance": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "kind",
+          "ref"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "ref": {
+            "type": "string"
+          },
+          "why": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "human_review_required": {
+      "type": "boolean"
+    },
+    "recommended_followup": {
+      "type": "object",
+      "required": [
+        "type",
+        "summary"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "issue",
+            "memory",
+            "docs",
+            "harness",
+            "dismissal",
+            "none"
+          ]
+        },
+        "summary": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

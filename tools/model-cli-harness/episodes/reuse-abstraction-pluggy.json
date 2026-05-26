@@ -1,0 +1,92 @@
+{
+  "kind": "agentic-workspace/long-horizon-episode/v1",
+  "id": "pluggy-multi-impl-remove-plugin",
+  "title": "Pluggy multi-implementation unregister abstraction",
+  "repo_source": {
+    "repo_url": "https://github.com/pytest-dev/pluggy",
+    "license": "MIT",
+    "reference_pr": "https://github.com/pytest-dev/pluggy/pull/646",
+    "base_commit": "6ab917ba3b2dc1dceba6a260a0c30cb947f6a69c",
+    "reference_commit": "20d8143f127a4d7526dbbea441857b4b80ec8bdd",
+    "changed_areas": [
+      "src/pluggy/_hooks.py",
+      "src/pluggy/_manager.py",
+      "testing/test_pluginmanager.py"
+    ]
+  },
+  "task_prompt": "Fix plugin unregister and hookcaller lookup behavior when one plugin provides multiple implementations. Keep the hook model coherent rather than patching only one symptom.",
+  "modes": [
+    {
+      "id": "baseline-agent-switch",
+      "aw_enabled": false,
+      "repo_url": "https://github.com/pytest-dev/pluggy",
+      "base_commit": "6ab917ba3b2dc1dceba6a260a0c30cb947f6a69c"
+    },
+    {
+      "id": "aw-assisted-agent-switch",
+      "aw_enabled": true,
+      "repo_url": "https://github.com/pytest-dev/pluggy",
+      "base_commit": "6ab917ba3b2dc1dceba6a260a0c30cb947f6a69c"
+    }
+  ],
+  "setup_commands": [
+    [
+      "python",
+      "-m",
+      "pip",
+      "install",
+      "-e",
+      ".[testing]"
+    ]
+  ],
+  "visible_validation_commands": [
+    [
+      "python",
+      "-m",
+      "pytest",
+      "testing/test_pluginmanager.py",
+      "-q"
+    ]
+  ],
+  "hidden_oracle": {
+    "reference_pr": "https://github.com/pytest-dev/pluggy/pull/646",
+    "oracle_command": "Review whether unregister invariants remain coherent when a plugin has several hook implementations.",
+    "shown_to_evaluator_after_primary_score": true
+  },
+  "phases": [
+    {
+      "id": "strong-agent-investigation",
+      "prompt": "Investigate the multi-implementation unregister bug, identify the abstraction boundary, and leave a continuation-safe partial fix or plan.",
+      "adapter": "codex",
+      "model": "gpt-5.3-codex-spark"
+    },
+    {
+      "id": "weaker-agent-continuation",
+      "prompt": "Resume from repo state only as a different agent. Finish the implementation without duplicating hook bookkeeping concepts.",
+      "adapter": "copilot",
+      "model": "claude-haiku-4.5",
+      "hide_transcript_for_resume": true
+    }
+  ],
+  "known_traps": [
+    "existing-abstraction",
+    "local-symptom-patch",
+    "agent-switch-continuation"
+  ],
+  "expected_mistake_classes": [
+    "existing_helper_missed",
+    "bad_abstraction",
+    "handoff_unusable",
+    "restart_failed"
+  ],
+  "rubric": {
+    "intent_satisfied": "The hookcaller bookkeeping remains coherent for plugins with multiple hook implementations.",
+    "proof_required": "Tests cover unregister and get_hookcallers behavior for multi-implementation plugins.",
+    "restartability_expected": true,
+    "closeout_expectation": "Completion should explain the abstraction boundary and any residual invariants not proven."
+  },
+  "evaluator": {
+    "adapter": "codex",
+    "model": "gpt-5.3-codex-spark"
+  }
+}

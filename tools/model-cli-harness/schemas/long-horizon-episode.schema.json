@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/long-horizon-episode/v1",
+  "title": "Agentic Workspace long-horizon episode",
+  "type": "object",
+  "required": [
+    "kind",
+    "id",
+    "title",
+    "task_prompt",
+    "modes",
+    "phases",
+    "known_traps",
+    "expected_mistake_classes",
+    "rubric"
+  ],
+  "properties": {
+    "kind": {
+      "const": "agentic-workspace/long-horizon-episode/v1"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "repo_source": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "task_prompt": {
+      "type": "string",
+      "minLength": 1
+    },
+    "modes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "aw_enabled": {
+            "type": "boolean"
+          },
+          "fixture": {
+            "type": "string"
+          },
+          "repo_url": {
+            "type": "string"
+          },
+          "base_commit": {
+            "type": "string"
+          }
+        },
+        "anyOf": [
+          {
+            "required": [
+              "fixture"
+            ]
+          },
+          {
+            "required": [
+              "repo_url",
+              "base_commit"
+            ]
+          }
+        ],
+        "additionalProperties": true
+      }
+    },
+    "setup_commands": {
+      "$ref": "#/$defs/commands"
+    },
+    "visible_validation_commands": {
+      "$ref": "#/$defs/commands"
+    },
+    "hidden_oracle": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "phases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "prompt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1
+          },
+          "adapter": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "hide_transcript_for_resume": {
+            "type": "boolean"
+          },
+          "validation_commands": {
+            "$ref": "#/$defs/commands"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "known_traps": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "expected_mistake_classes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "rubric": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": true
+    },
+    "evaluator": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
