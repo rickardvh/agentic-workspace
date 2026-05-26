@@ -220,6 +220,19 @@ def test_long_horizon_episode_records_agent_switch_and_aw_modes(tmp_path: Path) 
         assert [phase["model"] for phase in mode["phases"]] == ["fake-a-model", "fake-b-model"]
 
 
+def test_long_horizon_episode_paths_stay_short_for_windows_clone(tmp_path: Path) -> None:
+    module = _load_episode_module()
+
+    paths = module._episode_paths(
+        episode={"id": "very-long-real-repository-episode-id-that-would-otherwise-expand-the-run-directory"},
+        mode_id="aw-assisted-restart-with-a-verbose-mode-name",
+        output_root=tmp_path,
+    )
+
+    assert len(paths.run_root.name) <= 70
+    assert paths.repo_path == paths.run_root / "repo"
+
+
 def test_long_horizon_episode_bootstraps_aw_mode_for_pinned_repo_dry_run(tmp_path: Path) -> None:
     module = _load_episode_module()
     suite = _write_suite(tmp_path)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import shutil
 from pathlib import Path
@@ -146,14 +147,23 @@ def validate_evaluation_result(result: dict[str, Any]) -> None:
 
 
 def _episode_paths(*, episode: dict[str, Any], mode_id: str, output_root: Path) -> harness.HarnessPaths:
-    model = str(episode.get("id", "episode"))
-    return harness._scenario_paths(
-        output_root=output_root,
-        suite_id="long-horizon",
-        scenario_id=f"{episode['id']}-{mode_id}",
-        adapter_id="episode",
-        model=model,
+    episode_id = str(episode.get("id", "episode"))
+    readable = f"{episode_id}-{mode_id}"
+    digest = hashlib.sha1(readable.encode("utf-8")).hexdigest()[:10]
+    run_root = output_root / f"{harness._now_id()}-lh-{_path_slug(episode_id, 20)}-{_path_slug(mode_id, 12)}-{digest}"
+    return harness.HarnessPaths(
+        run_root=run_root,
+        fixture_root=run_root / "fixture",
+        repo_path=run_root / "repo",
+        transcript_path=run_root / "transcript.jsonl",
+        share_path=run_root / "session.md",
     )
+
+
+def _path_slug(value: str, max_length: int) -> str:
+    rendered = "".join(character if character.isalnum() else "-" for character in value.lower())
+    rendered = "-".join(part for part in rendered.split("-") if part)
+    return (rendered or "episode")[:max_length]
 
 
 def _bootstrap_aw_mode(repo_path: Path) -> None:

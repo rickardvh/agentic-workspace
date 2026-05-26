@@ -572,6 +572,30 @@
       "checked_in_justification": "Test fixture or checkout diagnostic data used to prove behavior, not package runtime authority."
     },
     {
+      "pattern": "tools/model-cli-harness/episodes/*.json",
+      "format": "json",
+      "owner": "model-cli-harness",
+      "status": "schema-backed",
+      "schema_or_validator": "tools/model-cli-harness/schemas/long-horizon-episode.schema.json",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Long-horizon episode records are maintainer-run evaluation inputs for restart, handoff, and AW-on/off comparison; scripts/model_cli_harness/long_horizon_episode.py applies extra runtime checks.",
+      "storage_class": "diagnostic-fixture",
+      "checked_in_justification": "Test fixture or checkout diagnostic data used to prove behavior, not package runtime authority."
+    },
+    {
+      "pattern": "tools/model-cli-harness/schemas/*.schema.json",
+      "format": "json",
+      "owner": "model-cli-harness",
+      "status": "schema-backed",
+      "schema_or_validator": "JSON Schema draft 2020-12",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Model CLI harness schemas define maintainer-authored episode and evaluator result surfaces.",
+      "storage_class": "diagnostic-fixture",
+      "checked_in_justification": "Test fixture or checkout diagnostic data used to prove behavior, not package runtime authority."
+    },
+    {
       "pattern": "tools/model-cli-harness/fixtures/**/*.json",
       "format": "json",
       "owner": "model-cli-harness",

@@ -29,18 +29,10 @@
       "base_commit": "6ab917ba3b2dc1dceba6a260a0c30cb947f6a69c"
     }
   ],
-  "setup_commands": [
-    [
-      "python",
-      "-m",
-      "pip",
-      "install",
-      "-e",
-      ".[testing]"
-    ]
-  ],
   "visible_validation_commands": [
     [
+      "uv",
+      "run",
       "python",
       "-m",
       "pytest",
