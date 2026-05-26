@@ -292,6 +292,46 @@ def test_long_horizon_episode_supports_same_agent_phase_override(tmp_path: Path)
     assert "Resume as the same agent" in phases[1]["prompt"]
 
 
+def test_long_horizon_episode_comparison_reports_same_agent_vs_switch(tmp_path: Path) -> None:
+    module = _load_episode_module()
+    suite = _write_suite(tmp_path)
+    episode = _write_episode(
+        tmp_path,
+        evaluator=False,
+        modes=[
+            {"id": "agent-switch", "aw_enabled": True, "fixture": "aw-fixture"},
+            {
+                "id": "same-agent",
+                "aw_enabled": True,
+                "fixture": "aw-fixture",
+                "phase_overrides": {
+                    "phase-two": {
+                        "adapter": "fake-a",
+                    }
+                },
+            },
+        ],
+    )
+
+    payload = module.run_episode(
+        episode_path=episode,
+        suite_path=suite,
+        output_root=tmp_path / "out",
+        execute=False,
+        evaluator=False,
+    )
+
+    comparison = payload["comparison"]["continuation_comparison"]
+    kinds = {mode["mode_id"]: mode["continuation_kind"] for mode in comparison["modes"]}
+    assert comparison["status"] == "present"
+    assert comparison["has_same_agent_continuation"] is True
+    assert comparison["has_agent_switch_continuation"] is True
+    assert kinds == {
+        "agent-switch": "agent-switch-continuation",
+        "same-agent": "same-agent-continuation",
+    }
+
+
 def test_long_horizon_episode_paths_stay_short_for_windows_clone(tmp_path: Path) -> None:
     module = _load_episode_module()
 
@@ -365,6 +405,7 @@ def test_long_horizon_episode_evaluator_excludes_hidden_oracle_and_reports_compa
     assert mode["evaluation"]["hidden_oracle_excluded"] is True
     assert mode["evaluation"]["post_score_reference"]["status"] == "available-after-primary-score"
     assert mode["evaluation"]["post_score_reference"]["reference"]["secret"] == "do-not-leak-reference"
+    assert payload["comparison"]["post_score_reference_by_mode"]["aw-assisted"]["status"] == "available-after-primary-score"
     assert "do-not-leak-reference" not in evaluator_prompt
     assert payload["comparison"]["mistake_classes"] == ["weak_proof"]
     assert payload["comparison"]["human_review_required"] is True

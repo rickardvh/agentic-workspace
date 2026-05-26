@@ -157,7 +157,7 @@ The episode runner supports:
 - checkpoint capture for diffs, transcripts, final answers, and validation output;
 - a separate evaluator adapter with a controlled evidence bundle;
 - post-score hidden/reference oracle metadata, kept out of the primary evaluator prompt;
-- comparison summaries for mistake classes, AW effect, human-review-needed status, and follow-up routing.
+- comparison summaries for mistake classes, same-agent versus agent-switch continuation, post-score reference status, AW effect, human-review-needed status, and follow-up routing.
 
 The first episode pack is intentionally small:
 

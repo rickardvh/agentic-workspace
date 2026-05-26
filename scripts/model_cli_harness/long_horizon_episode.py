@@ -349,11 +349,15 @@ def _parse_evaluation(text: str) -> dict[str, Any]:
 def _comparison_summary(mode_results: list[dict[str, Any]]) -> dict[str, Any]:
     mistake_classes_by_mode: dict[str, list[str]] = {}
     aw_effect_by_mode: dict[str, dict[str, list[str]]] = {}
+    post_score_reference_by_mode: dict[str, dict[str, Any]] = {}
     human_review_required = False
     followups: list[dict[str, Any]] = []
     for result in mode_results:
         mode_id = result["mode_id"]
-        evaluation = result.get("evaluation", {}).get("payload")
+        evaluation_result = result.get("evaluation", {})
+        if isinstance(evaluation_result, dict) and isinstance(evaluation_result.get("post_score_reference"), dict):
+            post_score_reference_by_mode[mode_id] = evaluation_result["post_score_reference"]
+        evaluation = evaluation_result.get("payload") if isinstance(evaluation_result, dict) else None
         if not isinstance(evaluation, dict):
             continue
         mistake_classes_by_mode[mode_id] = list(evaluation.get("mistake_classes", []))
@@ -378,7 +382,45 @@ def _comparison_summary(mode_results: list[dict[str, Any]]) -> dict[str, Any]:
         "aw_effect_by_mode": aw_effect_by_mode,
         "human_review_required": human_review_required,
         "recommended_followups": followups,
+        "continuation_comparison": _continuation_comparison(mode_results),
+        "post_score_reference_by_mode": post_score_reference_by_mode,
         "rule": "Comparison is review evidence, not a deterministic leaderboard.",
+    }
+
+
+def _continuation_comparison(mode_results: list[dict[str, Any]]) -> dict[str, Any]:
+    modes: list[dict[str, Any]] = []
+    kinds: set[str] = set()
+    for result in mode_results:
+        phases = result.get("phases", [])
+        if not isinstance(phases, list):
+            phases = []
+        adapters = [str(phase.get("adapter_id", "")) for phase in phases if isinstance(phase, dict)]
+        models = [str(phase.get("model", "")) for phase in phases if isinstance(phase, dict)]
+        if len(adapters) <= 1:
+            kind = "single-phase"
+        elif len(set(adapters)) == 1 and len(set(models)) == 1:
+            kind = "same-agent-continuation"
+        else:
+            kind = "agent-switch-continuation"
+        kinds.add(kind)
+        modes.append(
+            {
+                "mode_id": result.get("mode_id", ""),
+                "aw_enabled": bool(result.get("aw_enabled", False)),
+                "phase_count": len(adapters),
+                "phase_adapter_ids": adapters,
+                "phase_models": models,
+                "continuation_kind": kind,
+            }
+        )
+    has_same_agent = "same-agent-continuation" in kinds
+    has_agent_switch = "agent-switch-continuation" in kinds
+    return {
+        "status": "present" if has_same_agent and has_agent_switch else "partial" if modes else "absent",
+        "has_same_agent_continuation": has_same_agent,
+        "has_agent_switch_continuation": has_agent_switch,
+        "modes": modes,
     }
 
 
