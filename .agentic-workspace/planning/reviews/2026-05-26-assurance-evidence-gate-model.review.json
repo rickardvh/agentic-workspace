@@ -1,0 +1,229 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Assurance Evidence Gate Model Investigation",
+  "date": "2026-05-26",
+  "scope": [
+    "GitHub #1131 investigation for parent lane #1130"
+  ],
+  "classification": "design-investigation",
+  "goal": [
+    "Answer GitHub #1131 by mapping existing AW assurance, proof, Planning, Memory, report, and closeout building blocks into one repo-defined evidence-gate model."
+  ],
+  "non_goals": [
+    "Do not implement new config schema, commands, proof behavior, closeout gates, or fixtures in this investigation slice.",
+    "Do not encode domain-specific compliance knowledge in AW.",
+    "Do not create a parallel compliance subsystem."
+  ],
+  "review_mode": {
+    "mode": "design-investigation",
+    "review question": "How should repo-defined assurance requirements compose with existing AW surfaces without becoming a separate compliance product?",
+    "default finding cap": "bounded",
+    "inputs inspected first": "compact planning and task-specific surfaces"
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace start --task \"Ingest the #1130 lane on a new branch and do the #1131 investigation\" --format json; gh issue view 1130 --json number,title,state,body,labels,assignees,comments,url; gh issue view 1131 --json number,title,state,body,labels,assignees,comments,url; uv run agentic-workspace planning new-plan --id github-1131-assurance-evidence-gate-investigation --title \"Investigate assurance evidence gate model\" --source \"GitHub #1131; parent lane GitHub #1130\" --target . --activate --format json; rg assurance/proof/workflow/closeout surfaces; targeted source reads of config, workflow obligations, proof assurance, closeout, and config-effect review.",
+    "evidence sources": [
+      "GitHub #1130 parent lane",
+      "GitHub #1131 investigation slice",
+      "src/agentic_workspace/config.py",
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "src/agentic_workspace/reporting_support.py",
+      "src/agentic_workspace/contracts/schemas/workspace_config.schema.json",
+      "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+      ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
+      "docs/reviews/config-effect-review-2026-05-05.md",
+      "tests/test_workspace_report_cli.py",
+      "tests/test_workspace_proof_cli.py",
+      "packages/planning/tests/test_summary.py"
+    ]
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1130",
+      "label": "#1130",
+      "role": "parent lane"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1131",
+      "label": "#1131",
+      "role": "investigation"
+    },
+    {
+      "kind": "planning-decomposition",
+      "target": ".agentic-workspace/planning/decompositions/github-1130-assurance-requirements.decomposition.json",
+      "label": "ingested #1130 lane",
+      "role": "parent decomposition"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Existing surfaces already form most of the assurance loop",
+      "summary": "AW already has repo assurance config, workflow obligations, Planning assurance fields, proof-profile integration, closeout completion options, Memory residue routing, and ADR authority routing. The first implementation should compose these rather than add a compliance subsystem.",
+      "evidence": "config.py parses assurance.default_level, strict_closeout, proof_profiles, test_data_policy, invariant_registry, risk_registry, and workflow_obligations; planning-execplan.schema.json includes adaptive_assurance, traceability_refs, control_gates, test_data_policy, risk_registry_refs, invariant_refs; proof selection reads active planning assurance; closeout_trust already emits completion_options.",
+      "risk if unchanged": "A broad new subsystem would duplicate existing surfaces, increase ordinary-work cost, and weaken the repo-native boundary #1130 is trying to preserve.",
+      "suggested action": "Add a small requirement fact model under [assurance.requirements.<id>] and project it into existing assurance/proof/Planning/closeout surfaces.",
+      "confidence": "high",
+      "source": "#1131 investigation",
+      "promotion target": "follow-up issue: assurance requirement fact model",
+      "promotion trigger": "Before implementation starts",
+      "post-remediation note shape": "Keep as review evidence until child issues exist; no Memory note needed."
+    },
+    {
+      "title": "Minimal v1 requirement shape should be declarative and domain-generic",
+      "summary": "The smallest stable v1 shape should capture matching, authority refs, required evidence, proof/review linkage, force, and claim blockers. Domain meaning stays in repo-owned authority refs and free-form evidence labels.",
+      "evidence": "#1130 proposed id, level, applies_to_paths, applies_to_task_markers, authority_refs, required_evidence, proof_profile, workflow_obligation_refs, review_owner, force, blocking_claims; config.py already supports assurance levels and proof profiles; workflow obligations already support force/stage/commands/review_hint.",
+      "risk if unchanged": "Over-typing evidence or domain semantics would make AW appear to certify compliance; under-typing would leave agents unable to gate claims.",
+      "suggested action": "Use required fields id/level/at least one applies_to selector/force plus optional authority_refs, required_evidence, proof_profile, workflow_obligation_refs, review_owner, blocking_claims, notes.",
+      "confidence": "medium-high",
+      "source": "#1131 investigation",
+      "promotion target": "follow-up issue: assurance requirement fact model",
+      "promotion trigger": "When adding config/schema support",
+      "post-remediation note shape": "Retain in child issue acceptance, then shrink review."
+    },
+    {
+      "title": "Evidence status should be a projection first, not a new evidence store",
+      "summary": "Active evidence should live in Planning/proof/closeout fields for planned work and in explicit proof/closeout records for direct work. Memory is only for durable lessons or unresolved reusable residue.",
+      "evidence": "Planning records already carry proof_report, intent_proof, control_gates evidence, traceability_refs, durable_residue, closeout_distillation, and task_intent_promotion. closeout_trust already reconciles proof, intent, acceptance, package evidence, and residue. Memory index says Memory is anti-rediscovery, not active task state.",
+      "risk if unchanged": "A new evidence store would compete with Planning/proof ownership and create another state surface agents must reconcile.",
+      "suggested action": "Define an assurance_evidence_status projection with requirement_id, state, evidence_present, missing_evidence, sources, blocking_claims, and next_action. Read from existing fields first; add a command-owned writer only if direct-work evidence cannot be represented cleanly.",
+      "confidence": "high",
+      "source": "#1131 investigation",
+      "promotion target": "follow-up issue: evidence status and closeout gates",
+      "promotion trigger": "After requirement matching exists",
+      "post-remediation note shape": "No Memory note; active evidence ownership belongs to Planning/proof/closeout."
+    },
+    {
+      "title": "Closeout should block broad claims, not all progress",
+      "summary": "Missing high/critical assurance evidence should block claim-work-complete and close-parent-lane by default; claim-slice-complete can remain allowed only when the slice explicitly excludes the missing evidence or routes continuation honestly.",
+      "evidence": "_closeout_completion_options already distinguishes claim-slice-complete, claim-work-complete, close-parent-lane, route-residue, request-review, and stop-with-status. Tests already verify work-claim blocking for weak intent proof and closeout residue.",
+      "risk if unchanged": "Agents may treat passing tests as compliance/evidence satisfaction, or the product may overcorrect by blocking honest partial progress.",
+      "suggested action": "Feed assurance_evidence_status into existing completion option blockers: high/critical missing required evidence blocks work/parent claims; blocking force can also block slice claim unless explicitly scoped out; request-review and stop-with-status remain available.",
+      "confidence": "high",
+      "source": "#1131 investigation",
+      "promotion target": "follow-up issue: closeout evidence gates",
+      "promotion trigger": "After evidence status projection exists",
+      "post-remediation note shape": "Child issue acceptance should require both blocked broad claims and allowed honest status stops."
+    },
+    {
+      "title": "Proportionality depends on strict matching and quiet defaults",
+      "summary": "Configured high-assurance rules must not make unrelated work noisy. A requirement should activate only from explicit path glob match, task marker match, active Planning reference, proof profile reference, or risk/invariant reference.",
+      "evidence": "workflow_obligations currently matches from scope tags derived from active planning, task text, and changed paths; proof selection only enriches with configured assurance profiles when active planning assurance declares them.",
+      "risk if unchanged": "Repos with assurance config could make every small typo or README edit feel like regulated work, undermining AW's small-work ergonomics.",
+      "suggested action": "Require match evidence per active requirement and emit quiet status for non-matches. Tests must include a high-assurance matched task and an unrelated small edit that does not emit active requirements.",
+      "confidence": "high",
+      "source": "#1131 investigation",
+      "promotion target": "follow-up issue: requirement matching/projection",
+      "promotion trigger": "When implementing start/implement/report projection",
+      "post-remediation note shape": "Keep proportionality as a guardrail in every child issue."
+    }
+  ],
+  "recommendation": {
+    "promote": [
+      "Create a child issue for the minimal [assurance.requirements.<id>] fact model in config/schema/defaults/config output.",
+      "Create a child issue for matching/projection into start, implement, and report with high-assurance and quiet-low-assurance tests.",
+      "Create a child issue for evidence status and closeout completion-option gates.",
+      "Create a child issue for proof-profile integration from matched requirements.",
+      "Create a child issue for high-assurance and non-code dogfood fixtures after the first implementation slices exist."
+    ],
+    "defer": [
+      "Any new evidence store until Planning/proof/closeout projection proves insufficient.",
+      "Any domain-specific compliance vocabulary.",
+      "Any new top-level command until selectors/report sections prove too weak."
+    ],
+    "dismiss": [
+      "A separate [compliance] config tree.",
+      "AW-owned legal/regulatory interpretation.",
+      "Blocking all work in a repo merely because assurance requirements are configured."
+    ]
+  },
+  "retention": {
+    "closeout shape": "shrink",
+    "trigger": "findings promoted, dismissed, or superseded",
+    "proof surface": "routed issues, planning state, docs, checks, Memory, or a compact retained review stub"
+  },
+  "prose_templates": {
+    "review_finding": {
+      "sections": [
+        "Finding",
+        "Evidence",
+        "Impact",
+        "Recommendation",
+        "Owner",
+        "Status"
+      ],
+      "field_map": {
+        "Finding": "findings[].title + findings[].summary",
+        "Evidence": "findings[].evidence + findings[].source",
+        "Impact": "findings[].risk if unchanged",
+        "Recommendation": "findings[].suggested action + findings[].promotion target",
+        "Owner": "findings[].promotion target",
+        "Status": "recommendation/promote|defer|dismiss"
+      },
+      "rule": "Use only these headings when a prose finding is needed; keep the canonical fields structured."
+    },
+    "handoff_or_closeout": {
+      "sections": [
+        "Intent",
+        "What changed",
+        "Proof",
+        "Remaining risk",
+        "Durable residue",
+        "Next owner"
+      ],
+      "field_map": {
+        "Intent": "intent/outcome or requested_outcome",
+        "What changed": "execution_summary/outcome delivered",
+        "Proof": "proof_report/validation proof",
+        "Remaining risk": "finished_run_review/misinterpretation risk or follow-on decision",
+        "Durable residue": "durable_residue + closeout_distillation",
+        "Next owner": "execution_summary/follow-on routed to or required_continuation/owner surface"
+      },
+      "rule": "Prefer structured fields; use this shape only for short human-readable summaries."
+    }
+  },
+  "summary": {
+    "recommended_model": "Repo declares assurance requirements under [assurance.requirements.<id>]. AW matches requirements by explicit repo-owned signals, projects authority/evidence/proof/review facts into existing surfaces, and feeds missing evidence into existing completion options.",
+    "evidence_status_shape": {
+      "requirement_id": "stable id",
+      "state": "not-applicable|matched|satisfied|missing-evidence|review-required|waived",
+      "level": "low|medium|high|critical",
+      "applies_because": [],
+      "authority_refs": [],
+      "required_evidence": [],
+      "evidence_present": [],
+      "missing_evidence": [],
+      "proof_profile": "",
+      "workflow_obligation_refs": [],
+      "review_owner": "",
+      "blocking_claims": [],
+      "next_action": {}
+    },
+    "surface_integration": {
+      "start": "compactly report matched task-marker requirements and authority refs only when task text activates a requirement",
+      "implement": "match changed paths plus task markers; expose active requirements behind selector/verbose and keep tiny output quiet unless required action changes",
+      "proof": "include requirement-linked proof profiles, review aids, blocked commands, and residual missing evidence",
+      "closeout_trust": "summarize evidence status and add blockers to existing completion options",
+      "workflow_obligations": "allow requirements to reference or synthesize obligations rather than duplicate staged commands/reviews",
+      "planning": "carry requirement refs, evidence status, proof profile, review owner, and claim boundary in existing execplan fields",
+      "memory": "capture only durable lessons or unresolved assurance residue, not active evidence"
+    },
+    "non_goals": [
+      "domain compliance interpretation",
+      "parallel compliance subsystem",
+      "new evidence store by default",
+      "new top-level command by default",
+      "high-assurance ceremony for unrelated low-assurance work"
+    ]
+  },
+  "validation_commands": [
+    "uv run agentic-workspace summary --target . --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run python scripts/check/check_planning_surfaces.py"
+  ],
+  "drift_log": [
+    "2026-05-26: Review record created by create-review.",
+    "2026-05-26: Filled with #1131 assurance evidence-gate investigation and follow-up slice recommendations."
+  ]
+}
