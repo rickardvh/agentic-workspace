@@ -51,6 +51,12 @@
       "role": "investigation"
     },
     {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1132",
+      "label": "#1132",
+      "role": "first implementation child"
+    },
+    {
       "kind": "planning-decomposition",
       "target": ".agentic-workspace/planning/decompositions/github-1130-assurance-requirements.decomposition.json",
       "label": "ingested #1130 lane",
@@ -72,10 +78,10 @@
     },
     {
       "title": "Minimal v1 requirement shape should be declarative and domain-generic",
-      "summary": "The smallest stable v1 shape should capture matching, authority refs, required evidence, proof/review linkage, force, and claim blockers. Domain meaning stays in repo-owned authority refs and free-form evidence labels.",
+      "summary": "The smallest stable v1 shape should capture matching, authority refs, required evidence, proof/review linkage, force, claim blockers, and explicit waiver/dismissal facts. Domain meaning stays in repo-owned authority refs and free-form evidence labels.",
       "evidence": "#1130 proposed id, level, applies_to_paths, applies_to_task_markers, authority_refs, required_evidence, proof_profile, workflow_obligation_refs, review_owner, force, blocking_claims; config.py already supports assurance levels and proof profiles; workflow obligations already support force/stage/commands/review_hint.",
       "risk if unchanged": "Over-typing evidence or domain semantics would make AW appear to certify compliance; under-typing would leave agents unable to gate claims.",
-      "suggested action": "Use required fields id/level/at least one applies_to selector/force plus optional authority_refs, required_evidence, proof_profile, workflow_obligation_refs, review_owner, blocking_claims, notes.",
+      "suggested action": "Use required fields id/level/at least one applies_to selector/force plus optional authority_refs, required_evidence, proof_profile, workflow_obligation_refs, review_owner, blocking_claims, waiver, dismissal, notes. Waiver/dismissal must include reason and owner when present.",
       "confidence": "medium-high",
       "source": "#1131 investigation",
       "promotion target": "follow-up issue: assurance requirement fact model",
@@ -121,7 +127,7 @@
   ],
   "recommendation": {
     "promote": [
-      "Create a child issue for the minimal [assurance.requirements.<id>] fact model in config/schema/defaults/config output.",
+      "Create #1132 for the minimal [assurance.requirements.<id>] fact model plus config/report read projection.",
       "Create a child issue for matching/projection into start, implement, and report with high-assurance and quiet-low-assurance tests.",
       "Create a child issue for evidence status and closeout completion-option gates.",
       "Create a child issue for proof-profile integration from matched requirements.",
@@ -194,6 +200,11 @@
       "required_evidence": [],
       "evidence_present": [],
       "missing_evidence": [],
+      "waiver": {
+        "status": "none|waived|dismissed",
+        "reason": "",
+        "owner": ""
+      },
       "proof_profile": "",
       "workflow_obligation_refs": [],
       "review_owner": "",
@@ -224,6 +235,7 @@
   ],
   "drift_log": [
     "2026-05-26: Review record created by create-review.",
-    "2026-05-26: Filled with #1131 assurance evidence-gate investigation and follow-up slice recommendations."
+    "2026-05-26: Filled with #1131 assurance evidence-gate investigation and follow-up slice recommendations.",
+    "2026-05-26: Added explicit waiver/dismissal refinement and promoted #1132 as the first config plus read-projection child issue."
   ]
 }

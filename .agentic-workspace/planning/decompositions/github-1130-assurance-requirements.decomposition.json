@@ -21,11 +21,11 @@
     },
     {
       "id": "assurance-requirement-fact-model",
-      "title": "Define repo-declared assurance requirement facts",
+      "title": "Add minimal assurance requirement config and report projection",
       "readiness": "ready",
-      "outcome": "Config/schema accepts a minimal [assurance.requirements.<id>] shape and reports invalid or unsupported fields clearly.",
+      "outcome": "Config/schema accepts a minimal [assurance.requirements.<id>] shape, including explicit waiver/dismissal facts, and config/report output projects configured requirements for agents to inspect.",
       "owner_surface": "src/agentic_workspace/config.py and workspace config schema",
-      "proof": "Focused config/schema tests cover valid requirement, invalid force/level/evidence fields, and unchanged low-assurance config.",
+      "proof": "Focused config/report tests cover valid requirement, invalid force/level/blocking_claims fields, missing activation signal, waiver/dismissal shape, configured requirement projection, and unchanged low-assurance config.",
       "depends_on": [
         "github-1131-model-investigation"
       ],
@@ -85,7 +85,8 @@
   ],
   "dependency_assumptions": [
     "#1131 should close before implementation lanes start so the fact model does not fork away from existing assurance/proof/Planning/closeout surfaces.",
-    "Closeout and proof integration should reuse active Planning assurance fields before adding any new evidence store."
+    "Closeout and proof integration should reuse active Planning assurance fields before adding any new evidence store.",
+    "#1132 is the first implementation child and intentionally includes a read projection so schema does not land without agent-visible behavior."
   ],
   "parallelization_assumptions": [
     "Proof profile integration can proceed alongside closeout gate design after the projection shape is stable.",
@@ -108,6 +109,12 @@
       "target": "https://github.com/rickardvh/agentic-workspace/issues/1131",
       "label": "#1131",
       "role": "first promoted investigation"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1132",
+      "label": "#1132",
+      "role": "first implementation child"
     }
   ],
   "notes": "Ingested from GitHub #1130 as parent lane context. The upstream issue remains a tracker reference; checked-in Planning owns execution sequencing."

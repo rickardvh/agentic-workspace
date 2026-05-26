@@ -29,8 +29,9 @@ Stable fields:
 - `review_owner`: repo-local owner label.
 - `force`: `informational`, `recommended`, `required-before-closeout`, or `blocking`.
 - `blocking_claims`: completion option ids such as `claim-work-complete` and `close-parent-lane`.
+- `waiver` / `dismissal`: explicit recorded reason and owner when a matched requirement is waived, dismissed, or found not applicable after inspection.
 
-The implementation should require at least one matching signal and should validate known enum fields, but leave evidence labels free-form.
+The implementation should require at least one matching signal and should validate known enum fields, but leave evidence labels free-form. Waiver/dismissal must be first-class enough that agents do not work around gates by deleting or ignoring matched requirements.
 
 ## Evidence Status
 
@@ -46,6 +47,11 @@ Start with a projection, not a new evidence store:
   "required_evidence": ["authority_consulted", "risk_assessment"],
   "evidence_present": [],
   "missing_evidence": ["authority_consulted", "risk_assessment"],
+  "waiver": {
+    "status": "none|waived|dismissed",
+    "reason": "",
+    "owner": ""
+  },
   "proof_profile": "privacy",
   "workflow_obligation_refs": ["privacy_review"],
   "review_owner": "privacy-review",
@@ -76,7 +82,7 @@ A requirement should activate only from explicit evidence: path glob match, task
 
 ## Follow-Up Issues
 
-1. Minimal `assurance.requirements.<id>` fact model in config/schema/defaults/config output.
+1. #1132: Minimal `assurance.requirements.<id>` fact model plus config/report read projection, including explicit waiver/dismissal shape and no closeout gates yet.
 2. Requirement matching/projection into `start`, `implement`, and `report`.
 3. Evidence status and `closeout_trust` completion-option gates.
 4. Requirement-linked proof profile integration.
