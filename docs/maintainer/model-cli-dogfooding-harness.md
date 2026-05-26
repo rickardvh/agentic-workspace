@@ -31,7 +31,7 @@ uv run python scripts/model_cli_harness/run_model_cli_harness.py `
   --scenario startup-orientation
 ```
 
-The runner defaults to dry-run. It copies the scenario fixture into `scratch/model-cli-harness`, renders the prompt, writes `run.json`, and prints the exact CLI command it would execute. Add `--execute` only when you intentionally want to spend model calls and allow the configured CLI to operate in the copied fixture.
+The runner defaults to dry-run. It copies the scenario fixture into the configured local scratch root under `.agentic-workspace/local/scratch/model-cli-harness`, renders the prompt, writes `run.json`, and prints the exact CLI command it would execute. Add `--execute` only when you intentionally want to spend model calls and allow the configured CLI to operate in the copied fixture.
 
 Scenarios may define `prompt_variants` for non-deterministic probing. By default the runner uses the first/default prompt. Use `--prompt-variant all` to run every variant, or `--prompt-variant <id>` for a single one:
 
@@ -124,8 +124,8 @@ Use comparison mode after product or harness changes to check whether a targeted
 
 ```powershell
 uv run python scripts/model_cli_harness/run_model_cli_harness.py `
-  --compare-baseline scratch/model-cli-harness/baseline/run.json `
-  --compare-current scratch/model-cli-harness/current/run.json `
+  --compare-baseline .agentic-workspace/local/scratch/model-cli-harness/baseline/run.json `
+  --compare-current .agentic-workspace/local/scratch/model-cli-harness/current/run.json `
   --format json
 ```
 
@@ -191,7 +191,7 @@ Treat one-off capability failures cautiously. Give more weight to repeated ambig
 ## Safety Defaults
 
 - Dry-run is the default.
-- Scenario repository mutations should happen only in copied fixtures under `scratch/`.
+- Scenario repository mutations should happen only in copied fixtures under `.agentic-workspace/local/scratch/`.
 - Provider CLIs may still maintain their own local state outside the fixture. For Copilot, the harness routes logs to the run directory, but authenticated session/config state may still use `COPILOT_HOME` unless the operator provides an isolated authenticated home.
 - The Copilot adapter denies `git push`.
 - The Copilot adapter requires `pwsh` before execution because its shell tool uses PowerShell 7 on Windows. The suite includes standard PowerShell install paths and prepends the discovered parent directory to the model CLI `PATH`.

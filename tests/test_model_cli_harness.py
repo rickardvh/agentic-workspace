@@ -53,6 +53,12 @@ def test_model_cli_harness_extracts_token_usage_summary() -> None:
     }
 
 
+def test_model_cli_harness_default_output_root_uses_workspace_local_scratch() -> None:
+    harness = _load_harness()
+
+    assert harness.DEFAULT_OUTPUT_ROOT == REPO_ROOT / ".agentic-workspace" / "local" / "scratch" / "model-cli-harness"
+
+
 def test_model_cli_harness_tolerates_gemini_string_events_and_stats() -> None:
     harness = _load_harness()
     stdout = "\n".join(

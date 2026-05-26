@@ -18,9 +18,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Iterable
 
+from agentic_workspace.config import WORKSPACE_LOCAL_SCRATCH_ROOT_PATH
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SUITE = REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json"
-DEFAULT_OUTPUT_ROOT = REPO_ROOT / "scratch" / "model-cli-harness"
+DEFAULT_OUTPUT_ROOT = REPO_ROOT / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH / "model-cli-harness"
 EPHEMERAL_MUTATION_PATHS = (
     ".git/",
     ".pytest_cache/",
