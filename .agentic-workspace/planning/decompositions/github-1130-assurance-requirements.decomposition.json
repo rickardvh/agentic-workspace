@@ -22,7 +22,7 @@
     {
       "id": "assurance-requirement-fact-model",
       "title": "Add minimal assurance requirement config and report projection",
-      "readiness": "ready",
+      "readiness": "promoted",
       "outcome": "Config/schema accepts a minimal [assurance.requirements.<id>] shape, including explicit waiver/dismissal facts, and config/report output projects configured requirements for agents to inspect.",
       "owner_surface": "src/agentic_workspace/config.py and workspace config schema",
       "proof": "Focused config/report tests cover valid requirement, invalid force/level/blocking_claims fields, missing activation signal, waiver/dismissal shape, configured requirement projection, and unchanged low-assurance config.",
@@ -34,7 +34,7 @@
     {
       "id": "assurance-requirement-projection",
       "title": "Project applicable assurance requirements",
-      "readiness": "deferred",
+      "readiness": "promoted",
       "outcome": "start, implement, and report expose matched requirements from changed paths, task markers, proof profiles, active Planning, and configured refs while unrelated small work stays quiet.",
       "owner_surface": "src/agentic_workspace/workspace_runtime_primitives.py and report/start/implement tests",
       "proof": "Fixtures cover high-assurance path/task matches and a tiny unrelated edit with no ceremony.",
@@ -46,7 +46,7 @@
     {
       "id": "assurance-evidence-closeout-gates",
       "title": "Integrate evidence status with closeout and completion options",
-      "readiness": "deferred",
+      "readiness": "promoted",
       "outcome": "closeout_trust and completion options distinguish proof passed from required assurance evidence satisfied, blocking broad claims when required evidence is missing.",
       "owner_surface": "closeout_trust and completion option payloads",
       "proof": "Focused tests show missing evidence blocks claim-work-complete and close-parent-lane, while honest stop/status and review routes remain available.",
@@ -58,7 +58,7 @@
     {
       "id": "assurance-proof-profile-integration",
       "title": "Wire requirement-linked proof profiles into proof output",
-      "readiness": "deferred",
+      "readiness": "promoted",
       "outcome": "proof selects requirement-linked proof profile commands, review aids, blocked commands, and residual evidence gaps without replacing agent judgment.",
       "owner_surface": "proof selection and active planning assurance payloads",
       "proof": "Proof tests cover configured proof profile selection, missing configured profile, review aids, and host-policy blocked commands.",
@@ -72,7 +72,7 @@
     {
       "id": "assurance-dogfood-fixtures",
       "title": "Add high-assurance and non-code dogfood fixtures",
-      "readiness": "deferred",
+      "readiness": "promoted",
       "outcome": "A host fixture proves code and non-code assurance requirements, evidence recording, claim gates, and proportionality for unrelated work.",
       "owner_surface": "tests and fixture host repos",
       "proof": "Fixture tests cover relevant high-assurance work, evidence recorded, unrelated quiet edit, and non-code policy/runbook surface.",
@@ -86,7 +86,8 @@
   "dependency_assumptions": [
     "#1131 should close before implementation lanes start so the fact model does not fork away from existing assurance/proof/Planning/closeout surfaces.",
     "Closeout and proof integration should reuse active Planning assurance fields before adding any new evidence store.",
-    "#1132 is the first implementation child and intentionally includes a read projection so schema does not land without agent-visible behavior."
+    "#1132 is the first implementation child and intentionally includes a read projection so schema does not land without agent-visible behavior.",
+    "#1133-#1136 were created as follow-on child slices for projection, closeout gates, proof integration, and dogfood fixtures."
   ],
   "parallelization_assumptions": [
     "Proof profile integration can proceed alongside closeout gate design after the projection shape is stable.",
@@ -115,6 +116,30 @@
       "target": "https://github.com/rickardvh/agentic-workspace/issues/1132",
       "label": "#1132",
       "role": "first implementation child"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1133",
+      "label": "#1133",
+      "role": "projection child"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1134",
+      "label": "#1134",
+      "role": "closeout gates child"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1135",
+      "label": "#1135",
+      "role": "proof integration child"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1136",
+      "label": "#1136",
+      "role": "dogfood fixtures child"
     }
   ],
   "notes": "Ingested from GitHub #1130 as parent lane context. The upstream issue remains a tracker reference; checked-in Planning owns execution sequencing."

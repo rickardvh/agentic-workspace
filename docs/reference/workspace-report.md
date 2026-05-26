@@ -69,6 +69,7 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `system_intent_mirror` | object | no |  | Compiled system-intent mirror status and source metadata. |  |  |
 | `durable_intent` | object | yes |  | Compact decision projection for durable task, subsystem, and system intent pressure. |  |  |
 | `workflow_obligations` | object | yes |  | Repo-configured workflow obligations surfaced for report consumers. |  |  |
+| `assurance_requirements` | object | yes |  | Repo-declared assurance requirements, active matches, and evidence status projection. |  |  |
 | `authority_hierarchy` | object | no |  | Authority and promotion-path guidance for deciding which repo surfaces are current instruction, durable memory, future work, or historical audit. |  |  |
 | `continuation_state` | object | no |  | Compact continuation-state contract for preserving only unfinished or handoff-relevant work, not historical residue. |  |  |
 | `compliance_economics` | object | no |  | Boundary statement for what Agentic Workspace can enforce directly and where it instead makes noncompliance visible or costly. |  |  |

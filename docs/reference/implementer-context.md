@@ -71,6 +71,7 @@ Cheap implementer context for a bounded changed-path scope.
 | `acceptance_reconciliation.task_carry_forward_hint` | string | yes |  | Short reminder to preserve task text across start and implement calls. |  |  |
 | `intent_acknowledgement` | object | yes |  | Guidance for stating inferred intent, first slice, non-goals, and correction point before non-direct implementation. |  |  |
 | `reuse_pressure` | object | yes |  | Changed-path reuse and abstraction-pressure facts that help the agent decide whether to reuse, accept duplication, or route extraction follow-up. |  |  |
+| `assurance_requirements` | object | yes |  | Repo-declared assurance requirements matched to the task or changed paths, with evidence status and claim-boundary facts. |  |  |
 | `objective_drift` | object | yes |  | Heuristic warning when changed files do not mention explicit requested outcomes. |  |  |
 | `objective_drift.kind` | const `"agentic-workspace/objective-drift/v1"` | yes |  | Discriminator for the lightweight objective-drift heuristic. |  |  |
 | `objective_drift.status` | string | yes |  | Whether requested task terms appear missing from changed surfaces. |  |  |

@@ -26,6 +26,7 @@
     "system_intent_mirror",
     "durable_intent",
     "workflow_obligations",
+    "assurance_requirements",
     "product_managed_enclave",
     "ownership_diagnostics",
     "surface_value_guardrail",

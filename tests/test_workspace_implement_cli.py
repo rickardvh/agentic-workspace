@@ -107,6 +107,112 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(tmp_pat
     assert payload["planning_safety_gate"]["work_shape_facts"]["hard_blockers"] == []
 
 
+def test_implement_selects_active_assurance_requirements_from_changed_paths(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.requirements.privacy_data]
+level = "high"
+applies_to_paths = ["db/migrations/**"]
+authority_refs = ["docs/compliance/privacy.md"]
+required_evidence = ["authority_consulted"]
+proof_profile = "privacy"
+force = "required-before-closeout"
+blocking_claims = ["claim-work-complete", "close-parent-lane"]
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "db/migrations/001_privacy.sql",
+                "--select",
+                "assurance_requirements",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    selected = json.loads(capsys.readouterr().out)
+    requirements = selected["values"]["assurance_requirements"]
+    assert requirements["status"] == "attention"
+    assert requirements["active"][0]["id"] == "privacy_data"
+    assert requirements["active"][0]["applies_because"] == ["changed path matched db/migrations/**"]
+    assert requirements["evidence_status"][0]["missing_evidence"] == ["authority_consulted"]
+
+
+def test_implement_keeps_unmatched_assurance_requirements_out_of_tiny_output(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.requirements.privacy_data]
+level = "high"
+applies_to_paths = ["db/migrations/**"]
+required_evidence = ["authority_consulted"]
+force = "required-before-closeout"
+""",
+    )
+
+    assert cli.main(["implement", "--target", str(tmp_path), "--changed", "README.md", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert "assurance_requirements" not in payload
+
+
+def test_implement_matches_non_code_assurance_requirement(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.requirements.runbook_change]
+level = "medium"
+applies_to_paths = ["docs/runbooks/**"]
+authority_refs = ["docs/ops/runbook-authority.md"]
+required_evidence = ["operator_review"]
+force = "recommended"
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "docs/runbooks/restart-service.md",
+                "--select",
+                "assurance_requirements",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    requirements = json.loads(capsys.readouterr().out)["values"]["assurance_requirements"]
+    assert requirements["active"][0]["id"] == "runbook_change"
+    assert requirements["active"][0]["authority_refs"] == ["docs/ops/runbook-authority.md"]
+    assert requirements["evidence_status"][0]["missing_evidence"] == ["operator_review"]
+
+
 def test_implement_planning_source_includes_typecheck_ci_parity(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)

@@ -372,6 +372,49 @@ def test_preflight_matches_planless_workflow_obligations_from_task_text(tmp_path
     assert payload["closeout_obligations"]["status"] == "present"
 
 
+def test_start_surfaces_active_assurance_requirement_from_task_marker(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        """
+schema_version = 1
+
+[assurance.requirements.privacy_data]
+level = "high"
+applies_to_task_markers = ["privacy"]
+authority_refs = ["docs/compliance/privacy.md"]
+required_evidence = ["authority_consulted"]
+force = "required-before-closeout"
+blocking_claims = ["claim-work-complete", "close-parent-lane"]
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(target),
+                "--task",
+                "Update privacy policy handling",
+                "--select",
+                "assurance_requirements",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    requirements = payload["values"]["assurance_requirements"]
+    assert requirements["status"] == "attention"
+    assert requirements["active"][0]["id"] == "privacy_data"
+    assert requirements["active"][0]["applies_because"] == ["task marker matched privacy"]
+
+
 def test_preflight_active_only_includes_active_todo_without_execplan(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

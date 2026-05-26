@@ -104,6 +104,11 @@ SUPPORTED_WORKFLOW_OBLIGATION_FORCES = (
     "required-before-closeout",
     "blocking",
 )
+SUPPORTED_ASSURANCE_REQUIREMENT_BLOCKING_CLAIMS = (
+    "claim-slice-complete",
+    "claim-work-complete",
+    "close-parent-lane",
+)
 SUPPORTED_DELEGATION_TARGET_STRENGTHS = (
     "strong",
     "medium",
@@ -303,6 +308,34 @@ class AssuranceProofProfile:
 
 
 @dataclass(frozen=True)
+class AssuranceRequirementDisposition:
+    reason: str
+    owner: str
+
+
+@dataclass(frozen=True)
+class AssuranceRequirement:
+    id: str
+    level: str
+    applies_to_paths: tuple[str, ...]
+    applies_to_task_markers: tuple[str, ...]
+    applies_to_planning_refs: tuple[str, ...]
+    applies_to_proof_profiles: tuple[str, ...]
+    applies_to_risk_refs: tuple[str, ...]
+    applies_to_invariant_refs: tuple[str, ...]
+    authority_refs: tuple[str, ...]
+    required_evidence: tuple[str, ...]
+    proof_profile: str | None
+    workflow_obligation_refs: tuple[str, ...]
+    review_owner: str | None
+    force: str
+    blocking_claims: tuple[str, ...]
+    waiver: AssuranceRequirementDisposition | None
+    dismissal: AssuranceRequirementDisposition | None
+    notes: str | None
+
+
+@dataclass(frozen=True)
 class AssuranceConfig:
     default_level: str
     default_level_source: str
@@ -310,6 +343,7 @@ class AssuranceConfig:
     agent_may_deescalate: bool
     strict_closeout: bool
     proof_profiles: tuple[AssuranceProofProfile, ...]
+    requirements: tuple[AssuranceRequirement, ...]
     test_data_policy: dict[str, Any]
     decision_record_target: str | None
     decision_record_format: str | None
@@ -611,6 +645,125 @@ def _require_bool(*, payload: dict[str, Any], key: str, default: bool, config_pa
     return value
 
 
+def _require_disposition(
+    *,
+    payload: dict[str, Any],
+    key: str,
+    config_path: Path,
+) -> AssuranceRequirementDisposition | None:
+    if key not in payload:
+        return None
+    value = payload[key]
+    if not isinstance(value, dict):
+        raise WorkspaceUsageError(f"{config_path.as_posix()} {key} must be a table with reason and owner.")
+    unknown = sorted(set(value) - {"reason", "owner"})
+    if unknown:
+        allowed = ", ".join(("reason", "owner"))
+        raise WorkspaceUsageError(f"{config_path.as_posix()} {key} contains unsupported field(s): {', '.join(unknown)}; use {allowed}.")
+    reason = require_optional_string(payload=value, key="reason", config_path=Path(f"{config_path.as_posix()} {key}"))
+    owner = require_optional_string(payload=value, key="owner", config_path=Path(f"{config_path.as_posix()} {key}"))
+    if reason is None or owner is None:
+        raise WorkspaceUsageError(f"{config_path.as_posix()} {key} requires non-empty reason and owner.")
+    return AssuranceRequirementDisposition(reason=reason, owner=owner)
+
+
+def _load_assurance_requirements(
+    *,
+    raw_requirements: Any,
+    config_path: Path,
+) -> tuple[tuple[AssuranceRequirement, ...], list[str]]:
+    warnings: list[str] = []
+    if raw_requirements is None:
+        raw_requirements = {}
+    if not isinstance(raw_requirements, dict):
+        raise WorkspaceUsageError(f"{config_path.as_posix()} [assurance.requirements] section must be a table.")
+    requirements: list[AssuranceRequirement] = []
+    supported_fields = {
+        "level",
+        "applies_to_paths",
+        "applies_to_task_markers",
+        "applies_to_planning_refs",
+        "applies_to_proof_profiles",
+        "applies_to_risk_refs",
+        "applies_to_invariant_refs",
+        "authority_refs",
+        "required_evidence",
+        "proof_profile",
+        "workflow_obligation_refs",
+        "review_owner",
+        "force",
+        "blocking_claims",
+        "waiver",
+        "dismissal",
+        "notes",
+    }
+    activation_fields = {
+        "applies_to_paths",
+        "applies_to_task_markers",
+        "applies_to_planning_refs",
+        "applies_to_proof_profiles",
+        "applies_to_risk_refs",
+        "applies_to_invariant_refs",
+    }
+    for requirement_id, raw_requirement in sorted(raw_requirements.items()):
+        requirement_path = Path(f"{config_path.as_posix()} assurance.requirements.{requirement_id}")
+        if not isinstance(raw_requirement, dict):
+            raise WorkspaceUsageError(f"{requirement_path.as_posix()} must be a table.")
+        unknown_requirement = sorted(set(raw_requirement) - supported_fields)
+        if unknown_requirement:
+            warnings.append(f"{requirement_path.as_posix()} contains unsupported field(s): {', '.join(unknown_requirement)}.")
+        activation_values = {
+            key: require_optional_string_list(payload=raw_requirement, key=key, config_path=requirement_path) for key in activation_fields
+        }
+        if not any(activation_values.values()):
+            allowed = ", ".join(sorted(activation_fields))
+            raise WorkspaceUsageError(f"{requirement_path.as_posix()} requires at least one activation signal: {allowed}.")
+        requirements.append(
+            AssuranceRequirement(
+                id=str(requirement_id).strip(),
+                level=require_optional_enum(
+                    payload=raw_requirement,
+                    key="level",
+                    config_path=requirement_path,
+                    allowed=SUPPORTED_ASSURANCE_LEVELS,
+                    default=DEFAULT_ASSURANCE_LEVEL,
+                ),
+                applies_to_paths=activation_values["applies_to_paths"],
+                applies_to_task_markers=activation_values["applies_to_task_markers"],
+                applies_to_planning_refs=activation_values["applies_to_planning_refs"],
+                applies_to_proof_profiles=activation_values["applies_to_proof_profiles"],
+                applies_to_risk_refs=activation_values["applies_to_risk_refs"],
+                applies_to_invariant_refs=activation_values["applies_to_invariant_refs"],
+                authority_refs=require_optional_string_list(payload=raw_requirement, key="authority_refs", config_path=requirement_path),
+                required_evidence=require_optional_string_list(
+                    payload=raw_requirement, key="required_evidence", config_path=requirement_path
+                ),
+                proof_profile=require_optional_string(payload=raw_requirement, key="proof_profile", config_path=requirement_path),
+                workflow_obligation_refs=require_optional_string_list(
+                    payload=raw_requirement, key="workflow_obligation_refs", config_path=requirement_path
+                ),
+                review_owner=require_optional_string(payload=raw_requirement, key="review_owner", config_path=requirement_path),
+                force=require_optional_enum(
+                    payload=raw_requirement,
+                    key="force",
+                    config_path=requirement_path,
+                    allowed=SUPPORTED_WORKFLOW_OBLIGATION_FORCES,
+                    default="recommended",
+                ),
+                blocking_claims=require_optional_string_list(
+                    payload=raw_requirement,
+                    key="blocking_claims",
+                    config_path=requirement_path,
+                    allowed=SUPPORTED_ASSURANCE_REQUIREMENT_BLOCKING_CLAIMS,
+                ),
+                waiver=_require_disposition(payload=raw_requirement, key="waiver", config_path=requirement_path),
+                dismissal=_require_disposition(payload=raw_requirement, key="dismissal", config_path=requirement_path),
+                notes=require_optional_string(payload=raw_requirement, key="notes", config_path=requirement_path),
+            )
+        )
+    return (tuple(requirement for requirement in requirements if requirement.id), warnings)
+
+
 def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[AssuranceConfig, list[str]]:
     warnings: list[str] = []
     if raw_assurance is None:
@@ -623,6 +776,7 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
         "agent_may_deescalate",
         "strict_closeout",
         "proof_profiles",
+        "requirements",
         "test_data_policy",
         "decision_record_target",
         "decision_record_format",
@@ -671,6 +825,11 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
     decision_record_template = raw_assurance.get("decision_record_template")
     invariant_registry = raw_assurance.get("invariant_registry")
     risk_registry = raw_assurance.get("risk_registry")
+    requirements, requirement_warnings = _load_assurance_requirements(
+        raw_requirements=raw_assurance.get("requirements", {}),
+        config_path=config_path,
+    )
+    warnings.extend(requirement_warnings)
     return (
         AssuranceConfig(
             default_level=default_level,
@@ -679,6 +838,7 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
             agent_may_deescalate=_require_bool(payload=raw_assurance, key="agent_may_deescalate", default=False, config_path=config_path),
             strict_closeout=_require_bool(payload=raw_assurance, key="strict_closeout", default=False, config_path=config_path),
             proof_profiles=tuple(profile for profile in profiles if profile.id),
+            requirements=requirements,
             test_data_policy={str(key): value for key, value in raw_test_data_policy.items()},
             decision_record_target=str(decision_record_target).strip() if decision_record_target is not None else None,
             decision_record_format=str(decision_record_format).strip() if decision_record_format is not None else None,

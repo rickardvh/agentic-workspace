@@ -434,6 +434,81 @@ review_aids = []
     assert usable["assurance"]["onboarding"]["host_ref_count"] == 1
 
 
+def test_config_command_reports_assurance_requirements(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.requirements.privacy_data]
+level = "high"
+applies_to_paths = ["db/migrations/**"]
+applies_to_task_markers = ["privacy"]
+authority_refs = ["docs/compliance/privacy.md"]
+required_evidence = ["authority_consulted", "risk_assessment"]
+proof_profile = "privacy"
+workflow_obligation_refs = ["privacy_review"]
+review_owner = "privacy-review"
+force = "required-before-closeout"
+blocking_claims = ["claim-work-complete", "close-parent-lane"]
+
+[assurance.requirements.privacy_data.waiver]
+reason = "Covered by existing privacy review for this migration class."
+owner = "privacy-review"
+""",
+    )
+
+    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    requirement = payload["assurance"]["requirements"][0]
+    assert requirement["id"] == "privacy_data"
+    assert requirement["level"] == "high"
+    assert requirement["applies_to_paths"] == ["db/migrations/**"]
+    assert requirement["required_evidence"] == ["authority_consulted", "risk_assessment"]
+    assert requirement["force"] == "required-before-closeout"
+    assert requirement["blocking_claims"] == ["claim-work-complete", "close-parent-lane"]
+    assert requirement["waiver"]["status"] == "recorded"
+    assert requirement["waiver"]["owner"] == "privacy-review"
+
+
+def test_config_command_rejects_assurance_requirement_without_activation_signal(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.requirements.no_signal]
+level = "high"
+required_evidence = ["authority_consulted"]
+""",
+    )
+
+    with pytest.raises(SystemExit):
+        cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"])
+    assert "requires at least one activation signal" in capsys.readouterr().err
+
+
+def test_config_command_rejects_invalid_assurance_requirement_claim(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.requirements.bad_claim]
+applies_to_paths = ["docs/**"]
+blocking_claims = ["certify-compliant"]
+""",
+    )
+
+    with pytest.raises(SystemExit):
+        cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"])
+    assert "blocking_claims entries must be one of" in capsys.readouterr().err
+
+
 def test_config_command_reports_enabled_advanced_features(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     (tmp_path / ".agentic-workspace/config.toml").write_text(

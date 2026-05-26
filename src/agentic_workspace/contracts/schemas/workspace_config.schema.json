@@ -314,6 +314,176 @@
                 },
                 "uniqueItems": true,
                 "default": []
+              },
+              "disallowed_commands": {
+                "description": "Commands that this proof profile disallows for the matched assurance concern.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "One entry in the disallowed commands list."
+                },
+                "uniqueItems": true,
+                "default": []
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "requirements": {
+          "description": "Repo-declared assurance requirements that map work signals to authority refs, required evidence, proof profiles, review owners, and completion claim boundaries.",
+          "type": "object",
+          "default": {},
+          "additionalProperties": {
+            "type": "object",
+            "description": "One repo-defined assurance requirement. Domain meaning stays in repo-owned authority refs and free-form evidence labels.",
+            "x-agentic-workspace-unknown-properties": "warn",
+            "properties": {
+              "level": {
+                "description": "Repo-interpreted assurance level for the matched requirement.",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high",
+                  "critical"
+                ],
+                "default": "low"
+              },
+              "applies_to_paths": {
+                "description": "Path globs that activate this requirement when changed paths match.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "applies_to_task_markers": {
+                "description": "Task-text markers that activate this requirement.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "applies_to_planning_refs": {
+                "description": "Planning refs or requirement ids that activate this requirement from active planning state.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "applies_to_proof_profiles": {
+                "description": "Active planning proof profile ids that activate this requirement.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "applies_to_risk_refs": {
+                "description": "Risk registry refs that activate this requirement from active planning state.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "applies_to_invariant_refs": {
+                "description": "Invariant refs that activate this requirement from active planning state.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "authority_refs": {
+                "description": "Repo-owned docs, policies, runbooks, registries, or decision records agents should consult.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "required_evidence": {
+                "description": "Free-form repo vocabulary naming evidence expected before supported completion claims.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "proof_profile": {
+                "description": "Optional assurance.proof_profiles id to add when this requirement is active.",
+                "type": "string",
+                "minLength": 1
+              },
+              "workflow_obligation_refs": {
+                "description": "Workflow obligation ids related to this requirement.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "review_owner": {
+                "description": "Repo-local owner label for review or waiver decisions.",
+                "type": "string",
+                "minLength": 1
+              },
+              "force": {
+                "description": "How strongly this requirement affects guidance and closeout claim gates.",
+                "enum": [
+                  "informational",
+                  "recommended",
+                  "required-before-closeout",
+                  "blocking"
+                ],
+                "default": "recommended"
+              },
+              "blocking_claims": {
+                "description": "Completion option ids blocked while required evidence for this requirement is missing.",
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "claim-slice-complete",
+                    "claim-work-complete",
+                    "close-parent-lane"
+                  ]
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "waiver": {
+                "description": "Recorded waiver with reason and owner for this requirement.",
+                "$ref": "#/$defs/assurance_requirement_disposition"
+              },
+              "dismissal": {
+                "description": "Recorded dismissal or not-applicable decision with reason and owner for this requirement.",
+                "$ref": "#/$defs/assurance_requirement_disposition"
+              },
+              "notes": {
+                "description": "Optional repo-local note about this requirement.",
+                "type": "string",
+                "minLength": 1
               }
             },
             "additionalProperties": true
@@ -515,6 +685,27 @@
       },
       "x-agentic-workspace-unknown-properties": "warn",
       "additionalProperties": true
+    },
+    "assurance_requirement_disposition": {
+      "description": "Recorded waiver or dismissal for a repo-declared assurance requirement.",
+      "type": "object",
+      "required": [
+        "reason",
+        "owner"
+      ],
+      "properties": {
+        "reason": {
+          "description": "Why the requirement was waived, dismissed, or found not applicable.",
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "description": "Repo-local owner or role accountable for the waiver or dismissal.",
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
     }
   }
 }

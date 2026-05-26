@@ -66,6 +66,30 @@ Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.t
 | `assurance.proof_profiles.<name>.required_commands` | array of string | no | `[]` | Commands that must pass for this proof profile. |  |  |
 | `assurance.proof_profiles.<name>.optional_commands` | array of string | no | `[]` | Commands that are useful but not required for this proof profile. |  |  |
 | `assurance.proof_profiles.<name>.review_aids` | array of string | no | `[]` | Manual review aids or checklists associated with this proof profile. |  |  |
+| `assurance.proof_profiles.<name>.disallowed_commands` | array of string | no | `[]` | Commands that this proof profile disallows for the matched assurance concern. |  |  |
+| `assurance.requirements` | object | no | `{}` | Repo-declared assurance requirements that map work signals to authority refs, required evidence, proof profiles, review owners, and completion claim boundaries. |  |  |
+| `assurance.requirements.<name>` | object | no |  | One repo-defined assurance requirement. Domain meaning stays in repo-owned authority refs and free-form evidence labels. |  | x-agentic-workspace-unknown-properties: "warn" |
+| `assurance.requirements.<name>.level` | enum `"low"`, `"medium"`, `"high"`, `"critical"` | no | `"low"` | Repo-interpreted assurance level for the matched requirement. |  |  |
+| `assurance.requirements.<name>.applies_to_paths` | array of string | no | `[]` | Path globs that activate this requirement when changed paths match. |  |  |
+| `assurance.requirements.<name>.applies_to_task_markers` | array of string | no | `[]` | Task-text markers that activate this requirement. |  |  |
+| `assurance.requirements.<name>.applies_to_planning_refs` | array of string | no | `[]` | Planning refs or requirement ids that activate this requirement from active planning state. |  |  |
+| `assurance.requirements.<name>.applies_to_proof_profiles` | array of string | no | `[]` | Active planning proof profile ids that activate this requirement. |  |  |
+| `assurance.requirements.<name>.applies_to_risk_refs` | array of string | no | `[]` | Risk registry refs that activate this requirement from active planning state. |  |  |
+| `assurance.requirements.<name>.applies_to_invariant_refs` | array of string | no | `[]` | Invariant refs that activate this requirement from active planning state. |  |  |
+| `assurance.requirements.<name>.authority_refs` | array of string | no | `[]` | Repo-owned docs, policies, runbooks, registries, or decision records agents should consult. |  |  |
+| `assurance.requirements.<name>.required_evidence` | array of string | no | `[]` | Free-form repo vocabulary naming evidence expected before supported completion claims. |  |  |
+| `assurance.requirements.<name>.proof_profile` | string | no |  | Optional assurance.proof_profiles id to add when this requirement is active. |  |  |
+| `assurance.requirements.<name>.workflow_obligation_refs` | array of string | no | `[]` | Workflow obligation ids related to this requirement. |  |  |
+| `assurance.requirements.<name>.review_owner` | string | no |  | Repo-local owner label for review or waiver decisions. |  |  |
+| `assurance.requirements.<name>.force` | enum `"informational"`, `"recommended"`, `"required-before-closeout"`, `"blocking"` | no | `"recommended"` | How strongly this requirement affects guidance and closeout claim gates. |  |  |
+| `assurance.requirements.<name>.blocking_claims` | array of enum `"claim-slice-complete"`, `"claim-work-complete"`, `"close-parent-lane"` | no | `[]` | Completion option ids blocked while required evidence for this requirement is missing. |  |  |
+| `assurance.requirements.<name>.waiver` | ref `#/$defs/assurance_requirement_disposition` | no |  | Recorded waiver with reason and owner for this requirement. |  |  |
+| `assurance.requirements.<name>.waiver.reason` | string | yes |  | Why the requirement was waived, dismissed, or found not applicable. |  |  |
+| `assurance.requirements.<name>.waiver.owner` | string | yes |  | Repo-local owner or role accountable for the waiver or dismissal. |  |  |
+| `assurance.requirements.<name>.dismissal` | ref `#/$defs/assurance_requirement_disposition` | no |  | Recorded dismissal or not-applicable decision with reason and owner for this requirement. |  |  |
+| `assurance.requirements.<name>.dismissal.reason` | string | yes |  | Why the requirement was waived, dismissed, or found not applicable. |  |  |
+| `assurance.requirements.<name>.dismissal.owner` | string | yes |  | Repo-local owner or role accountable for the waiver or dismissal. |  |  |
+| `assurance.requirements.<name>.notes` | string | no |  | Optional repo-local note about this requirement. |  |  |
 | `assurance.test_data_policy` | object | no | `{}` | Repo-specific policy for test data, privacy, fixtures, or generated samples. |  | x-agentic-workspace-unknown-properties: "warn" |
 | `cli_compatibility` | object | no | `{}` | Expected CLI identity and posture for commands executed in this repo. |  | x-agentic-workspace-doc-role: "maintainer"<br>x-agentic-workspace-unknown-properties: "warn" |
 | `cli_compatibility.enforcement` | enum `"off"`, `"advisory"`, `"blocking"` | no | `"off"` | How strictly CLI compatibility expectations should be enforced. |  |  |

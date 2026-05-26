@@ -47,6 +47,7 @@ from agentic_workspace.config import (
     SUPPORTED_ADVANCED_FEATURES,
     SUPPORTED_AGENT_INSTRUCTIONS_FILES,
     SUPPORTED_ASSURANCE_LEVELS,
+    SUPPORTED_ASSURANCE_REQUIREMENT_BLOCKING_CLAIMS,
     SUPPORTED_CAPABILITY_EXECUTION_CLASSES,
     SUPPORTED_CAPABILITY_LOCATIONS,
     SUPPORTED_CLARIFICATION_CONTROL_MODES,
@@ -561,6 +562,7 @@ def _assurance_onboarding_payload(*, assurance: AssuranceConfig | None = None) -
     has_test_policy = bool(assurance.test_data_policy) if assurance is not None else False
     any_configured = bool(
         configured_profiles
+        or (assurance is not None and assurance.requirements)
         or host_refs
         or has_test_policy
         or (assurance is not None and assurance.default_level_source != "product-default")
@@ -592,6 +594,299 @@ def _assurance_onboarding_payload(*, assurance: AssuranceConfig | None = None) -
             "partial": "some assurance fields exist, but add at least one proof profile plus a host-owned ref or test-data policy",
             "usable": "at least one proof profile and one host-owned authority or test-data policy are configured",
         },
+    }
+
+
+def _assurance_disposition_payload(value: Any) -> dict[str, Any]:
+    if value is None:
+        return {"status": "none"}
+    return {
+        "status": "recorded",
+        "reason": str(getattr(value, "reason", "")),
+        "owner": str(getattr(value, "owner", "")),
+    }
+
+
+def _assurance_requirement_payloads(config: WorkspaceConfig | None) -> list[dict[str, Any]]:
+    requirements = list(config.assurance.requirements) if config is not None else []
+    payloads: list[dict[str, Any]] = []
+    for requirement in requirements:
+        payloads.append(
+            {
+                "id": requirement.id,
+                "level": requirement.level,
+                "applies_to_paths": list(requirement.applies_to_paths),
+                "applies_to_task_markers": list(requirement.applies_to_task_markers),
+                "applies_to_planning_refs": list(requirement.applies_to_planning_refs),
+                "applies_to_proof_profiles": list(requirement.applies_to_proof_profiles),
+                "applies_to_risk_refs": list(requirement.applies_to_risk_refs),
+                "applies_to_invariant_refs": list(requirement.applies_to_invariant_refs),
+                "authority_refs": list(requirement.authority_refs),
+                "required_evidence": list(requirement.required_evidence),
+                "proof_profile": requirement.proof_profile,
+                "workflow_obligation_refs": list(requirement.workflow_obligation_refs),
+                "review_owner": requirement.review_owner,
+                "force": requirement.force,
+                "blocking_claims": list(requirement.blocking_claims),
+                "waiver": _assurance_disposition_payload(requirement.waiver),
+                "dismissal": _assurance_disposition_payload(requirement.dismissal),
+                "notes": requirement.notes,
+            }
+        )
+    return payloads
+
+
+def _assurance_requirement_planning_facts(active_planning_record: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(active_planning_record, dict):
+        return {
+            "refs": [],
+            "proof_profiles": [],
+            "risk_refs": [],
+            "invariant_refs": [],
+            "evidence_by_requirement": {},
+        }
+    adaptive = active_planning_record.get("adaptive_assurance", {})
+    adaptive = adaptive if isinstance(adaptive, dict) else {}
+    refs: list[str] = []
+    for raw in (
+        active_planning_record.get("id"),
+        active_planning_record.get("title"),
+        active_planning_record.get("surface"),
+        active_planning_record.get("next_action"),
+    ):
+        if str(raw).strip():
+            refs.append(str(raw).strip())
+    refs.extend(str(item).strip() for item in _list_payload(active_planning_record.get("minimal_refs")) if str(item).strip())
+    refs.extend(str(item).strip() for item in _list_payload(active_planning_record.get("traceability_refs")) if str(item).strip())
+    refs.extend(str(item).strip() for item in _list_payload(adaptive.get("requirement_refs")) if str(item).strip())
+    refs.extend(str(item).strip() for item in _list_payload(active_planning_record.get("assurance_requirement_refs")) if str(item).strip())
+    proof_profiles = [str(item).strip() for item in _list_payload(adaptive.get("proof_profiles")) if str(item).strip()]
+    risk_refs = [str(item).strip() for item in _list_payload(active_planning_record.get("risk_registry_refs")) if str(item).strip()]
+    invariant_refs = [str(item).strip() for item in _list_payload(active_planning_record.get("invariant_refs")) if str(item).strip()]
+    raw_evidence = active_planning_record.get("assurance_evidence", {})
+    evidence_by_requirement: dict[str, list[str]] = {}
+    if isinstance(raw_evidence, dict):
+        for requirement_id, evidence in raw_evidence.items():
+            if isinstance(evidence, dict):
+                values = evidence.get("evidence_present", evidence.get("present", evidence.get("evidence", [])))
+            else:
+                values = evidence
+            evidence_by_requirement[str(requirement_id)] = [str(item).strip() for item in _list_payload(values) if str(item).strip()]
+    if isinstance(raw_evidence, list):
+        for item in raw_evidence:
+            if not isinstance(item, dict):
+                continue
+            requirement_id = str(item.get("requirement_id", "")).strip()
+            if not requirement_id:
+                continue
+            values = item.get("evidence_present", item.get("present", item.get("evidence", [])))
+            evidence_by_requirement[requirement_id] = [str(value).strip() for value in _list_payload(values) if str(value).strip()]
+    return {
+        "refs": _dedupe(refs),
+        "proof_profiles": _dedupe(proof_profiles),
+        "risk_refs": _dedupe(risk_refs),
+        "invariant_refs": _dedupe(invariant_refs),
+        "evidence_by_requirement": evidence_by_requirement,
+    }
+
+
+def _assurance_requirement_match(
+    *,
+    requirement: dict[str, Any],
+    changed_paths: list[str] | None,
+    task_text: str | None,
+    planning_facts: dict[str, Any],
+) -> tuple[bool, list[str]]:
+    applies_because: list[str] = []
+    normalized_paths = _normalize_changed_paths(changed_paths or [])
+    for path in normalized_paths:
+        for pattern in _list_payload(requirement.get("applies_to_paths")):
+            pattern_text = str(pattern).strip()
+            if pattern_text and fnmatch.fnmatch(path, pattern_text):
+                applies_because.append(f"changed path matched {pattern_text}")
+    normalized_task = (task_text or "").lower()
+    for marker in _list_payload(requirement.get("applies_to_task_markers")):
+        marker_text = str(marker).strip()
+        if marker_text and marker_text.lower() in normalized_task:
+            applies_because.append(f"task marker matched {marker_text}")
+    for field_name, fact_name, label in (
+        ("applies_to_planning_refs", "refs", "planning ref"),
+        ("applies_to_proof_profiles", "proof_profiles", "proof profile"),
+        ("applies_to_risk_refs", "risk_refs", "risk ref"),
+        ("applies_to_invariant_refs", "invariant_refs", "invariant ref"),
+    ):
+        configured = {str(item).strip() for item in _list_payload(requirement.get(field_name)) if str(item).strip()}
+        facts = {str(item).strip() for item in _list_payload(planning_facts.get(fact_name)) if str(item).strip()}
+        for matched in sorted(configured & facts):
+            applies_because.append(f"{label} matched {matched}")
+    applies_because = _dedupe(applies_because)
+    return (bool(applies_because), applies_because)
+
+
+def _assurance_status_for_requirement(
+    *, requirement: dict[str, Any], applies_because: list[str], planning_facts: dict[str, Any]
+) -> dict[str, Any]:
+    required_evidence = [str(item).strip() for item in _list_payload(requirement.get("required_evidence")) if str(item).strip()]
+    evidence_by_requirement = planning_facts.get("evidence_by_requirement", {})
+    evidence_present = []
+    if isinstance(evidence_by_requirement, dict):
+        evidence_present = [
+            str(item).strip()
+            for item in _list_payload(evidence_by_requirement.get(str(requirement.get("id", "")), []))
+            if str(item).strip()
+        ]
+    missing_evidence = [item for item in required_evidence if item not in evidence_present]
+    waiver = requirement.get("waiver", {}) if isinstance(requirement.get("waiver"), dict) else {}
+    dismissal = requirement.get("dismissal", {}) if isinstance(requirement.get("dismissal"), dict) else {}
+    state = "satisfied" if not missing_evidence else "missing-evidence"
+    if dismissal.get("status") == "recorded":
+        state = "dismissed"
+        missing_evidence = []
+    elif waiver.get("status") == "recorded":
+        state = "waived"
+        missing_evidence = []
+    elif missing_evidence and requirement.get("review_owner"):
+        state = "review-required"
+    return {
+        "requirement_id": str(requirement.get("id", "")),
+        "state": state,
+        "level": str(requirement.get("level", DEFAULT_ASSURANCE_LEVEL)),
+        "applies_because": applies_because,
+        "authority_refs": _list_payload(requirement.get("authority_refs")),
+        "required_evidence": required_evidence,
+        "evidence_present": evidence_present,
+        "missing_evidence": missing_evidence,
+        "waiver": waiver if waiver else {"status": "none"},
+        "dismissal": dismissal if dismissal else {"status": "none"},
+        "proof_profile": requirement.get("proof_profile"),
+        "workflow_obligation_refs": _list_payload(requirement.get("workflow_obligation_refs")),
+        "review_owner": requirement.get("review_owner"),
+        "force": str(requirement.get("force", "recommended")),
+        "blocking_claims": _list_payload(requirement.get("blocking_claims")),
+        "next_action": {
+            "id": "record-assurance-evidence" if missing_evidence else "none",
+            "why": "Required assurance evidence is missing before broad completion claims."
+            if missing_evidence
+            else "No missing assurance evidence is currently projected.",
+        },
+    }
+
+
+def _assurance_requirements_report_payload(
+    *,
+    config: WorkspaceConfig | None,
+    active_planning_record: dict[str, Any] | None = None,
+    task_text: str | None = None,
+    changed_paths: list[str] | None = None,
+) -> dict[str, Any]:
+    configured = _assurance_requirement_payloads(config)
+    planning_facts = _assurance_requirement_planning_facts(active_planning_record)
+    matching: list[dict[str, Any]] = []
+    active: list[dict[str, Any]] = []
+    evidence_status: list[dict[str, Any]] = []
+    for requirement in configured:
+        matched, applies_because = _assurance_requirement_match(
+            requirement=requirement,
+            changed_paths=changed_paths,
+            task_text=task_text,
+            planning_facts=planning_facts,
+        )
+        status = _assurance_status_for_requirement(
+            requirement=requirement,
+            applies_because=applies_because,
+            planning_facts=planning_facts,
+        )
+        matching.append(
+            {
+                "id": requirement["id"],
+                "matched": matched,
+                "applies_because": applies_because,
+                "non_match_reason": "" if matched else "no configured activation signal matched current work",
+                "level": requirement["level"],
+                "force": requirement["force"],
+                "blocking_claims": requirement["blocking_claims"],
+            }
+        )
+        if matched:
+            active.append({**requirement, "applies_because": applies_because})
+            evidence_status.append(status)
+    required_missing = [
+        item
+        for item in evidence_status
+        if item.get("state") in {"missing-evidence", "review-required"}
+        and str(item.get("force", "recommended")) in {"required-before-closeout", "blocking"}
+    ]
+    return {
+        "kind": "agentic-workspace/assurance-requirements/v1",
+        "status": "attention" if required_missing else "matched" if active else "configured" if configured else "absent",
+        "rule": "Repo-declared assurance requirements are domain-generic routing and claim-boundary facts; AW does not certify compliance.",
+        "configured_count": len(configured),
+        "active_count": len(active),
+        "missing_required_evidence_count": len(required_missing),
+        "configured": configured,
+        "active": active,
+        "evidence_status": evidence_status,
+        "match_evidence": {
+            "observed_scope_source": ", ".join(
+                source
+                for source, present in (
+                    ("changed paths", bool(changed_paths)),
+                    ("task text", bool(task_text)),
+                    ("active planning", bool(active_planning_record)),
+                )
+                if present
+            )
+            or "no active planning record, task text, or changed paths",
+            "match_count": len(active),
+            "matching": matching,
+        },
+        "supported_blocking_claims": list(SUPPORTED_ASSURANCE_REQUIREMENT_BLOCKING_CLAIMS),
+    }
+
+
+def _compact_assurance_requirements(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"status": "absent", "active_count": 0}
+    active = value.get("active", [])
+    active = active if isinstance(active, list) else []
+    evidence_status = value.get("evidence_status", [])
+    evidence_status = evidence_status if isinstance(evidence_status, list) else []
+    required_missing = [
+        item for item in evidence_status if isinstance(item, dict) and item.get("state") in {"missing-evidence", "review-required"}
+    ]
+    return {
+        "status": value.get("status", "absent"),
+        "configured_count": value.get("configured_count", 0),
+        "active_count": value.get("active_count", 0),
+        "missing_required_evidence_count": value.get("missing_required_evidence_count", 0),
+        "active": [
+            {
+                key: item.get(key)
+                for key in (
+                    "id",
+                    "level",
+                    "applies_because",
+                    "authority_refs",
+                    "required_evidence",
+                    "proof_profile",
+                    "review_owner",
+                    "force",
+                    "blocking_claims",
+                )
+                if isinstance(item, dict) and key in item
+            }
+            for item in active[:3]
+            if isinstance(item, dict)
+        ],
+        "evidence_status": [
+            {
+                key: item.get(key)
+                for key in ("requirement_id", "state", "missing_evidence", "waiver", "dismissal", "next_action")
+                if key in item
+            }
+            for item in required_missing[:3]
+        ],
+        "detail_command": "agentic-workspace report --target ./repo --section assurance_requirements --format json",
     }
 
 
@@ -5650,6 +5945,16 @@ def _run_report_command(
         module_reports=module_reports, external_work_delta=external_work_delta, cli_invoke=config.cli_invoke
     )
     ownership_payload = _ownership_payload(target_root=target_root, descriptors=descriptors)
+    active_planning_record = _active_planning_record(module_reports=module_reports)
+    raw_active_planning_record = (
+        _raw_active_planning_record_for_closeout(planning_record=active_planning_record, target_root=target_root)
+        if isinstance(active_planning_record, dict)
+        else None
+    )
+    assurance_requirements = _assurance_requirements_report_payload(
+        config=config,
+        active_planning_record=raw_active_planning_record or active_planning_record,
+    )
     payload = {
         "kind": "workspace-report/v1",
         "schema": _reporting_schema_payload(),
@@ -5686,9 +5991,8 @@ def _run_report_command(
             installed_modules=installed_modules, active_direction=_effective_active_direction_payload(module_reports=module_reports)
         ),
         "system_intent_mirror": _system_intent_report_payload(target_root=target_root, config=config),
-        "workflow_obligations": _workflow_obligations_report_payload(
-            config=config, active_planning_record=_active_planning_record(module_reports=module_reports)
-        ),
+        "workflow_obligations": _workflow_obligations_report_payload(config=config, active_planning_record=active_planning_record),
+        "assurance_requirements": assurance_requirements,
         "product_managed_enclave": _product_managed_enclave_payload(target_root=target_root, ownership_payload=ownership_payload),
         "ownership_diagnostics": ownership_payload["diagnostics"],
         "surface_value_guardrail": surface_value_guardrail,
@@ -7707,6 +8011,7 @@ def _closeout_completion_options(
     intent_check: dict[str, Any],
     acceptance_reconciliation: dict[str, Any],
     intent_proof_check: dict[str, Any] | None = None,
+    assurance_requirements: dict[str, Any] | None = None,
     durable_residue_action: dict[str, Any],
     lower_trust_closeout_count: int,
     cli_invoke: str,
@@ -7779,25 +8084,42 @@ def _closeout_completion_options(
         completion_blockers.append("continuation_owner")
     if not intent_proof_supports_work:
         completion_blockers.append("intent_proof")
+    assurance_claim_blockers = _assurance_claim_blockers(assurance_requirements)
 
     slice_blockers = [
         field
         for field in completion_blockers
         if field not in {"intent_satisfaction", "intent_proof"} or intent_proof_status == "needs_review"
     ]
+    slice_blockers.extend(assurance_claim_blockers.get("claim-slice-complete", []))
+    work_blockers = [*completion_blockers, *assurance_claim_blockers.get("claim-work-complete", [])]
+    parent_blockers = [*completion_blockers, *assurance_claim_blockers.get("close-parent-lane", [])]
     claim_slice_allowed = (
-        proof_achieved and (not strict_blocking) and acceptance_ok and not residue_required and not intent_proof_needs_review
+        proof_achieved
+        and (not strict_blocking)
+        and acceptance_ok
+        and not residue_required
+        and not intent_proof_needs_review
+        and not assurance_claim_blockers.get("claim-slice-complete")
     )
-    claim_work_allowed = claim_slice_allowed and intent_satisfied and (not larger_intent_open) and intent_proof_supports_work
-    close_parent_allowed = claim_work_allowed and close_evidence
+    claim_work_allowed = (
+        claim_slice_allowed
+        and intent_satisfied
+        and (not larger_intent_open)
+        and intent_proof_supports_work
+        and not assurance_claim_blockers.get("claim-work-complete")
+    )
+    close_parent_allowed = claim_work_allowed and close_evidence and not assurance_claim_blockers.get("close-parent-lane")
     route_residue_command = str(durable_residue_action.get("command", "")) or _command_with_cli_invoke(
         command="agentic-workspace report --target ./repo --section closeout_trust --format json", cli_invoke=cli_invoke
     )
+    assurance_review_required = any(assurance_claim_blockers.values())
     request_review_allowed = (
         status in {"unavailable", "invalid"}
         or intent_trust == "needs-review"
         or intent_proof_needs_review
         or str(strict_gate.get("status", "")) == "requires-review"
+        or assurance_review_required
     )
     return [
         _completion_option(
@@ -7822,7 +8144,7 @@ def _closeout_completion_options(
             if claim_work_allowed
             else "work completion is blocked until proof, intent, residue, continuation, and closeout evidence support it",
             owner=continuation_owner if larger_intent_open else None,
-            blocking_fields=completion_blockers or None,
+            blocking_fields=work_blockers or None,
         ),
         _completion_option(
             "keep-parent-open",
@@ -7840,7 +8162,7 @@ def _closeout_completion_options(
             if close_parent_allowed
             else "parent lane closure requires satisfied larger intent and explicit closure evidence",
             owner=continuation_owner if larger_intent_open else None,
-            blocking_fields=completion_blockers if completion_blockers else ["intent_satisfaction.closure_scope.larger_intent_closure"],
+            blocking_fields=parent_blockers if parent_blockers else ["intent_satisfaction.closure_scope.larger_intent_closure"],
         ),
         _completion_option(
             "route-residue",
@@ -7856,7 +8178,11 @@ def _closeout_completion_options(
             why="intent satisfaction or strict closeout evidence requires human/domain review"
             if request_review_allowed
             else "a concrete closeout action is available without requiring review",
-            blocking_fields=["intent_satisfaction"] if intent_trust == "needs-review" else None,
+            blocking_fields=["intent_satisfaction"]
+            if intent_trust == "needs-review"
+            else ["assurance_requirements"]
+            if assurance_review_required
+            else None,
         ),
         _completion_option(
             "stop-with-status",
@@ -7867,6 +8193,35 @@ def _closeout_completion_options(
             ),
         ),
     ]
+
+
+def _assurance_claim_blockers(assurance_requirements: dict[str, Any] | None) -> dict[str, list[str]]:
+    blockers: dict[str, list[str]] = {
+        "claim-slice-complete": [],
+        "claim-work-complete": [],
+        "close-parent-lane": [],
+    }
+    if not isinstance(assurance_requirements, dict):
+        return blockers
+    evidence_status = assurance_requirements.get("evidence_status", [])
+    if not isinstance(evidence_status, list):
+        return blockers
+    for status in evidence_status:
+        if not isinstance(status, dict):
+            continue
+        if status.get("state") not in {"missing-evidence", "review-required"}:
+            continue
+        force = str(status.get("force", "recommended"))
+        if force not in {"required-before-closeout", "blocking"}:
+            continue
+        requirement_id = str(status.get("requirement_id", "")).strip() or "unknown"
+        blocking_claims = [str(item).strip() for item in _list_payload(status.get("blocking_claims")) if str(item).strip()]
+        if not blocking_claims and force in {"required-before-closeout", "blocking"}:
+            blocking_claims = ["claim-work-complete", "close-parent-lane"]
+        for claim in blocking_claims:
+            if claim in blockers:
+                blockers[claim].append(f"assurance_evidence:{requirement_id}")
+    return {claim: _dedupe(values) for claim, values in blockers.items()}
 
 
 def _report_closeout_trust_payload(
@@ -7956,6 +8311,7 @@ def _report_closeout_trust_payload(
         acceptance_reconciliation = _acceptance_criteria_reconciliation_payload(planning_report={})
         intent_proof_check = _intent_proof_check_payload(planning_report={}, target_root=target_root)
         architecture_decision_closeout = _architecture_decision_closeout_payload(planning_report={}, target_root=target_root, config=config)
+        assurance_requirements = _assurance_requirements_report_payload(config=config)
         residue_action = durable_residue_action(trust="unavailable")
         return {
             "status": "unavailable",
@@ -7966,6 +8322,7 @@ def _report_closeout_trust_payload(
             "acceptance_criteria_reconciliation": acceptance_reconciliation,
             "intent_proof_check": intent_proof_check,
             "proof_confidence": _proof_confidence_payload(intent_proof=intent_proof_check),
+            "assurance_requirements": assurance_requirements,
             "architecture_decision_closeout": architecture_decision_closeout,
             "historical_review_artifacts": _historical_review_artifacts_policy(
                 planning_report={}, intent_validation={}, target_root=target_root
@@ -7981,6 +8338,7 @@ def _report_closeout_trust_payload(
                 intent_check=intent_check,
                 acceptance_reconciliation=acceptance_reconciliation,
                 intent_proof_check=intent_proof_check,
+                assurance_requirements=assurance_requirements,
                 durable_residue_action=residue_action,
                 lower_trust_closeout_count=1,
                 cli_invoke=cli_invoke,
@@ -7995,6 +8353,7 @@ def _report_closeout_trust_payload(
         architecture_decision_closeout = _architecture_decision_closeout_payload(
             planning_report=planning_report, target_root=target_root, config=config
         )
+        assurance_requirements = _assurance_requirements_report_payload(config=config)
         residue_action = durable_residue_action(trust="unavailable")
         return {
             "status": "unavailable",
@@ -8005,6 +8364,7 @@ def _report_closeout_trust_payload(
             "acceptance_criteria_reconciliation": acceptance_reconciliation,
             "intent_proof_check": intent_proof_check,
             "proof_confidence": _proof_confidence_payload(intent_proof=intent_proof_check),
+            "assurance_requirements": assurance_requirements,
             "architecture_decision_closeout": architecture_decision_closeout,
             "historical_review_artifacts": _historical_review_artifacts_policy(
                 planning_report=planning_report, intent_validation={}, target_root=target_root
@@ -8020,6 +8380,7 @@ def _report_closeout_trust_payload(
                 intent_check=intent_check,
                 acceptance_reconciliation=acceptance_reconciliation,
                 intent_proof_check=intent_proof_check,
+                assurance_requirements=assurance_requirements,
                 durable_residue_action=residue_action,
                 lower_trust_closeout_count=1,
                 cli_invoke=cli_invoke,
@@ -8042,6 +8403,16 @@ def _report_closeout_trust_payload(
     intent_proof_check = _intent_proof_check_payload(planning_report=planning_report, target_root=target_root)
     architecture_decision_closeout = _architecture_decision_closeout_payload(
         planning_report=planning_report, target_root=target_root, config=config
+    )
+    raw_active_planning_record = _raw_active_planning_record_for_closeout(
+        planning_record=planning_report.get("active", {}).get("planning_record", {})
+        if isinstance(planning_report.get("active"), dict)
+        else {},
+        target_root=target_root,
+    )
+    assurance_requirements = _assurance_requirements_report_payload(
+        config=config,
+        active_planning_record=raw_active_planning_record,
     )
     active_planning_record = package_workflow_evidence.get("status") == "present"
     package_absence_signals: list[str] = []
@@ -8097,6 +8468,7 @@ def _report_closeout_trust_payload(
         "acceptance_criteria_reconciliation": acceptance_reconciliation,
         "intent_proof_check": intent_proof_check,
         "proof_confidence": _proof_confidence_payload(intent_proof=intent_proof_check),
+        "assurance_requirements": assurance_requirements,
         "architecture_decision_closeout": architecture_decision_closeout,
         "historical_review_artifacts": _historical_review_artifacts_policy(
             planning_report=planning_report, intent_validation=intent_validation, target_root=target_root
@@ -8110,6 +8482,7 @@ def _report_closeout_trust_payload(
             intent_check=intent_satisfaction_check,
             acceptance_reconciliation=acceptance_reconciliation,
             intent_proof_check=intent_proof_check,
+            assurance_requirements=assurance_requirements,
             durable_residue_action=residue_action,
             lower_trust_closeout_count=effective_lower_trust_count,
             cli_invoke=cli_invoke,
@@ -10808,6 +11181,9 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             **({"task_search": skill_routing["task_search"]} if isinstance(skill_routing, dict) and "task_search" in skill_routing else {}),
         },
     }
+    assurance_requirements = payload.get("assurance_requirements", {})
+    if isinstance(assurance_requirements, dict) and int(assurance_requirements.get("active_count", 0) or 0) > 0:
+        projected["assurance_requirements"] = _compact_assurance_requirements(assurance_requirements)
     proof = payload.get("proof", {})
     if isinstance(proof, dict) and proof.get("kind") == "proof-selection/v1":
         projected["proof"] = _compact_start_proof_payload(proof)
@@ -11445,6 +11821,12 @@ def _start_payload(
     )
     workflow_obligations = preflight.get("workflow_obligations", {})
     compact_workflow_obligations = _compact_start_workflow_obligations(workflow_obligations)
+    assurance_requirements = _assurance_requirements_report_payload(
+        config=config,
+        active_planning_record=planning_record if isinstance(planning_record, dict) else None,
+        task_text=task_text,
+        changed_paths=changed_paths,
+    )
     current_need = "continue-active-planning" if active_planning_present else "first-contact-routing"
     if changed_paths:
         current_need = "changed-path-startup"
@@ -11526,6 +11908,8 @@ def _start_payload(
             cli_invoke=config.cli_invoke,
         ),
     }
+    if int(assurance_requirements.get("configured_count", 0) or 0) > 0:
+        payload["assurance_requirements"] = assurance_requirements
     startup_review = _workspace_absence_startup_review(target_root=target_root, config=config)
     if startup_review["status"] == "attention":
         payload["startup_review"] = startup_review
@@ -14353,6 +14737,12 @@ def _implement_payload(
         "reuse_pressure": _reuse_pressure_payload(
             target_root=target_root, changed_paths=normalized_paths, cli_invoke=config.cli_invoke, compact=False
         ),
+        "assurance_requirements": _assurance_requirements_report_payload(
+            config=config,
+            active_planning_record=None,
+            task_text=task_text,
+            changed_paths=normalized_paths,
+        ),
         "orientation": {
             "status": "changed-path-context" if normalized_paths else "unknown-scope",
             "minimum_before_editing": "Inspect the listed files, path boundaries, workflow obligations, and selected proof before editing."
@@ -14560,11 +14950,15 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "context.reuse_pressure",
                 "task_contract",
                 "change_impact",
+                "assurance_requirements",
                 "context.delegation_decision",
                 "context.routing",
             ],
         },
     }
+    assurance_requirements = payload.get("assurance_requirements", {})
+    if isinstance(assurance_requirements, dict) and int(assurance_requirements.get("active_count", 0) or 0) > 0:
+        projected["assurance_requirements"] = _compact_assurance_requirements(assurance_requirements)
     compatibility_review = projected["proof"].get("tiny_surface_compatibility_review", {})
     if not (isinstance(compatibility_review, dict) and compatibility_review.get("status") == "required"):
         projected["proof"].pop("tiny_surface_compatibility_review", None)
@@ -19621,6 +20015,10 @@ def _selector_requests_task_contract(select: str | None) -> bool:
     return any(token == "task_contract" or token.startswith("task_contract.") for token in _selector_tokens(select))
 
 
+def _selector_requests_assurance_requirements(select: str | None) -> bool:
+    return any(token == "assurance_requirements" or token.startswith("assurance_requirements.") for token in _selector_tokens(select))
+
+
 def _run_implement_context_adapter(args: argparse.Namespace) -> int:
     target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
     _validate_target_root(command_name="implement", target_root=target_root)
@@ -19633,6 +20031,7 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
     selected_fields = getattr(args, "select", None)
     change_impact_selected = _selector_requests_change_impact(selected_fields)
     task_contract_selected = _selector_requests_task_contract(selected_fields)
+    assurance_requirements_selected = _selector_requests_assurance_requirements(selected_fields)
     full_payload = _implement_payload(
         target_root=target_root,
         changed_paths=list(getattr(args, "changed", []) or []),
@@ -19647,6 +20046,8 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
             payload["task_contract"] = full_payload["task_contract"]
         if change_impact_selected:
             payload["change_impact"] = full_payload["change_impact"]
+        if assurance_requirements_selected:
+            payload["assurance_requirements"] = full_payload["assurance_requirements"]
     if getattr(args, "select", None):
         payload = _select_payload_fields(payload, select=getattr(args, "select"), source_command="implement")
     _emit_payload(payload=payload, format_name=args.format)
@@ -22019,7 +22420,43 @@ def _proof_selection_for_changed_paths(
                     "disallowed_commands": list(profile.disallowed_commands),
                 }
             )
+    active_assurance_requirements = _assurance_requirements_report_payload(
+        config=config,
+        task_text=task_text,
+        changed_paths=changed_paths,
+    )
+    requirement_lanes: list[dict[str, Any]] = []
+    existing_concern_profiles = {str(lane.get("proof_profile", "")) for lane in concern_lanes}
+    for requirement in active_assurance_requirements.get("active", []):
+        if not isinstance(requirement, dict):
+            continue
+        profile_id = str(requirement.get("proof_profile") or "").strip()
+        if not profile_id:
+            continue
+        profile = configured_profiles.get(profile_id)
+        if profile is None:
+            if profile_id not in missing_concern_profiles:
+                missing_concern_profiles.append(profile_id)
+            continue
+        if profile_id in existing_concern_profiles:
+            continue
+        requirement_lanes.append(
+            {
+                "id": f"assurance-requirement:{requirement.get('id')}",
+                "when": "matched repo-declared assurance requirement selects this proof profile",
+                "enough_proof": list(profile.required_commands),
+                "recovery_signal": "missing or failing requirement proof should block broad assurance closeout until resolved or explicitly waived",
+                "proof_profile": profile.id,
+                "optional_commands": list(profile.optional_commands),
+                "review_aids": list(profile.review_aids),
+                "disallowed_commands": list(profile.disallowed_commands),
+                "requirement_id": str(requirement.get("id", "")),
+                "applies_because": _list_payload(requirement.get("applies_because")),
+            }
+        )
+        existing_concern_profiles.add(profile_id)
     selected_lanes.extend(concern_lanes)
+    selected_lanes.extend(requirement_lanes)
     make_targets = _makefile_targets(target_root)
     package_scripts = _package_json_scripts(target_root)
     project_roots = _project_roots_for_changed_paths(target_root=target_root, changed_paths=changed_paths)
@@ -22030,7 +22467,7 @@ def _proof_selection_for_changed_paths(
     proof_command_adjustments: list[dict[str, str]] = []
     unavailable_proof_commands: list[dict[str, str]] = []
     host_policy_disallowed_commands: dict[str, dict[str, str]] = {}
-    for lane in concern_lanes:
+    for lane in [*concern_lanes, *requirement_lanes]:
         for raw_command in lane.get("disallowed_commands", []):
             raw_command_text = str(raw_command).strip()
             if not raw_command_text:
@@ -22190,7 +22627,7 @@ def _proof_selection_for_changed_paths(
                 for command in lane.get("disallowed_commands", [])
             ],
         }
-        for lane in concern_lanes
+        for lane in [*concern_lanes, *requirement_lanes]
         if lane.get("proof_profile")
     ]
     proof_next_decision = _proof_next_decision_payload(
@@ -22220,7 +22657,7 @@ def _proof_selection_for_changed_paths(
         proof_execution_evidence=proof_execution_evidence,
     )
     optional_commands = ["agentic-workspace proof --target ./repo --current --format json", "agentic-workspace summary --format json"]
-    for concern_lane in concern_lanes:
+    for concern_lane in [*concern_lanes, *requirement_lanes]:
         for command in concern_lane.get("optional_commands", []):
             if command not in optional_commands:
                 optional_commands.append(str(command))
@@ -22275,6 +22712,7 @@ def _proof_selection_for_changed_paths(
         "learned_route_hints": learned_route_hints,
         "proof_intents": proof_intents,
         "configured_policy": configured_policy,
+        "assurance_requirements": active_assurance_requirements,
         "selected_commands": selected_commands,
         "unavailable_commands": unavailable_commands,
         "host_policy_blocked_commands": host_policy_blocked_commands,
@@ -22301,6 +22739,8 @@ def _proof_selection_for_changed_paths(
                 "ci_relationship": lane.get("ci_relationship", ""),
                 "recovery_signal": lane.get("recovery_signal", ""),
                 **({"proof_profile": lane["proof_profile"]} if lane.get("proof_profile") else {}),
+                **({"requirement_id": lane["requirement_id"]} if lane.get("requirement_id") else {}),
+                **({"applies_because": lane["applies_because"]} if lane.get("applies_because") else {}),
                 **({"review_aids": lane["review_aids"]} if lane.get("review_aids") else {}),
                 **({"matched_paths": lane["matched_paths"]} if lane.get("matched_paths") else {}),
                 **({"subsystem": lane["subsystem"]} if lane.get("subsystem") else {}),
@@ -24345,9 +24785,11 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
                     "required_commands": list(profile.required_commands),
                     "optional_commands": list(profile.optional_commands),
                     "review_aids": list(profile.review_aids),
+                    "disallowed_commands": list(profile.disallowed_commands),
                 }
                 for profile in assurance.proof_profiles
             ],
+            "requirements": _assurance_requirement_payloads(config),
             "test_data_policy": dict(assurance.test_data_policy),
             "decision_record_target": assurance.decision_record_target,
             "invariant_registry": assurance.invariant_registry,
@@ -24424,6 +24866,7 @@ def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "agent_may_escalate": assurance["agent_may_escalate"],
             "agent_may_deescalate": assurance["agent_may_deescalate"],
             "configured_proof_profile_count": len(assurance["proof_profiles"]),
+            "configured_requirement_count": len(assurance.get("requirements", [])),
         },
         "local_runtime": {
             "local_override_path": local_override["path"],
