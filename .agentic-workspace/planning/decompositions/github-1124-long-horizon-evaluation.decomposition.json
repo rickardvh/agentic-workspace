@@ -196,6 +196,54 @@
       "target": "https://github.com/rickardvh/agentic-workspace/issues/1124#issuecomment-4533374862",
       "label": "#1124 candidate repo investigation",
       "role": "first-pack candidate evidence"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1141",
+      "label": "#1141",
+      "role": "child lane: long-horizon-episode-schema"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1142",
+      "label": "#1142",
+      "role": "child lane: pinned-episode-candidate-curation"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1143",
+      "label": "#1143",
+      "role": "child lane: phase-runner-checkpoints"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1144",
+      "label": "#1144",
+      "role": "child lane: agent-switch-variants"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1145",
+      "label": "#1145",
+      "role": "child lane: evaluator-evidence-bundle"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1146",
+      "label": "#1146",
+      "role": "child lane: aw-on-off-fixture-pairing"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1147",
+      "label": "#1147",
+      "role": "child lane: first-continuity-episode-pack"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1148",
+      "label": "#1148",
+      "role": "child lane: comparison-reporting-and-routing"
     }
   ],
   "notes": "Decomposed from #1124 and its investigation comments. GitHub remains the discussion tracker; this checked-in Planning decomposition owns lane sequencing and promotion discipline."
