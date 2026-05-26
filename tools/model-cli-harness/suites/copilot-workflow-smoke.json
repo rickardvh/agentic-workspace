@@ -20,15 +20,21 @@
       "block_on_preflight_failure": true,
       "provider_home_env": "COPILOT_HOME",
       "provider_home_path": "{run_root}/copilot-home",
+      "env": {
+        "COPILOT_ALLOW_ALL": "true"
+      },
       "inject_repo_startup_instructions": true,
       "postmortem_feedback_supported": false,
       "command": [
         "copilot",
         "--model",
         "{model}",
+        "-C",
+        "{repo}",
         "-p",
         "{prompt}",
         "--allow-all",
+        "--allow-tool=write",
         "--no-ask-user",
         "--disable-builtin-mcps",
         "--no-remote",

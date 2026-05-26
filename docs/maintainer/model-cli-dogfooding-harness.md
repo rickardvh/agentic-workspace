@@ -193,6 +193,7 @@ Treat one-off capability failures cautiously. Give more weight to repeated ambig
 - Dry-run is the default.
 - Scenario repository mutations should happen only in copied fixtures under `.agentic-workspace/local/scratch/`.
 - Provider CLIs may still maintain their own local state outside the fixture. For Copilot, the harness routes logs to the run directory, but authenticated session/config state may still use `COPILOT_HOME` unless the operator provides an isolated authenticated home.
+- The Copilot adapter passes both `-C {repo}` and `--add-dir {repo}` so Copilot roots its session in the copied fixture before invoking edit or PowerShell tools. It also sets `COPILOT_ALLOW_ALL=true` and passes Copilot's explicit `--allow-tool=write` grant because `--allow-all` alone has not reliably unlocked edits in non-interactive harness runs.
 - The Copilot adapter denies `git push`.
 - The Copilot adapter requires `pwsh` before execution because its shell tool uses PowerShell 7 on Windows. The suite includes standard PowerShell install paths and prepends the discovered parent directory to the model CLI `PATH`.
 - The Gemini adapter runs `gemini --prompt` in headless mode and records JSON output. It uses `--approval-mode yolo` only when the operator explicitly passes `--execute`; dry-run remains the default.

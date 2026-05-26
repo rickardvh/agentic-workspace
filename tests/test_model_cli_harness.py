@@ -505,6 +505,7 @@ def test_copilot_postmortem_feedback_is_marked_unsupported() -> None:
 
     adapter = suite["adapters"]["copilot"]
     command = adapter["postmortem_command"]
+    assert adapter["env"] == {"COPILOT_ALLOW_ALL": "true"}
     assert adapter["postmortem_feedback_supported"] is False
     assert "--available-tools=" in command
     assert "--no-custom-instructions" in command
@@ -707,6 +708,33 @@ def test_model_cli_harness_suite_renders_codex_adapter(tmp_path: Path) -> None:
     assert result["repo_path"] in result["command"]
     assert "--json" in result["command"]
     assert "Repository startup instruction from AGENTS.md" in result["prompt"]
+
+
+def test_model_cli_harness_suite_renders_copilot_adapter_with_explicit_cwd(tmp_path: Path) -> None:
+    harness = _load_harness()
+
+    payload = harness.run_suite(
+        suite_path=REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json",
+        adapter_id="copilot",
+        model=None,
+        scenario_filter="startup-orientation",
+        execute=False,
+        output_root=tmp_path / "out",
+        timeout_seconds=None,
+    )
+
+    result = payload["results"][0]
+    command = result["command"]
+    cwd_index = command.index("-C")
+    assert payload["adapter"] == "copilot"
+    assert payload["model"] == "claude-haiku-4.5"
+    assert result["result"]["status"] == "dry-run"
+    assert command[0:3] == ["copilot", "--model", "claude-haiku-4.5"]
+    assert command[cwd_index + 1] == result["repo_path"]
+    assert "--allow-all" in command
+    assert "--allow-tool=write" in command
+    assert "--add-dir" in command
+    assert result["repo_path"] in command
 
 
 def test_model_cli_harness_resolves_path_shims(tmp_path: Path, monkeypatch) -> None:
@@ -1542,6 +1570,32 @@ def test_model_cli_harness_counts_copilot_powershell_markdown_as_executed_comman
 ```
 """,
             "stdout": "",
+            "stderr": "",
+        },
+        mutation_summary={"status": "clean"},
+        repo_path=repo,
+    )
+
+    assert warnings == []
+
+
+def test_model_cli_harness_counts_copilot_plain_shell_block_as_executed_command(tmp_path: Path) -> None:
+    harness = _load_harness()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    warnings = harness._metadata_workflow_warnings(
+        scenario={
+            "id": "next-decision-output-profile",
+            "required_executed_commands": ["uv run agentic-workspace implement --changed"],
+        },
+        result={
+            "stdout": """
+● Get implementation guidance for README.md changes (shell)
+  │ uv run agentic-workspace implement --changed README.md --task "make a narrow
+  │ README.md edit" --format json
+  └ 411 lines...
+""",
             "stderr": "",
         },
         mutation_summary={"status": "clean"},

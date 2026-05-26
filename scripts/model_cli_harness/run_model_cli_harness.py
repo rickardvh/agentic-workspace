@@ -1251,6 +1251,7 @@ def _executed_command_text(result: dict[str, Any]) -> str:
         if not isinstance(source, str):
             continue
         command_fragments.extend(_copilot_markdown_shell_commands(source))
+        command_fragments.extend(_copilot_plain_shell_commands(source))
         for event in _json_objects_from_lines(source):
                 command = event.get("command")
                 if isinstance(command, str):
@@ -1275,6 +1276,32 @@ def _executed_command_text(result: dict[str, Any]) -> str:
                         if "run_shell_command" in by_name and isinstance(response, str):
                             command_fragments.append(response)
     return "\n".join(command_fragments)
+
+
+def _copilot_plain_shell_commands(text: str) -> list[str]:
+    commands: list[str] = []
+    lines = text.splitlines()
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        if not re.match(r"^[●✗]\s+.*\((?:shell|powershell|bash|cmd)\)\s*$", line):
+            index += 1
+            continue
+        index += 1
+        command_parts: list[str] = []
+        while index < len(lines):
+            body_line = lines[index]
+            if re.match(r"^[●✗]\s+", body_line) or re.match(r"^\s*└", body_line):
+                break
+            command_match = re.match(r"^\s*│\s?(?P<part>.*)$", body_line)
+            if command_match:
+                part = command_match.group("part").strip()
+                if part:
+                    command_parts.append(part)
+            index += 1
+        if command_parts:
+            commands.append(" ".join(command_parts))
+    return commands
 
 
 def _copilot_markdown_shell_commands(text: str) -> list[str]:
