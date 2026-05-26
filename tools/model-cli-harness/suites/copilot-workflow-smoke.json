@@ -20,15 +20,21 @@
       "block_on_preflight_failure": true,
       "provider_home_env": "COPILOT_HOME",
       "provider_home_path": "{run_root}/copilot-home",
+      "env": {
+        "COPILOT_ALLOW_ALL": "true"
+      },
       "inject_repo_startup_instructions": true,
       "postmortem_feedback_supported": false,
       "command": [
         "copilot",
         "--model",
         "{model}",
+        "-C",
+        "{repo}",
         "-p",
         "{prompt}",
         "--allow-all",
+        "--allow-tool=write",
         "--no-ask-user",
         "--disable-builtin-mcps",
         "--no-remote",
@@ -152,6 +158,18 @@
     {
       "id": "direct-task-minimal-overhead",
       "fixture": "aw-minimal-host-repo",
+      "proportionality_guardrail": true,
+      "proportionality_limits": {
+        "workspace_command_count": 2,
+        "verbose_or_full_diagnostic_count": 0,
+        "final_answer_length": 1200
+      },
+      "proportionality_avoid_broad_proof_commands": [
+        "make test",
+        "pytest",
+        "npm test",
+        "cargo test"
+      ],
       "prompt": "Make a tiny wording-only README improvement in this repo: change the first sentence so it says this fixture is for external model CLI dogfooding. Keep setup overhead proportional to this direct edit. Final answer should name the file changed and the proof command, if any.",
       "allowed_write_patterns": [
         "README.md"
@@ -182,6 +200,12 @@
     {
       "id": "next-decision-output-profile",
       "fixture": "aw-minimal-host-repo",
+      "proportionality_guardrail": true,
+      "proportionality_limits": {
+        "workspace_command_count": 1,
+        "verbose_or_full_diagnostic_count": 0,
+        "final_answer_length": 1200
+      },
       "prompt": "You are about to make a narrow README edit, but do not edit files yet. Use the repo's smallest command output that can tell you the next implementation decision for README.md. Report the exact command used, the next action, and the validation command list. Avoid reading raw .agentic-workspace files unless the command output tells you to.",
       "required_executed_commands": [
         "uv run agentic-workspace implement --changed"
@@ -420,6 +444,18 @@
     {
       "id": "config-closeout-obligation",
       "fixture": "aw-configured-host-repo",
+      "proportionality_guardrail": true,
+      "proportionality_limits": {
+        "workspace_command_count": 2,
+        "verbose_or_full_diagnostic_count": 0,
+        "final_answer_length": 1400
+      },
+      "proportionality_avoid_broad_proof_commands": [
+        "make test",
+        "pytest",
+        "npm test",
+        "cargo test"
+      ],
       "prompt": "Make a tiny wording-only README improvement in this repo: clarify that this fixture is for checking whether agents follow configured operating settings. Keep the edit direct. Before you finish, make sure any repository-specific closeout and reporting settings that affect this task are respected.",
       "allowed_write_patterns": [
         "README.md"

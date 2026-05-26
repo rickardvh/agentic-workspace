@@ -53,6 +53,12 @@ def test_model_cli_harness_extracts_token_usage_summary() -> None:
     }
 
 
+def test_model_cli_harness_default_output_root_uses_workspace_local_scratch() -> None:
+    harness = _load_harness()
+
+    assert harness.DEFAULT_OUTPUT_ROOT == REPO_ROOT / ".agentic-workspace" / "local" / "scratch" / "model-cli-harness"
+
+
 def test_model_cli_harness_tolerates_gemini_string_events_and_stats() -> None:
     harness = _load_harness()
     stdout = "\n".join(
@@ -499,6 +505,7 @@ def test_copilot_postmortem_feedback_is_marked_unsupported() -> None:
 
     adapter = suite["adapters"]["copilot"]
     command = adapter["postmortem_command"]
+    assert adapter["env"] == {"COPILOT_ALLOW_ALL": "true"}
     assert adapter["postmortem_feedback_supported"] is False
     assert "--available-tools=" in command
     assert "--no-custom-instructions" in command
@@ -701,6 +708,33 @@ def test_model_cli_harness_suite_renders_codex_adapter(tmp_path: Path) -> None:
     assert result["repo_path"] in result["command"]
     assert "--json" in result["command"]
     assert "Repository startup instruction from AGENTS.md" in result["prompt"]
+
+
+def test_model_cli_harness_suite_renders_copilot_adapter_with_explicit_cwd(tmp_path: Path) -> None:
+    harness = _load_harness()
+
+    payload = harness.run_suite(
+        suite_path=REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json",
+        adapter_id="copilot",
+        model=None,
+        scenario_filter="startup-orientation",
+        execute=False,
+        output_root=tmp_path / "out",
+        timeout_seconds=None,
+    )
+
+    result = payload["results"][0]
+    command = result["command"]
+    cwd_index = command.index("-C")
+    assert payload["adapter"] == "copilot"
+    assert payload["model"] == "claude-haiku-4.5"
+    assert result["result"]["status"] == "dry-run"
+    assert command[0:3] == ["copilot", "--model", "claude-haiku-4.5"]
+    assert command[cwd_index + 1] == result["repo_path"]
+    assert "--allow-all" in command
+    assert "--allow-tool=write" in command
+    assert "--add-dir" in command
+    assert result["repo_path"] in command
 
 
 def test_model_cli_harness_resolves_path_shims(tmp_path: Path, monkeypatch) -> None:
@@ -1545,6 +1579,32 @@ def test_model_cli_harness_counts_copilot_powershell_markdown_as_executed_comman
     assert warnings == []
 
 
+def test_model_cli_harness_counts_copilot_plain_shell_block_as_executed_command(tmp_path: Path) -> None:
+    harness = _load_harness()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    warnings = harness._metadata_workflow_warnings(
+        scenario={
+            "id": "next-decision-output-profile",
+            "required_executed_commands": ["uv run agentic-workspace implement --changed"],
+        },
+        result={
+            "stdout": """
+● Get implementation guidance for README.md changes (shell)
+  │ uv run agentic-workspace implement --changed README.md --task "make a narrow
+  │ README.md edit" --format json
+  └ 411 lines...
+""",
+            "stderr": "",
+        },
+        mutation_summary={"status": "clean"},
+        repo_path=repo,
+    )
+
+    assert warnings == []
+
+
 def test_model_cli_harness_counts_gemini_shell_stats_with_command_response_as_executed(tmp_path: Path) -> None:
     harness = _load_harness()
     repo = tmp_path / "repo"
@@ -1750,6 +1810,131 @@ def test_model_cli_harness_quality_signals_flag_read_surface_over_read() -> None
 
     assert any(signal["id"] == "read_surface_entrypoint_used" and signal["status"] == "satisfied" for signal in signals)
     assert any(signal["id"] == "read_surface_over_read" and signal["status"] == "weak" for signal in signals)
+
+
+def test_model_cli_harness_reports_small_work_proportionality_metrics() -> None:
+    harness = _load_harness()
+    stdout = "\n".join(
+        [
+            json.dumps(
+                {
+                    "type": "item.completed",
+                    "item": {
+                        "type": "command_execution",
+                        "command": "uv run agentic-workspace implement --changed README.md --format json",
+                        "aggregated_output": '{"kind":"implementer-context-tiny/v1"}\n',
+                        "exit_code": 0,
+                        "status": "completed",
+                    },
+                }
+            )
+        ]
+    )
+    result = {"stdout": stdout, "final_message": "Changed README.md and inspected the diff."}
+    package_summary = harness._package_read_surface_summary_from_stdout(stdout)
+
+    metrics = harness._proportionality_metrics(
+        scenario={"id": "direct-task-minimal-overhead", "proportionality_guardrail": True},
+        result=result,
+        mutation_summary={"status": "changed", "modified": ["README.md"]},
+        package_read_surface_summary=package_summary,
+        completion_loop={"requests_to_completion": 1},
+    )
+
+    assert metrics["status"] == "present"
+    assert metrics["package_command_count"] == 1
+    assert metrics["workspace_command_count"] == 1
+    assert metrics["changed_files_count"] == 1
+    assert metrics["planning_files_created"] == 0
+    assert metrics["requests_to_completion"] == 1
+
+
+def test_model_cli_harness_warns_on_small_work_ceremony() -> None:
+    harness = _load_harness()
+    long_closeout = "Done. " * 80
+    result = {
+        "stdout": "\n".join(
+            [
+                json.dumps(
+                    {
+                        "type": "item.completed",
+                        "item": {
+                            "type": "command_execution",
+                            "command": "uv run agentic-workspace summary --verbose",
+                            "aggregated_output": "{}\n",
+                            "exit_code": 0,
+                            "status": "completed",
+                        },
+                    }
+                ),
+                json.dumps(
+                    {
+                        "type": "item.completed",
+                        "item": {
+                            "type": "command_execution",
+                            "command": "Get-Content .agentic-workspace/memory/repo/index.md",
+                            "aggregated_output": "# memory\n",
+                            "exit_code": 0,
+                            "status": "completed",
+                        },
+                    }
+                ),
+                json.dumps(
+                    {
+                        "type": "item.completed",
+                        "item": {
+                            "type": "command_execution",
+                            "command": "pytest",
+                            "aggregated_output": "1 passed\n",
+                            "exit_code": 0,
+                            "status": "completed",
+                        },
+                    }
+                ),
+            ]
+        ),
+        "final_message": f"I read .agentic-workspace/memory/repo/index.md. {long_closeout}",
+    }
+    scenario = {
+        "id": "direct-task-minimal-overhead",
+        "proportionality_guardrail": True,
+        "proportionality_limits": {
+            "workspace_command_count": 1,
+            "verbose_or_full_diagnostic_count": 0,
+            "final_answer_length": 40,
+        },
+        "proportionality_avoid_broad_proof_commands": ["pytest"],
+    }
+    metrics = harness._proportionality_metrics(
+        scenario=scenario,
+        result=result,
+        mutation_summary={
+            "status": "changed",
+            "created": [
+                ".agentic-workspace/planning/execplans/readme.plan.json",
+                ".agentic-workspace/memory/repo/readme.md",
+            ],
+            "modified": ["README.md"],
+        },
+        package_read_surface_summary=harness._package_read_surface_summary_from_stdout(result["stdout"]),
+    )
+    warnings = harness._proportionality_warnings(scenario=scenario, result=result, metrics=metrics)
+    classes = {warning["warning_class"] for warning in warnings}
+    mistakes = {warning["mistake_class"] for warning in warnings}
+
+    assert "model_cli_proportionality_over_planning" in classes
+    assert "model_cli_proportionality_memory_ceremony" in classes
+    assert "model_cli_proportionality_over_reading" in classes
+    assert "model_cli_proportionality_over_proofing" in classes
+    assert "model_cli_proportionality_closeout_ceremony" in classes
+    assert {
+        "over_planning",
+        "memory_ceremony",
+        "verbose_diagnostics_for_tiny_task",
+        "raw_workspace_spelunking",
+        "over_proofing",
+        "closeout_ceremony",
+    }.issubset(mistakes)
 
 
 def test_model_cli_harness_postmortem_prompt_keeps_feedback_compact_and_actionable() -> None:
@@ -2777,6 +2962,11 @@ def test_model_cli_harness_compares_before_after_runs(tmp_path: Path) -> None:
                             {"warning_class": "model_cli_semantic_workflow_failure", "message": "still here"},
                         ],
                         "mutation_summary": {"status": "changed"},
+                        "proportionality_metrics": {
+                            "status": "present",
+                            "workspace_command_count": 1,
+                            "package_output_bytes": 100,
+                        },
                     }
                 ]
             }
@@ -2793,6 +2983,11 @@ def test_model_cli_harness_compares_before_after_runs(tmp_path: Path) -> None:
                             {"warning_class": "model_cli_metadata_scoring_failure", "message": "new problem"},
                         ],
                         "mutation_summary": {"status": "clean"},
+                        "proportionality_metrics": {
+                            "status": "present",
+                            "workspace_command_count": 3,
+                            "package_output_bytes": 260,
+                        },
                     }
                 ]
             }
@@ -2806,3 +3001,5 @@ def test_model_cli_harness_compares_before_after_runs(tmp_path: Path) -> None:
     assert [warning["message"] for warning in comparison["resolved_warnings"]] == ["old problem"]
     assert [warning["message"] for warning in comparison["new_warnings"]] == ["new problem"]
     assert comparison["mutation_delta"] == {"baseline_changed_results": 1, "current_changed_results": 0}
+    assert comparison["proportionality_delta"]["workspace_command_count"] == 2
+    assert comparison["proportionality_delta"]["package_output_bytes"] == 160

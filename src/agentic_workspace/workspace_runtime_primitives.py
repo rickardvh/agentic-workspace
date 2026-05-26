@@ -6546,7 +6546,8 @@ def _final_report_budget_payload() -> dict[str, Any]:
 
 
 def _successful_completion_cost_payload(*, target_root: Path, cli_invoke: str) -> dict[str, Any]:
-    summary_dir = target_root / "scratch" / "model-cli-harness"
+    summary_dir_relative = WORKSPACE_LOCAL_SCRATCH_ROOT_PATH / "model-cli-harness"
+    summary_dir = target_root / summary_dir_relative
     summary_files = sorted(
         summary_dir.glob("*summary.json") if summary_dir.exists() else [], key=lambda path: (path.stat().st_mtime, path.name), reverse=True
     )
@@ -6601,7 +6602,7 @@ def _successful_completion_cost_payload(*, target_root: Path, cli_invoke: str) -
         "advisory_only": True,
         "rule": "Use this as maintainer evidence for surface-cost tradeoffs. It is not a formal benchmark, CI gate, or model leaderboard.",
         "evidence": {
-            "summary_dir": "scratch/model-cli-harness",
+            "summary_dir": summary_dir_relative.as_posix(),
             "summary_count": evidence_count,
             "skipped_summary_count": skipped_count,
             "included_recent_limit": 8,

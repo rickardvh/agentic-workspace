@@ -1162,7 +1162,7 @@ def test_report_section_selector_returns_successful_completion_cost_summary(tmp_
     assert cli.main(["init", "--target", str(target)]) == 0
     capsys.readouterr()
     _write_json(
-        target / "scratch" / "model-cli-harness" / "20260508T220836Z-suite-codex-summary.json",
+        target / ".agentic-workspace" / "local" / "scratch" / "model-cli-harness" / "20260508T220836Z-suite-codex-summary.json",
         {
             "adapter": "codex",
             "model": "gpt-5.3-codex-spark",
@@ -1219,6 +1219,7 @@ def test_report_section_selector_returns_successful_completion_cost_summary(tmp_
     assert answer["kind"] == "workspace-successful-completion-cost/v1"
     assert answer["advisory_only"] is True
     assert "not a formal benchmark" in answer["rule"]
+    assert answer["evidence"]["summary_dir"] == ".agentic-workspace/local/scratch/model-cli-harness"
     assert answer["evidence"]["summary_count"] == 1
     assert answer["evidence"]["weakness_ledger"]["active_high_priority_count"] == 1
     totals = answer["totals"]

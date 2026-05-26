@@ -31,7 +31,7 @@ uv run python scripts/model_cli_harness/run_model_cli_harness.py `
   --scenario startup-orientation
 ```
 
-The runner defaults to dry-run. It copies the scenario fixture into `scratch/model-cli-harness`, renders the prompt, writes `run.json`, and prints the exact CLI command it would execute. Add `--execute` only when you intentionally want to spend model calls and allow the configured CLI to operate in the copied fixture.
+The runner defaults to dry-run. It copies the scenario fixture into the configured local scratch root under `.agentic-workspace/local/scratch/model-cli-harness`, renders the prompt, writes `run.json`, and prints the exact CLI command it would execute. Add `--execute` only when you intentionally want to spend model calls and allow the configured CLI to operate in the copied fixture.
 
 Scenarios may define `prompt_variants` for non-deterministic probing. By default the runner uses the first/default prompt. Use `--prompt-variant all` to run every variant, or `--prompt-variant <id>` for a single one:
 
@@ -105,6 +105,8 @@ The current suite evaluates these semi-realistic workflow pressure points. The p
 - `local-delegation-posture`: whether agents distinguish checked-in repo policy from local-only delegation controls and avoid auto-delegation when local safety disables it.
 - `config-output-posture`: whether agents use config to shape reporting style without turning output posture into execution-method authority.
 
+`direct-task-minimal-overhead`, `next-decision-output-profile`, and `config-closeout-obligation` are proportionality guardrails for small bounded work. Their `run.json` entries include `proportionality_metrics` for command count, package output size, changed-file count, Planning/Memory residue, raw workspace reads, verbose/full diagnostics, requests to completion, and final-answer length. The harness emits proportionality warning classes for over-planning, over-reading, over-proofing, Memory ceremony, and closeout ceremony. Treat those warnings as review signals: compact AW routing is allowed when it prevents wrong action, but tiny work should not become a broad diagnostic or Planning exercise.
+
 Use these as optimisation probes rather than regular regression tests. A good run matrix samples a few scenarios across weaker, cheaper, and stronger agents, then turns repeated weak points into package changes, clearer CLI output, docs, fixtures, or new scorer warnings. Do not expect a single deterministic pass/fail result to settle a workflow question.
 
 ## Adaptive Optimisation Loop
@@ -122,12 +124,12 @@ Use comparison mode after product or harness changes to check whether a targeted
 
 ```powershell
 uv run python scripts/model_cli_harness/run_model_cli_harness.py `
-  --compare-baseline scratch/model-cli-harness/baseline/run.json `
-  --compare-current scratch/model-cli-harness/current/run.json `
+  --compare-baseline .agentic-workspace/local/scratch/model-cli-harness/baseline/run.json `
+  --compare-current .agentic-workspace/local/scratch/model-cli-harness/current/run.json `
   --format json
 ```
 
-The comparison report lists resolved, retained, and new warnings, mutation deltas, a compact product interpretation, and the recommended next action. Treat it as a review aid, not a benchmark verdict.
+The comparison report lists resolved, retained, and new warnings, mutation deltas, proportionality metric deltas, a compact product interpretation, and the recommended next action. Treat it as a review aid, not a benchmark verdict.
 
 Executed run results include two different cost signals:
 
@@ -189,8 +191,9 @@ Treat one-off capability failures cautiously. Give more weight to repeated ambig
 ## Safety Defaults
 
 - Dry-run is the default.
-- Scenario repository mutations should happen only in copied fixtures under `scratch/`.
+- Scenario repository mutations should happen only in copied fixtures under `.agentic-workspace/local/scratch/`.
 - Provider CLIs may still maintain their own local state outside the fixture. For Copilot, the harness routes logs to the run directory, but authenticated session/config state may still use `COPILOT_HOME` unless the operator provides an isolated authenticated home.
+- The Copilot adapter passes both `-C {repo}` and `--add-dir {repo}` so Copilot roots its session in the copied fixture before invoking edit or PowerShell tools. It also sets `COPILOT_ALLOW_ALL=true` and passes Copilot's explicit `--allow-tool=write` grant because `--allow-all` alone has not reliably unlocked edits in non-interactive harness runs.
 - The Copilot adapter denies `git push`.
 - The Copilot adapter requires `pwsh` before execution because its shell tool uses PowerShell 7 on Windows. The suite includes standard PowerShell install paths and prepends the discovered parent directory to the model CLI `PATH`.
 - The Gemini adapter runs `gemini --prompt` in headless mode and records JSON output. It uses `--approval-mode yolo` only when the operator explicitly passes `--execute`; dry-run remains the default.
