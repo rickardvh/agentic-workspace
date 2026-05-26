@@ -29,6 +29,7 @@
     "agent_configuration_system",
     "agent_configuration_queries",
     "workflow_obligations",
+    "assurance_requirements",
     "durable_intent",
     "product_managed_enclave",
     "ownership_diagnostics",
@@ -202,6 +203,10 @@
     "workflow_obligations": {
       "type": "object",
       "description": "Repo-configured workflow obligations surfaced for report consumers."
+    },
+    "assurance_requirements": {
+      "type": "object",
+      "description": "Repo-declared assurance requirements, active matches, and evidence status projection."
     },
     "authority_hierarchy": {
       "type": "object",

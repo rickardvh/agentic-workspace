@@ -1,0 +1,341 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Implement assurance requirements and evidence gates",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement the remaining #1130 assurance requirements lane: config fact model, projection, proof integration, closeout gates, and dogfood coverage.",
+    "hard_constraints": "Reuse existing AW config/report/start/implement/proof/closeout machinery; keep AW domain-generic; do not add a parallel compliance subsystem or evidence store.",
+    "agent_may_decide": "Exact payload shape, tests, schema wiring, issue routing, and proportionality guardrails within the #1130 child issue boundaries.",
+    "escalate_when": "A correct implementation requires domain-specific compliance semantics, a new evidence store, a new top-level command, or broad workflow machinery beyond #1130.",
+    "next_action": "Validate the implemented assurance surfaces, then close out and open the PR.",
+    "proof_expectations": [
+      "uv run pytest tests/test_workspace_config_cli.py tests/test_workspace_implement_cli.py tests/test_workspace_start_preflight_cli.py tests/test_workspace_proof_cli.py tests/test_workspace_report_cli.py -q",
+      "uv run agentic-workspace summary --target . --format json",
+      "uv run agentic-workspace doctor --target . --modules planning --format json"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/config.py",
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "src/agentic_workspace/reporting_support.py",
+      "src/agentic_workspace/contracts/report_contract.json",
+      "src/agentic_workspace/contracts/schemas/workspace_config.schema.json",
+      "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+      "tests/test_workspace_config_cli.py",
+      "tests/test_workspace_implement_cli.py",
+      "tests/test_workspace_start_preflight_cli.py",
+      "tests/test_workspace_proof_cli.py",
+      "tests/test_workspace_report_cli.py",
+      ".agentic-workspace/planning/decompositions/github-1130-assurance-requirements.decomposition.json"
+    ],
+    "completion_criteria": [
+      "Host repos can configure assurance.requirements with activation signals, evidence labels, proof profiles, blocking claims, and waiver/dismissal records.",
+      "Report/start/implement/proof/closeout surfaces project active requirements without noisy unrelated tiny output.",
+      "closeout_trust blocks unsupported broad claims when required assurance evidence is missing while review/status routes remain available.",
+      "Tests cover high-assurance path/task matches, proof-profile integration, closeout gates, quiet unrelated work, and non-code requirements."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Create a bounded plan for Implement assurance requirements and evidence gates."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Implement the remaining #1130 assurance requirements lane.",
+      "constraints": "Reuse existing AW machinery and keep the feature domain-generic.",
+      "latitude": "Choose compact payload and test shape within the child issue boundaries.",
+      "escalation": "Escalate if the work requires a new compliance subsystem, evidence store, or domain semantics.",
+      "proof": "make test-workspace; make lint-workspace; make schema-reference-docs; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success"
+    },
+    "execution": {
+      "milestone": "github-1130-assurance-requirements-implementation",
+      "status": "active",
+      "next_step": "Validate the implemented assurance surfaces, then close out and open the PR.",
+      "proof": "Focused workspace CLI assurance tests plus AW summary/doctor."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/config.py",
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "src/agentic_workspace/reporting_support.py",
+        "src/agentic_workspace/contracts/",
+        "tests/test_workspace_*_cli.py",
+        ".agentic-workspace/planning/decompositions/github-1130-assurance-requirements.decomposition.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Complete the #1130 repo-defined assurance requirements lane.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Implement the remainder of #1130, creating new issues along the way",
+    "inferred intended outcome": "Finish the remaining #1130 implementation slices and create child issues for the concrete lanes.",
+    "chosen concrete what": "Implement requirement config, projection, proof, closeout, and fixture coverage in one bounded branch.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "src/agentic_workspace config/runtime/reporting/contracts, focused workspace CLI tests, and #1130 planning decomposition.",
+    "max changed files": "About a dozen source, contract, test, and planning files.",
+    "required validation commands": "uv run pytest tests/test_workspace_config_cli.py tests/test_workspace_implement_cli.py tests/test_workspace_start_preflight_cli.py tests/test_workspace_proof_cli.py tests/test_workspace_report_cli.py -q; uv run agentic-workspace summary --target . --format json; uv run agentic-workspace doctor --target . --modules planning --format json",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Assurance requirements implementation is in branch codex/assurance-requirements-1130; validate focused workspace CLI tests and close out.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement the remaining #1130 assurance requirements lane.",
+    "hard constraints": "Reuse existing AW machinery, keep domain semantics repo-owned, and avoid a parallel compliance/evidence subsystem.",
+    "agent may decide locally": "Payload details, tests, and PR issue closure wording.",
+    "escalate when": "A correct fix requires a new evidence store, new top-level workflow, or domain-specific compliance logic."
+  },
+  "post_decomposition_delegation": {
+    "status": "pending",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    "#1130",
+    "#1132",
+    "#1133",
+    "#1134",
+    "#1135",
+    "#1136"
+  ],
+  "active_milestone": {
+    "id": "github-1130-assurance-requirements-implementation",
+    "status": "completed",
+    "scope": "Implement the remaining #1130 child slices in the workspace config/runtime/report/proof/closeout surfaces.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Validate the assurance implementation and open the PR."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/config.py",
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "src/agentic_workspace/reporting_support.py",
+    "src/agentic_workspace/contracts/report_contract.json",
+    "src/agentic_workspace/contracts/schemas/workspace_config.schema.json",
+    "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+    "tests/test_workspace_config_cli.py",
+    "tests/test_workspace_implement_cli.py",
+    "tests/test_workspace_start_preflight_cli.py",
+    "tests/test_workspace_proof_cli.py",
+    "tests/test_workspace_report_cli.py",
+    ".agentic-workspace/planning/decompositions/github-1130-assurance-requirements.decomposition.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_config_cli.py tests/test_workspace_implement_cli.py tests/test_workspace_start_preflight_cli.py tests/test_workspace_proof_cli.py tests/test_workspace_report_cli.py -q",
+    "uv run agentic-workspace summary --target . --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Implement assurance requirements and evidence gates is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Implemented repo-defined assurance requirements from #1130: config/schema parsing, config/report/start/implement/proof projections, closeout trust gates, waiver/dismissal metadata, proof-profile integration, and high-assurance/non-code fixtures.",
+    "scope touched": "Workspace config, runtime projections, report support, contracts, generated reference docs, tests, and Planning lane decomposition.",
+    "changed surfaces": "src/agentic_workspace/config.py; src/agentic_workspace/workspace_runtime_primitives.py; src/agentic_workspace/reporting_support.py; src/agentic_workspace/contracts; docs/reference; tests; .agentic-workspace/planning",
+    "validations run": "make test-workspace; make lint-workspace; make schema-reference-docs; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "result for continuation": "bounded closeout complete",
+    "next step": "archive this execplan"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Remainder of #1130 is implemented as repo-native assurance requirements and evidence gates, with follow-up child issues #1133-#1136 created and linked in the decomposition.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "not-delegated",
+    "route skipped reason": "No delegation route was recorded; prepare-closeout normalized archive-only residue.",
+    "expected savings": "none recorded",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "make test-workspace; make lint-workspace; make schema-reference-docs; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "make test-workspace; make lint-workspace; make schema-reference-docs; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success"
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Implement assurance requirements and evidence gates.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "make test-workspace; make lint-workspace; make schema-reference-docs; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Configured assurance requirements are inspectable, matchable, proof-affecting, and claim-gating without creating a separate evidence store.",
+    "validation confirmed": "make test-workspace; make lint-workspace; make schema-reference-docs; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "knowledge promoted (memory/docs/config)": "none",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "No future-relevant learning was identified beyond the closeout evidence.",
+    "motivation worth preserving": "Closeout reviewed durable residue and found no live follow-up.",
+    "canonical owner now": "archive",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "archive",
+    "proposed durable intent": "Closeout reviewed durable residue and found no live follow-up.",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": "archive"
+  },
+  "closure_check": {
+    "closeout scope": "lane",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a lane claim with intent-status satisfied.",
+    "evidence carried forward": "make test-workspace; make lint-workspace; make schema-reference-docs; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "improvement_signal_review": {
+    "status": "not_checked",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "agent closeout reflection"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-26: Scaffolded by agentic-planning new-plan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Create a bounded plan for Implement assurance requirements and evidence gates.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: make test-workspace; make lint-workspace; make schema-reference-docs; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success\nChanged surfaces: src/agentic_workspace/config.py; src/agentic_workspace/workspace_runtime_primitives.py; src/agentic_workspace/reporting_support.py; src/agentic_workspace/contracts; docs/reference; tests; .agentic-workspace/planning\nDurable residue: none (archive)\nMemory learning: none\nFollow-up: none"
+  }
+}

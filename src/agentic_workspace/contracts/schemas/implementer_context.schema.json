@@ -24,6 +24,7 @@
     "intent_acknowledgement",
     "objective_drift",
     "reuse_pressure",
+    "assurance_requirements",
     "orientation",
     "inference_limits",
     "execution_posture",
@@ -145,6 +146,11 @@
     "reuse_pressure": {
       "type": "object",
       "description": "Changed-path reuse and abstraction-pressure facts that help the agent decide whether to reuse, accept duplication, or route extraction follow-up.",
+      "additionalProperties": true
+    },
+    "assurance_requirements": {
+      "type": "object",
+      "description": "Repo-declared assurance requirements matched to the task or changed paths, with evidence status and claim-boundary facts.",
       "additionalProperties": true
     },
     "objective_drift": {

@@ -1,0 +1,370 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Investigate assurance evidence gate model",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Ingest the #1130 assurance parent lane into checked-in Planning and complete the #1131 design investigation.",
+    "hard_constraints": "Design-only slice; do not implement new config schema, commands, proof behavior, closeout gates, or fixtures. Keep GitHub as intake/reference and checked-in Planning as execution authority.",
+    "agent_may_decide": "Choose the compact planning artifact shape, investigation structure, follow-up slice recommendations, and issue-comment wording.",
+    "escalate_when": "The investigation would require committing implementation behavior or creating a parallel compliance subsystem.",
+    "next_action": "Validate the planning artifacts and post the compact investigation result to GitHub #1131.",
+    "proof_expectations": [
+      "uv run agentic-workspace summary --target . --format json",
+      "uv run agentic-workspace doctor --target . --modules planning --format json",
+      "uv run python scripts/check/check_planning_surfaces.py"
+    ],
+    "touched_scope": [
+      ".agentic-workspace/planning/state.toml",
+      ".agentic-workspace/planning/decompositions/github-1130-assurance-requirements.decomposition.json",
+      ".agentic-workspace/planning/execplans/github-1131-assurance-evidence-gate-investigation.plan.json",
+      ".agentic-workspace/planning/reviews/2026-05-26-assurance-evidence-gate-model.review.json",
+      ".agentic-workspace/planning/reviews/2026-05-26-assurance-evidence-gate-model.md"
+    ],
+    "completion_criteria": [
+      "#1130 is represented as parent lane/decomposition context in checked-in Planning.",
+      "#1131 has a compact design investigation artifact answering inventory, v1 model, evidence ownership, integration points, closeout behavior, proportionality, non-goals, and follow-up issues.",
+      "The investigation is posted or summarized back to GitHub #1131.",
+      "Planning validation passes."
+    ],
+    "continuation_owner": ".agentic-workspace/planning/decompositions/github-1130-assurance-requirements.decomposition.json",
+    "closeout_decision": "archive-but-keep-lane-open"
+  },
+  "goal": [
+    "Ingest GitHub #1130 as the parent assurance lane in checked-in Planning.",
+    "Complete GitHub #1131 as a bounded design investigation, not an implementation."
+  ],
+  "non_goals": [
+    "Do not implement assurance requirements, evidence gates, proof integration, closeout gates, or fixtures in this slice.",
+    "Do not add domain-specific compliance semantics to AW.",
+    "Do not make GitHub issues the execution authority after intake."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Checked-in parent lane context for #1130 plus a completed #1131 investigation artifact.",
+      "constraints": "Design-only; no product behavior changes.",
+      "latitude": "Artifact format, summary wording, and follow-up slice recommendations.",
+      "escalation": "Escalate if investigation cannot stay design-only or if existing surfaces are insufficient to avoid a parallel subsystem.",
+      "proof": "uv run agentic-workspace summary --target . --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_planning_surfaces.py"
+    },
+    "execution": {
+      "milestone": "github-1131-assurance-evidence-gate-investigation",
+      "status": "active",
+      "next_step": "Validate planning artifacts and post the investigation summary to #1131.",
+      "proof": "Planning summary, planning doctor, and planning surface check pass."
+    },
+    "scope": {
+      "touched": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/decompositions/github-1130-assurance-requirements.decomposition.json",
+        ".agentic-workspace/planning/execplans/github-1131-assurance-evidence-gate-investigation.plan.json",
+        ".agentic-workspace/planning/reviews/2026-05-26-assurance-evidence-gate-model.review.json",
+        ".agentic-workspace/planning/reviews/2026-05-26-assurance-evidence-gate-model.md"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "GitHub #1130: repo-defined assurance requirements and evidence gates.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/decompositions/github-1130-assurance-requirements.decomposition.json",
+    "parent lane": "GitHub #1130"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/decompositions/github-1130-assurance-requirements.decomposition.json",
+    "activation trigger": "Promote the first implementation child issue after #1131 is accepted."
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Follow-up implementation issues can start from a concrete v1 assurance requirement/evidence-gate model.",
+    "intentionally deferred": "Config/schema implementation, projection, proof integration, closeout gates, and dogfood fixtures.",
+    "discovered implications": "Most of the required assurance loop already exists; the missing piece is a small repo-declared requirement fact model plus evidence-status projection.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "Create/promote the minimal assurance requirement fact model child issue."
+  },
+  "intent_interpretation": {
+    "literal request": "Ingest the #1130 lane on a new branch and do the #1131 investigation.",
+    "inferred intended outcome": "Create checked-in planning context for the parent assurance lane and produce a design investigation that can seed implementation child issues.",
+    "chosen concrete what": "Parent decomposition plus active execplan plus planning review/design artifact and GitHub #1131 comment.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the investigation avoids implementation and avoids inventing a parallel compliance subsystem."
+  },
+  "execution_bounds": {
+    "allowed paths": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/decompositions/github-1130-assurance-requirements.decomposition.json; .agentic-workspace/planning/execplans/github-1131-assurance-evidence-gate-investigation.plan.json; .agentic-workspace/planning/reviews/2026-05-26-assurance-evidence-gate-model.review.json; .agentic-workspace/planning/reviews/2026-05-26-assurance-evidence-gate-model.md",
+    "max changed files": "5 planning files plus optional generated formatting changes from planning commands.",
+    "required validation commands": "uv run agentic-workspace summary --target . --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_planning_surfaces.py",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Implementation code, schemas, generated contracts, tests, Memory notes, or docs outside the planning investigation artifacts."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "GitHub #1130, GitHub #1131, this execplan, the parent decomposition, and the review artifact.",
+    "recoverable later": "Detailed issue bodies, historical reviews, source search output, and deferred implementation lanes.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Complete the #1131 design artifact and post a compact issue comment; do not implement behavior.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Checked-in #1130 lane context and #1131 investigation result.",
+    "hard constraints": "No product behavior implementation; no domain compliance semantics; no parallel compliance subsystem.",
+    "agent may decide locally": "Investigation wording, follow-up issue breakdown, and whether to comment on #1131.",
+    "escalate when": "The next step would require implementing schema/command/proof/closeout behavior."
+  },
+  "post_decomposition_delegation": {
+    "status": "pending",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1131",
+      "label": "GitHub #1131",
+      "role": "intake",
+      "locator": ""
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1130",
+      "label": "GitHub #1130",
+      "role": "parent lane",
+      "locator": ""
+    },
+    {
+      "kind": "planning-decomposition",
+      "target": ".agentic-workspace/planning/decompositions/github-1130-assurance-requirements.decomposition.json",
+      "label": "#1130 lane decomposition",
+      "role": "parent context",
+      "locator": ""
+    },
+    {
+      "kind": "planning-review",
+      "target": ".agentic-workspace/planning/reviews/2026-05-26-assurance-evidence-gate-model.review.json",
+      "label": "#1131 investigation artifact",
+      "role": "design result",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "github-1131-assurance-evidence-gate-investigation",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Validate planning artifacts and post the compact design result to GitHub #1131."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/decompositions/github-1130-assurance-requirements.decomposition.json",
+    ".agentic-workspace/planning/execplans/github-1131-assurance-evidence-gate-investigation.plan.json",
+    ".agentic-workspace/planning/reviews/2026-05-26-assurance-evidence-gate-model.review.json",
+    ".agentic-workspace/planning/reviews/2026-05-26-assurance-evidence-gate-model.md"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run agentic-workspace summary --target . --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "uv run python scripts/check/check_planning_surfaces.py"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Investigate assurance evidence gate model is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Ingested GitHub #1130 as parent assurance lane context, completed the #1131 design investigation, and prepared follow-up implementation lane recommendations.",
+    "scope touched": "Checked-in Planning intake, decomposition, execplan, and review surfaces.",
+    "changed surfaces": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/decompositions/github-1130-assurance-requirements.decomposition.json; .agentic-workspace/planning/execplans/github-1131-assurance-evidence-gate-investigation.plan.json; .agentic-workspace/planning/reviews/2026-05-26-assurance-evidence-gate-model.review.json; .agentic-workspace/planning/reviews/2026-05-26-assurance-evidence-gate-model.md",
+    "validations run": "uv run agentic-workspace summary --target . --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_planning_surfaces.py",
+    "result for continuation": "continue from .agentic-workspace/planning/decompositions/github-1130-assurance-requirements.decomposition.json",
+    "next step": "promote the next bounded slice from .agentic-workspace/planning/decompositions/github-1130-assurance-requirements.decomposition.json"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Scope stayed design-only; no config/schema/proof/closeout behavior was implemented. Parent #1130 remains open with follow-up lanes.",
+    "proof status": "passed",
+    "intent served": "no; intent-status=deferred-with-owner keeps continuation explicit.",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": ".agentic-workspace/planning/decompositions/github-1130-assurance-requirements.decomposition.json"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "Design investigation is bounded and directly tied to active Planning; external delegation would not reduce proof burden.",
+    "expected savings": "none",
+    "actual friction": "none yet",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "larger intent remains routed through the continuation owner"
+  },
+  "proof_report": {
+    "validation proof": "uv run agentic-workspace summary --target . --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_planning_surfaces.py",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "uv run agentic-workspace summary --target . --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_planning_surfaces.py"
+  },
+  "intent_satisfaction": {
+    "original intent": "Ingest the #1130 lane on a new branch and do the #1131 investigation.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "uv run agentic-workspace summary --target . --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_planning_surfaces.py",
+    "unsolved intent passed to": ".agentic-workspace/planning/decompositions/github-1130-assurance-requirements.decomposition.json"
+  },
+  "execution_summary": {
+    "outcome delivered": "#1131 investigation recommends a repo-declared assurance requirement fact model, evidence-status projection, closeout completion-option gates, proof-profile integration, and dogfood fixtures while avoiding a parallel compliance subsystem.",
+    "validation confirmed": "uv run agentic-workspace summary --target . --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_planning_surfaces.py",
+    "follow-on routed to": ".agentic-workspace/planning/decompositions/github-1130-assurance-requirements.decomposition.json",
+    "post-work posterity capture": "archive closeout distillation",
+    "knowledge promoted (memory/docs/config)": "none",
+    "resume from": ".agentic-workspace/planning/decompositions/github-1130-assurance-requirements.decomposition.json",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed planning residue to .agentic-workspace/planning/decompositions/github-1130-assurance-requirements.decomposition.json.",
+    "motivation worth preserving": "Future agents should continue from .agentic-workspace/planning/decompositions/github-1130-assurance-requirements.decomposition.json rather than rediscover this closeout residue.",
+    "canonical owner now": ".agentic-workspace/planning/decompositions/github-1130-assurance-requirements.decomposition.json",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "planning",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "GitHub #1130/#1131 and planning review artifact",
+    "target scope": "Parent lane decomposition and follow-up issues",
+    "proposed durable intent": "Assurance requirements should stay repo-defined, domain-generic, evidence-oriented, and integrated with existing proof/closeout claim gates.",
+    "confidence": "medium",
+    "needs review": false,
+    "owner surface": ".agentic-workspace/planning/decompositions/github-1130-assurance-requirements.decomposition.json"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status deferred-with-owner.",
+    "evidence carried forward": "uv run agentic-workspace summary --target . --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_planning_surfaces.py",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/decompositions/github-1130-assurance-requirements.decomposition.json activates a fresh bounded slice."
+  },
+  "improvement_signal_review": {
+    "status": "not_checked",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "agent closeout reflection"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Promote child issues for the minimal fact model, matching/projection, evidence closeout gates, proof integration, and dogfood fixtures.",
+          "owner": "GitHub #1130",
+          "source": ""
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "GitHub #1131",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/1131"
+        },
+        {
+          "summary": "GitHub #1130",
+          "owner": "github-issue",
+          "source": "https://github.com/rickardvh/agentic-workspace/issues/1130"
+        }
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-05-26: Scaffolded by agentic-planning new-plan.",
+    "2026-05-26: Tightened for #1131 investigation and linked #1130 parent decomposition plus review artifact."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "yes",
+    "decision": "route_to_planning",
+    "target": ".agentic-workspace/planning/decompositions/github-1130-assurance-requirements.decomposition.json",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Ingest the #1130 lane on a new branch and do the #1131 investigation.\nIntent satisfied: no\nArchive decision: archive-but-keep-lane-open\nProof: uv run agentic-workspace summary --target . --format json; uv run agentic-workspace doctor --target . --modules planning --format json; uv run python scripts/check/check_planning_surfaces.py\nChanged surfaces: .agentic-workspace/planning/state.toml; .agentic-workspace/planning/decompositions/github-1130-assurance-requirements.decomposition.json; .agentic-workspace/planning/execplans/github-1131-assurance-evidence-gate-investigation.plan.json; .agentic-workspace/planning/reviews/2026-05-26-assurance-evidence-gate-model.review.json; .agentic-workspace/planning/reviews/2026-05-26-assurance-evidence-gate-model.md\nDurable residue: planning (.agentic-workspace/planning/decompositions/github-1130-assurance-requirements.decomposition.json)\nMemory learning: route_to_planning\nFollow-up: .agentic-workspace/planning/decompositions/github-1130-assurance-requirements.decomposition.json"
+  }
+}

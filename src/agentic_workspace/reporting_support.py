@@ -315,6 +315,8 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
         intent_proof_check = intent_proof_check if isinstance(intent_proof_check, dict) else {}
         proof_confidence = answer.get("proof_confidence", {})
         proof_confidence = proof_confidence if isinstance(proof_confidence, dict) else {}
+        assurance_requirements = answer.get("assurance_requirements", {})
+        assurance_requirements = assurance_requirements if isinstance(assurance_requirements, dict) else {}
         architecture_decision = answer.get("architecture_decision_closeout", {})
         architecture_decision = architecture_decision if isinstance(architecture_decision, dict) else {}
         architecture_candidate = architecture_decision.get("architecture_decision_candidate", {})
@@ -340,6 +342,13 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
             "summary": answer.get("summary", ""),
             "terminal_action": terminal_action,
             "completion_options": completion_options,
+            "assurance_requirements": {
+                "status": assurance_requirements.get("status", "absent"),
+                "configured_count": assurance_requirements.get("configured_count", 0),
+                "active_count": assurance_requirements.get("active_count", 0),
+                "missing_required_evidence_count": assurance_requirements.get("missing_required_evidence_count", 0),
+                "evidence_status": assurance_requirements.get("evidence_status", []),
+            },
             "proof_confidence": {
                 key: proof_confidence.get(key)
                 for key in ("status", "confidence", "claim_boundary", "proven_dimensions", "unproven_dimensions", "residual_risk")
@@ -973,6 +982,7 @@ def report_section_hints(
         "module_reports": "deep planning and memory module reports",
         "reports": "workspace lifecycle report detail",
         "surface_value_guardrail": "surface growth review pressure",
+        "assurance_requirements": "repo-declared assurance authority, evidence, proof profile, and claim-boundary facts",
         "closeout_trust": "closeout trust and lower-trust residue signals",
         "external_work_reconciliation": "one provider-agnostic external-work route for evidence freshness, closeout reconciliation, and landed-open checks",
         "external_work_delta": "provider-agnostic external-work snapshot or delta from prior evidence when available",
@@ -1003,6 +1013,7 @@ def report_section_hints(
         "module_reports": "deep detail; inspect only when a compact router field points to planning or memory internals",
         "reports": "deep lifecycle detail; inspect only for report/debug work",
         "surface_value_guardrail": "inspect before adding or expanding a visible surface",
+        "assurance_requirements": "inspect when repo-declared assurance requirements may affect authority lookup, proof, review, or closeout claims",
         "closeout_trust": "inspect before closing broad work or auditing package-use evidence",
         "external_work_reconciliation": "inspect when deciding whether checked-in planning, external work state, and landed evidence agree",
         "external_work_delta": "inspect when external-work intake or closure state is part of the task",
