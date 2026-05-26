@@ -338,6 +338,10 @@
             "type": "object",
             "description": "One repo-defined assurance requirement. Domain meaning stays in repo-owned authority refs and free-form evidence labels.",
             "x-agentic-workspace-unknown-properties": "warn",
+            "required": [
+              "level",
+              "force"
+            ],
             "properties": {
               "level": {
                 "description": "Repo-interpreted assurance level for the matched requirement.",
@@ -346,8 +350,7 @@
                   "medium",
                   "high",
                   "critical"
-                ],
-                "default": "low"
+                ]
               },
               "applies_to_paths": {
                 "description": "Path globs that activate this requirement when changed paths match.",
@@ -456,8 +459,7 @@
                   "recommended",
                   "required-before-closeout",
                   "blocking"
-                ],
-                "default": "recommended"
+                ]
               },
               "blocking_claims": {
                 "description": "Completion option ids blocked while required evidence for this requirement is missing.",

@@ -519,6 +519,17 @@ def require_optional_enum(
     return value
 
 
+def require_required_enum(*, payload: dict[str, Any], key: str, config_path: Path, allowed: tuple[str, ...]) -> str:
+    if key not in payload:
+        allowed_text = ", ".join(allowed)
+        raise WorkspaceUsageError(f"{config_path.as_posix()} {key} is required and must be one of: {allowed_text}.")
+    value = payload[key]
+    if not isinstance(value, str) or value not in allowed:
+        allowed_text = ", ".join(allowed)
+        raise WorkspaceUsageError(f"{config_path.as_posix()} {key} must be one of: {allowed_text}.")
+    return value
+
+
 def validate_agent_instructions_filename(filename: str) -> str:
     normalized = filename.strip()
     if not normalized:
@@ -721,12 +732,11 @@ def _load_assurance_requirements(
         requirements.append(
             AssuranceRequirement(
                 id=str(requirement_id).strip(),
-                level=require_optional_enum(
+                level=require_required_enum(
                     payload=raw_requirement,
                     key="level",
                     config_path=requirement_path,
                     allowed=SUPPORTED_ASSURANCE_LEVELS,
-                    default=DEFAULT_ASSURANCE_LEVEL,
                 ),
                 applies_to_paths=activation_values["applies_to_paths"],
                 applies_to_task_markers=activation_values["applies_to_task_markers"],
@@ -743,12 +753,11 @@ def _load_assurance_requirements(
                     payload=raw_requirement, key="workflow_obligation_refs", config_path=requirement_path
                 ),
                 review_owner=require_optional_string(payload=raw_requirement, key="review_owner", config_path=requirement_path),
-                force=require_optional_enum(
+                force=require_required_enum(
                     payload=raw_requirement,
                     key="force",
                     config_path=requirement_path,
                     allowed=SUPPORTED_WORKFLOW_OBLIGATION_FORCES,
-                    default="recommended",
                 ),
                 blocking_claims=require_optional_string_list(
                     payload=raw_requirement,

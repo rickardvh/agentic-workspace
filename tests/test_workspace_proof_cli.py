@@ -903,6 +903,69 @@ blocking_claims = ["claim-work-complete", "close-parent-lane"]
     assert lane["applies_because"] == ["changed path matched db/migrations/**"]
 
 
+def test_proof_current_includes_active_planning_assurance_requirement_profile(tmp_path: Path, capsys) -> None:
+    from repo_planning_bootstrap import installer as planning_installer
+
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        """
+schema_version = 1
+
+[assurance.proof_profiles.privacy]
+required_commands = ["uv run pytest tests/privacy -q"]
+optional_commands = ["uv run pytest tests/privacy_integration -q"]
+review_aids = ["docs/compliance/privacy.md"]
+
+[assurance.requirements.privacy_data]
+level = "high"
+applies_to_planning_refs = ["privacy_data"]
+authority_refs = ["docs/compliance/privacy.md"]
+required_evidence = ["authority_consulted"]
+proof_profile = "privacy"
+force = "required-before-closeout"
+blocking_claims = ["claim-work-complete", "close-parent-lane"]
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+[todo]
+active_items = [
+  { id = "privacy-plan", status = "in-progress", surface = ".agentic-workspace/planning/execplans/privacy-plan.plan.json", why_now = "prove privacy requirement." },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    record = planning_installer._build_execplan_record_from_todo_item(
+        title="Privacy Plan",
+        item_id="privacy-plan",
+        status="in-progress",
+        why_now="prove privacy requirement.",
+        next_action="run proof selection.",
+        done_when="privacy proof appears.",
+    )
+    record["adaptive_assurance"] = {
+        "level": "high",
+        "requirement_refs": ["privacy_data"],
+        "strict_closeout": True,
+    }
+    _write_json(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "privacy-plan.plan.json", record)
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--current", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert "uv run pytest tests/privacy -q" in answer["required_commands"]
+    assert "uv run pytest tests/privacy_integration -q" in answer["optional_commands"]
+    assert answer["assurance_requirements"]["active"][0]["id"] == "privacy_data"
+    lane = [item for item in answer["selected_lanes"] if item.get("requirement_id") == "privacy_data"][0]
+    assert lane["proof_profile"] == "privacy"
+    assert lane["applies_because"] == ["planning ref matched privacy_data"]
+
+
 def test_proof_changed_reports_compact_proof_execution_evidence_states(tmp_path: Path, capsys) -> None:
     from repo_planning_bootstrap import installer as planning_installer
 

@@ -482,6 +482,7 @@ schema_version = 1
 
 [assurance.requirements.no_signal]
 level = "high"
+force = "required-before-closeout"
 required_evidence = ["authority_consulted"]
 """,
     )
@@ -489,6 +490,43 @@ required_evidence = ["authority_consulted"]
     with pytest.raises(SystemExit):
         cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"])
     assert "requires at least one activation signal" in capsys.readouterr().err
+
+
+def test_config_command_requires_assurance_requirement_level_and_force(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.requirements.missing_level]
+applies_to_paths = ["docs/**"]
+force = "required-before-closeout"
+
+[assurance.requirements.missing_force]
+level = "high"
+applies_to_paths = ["src/**"]
+""",
+    )
+
+    with pytest.raises(SystemExit):
+        cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"])
+    assert "missing_force force is required" in capsys.readouterr().err
+
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.requirements.missing_level]
+applies_to_paths = ["docs/**"]
+force = "required-before-closeout"
+""",
+    )
+
+    with pytest.raises(SystemExit):
+        cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"])
+    assert "missing_level level is required" in capsys.readouterr().err
 
 
 def test_config_command_rejects_invalid_assurance_requirement_claim(tmp_path: Path, capsys) -> None:
@@ -499,7 +537,9 @@ def test_config_command_rejects_invalid_assurance_requirement_claim(tmp_path: Pa
 schema_version = 1
 
 [assurance.requirements.bad_claim]
+level = "high"
 applies_to_paths = ["docs/**"]
+force = "required-before-closeout"
 blocking_claims = ["certify-compliant"]
 """,
     )

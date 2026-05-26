@@ -19730,7 +19730,10 @@ def _select_proof_payload(
             surface="proof", selector={"route": route}, answer=answer, refs=refs, matched=matched, target=payload["target"]
         )
     if current_only:
-        answer = payload["current"]
+        current_selection = _proof_selection_for_changed_paths(changed_paths=[], target_root=target_root)
+        planning_present = current_selection.get("planning_assurance", {}).get("status") == "present"
+        active_requirements = current_selection.get("assurance_requirements", {}).get("active_count", 0)
+        answer = {**current_selection, "current": payload["current"]} if planning_present or active_requirements else payload["current"]
         refs = [compact_contract_manifest()["canonical_doc"], payload["command"], payload["canonical_doc"]]
         return _compact_contract_answer(surface="proof", selector={"current": True}, answer=answer, refs=refs, target=payload["target"])
     return payload
@@ -22422,6 +22425,7 @@ def _proof_selection_for_changed_paths(
             )
     active_assurance_requirements = _assurance_requirements_report_payload(
         config=config,
+        active_planning_record=planning_assurance if planning_assurance.get("status") == "present" else None,
         task_text=task_text,
         changed_paths=changed_paths,
     )

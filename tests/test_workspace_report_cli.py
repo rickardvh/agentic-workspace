@@ -2245,6 +2245,109 @@ review_owner = "privacy-review"
     assert options["stop-with-status"]["allowed"] is True
 
 
+def test_report_closeout_trust_waiver_clears_assurance_evidence_claim_gate(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        """
+schema_version = 1
+
+[assurance.requirements.privacy_data]
+level = "high"
+applies_to_planning_refs = ["privacy_data"]
+required_evidence = ["authority_consulted"]
+force = "required-before-closeout"
+blocking_claims = ["claim-work-complete", "close-parent-lane"]
+review_owner = "privacy-review"
+
+[assurance.requirements.privacy_data.waiver]
+reason = "Existing privacy review covers this class of change."
+owner = "privacy-review"
+""",
+    )
+    plan = target / ".agentic-workspace" / "planning" / "execplans" / "assurance-proof.plan.json"
+    _write_json(
+        plan,
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Assurance Proof",
+            "active_milestone": {"id": "assurance-proof", "status": "complete"},
+            "adaptive_assurance": {"level": "high", "requirement_refs": ["privacy_data"]},
+            "delegated_judgment": {
+                "requested outcome": "Record proof while assurance evidence is waived.",
+                "hard constraints": "Do not claim work complete before assurance evidence or waiver is recorded.",
+                "agent may decide locally": "Exact compact closeout wording.",
+                "escalate when": "Assurance evidence and waiver are unavailable.",
+            },
+            "immediate_next_action": ["Close only after assurance evidence or waiver is present."],
+            "completion_criteria": ["Direct proof and assurance evidence or waiver support the claim."],
+            "validation_commands": ["uv run pytest tests/test_direct.py"],
+            "intent_continuity": {
+                "larger intended outcome": "Record assurance-gated proof.",
+                "this slice completes the larger intended outcome": "yes",
+                "continuation surface": "none",
+            },
+            "required_continuation": {
+                "required follow-on for the larger intended outcome": "no",
+                "owner surface": "none",
+                "activation trigger": "none",
+            },
+            "execution_run": {
+                "run status": "complete",
+                "executor": "test",
+                "handoff source": "uv run agentic-workspace preflight --format json",
+                "what happened": "Proof passed and assurance evidence was waived.",
+                "scope touched": "test",
+                "changed surfaces": "test",
+                "validations run": "uv run pytest tests/test_direct.py",
+                "result for continuation": "close",
+                "next step": "close",
+            },
+            "proof_report": {
+                "validation proof": "uv run pytest tests/test_direct.py passed",
+                "acceptance reconciliation": "requested direct proof -> delivered focused direct test -> proof passed",
+                "proof achieved now": "yes",
+                "intent_proof": {
+                    "status": "sufficient_for_claim",
+                    "claim_boundary": "work",
+                    "intended_behavior": ["direct behavior"],
+                    "proof_dimensions": ["focused direct behavior"],
+                    "unproven_after_tests": [],
+                },
+            },
+            "closure_check": {
+                "slice status": "complete",
+                "larger-intent status": "closed",
+                "closure decision": "archive-and-close",
+                "why this decision is honest": "The focused direct proof is sufficient and assurance waiver is recorded.",
+                "evidence carried forward": "report closeout_trust",
+                "reopen trigger": "waiver becomes invalid",
+            },
+        },
+    )
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        "[todo]\n"
+        "active_items = [\n"
+        "  { id = 'assurance-proof', title = 'Assurance proof', surface = '.agentic-workspace/planning/execplans/assurance-proof.plan.json' },\n"
+        "]\n"
+        "queued_items = []\n\n"
+        "[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
+
+    closeout = json.loads(capsys.readouterr().out)["answer"]
+    assert closeout["assurance_requirements"]["evidence_status"][0]["state"] == "waived"
+    options = {option["id"]: option for option in closeout["completion_options"]}
+    assert "assurance_evidence:privacy_data" not in options["claim-work-complete"].get("blocking_fields", [])
+    assert "assurance_evidence:privacy_data" not in options["close-parent-lane"].get("blocking_fields", [])
+
+
 def test_report_closeout_trust_requires_external_negative_invariant_reconciliation(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
