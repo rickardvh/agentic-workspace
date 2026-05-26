@@ -18,5 +18,4 @@ queued_items = []
 [roadmap]
 lanes = []
 candidates = [
-  { id = "github-892-codegen-epic-implementation-independent-generate", maturity = "candidate", status = "next", priority = "P3", refs = "GitHub #892", title = "[Codegen Epic]: Implementation-independent generated command packages", outcome = "Coordinate the remaining codegen epic through bounded TypeScript-resource and extraction-readiness slices.", reason = "Parent issue remains the source of tier sequencing and completion rules, but should not outrank concrete child work.", promotion_signal = "Promote only as an umbrella lane when multiple child slices need parent-level coordination.", suggested_first_slice = "Promote #929 as the next concrete continuation; keep #892 open until TypeScript resource parity and extraction-readiness residue are explicitly routed or closed." },
 ]
