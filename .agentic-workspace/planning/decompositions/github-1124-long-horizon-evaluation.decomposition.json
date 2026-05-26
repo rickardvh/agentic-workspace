@@ -1,0 +1,203 @@
+{
+  "kind": "planning-decomposition/v1",
+  "title": "Long-horizon repo episode evaluation",
+  "status": "ready-for-lane-promotion",
+  "larger_intended_outcome": "Evaluate whether Agentic Workspace improves real project continuity across interruptions, restarts, handoffs, agent switches, proof ambiguity, ownership traps, and closeout boundaries by extending the existing model CLI harness into a small long-horizon episode layer.",
+  "non_goals": [
+    "Do not turn AW into a generic benchmark platform or leaderboard.",
+    "Do not run arbitrary live GitHub issues as benchmarks.",
+    "Do not make long-horizon episodes part of ordinary unit or CI tests.",
+    "Do not build a broad benchmark DSL before a few hand-authored episodes prove the shape.",
+    "Do not require fully automatic evaluator-only claims; human review remains valid when engineering judgment is needed.",
+    "Do not create episodes that require credentials, secrets, live external services, or long dependency setup."
+  ],
+  "candidate_lanes": [
+    {
+      "id": "long-horizon-episode-schema",
+      "title": "Define episode and evaluation schemas",
+      "readiness": "ready",
+      "outcome": "Draft hand-authorable `long-horizon-episode/v1` and `long-horizon-evaluation/v1` schemas, plus at least one sample episode and sample evaluator result that validate against the new checks.",
+      "owner_surface": "tools/model-cli-harness/schemas/, tools/model-cli-harness/episodes/, scripts/model_cli_harness/, and tests/test_model_cli_harness.py",
+      "proof": "Focused schema tests validate one sample episode and one sample evaluator result while existing Tier 1 suite rendering still passes.",
+      "depends_on": [],
+      "parallel_with": [
+        "pinned-episode-candidate-curation"
+      ]
+    },
+    {
+      "id": "pinned-episode-candidate-curation",
+      "title": "Curate first pinned real-repo episode candidates",
+      "readiness": "ready",
+      "outcome": "Confirm license, setup, base commit, visible validation, hidden/reference oracle, known traps, expected AW affordances, and baseline/AW fixture strategy for at least three first-pack episodes.",
+      "owner_surface": "tools/model-cli-harness/episodes/, docs/maintainer/model-cli-dogfooding-harness.md, and candidate episode metadata",
+      "proof": "Reviewable candidate records cover at least one intent-proof episode, one abstraction/reuse episode, and one restart or agent-switch-capable episode, with unsuitable repos rejected or deferred explicitly.",
+      "depends_on": [],
+      "parallel_with": [
+        "long-horizon-episode-schema"
+      ]
+    },
+    {
+      "id": "phase-runner-checkpoints",
+      "title": "Add phase runner and restart checkpoints",
+      "readiness": "ready",
+      "outcome": "A long-horizon episode runner can execute multiple phases against the same copied repo, capture checkpoint evidence after each phase, and hide prior transcript from resume phases when configured.",
+      "owner_surface": "scripts/model_cli_harness/long_horizon_episode.py or equivalent thin episode layer, scripts/model_cli_harness/run_model_cli_harness.py helpers, and tests",
+      "proof": "Dry-run and fake-adapter executed tests prove phase 2 sees phase 1 repo mutations, hidden-transcript resume omits prior chat, checkpoints capture diffs/transcripts/validation output, and existing single-scenario runs still work.",
+      "depends_on": [
+        "long-horizon-episode-schema"
+      ],
+      "parallel_with": []
+    },
+    {
+      "id": "agent-switch-variants",
+      "title": "Support same-agent and switched-agent variants",
+      "readiness": "ready",
+      "outcome": "Episode phases can select distinct adapters/models so the runner can compare baseline restart, AW-assisted restart, same-agent continuation, agent-switch continuation, and strong-to-weak continuation without provider-specific coupling.",
+      "owner_surface": "long-horizon episode runner, adapter rendering, run.json phase result shape, and tests",
+      "proof": "Dry-run output renders distinct phase commands with distinct adapters/models, and an executed fake-adapter test proves phase 2 uses the requested different adapter/model while preserving provider state isolation boundaries.",
+      "depends_on": [
+        "phase-runner-checkpoints"
+      ],
+      "parallel_with": [
+        "evaluator-evidence-bundle"
+      ]
+    },
+    {
+      "id": "evaluator-evidence-bundle",
+      "title": "Add evaluator-agent structured review pass",
+      "readiness": "ready",
+      "outcome": "The runner can invoke a separate evaluator adapter with a controlled evidence bundle and capture structured `long-horizon-evaluation/v1` output before hidden/reference oracle comparison.",
+      "owner_surface": "long-horizon episode runner, evaluator prompt/evidence bundle builder, evaluator result parser, and tests",
+      "proof": "Fake evaluator tests prove valid structured results are accepted, invalid evaluator JSON is captured as evaluator failure, evidence cites files/diffs/commands/transcripts/AW outputs, and hidden oracle material is excluded until after primary scoring.",
+      "depends_on": [
+        "long-horizon-episode-schema",
+        "phase-runner-checkpoints"
+      ],
+      "parallel_with": [
+        "agent-switch-variants"
+      ]
+    },
+    {
+      "id": "aw-on-off-fixture-pairing",
+      "title": "Add AW-on and AW-off episode pairing",
+      "readiness": "ready",
+      "outcome": "Episodes can run equivalent AW-assisted and baseline fixtures without contaminating baseline prompts or repo state, recording mode and comparison context in results.",
+      "owner_surface": "episode metadata, fixture preparation, prompt rendering, comparison result shape, and docs",
+      "proof": "A paired dry-run test renders AW-on and AW-off phases, baseline fixtures explicitly lack AW startup surfaces, task prompts remain equivalent except for mode setup, and result records mode without suppressing baseline contamination warnings.",
+      "depends_on": [
+        "long-horizon-episode-schema"
+      ],
+      "parallel_with": [
+        "phase-runner-checkpoints"
+      ]
+    },
+    {
+      "id": "first-continuity-episode-pack",
+      "title": "Build the first credible continuity episode pack",
+      "readiness": "needs-shaping",
+      "outcome": "At least three pinned episodes exist with setup, visible validation, hidden/reference oracle or rubric, known traps, expected mistake classes, and at least one forced restart plus one agent-switch-capable variant.",
+      "owner_surface": "tools/model-cli-harness/episodes/, fixture preparation scripts or metadata, docs/maintainer/model-cli-dogfooding-harness.md, and tests for episode validation",
+      "proof": "Episode validation proves generated-surface or equivalent ownership trap, reuse/abstraction trap, and intent-proof overclaim trap are represented; at least one episode supports baseline restart vs AW-assisted restart and at least one supports same-agent vs agent-switch continuation.",
+      "depends_on": [
+        "pinned-episode-candidate-curation",
+        "long-horizon-episode-schema",
+        "phase-runner-checkpoints",
+        "agent-switch-variants",
+        "aw-on-off-fixture-pairing"
+      ],
+      "parallel_with": []
+    },
+    {
+      "id": "comparison-reporting-and-routing",
+      "title": "Report mistake classes, AW effect, and follow-up routing",
+      "readiness": "needs-shaping",
+      "outcome": "Long-horizon result reports compare AW-on/AW-off and same-agent/agent-switch outcomes, summarize mistake classes, AW helped/hurt/missed affordance fields, proof/intent match, restartability, completion honesty, and recommended follow-up routing.",
+      "owner_surface": "long-horizon comparison report, model-task weakness ledger integration, docs, and issue/Memory/dismissal routing guidance",
+      "proof": "Comparison tests show retained/resolved/new mistake classes, evaluator evidence references, human-review-needed status, and follow-up routing into issue, Memory, docs, harness fix, or dismissal without creating hidden backlog.",
+      "depends_on": [
+        "evaluator-evidence-bundle",
+        "first-continuity-episode-pack"
+      ],
+      "parallel_with": []
+    }
+  ],
+  "dependency_assumptions": [
+    "The existing model CLI harness remains Tier 1 affordance probes; long-horizon support should be a thin episode/orchestration layer over it rather than a replacement.",
+    "Schema and candidate curation can proceed in parallel because both are hand-authored shaping work and neither needs executable orchestration first.",
+    "Phase runner checkpoints are the core implementation dependency for restart, agent switch, evaluator evidence, and AW-on/AW-off comparison.",
+    "Evaluator scoring must happen before hidden/reference oracle comparison so the primary judgment reflects the produced repo state, transcript, proof, and AW evidence.",
+    "The first continuity pack should start with three episodes, not a broad benchmark set; additional repos should wait until the runner and evaluator shape are credible."
+  ],
+  "parallelization_assumptions": [
+    "Episode schema and candidate curation are independent enough to promote separately.",
+    "Evaluator evidence-bundle work can proceed alongside agent-switch variants after checkpoint capture exists.",
+    "AW-on/AW-off fixture pairing can be developed alongside checkpoint mechanics if the schema lane has defined the mode fields.",
+    "Comparison/reporting should wait for at least one real or realistic continuity pack so report fields are evidence-driven rather than aspirational."
+  ],
+  "proof_expectations": [
+    "Each promoted lane must preserve existing model CLI harness dry-run defaults, disposable fixture isolation, adapter abstraction, and structured run output.",
+    "Long-horizon runner tests should use fake adapters for deterministic CI coverage; real model executions remain exploratory maintainer evidence.",
+    "Each executable lane should prove backward compatibility for existing single-scenario harness runs.",
+    "Episode pack lanes must record visible validation, hidden/reference oracle boundaries, known traps, and expected mistake classes before claiming scenario readiness.",
+    "Evaluator and comparison lanes must distinguish engineering judgment from deterministic pass/fail and cite concrete evidence from files, diffs, commands, transcripts, or AW outputs."
+  ],
+  "promotion_rule": "Promote one bounded lane at a time when it has a clear owner surface, fake-adapter proof path, and acceptance criteria tied to #1124; do not promote broad episode-pack or reporting work before schema and checkpoint mechanics exist.",
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1124",
+      "label": "#1124",
+      "role": "parent epic"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1115",
+      "label": "#1115",
+      "role": "agent OS capability map"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1090",
+      "label": "#1090",
+      "role": "engineering horizon thesis"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1092",
+      "label": "#1092",
+      "role": "reuse and abstraction pressure"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1094",
+      "label": "#1094",
+      "role": "intent proof strength"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1116",
+      "label": "#1116",
+      "role": "proof confidence"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1087",
+      "label": "#1087",
+      "role": "Planning concurrency and stale state"
+    },
+    {
+      "kind": "github-issue-comment",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1124#issuecomment-4533292801",
+      "label": "#1124 investigation comment",
+      "role": "harness gap and child-lane shaping"
+    },
+    {
+      "kind": "github-issue-comment",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1124#issuecomment-4533374862",
+      "label": "#1124 candidate repo investigation",
+      "role": "first-pack candidate evidence"
+    }
+  ],
+  "notes": "Decomposed from #1124 and its investigation comments. GitHub remains the discussion tracker; this checked-in Planning decomposition owns lane sequencing and promotion discipline."
+}
+
