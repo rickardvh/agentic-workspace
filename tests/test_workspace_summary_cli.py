@@ -450,6 +450,31 @@ candidates = [
 
     monkeypatch.setattr(cli.subprocess, "run", fake_run)
 
+    dry_run_exit_code = cli.main(
+        [
+            "external-intent",
+            "refresh-github",
+            "--target",
+            str(tmp_path),
+            "--state",
+            "all",
+            "--storage",
+            "cache",
+            "--dry-run",
+            "--format",
+            "json",
+        ]
+    )
+    dry_run_payload = json.loads(capsys.readouterr().out)
+
+    assert dry_run_exit_code == 0
+    stale_candidate = dry_run_payload["stale_planning_candidate_reconciliation"]["stale_candidates"][0]
+    assert stale_candidate["id"] == "github-10-stale"
+    assert stale_candidate["reconcile_command"] == (
+        "uv run agentic-workspace external-intent refresh-github --target . --state closed --storage cache "
+        "--apply-planning-candidates --format json"
+    )
+
     exit_code = cli.main(
         [
             "external-intent",

@@ -9911,7 +9911,7 @@ def _stale_planning_candidate_reconciliation(
                 "id": str(candidate.get("id", "")),
                 "refs": sorted(refs),
                 "title": str(candidate.get("title", "")),
-                "reconcile_command": f"uv run agentic-workspace planning close-item --target . --item {candidate.get('id', '')} --issue '{', '.join(sorted(refs))}' --format json",
+                "reconcile_command": "uv run agentic-workspace external-intent refresh-github --target . --state closed --storage cache --apply-planning-candidates --format json",
             }
         )
     if not stale:
