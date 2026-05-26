@@ -121,6 +121,9 @@ def test_decision_pressure_scaffolds_configured_decision_record(tmp_path: Path, 
     assert answer["configuration"]["target"] == "docs/decisions/"
     assert answer["existing_decisions"]["decision_count"] == 0
     assert "planning decision-scaffold" in answer["actions"]["scaffold"]["command"]
+    assert "--target ./repo" not in answer["actions"]["scaffold"]["command"]
+    assert answer["actions"]["scaffold"]["command_target"]["target"] == "<repo>"
+    assert answer["actions"]["scaffold"]["command_target"]["is_placeholder"] is True
 
     assert (
         cli.main(
@@ -243,6 +246,111 @@ def test_report_decision_pressure_surfaces_planning_promotion_candidate(tmp_path
     assert answer["closeout_decision_state"]["status"] == "candidate_unpromoted"
     assert answer["actions"]["promote_from_plan"]["available"] is True
     assert "planning decision-promote --from-plan" in answer["actions"]["promote_from_plan"]["command"]
+    assert "--target ./repo" not in answer["actions"]["promote_from_plan"]["command"]
+    assert answer["actions"]["promote_from_plan"]["command_target"]["target"] == "<repo>"
+
+
+def test_report_decision_pressure_surfaces_memory_decision_candidate_when_adr_target_appears(tmp_path: Path, monkeypatch, capsys) -> None:
+    from repo_memory_bootstrap import installer as memory_installer
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write(target / "docs" / "adr" / "README.md", "# ADRs\n", encoding="utf-8")
+
+    def _memory_report_with_typed_candidate(*, target=None):
+        return {
+            "module": "memory",
+            "health": "attention-needed",
+            "findings": [],
+            "habitual_pull": {},
+            "promotion_pressure": {
+                "status": "attention",
+                "candidate_count": 1,
+                "sample": [
+                    {
+                        "path": ".agentic-workspace/memory/repo/decisions/database-storage.md",
+                        "preferred_remediation": "Promote architecture decision candidate to decision record.",
+                        "promotion_target": "decision-record",
+                    }
+                ],
+            },
+        }
+
+    monkeypatch.setattr(memory_installer, "memory_report", _memory_report_with_typed_candidate)
+
+    assert cli.main(["report", "--target", str(target), "--section", "decision_pressure", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert answer["status"] == "attention"
+    assert answer["configuration"]["target"] == "docs/adr/"
+    assert answer["memory_pressure"]["status"] == "attention"
+    assert answer["memory_pressure"]["candidate_count"] == 1
+    assert answer["memory_pressure"]["sample"][0]["promotion_target"] == "decision-record"
+
+
+def test_report_closeout_trust_routes_architecture_decision_candidate_to_discovered_adr_target(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--preset", "planning"]) == 0
+    capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        'schema_version = 1\n\n[workspace]\ndefault_preset = "planning"\n',
+    )
+    _write(target / "docs" / "adr" / "README.md", "# ADRs\n", encoding="utf-8")
+    _write(target / "docs" / "adr" / "TEMPLATE.md", "# {{title}}\n\n{{decision}}\n", encoding="utf-8")
+    plan = target / ".agentic-workspace" / "planning" / "execplans" / "database-storage.plan.json"
+    _write_json(
+        plan,
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Database storage migration",
+            "active_milestone": {"id": "database-storage", "status": "active"},
+            "delegated_judgment": {
+                "requested outcome": "Complete the database storage migration.",
+                "hard constraints": "Do not hide architecture residue at closeout.",
+                "agent may decide locally": "Exact ADR title.",
+                "escalate when": "The migration decision is not architecture-worthy.",
+            },
+            "immediate_next_action": ["Close out database storage migration work."],
+            "completion_criteria": ["Closeout reports the database storage migration architecture decision candidate."],
+            "validation_commands": ["uv run agentic-workspace report --section closeout_trust --format json"],
+            "execution_run": {
+                "run status": "active",
+                "what happened": "Implemented a database storage migration from SQLite to MariaDB.",
+                "result for continuation": "Architecture decision should be recorded.",
+            },
+            "closure_check": {
+                "slice status": "active",
+                "closure decision": "route database storage migration decision before closeout",
+                "evidence carried forward": "report closeout_trust",
+            },
+        },
+    )
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        "[todo]\n"
+        "active_items = [\n"
+        "  { id = 'database-storage', title = 'Database storage migration', surface = '.agentic-workspace/planning/execplans/database-storage.plan.json' },\n"
+        "]\n"
+        "queued_items = []\n\n"
+        "[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
+
+    closeout = json.loads(capsys.readouterr().out)["answer"]
+    candidate = closeout["architecture_decision_candidate"]
+    assert candidate["status"] == "candidate"
+    assert candidate["primary_route"] == "decision-record"
+    assert candidate["decision_target"]["target"] == "docs/adr/"
+    assert "planning decision-scaffold" in candidate["route"]["command"]
+    assert "--target ./repo" not in candidate["route"]["command"]
+    assert candidate["route"]["command_target"]["target"] == "<repo>"
 
 
 def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, capsys) -> None:

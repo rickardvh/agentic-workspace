@@ -408,6 +408,8 @@ def test_skills_command_routes_architecture_decision_tasks_to_planning_decision_
     payload = json.loads(capsys.readouterr().out)
     assert payload["recommendations"][0]["id"] == "planning-new-plan-tighten"
     assert any("decision" in reason.lower() or "adr" in reason.lower() for reason in payload["recommendations"][0]["reasons"])
+    guidance = " ".join(payload["recommendations"][0]["follow_up_guidance"]).lower()
+    assert "decision-scaffold" in guidance or "decision-promote" in guidance
 
 
 def test_skills_command_recommends_review_skill_for_natural_review_request(tmp_path: Path, capsys) -> None:

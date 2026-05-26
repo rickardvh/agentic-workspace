@@ -317,6 +317,8 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
         proof_confidence = proof_confidence if isinstance(proof_confidence, dict) else {}
         architecture_decision = answer.get("architecture_decision_closeout", {})
         architecture_decision = architecture_decision if isinstance(architecture_decision, dict) else {}
+        architecture_candidate = architecture_decision.get("architecture_decision_candidate", {})
+        architecture_candidate = architecture_candidate if isinstance(architecture_candidate, dict) else {}
         terminal_action = answer.get("terminal_action", {})
         terminal_action = terminal_action if isinstance(terminal_action, dict) else {}
         durable_action = answer.get("durable_residue_action", {})
@@ -371,6 +373,12 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
             },
             "detail": detail_command,
         }
+        if architecture_candidate.get("status") == "candidate":
+            compact_answer["architecture_decision_candidate"] = {
+                key: architecture_candidate.get(key)
+                for key in ("status", "primary_route", "matched_markers", "decision_path_matches", "decision_target", "route")
+                if key in architecture_candidate
+            }
         return _localize_command_fields(compact_answer, cli_invoke=cli_invoke, target_arg=target_arg)
     if section == "agent_aids" and isinstance(answer, dict):
         storage = answer.get("storage", {})

@@ -846,6 +846,44 @@ def test_start_surfaces_architecture_decision_candidate_for_database_migration_w
     assert candidate["primary_route"] == "decision-record"
     assert candidate["decision_target"]["target"] == "docs/adr/"
     assert "planning decision-scaffold" in candidate["route"]["command"]
+    assert "--target ./repo" not in candidate["route"]["command"]
+    assert candidate["route"]["command_target"]["target"] == "<repo>"
+    assert candidate["route"]["command_target"]["is_placeholder"] is True
+
+
+def test_start_surfaces_typed_memory_fallback_for_database_migration_without_adr_target(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(target / ".agentic-workspace" / "config.toml", "schema_version = 1\n", encoding="utf-8")
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(target),
+                "--task",
+                "Migrate database storage from SQLite to MariaDB",
+                "--select",
+                "durable_intent_promotion",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    promotion = json.loads(capsys.readouterr().out)["values"]["durable_intent_promotion"]
+    candidate = promotion["architecture_decision_candidate"]
+    assert candidate["primary_route"] == "typed-memory-fallback"
+    assert candidate["decision_target"]["configured"] is False
+    assert candidate["route"]["target"] == ".agentic-workspace/memory/repo/decisions/"
+    assert "memory capture-note" in candidate["route"]["command"]
+    assert "architecture_decision_candidate" in candidate["route"]["command"]
+    assert "promotion_target: decision-record" in candidate["route"]["command"]
+    assert "--target ./repo" not in candidate["route"]["command"]
+    assert candidate["route"]["command_target"]["target"] == "<repo>"
 
 
 def test_start_keeps_adr_directory_quiet_for_tiny_typo_task(tmp_path: Path, capsys) -> None:

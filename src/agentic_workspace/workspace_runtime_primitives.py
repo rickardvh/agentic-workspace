@@ -5841,7 +5841,9 @@ def _decision_pressure_from_planning(planning_record: dict[str, Any] | None) -> 
 def _decision_pressure_from_memory(module_reports: list[dict[str, Any]]) -> dict[str, Any]:
     memory_report = next((report for report in module_reports if isinstance(report, dict) and report.get("module") == "memory"), None)
     consult = memory_report.get("habitual_pull", {}) if isinstance(memory_report, dict) else {}
-    promotion_pressure = consult.get("promotion_pressure", {}) if isinstance(consult, dict) else {}
+    promotion_pressure = memory_report.get("promotion_pressure", {}) if isinstance(memory_report, dict) else {}
+    if not isinstance(promotion_pressure, dict) or not promotion_pressure:
+        promotion_pressure = consult.get("promotion_pressure", {}) if isinstance(consult, dict) else {}
     if not isinstance(promotion_pressure, dict):
         return {"status": "unavailable", "candidate_count": 0, "sample": []}
     sample = []
@@ -5880,6 +5882,14 @@ def _decision_closeout_state(*, planning_pressure: dict[str, Any], config_info: 
     }
 
 
+def _decision_command_placeholder_payload() -> dict[str, Any]:
+    return {
+        "target": "<repo>",
+        "is_placeholder": True,
+        "rule": "Replace <repo> with the resolved workspace target, or omit --target when running from the target repo.",
+    }
+
+
 def _decision_pressure_payload(
     *, target_root: Path, config: WorkspaceConfig, module_reports: list[dict[str, Any]], cli_invoke: str = DEFAULT_CLI_INVOKE
 ) -> dict[str, Any]:
@@ -5890,7 +5900,7 @@ def _decision_pressure_payload(
     memory_pressure = _decision_pressure_from_memory(module_reports)
     closeout_state = _decision_closeout_state(planning_pressure=planning_pressure, config_info=config_info)
     scaffold_command = _command_with_cli_invoke(
-        command='agentic-workspace planning decision-scaffold --title "<title>" --summary "<decision>" --target ./repo --format json',
+        command='agentic-workspace planning decision-scaffold --title "<title>" --summary "<decision>" --target <repo> --format json',
         cli_invoke=cli_invoke,
     )
     task = planning_record.get("task", {}) if isinstance(planning_record, dict) else {}
@@ -5898,7 +5908,7 @@ def _decision_pressure_payload(
     promote_command = ""
     if plan_surface:
         promote_command = _command_with_cli_invoke(
-            command=f"agentic-workspace planning decision-promote --from-plan {plan_surface} --target ./repo --format json",
+            command=f"agentic-workspace planning decision-promote --from-plan {plan_surface} --target <repo> --format json",
             cli_invoke=cli_invoke,
         )
     pressure_count = int(planning_pressure.get("candidate_count", 0)) + int(memory_pressure.get("candidate_count", 0))
@@ -5918,11 +5928,13 @@ def _decision_pressure_payload(
             "scaffold": {
                 "available": bool(config_info.get("configured") and config_info.get("inside_target", True)),
                 "command": scaffold_command if config_info.get("configured") else "",
+                "command_target": _decision_command_placeholder_payload() if config_info.get("configured") else {},
                 "why": "Create a host decision record through AW instead of hand-editing the target file.",
             },
             "promote_from_plan": {
                 "available": bool(config_info.get("configured") and plan_surface),
                 "command": promote_command,
+                "command_target": _decision_command_placeholder_payload() if promote_command else {},
                 "why": "Promote active planning architecture_decision_promotion into the configured or discovered decision target.",
             },
         },
@@ -5944,12 +5956,23 @@ def _architecture_decision_closeout_payload(
         planning_record = {}
     pressure = _decision_pressure_from_planning(planning_record)
     closeout_state = _decision_closeout_state(planning_pressure=pressure, config_info=config_info)
-    return {
+    payload = {
         "kind": "agentic-workspace/architecture-decision-closeout/v1",
         **closeout_state,
         "promotion": pressure.get("architecture_decision_promotion", {}),
         "rule": "Architecture decisions are optional, but closeout should not hide an unpromoted decision candidate.",
     }
+    closeout_text = _planning_record_text_for_external_check(planning_record) if planning_record else ""
+    architecture_candidate = _architecture_decision_candidate_payload(
+        task_text=closeout_text,
+        target_root=target_root,
+        config=config,
+        changed_paths=[],
+        cli_invoke=config.cli_invoke if config is not None else DEFAULT_CLI_INVOKE,
+    )
+    if architecture_candidate.get("status") == "candidate":
+        payload["architecture_decision_candidate"] = architecture_candidate
+    return payload
 
 
 def _run_report_router_command(
@@ -12783,7 +12806,9 @@ _ARCHITECTURE_DECISION_MARKERS = (
 def _architecture_decision_signal(*, task_text: str | None, changed_paths: Sequence[str] = ()) -> dict[str, Any]:
     normalized = " ".join(str(task_text or "").lower().split())
     matched = [marker for marker in _ARCHITECTURE_DECISION_MARKERS if marker in normalized]
-    if "migration" in normalized and any(token in normalized for token in ("database", "storage", "schema")):
+    if any(marker in normalized for marker in ("migration", "migrate", "migrated", "migrating")) and any(
+        token in normalized for token in ("database", "storage", "schema")
+    ):
         matched.append("migration + database/storage/schema")
     if "change" in normalized and any(token in normalized for token in ("database", "storage engine", "schema", "api contract")):
         matched.append("change + architecture surface")
@@ -12817,12 +12842,12 @@ def _architecture_decision_candidate_payload(
     )
     has_decision_target = bool(config_info.get("configured") and config_info.get("inside_target", True))
     scaffold_command = _command_with_cli_invoke(
-        command='agentic-workspace planning decision-scaffold --title "<title>" --summary "<decision>" --target ./repo --format json',
+        command='agentic-workspace planning decision-scaffold --title "<title>" --summary "<decision>" --target <repo> --format json',
         cli_invoke=cli_invoke,
     )
     memory_command = _command_with_cli_invoke(
         command=(
-            "agentic-workspace memory capture-note --slug <slug> --summary "
+            "agentic-workspace memory capture-note --slug <slug> --target <repo> --summary "
             '"architecture_decision_candidate: <decision>; promotion_target: decision-record" '
             "--files <changed paths> --format json"
         ),
@@ -12841,6 +12866,7 @@ def _architecture_decision_candidate_payload(
         "route": {
             "target": str(config_info.get("target", "")) if has_decision_target else ".agentic-workspace/memory/repo/decisions/",
             "command": scaffold_command if has_decision_target else memory_command,
+            "command_target": _decision_command_placeholder_payload(),
             "why": "Route architecture decisions directly to the host decision-record target when one is configured or discoverable."
             if has_decision_target
             else "No decision-record target is configured or discoverable; preserve a typed promotion-ready memory candidate instead of a generic note.",
@@ -24865,7 +24891,12 @@ def _skills_payload(*, target_root: Path | None, task_text: str | None) -> dict[
     visible_agent_aids = [aid for aid in agent_aids if aid["status"] != "retired"]
     agent_aid_recommendations = _recommend_agent_aids(task_text=task_text, aids=visible_agent_aids) if task_text else []
     skill_recommendation_payloads = [
-        {**_skill_payload(skill=recommendation.skill), "score": recommendation.score, "reasons": list(recommendation.reasons)}
+        {
+            **_skill_payload(skill=recommendation.skill),
+            "score": recommendation.score,
+            "reasons": list(recommendation.reasons),
+            "follow_up_guidance": list(recommendation.skill.activation_hints.when),
+        }
         for recommendation in recommendations
     ]
     return {
@@ -24874,7 +24905,11 @@ def _skills_payload(*, target_root: Path | None, task_text: str | None) -> dict[
         "skills": [_skill_payload(skill=skill) for skill in skills],
         "recommendations": skill_recommendation_payloads,
         "top_recommendations": [
-            {key: item.get(key) for key in ("id", "path", "score", "summary", "reasons") if item.get(key) not in ("", None)}
+            {
+                key: item.get(key)
+                for key in ("id", "path", "score", "summary", "reasons", "follow_up_guidance")
+                if item.get(key) not in ("", None)
+            }
             for item in skill_recommendation_payloads[:3]
         ],
         "agent_aids": visible_agent_aids,
