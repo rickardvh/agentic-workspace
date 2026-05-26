@@ -13,7 +13,12 @@ import pytest
 from jsonschema import Draft202012Validator
 
 from agentic_workspace import contract_tooling
-from command_generation.generated_package_loader import load_generated_command_package_for_entrypoint
+
+COMMAND_GENERATION_SRC = Path(__file__).resolve().parents[1] / "internal" / "command-generation" / "src"
+if str(COMMAND_GENERATION_SRC) not in sys.path:
+    sys.path.insert(0, str(COMMAND_GENERATION_SRC))
+
+from command_generation.generated_package_loader import load_generated_command_package_for_entrypoint  # noqa: E402
 
 
 def _command_operation_ids(command: dict[str, object]) -> set[str]:
@@ -903,7 +908,7 @@ def test_command_generation_schema_boundary_is_checked() -> None:
     workspace_schema = (
         Path(__file__).resolve().parents[1] / "src" / "agentic_workspace" / "contracts" / "schemas" / "command_package_ir.schema.json"
     )
-    package_schema = Path(__file__).resolve().parents[1] / "packages" / "command-generation" / "schemas" / "command_package_ir.schema.json"
+    package_schema = Path(__file__).resolve().parents[1] / "internal" / "command-generation" / "schemas" / "command_package_ir.schema.json"
     assert workspace_schema.read_text(encoding="utf-8") == package_schema.read_text(encoding="utf-8")
 
 
@@ -912,7 +917,7 @@ def test_command_generation_loader_uses_explicit_ir_and_schema_paths() -> None:
 
     repo_root = Path(__file__).resolve().parents[1]
     ir_path = repo_root / "src" / "agentic_workspace" / "contracts" / "command_package_ir.json"
-    schema_path = repo_root / "packages" / "command-generation" / "schemas" / "command_package_ir.schema.json"
+    schema_path = repo_root / "internal" / "command-generation" / "schemas" / "command_package_ir.schema.json"
 
     manifest = load_command_package_ir(ir_path, schema_path)
 
@@ -1106,7 +1111,7 @@ def test_workspace_command_generation_integration_owns_repo_paths() -> None:
     spec.loader.exec_module(module)
 
     assert module.SOURCE_PATH == "src/agentic_workspace/contracts/command_package_ir.json"
-    assert module.SCHEMA_PATH == "packages/command-generation/schemas/command_package_ir.schema.json"
+    assert module.SCHEMA_PATH == "internal/command-generation/schemas/command_package_ir.schema.json"
     manifest = module.load_workspace_command_package_ir()
     assert manifest["schema_version"] == "agentic-workspace/command-package-ir/v1"
 
@@ -1121,7 +1126,7 @@ def test_generate_command_packages_wrapper_uses_workspace_consumer_integration()
 
 
 def test_command_package_generator_normalizes_line_endings() -> None:
-    generator = Path(__file__).resolve().parents[1] / "packages" / "command-generation" / "src" / "command_generation" / "generator.py"
+    generator = Path(__file__).resolve().parents[1] / "internal" / "command-generation" / "src" / "command_generation" / "generator.py"
     wrapper = Path(__file__).resolve().parents[1] / "scripts" / "generate" / "generate_command_packages.py"
 
     assert 'newline="\\n"' in generator.read_text(encoding="utf-8")
@@ -1130,7 +1135,7 @@ def test_command_package_generator_normalizes_line_endings() -> None:
 
 def test_command_package_generator_renders_planning_runtime_module_from_binding() -> None:
     repo_root = Path(__file__).resolve().parents[1]
-    generator_path = repo_root / "packages" / "command-generation" / "src" / "command_generation" / "generator.py"
+    generator_path = repo_root / "internal" / "command-generation" / "src" / "command_generation" / "generator.py"
     spec = importlib.util.spec_from_file_location("command_generation_generator_render_outputs", generator_path)
     assert spec is not None and spec.loader is not None
     generator = importlib.util.module_from_spec(spec)
@@ -1167,7 +1172,7 @@ def test_command_package_generator_renders_planning_runtime_module_from_binding(
 
 
 def test_generated_python_module_collects_nested_operation_refs(tmp_path: Path) -> None:
-    generator_path = Path(__file__).resolve().parents[1] / "packages" / "command-generation" / "src" / "command_generation" / "generator.py"
+    generator_path = Path(__file__).resolve().parents[1] / "internal" / "command-generation" / "src" / "command_generation" / "generator.py"
     spec = importlib.util.spec_from_file_location("command_generation_generator", generator_path)
     assert spec is not None and spec.loader is not None
     generator = importlib.util.module_from_spec(spec)
@@ -1243,7 +1248,7 @@ def test_generated_python_module_collects_nested_operation_refs(tmp_path: Path) 
 
 
 def test_generic_command_generation_package_has_no_workspace_imports() -> None:
-    package_root = Path(__file__).resolve().parents[1] / "packages" / "command-generation" / "src" / "command_generation"
+    package_root = Path(__file__).resolve().parents[1] / "internal" / "command-generation" / "src" / "command_generation"
     for path in package_root.rglob("*.py"):
         if path.name.endswith(("_generated_cli_package.py", "_operation_ir_executor.py", "_runtime_cli.py")):
             continue
@@ -1253,7 +1258,7 @@ def test_generic_command_generation_package_has_no_workspace_imports() -> None:
 
 
 def test_command_generation_readme_defines_lift_out_criteria() -> None:
-    readme = Path(__file__).resolve().parents[1] / "packages" / "command-generation" / "README.md"
+    readme = Path(__file__).resolve().parents[1] / "internal" / "command-generation" / "README.md"
     text = readme.read_text(encoding="utf-8")
 
     assert "## Lift-Out Readiness" in text
@@ -1593,6 +1598,7 @@ def test_generated_typescript_package_adapters_are_runnable() -> None:
             "@agentic-workspace/planning-cli",
             "agentic-planning",
             "agentic-planning",
+            "repo_planning_bootstrap.cli",
             "mutation-capable-adapter",
             "allowed-mutation-with-review",
         ),
@@ -1600,11 +1606,12 @@ def test_generated_typescript_package_adapters_are_runnable() -> None:
             "@agentic-workspace/memory-cli",
             "agentic-memory",
             "agentic-memory",
+            "repo_memory_bootstrap.cli",
             "mutation-capable-adapter",
             "allowed-mutation-with-review",
         ),
     }
-    for package, (package_name, entrypoint, runtime_command, maturity, weak_agent_routing) in packages.items():
+    for package, (package_name, entrypoint, runtime_command, runtime_module, maturity, weak_agent_routing) in packages.items():
         package_root = repo_root / "generated" / "typescript" / package
         package_json = json.loads((package_root / "package.json").read_text(encoding="utf-8"))
         resource_payload = json.loads((package_root / "resources" / "command_package.json").read_text(encoding="utf-8"))
@@ -1618,12 +1625,12 @@ def test_generated_typescript_package_adapters_are_runnable() -> None:
         metadata = package_json["agenticWorkspace"]
         assert metadata["fixtureOnly"] is False
         assert metadata["generationStatus"] == maturity
-        assert runtime_command in metadata["effectiveRuntimeCommand"]
+        assert runtime_module in metadata["effectiveRuntimeCommand"]
         assert metadata["maturity"]["id"] == maturity
         assert metadata["maturity"]["runnable"] is True
         assert metadata["maturity"]["weak_agent_routing"] == weak_agent_routing
         assert metadata["maturity"]["promotion_requires"]
-        assert runtime_command in cli_text
+        assert runtime_module in cli_text
         assert "function splitRuntimeCommand(commandLine)" in cli_text
         assert "spawnSync(runtimeExecutable, [...runtimeArgs, ...argv]" in cli_text
         assert "shell: true" not in cli_text

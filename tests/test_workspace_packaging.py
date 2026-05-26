@@ -191,6 +191,7 @@ def test_installed_workspace_stack_runs_fresh_repo_cli_sequence() -> None:
         tmpdir_path = Path(tmpdir)
         wheel_path = _build_artifact(tmpdir, "wheel")
         workspace_exe = _install_workspace_stack_venv(wheel_path=wheel_path, tmpdir_path=tmpdir_path)
+        assert _venv_site_package_entry_names(tmpdir_path / ".venv", "command_generation") == []
         target = tmpdir_path / "repo"
         target.mkdir()
         subprocess.run(["git", "init"], cwd=target, capture_output=True, text=True, check=True)
@@ -325,3 +326,14 @@ def _venv_script(venv_path: Path, name: str) -> Path:
     if os.name == "nt":
         return venv_path / "Scripts" / f"{name}.exe"
     return venv_path / "bin" / name
+
+
+def _venv_site_package_entry_names(venv_path: Path, prefix: str) -> list[str]:
+    if os.name == "nt":
+        site_packages = venv_path / "Lib" / "site-packages"
+    else:
+        candidates = sorted((venv_path / "lib").glob("python*/site-packages"))
+        assert candidates, f"site-packages not found under {venv_path}"
+        site_packages = candidates[0]
+    pattern = f"{prefix}*"
+    return sorted(path.name for path in site_packages.glob(pattern) if path.exists())

@@ -602,6 +602,13 @@
       "rationale": "The planning wheel force-includes the target-local primitive facade as private runtime import data; primitive implementation remains owned by command-generation."
     },
     {
+      "source_path": "generated/planning/python/primitives/primitive_executor.py",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/primitives/primitive_executor.py",
+      "classification": "maintainer/development only",
+      "owner": "generated primitive executor projection",
+      "rationale": "The planning wheel force-includes the target-local primitive executor as private runtime import data so shipped packages do not depend on the internal command-generation distribution."
+    },
+    {
       "source_path": "generated/planning/python/primitives/resources.py",
       "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/primitives/resources.py",
       "classification": "maintainer/development only",

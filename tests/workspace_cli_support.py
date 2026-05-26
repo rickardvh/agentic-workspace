@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -13,7 +14,12 @@ from jsonschema import Draft202012Validator
 from agentic_workspace import workspace_runtime_primitives
 from agentic_workspace.contract_tooling import authority_markers_manifest, cli_commands_manifest
 from agentic_workspace.result_adapter import adapt_action, adapt_module_result
-from command_generation.generated_package_loader import load_generated_command_module_for_entrypoint
+
+COMMAND_GENERATION_SRC = Path(__file__).resolve().parents[1] / "internal" / "command-generation" / "src"
+if str(COMMAND_GENERATION_SRC) not in sys.path:
+    sys.path.insert(0, str(COMMAND_GENERATION_SRC))
+
+from command_generation.generated_package_loader import load_generated_command_module_for_entrypoint  # noqa: E402
 
 _generated_cli = load_generated_command_module_for_entrypoint("agentic-workspace", "cli.py")
 

@@ -9848,11 +9848,19 @@ def _prepared_memory_learning_capture(record: dict[str, Any]) -> dict[str, str]:
 
 
 def _prepared_task_intent_promotion(record: dict[str, Any]) -> dict[str, Any]:
-    existing = _record_section_dict(record, "task_intent_promotion") or {}
+    raw_existing = _record_section_value(record, "task_intent_promotion")
+    existing = copy.deepcopy(raw_existing) if isinstance(raw_existing, dict) else {}
     durable_residue = _prepared_durable_residue(record)
     residue_status = durable_residue.get("status", "none").strip().lower() or "none"
     owner = durable_residue.get("canonical owner now", "").strip()
     decision = str(existing.get("decision", "")).strip()
+    needs_review = existing.get("needs review", True)
+    if isinstance(needs_review, str):
+        lowered = needs_review.strip().lower()
+        if lowered in {"true", "yes", "1"}:
+            needs_review = True
+        elif lowered in {"false", "no", "0"}:
+            needs_review = False
     if not decision or decision == "pending":
         if residue_status == "memory":
             decision = "memory"
@@ -9872,7 +9880,7 @@ def _prepared_task_intent_promotion(record: dict[str, Any]) -> dict[str, Any]:
         "target scope": existing.get("target scope") or owner,
         "proposed durable intent": existing.get("proposed durable intent") or durable_residue.get("motivation worth preserving", ""),
         "confidence": existing.get("confidence") or "low",
-        "needs review": existing.get("needs review", True),
+        "needs review": needs_review,
         "owner surface": existing.get("owner surface") or owner,
     }
 
@@ -9903,7 +9911,8 @@ def _prepared_canonical_core_closeout(
     validation_evidence: str = "",
     outcome_delivered: str = "",
 ) -> dict[str, Any]:
-    canonical_core = dict(_record_section_dict(record, "canonical_core") or {})
+    raw_canonical_core = _record_section_value(record, "canonical_core")
+    canonical_core = copy.deepcopy(raw_canonical_core) if isinstance(raw_canonical_core, dict) else {}
     proof = validation_evidence.strip() or "closeout proof recorded in proof_report."
     outcome = outcome_delivered.strip() or "bounded slice closeout completed."
     if _closeout_sequence_needs_normalization(canonical_core.get("proof_expectations")):
@@ -9918,7 +9927,8 @@ def _prepared_canonical_core_closeout(
 
 
 def _prepared_machine_readable_contract_closeout(*, record: dict[str, Any], validation_evidence: str) -> dict[str, Any]:
-    contract = dict(_record_section_dict(record, "machine_readable_contract") or {})
+    raw_contract = _record_section_value(record, "machine_readable_contract")
+    contract = copy.deepcopy(raw_contract) if isinstance(raw_contract, dict) else {}
     intent = dict(contract.get("intent", {})) if isinstance(contract.get("intent"), dict) else {}
     execution = dict(contract.get("execution", {})) if isinstance(contract.get("execution"), dict) else {}
     scope = dict(contract.get("scope", {})) if isinstance(contract.get("scope"), dict) else {}

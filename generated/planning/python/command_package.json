@@ -2484,6 +2484,7 @@
   "package_role": "planning-module-cli",
   "program": "agentic-planning",
   "python_runtime_binding": {
+    "default_runtime_command": "python -c \"import sys; from repo_planning_bootstrap.cli import main; raise SystemExit(main(sys.argv[1:]))\"",
     "entrypoint": "agentic-planning",
     "local_runtime_bindings": [
       {

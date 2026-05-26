@@ -1126,7 +1126,7 @@ def test_proof_changed_selector_routes_readme_to_docs_review(capsys) -> None:
     answer = payload["answer"]
     docs_diff = (
         "git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md "
-        "packages/memory/README.md packages/command-generation/README.md"
+        "packages/memory/README.md internal/command-generation/README.md"
     )
     assert [lane["id"] for lane in answer["selected_lanes"]] == ["repo_docs_review"]
     assert answer["selected_lanes"][0]["proof_kind"] == "diff-review"
@@ -1275,6 +1275,30 @@ def test_proof_changed_surfaces_compact_intent_proof_prompt(capsys) -> None:
     assert "proof strength" not in json.dumps(answer["required_commands"]).lower()
 
 
+def test_proof_changed_verbose_surfaces_proof_confidence(capsys) -> None:
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    proof_confidence = answer["proof_confidence"]
+    assert proof_confidence["confidence"] == "needs-review"
+    assert proof_confidence["claim_boundary"] == "slice"
+    assert proof_confidence["proven_dimensions"] == []
+    assert proof_confidence["unproven_dimensions"]
+    assert "Selected proof" in proof_confidence["residual_risk"]
+
+
 def test_proof_changed_selector_includes_planning_schema_reference_wrapper(capsys) -> None:
     assert (
         cli.main(
@@ -1355,7 +1379,7 @@ def test_proof_tiny_readme_profile_keeps_docs_only_validation_light(capsys) -> N
     encoded = json.dumps(payload)
     docs_diff = (
         "git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md "
-        "packages/memory/README.md packages/command-generation/README.md"
+        "packages/memory/README.md internal/command-generation/README.md"
     )
     assert payload["kind"] == "proof-next-decision/v1"
     assert payload["next"]["command"] == docs_diff

@@ -13,6 +13,7 @@ import copy
 import difflib
 import fnmatch
 import hashlib
+import importlib
 import io
 import json
 import os
@@ -27,7 +28,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, cast, overload
 
 from agentic_workspace import __version__, doctor
 from agentic_workspace import config as config_lib
@@ -130,14 +131,31 @@ from agentic_workspace.workspace_output import (
     _emit_report_text,
     _emit_setup_text,
 )
-from command_generation.generated_package_loader import (
-    load_generated_command_module_for_entrypoint,
-    load_generated_command_package_for_entrypoint,
-)
+
+_GENERATED_CLI_MODULES = {
+    "agentic-workspace": ("agentic_workspace._generated_cli_package_impl.cli", "generated.workspace.python.cli"),
+    "agentic-planning": ("repo_planning_bootstrap._generated_cli_package_impl.cli", "generated.planning.python.cli"),
+    "agentic-memory": ("repo_memory_bootstrap._generated_cli_package_impl.cli", "generated.memory.python.cli"),
+}
+
+
+def _load_generated_cli_module(entrypoint: str) -> Any:
+    try:
+        installed_module, source_module = _GENERATED_CLI_MODULES[entrypoint]
+    except KeyError as exc:
+        raise RuntimeError(f"unsupported generated CLI entrypoint: {entrypoint}") from exc
+    try:
+        return importlib.import_module(installed_module)
+    except ModuleNotFoundError as exc:
+        if exc.name != installed_module.rsplit(".cli", 1)[0]:
+            raise
+        repo_root = Path(__file__).resolve().parents[2]
+        sys.path.insert(0, str(repo_root))
+        return importlib.import_module(source_module)
 
 
 def build_generated_parser() -> Any:
-    return load_generated_command_package_for_entrypoint("agentic-workspace").build_generated_parser()
+    return _load_generated_cli_module("agentic-workspace").build_generated_parser()
 
 
 def build_generated_cli_package_parser() -> Any:
@@ -230,7 +248,7 @@ def _agentic_workspace_package_root() -> Path | None:
 
 
 def _invoked_cli_identity_payload(*, target_root: Path | None = None, compact: bool = False) -> dict[str, Any]:
-    module_file = load_generated_command_module_for_entrypoint("agentic-workspace", "cli.py").__file__
+    module_file = _load_generated_cli_module("agentic-workspace").__file__
     package_root = _agentic_workspace_package_root()
     module_path = Path(module_file).resolve() if module_file is not None else package_root or Path.cwd().resolve()
     argv0 = sys.argv[0] if sys.argv else ""
@@ -1452,9 +1470,7 @@ def _memory_module_argv(args: argparse.Namespace) -> list[str]:
 
 
 def _run_planning_front_door(args: argparse.Namespace) -> int:
-    from command_generation.generated_package_loader import load_generated_command_package_for_entrypoint
-
-    planning_main = load_generated_command_package_for_entrypoint("agentic-planning").main
+    planning_main = _load_generated_cli_module("agentic-planning").main
     buffer = io.StringIO()
     with contextlib.redirect_stdout(buffer):
         result = planning_main(_planning_module_argv(args))
@@ -1463,9 +1479,7 @@ def _run_planning_front_door(args: argparse.Namespace) -> int:
 
 
 def _run_memory_front_door(args: argparse.Namespace) -> int:
-    from command_generation.generated_package_loader import load_generated_command_package_for_entrypoint
-
-    memory_main = load_generated_command_package_for_entrypoint("agentic-memory").main
+    memory_main = _load_generated_cli_module("agentic-memory").main
     buffer = io.StringIO()
     with contextlib.redirect_stdout(buffer):
         result = memory_main(_memory_module_argv(args))
@@ -2292,6 +2306,170 @@ def _workspace_payload_source(relative: Path) -> Path:
 
 def _workspace_payload_bytes(relative: Path) -> bytes:
     return _workspace_payload_source(relative).read_bytes()
+
+
+def _host_ownership_ledger_text() -> str:
+    return """schema_version = 1
+
+[workspace]
+workflow_path = ".agentic-workspace/WORKFLOW.md"
+ownership_manifest_path = ".agentic-workspace/OWNERSHIP.toml"
+managed_root = ".agentic-workspace/"
+
+subsystems = []
+
+[ownership_classes.repo_owned]
+summary = "Repository-native state owned by the repo and not upgrade-replaceable by installed packages."
+
+[ownership_classes.managed_fence]
+summary = "Product-managed content inside an explicit fence in a repo-owned file."
+
+[ownership_classes.module_managed]
+summary = "Upgrade-replaceable content owned by one installed module under .agentic-workspace/."
+
+[[module_roots]]
+module = "workspace"
+path = ".agentic-workspace/"
+ownership = "module_managed"
+uninstall_policy = "remove-managed-files-only"
+
+[[module_roots]]
+module = "memory"
+path = ".agentic-workspace/memory/"
+ownership = "module_managed"
+uninstall_policy = "remove-managed-files-only"
+
+[[module_roots]]
+module = "planning"
+path = ".agentic-workspace/planning/"
+ownership = "module_managed"
+uninstall_policy = "remove-managed-files-only"
+
+[[managed_surfaces]]
+module = "workspace"
+path = ".agentic-workspace/WORKFLOW.md"
+kind = "workflow-contract"
+ownership = "module_managed"
+uninstall_policy = "remove-if-owned"
+
+[[managed_surfaces]]
+module = "workspace"
+path = ".agentic-workspace/OWNERSHIP.toml"
+kind = "ownership-ledger"
+ownership = "module_managed"
+uninstall_policy = "remove-if-owned"
+
+[[managed_surfaces]]
+module = "workspace"
+path = ".agentic-workspace/system-intent/WORKFLOW.md"
+kind = "system-intent-workflow"
+ownership = "module_managed"
+uninstall_policy = "remove-if-owned"
+
+[[managed_surfaces]]
+module = "memory"
+path = ".agentic-workspace/memory/**"
+kind = "module-root"
+ownership = "module_managed"
+uninstall_policy = "remove-if-owned"
+
+[[managed_surfaces]]
+module = "planning"
+path = ".agentic-workspace/planning/**"
+kind = "module-root"
+ownership = "module_managed"
+uninstall_policy = "remove-if-owned"
+
+[[fences]]
+name = "workspace-workflow-pointer"
+module = "workspace"
+file = "AGENTS.md"
+start = "<!-- agentic-workspace:workflow:start -->"
+end = "<!-- agentic-workspace:workflow:end -->"
+ownership = "managed_fence"
+uninstall_policy = "remove-fence-only"
+
+[[authority_surfaces]]
+concern = "startup-instructions"
+surface = "AGENTS.md"
+owner = "repo"
+ownership = "repo_owned"
+authority = "primary"
+summary = "Repo-level startup instructions and local operating constraints."
+
+[[authority_surfaces]]
+concern = "workspace-policy"
+surface = ".agentic-workspace/config.toml"
+owner = "repo"
+ownership = "repo_owned"
+authority = "primary"
+summary = "Repo-owned workspace policy, workflow obligations, and structured operating settings."
+
+[[authority_surfaces]]
+concern = "compact-planning-state"
+surface = ".agentic-workspace/planning/state.toml"
+owner = "planning"
+ownership = "module_managed"
+authority = "primary"
+summary = "Consolidated active queue and roadmap state owned by the planning package."
+
+[[authority_surfaces]]
+concern = "shared-workflow-contract"
+surface = ".agentic-workspace/WORKFLOW.md"
+owner = "workspace"
+ownership = "module_managed"
+authority = "primary"
+summary = "Shared workflow rules installed by the workspace layer."
+
+[[authority_surfaces]]
+concern = "ownership-ledger"
+surface = ".agentic-workspace/OWNERSHIP.toml"
+owner = "workspace"
+ownership = "module_managed"
+authority = "primary"
+summary = "Ownership ledger for managed paths, fences, and optional host-repo subsystem boundaries."
+
+[[authority_surfaces]]
+concern = "system-intent-mirror"
+surface = ".agentic-workspace/system-intent/intent.toml"
+owner = "workspace"
+ownership = "module_managed"
+authority = "primary"
+summary = "Workspace-owned mirrored system-intent contract consumed by package operations."
+
+[[authority_surfaces]]
+concern = "planning-install-tree"
+surface = ".agentic-workspace/planning/"
+owner = "planning"
+ownership = "module_managed"
+authority = "primary"
+summary = "Planning-owned installed workflow and helper surfaces."
+
+[[authority_surfaces]]
+concern = "memory-shared-support"
+surface = ".agentic-workspace/memory/"
+owner = "memory"
+ownership = "module_managed"
+authority = "primary"
+summary = "Memory-owned shared workflow, version, bootstrap, and skill support surfaces."
+
+[[authority_surfaces]]
+concern = "workspace-workflow-pointer"
+surface = "AGENTS.md#agentic-workspace:workflow"
+owner = "workspace"
+ownership = "managed_fence"
+authority = "fenced"
+summary = "Managed pointer block inside the repo-owned agent instructions file."
+
+[notes]
+purpose = "This file defines Agentic Workspace managed surfaces and optional host-repo ownership boundaries. Add host-specific [[subsystems]] entries here when useful."
+"""
+
+
+def _workspace_payload_bytes_for_target(relative: Path, *, target_root: Path) -> bytes:
+    if relative == Path(".agentic-workspace/OWNERSHIP.toml") and not _is_agentic_workspace_source_checkout(target_root):
+        return _host_ownership_ledger_text().encode("utf-8")
+    return _workspace_payload_bytes(relative)
 
 
 def _workspace_report(
@@ -3565,7 +3743,7 @@ def _workspace_init_or_upgrade_report(
         actions.append(config_action)
     for relative in WORKSPACE_PAYLOAD_FILES:
         destination = target_root / relative
-        source_bytes = _workspace_payload_bytes(relative)
+        source_bytes = _workspace_payload_bytes_for_target(relative, target_root=target_root)
         existing = destination.exists()
         if not existing:
             if not dry_run:
@@ -3740,7 +3918,7 @@ def _workspace_uninstall_report(
         if not destination.exists():
             actions.append({"kind": "skipped", "path": destination.as_posix(), "detail": "already absent"})
             continue
-        if destination.read_bytes() == _workspace_payload_bytes(relative):
+        if destination.read_bytes() == _workspace_payload_bytes_for_target(relative, target_root=target_root):
             removable_candidates.append(relative)
             continue
         ambiguous_payloads.append(relative)
@@ -7737,6 +7915,7 @@ def _report_closeout_trust_payload(
             "intent_satisfaction_check": intent_check,
             "acceptance_criteria_reconciliation": acceptance_reconciliation,
             "intent_proof_check": intent_proof_check,
+            "proof_confidence": _proof_confidence_payload(intent_proof=intent_proof_check),
             "architecture_decision_closeout": architecture_decision_closeout,
             "historical_review_artifacts": _historical_review_artifacts_policy(
                 planning_report={}, intent_validation={}, target_root=target_root
@@ -7775,6 +7954,7 @@ def _report_closeout_trust_payload(
             "intent_satisfaction_check": intent_check,
             "acceptance_criteria_reconciliation": acceptance_reconciliation,
             "intent_proof_check": intent_proof_check,
+            "proof_confidence": _proof_confidence_payload(intent_proof=intent_proof_check),
             "architecture_decision_closeout": architecture_decision_closeout,
             "historical_review_artifacts": _historical_review_artifacts_policy(
                 planning_report=planning_report, intent_validation={}, target_root=target_root
@@ -7866,6 +8046,7 @@ def _report_closeout_trust_payload(
         "intent_satisfaction_check": intent_satisfaction_check,
         "acceptance_criteria_reconciliation": acceptance_reconciliation,
         "intent_proof_check": intent_proof_check,
+        "proof_confidence": _proof_confidence_payload(intent_proof=intent_proof_check),
         "architecture_decision_closeout": architecture_decision_closeout,
         "historical_review_artifacts": _historical_review_artifacts_policy(
             planning_report=planning_report, intent_validation=intent_validation, target_root=target_root
@@ -10231,7 +10412,11 @@ def _authority_marker_for_path(path_text: str) -> dict[str, Any]:
         return _authority_marker_payload(marker_id="memory-surface", normalized=normalized)
     if "/bootstrap/" in normalized or normalized.endswith("/bootstrap"):
         return _authority_marker_payload(marker_id="package-bootstrap-payload", normalized=normalized)
-    if normalized.startswith("src/agentic_workspace/") or normalized.startswith("packages/"):
+    if (
+        normalized.startswith("src/agentic_workspace/")
+        or normalized.startswith("packages/")
+        or normalized.startswith("internal/command-generation/")
+    ):
         return _authority_marker_payload(marker_id="source", normalized=normalized)
     if normalized.startswith(".agentic-workspace/"):
         return _authority_marker_payload(marker_id="managed-workspace-surface", normalized=normalized)
@@ -10278,6 +10463,8 @@ def _boundary_warning_for_path(path_text: str) -> dict[str, Any]:
         warning = "Installed workspace surfaces are shared operational state; verify ownership before editing."
     elif normalized.startswith("packages/") and "/src/" in normalized:
         warning = "Package source edits may need matching payload or installed-surface proof before closeout."
+    elif normalized.startswith("internal/command-generation/"):
+        warning = "Internal command-generation edits must be proven through generated package freshness and conformance checks."
     elif marker["authority"] == "generated-adapter":
         warning = "Generated adapter content should be refreshed from its canonical source rather than hand-edited."
     return {"path": normalized, "authority": marker["authority"], "warning": warning, "requires_attention": warning is not None}
@@ -11614,6 +11801,8 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "acceptance_reconciliation",
         "objective_drift",
         "reuse_pressure",
+        "task_contract",
+        "change_impact",
         "detail_commands",
         "path_boundaries",
         "drill_down",
@@ -13520,7 +13709,338 @@ def _reuse_pressure_summary(*, state: str, finding_count: int, weak_hint_count: 
     return f"{finding_count} reuse-pressure finding(s) surfaced; inspect before adding another local implementation."
 
 
-def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text: str | None = None) -> dict[str, Any]:
+def _change_impact_owner_guess(*, path: str, ownership_answer: dict[str, Any], authority_marker: dict[str, Any]) -> str:
+    owner = str(ownership_answer.get("owner", "") or "").strip()
+    if owner:
+        return owner
+    primary_subsystem = ownership_answer.get("primary_subsystem")
+    if isinstance(primary_subsystem, dict) and str(primary_subsystem.get("id", "")).strip():
+        return f"subsystem:{primary_subsystem['id']}"
+    normalized = path.replace("\\", "/").strip("/")
+    if normalized.startswith(("src/agentic_workspace/", "generated/workspace/")):
+        return "workspace"
+    for module_name in ("planning", "memory", "command-generation"):
+        if normalized.startswith(f"packages/{module_name}/") or normalized.startswith(f"generated/{module_name}/"):
+            return module_name
+    if normalized.startswith(("docs/", "tests/", "scripts/", "README.md")):
+        return "repo"
+    if authority_marker.get("authority") == "adapter":
+        return "repo"
+    return "unknown"
+
+
+def _change_impact_surface_origin(
+    *, path: str, authority_marker: dict[str, Any], ownership_answer: dict[str, Any], cli_classification: dict[str, Any] | None
+) -> str:
+    role = str(cli_classification.get("role", "")) if cli_classification else ""
+    normalized = path.replace("\\", "/").strip("/")
+    ownership = str(ownership_answer.get("ownership", "") or "")
+    authority = str(authority_marker.get("authority", "") or "")
+    if role == "projection":
+        return "generated"
+    if role in {"generator", "hand-owned-executable"}:
+        return "source-authored"
+    if normalized.startswith("generated/") or normalized.startswith("docs/reference/") or authority in {"generated-adapter", "payload"}:
+        return "generated"
+    if (
+        normalized.startswith(".agentic-workspace/")
+        or authority in {"managed", "canonical"}
+        or ownership
+        in {
+            "module_managed",
+            "managed_fence",
+            "workspace_shared",
+        }
+    ):
+        return "managed"
+    if authority in {"source", "repo-owned", "adapter"}:
+        return "source-authored"
+    return "unknown"
+
+
+def _change_impact_lane_ids_for_path(*, path: str, proof: dict[str, Any]) -> list[str]:
+    selected_lane_ids = [str(lane.get("id", "")) for lane in proof.get("selected_lanes", []) if isinstance(lane, dict)]
+    lane_ids: list[str] = []
+
+    def add(lane_id: str | None) -> None:
+        if lane_id and lane_id in selected_lane_ids and lane_id not in lane_ids:
+            lane_ids.append(lane_id)
+
+    for lane in proof.get("selected_lanes", []):
+        if not isinstance(lane, dict):
+            continue
+        matched_paths = lane.get("matched_paths", [])
+        subsystem = lane.get("subsystem", {})
+        subsystem_paths = subsystem.get("matched_paths", []) if isinstance(subsystem, dict) else []
+        if path in matched_paths or path in subsystem_paths:
+            add(str(lane.get("id", "")))
+    cli_classification = _cli_authority_classification_for_path(path)
+    if cli_classification:
+        add(str(_PROOF_SELECTION_RULES.get("cli_authority", {}).get("lane", "")))
+    for rule in _PROOF_SELECTION_RULES.get("rules", []):
+        exact_matches = set(rule.get("exact", []))
+        prefixes = tuple(rule.get("prefixes", []))
+        if path in exact_matches or path.startswith(prefixes):
+            matched_lane = str(rule.get("lane", ""))
+            add(_docs_only_reduction_lane(changed_path=path, matched_lane=matched_lane) or matched_lane)
+            break
+    if not lane_ids:
+        add(str(_PROOF_SELECTION_RULES.get("fallback_lane", "")))
+    return lane_ids
+
+
+def _change_impact_path_payload(*, path: str, ownership_payload: dict[str, Any], proof: dict[str, Any], cli_invoke: str) -> dict[str, Any]:
+    ownership_answer, ownership_matched = _ownership_answer_for_path(ownership_payload, repo_path=path)
+    authority_marker = _authority_marker_for_path(path)
+    boundary = _boundary_warning_for_path(path)
+    cli_classification = _cli_authority_classification_for_path(path)
+    surface_origin = _change_impact_surface_origin(
+        path=path, authority_marker=authority_marker, ownership_answer=ownership_answer, cli_classification=cli_classification
+    )
+    owner = _change_impact_owner_guess(path=path, ownership_answer=ownership_answer, authority_marker=authority_marker)
+    refresh_command = authority_marker.get("refresh_command")
+    if cli_classification and cli_classification.get("regeneration_path"):
+        refresh_command = cli_classification.get("regeneration_path")
+    canonical_source = authority_marker.get("canonical_source")
+    if cli_classification and cli_classification.get("source_contract"):
+        canonical_source = cli_classification.get("source_contract")
+    facts = [
+        f"owner={owner}",
+        f"surface_origin={surface_origin}",
+        f"authority={authority_marker.get('authority')}",
+    ]
+    warnings: list[str] = []
+    hard_blockers: list[str] = []
+    if boundary.get("warning"):
+        warnings.append(str(boundary["warning"]))
+    if surface_origin == "managed" and path.replace("\\", "/").strip("/").startswith(".agentic-workspace/planning/"):
+        warnings.append("Managed Planning state is command-owned mutation state; prefer Planning/AW commands over direct edits.")
+    if not ownership_matched:
+        warnings.append("No explicit ownership ledger match; using path and authority-marker inference.")
+    if cli_classification and not bool(cli_classification.get("direct_edit_allowed", True)):
+        hard_blockers.append("Generated projection is not a direct-edit surface; edit its source contract or generator and refresh it.")
+    elif not bool(authority_marker.get("safe_to_edit", True)):
+        hard_blockers.append("Authority marker says this path is not safe to edit directly; route through its canonical source.")
+    related_contracts = []
+    if cli_classification:
+        for key in ("source_contract", "generator_contract"):
+            value = str(cli_classification.get(key, "") or "").strip()
+            if value:
+                related_contracts.append(value)
+    related_subsystems = ownership_answer.get("subsystems", []) if isinstance(ownership_answer.get("subsystems"), list) else []
+    likely_proof_lanes = _change_impact_lane_ids_for_path(path=path, proof=proof)
+    signal = "hard_blocker" if hard_blockers else "warning" if warnings else "fact"
+    return {
+        "path": path,
+        "signal": signal,
+        "owner": owner,
+        "ownership": ownership_answer.get("ownership", "unknown"),
+        "ownership_matched": ownership_matched,
+        "matched_by": ownership_answer.get("matched_by", "none" if not ownership_matched else "unknown"),
+        "authority": authority_marker.get("authority"),
+        "surface_origin": surface_origin,
+        "safe_to_edit": bool(authority_marker.get("safe_to_edit", True)) and not hard_blockers,
+        "canonical_source": canonical_source,
+        "refresh_command": _command_with_cli_invoke(command=refresh_command, cli_invoke=cli_invoke) if refresh_command else None,
+        "facts": facts,
+        "warnings": warnings,
+        "hard_blockers": hard_blockers,
+        "related": {
+            "contracts_or_docs": related_contracts,
+            "subsystems": related_subsystems,
+            "proof_lanes": likely_proof_lanes,
+        },
+    }
+
+
+def _change_impact_payload(*, target_root: Path, changed_paths: list[str], proof: dict[str, Any], cli_invoke: str) -> dict[str, Any]:
+    if not changed_paths:
+        return {
+            "kind": "agentic-workspace/change-impact/v1",
+            "status": "unavailable",
+            "reason": "changed paths are required before ownership, generatedness, and proof impact can be projected",
+            "paths": [],
+            "facts": [],
+            "warnings": [],
+            "hard_blockers": [],
+        }
+    ownership_payload = _ownership_payload(target_root=target_root, descriptors=_module_operations())
+    paths = [
+        _change_impact_path_payload(path=path, ownership_payload=ownership_payload, proof=proof, cli_invoke=cli_invoke)
+        for path in changed_paths
+    ]
+    facts = [f"{item['path']}: {fact}" for item in paths for fact in item["facts"]]
+    warnings = [f"{item['path']}: {warning}" for item in paths for warning in item["warnings"]]
+    hard_blockers = [f"{item['path']}: {blocker}" for item in paths for blocker in item["hard_blockers"]]
+    generated_count = sum(1 for item in paths if item.get("surface_origin") == "generated")
+    managed_count = sum(1 for item in paths if item.get("surface_origin") == "managed")
+    unknown_count = sum(1 for item in paths if item.get("owner") == "unknown" or item.get("surface_origin") == "unknown")
+    return {
+        "kind": "agentic-workspace/change-impact/v1",
+        "status": "present",
+        "changed_paths": changed_paths,
+        "path_count": len(paths),
+        "generated_path_count": generated_count,
+        "managed_path_count": managed_count,
+        "unknown_path_count": unknown_count,
+        "warning_count": len(warnings),
+        "hard_blocker_count": len(hard_blockers),
+        "paths": paths,
+        "facts": facts,
+        "warnings": warnings,
+        "hard_blockers": hard_blockers,
+        "proof_impact": {
+            "selected_lanes": [str(lane.get("id", "")) for lane in proof.get("selected_lanes", []) if isinstance(lane, dict)],
+            "required_commands": list(proof.get("required_commands", [])),
+            "detail_command": _command_with_cli_invoke(
+                command="agentic-workspace proof --verbose --changed <paths> --format json", cli_invoke=cli_invoke
+            ),
+        },
+        "rule": "Change impact is advisory unless hard_blockers is non-empty; it composes ownership, authority markers, generated-surface guidance, subsystem hints, and proof selection for the changed paths.",
+    }
+
+
+def _task_contract_payload(
+    *,
+    changed_paths: list[str],
+    task_intent: dict[str, Any],
+    acceptance: dict[str, Any],
+    proof: dict[str, Any],
+    execution_posture: dict[str, Any],
+    planning_safety_gate: dict[str, Any],
+    intent_acknowledgement: dict[str, Any],
+    handoff_requirements: dict[str, Any],
+) -> dict[str, Any]:
+    task_present = bool(task_intent.get("task_text_available"))
+    acceptance_items = acceptance.get("items", []) if isinstance(acceptance.get("items"), list) else []
+    capability = execution_posture.get("capability_posture", {}) if isinstance(execution_posture, dict) else {}
+    runtime_resolution = execution_posture.get("runtime_resolution", {}) if isinstance(execution_posture, dict) else {}
+    delegation_decision = execution_posture.get("delegation_decision", {}) if isinstance(execution_posture, dict) else {}
+    acceptance_guidance = proof.get("acceptance_guidance", {}) if isinstance(proof, dict) else {}
+    intent_proof = proof.get("intent_proof", {}) if isinstance(proof, dict) else {}
+    work_shape_facts = planning_safety_gate.get("work_shape_facts", {}) if isinstance(planning_safety_gate, dict) else {}
+
+    stop_conditions: list[str] = []
+    for source in (
+        handoff_requirements.get("stop_when") if isinstance(handoff_requirements, dict) else [],
+        work_shape_facts.get("stop_conditions") if isinstance(work_shape_facts, dict) else [],
+        proof.get("escalate_when") if isinstance(proof, dict) else [],
+    ):
+        if isinstance(source, list):
+            for item in source:
+                text = str(item).strip()
+                if text and text not in stop_conditions:
+                    stop_conditions.append(text)
+
+    missing_fields = []
+    if not task_present:
+        missing_fields.append("task_intent.task_text")
+    if not changed_paths:
+        missing_fields.append("changed_paths")
+    if not acceptance_items:
+        missing_fields.append("acceptance.items")
+    if not proof.get("required_commands"):
+        missing_fields.append("proof.required_commands")
+
+    return {
+        "kind": "agentic-workspace/task-contract/v1",
+        "status": "present" if not missing_fields else "present-with-gaps",
+        "authority": "assembled-view",
+        "rule": (
+            "Task contract assembles existing implement surfaces for orientation and closeout; it does not create durable "
+            "Planning state or override source fields."
+        ),
+        "changed_paths": changed_paths,
+        "source_fields": [
+            "changed_paths",
+            "task_intent",
+            "acceptance",
+            "proof",
+            "execution_posture",
+            "planning_safety_gate",
+            "intent_acknowledgement",
+            "handoff_requirements",
+        ],
+        "missing_fields": missing_fields,
+        "intent": {
+            "status": "present" if task_present else "absent",
+            "task_text_available": task_present,
+            "task_excerpt": task_intent.get("task_excerpt"),
+            "requested_outcomes": task_intent.get("requested_outcomes", []),
+            "task_argument_mode": task_intent.get("task_argument_mode"),
+            "source_fields": ["task_intent.task_text_available", "task_intent.requested_outcomes", "task_intent.task_excerpt"],
+            "missing_fields": [] if task_present else ["task_intent.task_text"],
+        },
+        "acceptance": {
+            "status": acceptance.get("status", "unknown"),
+            "closeout_required": bool(acceptance.get("closeout_required")),
+            "item_count": len(acceptance_items),
+            "requested_outcomes": acceptance.get("requested_outcomes", []),
+            "closeout_rule": acceptance.get("closeout_rule", ""),
+            "source_fields": ["acceptance.status", "acceptance.items", "acceptance.closeout_required", "acceptance.closeout_rule"],
+            "missing_fields": [] if acceptance_items else ["acceptance.items"],
+        },
+        "autonomy_and_escalation": {
+            "delegation_decision": delegation_decision.get("decision"),
+            "delegation_mode": delegation_decision.get("mode"),
+            "work_shape": capability.get("work_shape"),
+            "proof_burden": capability.get("proof_burden"),
+            "runtime_recommendation": runtime_resolution.get("recommendation") if isinstance(runtime_resolution, dict) else None,
+            "planning_safety": planning_safety_gate.get("status") if isinstance(planning_safety_gate, dict) else None,
+            "intent_acknowledgement": intent_acknowledgement.get("decision"),
+            "ask_human_when": intent_acknowledgement.get("ask_human_when"),
+            "source_fields": [
+                "execution_posture.delegation_decision",
+                "execution_posture.capability_posture",
+                "execution_posture.runtime_resolution",
+                "planning_safety_gate.status",
+                "intent_acknowledgement",
+            ],
+            "missing_fields": [],
+        },
+        "proof_expectations": {
+            "status": "present" if proof.get("required_commands") else "missing-required-commands",
+            "required_commands": proof.get("required_commands", []),
+            "intent_proof_status": intent_proof.get("status") if isinstance(intent_proof, dict) else None,
+            "acceptance_guidance": {
+                "status": acceptance_guidance.get("status") if isinstance(acceptance_guidance, dict) else None,
+                "closeout_required": acceptance_guidance.get("closeout_required") if isinstance(acceptance_guidance, dict) else None,
+                "acceptance_item_count": acceptance_guidance.get("acceptance_item_count")
+                if isinstance(acceptance_guidance, dict)
+                else None,
+            },
+            "broaden_when": proof.get("broaden_when", []),
+            "escalate_when": proof.get("escalate_when", []),
+            "source_fields": [
+                "proof.required_commands",
+                "proof.intent_proof.status",
+                "proof.acceptance_guidance",
+                "proof.broaden_when",
+                "proof.escalate_when",
+            ],
+            "missing_fields": [] if proof.get("required_commands") else ["proof.required_commands"],
+        },
+        "stop_conditions": {
+            "status": "present" if stop_conditions else "not-recorded",
+            "items": stop_conditions,
+            "source_fields": [
+                "handoff_requirements.stop_when",
+                "planning_safety_gate.work_shape_facts.stop_conditions",
+                "proof.escalate_when",
+            ],
+            "missing_fields": [] if stop_conditions else ["handoff_requirements.stop_when"],
+        },
+    }
+
+
+def _implement_payload(
+    *,
+    target_root: Path,
+    changed_paths: list[str],
+    task_text: str | None = None,
+    include_change_impact: bool = True,
+    include_task_contract: bool = True,
+) -> dict[str, Any]:
     implementer_template = _CONTEXT_TEMPLATES["implementer_context"]
     normalized_paths = _normalize_changed_paths(changed_paths)
     config = _load_workspace_config(target_root=target_root)
@@ -13693,6 +14213,21 @@ def _implement_payload(*, target_root: Path, changed_paths: list[str], task_text
             "planning safety gate requires active planning ownership",
             *payload["handoff_requirements"]["stop_when"],
         ]
+    if include_task_contract:
+        payload["task_contract"] = _task_contract_payload(
+            changed_paths=normalized_paths,
+            task_intent=task_intent,
+            acceptance=acceptance,
+            proof=proof,
+            execution_posture=execution_posture,
+            planning_safety_gate=planning_safety_gate,
+            intent_acknowledgement=payload["intent_acknowledgement"],
+            handoff_requirements=payload["handoff_requirements"],
+        )
+    if include_change_impact:
+        payload["change_impact"] = _change_impact_payload(
+            target_root=target_root, changed_paths=normalized_paths, proof=proof, cli_invoke=config.cli_invoke
+        )
     return payload
 
 
@@ -13834,6 +14369,8 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "context.acceptance_reconciliation",
                 "context.objective_drift",
                 "context.reuse_pressure",
+                "task_contract",
+                "change_impact",
                 "context.delegation_decision",
                 "context.routing",
             ],
@@ -15341,6 +15878,14 @@ def _execution_posture_payload(
     }
 
 
+@overload
+def _command_with_cli_invoke(*, command: str, cli_invoke: str) -> str: ...
+
+
+@overload
+def _command_with_cli_invoke(*, command: None, cli_invoke: str) -> None: ...
+
+
 def _command_with_cli_invoke(*, command: str | None, cli_invoke: str) -> str | None:
     if command is None:
         return None
@@ -16035,7 +16580,51 @@ def _validate_intent_lifecycle_fields(*, surface: str, item: dict[str, Any]) -> 
         raise WorkspaceUsageError(f"{surface} confidence must be one of: {accepted}.")
 
 
-def _default_subsystem_intent_text() -> str:
+def _render_subsystem_intent_text(subsystems: list[dict[str, Any]]) -> str:
+    rule = "Subsystem intent is durable scoped decision pressure, not active task state by default."
+    lines = ["schema_version = 1", f'kind = "{SUBSYSTEM_INTENT_KIND}"', f"rule = {json.dumps(rule)}"]
+    if not subsystems:
+        lines.extend(["subsystems = []", ""])
+        return "\n".join(lines)
+    for subsystem in subsystems:
+        raw_records = subsystem.get("source_records", [])
+        records = raw_records if isinstance(raw_records, list) else []
+        source_records = [
+            "{ "
+            + ", ".join(
+                [
+                    f"source_type = {json.dumps(str(record.get('source_type', '')))}",
+                    f"ref = {json.dumps(str(record.get('ref', '')))}",
+                    f"summary = {json.dumps(str(record.get('summary', '')))}",
+                ]
+            )
+            + " }"
+            for record in records
+            if isinstance(record, dict)
+        ]
+        lines.extend(
+            [
+                "",
+                "[[subsystems]]",
+                f"id = {json.dumps(subsystem['id'])}",
+                f"scope = {json.dumps(subsystem['scope'])}",
+                f"status = {json.dumps(subsystem['status'])}",
+                f"summary = {json.dumps(subsystem['summary'])}",
+                f"governing_intents = {json.dumps(subsystem['governing_intents'])}",
+                f"anti_intents = {json.dumps(subsystem['anti_intents'])}",
+                f"decision_tests = {json.dumps(subsystem['decision_tests'])}",
+                f"confidence = {json.dumps(subsystem['confidence'])}",
+                f"needs_review = {('true' if subsystem['needs_review'] else 'false')}",
+                f"source_records = [{', '.join(source_records)}]",
+            ]
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _default_subsystem_intent_text(*, target_root: Path) -> str:
+    if not _is_agentic_workspace_source_checkout(target_root):
+        return _render_subsystem_intent_text([])
     subsystems: list[dict[str, Any]] = [
         {
             "id": "planning",
@@ -16093,42 +16682,7 @@ def _default_subsystem_intent_text() -> str:
             ],
         },
     ]
-    rule = "Subsystem intent is durable scoped decision pressure, not active task state by default."
-    lines = ["schema_version = 1", f'kind = "{SUBSYSTEM_INTENT_KIND}"', f"rule = {json.dumps(rule)}"]
-    for subsystem in subsystems:
-        raw_records = subsystem.get("source_records", [])
-        records = raw_records if isinstance(raw_records, list) else []
-        source_records = [
-            "{ "
-            + ", ".join(
-                [
-                    f"source_type = {json.dumps(str(record.get('source_type', '')))}",
-                    f"ref = {json.dumps(str(record.get('ref', '')))}",
-                    f"summary = {json.dumps(str(record.get('summary', '')))}",
-                ]
-            )
-            + " }"
-            for record in records
-            if isinstance(record, dict)
-        ]
-        lines.extend(
-            [
-                "",
-                "[[subsystems]]",
-                f"id = {json.dumps(subsystem['id'])}",
-                f"scope = {json.dumps(subsystem['scope'])}",
-                f"status = {json.dumps(subsystem['status'])}",
-                f"summary = {json.dumps(subsystem['summary'])}",
-                f"governing_intents = {json.dumps(subsystem['governing_intents'])}",
-                f"anti_intents = {json.dumps(subsystem['anti_intents'])}",
-                f"decision_tests = {json.dumps(subsystem['decision_tests'])}",
-                f"confidence = {json.dumps(subsystem['confidence'])}",
-                f"needs_review = {('true' if subsystem['needs_review'] else 'false')}",
-                f"source_records = [{', '.join(source_records)}]",
-            ]
-        )
-    lines.append("")
-    return "\n".join(lines)
+    return _render_subsystem_intent_text(subsystems)
 
 
 def _load_subsystem_intent(*, target_root: Path) -> dict[str, Any]:
@@ -16530,7 +17084,7 @@ def _sync_system_intent_mirror(*, target_root: Path, config: WorkspaceConfig, dr
         )
     subsystem_path = target_root / WORKSPACE_SUBSYSTEM_INTENT_PATH
     if not subsystem_path.exists():
-        subsystem_text = _default_subsystem_intent_text()
+        subsystem_text = _default_subsystem_intent_text(target_root=target_root)
         if not dry_run:
             subsystem_path.parent.mkdir(parents=True, exist_ok=True)
             subsystem_path.write_text(subsystem_text, encoding="utf-8")
@@ -18858,6 +19412,14 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
     return 0
 
 
+def _selector_requests_change_impact(select: str | None) -> bool:
+    return any(token == "change_impact" or token.startswith("change_impact.") for token in _selector_tokens(select))
+
+
+def _selector_requests_task_contract(select: str | None) -> bool:
+    return any(token == "task_contract" or token.startswith("task_contract.") for token in _selector_tokens(select))
+
+
 def _run_implement_context_adapter(args: argparse.Namespace) -> int:
     target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
     _validate_target_root(command_name="implement", target_root=target_root)
@@ -18866,9 +19428,24 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
         raise WorkspaceUsageError("Use either --task or --task-file, not both.")
     if not task_text:
         task_text = _read_task_text_from_file(target_root=target_root, task_file=getattr(args, "task_file", None))
-    payload = _implement_payload(target_root=target_root, changed_paths=list(getattr(args, "changed", []) or []), task_text=task_text)
-    if _diagnostic_profile(args, default="tiny") == "tiny":
-        payload = _tiny_implement_payload(payload)
+    profile = _diagnostic_profile(args, default="tiny")
+    selected_fields = getattr(args, "select", None)
+    change_impact_selected = _selector_requests_change_impact(selected_fields)
+    task_contract_selected = _selector_requests_task_contract(selected_fields)
+    full_payload = _implement_payload(
+        target_root=target_root,
+        changed_paths=list(getattr(args, "changed", []) or []),
+        task_text=task_text,
+        include_change_impact=(profile != "tiny" or change_impact_selected),
+        include_task_contract=(profile != "tiny" or task_contract_selected),
+    )
+    payload = full_payload
+    if profile == "tiny":
+        payload = _tiny_implement_payload(full_payload)
+        if task_contract_selected:
+            payload["task_contract"] = full_payload["task_contract"]
+        if change_impact_selected:
+            payload["change_impact"] = full_payload["change_impact"]
     if getattr(args, "select", None):
         payload = _select_payload_fields(payload, select=getattr(args, "select"), source_command="implement")
     _emit_payload(payload=payload, format_name=args.format)
@@ -20845,6 +21422,62 @@ def _intent_proof_prompt_payload(
     }
 
 
+def _proof_confidence_payload(
+    *,
+    intent_proof: dict[str, Any],
+    proof_execution_evidence: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    intent_proof = intent_proof if isinstance(intent_proof, dict) else {}
+    proof_execution_evidence = proof_execution_evidence if isinstance(proof_execution_evidence, dict) else {}
+    status = str(intent_proof.get("status", "not_recorded")).strip().lower().replace("-", "_") or "not_recorded"
+    claim_boundary = str(intent_proof.get("claim_boundary", "slice")).strip() or "slice"
+    proven_dimensions = [str(item) for item in _list_payload(intent_proof.get("proof_dimensions")) if str(item).strip()][:5]
+    unproven_dimensions = [str(item) for item in _list_payload(intent_proof.get("unproven_after_tests")) if str(item).strip()][:5]
+    intended_behavior = [str(item) for item in _list_payload(intent_proof.get("intended_behavior")) if str(item).strip()][:5]
+    if status == "regression_only" and not proven_dimensions:
+        proven_dimensions = ["local regression behavior"]
+    if status in {"not_recorded", "needs_agent_judgment"} and not unproven_dimensions:
+        unproven_dimensions = intended_behavior or ["intended behavior has not been compared to proof"]
+    elif status == "regression_only" and not unproven_dimensions:
+        unproven_dimensions = [
+            "representative user path",
+            "negative or boundary case",
+            "integration or consumer behavior",
+        ]
+
+    confidence_by_status = {
+        "sufficient_for_claim": "high",
+        "representative": "medium",
+        "regression_only": "low",
+        "not_recorded": "low",
+        "needs_review": "needs-review",
+        "needs_agent_judgment": "needs-review",
+    }
+    residual_risk_by_status = {
+        "sufficient_for_claim": "Proof confidence supports the stated claim boundary; remaining risk is ordinary unlisted behavior.",
+        "representative": "Representative proof is present, but broader work or parent closure may still need closeout reconciliation.",
+        "regression_only": "Proof may cover the local patch while leaving representative user, boundary, or consumer behavior unproven.",
+        "not_recorded": "Proof execution may be recorded, but proof confidence was not recorded.",
+        "needs_review": "Human or domain review is required before treating proof as sufficient for the claim.",
+        "needs_agent_judgment": "Selected proof still needs agent judgment against the intended behavior before completion can be claimed.",
+    }
+    return {
+        "kind": "agentic-workspace/proof-confidence/v1",
+        "status": "present",
+        "source": "intent_proof",
+        "intent_proof_status": status,
+        "confidence": confidence_by_status.get(status, "needs-review"),
+        "claim_boundary": claim_boundary,
+        "proven_dimensions": proven_dimensions,
+        "unproven_dimensions": unproven_dimensions,
+        "residual_risk": residual_risk_by_status.get(
+            status, "Proof confidence cannot be classified from the available intent-proof evidence."
+        ),
+        "evidence_state": str(proof_execution_evidence.get("status", "")) or "unknown",
+        "rule": "Proof confidence interprets proof strength; it does not execute proof or score test quality automatically.",
+    }
+
+
 def _proof_completion_options(*, required_commands: list[str], manual_verification: dict[str, Any] | None) -> list[dict[str, Any]]:
     options: list[dict[str, Any]] = [
         _completion_option(
@@ -21335,6 +21968,7 @@ def _proof_selection_for_changed_paths(
         )
         for command in optional_commands
     ]
+    intent_proof = _intent_proof_prompt_payload(task_text=task_text, acceptance=acceptance, claim_boundary="slice")
     proof_selection = {
         "kind": "proof-selection/v1",
         "changed_paths": changed_paths,
@@ -21381,7 +22015,11 @@ def _proof_selection_for_changed_paths(
         "unavailable_commands": unavailable_commands,
         "host_policy_blocked_commands": host_policy_blocked_commands,
         "proof_execution_evidence": proof_execution_evidence,
-        "intent_proof": _intent_proof_prompt_payload(task_text=task_text, acceptance=acceptance, claim_boundary="slice"),
+        "intent_proof": intent_proof,
+        "proof_confidence": _proof_confidence_payload(
+            intent_proof=intent_proof,
+            proof_execution_evidence=proof_execution_evidence,
+        ),
         "proof_route_decision": proof_route_decision,
         "proof_route_explanation": proof_route_explanation,
         "proof_next_decision": proof_next_decision,

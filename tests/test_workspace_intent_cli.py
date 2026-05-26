@@ -40,8 +40,10 @@ def test_system_intent_command_sync_refreshes_source_metadata_without_mechanical
     assert 'path = "README.md"' in mirror_text
     subsystem_text = (tmp_path / ".agentic-workspace/system-intent/subsystems.toml").read_text(encoding="utf-8")
     assert 'kind = "agentic-workspace/subsystem-intent-set/v1"' in subsystem_text
-    assert 'id = "planning"' in subsystem_text
-    assert payload["subsystem_intent"]["subsystem_count"] == 2
+    assert 'id = "planning"' not in subsystem_text
+    assert 'id = "memory"' not in subsystem_text
+    assert "subsystems = []" in subsystem_text
+    assert payload["subsystem_intent"]["subsystem_count"] == 0
     assert payload["decision_projection"]["task_intent"]["role"] == "bounded and closable"
 
 

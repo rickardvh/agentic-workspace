@@ -180,6 +180,237 @@ def test_implement_groups_generated_reuse_pressure_under_source_owner(tmp_path: 
     assert [item["kind"] for item in payload["findings"]] == ["generated_artifact_source_owner"]
 
 
+def test_implement_selector_surfaces_changed_path_impact_map(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "OWNERSHIP.toml",
+        "schema_version = 1\n\n"
+        "[[authority_surfaces]]\n"
+        'concern = "startup-instructions"\n'
+        'surface = "AGENTS.md"\n'
+        'owner = "repo"\n'
+        'ownership = "repo_owned"\n'
+        'authority = "primary"\n'
+        'summary = "startup"\n\n'
+        "[[module_roots]]\n"
+        'module = "planning"\n'
+        'path = ".agentic-workspace/planning/"\n'
+        'ownership = "module_managed"\n'
+        'uninstall_policy = "remove-managed-files-only"\n\n'
+        "[[subsystems]]\n"
+        'id = "workspace-runtime"\n'
+        'paths = ["src/agentic_workspace/**"]\n'
+        'owns = ["workspace runtime behavior"]\n'
+        'does_not_own = ["planning state semantics"]\n'
+        'proof = ["uv run pytest tests/test_workspace_implement_cli.py -q"]\n'
+        'escalate_when = ["runtime contract changes"]\n',
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "generated/workspace/python/command_package.json",
+                ".agentic-workspace/planning/state.toml",
+                "scratch/unknown.adapter",
+                "--select",
+                "change_impact",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    impact = json.loads(capsys.readouterr().out)["values"]["change_impact"]
+    by_path = {item["path"]: item for item in impact["paths"]}
+    source = by_path["src/agentic_workspace/workspace_runtime_primitives.py"]
+    assert source["owner"] == "subsystem:workspace-runtime"
+    assert source["surface_origin"] == "source-authored"
+    assert source["related"]["subsystems"][0]["id"] == "workspace-runtime"
+    assert "subsystem:workspace-runtime" in source["related"]["proof_lanes"]
+
+    generated = by_path["generated/workspace/python/command_package.json"]
+    assert generated["surface_origin"] == "generated"
+    assert generated["signal"] == "hard_blocker"
+    assert generated["safe_to_edit"] is False
+    assert generated["canonical_source"] == "src/agentic_workspace/contracts/command_package_ir.json"
+    assert generated["refresh_command"] == "uv run python scripts/check/check_generated_command_packages.py"
+    assert "cli_authority" in generated["related"]["proof_lanes"]
+
+    managed = by_path[".agentic-workspace/planning/state.toml"]
+    assert managed["owner"] == "planning"
+    assert managed["surface_origin"] == "managed"
+    assert managed["matched_by"] == "module_root"
+    assert managed["signal"] == "warning"
+    assert managed["safe_to_edit"] is True
+    assert any("command-owned mutation" in warning for warning in managed["warnings"])
+
+    unknown = by_path["scratch/unknown.adapter"]
+    assert unknown["owner"] == "unknown"
+    assert unknown["ownership_matched"] is False
+    assert unknown["signal"] == "warning"
+    assert "No explicit ownership ledger match" in unknown["warnings"][0]
+
+    assert impact["generated_path_count"] == 1
+    assert impact["managed_path_count"] == 1
+    assert impact["unknown_path_count"] == 1
+    assert impact["hard_blocker_count"] == 1
+    assert impact["proof_impact"]["required_commands"]
+
+
+def test_implement_selector_surfaces_task_contract_view(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "Makefile", "test-workspace:\n\tpytest tests\n\nlint-workspace:\n\truff check src tests\n")
+    _write(tmp_path / "README.md", "hello\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "README.md",
+                "--task",
+                "Update README wording",
+                "--select",
+                "task_contract",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    contract = json.loads(capsys.readouterr().out)["values"]["task_contract"]
+    assert contract["kind"] == "agentic-workspace/task-contract/v1"
+    assert contract["status"] == "present"
+    assert contract["authority"] == "assembled-view"
+    assert contract["changed_paths"] == ["README.md"]
+    assert "task_intent" in contract["source_fields"]
+    assert contract["intent"]["status"] == "present"
+    assert contract["intent"]["missing_fields"] == []
+    assert contract["acceptance"]["closeout_required"] is True
+    assert contract["acceptance"]["item_count"] == 3
+    assert contract["autonomy_and_escalation"]["delegation_decision"] in {
+        "execute-locally",
+        "stay-local",
+        "suggest-delegation",
+        "manual-handoff",
+        "clarify-first",
+    }
+    assert contract["proof_expectations"]["status"] == "present"
+    assert contract["proof_expectations"]["required_commands"]
+    assert contract["proof_expectations"]["intent_proof_status"] in {"prompt-required", "needs-agent-judgment"}
+    assert contract["stop_conditions"]["status"] == "present"
+    assert "proof.escalate_when" in contract["stop_conditions"]["source_fields"]
+
+
+def test_implement_task_contract_names_missing_task_inputs(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "Makefile", "test-workspace:\n\tpytest tests\n\nlint-workspace:\n\truff check src tests\n")
+    _write(tmp_path / "README.md", "hello\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "README.md",
+                "--select",
+                "task_contract",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    contract = json.loads(capsys.readouterr().out)["values"]["task_contract"]
+    assert contract["status"] == "present-with-gaps"
+    assert contract["intent"]["status"] == "absent"
+    assert contract["intent"]["missing_fields"] == ["task_intent.task_text"]
+    assert "task_intent.task_text" in contract["missing_fields"]
+    assert "acceptance.items" in contract["missing_fields"]
+    assert contract["proof_expectations"]["status"] == "present"
+    assert contract["changed_paths"] == ["README.md"]
+
+
+def test_implement_tiny_profile_does_not_compute_change_impact(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "README.md", "hello\n")
+
+    def fail_change_impact(**_: object) -> dict[str, object]:
+        raise AssertionError("ordinary tiny implement output should not build change_impact")
+
+    monkeypatch.setattr(cli, "_change_impact_payload", fail_change_impact)
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "README.md",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "implementer-context-tiny/v1"
+    assert "change_impact" not in payload
+    assert "change_impact" not in payload["context"]
+
+
+def test_implement_tiny_profile_does_not_compute_task_contract(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "README.md", "hello\n")
+
+    def fail_task_contract(**_: object) -> dict[str, object]:
+        raise AssertionError("ordinary tiny implement output should not build task_contract")
+
+    monkeypatch.setattr(cli, "_task_contract_payload", fail_task_contract)
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "README.md",
+                "--task",
+                "Update README wording",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "implementer-context-tiny/v1"
+    assert "task_contract" not in payload
+    assert "task_contract" not in payload["context"]
+    assert "task_contract" in payload["drill_down"]["available_selectors"]
+
+
 def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)

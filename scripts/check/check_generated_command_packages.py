@@ -22,7 +22,7 @@ if str(GENERATOR_SCRIPT_ROOT) not in sys.path:
     sys.path.insert(0, str(GENERATOR_SCRIPT_ROOT))
 for SOURCE_ROOT in (
     REPO_ROOT / "src",
-    REPO_ROOT / "packages" / "command-generation" / "src",
+    REPO_ROOT / "internal" / "command-generation" / "src",
     REPO_ROOT / "packages" / "planning" / "src",
     REPO_ROOT / "packages" / "memory" / "src",
 ):
@@ -204,8 +204,10 @@ GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST = {
     ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json": (
         "historical generated target-layout migration context"
     ),
-    "packages/command-generation/src/command_generation/generated_package_loader.py": "legacy loader compatibility wrappers and legacy layout fallback",
+    "internal/command-generation/src/command_generation/generated_package_loader.py": "legacy loader compatibility wrappers and legacy layout fallback",
     "src/agentic_workspace/cli.py": "source-checkout fallback to checked-in generated workspace CLI package",
+    "packages/planning/src/repo_planning_bootstrap/cli.py": "source-checkout fallback to checked-in generated planning CLI package",
+    "packages/memory/src/repo_memory_bootstrap/cli.py": "source-checkout fallback to checked-in generated memory CLI package",
     "src/agentic_workspace/workspace_runtime_primitives.py": "legacy parser helper compatibility wrapper",
     "scripts/check/check_generated_command_packages.py": "static compatibility allowlist and obsolete-layout guards",
     "tests/test_command_generation_artifacts.py": "obsolete target-specific runtime guard",
@@ -220,7 +222,7 @@ GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST_PREFIXES = {
     ".agentic-workspace/planning/execplans/archive/": "historical planning evidence",
     "docs/reviews/": "historical review evidence",
 }
-COMMAND_GENERATION_SOURCE_ROOT = "packages/command-generation/src/command_generation"
+COMMAND_GENERATION_SOURCE_ROOT = "internal/command-generation/src/command_generation"
 COMMAND_GENERATION_FORBIDDEN_PRODUCT_IMPORT_ROOTS = (
     "agentic_workspace",
     "repo_planning_bootstrap",
@@ -375,7 +377,7 @@ def _conformance_env(*, runtime: str | None = None) -> dict[str, str]:
         str(REPO_ROOT / "src"),
         str(REPO_ROOT / "packages" / "planning" / "src"),
         str(REPO_ROOT / "packages" / "memory" / "src"),
-        str(REPO_ROOT / "packages" / "command-generation" / "src"),
+        str(REPO_ROOT / "internal" / "command-generation" / "src"),
     ]
     existing_pythonpath = env.get("PYTHONPATH")
     if existing_pythonpath:
@@ -410,13 +412,18 @@ def _generated_runtime_module_for_package(package_id: str):
 
 
 def _python_command_for_package(package_id: str) -> list[str]:
-    entrypoint = _entrypoint_for_package(package_id)
+    module_by_package = {
+        "root-workspace": "agentic_workspace.cli",
+        "planning-bootstrap": "repo_planning_bootstrap.cli",
+        "memory-bootstrap": "repo_memory_bootstrap.cli",
+    }
+    module = module_by_package[package_id]
     return [
         _python_executable(),
         "-c",
         (
-            "import sys; from command_generation.console import main_for_entrypoint; "
-            f"raise SystemExit(main_for_entrypoint({entrypoint!r}, sys.argv[1:]))"
+            f"import sys; from {module} import main; "
+            "raise SystemExit(main(sys.argv[1:]))"
         ),
     ]
 
@@ -853,16 +860,19 @@ def _run_python_adapter_conformance() -> list[str]:
         def command_for_package(package_id: str) -> list[str]:
             shim = shims.get(package_id)
             if shim is None:
-                entrypoint = _entrypoint_for_package(package_id)
+                module_by_package = {
+                    "root-workspace": "agentic_workspace.cli",
+                    "planning-bootstrap": "repo_planning_bootstrap.cli",
+                    "memory-bootstrap": "repo_memory_bootstrap.cli",
+                }
                 shim = temp_root / f"{package_id.replace('-', '_')}_cli_shim.py"
                 shim.write_text(
                     "import sys\n"
                     f"sys.path.insert(0, {str(REPO_ROOT / 'src')!r})\n"
-                    f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'command-generation' / 'src')!r})\n"
                     f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'planning' / 'src')!r})\n"
                     f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'memory' / 'src')!r})\n"
-                    "from command_generation.console import main_for_entrypoint\n"
-                    f"raise SystemExit(main_for_entrypoint({entrypoint!r}, sys.argv[1:]))\n",
+                    f"from {module_by_package[package_id]} import main\n"
+                    "raise SystemExit(main(sys.argv[1:]))\n",
                     encoding="utf-8",
                 )
                 shims[package_id] = shim
@@ -2079,7 +2089,7 @@ def _source_tree_python_files() -> list[str]:
         REPO_ROOT / "src" / "agentic_workspace",
         REPO_ROOT / "packages" / "planning" / "src" / "repo_planning_bootstrap",
         REPO_ROOT / "packages" / "memory" / "src" / "repo_memory_bootstrap",
-        REPO_ROOT / "packages" / "command-generation" / "src" / "command_generation",
+        REPO_ROOT / "internal" / "command-generation" / "src" / "command_generation",
     ]
     paths = []
     for root in roots:
@@ -2141,7 +2151,7 @@ def _validate_python_shipped_source_executable_retirement() -> list[str]:
     for relative_path in tracked_sources:
         is_shipped_module_source = relative_path.startswith(PYTHON_SHIPPED_MODULE_SOURCE_ROOTS)
         is_product_command_generation_source = relative_path.startswith(
-            "packages/command-generation/src/command_generation/"
+            "internal/command-generation/src/command_generation/"
         ) and relative_path.endswith(PYTHON_PRODUCT_RUNTIME_SOURCE_PATTERNS)
         if not is_shipped_module_source and not is_product_command_generation_source:
             continue
@@ -2325,7 +2335,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
             errors.append(f"{operation_id} must be marked {expected_status} in python_operation_execution_inventory.json")
         expected_primitive_executor = expected_primitive_executors.get(
             operation_id,
-            "packages/command-generation/src/command_generation/primitive_executor.py",
+            "internal/command-generation/src/command_generation/primitive_executor.py",
         )
         if entry.get("primitive_executor") != expected_primitive_executor:
             errors.append(f"{operation_id} must point at {expected_primitive_executor}")
@@ -2381,8 +2391,8 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
     memory_operation_executor_text = (REPO_ROOT / "generated" / "memory" / "python" / "primitives" / "operation_executor.py").read_text(
         encoding="utf-8"
     )
-    if "from command_generation.primitive_executor import" not in memory_operation_executor_text:
-        errors.append("memory operation IR executor must import the codegen-owned primitive executor")
+    if "from .primitive_executor import" not in memory_operation_executor_text:
+        errors.append("memory operation IR executor must import the target-local codegen-owned primitive executor")
     if "run_operation_steps(" not in memory_operation_executor_text:
         errors.append("memory operation IR executor must execute operation plans through codegen-owned run_operation_steps")
     if "from repo_memory_bootstrap.runtime_primitives import" in memory_operation_executor_text:
@@ -2501,8 +2511,8 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
     planning_operation_executor_text = (REPO_ROOT / "generated" / "planning" / "python" / "primitives" / "operation_executor.py").read_text(
         encoding="utf-8"
     )
-    if "from command_generation.primitive_executor import" not in planning_operation_executor_text:
-        errors.append("planning operation IR executor must import the codegen-owned primitive executor")
+    if "from .primitive_executor import" not in planning_operation_executor_text:
+        errors.append("planning operation IR executor must import the target-local codegen-owned primitive executor")
     if "run_operation_steps(" not in planning_operation_executor_text:
         errors.append("planning operation IR executor must execute operation plans through codegen-owned run_operation_steps")
     for forbidden_import in (
@@ -2534,8 +2544,8 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
     workspace_operation_executor_text = (
         REPO_ROOT / "generated" / "workspace" / "python" / "primitives" / "operation_executor.py"
     ).read_text(encoding="utf-8")
-    if "from command_generation.primitive_executor import" not in workspace_operation_executor_text:
-        errors.append("workspace operation IR executor must import the codegen-owned primitive executor")
+    if "from .primitive_executor import" not in workspace_operation_executor_text:
+        errors.append("workspace operation IR executor must import the target-local codegen-owned primitive executor")
     if "run_operation_steps(" not in workspace_operation_executor_text:
         errors.append("workspace operation IR executor must execute operation plans through codegen-owned run_operation_steps")
     for module_name in (
@@ -2725,6 +2735,7 @@ def _validate_generated_cli_compatibility_vocabulary() -> list[str]:
             ".agentic-workspace",
             "docs",
             "generated",
+            "internal",
             "packages",
             "scripts",
             "src",
@@ -2742,6 +2753,8 @@ def _validate_generated_cli_compatibility_vocabulary() -> list[str]:
         if not relative_path.endswith((".py", ".json", ".toml", ".md")):
             continue
         path = REPO_ROOT / relative_path
+        if not path.exists():
+            continue
         try:
             text = path.read_text(encoding="utf-8")
         except UnicodeDecodeError:
@@ -2919,16 +2932,19 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
         def runtime_for_package(package_id: str) -> str:
             shim = shims.get(package_id)
             if shim is None:
-                entrypoint = _entrypoint_for_package(package_id)
+                module_by_package = {
+                    "root-workspace": "agentic_workspace.cli",
+                    "planning-bootstrap": "repo_planning_bootstrap.cli",
+                    "memory-bootstrap": "repo_memory_bootstrap.cli",
+                }
                 shim = temp_root / f"{package_id.replace('-', '_')}_cli_shim.py"
                 shim.write_text(
                     "import sys\n"
                     f"sys.path.insert(0, {str(REPO_ROOT / 'src')!r})\n"
-                    f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'command-generation' / 'src')!r})\n"
                     f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'planning' / 'src')!r})\n"
                     f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'memory' / 'src')!r})\n"
-                    "from command_generation.console import main_for_entrypoint\n"
-                    f"raise SystemExit(main_for_entrypoint({entrypoint!r}, sys.argv[1:]))\n",
+                    f"from {module_by_package[package_id]} import main\n"
+                    "raise SystemExit(main(sys.argv[1:]))\n",
                     encoding="utf-8",
                 )
                 shims[package_id] = shim
@@ -3106,7 +3122,7 @@ def _validate_static_surfaces() -> list[str]:
     if not ir_path.is_file():
         errors.append("src/agentic_workspace/contracts/command_package_ir.json is missing")
     if not schema_path.is_file():
-        errors.append("packages/command-generation/schemas/command_package_ir.schema.json is missing")
+        errors.append("internal/command-generation/schemas/command_package_ir.schema.json is missing")
     if errors:
         return errors
     try:
@@ -3331,9 +3347,9 @@ def _validate_static_surfaces() -> list[str]:
     primitive_conformance_dockerfile = REPO_ROOT / "generated" / "python" / "Dockerfile.primitive-conformance"
     if not primitive_conformance_dockerfile.is_file():
         errors.append("generated/python/Dockerfile.primitive-conformance is missing")
-    primitive_conformance_script = REPO_ROOT / "packages" / "command-generation" / "tests" / "primitive_conformance.py"
+    primitive_conformance_script = REPO_ROOT / "internal" / "command-generation" / "tests" / "primitive_conformance.py"
     if not primitive_conformance_script.is_file():
-        errors.append("packages/command-generation/tests/primitive_conformance.py is missing")
+        errors.append("internal/command-generation/tests/primitive_conformance.py is missing")
     else:
         primitive_conformance_text = primitive_conformance_script.read_text(encoding="utf-8")
         for primitive_id in sorted(REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE):
@@ -3481,7 +3497,7 @@ def _run_docker(
 
 
 def _run_primitive_conformance() -> int:
-    return _run([_python_executable(), "packages/command-generation/tests/primitive_conformance.py"])
+    return _run([_python_executable(), "internal/command-generation/tests/primitive_conformance.py"])
 
 
 def _python_completion_blockers_report(ir: dict[str, object]) -> dict[str, object]:
