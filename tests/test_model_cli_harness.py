@@ -1752,6 +1752,131 @@ def test_model_cli_harness_quality_signals_flag_read_surface_over_read() -> None
     assert any(signal["id"] == "read_surface_over_read" and signal["status"] == "weak" for signal in signals)
 
 
+def test_model_cli_harness_reports_small_work_proportionality_metrics() -> None:
+    harness = _load_harness()
+    stdout = "\n".join(
+        [
+            json.dumps(
+                {
+                    "type": "item.completed",
+                    "item": {
+                        "type": "command_execution",
+                        "command": "uv run agentic-workspace implement --changed README.md --format json",
+                        "aggregated_output": '{"kind":"implementer-context-tiny/v1"}\n',
+                        "exit_code": 0,
+                        "status": "completed",
+                    },
+                }
+            )
+        ]
+    )
+    result = {"stdout": stdout, "final_message": "Changed README.md and inspected the diff."}
+    package_summary = harness._package_read_surface_summary_from_stdout(stdout)
+
+    metrics = harness._proportionality_metrics(
+        scenario={"id": "direct-task-minimal-overhead", "proportionality_guardrail": True},
+        result=result,
+        mutation_summary={"status": "changed", "modified": ["README.md"]},
+        package_read_surface_summary=package_summary,
+        completion_loop={"requests_to_completion": 1},
+    )
+
+    assert metrics["status"] == "present"
+    assert metrics["package_command_count"] == 1
+    assert metrics["workspace_command_count"] == 1
+    assert metrics["changed_files_count"] == 1
+    assert metrics["planning_files_created"] == 0
+    assert metrics["requests_to_completion"] == 1
+
+
+def test_model_cli_harness_warns_on_small_work_ceremony() -> None:
+    harness = _load_harness()
+    long_closeout = "Done. " * 80
+    result = {
+        "stdout": "\n".join(
+            [
+                json.dumps(
+                    {
+                        "type": "item.completed",
+                        "item": {
+                            "type": "command_execution",
+                            "command": "uv run agentic-workspace summary --verbose",
+                            "aggregated_output": "{}\n",
+                            "exit_code": 0,
+                            "status": "completed",
+                        },
+                    }
+                ),
+                json.dumps(
+                    {
+                        "type": "item.completed",
+                        "item": {
+                            "type": "command_execution",
+                            "command": "Get-Content .agentic-workspace/memory/repo/index.md",
+                            "aggregated_output": "# memory\n",
+                            "exit_code": 0,
+                            "status": "completed",
+                        },
+                    }
+                ),
+                json.dumps(
+                    {
+                        "type": "item.completed",
+                        "item": {
+                            "type": "command_execution",
+                            "command": "pytest",
+                            "aggregated_output": "1 passed\n",
+                            "exit_code": 0,
+                            "status": "completed",
+                        },
+                    }
+                ),
+            ]
+        ),
+        "final_message": f"I read .agentic-workspace/memory/repo/index.md. {long_closeout}",
+    }
+    scenario = {
+        "id": "direct-task-minimal-overhead",
+        "proportionality_guardrail": True,
+        "proportionality_limits": {
+            "workspace_command_count": 1,
+            "verbose_or_full_diagnostic_count": 0,
+            "final_answer_length": 40,
+        },
+        "proportionality_avoid_broad_proof_commands": ["pytest"],
+    }
+    metrics = harness._proportionality_metrics(
+        scenario=scenario,
+        result=result,
+        mutation_summary={
+            "status": "changed",
+            "created": [
+                ".agentic-workspace/planning/execplans/readme.plan.json",
+                ".agentic-workspace/memory/repo/readme.md",
+            ],
+            "modified": ["README.md"],
+        },
+        package_read_surface_summary=harness._package_read_surface_summary_from_stdout(result["stdout"]),
+    )
+    warnings = harness._proportionality_warnings(scenario=scenario, result=result, metrics=metrics)
+    classes = {warning["warning_class"] for warning in warnings}
+    mistakes = {warning["mistake_class"] for warning in warnings}
+
+    assert "model_cli_proportionality_over_planning" in classes
+    assert "model_cli_proportionality_memory_ceremony" in classes
+    assert "model_cli_proportionality_over_reading" in classes
+    assert "model_cli_proportionality_over_proofing" in classes
+    assert "model_cli_proportionality_closeout_ceremony" in classes
+    assert {
+        "over_planning",
+        "memory_ceremony",
+        "verbose_diagnostics_for_tiny_task",
+        "raw_workspace_spelunking",
+        "over_proofing",
+        "closeout_ceremony",
+    }.issubset(mistakes)
+
+
 def test_model_cli_harness_postmortem_prompt_keeps_feedback_compact_and_actionable() -> None:
     harness = _load_harness()
 
@@ -2777,6 +2902,11 @@ def test_model_cli_harness_compares_before_after_runs(tmp_path: Path) -> None:
                             {"warning_class": "model_cli_semantic_workflow_failure", "message": "still here"},
                         ],
                         "mutation_summary": {"status": "changed"},
+                        "proportionality_metrics": {
+                            "status": "present",
+                            "workspace_command_count": 1,
+                            "package_output_bytes": 100,
+                        },
                     }
                 ]
             }
@@ -2793,6 +2923,11 @@ def test_model_cli_harness_compares_before_after_runs(tmp_path: Path) -> None:
                             {"warning_class": "model_cli_metadata_scoring_failure", "message": "new problem"},
                         ],
                         "mutation_summary": {"status": "clean"},
+                        "proportionality_metrics": {
+                            "status": "present",
+                            "workspace_command_count": 3,
+                            "package_output_bytes": 260,
+                        },
                     }
                 ]
             }
@@ -2806,3 +2941,5 @@ def test_model_cli_harness_compares_before_after_runs(tmp_path: Path) -> None:
     assert [warning["message"] for warning in comparison["resolved_warnings"]] == ["old problem"]
     assert [warning["message"] for warning in comparison["new_warnings"]] == ["new problem"]
     assert comparison["mutation_delta"] == {"baseline_changed_results": 1, "current_changed_results": 0}
+    assert comparison["proportionality_delta"]["workspace_command_count"] == 2
+    assert comparison["proportionality_delta"]["package_output_bytes"] == 160

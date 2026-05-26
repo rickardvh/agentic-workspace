@@ -105,6 +105,8 @@ The current suite evaluates these semi-realistic workflow pressure points. The p
 - `local-delegation-posture`: whether agents distinguish checked-in repo policy from local-only delegation controls and avoid auto-delegation when local safety disables it.
 - `config-output-posture`: whether agents use config to shape reporting style without turning output posture into execution-method authority.
 
+`direct-task-minimal-overhead`, `next-decision-output-profile`, and `config-closeout-obligation` are proportionality guardrails for small bounded work. Their `run.json` entries include `proportionality_metrics` for command count, package output size, changed-file count, Planning/Memory residue, raw workspace reads, verbose/full diagnostics, requests to completion, and final-answer length. The harness emits proportionality warning classes for over-planning, over-reading, over-proofing, Memory ceremony, and closeout ceremony. Treat those warnings as review signals: compact AW routing is allowed when it prevents wrong action, but tiny work should not become a broad diagnostic or Planning exercise.
+
 Use these as optimisation probes rather than regular regression tests. A good run matrix samples a few scenarios across weaker, cheaper, and stronger agents, then turns repeated weak points into package changes, clearer CLI output, docs, fixtures, or new scorer warnings. Do not expect a single deterministic pass/fail result to settle a workflow question.
 
 ## Adaptive Optimisation Loop
@@ -127,7 +129,7 @@ uv run python scripts/model_cli_harness/run_model_cli_harness.py `
   --format json
 ```
 
-The comparison report lists resolved, retained, and new warnings, mutation deltas, a compact product interpretation, and the recommended next action. Treat it as a review aid, not a benchmark verdict.
+The comparison report lists resolved, retained, and new warnings, mutation deltas, proportionality metric deltas, a compact product interpretation, and the recommended next action. Treat it as a review aid, not a benchmark verdict.
 
 Executed run results include two different cost signals:
 

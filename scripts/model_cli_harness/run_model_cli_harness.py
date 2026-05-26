@@ -617,6 +617,204 @@ def _aggregate_package_read_surface_summaries(results: list[dict[str, Any]]) -> 
     }
 
 
+PROPORTIONALITY_GUARDRAIL_SCENARIOS = {
+    "direct-task-minimal-overhead",
+    "next-decision-output-profile",
+    "config-closeout-obligation",
+}
+
+
+def _is_proportionality_guardrail_scenario(scenario: dict[str, Any]) -> bool:
+    return bool(scenario.get("proportionality_guardrail")) or str(scenario.get("id", "")) in PROPORTIONALITY_GUARDRAIL_SCENARIOS
+
+
+def _command_contains_any(command_text: str, markers: list[str]) -> bool:
+    normalized = _normalized_command_text(command_text)
+    return any(_normalized_command_text(marker) in normalized for marker in markers)
+
+
+def _proportionality_metrics(
+    *,
+    scenario: dict[str, Any],
+    result: dict[str, Any],
+    mutation_summary: dict[str, Any] | None,
+    package_read_surface_summary: dict[str, Any] | None,
+    completion_loop: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    if not _is_proportionality_guardrail_scenario(scenario):
+        return {"kind": "agentic-workspace/model-cli-proportionality-metrics/v1", "status": "not-applicable"}
+    changed_paths = _changed_paths(mutation_summary)
+    created = [path.replace("\\", "/") for path in (mutation_summary or {}).get("created", []) if isinstance(path, str)]
+    executed_command_text = _normalized_command_text(_executed_command_text(result))
+    scored_response_text = _scored_agent_response_text(result)
+    mentioned_paths = sorted(dict.fromkeys([*_mentioned_workspace_paths(scored_response_text), *_mentioned_workspace_paths(executed_command_text)]))
+    scored_text = _normalized_command_text(scored_response_text)
+    combined_agent_text = f"{executed_command_text}\n{scored_text}"
+    workspace_mentions = [path for path in mentioned_paths if path.startswith(".agentic-workspace/")]
+    memory_mentions = [path for path in workspace_mentions if path.startswith(".agentic-workspace/memory/")]
+    planning_created = [path for path in created if path.startswith(".agentic-workspace/planning/")]
+    memory_created = [path for path in created if path.startswith(".agentic-workspace/memory/")]
+    diagnostic_markers = (
+        "--verbose",
+        "agentic-workspace report",
+        "agentic-workspace doctor",
+        "agentic-workspace preflight",
+        "agentic-workspace summary --verbose",
+        "agentic-workspace implement --verbose",
+        "agentic-workspace proof --verbose",
+    )
+    broad_diagnostic_markers = (
+        "agentic-workspace report",
+        "agentic-workspace doctor",
+        "agentic-workspace preflight",
+        "agentic-workspace summary",
+    )
+    raw_workspace_read_patterns = (
+        r"\b(get-content|cat|type|read_file|open)\b[^\n;|&]*\.agentic-workspace/",
+        r"\.agentic-workspace/[^\s`'\"),;]+[^\n.]*\b(read|opened|inspected)\b",
+    )
+    raw_workspace_read_count = sum(
+        1 for pattern in raw_workspace_read_patterns for _match in re.finditer(pattern, combined_agent_text, flags=re.IGNORECASE)
+    )
+    package_summary = package_read_surface_summary if isinstance(package_read_surface_summary, dict) else {}
+    return {
+        "kind": "agentic-workspace/model-cli-proportionality-metrics/v1",
+        "status": "present",
+        "scenario_id": str(scenario.get("id", "")),
+        "package_command_count": int(package_summary.get("command_count", 0) or 0),
+        "package_output_bytes": int(package_summary.get("output_bytes", 0) or 0),
+        "package_output_lines": int(package_summary.get("output_lines", 0) or 0),
+        "workspace_command_count": int(package_summary.get("command_count", 0) or 0),
+        "raw_workspace_file_mentions": len(workspace_mentions),
+        "raw_workspace_read_count": raw_workspace_read_count,
+        "files_read_or_mentioned_count": len(mentioned_paths),
+        "files_read_or_mentioned": mentioned_paths[:20],
+        "changed_files_count": len(changed_paths),
+        "planning_files_created": len(planning_created),
+        "memory_files_created": len(memory_created),
+        "memory_files_read_or_mentioned": len(memory_mentions),
+        "verbose_or_full_diagnostic_count": sum(combined_agent_text.count(marker) for marker in diagnostic_markers),
+        "broad_workspace_diagnostic_count": sum(combined_agent_text.count(marker) for marker in broad_diagnostic_markers),
+        "requests_to_completion": int((completion_loop or {}).get("requests_to_completion", 0) or 0),
+        "final_answer_length": len(_scored_agent_response_text(result)),
+    }
+
+
+def _proportionality_warnings(
+    *,
+    scenario: dict[str, Any],
+    result: dict[str, Any],
+    metrics: dict[str, Any],
+) -> list[dict[str, str]]:
+    if metrics.get("status") != "present":
+        return []
+    limits = scenario.get("proportionality_limits", {})
+    if not isinstance(limits, dict):
+        limits = {}
+    warnings: list[dict[str, str]] = []
+
+    def add(warning_class: str, message: str, *, evidence: str = "", mistake_class: str = "") -> None:
+        warning: dict[str, str] = {"warning_class": warning_class, "message": message}
+        if evidence:
+            warning["evidence"] = evidence
+        if mistake_class:
+            warning["mistake_class"] = mistake_class
+        warnings.append(warning)
+
+    if metrics["planning_files_created"]:
+        add(
+            "model_cli_proportionality_over_planning",
+            "Tiny bounded work created Planning residue without scenario justification.",
+            evidence=f"planning_files_created={metrics['planning_files_created']}",
+            mistake_class="over_planning",
+        )
+    if metrics["memory_files_created"] or metrics["memory_files_read_or_mentioned"]:
+        add(
+            "model_cli_proportionality_memory_ceremony",
+            "Tiny bounded work used Memory despite no durable anti-rediscovery need in the scenario.",
+            evidence=(
+                f"memory_files_created={metrics['memory_files_created']}; "
+                f"memory_files_read_or_mentioned={metrics['memory_files_read_or_mentioned']}"
+            ),
+            mistake_class="memory_ceremony",
+        )
+    max_workspace_commands = limits.get("workspace_command_count")
+    if isinstance(max_workspace_commands, int) and metrics["workspace_command_count"] > max_workspace_commands:
+        add(
+            "model_cli_proportionality_over_reading",
+            "Tiny bounded work used more Agentic Workspace commands than the scenario budget allows.",
+            evidence=f"workspace_command_count={metrics['workspace_command_count']}; limit={max_workspace_commands}",
+            mistake_class="over_reading",
+        )
+    max_verbose = limits.get("verbose_or_full_diagnostic_count", 0)
+    if isinstance(max_verbose, int) and metrics["verbose_or_full_diagnostic_count"] > max_verbose:
+        add(
+            "model_cli_proportionality_over_reading",
+            "Tiny bounded work used verbose or full diagnostics where compact output should suffice.",
+            evidence=f"verbose_or_full_diagnostic_count={metrics['verbose_or_full_diagnostic_count']}; limit={max_verbose}",
+            mistake_class="verbose_diagnostics_for_tiny_task",
+        )
+    if metrics["raw_workspace_read_count"]:
+        add(
+            "model_cli_proportionality_over_reading",
+            "Tiny bounded work appears to read raw `.agentic-workspace` files instead of compact command surfaces.",
+            evidence=f"raw_workspace_read_count={metrics['raw_workspace_read_count']}",
+            mistake_class="raw_workspace_spelunking",
+        )
+    avoid_broad_proof = scenario.get("proportionality_avoid_broad_proof_commands", [])
+    if isinstance(avoid_broad_proof, list) and all(isinstance(item, str) for item in avoid_broad_proof):
+        command_text = _executed_command_text(result)
+        broad_proof = [marker for marker in avoid_broad_proof if _command_contains_any(command_text, [marker])]
+        if broad_proof:
+            add(
+                "model_cli_proportionality_over_proofing",
+                "Tiny bounded work used broad proof where the scenario expects narrow local proof.",
+                evidence=", ".join(broad_proof[:8]),
+                mistake_class="over_proofing",
+            )
+    max_final = limits.get("final_answer_length")
+    if isinstance(max_final, int) and metrics["final_answer_length"] > max_final:
+        add(
+            "model_cli_proportionality_closeout_ceremony",
+            "Tiny bounded work produced a longer closeout than the scenario budget allows.",
+            evidence=f"final_answer_length={metrics['final_answer_length']}; limit={max_final}",
+            mistake_class="closeout_ceremony",
+        )
+    return warnings
+
+
+def _aggregate_proportionality_metrics(results: list[dict[str, Any]]) -> dict[str, Any]:
+    present = [
+        result.get("proportionality_metrics")
+        for result in results
+        if isinstance(result.get("proportionality_metrics"), dict) and result["proportionality_metrics"].get("status") == "present"
+    ]
+    numeric_fields = (
+        "package_command_count",
+        "package_output_bytes",
+        "package_output_lines",
+        "workspace_command_count",
+        "raw_workspace_file_mentions",
+        "raw_workspace_read_count",
+        "changed_files_count",
+        "planning_files_created",
+        "memory_files_created",
+        "memory_files_read_or_mentioned",
+        "verbose_or_full_diagnostic_count",
+        "broad_workspace_diagnostic_count",
+        "requests_to_completion",
+        "final_answer_length",
+    )
+    totals = {field: sum(int(metrics.get(field, 0) or 0) for metrics in present) for field in numeric_fields}
+    return {
+        "kind": "agentic-workspace/model-cli-proportionality-summary/v1",
+        "status": "present" if present else "absent",
+        "result_count": len(present),
+        "scenario_ids": sorted({str(metrics.get("scenario_id", "")) for metrics in present if metrics.get("scenario_id")}),
+        "totals": totals,
+    }
+
+
 def _aggregate_usage_summaries(results: list[dict[str, Any]]) -> dict[str, Any]:
     totals = {
         "input_tokens": 0,
@@ -2177,6 +2375,16 @@ def compare_results(*, baseline_path: Path, current_path: Path) -> dict[str, Any
         "baseline_changed_results": sum(1 for result in baseline_results if result.get("mutation_summary", {}).get("status") == "changed"),
         "current_changed_results": sum(1 for result in current_results if result.get("mutation_summary", {}).get("status") == "changed"),
     }
+    baseline_proportionality = _aggregate_proportionality_metrics(baseline_results)
+    current_proportionality = _aggregate_proportionality_metrics(current_results)
+    proportionality_delta = {
+        key: int(current_proportionality.get("totals", {}).get(key, 0) or 0)
+        - int(baseline_proportionality.get("totals", {}).get(key, 0) or 0)
+        for key in sorted(
+            set(baseline_proportionality.get("totals", {}))
+            | set(current_proportionality.get("totals", {}))
+        )
+    }
     if introduced:
         interpretation = "regressed"
     elif resolved:
@@ -2195,6 +2403,9 @@ def compare_results(*, baseline_path: Path, current_path: Path) -> dict[str, Any
         "new_warnings": [current_warnings[key] for key in introduced],
         "retained_warnings": [current_warnings[key] for key in retained],
         "mutation_delta": mutation_delta,
+        "baseline_proportionality_summary": baseline_proportionality,
+        "current_proportionality_summary": current_proportionality,
+        "proportionality_delta": proportionality_delta,
         "product_interpretation": interpretation,
         "recommended_action": (
             "Promote the fix if resolved warnings match the intended product change."
@@ -2388,6 +2599,7 @@ def run_suite(
                 ]
                 invocation["usage_summary"] = {"status": "not-run"}
                 invocation["package_read_surface_summary"] = {"status": "not-run"}
+                invocation["proportionality_metrics"] = {"status": "not-run"}
             elif execute:
                 result = _run_command(command, cwd=paths.repo_path, timeout_seconds=effective_timeout, env=adapter_env)
                 if paths.share_path.exists():
@@ -2416,6 +2628,19 @@ def run_suite(
                         result=result,
                         mutation_summary=mutation_summary,
                         repo_path=paths.repo_path,
+                    )
+                )
+                invocation["proportionality_metrics"] = _proportionality_metrics(
+                    scenario=scenario,
+                    result=result,
+                    mutation_summary=mutation_summary,
+                    package_read_surface_summary=invocation["package_read_surface_summary"],
+                )
+                invocation["warnings"].extend(
+                    _proportionality_warnings(
+                        scenario=scenario,
+                        result=result,
+                        metrics=invocation["proportionality_metrics"],
                     )
                 )
                 if postmortem_feedback:
@@ -2539,6 +2764,13 @@ def run_suite(
                         *followup_turns,
                     ]
                 )
+                invocation["proportionality_metrics"] = _proportionality_metrics(
+                    scenario=scenario,
+                    result=result,
+                    mutation_summary=mutation_summary,
+                    package_read_surface_summary=invocation["package_read_surface_summary"],
+                    completion_loop=invocation["completion_loop"],
+                )
             else:
                 invocation["result"] = {
                     "status": "dry-run",
@@ -2547,6 +2779,7 @@ def run_suite(
                 invocation["mutation_summary"] = {"status": "not-run"}
                 invocation["usage_summary"] = {"status": "not-run"}
                 invocation["package_read_surface_summary"] = {"status": "not-run"}
+                invocation["proportionality_metrics"] = {"status": "not-run"}
                 invocation["warnings"] = []
                 invocation["completion_loop"] = _completion_loop_summary(
                     execute=False,
@@ -2579,6 +2812,7 @@ def run_suite(
     }
     payload["usage_summary"] = _aggregate_usage_summaries(run_results)
     payload["package_read_surface_summary"] = _aggregate_package_read_surface_summaries(run_results)
+    payload["proportionality_summary"] = _aggregate_proportionality_metrics(run_results)
     payload["finding_classification"] = _classify_suite_findings(run_results)
     payload["capability_routing_evaluation"] = _aggregate_capability_routing_evaluations(run_results)
     completion_loops = [result.get("completion_loop") for result in run_results if isinstance(result.get("completion_loop"), dict)]
