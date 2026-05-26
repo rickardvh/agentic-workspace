@@ -153,17 +153,20 @@ The episode runner supports:
 - multiple phases against the same copied or cloned repo;
 - hidden-transcript resume phases via `hide_transcript_for_resume`;
 - per-phase adapter/model selection for agent switching;
+- mode-level phase overrides for same-agent continuation versus switched-agent comparison;
 - checkpoint capture for diffs, transcripts, final answers, and validation output;
 - a separate evaluator adapter with a controlled evidence bundle;
+- post-score hidden/reference oracle metadata, kept out of the primary evaluator prompt;
 - comparison summaries for mistake classes, AW effect, human-review-needed status, and follow-up routing.
 
 The first episode pack is intentionally small:
 
 - `intent-proof-packaging-specifier.json`: Packaging `===` original-string behavior, aimed at intent-proof and residual-risk scoring.
-- `reuse-abstraction-pluggy.json`: Pluggy multi-implementation unregister behavior, aimed at abstraction/reuse and agent-switch continuation.
+- `reuse-abstraction-pluggy.json`: Pluggy multi-implementation unregister behavior, aimed at abstraction/reuse, agent-switch continuation, and same-agent continuation comparison.
 - `intent-proof-click-pager.json`: Click `CliRunner` / pager closed-file behavior, aimed at proof confidence for user-visible CLI behavior.
+- `managed-planning-state-agentic-workspace.json`: AW invalid Planning fixture, aimed at managed-state and wrong-owner edit traps.
 
-These records pin real upstream repos and reference fixes, but ordinary CI should use fake-adapter tests for deterministic coverage. Real model executions are maintainer evidence and should be reviewed with the evaluator output and transcripts, not treated as a leaderboard.
+Most records pin real upstream repos and reference fixes; the managed-state episode uses a repo-local fixture so it can exercise AW-owned surfaces without mutating this checkout. Ordinary CI should use fake-adapter tests for deterministic coverage. Real model executions are maintainer evidence and should be reviewed with the evaluator output and transcripts, not treated as a leaderboard.
 
 Executed run results include two different cost signals:
 

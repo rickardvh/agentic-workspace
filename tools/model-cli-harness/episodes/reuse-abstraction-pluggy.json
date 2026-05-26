@@ -27,6 +27,19 @@
       "aw_enabled": true,
       "repo_url": "https://github.com/pytest-dev/pluggy",
       "base_commit": "6ab917ba3b2dc1dceba6a260a0c30cb947f6a69c"
+    },
+    {
+      "id": "aw-assisted-same-agent-continuation",
+      "aw_enabled": true,
+      "repo_url": "https://github.com/pytest-dev/pluggy",
+      "base_commit": "6ab917ba3b2dc1dceba6a260a0c30cb947f6a69c",
+      "phase_overrides": {
+        "weaker-agent-continuation": {
+          "prompt": "Resume from repo state only as the same agent family. Finish the implementation without duplicating hook bookkeeping concepts.",
+          "adapter": "codex",
+          "model": "gpt-5.3-codex-spark"
+        }
+      }
     }
   ],
   "visible_validation_commands": [

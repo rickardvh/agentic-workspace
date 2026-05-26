@@ -5,6 +5,8 @@ import json
 import sys
 from pathlib import Path
 
+from jsonschema import Draft202012Validator
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 HARNESS_DIR = REPO_ROOT / "scripts" / "model_cli_harness"
 EPISODE_PATH = HARNESS_DIR / "long_horizon_episode.py"
@@ -139,18 +141,52 @@ def test_long_horizon_episode_validates_sample_pack_and_schema_files() -> None:
     module = _load_episode_module()
 
     schema_dir = REPO_ROOT / "tools" / "model-cli-harness" / "schemas"
-    assert json.loads((schema_dir / "long-horizon-episode.schema.json").read_text(encoding="utf-8"))["$id"] == module.EPISODE_KIND
-    assert json.loads((schema_dir / "long-horizon-evaluation.schema.json").read_text(encoding="utf-8"))["$id"] == module.EVALUATION_KIND
+    episode_schema = json.loads((schema_dir / "long-horizon-episode.schema.json").read_text(encoding="utf-8"))
+    evaluation_schema = json.loads((schema_dir / "long-horizon-evaluation.schema.json").read_text(encoding="utf-8"))
+    Draft202012Validator.check_schema(episode_schema)
+    Draft202012Validator.check_schema(evaluation_schema)
+    episode_validator = Draft202012Validator(episode_schema)
+    evaluation_validator = Draft202012Validator(evaluation_schema)
+
+    assert episode_schema["$id"] == module.EPISODE_KIND
+    assert evaluation_schema["$id"] == module.EVALUATION_KIND
 
     episode_dir = REPO_ROOT / "tools" / "model-cli-harness" / "episodes"
     for path in [
         episode_dir / "intent-proof-packaging-specifier.json",
         episode_dir / "reuse-abstraction-pluggy.json",
         episode_dir / "intent-proof-click-pager.json",
+        episode_dir / "managed-planning-state-agentic-workspace.json",
     ]:
         episode = module.load_episode(path)
+        episode_validator.validate(episode)
         assert episode["modes"]
         assert episode["visible_validation_commands"]
+
+    evaluation_validator.validate(
+        {
+            "kind": module.EVALUATION_KIND,
+            "scenario": "schema-smoke",
+            "mode": "aw-assisted",
+            "result": {
+                "intent_satisfied": "partial",
+                "scope_respected": True,
+                "proof_sufficient": False,
+                "proof_matches_intent": False,
+                "restartable_from_repo_state": True,
+                "completion_claim_honest": True,
+            },
+            "mistake_classes": ["weak_proof"],
+            "aw_effect": {
+                "helped": [],
+                "hurt_or_overhead": [],
+                "missed_affordance": ["reference comparison"],
+            },
+            "evidence": [{"kind": "file", "ref": "README.md"}],
+            "human_review_required": True,
+            "recommended_followup": {"type": "harness", "summary": "schema smoke"},
+        }
+    )
 
 
 def test_long_horizon_episode_rejects_unknown_mistake_class(tmp_path: Path) -> None:
@@ -218,6 +254,42 @@ def test_long_horizon_episode_records_agent_switch_and_aw_modes(tmp_path: Path) 
     for mode in payload["modes"]:
         assert [phase["adapter_id"] for phase in mode["phases"]] == ["fake-a", "fake-b"]
         assert [phase["model"] for phase in mode["phases"]] == ["fake-a-model", "fake-b-model"]
+
+
+def test_long_horizon_episode_supports_same_agent_phase_override(tmp_path: Path) -> None:
+    module = _load_episode_module()
+    suite = _write_suite(tmp_path)
+    episode = _write_episode(
+        tmp_path,
+        evaluator=False,
+        modes=[
+            {
+                "id": "same-agent",
+                "aw_enabled": True,
+                "fixture": "aw-fixture",
+                "phase_overrides": {
+                    "phase-two": {
+                        "adapter": "fake-a",
+                        "model": "same-agent-model",
+                        "prompt": "Resume as the same agent.",
+                    }
+                },
+            },
+        ],
+    )
+
+    payload = module.run_episode(
+        episode_path=episode,
+        suite_path=suite,
+        output_root=tmp_path / "out",
+        execute=False,
+        evaluator=False,
+    )
+
+    phases = payload["modes"][0]["phases"]
+    assert [phase["adapter_id"] for phase in phases] == ["fake-a", "fake-a"]
+    assert phases[1]["model"] == "same-agent-model"
+    assert "Resume as the same agent" in phases[1]["prompt"]
 
 
 def test_long_horizon_episode_paths_stay_short_for_windows_clone(tmp_path: Path) -> None:
@@ -291,6 +363,8 @@ def test_long_horizon_episode_evaluator_excludes_hidden_oracle_and_reports_compa
 
     assert mode["evaluation"]["status"] == "valid"
     assert mode["evaluation"]["hidden_oracle_excluded"] is True
+    assert mode["evaluation"]["post_score_reference"]["status"] == "available-after-primary-score"
+    assert mode["evaluation"]["post_score_reference"]["reference"]["secret"] == "do-not-leak-reference"
     assert "do-not-leak-reference" not in evaluator_prompt
     assert payload["comparison"]["mistake_classes"] == ["weak_proof"]
     assert payload["comparison"]["human_review_required"] is True

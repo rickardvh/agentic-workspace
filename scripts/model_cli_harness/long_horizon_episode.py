@@ -87,6 +87,7 @@ def validate_episode(episode: dict[str, Any]) -> None:
         mode_ids.add(mode_id)
         if not isinstance(mode.get("fixture"), str) and not isinstance(mode.get("repo_url"), str):
             raise ValueError(f"episode.modes.{mode_id} needs fixture or repo_url")
+        _phase_overrides(mode, field=f"episode.modes.{mode_id}.phase_overrides")
     phases = episode.get("phases")
     if not isinstance(phases, list) or not phases:
         raise ValueError("episode.phases must be a non-empty list")
@@ -182,6 +183,22 @@ def _bootstrap_aw_mode(repo_path: Path) -> None:
     harness._prepare_source_checkout_invocation(repo_path)
 
 
+def _phase_overrides(mode: dict[str, Any], *, field: str) -> dict[str, dict[str, Any]]:
+    raw_overrides = mode.get("phase_overrides", {})
+    if raw_overrides is None:
+        return {}
+    if not isinstance(raw_overrides, dict):
+        raise ValueError(f"{field} must be an object")
+    overrides: dict[str, dict[str, Any]] = {}
+    for phase_id, override in raw_overrides.items():
+        if not isinstance(phase_id, str) or not phase_id.strip():
+            raise ValueError(f"{field} keys must be phase ids")
+        if not isinstance(override, dict):
+            raise ValueError(f"{field}.{phase_id} must be an object")
+        overrides[phase_id] = override
+    return overrides
+
+
 def _prepare_mode_repo(*, suite_path: Path, mode: dict[str, Any], paths: harness.HarnessPaths, execute: bool) -> None:
     paths.run_root.mkdir(parents=True, exist_ok=False)
     fixture = mode.get("fixture")
@@ -268,6 +285,11 @@ def _phase_prompt(*, episode: dict[str, Any], mode: dict[str, Any], phase: dict[
     return "\n\n".join(prompt_parts) + "\n", include_prior
 
 
+def _effective_phase(*, phase: dict[str, Any], mode: dict[str, Any]) -> dict[str, Any]:
+    override = _phase_overrides(mode, field=f"mode.{mode.get('id', '<unknown>')}.phase_overrides").get(str(phase["id"]), {})
+    return {**phase, **override}
+
+
 def _evaluation_prompt(*, episode: dict[str, Any], mode_result: dict[str, Any]) -> str:
     hidden_oracle = episode.get("hidden_oracle")
     evidence_bundle = {
@@ -287,6 +309,25 @@ def _evaluation_prompt(*, episode: dict[str, Any], mode_result: dict[str, Any]) 
         f"{EVALUATION_KIND}.\n\n"
         + json.dumps(evidence_bundle, indent=2, sort_keys=True)
     )
+
+
+def _post_score_reference_payload(*, episode: dict[str, Any], evaluation_status: str) -> dict[str, Any]:
+    hidden_oracle = episode.get("hidden_oracle")
+    if not isinstance(hidden_oracle, dict):
+        return {"status": "absent"}
+    if evaluation_status != "valid":
+        return {
+            "status": "pending-primary-score",
+            "primary_evaluation_status": evaluation_status,
+            "reference_available": True,
+            "rule": "The hidden/reference oracle is excluded from the primary evaluator prompt and exposed only after primary scoring.",
+        }
+    return {
+        "status": "available-after-primary-score",
+        "primary_evaluation_status": evaluation_status,
+        "reference": hidden_oracle,
+        "rule": "The hidden/reference oracle is excluded from the primary evaluator prompt and exposed only after primary scoring.",
+    }
 
 
 def _parse_evaluation(text: str) -> dict[str, Any]:
@@ -378,6 +419,7 @@ def run_episode(
         phase_results: list[dict[str, Any]] = []
         previous_snapshot = harness._file_snapshot(paths.repo_path)
         for phase in episode["phases"]:
+            phase = _effective_phase(phase=phase, mode=mode)
             phase_prompt, prior_included = _phase_prompt(episode=episode, mode=mode, phase=phase, prior_context=prior_context)
             phase_share = paths.run_root / f"{phase['id']}.md"
             phase_transcript = paths.run_root / f"{phase['id']}.transcript.jsonl"
@@ -495,6 +537,7 @@ def run_episode(
                 "result": evaluator_result,
                 "payload": evaluation_payload,
                 "hidden_oracle_excluded": episode.get("hidden_oracle") is not None,
+                "post_score_reference": _post_score_reference_payload(episode=episode, evaluation_status=evaluation_status),
             }
         mode_results.append(mode_result)
     payload = {

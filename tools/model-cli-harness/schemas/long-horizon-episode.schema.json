@@ -58,6 +58,30 @@
           },
           "base_commit": {
             "type": "string"
+          },
+          "phase_overrides": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "prompt": {
+                  "type": "string"
+                },
+                "adapter": {
+                  "type": "string"
+                },
+                "model": {
+                  "type": "string"
+                },
+                "hide_transcript_for_resume": {
+                  "type": "boolean"
+                },
+                "validation_commands": {
+                  "$ref": "#/$defs/commands"
+                }
+              },
+              "additionalProperties": true
+            }
           }
         },
         "anyOf": [
