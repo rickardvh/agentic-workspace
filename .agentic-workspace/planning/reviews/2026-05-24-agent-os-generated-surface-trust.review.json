@@ -1,0 +1,73 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Agent OS ROI review: generated-surface trust for ordinary agents",
+  "date": "2026-05-24",
+  "classification": "generated-surface-trust",
+  "goal": [
+    "Capture the ROI case for exposing generated-surface trust to ordinary agents.",
+    "Separate daily trust affordance from maintainer-only generation machinery."
+  ],
+  "scope": [
+    "Issue #1115 ROI point 4: generated-surface trust for ordinary agents.",
+    "Generated files, source commands, stale status, and direct-edit prohibitions."
+  ],
+  "non_goals": [
+    "Do not change generated outputs in this review.",
+    "Do not productize generated-surface trust as a standalone package."
+  ],
+  "review_mode": {
+    "mode": "generated-surface-trust",
+    "review question": "Should generated-surface provenance and staleness be ordinary agent context rather than maintainer-only detail?",
+    "default finding cap": "1",
+    "inputs inspected first": "Issue #1115 body, docs/agent-os-capabilities.md generated-surface trust section, earlier stale schema reference proof failure"
+  },
+  "review_method": {
+    "commands used": "make maintainer-surfaces; uv run agentic-workspace implement --changed <ten review artifact paths> --task \"Create one planning review artifact for each of the ten agent OS capability ROI points from issue #1115\" --format json",
+    "evidence sources": "GitHub #1115; docs/agent-os-capabilities.md; make maintainer-surfaces stale docs/reference/proof-selection-rules.md result"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1115",
+      "label": "Parent direction issue",
+      "role": "source lane"
+    },
+    {
+      "kind": "doc",
+      "target": "docs/agent-os-capabilities.md",
+      "label": "Generated-Surface Trust",
+      "role": "capability doctrine"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Generated-surface trust is daily agent context, not only maintainer machinery",
+      "summary": "The capability document currently frames generated-surface trust mostly as internal maintainer/development machinery. Ordinary agents still need a compact answer to whether a touched file is generated, where it comes from, how to refresh it, and whether direct edits are wrong.",
+      "evidence": "Issue #1115 ranks this fourth by ROI. The earlier `make maintainer-surfaces` run failed because `docs/reference/proof-selection-rules.md` was stale and named the refresh command. That is exactly the kind of signal an ordinary agent should receive before deciding how to edit or validate a generated file.",
+      "risk if unchanged": "Agents may manually edit generated artifacts, miss refresh commands, or mistrust useful generated surfaces because provenance and freshness are not exposed at the point of use.",
+      "suggested action": "Create a child slice that exposes generated-source, freshness, refresh command, and direct-edit policy in ordinary workspace/doctor/implement output for changed paths.",
+      "confidence": "high",
+      "source": "friction-confirmed",
+      "promotion target": "GitHub child issue under #1115; Generated-Surface Trust with Workspace/report exposure",
+      "promotion trigger": "Promote when stale generated surfaces or direct-edit ambiguity recur, or when generated command extraction needs a daily-use trust affordance.",
+      "post-remediation note shape": "shrink to pointer to generated-surface trust child issue and maintainer proof output"
+    }
+  ],
+  "recommendation": {
+    "promote": "High-ROI child slice; especially valuable when changed-path routing touches generated references.",
+    "defer": "May pair naturally with change-impact mapping.",
+    "dismiss": "Do not dismiss while stale generated references remain a live proof class."
+  },
+  "retention": {
+    "closeout shape": "shrink",
+    "trigger": "Ordinary agent output exposes generated-surface trust status or a child issue owns it.",
+    "proof surface": "Doctor/implement output and maintainer-surface validation."
+  },
+  "validation_commands": [
+    "uv run agentic-workspace summary --target . --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "drift_log": [
+    "2026-05-24: Review record created from issue #1115 ROI point 4."
+  ]
+}

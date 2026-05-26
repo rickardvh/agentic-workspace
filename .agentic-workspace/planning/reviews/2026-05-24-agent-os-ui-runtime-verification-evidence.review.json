@@ -1,0 +1,73 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Agent OS ROI review: UI runtime verification evidence surfaces",
+  "date": "2026-05-24",
+  "classification": "validation-lane",
+  "goal": [
+    "Capture the ROI case for UI/runtime verification evidence surfaces.",
+    "Keep the candidate as optional validation evidence rather than a core planning primitive."
+  ],
+  "scope": [
+    "Issue #1115 ROI point 10: UI/runtime verification evidence surfaces.",
+    "Screenshots, smoke transcripts, browser checks, visual assertions, and interactive workflow proof."
+  ],
+  "non_goals": [
+    "Do not add browser automation or screenshot tooling in this review.",
+    "Do not make UI verification mandatory for non-UI work."
+  ],
+  "review_mode": {
+    "mode": "validation-lane",
+    "review question": "Should UI/runtime checks become structured proof artifacts when relevant rather than ad hoc final-answer prose?",
+    "default finding cap": "1",
+    "inputs inspected first": "Issue #1115 body, proof-surface doctrine in docs/agent-os-capabilities.md, current validation command routing"
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace implement --changed <ten review artifact paths> --task \"Create one planning review artifact for each of the ten agent OS capability ROI points from issue #1115\" --format json",
+    "evidence sources": "GitHub #1115; docs/agent-os-capabilities.md Checks / Proof Surfaces; implement proof.required_commands"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1115",
+      "label": "Parent direction issue",
+      "role": "source lane"
+    },
+    {
+      "kind": "doc",
+      "target": "docs/agent-os-capabilities.md",
+      "label": "Checks / Proof Surfaces",
+      "role": "capability doctrine"
+    }
+  ],
+  "findings": [
+    {
+      "title": "UI/runtime evidence is medium ROI but important for interactive workflows",
+      "summary": "Structured screenshots, smoke transcripts, browser checks, and visual assertions are not core for every repo task, but they should become first-class proof evidence when the changed surface is UI or runtime-interactive.",
+      "evidence": "Issue #1115 ranks this tenth but calls it important for frontend and interactive workflows. The capability doctrine already treats proof surfaces as internal capability. The implement output for these files selected non-UI planning proof, illustrating that UI/runtime evidence should be conditional rather than always-on.",
+      "risk if unchanged": "Frontend and interactive changes can close with informal claims like 'opened and looked fine' instead of durable evidence that later agents can inspect.",
+      "suggested action": "Create a child slice only after a UI/runtime workflow needs it; define the artifact as validation evidence consumed by Planning/Workspace, not as core planning state.",
+      "confidence": "medium",
+      "source": "static-analysis",
+      "promotion target": "GitHub child issue under #1115 when UI/runtime validation friction appears; Checks / Proof Surfaces plus optional tool adapters",
+      "promotion trigger": "Promote after repeated UI or interactive-runtime work lacks durable screenshot/transcript proof, or when a browser/tool adapter integration is selected.",
+      "post-remediation note shape": "stub pointing to validation evidence contract"
+    }
+  ],
+  "recommendation": {
+    "promote": "Do not promote ahead of higher-ROI general workflow slices unless a UI/runtime task makes it urgent.",
+    "defer": "Retain as a conditional validation-lane candidate under #1115.",
+    "dismiss": "Do not dismiss; the value is workload-specific rather than absent."
+  },
+  "retention": {
+    "closeout shape": "stub",
+    "trigger": "A UI/runtime proof artifact contract is defined or the candidate is explicitly superseded.",
+    "proof surface": "Validation-lane output, browser/smoke transcripts, and screenshot artifacts when relevant."
+  },
+  "validation_commands": [
+    "uv run agentic-workspace summary --target . --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "drift_log": [
+    "2026-05-24: Review record created from issue #1115 ROI point 10."
+  ]
+}

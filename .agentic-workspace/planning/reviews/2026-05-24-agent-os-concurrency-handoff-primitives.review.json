@@ -1,0 +1,73 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Agent OS ROI review: concurrency and handoff primitives",
+  "date": "2026-05-24",
+  "classification": "planning-surface",
+  "goal": [
+    "Capture the ROI case for lightweight concurrency and handoff primitives.",
+    "Keep the review separate from active planning promotion."
+  ],
+  "scope": [
+    "Issue #1115 ROI point 7: concurrency and handoff primitives.",
+    "Task/file claims, stale-claim recovery, handoff summaries, and last-proven records."
+  ],
+  "non_goals": [
+    "Do not introduce lock files or claim protocols in this review.",
+    "Do not convert handoff summaries into a standalone package promise."
+  ],
+  "review_mode": {
+    "mode": "planning-surface",
+    "review question": "Would lightweight claims and last-proven handoff records reduce restart and multi-agent collision cost?",
+    "default finding cap": "1",
+    "inputs inspected first": "Issue #1115 body, planning state active/roadmap shape, docs/agent-os-capabilities.md collaboration and handoff sections"
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace start --task \"Create one planning review artifact for each of the ten agent OS capability ROI points from issue #1115\" --format json; Get-Content .agentic-workspace/planning/state.toml",
+    "evidence sources": "GitHub #1115; planning state with no active execplans; docs/agent-os-capabilities.md"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1115",
+      "label": "Parent direction issue",
+      "role": "source lane"
+    },
+    {
+      "kind": "doc",
+      "target": "docs/agent-os-capabilities.md",
+      "label": "Collaboration / Concurrency Safety and Handoff / Execution Summaries",
+      "role": "capability doctrine"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Concurrency and handoff primitives are medium-high ROI supporting infrastructure",
+      "summary": "The repo already separates active planning, roadmap candidates, and review artifacts, but lightweight claims, stale-claim recovery, handoff summaries, and last-proven records would make multi-agent continuation cheaper without making handoff a standalone product.",
+      "evidence": "Issue #1115 ranks concurrency/handoff seventh. The current startup output showed no active execplans and gave safe routing for direct work; the planning state keeps active items and roadmap candidates separate. The capability doctrine treats collaboration as internal and handoff as unlikely to stand alone, which matches the supporting-infrastructure shape.",
+      "risk if unchanged": "Agents can collide on high-churn workflow files, lose recent validation context, or resume from chat summaries instead of a compact checked-in last-proven record.",
+      "suggested action": "Create a child slice only when multi-agent collision or restart failures recur; keep the first design as Planning-owned support with Workspace reporting.",
+      "confidence": "medium",
+      "source": "mixed",
+      "promotion target": "GitHub child issue under #1115 or future Planning roadmap candidate",
+      "promotion trigger": "Promote after repeated stale-claim, handoff, or last-proof reconstruction friction.",
+      "post-remediation note shape": "stub pointing to the planning support contract"
+    }
+  ],
+  "recommendation": {
+    "promote": "Not first; preserve as a later child slice unless concurrency friction becomes urgent.",
+    "defer": "Keep inactive under #1115.",
+    "dismiss": "Do not dismiss; retain the support-infrastructure framing."
+  },
+  "retention": {
+    "closeout shape": "stub",
+    "trigger": "A child issue or planning support contract captures concurrency/handoff primitives.",
+    "proof surface": "Planning state, handoff output, and closeout proof records."
+  },
+  "validation_commands": [
+    "uv run agentic-workspace summary --target . --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "drift_log": [
+    "2026-05-24: Review record created from issue #1115 ROI point 7."
+  ]
+}

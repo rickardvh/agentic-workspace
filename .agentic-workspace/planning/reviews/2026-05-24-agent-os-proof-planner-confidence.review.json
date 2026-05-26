@@ -1,0 +1,73 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Agent OS ROI review: proof planner confidence and residual risk",
+  "date": "2026-05-24",
+  "classification": "validation-lane",
+  "goal": [
+    "Capture the ROI case for proof planning that states confidence and residual risk.",
+    "Keep the artifact as review evidence under issue #1115."
+  ],
+  "scope": [
+    "Issue #1115 ROI point 3: proof planner with explicit confidence and residual risk.",
+    "Current proof-selection output, acceptance reconciliation, and validation-lane expectations."
+  ],
+  "non_goals": [
+    "Do not change proof-selection rules in this review.",
+    "Do not add new validation commands."
+  ],
+  "review_mode": {
+    "mode": "validation-lane",
+    "review question": "Would explicit proof confidence and residual-risk wording reduce false closeout confidence?",
+    "default finding cap": "1",
+    "inputs inspected first": "Issue #1115 body, implement proof payload, prior stale proof-selection doc failure from maintainer-surfaces"
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace implement --changed <ten review artifact paths> --task \"Create one planning review artifact for each of the ten agent OS capability ROI points from issue #1115\" --format json",
+    "evidence sources": "GitHub #1115; implement proof.required_commands; implement acceptance_reconciliation; earlier make maintainer-surfaces stale-schema-reference failure noted in this thread"
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1115",
+      "label": "Parent direction issue",
+      "role": "source lane"
+    },
+    {
+      "kind": "review-signal",
+      "target": "scratch/command-logs/20260524-150053-schema-reference-docs.log",
+      "label": "Earlier maintainer-surface proof failure",
+      "role": "validation friction evidence"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Proof selection should say what remains unproven",
+      "summary": "The selected commands are useful, but the agent still has to judge whether they prove the requested outcome or merely prove schema/planning health. A proof planner that states confidence and residual risk would reduce overclaiming at closeout.",
+      "evidence": "The implement payload selected `summary` and planning `doctor` for these review artifacts and separately warned that proof should demonstrate acceptance satisfaction, not only command success. Earlier in this thread, `make maintainer-surfaces` failed for a stale generated reference, illustrating that command success/failure needs interpretation against intent.",
+      "risk if unchanged": "Agents may report successful validation without explaining what user intent remains review-only, or may overrun validation by adding commands that do not map to the requested outcome.",
+      "suggested action": "Create a child slice that augments proof-selection output with proven dimensions, unproven dimensions, confidence tier, and residual-risk text.",
+      "confidence": "high",
+      "source": "friction-confirmed",
+      "promotion target": "GitHub child issue under #1115; Checks / Proof Surfaces inside Planning and Workspace aggregation",
+      "promotion trigger": "Promote when closeout proof is ambiguous, when a stale/generated proof failure needs classification, or when issue #1106/#1114 style proof-ranking work is selected.",
+      "post-remediation note shape": "shrink to a pointer to proof-selection child work and validation-lane evidence"
+    }
+  ],
+  "recommendation": {
+    "promote": "High-priority child slice; it directly affects closeout honesty.",
+    "defer": "Can wait behind task-contract if the child slices need strict ordering.",
+    "dismiss": "Do not dismiss while proof confidence remains agent-judgment-only."
+  },
+  "retention": {
+    "closeout shape": "shrink",
+    "trigger": "Proof-selection output carries confidence and residual-risk fields or a child issue owns the work.",
+    "proof surface": "Proof-selection command output and validation-lane tests."
+  },
+  "validation_commands": [
+    "uv run agentic-workspace summary --target . --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json"
+  ],
+  "drift_log": [
+    "2026-05-24: Review record created from issue #1115 ROI point 3."
+  ]
+}
