@@ -31,7 +31,7 @@
       "path": "workspace-work-shape/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "classify work shape and route direct, bounded, lane, or epic work before implementation",
+      "summary": "decide work shape from AW facts, hard blockers, proof needs, and user intent before implementation",
       "activation_hints": {
         "verbs": ["classify", "triage", "shape", "route", "decide", "infer", "resolve"],
         "nouns": [
@@ -51,7 +51,7 @@
           "satisfaction evidence"
         ],
         "phrases": [
-          "classify work shape",
+          "decide work shape",
           "shape this work",
           "infer intended outcome",
           "resolve intended outcome",

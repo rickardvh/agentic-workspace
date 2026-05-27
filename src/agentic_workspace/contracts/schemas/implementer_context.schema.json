@@ -857,11 +857,11 @@
       "required": [
         "status",
         "posture",
-        "work_shape",
-        "proof_burden",
+        "work_shape_guidance",
+        "proof_factors",
         "risk_flags",
         "inspection_evidence_required",
-        "classification_authority",
+        "guidance_authority",
         "self_assessment_authority"
       ],
       "properties": {
@@ -873,13 +873,13 @@
           "type": "object",
           "description": "Human-readable posture details used for review."
         },
-        "work_shape": {
-          "type": "string",
-          "description": "Inferred work shape such as direct, bounded, lane, or epic."
+        "work_shape_guidance": {
+          "type": "object",
+          "description": "Structural work-shape guidance; the agent owns final work-shape judgment."
         },
-        "proof_burden": {
-          "type": "string",
-          "description": "Expected proof burden for this task."
+        "proof_factors": {
+          "type": "object",
+          "description": "Structural proof factors; the agent owns proof proportionality judgment."
         },
         "risk_flags": {
           "type": "array",
@@ -897,9 +897,9 @@
           },
           "description": "Context required before trusting the posture."
         },
-        "classification_authority": {
+        "guidance_authority": {
           "type": "string",
-          "description": "Authority used to classify task capability needs."
+          "description": "Authority used to provide structural guidance."
         },
         "self_assessment_authority": {
           "type": "string",
@@ -907,7 +907,7 @@
         }
       },
       "additionalProperties": true,
-      "description": "Task capability classification for changed-path implementation."
+      "description": "Task capability guidance for changed-path implementation."
     },
     "runtime_resolution": {
       "type": "object",
