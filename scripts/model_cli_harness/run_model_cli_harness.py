@@ -25,10 +25,30 @@ DEFAULT_SUITE = REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-
 DEFAULT_OUTPUT_ROOT = REPO_ROOT / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH / "model-cli-harness"
 EPHEMERAL_MUTATION_PATHS = (
     ".git/",
+    ".coverage",
+    ".mypy_cache/",
     ".pytest_cache/",
+    ".ruff_cache/",
+    ".tox/",
     ".venv/",
     "__pycache__/",
+    "build/",
+    "dist/",
+    "env/",
+    "htmlcov/",
+    "node_modules/",
+    "site/",
     "uv.lock",
+    "venv/",
+)
+EPHEMERAL_MUTATION_GLOBS = (
+    "*.egg-info/*",
+    "*.egg-info",
+)
+HARNESS_SETUP_MUTATION_PATHS = (
+    ".agentic-workspace/",
+    "AGENTS.md",
+    "pyproject.toml",
 )
 
 
@@ -63,6 +83,142 @@ def _replace_placeholders(value: str, *, replacements: dict[str, str]) -> str:
 
 def _render_list(values: list[str], *, replacements: dict[str, str]) -> list[str]:
     return [_replace_placeholders(value, replacements=replacements) for value in values]
+
+
+def _string_list_config(value: Any, *, field: str) -> list[str]:
+    if value is None:
+        return []
+    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+        raise ValueError(f"{field} must be a string list")
+    return value
+
+
+def _adapter_model_args(adapter: dict[str, Any], *, model: str) -> list[str]:
+    args = _string_list_config(adapter.get("model_args"), field="adapter.model_args")
+    by_model = adapter.get("model_args_by_model", {})
+    if by_model is None:
+        return args
+    if not isinstance(by_model, dict):
+        raise ValueError("adapter.model_args_by_model must be an object")
+    if model not in by_model:
+        return args
+    return _string_list_config(by_model[model], field=f"adapter.model_args_by_model.{model}")
+
+
+def _safe_prompt_stem(value: str) -> str:
+    rendered = re.sub(r"[^A-Za-z0-9_.-]+", "-", value).strip("-._")
+    return (rendered or "prompt")[:80]
+
+
+def _prompt_transport(
+    adapter: dict[str, Any],
+    *,
+    prompt: str,
+    run_root: Path,
+    prompt_id: str,
+    replacements: dict[str, str],
+) -> tuple[str, list[str], dict[str, Any]]:
+    config = adapter.get("prompt_transport")
+    prompt_length = len(prompt)
+    if config is None:
+        return prompt, [], {
+            "mode": "inline",
+            "prompt_length": prompt_length,
+            "threshold_chars": None,
+            "prompt_file": "",
+        }
+    if not isinstance(config, dict):
+        raise ValueError("adapter.prompt_transport must be an object")
+    threshold = int(config.get("threshold_chars", 8000))
+    if prompt_length <= threshold:
+        return prompt, [], {
+            "mode": "inline",
+            "prompt_length": prompt_length,
+            "threshold_chars": threshold,
+            "prompt_file": "",
+        }
+
+    prompt_dir = run_root / "prompts"
+    prompt_dir.mkdir(parents=True, exist_ok=True)
+    prompt_file = prompt_dir / f"{_safe_prompt_stem(prompt_id)}.txt"
+    prompt_file.write_text(prompt, encoding="utf-8")
+    transport_replacements = {
+        **replacements,
+        "prompt_file": str(prompt_file),
+        "prompt_length": str(prompt_length),
+    }
+    file_prompt_template = str(
+        config.get("file_prompt")
+        or "Read the attached prompt file and follow it exactly. Treat it as the complete task prompt."
+    )
+    inline_prompt = _replace_placeholders(file_prompt_template, replacements=transport_replacements)
+    file_args = _render_list(
+        _string_list_config(config.get("file_args"), field="adapter.prompt_transport.file_args"),
+        replacements=transport_replacements,
+    )
+    mode = str(config.get("mode") or "file")
+    return inline_prompt, file_args, {
+        "mode": mode,
+        "prompt_length": prompt_length,
+        "inline_prompt_length": len(inline_prompt),
+        "threshold_chars": threshold,
+        "prompt_file": str(prompt_file),
+    }
+
+
+def _render_command_template(
+    values: list[str],
+    *,
+    replacements: dict[str, str],
+    expansion_args: dict[str, list[str]] | None = None,
+) -> list[str]:
+    expansion_args = expansion_args or {}
+    rendered: list[str] = []
+    for value in values:
+        if value == "{model_args}":
+            rendered.extend(_render_list(expansion_args.get("model_args", []), replacements=replacements))
+            continue
+        if value == "{prompt_transport_args}":
+            rendered.extend(_render_list(expansion_args.get("prompt_transport_args", []), replacements=replacements))
+            continue
+        rendered.append(_replace_placeholders(value, replacements=replacements))
+    return rendered
+
+
+def _adapter_invocation_command(
+    adapter: dict[str, Any],
+    *,
+    adapter_id: str,
+    model: str,
+    replacements: dict[str, str],
+    run_root: Path,
+    prompt_id: str,
+    command_key: str = "command",
+) -> tuple[list[str], dict[str, Any], dict[str, str]]:
+    command_template = adapter.get(command_key)
+    if command_template is None and command_key != "command":
+        command_template = adapter.get("command")
+    if not isinstance(command_template, list) or not all(isinstance(item, str) for item in command_template):
+        raise ValueError(f"adapter '{adapter_id}' must define {command_key} as a string list")
+    prompt = str(replacements.get("prompt", ""))
+    model_args = _adapter_model_args(adapter, model=model)
+    command_prompt, prompt_transport_args, prompt_transport = _prompt_transport(
+        adapter,
+        prompt=prompt,
+        run_root=run_root,
+        prompt_id=prompt_id,
+        replacements={**replacements, "model": model},
+    )
+    command_replacements = {**replacements, "model": model, "prompt": command_prompt}
+    command = _render_command_template(
+        command_template,
+        replacements=command_replacements,
+        expansion_args={
+            "model_args": model_args,
+            "prompt_transport_args": prompt_transport_args,
+        },
+    )
+    return command, prompt_transport, command_replacements
 
 
 def _render_prompt(template: str, *, replacements: dict[str, str]) -> str:
@@ -273,9 +429,25 @@ def _has_usable_model_output(result: dict[str, Any]) -> bool:
     return bool(str(result.get("stdout") or "").strip() or str(result.get("final_message") or "").strip())
 
 
+def _adapter_configuration_rejected(result: dict[str, Any]) -> bool:
+    combined = f"{result.get('stdout') or ''}\n{result.get('stderr') or ''}\n{result.get('final_message') or ''}".lower()
+    markers = (
+        "does not support reasoning effort",
+        "unsupported reasoning effort",
+        "unsupported adapter option",
+        "unknown option",
+        "invalid option",
+        "unrecognized option",
+        "doesn't support reasoning effort",
+    )
+    return isinstance(result.get("returncode"), int) and result["returncode"] != 0 and any(marker in combined for marker in markers)
+
+
 def _classify_result_status(result: dict[str, Any]) -> str:
     if result.get("timed_out"):
         return "adapter_blocked"
+    if _adapter_configuration_rejected(result):
+        return "adapter_configuration_rejected"
     if isinstance(result.get("returncode"), int) and result["returncode"] != 0 and not _has_usable_model_output(result):
         return "runtime_failed"
     return str(result.get("status") or "completed")
@@ -292,18 +464,30 @@ def _with_git_ceiling(env: dict[str, str], *, run_root: Path) -> dict[str, str]:
 def _is_ephemeral_mutation_path(path: str) -> bool:
     normalized = path.replace("\\", "/")
     parts = normalized.split("/")
-    if any(part in {".git", ".pytest_cache", ".venv", "__pycache__"} for part in parts):
+    if any(part in {".git", ".mypy_cache", ".pytest_cache", ".ruff_cache", ".tox", ".venv", "__pycache__", "node_modules"} for part in parts):
         return True
-    return any(normalized.startswith(prefix) for prefix in EPHEMERAL_MUTATION_PATHS)
+    return any(normalized.startswith(prefix) or normalized == prefix.rstrip("/") for prefix in EPHEMERAL_MUTATION_PATHS) or any(
+        fnmatch.fnmatch(normalized, pattern) for pattern in EPHEMERAL_MUTATION_GLOBS
+    )
 
 
-def _file_snapshot(root: Path) -> dict[str, dict[str, Any]]:
+def _is_harness_setup_mutation_path(path: str, *, patterns: Iterable[str] | None = None) -> bool:
+    if patterns is None:
+        return False
+    normalized = path.replace("\\", "/")
+    candidates = tuple(patterns)
+    return any(normalized.startswith(pattern) or normalized == pattern.rstrip("/") or fnmatch.fnmatch(normalized, pattern) for pattern in candidates)
+
+
+def _file_snapshot(root: Path, *, include_ignored: bool = False) -> dict[str, dict[str, Any]]:
     snapshot: dict[str, dict[str, Any]] = {}
     if not root.exists():
         return snapshot
     for path in sorted(item for item in root.rglob("*") if item.is_file()):
         relative = path.relative_to(root).as_posix()
-        if _is_ephemeral_mutation_path(relative):
+        if relative.startswith(".git/"):
+            continue
+        if not include_ignored and _is_ephemeral_mutation_path(relative):
             continue
         data = path.read_bytes()
         snapshot[relative] = {
@@ -313,20 +497,67 @@ def _file_snapshot(root: Path) -> dict[str, dict[str, Any]]:
     return snapshot
 
 
-def _snapshot_diff(before: dict[str, dict[str, Any]], after: dict[str, dict[str, Any]]) -> dict[str, Any]:
+def _path_changes(
+    before: dict[str, dict[str, Any]],
+    after: dict[str, dict[str, Any]],
+    *,
+    paths: Iterable[str],
+) -> dict[str, list[str]]:
+    selected = set(paths)
+    before_paths = set(before) & selected
+    after_paths = set(after) & selected
+    return {
+        "created": sorted(after_paths - before_paths),
+        "deleted": sorted(before_paths - after_paths),
+        "modified": sorted(path for path in before_paths & after_paths if before[path] != after[path]),
+    }
+
+
+def _snapshot_diff(
+    before: dict[str, dict[str, Any]],
+    after: dict[str, dict[str, Any]],
+    *,
+    harness_setup_patterns: Iterable[str] | None = None,
+) -> dict[str, Any]:
     before_paths = set(before)
     after_paths = set(after)
-    created = sorted(after_paths - before_paths)
-    deleted = sorted(before_paths - after_paths)
-    modified = sorted(path for path in before_paths & after_paths if before[path] != after[path])
+    raw_created = sorted(after_paths - before_paths)
+    raw_deleted = sorted(before_paths - after_paths)
+    raw_modified = sorted(path for path in before_paths & after_paths if before[path] != after[path])
+    changed_paths = sorted(set(raw_created + raw_deleted + raw_modified))
+    ignored_paths = [path for path in changed_paths if _is_ephemeral_mutation_path(path)]
+    setup_paths = [path for path in changed_paths if path not in ignored_paths and _is_harness_setup_mutation_path(path, patterns=harness_setup_patterns)]
+    source_paths = [path for path in changed_paths if path not in set(ignored_paths) and path not in set(setup_paths)]
+    source_changes = _path_changes(before, after, paths=source_paths)
+    ignored_changes = _path_changes(before, after, paths=ignored_paths)
+    setup_changes = _path_changes(before, after, paths=setup_paths)
+    raw_status = "changed" if changed_paths else "clean"
     return {
-        "status": "changed" if created or modified or deleted else "clean",
-        "created_count": len(created),
-        "modified_count": len(modified),
-        "deleted_count": len(deleted),
-        "created": created,
-        "modified": modified,
-        "deleted": deleted,
+        "status": "changed" if source_paths else "clean",
+        "raw_status": raw_status,
+        "created_count": len(source_changes["created"]),
+        "modified_count": len(source_changes["modified"]),
+        "deleted_count": len(source_changes["deleted"]),
+        "created": source_changes["created"],
+        "modified": source_changes["modified"],
+        "deleted": source_changes["deleted"],
+        "source_created": source_changes["created"],
+        "source_modified": source_changes["modified"],
+        "source_deleted": source_changes["deleted"],
+        "raw_created_count": len(raw_created),
+        "raw_modified_count": len(raw_modified),
+        "raw_deleted_count": len(raw_deleted),
+        "raw_created": raw_created,
+        "raw_modified": raw_modified,
+        "raw_deleted": raw_deleted,
+        "ignored_noise_count": len(ignored_paths),
+        "ignored_created": ignored_changes["created"],
+        "ignored_modified": ignored_changes["modified"],
+        "ignored_deleted": ignored_changes["deleted"],
+        "harness_setup_count": len(setup_paths),
+        "harness_setup_created": setup_changes["created"],
+        "harness_setup_modified": setup_changes["modified"],
+        "harness_setup_deleted": setup_changes["deleted"],
     }
 
 
@@ -2057,6 +2288,13 @@ def _execution_warnings(*, result: dict[str, Any], repo_path: Path, mutation_sum
                 "message": "The model CLI process failed before producing usable model output.",
             }
         )
+    if result.get("status") == "adapter_configuration_rejected" or _adapter_configuration_rejected(result):
+        warnings.append(
+            {
+                "warning_class": "model_cli_adapter_configuration_rejected",
+                "message": "The model CLI rejected the configured adapter/model options.",
+            }
+        )
     if result.get("capture_warning"):
         warnings.append(
             {
@@ -2222,6 +2460,7 @@ def _finding_base_classes(warning_key: str) -> list[str]:
         "model_cli_runtime_failed",
         "model_cli_adapter_tooling_limitation",
         "model_cli_adapter_blocked",
+        "model_cli_adapter_configuration_rejected",
         "model_cli_permission_denied",
     }:
         return ["environment_or_provider"]
@@ -2478,7 +2717,12 @@ def _completion_loop_summary(
     final_validation_status = "not-run"
     if validation_results:
         final_validation_status = "passed" if all(result.get("returncode") == 0 for result in validation_results) else "failed"
-    blocking_warning_classes = {"model_cli_adapter_blocked", "model_cli_runtime_failed", "model_cli_model_not_found"}
+    blocking_warning_classes = {
+        "model_cli_adapter_blocked",
+        "model_cli_runtime_failed",
+        "model_cli_model_not_found",
+        "model_cli_adapter_configuration_rejected",
+    }
     blocked = any(warning.get("warning_class") in blocking_warning_classes for warning in first_warnings)
     first_pass_success = execute and not first_warnings and final_validation_status in {"not-run", "passed"}
     eventual_success = execute and not blocked and final_validation_status != "failed"
@@ -2563,14 +2807,18 @@ def run_suite(
             if bool(adapter.get("inject_repo_startup_instructions", False)):
                 prompt = _startup_instruction_prompt(repo_path=paths.repo_path, prompt=prompt)
             replacements["prompt"] = prompt
-            command_template = adapter.get("command")
-            if not isinstance(command_template, list) or not all(isinstance(item, str) for item in command_template):
-                raise ValueError(f"adapter '{adapter_id}' must define command as a string list")
-            command = _render_list(command_template, replacements=replacements)
-            preflight = _adapter_preflight(adapter, command=command, replacements=replacements)
+            command, prompt_transport, command_replacements = _adapter_invocation_command(
+                adapter,
+                adapter_id=adapter_id,
+                model=resolved_model,
+                replacements=replacements,
+                run_root=paths.run_root,
+                prompt_id=f"{scenario_id}-{prompt_variant_id}",
+            )
+            preflight = _adapter_preflight(adapter, command=command, replacements=command_replacements)
             adapter_env = _adapter_environment(
                 adapter,
-                replacements=replacements,
+                replacements=command_replacements,
                 isolate_provider_home=isolate_provider_home,
             )
             adapter_env = _prepend_env_path(adapter_env, preflight["path_prepend"])
@@ -2595,7 +2843,7 @@ def run_suite(
                             env=adapter_env,
                         )
                     )
-            baseline_snapshot = _file_snapshot(paths.repo_path)
+            baseline_snapshot = _file_snapshot(paths.repo_path, include_ignored=True)
 
             invocation: dict[str, Any] = {
                 "scenario_id": scenario_id,
@@ -2606,6 +2854,7 @@ def run_suite(
                 "repo_path": str(paths.repo_path),
                 "run_root": str(paths.run_root),
                 "prompt": prompt,
+                "prompt_transport": prompt_transport,
                 "command": command,
                 "preflight": preflight,
                 "git_ceiling_directories": adapter_env.get("GIT_CEILING_DIRECTORIES", ""),
@@ -2635,7 +2884,7 @@ def run_suite(
                     result["final_message"] = paths.share_path.read_text(encoding="utf-8")
                 result["status"] = _classify_result_status(result)
                 _copy_transcript(str(result.get("stdout", "")), paths.transcript_path)
-                mutation_summary = _snapshot_diff(baseline_snapshot, _file_snapshot(paths.repo_path))
+                mutation_summary = _snapshot_diff(baseline_snapshot, _file_snapshot(paths.repo_path, include_ignored=True))
                 invocation["usage_summary"] = _usage_summary_from_stdout(str(result.get("stdout", "")))
                 invocation["package_read_surface_summary"] = _package_read_surface_summary_from_stdout(str(result.get("stdout", "")))
                 invocation["result"] = result
@@ -2694,10 +2943,15 @@ def run_suite(
                             "share_path": str(paths.run_root / "postmortem.md"),
                             "postmortem_cwd": str(postmortem_cwd),
                         }
-                        postmortem_template = adapter.get("postmortem_command", command_template)
-                        if not isinstance(postmortem_template, list) or not all(isinstance(item, str) for item in postmortem_template):
-                            raise ValueError(f"adapter '{adapter_id}' postmortem_command must be a string list")
-                        postmortem_command = _render_list(postmortem_template, replacements=postmortem_replacements)
+                        postmortem_command, postmortem_prompt_transport, _ = _adapter_invocation_command(
+                            adapter,
+                            adapter_id=adapter_id,
+                            model=resolved_model,
+                            replacements=postmortem_replacements,
+                            run_root=paths.run_root,
+                            prompt_id=f"{scenario_id}-{prompt_variant_id}-postmortem",
+                            command_key="postmortem_command",
+                        )
                         postmortem_result = _run_command(
                             postmortem_command,
                             cwd=postmortem_cwd,
@@ -2709,6 +2963,7 @@ def run_suite(
                             postmortem_result["final_message"] = postmortem_share.read_text(encoding="utf-8")
                         invocation["postmortem_feedback"] = {
                             "prompt": postmortem_prompt,
+                            "prompt_transport": postmortem_prompt_transport,
                             "command": postmortem_command,
                             "result": postmortem_result,
                             "warnings": _postmortem_feedback_warnings(result=postmortem_result),
@@ -2736,7 +2991,14 @@ def run_suite(
                         "share_path": str(followup_share),
                         "transcript_path": str(followup_transcript),
                     }
-                    followup_command = _render_list(command_template, replacements=followup_replacements)
+                    followup_command, followup_prompt_transport, _ = _adapter_invocation_command(
+                        adapter,
+                        adapter_id=adapter_id,
+                        model=resolved_model,
+                        replacements=followup_replacements,
+                        run_root=paths.run_root,
+                        prompt_id=f"{scenario_id}-{prompt_variant_id}-turn-{index}",
+                    )
                     followup_result = _run_command(
                         followup_command,
                         cwd=paths.repo_path,
@@ -2750,6 +3012,7 @@ def run_suite(
                     followup_turn = {
                         "turn": index,
                         "prompt": followup_prompt,
+                        "prompt_transport": followup_prompt_transport,
                         "command": followup_command,
                         "result": followup_result,
                         "usage_summary": _usage_summary_from_stdout(str(followup_result.get("stdout", ""))),
@@ -2972,4 +3235,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
