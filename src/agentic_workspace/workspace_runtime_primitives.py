@@ -15929,7 +15929,6 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if isinstance(planning_safety_gate, dict):
         compact_gate = _selector_first_planning_safety_gate(planning_safety_gate)
         compact_gate.pop("planning_revision", None)
-        compact_gate.pop("active_plan_reliance", None)
         compact_gate.pop("work_shape_guidance", None)
         projected["context"]["planning_safety_gate"] = compact_gate
     if isinstance(intent_acknowledgement, dict) and intent_acknowledgement.get("decision") == "proceed-with-stated-assumption":
@@ -16293,11 +16292,127 @@ def _command_with_expected_planning_revision(command: str, *, planning_revision:
     return f"{command}{addition}"
 
 
-def _active_plan_reliance_payload(
+def _file_mtime_iso(path: Path) -> str | None:
+    try:
+        if not path.exists():
+            return None
+        return datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat()
+    except OSError:
+        return None
+
+
+def _active_plan_record_for_reliance(*, target_root: Path, active_surface: str) -> dict[str, Any]:
+    if not active_surface:
+        return {}
+    plan_path = target_root / active_surface
+    if not plan_path.exists() or plan_path.suffix != ".json":
+        return {}
+    try:
+        record = json.loads(plan_path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return record if isinstance(record, dict) else {}
+
+
+def _active_plan_freshness_evidence(
     *,
-    active_planning_present: bool,
+    target_root: Path,
+    active_summary: dict[str, Any],
     active_delegation_requirement: dict[str, Any],
     planning_revision: dict[str, Any],
+    cli_invoke: str,
+) -> dict[str, Any]:
+    active_surface = str(
+        active_summary.get("active_execplan") or planning_revision.get("active_execplan") or active_delegation_requirement.get("path") or ""
+    ).strip()
+    state_path_text = str(planning_revision.get("state_path") or ".agentic-workspace/planning/state.toml")
+    state_path = target_root / state_path_text
+    plan_path = target_root / active_surface if active_surface else None
+    record = _active_plan_record_for_reliance(target_root=target_root, active_surface=active_surface)
+    proof_report = record.get("proof_report", {}) if isinstance(record.get("proof_report"), dict) else {}
+    finished_review = record.get("finished_run_review", {}) if isinstance(record.get("finished_run_review"), dict) else {}
+    execution_run = record.get("execution_run", {}) if isinstance(record.get("execution_run"), dict) else {}
+    proof_values = [
+        str(proof_report.get("validation proof", "") or "").strip(),
+        str(proof_report.get("proof achieved now", "") or "").strip(),
+        str(proof_report.get('evidence for "proof achieved" state', "") or "").strip(),
+        str(finished_review.get("proof status", "") or "").strip(),
+    ]
+    proof_recorded = any(proof_values)
+    proof_status = str(finished_review.get("proof status") or proof_report.get("proof achieved now") or "").strip()
+    state_mtime = _file_mtime_iso(state_path)
+    plan_mtime = _file_mtime_iso(plan_path) if plan_path is not None else None
+    last_updated_candidates = [item for item in (state_mtime, plan_mtime) if item]
+    last_updated = max(last_updated_candidates) if last_updated_candidates else None
+    requirement_status = str(active_delegation_requirement.get("status", "") or "unknown")
+    stale_indicators: list[str] = []
+    if active_surface and not proof_recorded:
+        stale_indicators.append("proof-not-recorded")
+    if execution_run and not proof_recorded:
+        stale_indicators.append("execution-run-present-without-proof-report")
+    if active_delegation_requirement.get("required"):
+        stale_indicators.append("active-planning-gate-blocked")
+    if requirement_status == "delegation-decision-untrusted-shared-state":
+        stale_indicators.append("hand-edited-delegation-decision")
+    if requirement_status == "delegation-decision-recorded":
+        mutation_authority = "command-provenance-present"
+    elif requirement_status == "delegation-decision-untrusted-shared-state":
+        mutation_authority = "manual-edit-indicator"
+    elif active_surface:
+        mutation_authority = "active-state-requires-agent-review"
+    else:
+        mutation_authority = "not-applicable"
+    refresh_command = _command_with_cli_invoke(
+        command="agentic-workspace summary --target . --format json",
+        cli_invoke=cli_invoke,
+    )
+    closeout_command = _command_with_expected_planning_revision(
+        _command_with_cli_invoke(
+            command="agentic-workspace planning closeout --target . --proof-from last --format json",
+            cli_invoke=cli_invoke,
+        ),
+        planning_revision=planning_revision,
+    )
+    repair_command = str(active_delegation_requirement.get("command") or "")
+    return {
+        "authority": "assembled-from-planning-state",
+        "state_path": state_path_text,
+        "active_execplan": active_surface,
+        "state_last_modified": state_mtime,
+        "active_execplan_last_modified": plan_mtime,
+        "last_updated": last_updated,
+        "source_hashes": {
+            "state_hash": planning_revision.get("state_hash"),
+            "active_execplan_hash": planning_revision.get("active_execplan_hash"),
+            "revision_id": planning_revision.get("revision_id"),
+        },
+        "mutation_authority": mutation_authority,
+        "manual_edit_indicator": mutation_authority == "manual-edit-indicator",
+        "last_proof": {
+            "status": proof_status or ("recorded" if proof_recorded else "not-recorded"),
+            "recorded": proof_recorded,
+            "proof_report_present": bool(proof_report),
+            "finished_review_proof_status": str(finished_review.get("proof status", "") or "").strip(),
+        },
+        "stale_indicators": stale_indicators,
+        "current_enough_to_guide_work": bool(active_surface) and not stale_indicators,
+        "routes": {
+            "refresh": refresh_command,
+            "record_or_repair": repair_command or closeout_command,
+            "close_or_update_stale_state": closeout_command,
+        },
+        "rule": "Planning state can guide work only after the agent reviews freshness, provenance, proof state, and any stale indicators.",
+    }
+
+
+def _active_plan_reliance_payload(
+    *,
+    target_root: Path,
+    active_planning_present: bool,
+    active_summary: dict[str, Any],
+    active_delegation_requirement: dict[str, Any],
+    planning_revision: dict[str, Any],
+    cli_invoke: str,
 ) -> dict[str, Any]:
     revision_id = str(planning_revision.get("revision_id", "") or "")
     requirement_status = str(active_delegation_requirement.get("status", "") or "unknown")
@@ -16326,7 +16441,7 @@ def _active_plan_reliance_payload(
         permission_claim = "continue-active-plan-after-normal-review"
         integrity = "not-required-by-current-facts"
         reliance = "allowed-after-current-state-review"
-    return {
+    payload = {
         "kind": "agentic-workspace/active-plan-reliance/v1",
         "status": status,
         "permission_claim": permission_claim,
@@ -16338,6 +16453,15 @@ def _active_plan_reliance_payload(
         "reliance": reliance,
         "requirement_status": requirement_status,
     }
+    if active_planning_present:
+        payload["authority_evidence"] = _active_plan_freshness_evidence(
+            target_root=target_root,
+            active_summary=active_summary,
+            active_delegation_requirement=active_delegation_requirement,
+            planning_revision=planning_revision,
+            cli_invoke=cli_invoke,
+        )
+    return payload
 
 
 def _planning_safety_promotion_command(
@@ -16610,9 +16734,12 @@ def _planning_safety_gate_payload(
         active_summary=active_summary,
     )
     active_plan_reliance = _active_plan_reliance_payload(
+        target_root=target_root,
         active_planning_present=active_planning_present,
+        active_summary=active_summary,
         active_delegation_requirement=active_delegation_requirement,
         planning_revision=planning_revision,
+        cli_invoke=config.cli_invoke,
     )
     if active_planning_present and active_delegation_requirement.get("required"):
         status = "blocked"

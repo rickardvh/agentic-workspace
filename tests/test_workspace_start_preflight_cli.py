@@ -1936,6 +1936,12 @@ queued_items = []
                     "decision command": "agentic-planning delegation-decision",
                     "recorded at": "2026-05-21T15:04:09+00:00",
                 },
+                "proof_report": {
+                    "validation proof": "uv run pytest tests/test_workspace_start_preflight_cli.py -q passed",
+                    "proof achieved now": "yes",
+                    'evidence for "proof achieved" state': "focused active-plan reliance test",
+                },
+                "finished_run_review": {"proof status": "passed"},
             }
         ),
     )
@@ -1960,6 +1966,17 @@ queued_items = []
     assert recorded_payload["active_plan_reliance"]["status"] == "command-written-state-observed"
     assert recorded_payload["active_plan_reliance"]["permission_claim"] == "review-before-continuing-active-plan"
     assert recorded_payload["planning_revision"]["revision_id"]
+    authority = recorded_payload["active_plan_reliance"]["authority_evidence"]
+    assert authority["active_execplan"] == ".agentic-workspace/planning/execplans/mechanical-lane.plan.json"
+    assert authority["state_last_modified"]
+    assert authority["active_execplan_last_modified"]
+    assert authority["last_updated"]
+    assert authority["mutation_authority"] == "command-provenance-present"
+    assert authority["manual_edit_indicator"] is False
+    assert authority["last_proof"]["recorded"] is True
+    assert authority["last_proof"]["status"] == "passed"
+    assert authority["current_enough_to_guide_work"] is True
+    assert "--expect-planning-revision" in authority["routes"]["close_or_update_stale_state"]
 
 
 def test_implement_does_not_promote_unmatched_decomposition_candidate(tmp_path: Path, capsys) -> None:
@@ -2050,10 +2067,18 @@ queued_items = []
         == 0
     )
 
-    gate = _start_planning_safety_gate(json.loads(capsys.readouterr().out))
+    payload = json.loads(capsys.readouterr().out)
+    gate = _start_planning_safety_gate(payload)
     assert gate["status"] == "blocked"
     assert gate["decision"] == "delegation-decision-required"
     assert gate["active_delegation_requirement"]["status"] == "delegation-decision-untrusted-shared-state"
+    reliance = gate["active_plan_reliance"]
+    assert reliance["status"] == "blocked"
+    authority = reliance["authority_evidence"]
+    assert authority["mutation_authority"] == "manual-edit-indicator"
+    assert authority["manual_edit_indicator"] is True
+    assert "hand-edited-delegation-decision" in authority["stale_indicators"]
+    assert "planning delegation-decision" in authority["routes"]["record_or_repair"]
 
 
 def test_implement_blocks_stale_parent_decomposition_for_active_epic_plan(tmp_path: Path, capsys) -> None:
