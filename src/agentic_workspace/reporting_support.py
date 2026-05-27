@@ -211,6 +211,7 @@ def report_profile_payload(*, context_router: dict[str, Any], cli_invoke: str = 
             "section_hints",
             "effective_authority",
             "execution_shape",
+            "routine_work_context",
             "durable_intent",
             "memory_consult",
             "improvement_intake",
@@ -317,6 +318,8 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
         proof_confidence = proof_confidence if isinstance(proof_confidence, dict) else {}
         assurance_requirements = answer.get("assurance_requirements", {})
         assurance_requirements = assurance_requirements if isinstance(assurance_requirements, dict) else {}
+        knowledge_authority_review = answer.get("knowledge_authority_review", {})
+        knowledge_authority_review = knowledge_authority_review if isinstance(knowledge_authority_review, dict) else {}
         architecture_decision = answer.get("architecture_decision_closeout", {})
         architecture_decision = architecture_decision if isinstance(architecture_decision, dict) else {}
         architecture_candidate = architecture_decision.get("architecture_decision_candidate", {})
@@ -348,6 +351,20 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
                 "active_count": assurance_requirements.get("active_count", 0),
                 "missing_required_evidence_count": assurance_requirements.get("missing_required_evidence_count", 0),
                 "evidence_status": assurance_requirements.get("evidence_status", []),
+            },
+            "knowledge_authority_review": {
+                key: knowledge_authority_review.get(key)
+                for key in (
+                    "kind",
+                    "status",
+                    "matched_source_count",
+                    "workflow_obligation_match_count",
+                    "stale_source_count",
+                    "promotion_candidate_count",
+                    "supersession_attention_count",
+                    "next_actions",
+                )
+                if key in knowledge_authority_review
             },
             "proof_confidence": {
                 key: proof_confidence.get(key)
@@ -527,6 +544,7 @@ def report_router_payload(
         "report_profile": profile_payload,
         "current_work": current_work,
         "memory_consult": payload.get("memory_consult", {}),
+        "routine_work_context": payload.get("routine_work_context", {}),
         "next_action": payload.get("next_action", {}),
         "warning_summary": {
             "total_count": len(findings),
@@ -599,6 +617,7 @@ def report_router_payload(
                 "context.report_profile",
                 "context.current_work",
                 "context.memory_consult",
+                "context.routine_work_context",
                 "context.warning_summary",
                 "context.execution_shape",
                 "context.improvement_intake",
@@ -651,12 +670,13 @@ def _compact_report_section_hints(hints: list[dict[str, Any]]) -> list[dict[str,
     priority = {
         "effective_authority": 0,
         "execution_shape": 1,
-        "improvement_intake": 2,
-        "operating_posture": 3,
-        "external_work_reconciliation": 4,
-        "module_reports": 5,
-        "successful_completion_cost": 6,
-        "findings": 7,
+        "routine_work_context": 2,
+        "improvement_intake": 3,
+        "operating_posture": 4,
+        "external_work_reconciliation": 5,
+        "module_reports": 6,
+        "successful_completion_cost": 7,
+        "findings": 8,
     }
     ordered = sorted(
         hints,

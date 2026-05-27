@@ -415,6 +415,73 @@ blocking_claims = ["claim-work-complete", "close-parent-lane"]
     assert requirements["active"][0]["applies_because"] == ["task marker matched privacy"]
 
 
+def test_start_surfaces_compact_routine_work_context(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        """
+schema_version = 1
+
+[assurance.requirements.privacy_data]
+level = "high"
+applies_to_task_markers = ["privacy"]
+required_evidence = ["authority_consulted"]
+force = "required-before-closeout"
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(target),
+                "--task",
+                "Update privacy policy handling",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    routine = payload["context"]["routine_work_context"]
+    assert routine["surface"] == "start"
+    assert routine["categories"]["authority"]["signals"]["active_assurance_requirements"] == 1
+    assert "owner_surface_inventory" not in routine
+    assert "routine_work_context" in payload["drill_down"]["available_selectors"]
+
+
+def test_start_keeps_routine_work_context_quiet_without_active_pressure(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(target),
+                "--task",
+                "Fix a spelling mistake",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    routine = payload["context"]["routine_work_context"]
+    assert routine["status"] == "present"
+    assert routine["categories"] == {}
+    assert "knowledge_authority_review" not in routine
+
+
 def test_preflight_active_only_includes_active_todo_without_execplan(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

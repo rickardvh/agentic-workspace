@@ -135,6 +135,49 @@ def test_proof_changed_selector_returns_path_based_validation_lane(capsys) -> No
     assert any(item.startswith("Relevant durable intent may add proof") for item in answer["escalate_when"])
 
 
+def test_proof_routine_context_surfaces_workflow_obligation_match(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[workflow_obligations.workspace_closeout]
+summary = "Run workspace closeout checks."
+stage = "closeout"
+force = "required-before-closeout"
+scope_tags = ["workspace"]
+commands = ["agentic-workspace report --target . --section closeout_trust --format json"]
+review_hint = "Workspace orchestration applies to workspace paths."
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/runtime.py",
+                "--verbose",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    routine = answer["routine_work_context"]
+    assert routine["surface"] == "proof"
+    assert routine["categories"]["authority"]["status"] == "attention"
+    assert routine["categories"]["authority"]["signals"]["workflow_obligation_matches"] == 1
+    assert routine["categories"]["evidence_proof"]["status"] == "attention"
+    assert routine["categories"]["evidence_proof"]["signals"]["workflow_obligation_matches"] == 1
+    assert routine["knowledge_authority_review"]["workflow_obligation_match_count"] == 1
+
+
 def test_proof_accumulates_repeated_changed_flags(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
 

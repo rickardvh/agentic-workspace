@@ -452,6 +452,111 @@ def test_implement_task_contract_names_missing_task_inputs(tmp_path: Path, capsy
     assert contract["changed_paths"] == ["README.md"]
 
 
+def test_implement_selector_surfaces_routine_work_context(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.requirements.docs_review]
+level = "medium"
+applies_to_paths = ["docs/**"]
+required_evidence = ["reviewed_docs_authority"]
+force = "required-before-closeout"
+""",
+    )
+    _write(tmp_path / "docs" / "guide.md", "hello\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "docs/guide.md",
+                "--select",
+                "routine_work_context",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    routine = json.loads(capsys.readouterr().out)["values"]["routine_work_context"]
+    assert routine["surface"] == "implement"
+    assert routine["categories"]["authority"]["signals"]["active_assurance_requirements"] == 1
+    assert routine["categories"]["evidence_proof"]["signals"]["missing_required_assurance_evidence"] == 1
+    assert routine["activation"]["small_work_rule"].startswith("If no category is attention")
+
+
+def test_implement_routine_context_surfaces_memory_freshness_and_promotion_pressure(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(target / ".agentic-workspace" / "memory" / "repo" / "domains" / "token-policy.md", "# Token policy\n")
+    _write(
+        target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml",
+        """
+version = 1
+
+[notes.".agentic-workspace/memory/repo/domains/token-policy.md"]
+note_type = "domain"
+canonical_home = ".agentic-workspace/memory/repo/domains/token-policy.md"
+authority = "advisory"
+audience = "human+agent"
+canonicality = "candidate_for_promotion"
+task_relevance = "required"
+subsystems = ["auth"]
+surfaces = ["token"]
+routes_from = ["src/auth/**"]
+stale_when = ["src/auth/**"]
+evidence = ["docs/security/token-policy.md"]
+memory_role = "improvement_signal"
+promotion_target = "assurance.requirements.token_policy"
+promotion_trigger = "Promote when token handling is next touched."
+preferred_remediation = "validation"
+improvement_note = "Create a reusable token-policy assurance gate."
+elimination_target = "promote"
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(target),
+                "--changed",
+                "src/auth/token.py",
+                "--task",
+                "Update token handling",
+                "--select",
+                "routine_work_context",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    routine = json.loads(capsys.readouterr().out)["values"]["routine_work_context"]
+    review = routine["knowledge_authority_review"]
+    assert review["status"] == "attention"
+    assert review["stale_source_count"] == 1
+    assert review["promotion_candidate_count"] == 1
+    assert routine["categories"]["durable_knowledge"]["status"] == "attention"
+    assert routine["categories"]["promotion_residue"]["status"] == "attention"
+    source = review["matched_sources"][0]
+    assert source["owner_surface"] == ".agentic-workspace/memory/repo/domains/token-policy.md"
+    assert source["freshness"]["status"] == "needs-review"
+    assert source["promotion_pressure"]["target"] == "assurance.requirements.token_policy"
+    assert "route promotion or dismissal during closeout" in source["claim_effect"]["advises"]
+
+
 def test_implement_tiny_profile_does_not_compute_change_impact(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
@@ -515,6 +620,37 @@ def test_implement_tiny_profile_does_not_compute_task_contract(tmp_path: Path, m
     assert "task_contract" not in payload
     assert "task_contract" not in payload["context"]
     assert "task_contract" in payload["drill_down"]["available_selectors"]
+
+
+def test_implement_tiny_profile_does_not_compute_routine_work_context(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "README.md", "hello\n")
+
+    def fail_routine_context(**_: object) -> dict[str, object]:
+        raise AssertionError("ordinary tiny implement output should not build routine_work_context")
+
+    monkeypatch.setattr(cli, "_routine_work_context_payload", fail_routine_context)
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "README.md",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "implementer-context-tiny/v1"
+    assert "routine_work_context" not in payload
+    assert "routine_work_context" in payload["drill_down"]["available_selectors"]
 
 
 def test_implement_tiny_profile_does_not_compute_assurance_requirements(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
