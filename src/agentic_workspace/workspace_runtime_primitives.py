@@ -8064,7 +8064,7 @@ def _generated_output_footprint(*, target: Any) -> dict[str, Any]:
                         }
                     )
     support_artifacts = [
-        path for path in generated_relatives if path in {"generated/typescript/Dockerfile", "generated/typescript/Dockerfile.conformance"}
+        path for path in generated_relatives if path in {"generated/typescript.Dockerfile", "generated/typescript.conformance.Dockerfile"}
     ]
     if support_artifacts:
         role_counts["proof-container-support"] = role_counts.get("proof-container-support", 0) + len(support_artifacts)
@@ -8073,7 +8073,7 @@ def _generated_output_footprint(*, target: Any) -> dict[str, Any]:
                 "id": "typescript:proof-container-support",
                 "program": "generated-typescript-packages",
                 "kind": "docker",
-                "generated_root": "generated/typescript",
+                "generated_root": "generated",
                 "generation_status": "proof-support",
                 "maturity_level_ref": "proof-container-support",
                 "test_environment": "docker",
@@ -23510,10 +23510,19 @@ def _proof_selection_for_changed_paths(
                 or path.startswith("generated/workspace/python/")
                 or path.startswith("generated/planning/python/")
                 or path.startswith("generated/memory/python/")
+                or path.startswith("generated/verification/python/")
             )
             for path in changed_paths
         )
-        has_typescript = any((path.startswith("generated/typescript/") for path in changed_paths))
+        has_typescript = any(
+            (
+                path.startswith("generated/workspace/typescript/")
+                or path.startswith("generated/planning/typescript/")
+                or path.startswith("generated/memory/typescript/")
+                or path.startswith("generated/verification/typescript/")
+            )
+            for path in changed_paths
+        )
         has_shared_source = any(
             (
                 path in {"src/agentic_workspace/contracts/command_package_ir.json"}

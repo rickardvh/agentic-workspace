@@ -557,7 +557,7 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
     assert any("generic deterministic operations" in item for item in python_completion["proof_requirements"])
     assert any("generated/python target output" in item for item in python_completion["proof_requirements"])
     assert any("compact Python completion blocker report" in item for item in python_completion["proof_requirements"])
-    assert runtime_binding["selected_model"] == "generated parser/help with process handoff to canonical Python CLI"
+    assert runtime_binding["selected_model"] == "generated parser/help/validation with process handoff to canonical Python CLI"
     assert "operation primitive implementation" in runtime_binding["runtime_owns"]
     assert "argv spelling and help rendering" in runtime_binding["target_projection_owns"]
     assert "adapter failures" in " ".join(runtime_binding["error_mapping"])
@@ -846,12 +846,12 @@ def test_generated_command_package_docker_flags_compose(monkeypatch) -> None:
         ),
         (
             "agentic-workspace-generated-typescript-cli-test",
-            "generated/typescript/Dockerfile",
+            "generated/typescript.Dockerfile",
             "generated TypeScript package Docker proof",
         ),
         (
             "agentic-workspace-generated-typescript-cli-test-conformance",
-            "generated/typescript/Dockerfile.conformance",
+            "generated/typescript.conformance.Dockerfile",
             "generated TypeScript package Docker conformance proof",
         ),
     ]
@@ -884,7 +884,7 @@ def test_generated_command_package_docker_conformance_surface_exists() -> None:
     repo_root = Path(__file__).resolve().parents[1]
     python_dockerfile = repo_root / "generated" / "python" / "Dockerfile.conformance"
     python_text = python_dockerfile.read_text(encoding="utf-8")
-    dockerfile = repo_root / "generated" / "typescript" / "Dockerfile.conformance"
+    dockerfile = repo_root / "generated" / "typescript.conformance.Dockerfile"
     text = dockerfile.read_text(encoding="utf-8")
 
     assert "scripts/check/check_generated_command_packages.py" in python_text
@@ -1536,7 +1536,7 @@ def test_package_generated_python_command_packages_parse_status_runtime_operatio
 
 
 def test_generated_typescript_command_package_fixture_is_current() -> None:
-    package_root = Path(__file__).resolve().parents[1] / "generated" / "typescript" / "workspace-cli"
+    package_root = Path(__file__).resolve().parents[1] / "generated" / "workspace" / "typescript"
     package_json = json.loads((package_root / "package.json").read_text(encoding="utf-8"))
     source_text = (package_root / "src" / "commandPackage.ts").read_text(encoding="utf-8")
     resource_payload = json.loads((package_root / "resources" / "command_package.json").read_text(encoding="utf-8"))
@@ -1555,7 +1555,7 @@ def test_generated_typescript_command_package_fixture_is_current() -> None:
     assert package_json["agenticWorkspace"]["maturity"]["promotion_requires"]
     assert (
         package_json["agenticWorkspace"]["runtimeBinding"]["selected_model"]
-        == "generated parser/help with process handoff to canonical Python CLI"
+        == "generated parser/help/validation with process handoff to canonical Python CLI"
     )
     assert package_json["agenticWorkspace"]["declaredEntrypoints"] == ["agentic-workspace"]
     adapter_ids = {command["adapter_id"] for command in resource_payload["commands"]}
@@ -1579,6 +1579,8 @@ def test_generated_typescript_command_package_fixture_is_current() -> None:
     assert "DO NOT EDIT DIRECTLY" in source_text
     assert "maxBuffer: 16 * 1024 * 1024" in cli_text
     assert "function splitRuntimeCommand(commandLine)" in cli_text
+    assert "validateInterface(commandByName.get(command), argv.slice(1), [command]);" in cli_text
+    assert "TypeScript CLI validation failed" in cli_text
     assert "spawnSync(runtimeExecutable, [...runtimeArgs, ...argv]" in cli_text
     assert "shell: true" not in cli_text
     assert "writeSync(1, result.stdout)" in cli_text
@@ -1588,6 +1590,7 @@ def test_generated_typescript_command_package_fixture_is_current() -> None:
     assert "Adapter runtime handoff failed" in cli_text
     assert "generated package resource exposes expected commands" in test_text
     assert "generated runnable adapter delegates supported command to runtime process" in test_text
+    assert "generated runnable adapter validates choices before runtime handoff" in test_text
     assert "generated runnable adapter exposes routing status and recovery guidance" in test_text
     assert "generated runnable adapter maps runtime handoff failure with recovery guidance" in test_text
 
@@ -1595,7 +1598,7 @@ def test_generated_typescript_command_package_fixture_is_current() -> None:
 def test_generated_typescript_package_adapters_are_runnable() -> None:
     repo_root = Path(__file__).resolve().parents[1]
     packages = {
-        "planning-cli": (
+        "planning": (
             "@agentic-workspace/planning-cli",
             "agentic-planning",
             "agentic-planning",
@@ -1603,7 +1606,7 @@ def test_generated_typescript_package_adapters_are_runnable() -> None:
             "mutation-capable-adapter",
             "allowed-mutation-with-review",
         ),
-        "memory-cli": (
+        "memory": (
             "@agentic-workspace/memory-cli",
             "agentic-memory",
             "agentic-memory",
@@ -1611,9 +1614,17 @@ def test_generated_typescript_package_adapters_are_runnable() -> None:
             "mutation-capable-adapter",
             "allowed-mutation-with-review",
         ),
+        "verification": (
+            "@agentic-workspace/verification-cli",
+            "agentic-verification",
+            "agentic-verification",
+            "repo_verification_bootstrap.cli",
+            "runtime-backed-read-only-adapter",
+            "review-required",
+        ),
     }
-    for package, (package_name, entrypoint, runtime_command, runtime_module, maturity, weak_agent_routing) in packages.items():
-        package_root = repo_root / "generated" / "typescript" / package
+    for module, (package_name, entrypoint, runtime_command, runtime_module, maturity, weak_agent_routing) in packages.items():
+        package_root = repo_root / "generated" / module / "typescript"
         package_json = json.loads((package_root / "package.json").read_text(encoding="utf-8"))
         resource_payload = json.loads((package_root / "resources" / "command_package.json").read_text(encoding="utf-8"))
         cli_text = (package_root / "src" / "cli.mjs").read_text(encoding="utf-8")
@@ -1633,10 +1644,12 @@ def test_generated_typescript_package_adapters_are_runnable() -> None:
         assert metadata["maturity"]["promotion_requires"]
         assert runtime_module in cli_text
         assert "function splitRuntimeCommand(commandLine)" in cli_text
+        assert "validateInterface(commandByName.get(command), argv.slice(1), [command]);" in cli_text
         assert "spawnSync(runtimeExecutable, [...runtimeArgs, ...argv]" in cli_text
         assert "shell: true" not in cli_text
         assert f"Weak-agent routing: {weak_agent_routing}" in cli_text
         assert "generated runnable adapter delegates supported command to runtime process" in test_text
+        assert "generated runnable adapter validates choices before runtime handoff" in test_text
         assert "generated runnable adapter preserves spaced argv values during runtime handoff" in test_text
 
 

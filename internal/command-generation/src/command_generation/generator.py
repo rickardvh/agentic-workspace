@@ -24,6 +24,7 @@ def _maturity_levels(manifest: dict[str, Any]) -> dict[str, dict[str, Any]]:
 def _is_runnable_typescript_target(target: dict[str, Any]) -> bool:
     return target.get("maturity_level_ref") in {
         "runnable-read-only-adapter",
+        "runtime-backed-read-only-adapter",
         "weak-agent-safe-adapter",
         "mutation-capable-adapter",
     }
@@ -1847,6 +1848,16 @@ def _typescript_module(package: dict[str, Any], *, source_path: str, regenerate_
     )
 
 
+def _typescript_interface_payload(package: dict[str, Any]) -> list[dict[str, Any]]:
+    return [
+        {
+            "name": str(command["command"]["name"]),
+            "interface": command["interface"],
+        }
+        for command in package["commands"]
+    ]
+
+
 def _typescript_cli_module(
     package: dict[str, Any],
     target: dict[str, Any],
@@ -1858,6 +1869,7 @@ def _typescript_cli_module(
 ) -> str:
     command_names = sorted(command["command"]["name"] for command in package["commands"])
     rendered_commands = json.dumps(command_names)
+    rendered_interfaces = json.dumps(_typescript_interface_payload(package), indent=2, sort_keys=True)
     default_runtime_command = json.dumps(_runtime_command_for_package(package, runtime_binding))
     weak_agent_status = _weak_agent_routing_for_target(target, maturity_levels)
     recovery_command = f"{target['entrypoints'][0]} --help"
@@ -1871,13 +1883,136 @@ def _typescript_cli_module(
         "import { spawnSync } from 'node:child_process';\n"
         "import { writeSync } from 'node:fs';\n\n"
         f"const supportedCommands = new Set({rendered_commands});\n"
+        f"const commandDefinitions = {rendered_interfaces};\n"
+        "const commandByName = new Map(commandDefinitions.map((definition) => [definition.name, definition.interface]));\n"
         "const argv = process.argv.slice(2);\n"
         "const command = argv[0];\n\n"
-        "if (!command || command === '--help' || command === '-h') {\n"
+        "function optionFlags(option) {\n"
+        "  return Array.isArray(option.flags) ? option.flags : [];\n"
+        "}\n\n"
+        "function interfaceOptions(iface) {\n"
+        "  return Array.isArray(iface.options) ? iface.options : [];\n"
+        "}\n\n"
+        "function interfaceArguments(iface) {\n"
+        "  return Array.isArray(iface.arguments) ? iface.arguments : [];\n"
+        "}\n\n"
+        "function interfaceSubcommands(iface) {\n"
+        "  return Array.isArray(iface.subcommands) ? iface.subcommands : [];\n"
+        "}\n\n"
+        "function isHelpToken(token) {\n"
+        "  return token === '--help' || token === '-h';\n"
+        "}\n\n"
+        "function printRootHelp() {\n"
         f"  console.log(`Usage: {target['entrypoints'][0]} <command> [options]`);\n"
         "  console.log(`Supported generated commands: ${Array.from(supportedCommands).join(', ')}`);\n"
         f"  console.log('Weak-agent routing: {weak_agent_status}');\n"
+        "  console.log('TypeScript CLI boundary: generated parser/help/validation, then canonical Python runtime handoff.');\n"
         "  console.log('Recovery: use a supported generated command or route back to the canonical Python CLI.');\n"
+        "}\n\n"
+        "function printInterfaceHelp(path, iface) {\n"
+        "  const argumentNames = interfaceArguments(iface).map((argument) => argument.nargs === '?' ? `[${argument.name}]` : `<${argument.name}>`);\n"
+        "  const hasSubcommands = interfaceSubcommands(iface).length > 0;\n"
+        "  const subcommandSuffix = hasSubcommands ? ' <subcommand>' : '';\n"
+        "  const argumentSuffix = argumentNames.length ? ` ${argumentNames.join(' ')}` : '';\n"
+        "  console.log(`Usage: ${path.join(' ')}${subcommandSuffix} [options]${argumentSuffix}`);\n"
+        "  if (iface.help) console.log(String(iface.help));\n"
+        "  const options = interfaceOptions(iface);\n"
+        "  if (options.length) {\n"
+        "    console.log('Options:');\n"
+        "    for (const option of options) {\n"
+        "      const choices = Array.isArray(option.choices) ? ` choices=${option.choices.join('|')}` : '';\n"
+        "      const required = option.required === true ? ' required' : '';\n"
+        "      console.log(`  ${optionFlags(option).join(', ')}${required}${choices}  ${option.help ?? ''}`);\n"
+        "    }\n"
+        "  }\n"
+        "  const subcommands = interfaceSubcommands(iface);\n"
+        "  if (subcommands.length) {\n"
+        "    console.log('Subcommands:');\n"
+        "    for (const subcommand of subcommands) {\n"
+        "      console.log(`  ${subcommand.name}  ${subcommand.help ?? ''}`);\n"
+        "    }\n"
+        "  }\n"
+        "}\n\n"
+        "function failValidation(message) {\n"
+        "  console.error(`TypeScript CLI validation failed: ${message}`);\n"
+        f"  console.error('Recovery: run {recovery_command} and choose a supported generated command or valid option.');\n"
+        "  process.exit(2);\n"
+        "}\n\n"
+        "function validateChoice(spec, value, label) {\n"
+        "  if (Array.isArray(spec.choices) && !spec.choices.includes(value)) {\n"
+        "    failValidation(`${label} must be one of: ${spec.choices.join(', ')}`);\n"
+        "  }\n"
+        "  if (spec.type === 'integer' && !/^-?\\d+$/.test(value)) {\n"
+        "    failValidation(`${label} must be an integer`);\n"
+        "  }\n"
+        "}\n\n"
+        "function optionByFlag(iface, flag) {\n"
+        "  return interfaceOptions(iface).find((option) => optionFlags(option).includes(flag));\n"
+        "}\n\n"
+        "function consumeOption(iface, option, tokens, index, seenOptions) {\n"
+        "  const optionName = option.name ?? optionFlags(option)[0];\n"
+        "  if (optionName) seenOptions.add(optionName);\n"
+        "  if (option.action === 'store_true') return index + 1;\n"
+        "  if (option.nargs === '*') {\n"
+        "    let cursor = index + 1;\n"
+        "    while (cursor < tokens.length && !String(tokens[cursor]).startsWith('-')) {\n"
+        "      validateChoice(option, String(tokens[cursor]), optionFlags(option)[0]);\n"
+        "      cursor += 1;\n"
+        "    }\n"
+        "    return cursor;\n"
+        "  }\n"
+        "  if (index + 1 >= tokens.length || isHelpToken(tokens[index + 1])) {\n"
+        "    failValidation(`${optionFlags(option)[0]} requires a value`);\n"
+        "  }\n"
+        "  const value = String(tokens[index + 1]);\n"
+        "  validateChoice(option, value, optionFlags(option)[0]);\n"
+        "  return index + 2;\n"
+        "}\n\n"
+        "function validateInterface(iface, tokens, path) {\n"
+        "  const seenOptions = new Set();\n"
+        "  const positional = [];\n"
+        "  let index = 0;\n"
+        "  while (index < tokens.length) {\n"
+        "    const token = String(tokens[index]);\n"
+        "    if (isHelpToken(token)) {\n"
+        "      printInterfaceHelp(path, iface);\n"
+        "      process.exit(0);\n"
+        "    }\n"
+        "    if (token.startsWith('-')) {\n"
+        "      const option = optionByFlag(iface, token);\n"
+        "      if (!option) failValidation(`unknown option ${token} for ${path.join(' ')}`);\n"
+        "      index = consumeOption(iface, option, tokens, index, seenOptions);\n"
+        "      continue;\n"
+        "    }\n"
+        "    const subcommand = interfaceSubcommands(iface).find((candidate) => candidate.name === token);\n"
+        "    if (subcommand) {\n"
+        "      validateInterface(subcommand, tokens.slice(index + 1), [...path, token]);\n"
+        "      return;\n"
+        "    }\n"
+        "    positional.push(token);\n"
+        "    index += 1;\n"
+        "  }\n"
+        "  for (const option of interfaceOptions(iface)) {\n"
+        "    const optionName = option.name ?? optionFlags(option)[0];\n"
+        "    if (option.required === true && optionName && !seenOptions.has(optionName)) {\n"
+        "      failValidation(`missing required option ${optionFlags(option)[0]} for ${path.join(' ')}`);\n"
+        "    }\n"
+        "  }\n"
+        "  const positionalSpecs = interfaceArguments(iface);\n"
+        "  const requiredPositionals = positionalSpecs.filter((argument) => argument.nargs !== '?' && argument.default === undefined);\n"
+        "  if (positional.length < requiredPositionals.length) {\n"
+        "    failValidation(`missing required argument for ${path.join(' ')}`);\n"
+        "  }\n"
+        "  if (positional.length > positionalSpecs.length) {\n"
+        "    failValidation(`unexpected argument ${positional[positionalSpecs.length]} for ${path.join(' ')}`);\n"
+        "  }\n"
+        "  positional.forEach((value, position) => validateChoice(positionalSpecs[position] ?? {}, value, positionalSpecs[position]?.name ?? 'argument'));\n"
+        "  if (interfaceSubcommands(iface).length && iface.subcommands_required !== false && positional.length === 0) {\n"
+        "    failValidation(`missing subcommand for ${path.join(' ')}`);\n"
+        "  }\n"
+        "}\n\n"
+        "if (!command || command === '--help' || command === '-h') {\n"
+        "  printRootHelp();\n"
         "  process.exit(0);\n"
         "}\n\n"
         "if (!supportedCommands.has(command)) {\n"
@@ -1885,6 +2020,7 @@ def _typescript_cli_module(
         f"  console.error('Recovery: run {recovery_command} and choose one of the supported generated commands.');\n"
         "  process.exit(2);\n"
         "}\n\n"
+        "validateInterface(commandByName.get(command), argv.slice(1), [command]);\n\n"
         f"const runtimeCommand = process.env.AGENTIC_WORKSPACE_RUNTIME ?? {default_runtime_command};\n"
         "\n"
         "function splitRuntimeCommand(commandLine) {\n"
@@ -1936,10 +2072,32 @@ def _typescript_mock_runtime() -> str:
     return "const payload = {\n  command: process.argv[2],\n  args: process.argv.slice(2),\n};\nconsole.log(JSON.stringify(payload));\n"
 
 
+def _typescript_required_option_case(package: dict[str, Any]) -> dict[str, Any] | None:
+    def find_required(interface: dict[str, Any], path: list[str]) -> dict[str, Any] | None:
+        for option in interface.get("options", []):
+            if isinstance(option, dict) and option.get("required") is True:
+                flags = option.get("flags", [])
+                if isinstance(flags, list) and flags:
+                    return {"path": path, "flag": str(flags[0])}
+        for subcommand in interface.get("subcommands", []):
+            if isinstance(subcommand, dict) and subcommand.get("name"):
+                found = find_required(subcommand, [*path, str(subcommand["name"])])
+                if found is not None:
+                    return found
+        return None
+
+    for command in package["commands"]:
+        found = find_required(command["interface"], [str(command["command"]["name"])])
+        if found is not None:
+            return found
+    return None
+
+
 def _typescript_test(package: dict[str, Any], target: dict[str, Any]) -> str:
     expected_commands = sorted(command["command"]["name"] for command in package["commands"])
     rendered_expected = json.dumps(expected_commands)
     sample_command = expected_commands[0]
+    required_case = _typescript_required_option_case(package)
     runnable = _is_runnable_typescript_target(target)
     expected_maturity = target["maturity_level_ref"]
     expected_generation_status = target["generation_status"]
@@ -2012,13 +2170,13 @@ def _typescript_test(package: dict[str, Any], target: dict[str, Any]) -> str:
             "  const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));\n"
             "  const mockRuntime = fileURLToPath(new URL('./mock-runtime.mjs', import.meta.url));\n"
             '  const runtime = `"${process.execPath}" "${mockRuntime}"`;\n'
-            f"  const result = spawnSync(process.execPath, [cli, {sample_command!r}, '--task', 'value with spaces'], {{\n"
+            f"  const result = spawnSync(process.execPath, [cli, {sample_command!r}, '--target', 'value with spaces'], {{\n"
             "    encoding: 'utf8',\n"
             "    env: { ...process.env, AGENTIC_WORKSPACE_RUNTIME: runtime },\n"
             "  });\n"
             "  assert.equal(result.status, 0);\n"
             "  const payload = JSON.parse(result.stdout);\n"
-            f"  assert.deepEqual(payload.args, [{sample_command!r}, '--task', 'value with spaces']);\n"
+            f"  assert.deepEqual(payload.args, [{sample_command!r}, '--target', 'value with spaces']);\n"
             "});\n"
             "\n"
             "test('generated runnable adapter exposes routing status and recovery guidance', () => {\n"
@@ -2027,8 +2185,49 @@ def _typescript_test(package: dict[str, Any], target: dict[str, Any]) -> str:
             "  assert.equal(result.status, 0);\n"
             "  assert.match(result.stdout, /Supported generated commands:/);\n"
             f"  assert.match(result.stdout, /Weak-agent routing: {expected_weak_agent_routing}/);\n"
+            "  assert.match(result.stdout, /generated parser\\/help\\/validation/);\n"
             "  assert.match(result.stdout, /Recovery:/);\n"
             "});\n"
+            "\n"
+            "test('generated runnable adapter renders command help without runtime handoff', () => {\n"
+            "  const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));\n"
+            f"  const result = spawnSync(process.execPath, [cli, {sample_command!r}, '--help'], {{\n"
+            "    encoding: 'utf8',\n"
+            "    env: { ...process.env, AGENTIC_WORKSPACE_RUNTIME: '' },\n"
+            "  });\n"
+            "  assert.equal(result.status, 0);\n"
+            "  assert.match(result.stdout, /Usage:/);\n"
+            "  assert.match(result.stdout, /Options:/);\n"
+            "});\n"
+            "\n"
+            "test('generated runnable adapter validates choices before runtime handoff', () => {\n"
+            "  const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));\n"
+            f"  const result = spawnSync(process.execPath, [cli, {sample_command!r}, '--format', '__invalid__'], {{\n"
+            "    encoding: 'utf8',\n"
+            "    env: { ...process.env, AGENTIC_WORKSPACE_RUNTIME: '' },\n"
+            "  });\n"
+            "  assert.equal(result.status, 2);\n"
+            "  assert.equal(result.stdout, '');\n"
+            "  assert.match(result.stderr, /TypeScript CLI validation failed:/);\n"
+            "  assert.doesNotMatch(result.stderr, /Adapter runtime handoff failed:/);\n"
+            "});\n"
+        )
+        if required_case is not None:
+            body += (
+                "\n"
+                "test('generated runnable adapter validates required options before runtime handoff', () => {\n"
+                "  const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));\n"
+                f"  const result = spawnSync(process.execPath, [cli, ...{json.dumps(required_case['path'])}], {{\n"
+                "    encoding: 'utf8',\n"
+                "    env: { ...process.env, AGENTIC_WORKSPACE_RUNTIME: '' },\n"
+                "  });\n"
+                "  assert.equal(result.status, 2);\n"
+                "  assert.equal(result.stdout, '');\n"
+                f"  assert.match(result.stderr, /missing required option {required_case['flag']}/);\n"
+                "  assert.doesNotMatch(result.stderr, /Adapter runtime handoff failed:/);\n"
+                "});\n"
+            )
+        body += (
             "\n"
             "test('generated runnable adapter rejects unsupported commands with recovery guidance', () => {\n"
             "  const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));\n"

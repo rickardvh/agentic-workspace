@@ -1509,7 +1509,7 @@ def test_operational_compression_classifies_generated_output_footprint(tmp_path:
                         },
                         {
                             "kind": "typescript",
-                            "generated_root": "generated/typescript/workspace-cli",
+                            "generated_root": "generated/workspace/typescript",
                             "generation_status": "weak-agent-safe-adapter",
                             "maturity_level_ref": "weak-agent-safe-adapter",
                             "test_environment": "docker",
@@ -1538,9 +1538,9 @@ def test_operational_compression_classifies_generated_output_footprint(tmp_path:
         "cache\n",
     )
     _write(target / "generated" / "workspace" / "python" / "generated_command_adapters.json", "{}\n")
-    _write(target / "generated" / "typescript" / "workspace-cli" / "package.json", "{}\n")
-    _write(target / "generated" / "typescript" / "workspace-cli" / "src" / "cli.mjs", "export {};\n")
-    _write(target / "generated" / "typescript" / "Dockerfile", "FROM node:22\n")
+    _write(target / "generated" / "workspace" / "typescript" / "package.json", "{}\n")
+    _write(target / "generated" / "workspace" / "typescript" / "src" / "cli.mjs", "export {};\n")
+    _write(target / "generated" / "typescript.Dockerfile", "FROM node:22\n")
 
     assert cli.main(["report", "--target", str(target), "--section", "operational_compression", "--format", "json"]) == 0
 
