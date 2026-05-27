@@ -62,6 +62,7 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `branch_workflow_posture` | object | yes |  | Branch and worktree posture relevant to safe continuation. |  |  |
 | `local_memory` | object | yes |  | Machine-local memory configuration and advisory state. |  |  |
 | `memory_consult` | object | yes |  | Recommended checked-in Memory lookup route for the current report. |  |  |
+| `routine_work_context` | object | yes |  | Assembled routine router projection grouping existing owner surfaces into authority, active work, evidence/proof, durable knowledge, and promotion/residue. |  |  |
 | `reuse_pressure` | object | yes |  | Entry point for changed-path reuse and abstraction-pressure facts. |  |  |
 | `agent_aids` | object | yes |  | Reusable agent aid availability, manifest coverage, and startup role information. |  |  |
 | `agent_configuration_system` | object | yes |  | How repo-owned agent configuration classes are represented in this workspace. |  |  |

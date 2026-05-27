@@ -24,6 +24,7 @@
     "branch_workflow_posture",
     "local_memory",
     "memory_consult",
+    "routine_work_context",
     "reuse_pressure",
     "agent_aids",
     "agent_configuration_system",
@@ -175,6 +176,10 @@
     "memory_consult": {
       "type": "object",
       "description": "Recommended checked-in Memory lookup route for the current report."
+    },
+    "routine_work_context": {
+      "type": "object",
+      "description": "Assembled routine router projection grouping existing owner surfaces into authority, active work, evidence/proof, durable knowledge, and promotion/residue."
     },
     "reuse_pressure": {
       "type": "object",

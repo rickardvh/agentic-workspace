@@ -20,6 +20,7 @@
     "branch_workflow_posture",
     "local_memory",
     "memory_consult",
+    "routine_work_context",
     "agent_aids",
     "agent_configuration_system",
     "agent_configuration_queries",
@@ -64,6 +65,7 @@
     "make each config setting's actual force inspectable instead of relying on setting names alone",
     "let optimization bias change rendering density, not canonical truth or execution method",
     "route improvement signals through one intake model before promoting them to work, memory, docs, checks, or dismissal",
-    "make recent successful-completion cost evidence inspectable without broad dogfooding or review archaeology"
+    "make recent successful-completion cost evidence inspectable without broad dogfooding or review archaeology",
+    "compress routine agent routing into authority, active work, evidence, durable knowledge, and promotion residue without changing canonical owners"
   ]
 }

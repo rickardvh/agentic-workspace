@@ -452,6 +452,47 @@ def test_implement_task_contract_names_missing_task_inputs(tmp_path: Path, capsy
     assert contract["changed_paths"] == ["README.md"]
 
 
+def test_implement_selector_surfaces_routine_work_context(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.requirements.docs_review]
+level = "medium"
+applies_to_paths = ["docs/**"]
+required_evidence = ["reviewed_docs_authority"]
+force = "required-before-closeout"
+""",
+    )
+    _write(tmp_path / "docs" / "guide.md", "hello\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "docs/guide.md",
+                "--select",
+                "routine_work_context",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    routine = json.loads(capsys.readouterr().out)["values"]["routine_work_context"]
+    assert routine["surface"] == "implement"
+    assert routine["categories"]["authority"]["signals"]["active_assurance_requirements"] == 1
+    assert routine["categories"]["evidence_proof"]["signals"]["missing_required_assurance_evidence"] == 1
+    assert routine["activation"]["small_work_rule"].startswith("If no category is attention")
+
+
 def test_implement_tiny_profile_does_not_compute_change_impact(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
@@ -515,6 +556,37 @@ def test_implement_tiny_profile_does_not_compute_task_contract(tmp_path: Path, m
     assert "task_contract" not in payload
     assert "task_contract" not in payload["context"]
     assert "task_contract" in payload["drill_down"]["available_selectors"]
+
+
+def test_implement_tiny_profile_does_not_compute_routine_work_context(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "README.md", "hello\n")
+
+    def fail_routine_context(**_: object) -> dict[str, object]:
+        raise AssertionError("ordinary tiny implement output should not build routine_work_context")
+
+    monkeypatch.setattr(cli, "_routine_work_context_payload", fail_routine_context)
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "README.md",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "implementer-context-tiny/v1"
+    assert "routine_work_context" not in payload
+    assert "routine_work_context" in payload["drill_down"]["available_selectors"]
 
 
 def test_implement_tiny_profile_does_not_compute_assurance_requirements(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:

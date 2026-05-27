@@ -131,6 +131,53 @@ blocking_claims = ["claim-work-complete", "close-parent-lane"]
     assert answer["match_evidence"]["match_count"] == 0
 
 
+def test_report_routine_work_context_groups_existing_owner_surfaces(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.requirements.privacy_data]
+level = "high"
+applies_to_task_markers = ["privacy"]
+authority_refs = ["docs/compliance/privacy.md"]
+required_evidence = ["authority_consulted"]
+force = "required-before-closeout"
+""",
+    )
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "routine_work_context", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert answer["kind"] == "agentic-workspace/routine-work-context/v1"
+    assert answer["authority"] == "assembled-view"
+    assert set(answer["categories"]) == {
+        "authority",
+        "active_work",
+        "evidence_proof",
+        "durable_knowledge",
+        "promotion_residue",
+    }
+    assert "assurance_requirements" in answer["categories"]["authority"]["fronts"]
+    assert "closeout_trust" in answer["categories"]["evidence_proof"]["fronts"]
+    assert "Memory" in {item["concept"] for item in answer["owner_surface_inventory"]}
+    assert answer["workflow_checkpoint_placement"]["report"] == ["all categories as a compact owner-shaped review"]
+    assert "unmatched assurance requirements" in answer["proportionality"]["must_stay_quiet"]
+
+
+def test_report_router_surfaces_compact_routine_work_context(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert cli.main(["report", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    routine = payload["context"]["routine_work_context"]
+    assert routine["kind"] == "agentic-workspace/routine-work-context/v1"
+    assert "owner_surface_inventory" not in routine
+    assert "context.routine_work_context" in payload["drill_down"]["available_selectors"]
+
+
 def test_decision_pressure_scaffolds_configured_decision_record(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

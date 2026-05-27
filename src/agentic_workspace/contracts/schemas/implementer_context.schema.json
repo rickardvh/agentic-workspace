@@ -25,6 +25,7 @@
     "objective_drift",
     "reuse_pressure",
     "assurance_requirements",
+    "routine_work_context",
     "orientation",
     "inference_limits",
     "execution_posture",
@@ -151,6 +152,11 @@
     "assurance_requirements": {
       "type": "object",
       "description": "Repo-declared assurance requirements matched to the task or changed paths, with evidence status and claim-boundary facts.",
+      "additionalProperties": true
+    },
+    "routine_work_context": {
+      "type": "object",
+      "description": "Assembled routine router projection grouping existing owner surfaces into authority, active work, evidence/proof, durable knowledge, and promotion/residue.",
       "additionalProperties": true
     },
     "objective_drift": {
