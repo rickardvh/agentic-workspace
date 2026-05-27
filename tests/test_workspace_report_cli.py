@@ -131,6 +131,140 @@ blocking_claims = ["claim-work-complete", "close-parent-lane"]
     assert answer["match_evidence"]["match_count"] == 0
 
 
+def test_report_verification_section_projects_protocols_scenarios_and_evidence(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/verification/manifest.toml",
+        """
+schema_version = "agentic-workspace/verification-manifest/v1"
+
+[scenarios.recovery_walkthrough]
+protocol_id = "runbook_recovery"
+title = "Runbook recovery walkthrough"
+steps = ["Open the runbook", "Check the rollback steps"]
+expected_observations = ["Rollback owner and evidence labels are visible"]
+pass_evidence_labels = ["runbook_reviewed"]
+fail_evidence_labels = ["runbook_gap"]
+manual_boundary = "Human or agent review is acceptable when recorded."
+
+[protocols.runbook_recovery]
+title = "Runbook recovery verification"
+purpose = "Repeatable non-code verification for recovery runbooks."
+applies_to_paths = ["docs/runbooks/**"]
+scenario_refs = ["recovery_walkthrough"]
+steps = ["Execute recovery_walkthrough"]
+expected_evidence = ["runbook_reviewed"]
+review_owner = "ops-review"
+authority_refs = ["docs/runbooks/README.md"]
+retention = "retain-summary"
+
+[evidence_bundles.recovery_2026_05]
+protocol_id = "runbook_recovery"
+scenario_id = "recovery_walkthrough"
+changed_paths = ["docs/runbooks/recovery.md"]
+executor = "test-agent"
+executed_at = "2026-05-27T10:00:00Z"
+outcome = "passed"
+evidence_items = ["runbook_reviewed"]
+transcript_summaries = ["Reviewed rollback path; no raw transcript needed."]
+residual_risk = "Human review only."
+claim_boundaries = ["slice"]
+reviewer = "ops-review"
+retention_until = "2099-01-01"
+
+[proof_routes.runbook_recovery_route]
+protocol_refs = ["runbook_recovery"]
+scenario_refs = ["recovery_walkthrough"]
+commands = ["uv run pytest tests/test_runbook_recovery.py"]
+review_aids = ["Compare the runbook steps with the observed rollback path."]
+proof_lane_hint = "manual-runbook-proof"
+reason = "Runbook changes need a repeatable walkthrough proof lane."
+
+[known_gaps.runbook_evidence_gap]
+protocol_id = "runbook_recovery"
+scenario_id = "recovery_walkthrough"
+reason = "Manual review can miss environment-specific rollback constraints."
+owner = "ops-review"
+status = "open"
+evidence_labels = ["environment_walkthrough"]
+blocked_claims = ["close-parent-lane"]
+residual_risk = "Environment-specific coverage remains outside this evidence bundle."
+reopen_trigger = "runbook recovery environment matrix changes"
+""",
+    )
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "verification", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert answer["kind"] == "agentic-workspace/verification/v1"
+    assert answer["status"] == "configured"
+    assert answer["protocol_count"] == 1
+    assert answer["scenario_count"] == 1
+    assert answer["evidence_bundle_count"] == 1
+    assert answer["proof_route_count"] == 1
+    assert answer["known_gap_count"] == 1
+    assert answer["configured_protocols"][0]["id"] == "runbook_recovery"
+    assert answer["configured_scenarios"][0]["id"] == "recovery_walkthrough"
+    assert answer["proof_routes"][0]["id"] == "runbook_recovery_route"
+    assert answer["known_gaps"][0]["id"] == "runbook_evidence_gap"
+    assert answer["evidence_bundle_status"][0]["state"] == "present"
+    assert answer["transcript_policy"]["summary_first"] is True
+
+
+def test_report_verification_manifest_rejects_protocol_without_activation(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/verification/manifest.toml",
+        """
+schema_version = "agentic-workspace/verification-manifest/v1"
+
+[protocols.no_route]
+title = "No route"
+purpose = "This cannot be discovered."
+review_owner = "test"
+""",
+    )
+
+    with pytest.raises(SystemExit):
+        cli.main(["report", "--target", str(tmp_path), "--section", "verification", "--format", "json"])
+    assert "requires at least one activation signal" in capsys.readouterr().err
+
+
+def test_report_verification_marks_expired_transcript_evidence(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/verification/manifest.toml",
+        """
+schema_version = "agentic-workspace/verification-manifest/v1"
+
+[protocols.long_horizon_review]
+title = "Long-horizon review"
+purpose = "Bound model-run evidence without retaining all transcript content."
+applies_to_task_markers = ["long-horizon"]
+expected_evidence = ["post_score_reviewed"]
+review_owner = "maintainer"
+
+[evidence_bundles.old_run]
+protocol_id = "long_horizon_review"
+outcome = "passed"
+evidence_items = ["post_score_reviewed"]
+transcript_refs = [".agentic-workspace/local/scratch/model-cli-harness/run/transcript.jsonl"]
+transcript_summaries = ["Evaluator score was reviewed after the run."]
+source_tool = "model-cli-harness"
+source_model = "claude-sonnet"
+post_score_reference = "hidden oracle compared only after primary score"
+retention_until = "2000-01-01"
+""",
+    )
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "verification", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert answer["evidence_bundle_status"][0]["state"] == "expired"
+    assert answer["evidence_bundle_status"][0]["raw_transcript_ref_count"] == 1
+    assert answer["transcript_policy"]["hidden_oracle_rule"].startswith("Keep hidden/reference oracle material")
+
+
 def test_report_routine_work_context_groups_existing_owner_surfaces(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(
@@ -2332,6 +2466,130 @@ review_owner = "privacy-review"
     assert "assurance_evidence:privacy_data" in options["close-parent-lane"]["blocking_fields"]
     assert options["request-review"]["allowed"] is True
     assert options["stop-with-status"]["allowed"] is True
+
+
+def test_report_closeout_trust_cites_verification_evidence_for_assurance_requirement(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        """
+schema_version = 1
+
+[assurance.requirements.privacy_data]
+level = "high"
+applies_to_planning_refs = ["privacy_data"]
+required_evidence = ["manual_privacy_review"]
+force = "required-before-closeout"
+blocking_claims = ["claim-work-complete", "close-parent-lane"]
+review_owner = "privacy-review"
+""",
+    )
+    _write(
+        target / ".agentic-workspace/verification/manifest.toml",
+        """
+schema_version = "agentic-workspace/verification-manifest/v1"
+
+[protocols.privacy_review]
+title = "Privacy review"
+purpose = "Bounded evidence protocol for privacy assurance."
+assurance_requirement_refs = ["privacy_data"]
+planning_refs = ["privacy_data"]
+expected_evidence = ["manual_privacy_review"]
+review_owner = "privacy-review"
+
+[evidence_bundles.privacy_review_2026]
+protocol_id = "privacy_review"
+outcome = "passed"
+evidence_items = ["manual_privacy_review"]
+transcript_summaries = ["Reviewed privacy data export path; raw transcript not retained."]
+residual_risk = "Manual review evidence only."
+claim_boundaries = ["work"]
+reviewer = "privacy-review"
+retention_until = "2099-01-01"
+""",
+    )
+    plan = target / ".agentic-workspace" / "planning" / "execplans" / "verification-proof.plan.json"
+    _write_json(
+        plan,
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Verification Proof",
+            "active_milestone": {"id": "verification-proof", "status": "complete"},
+            "adaptive_assurance": {"level": "high", "requirement_refs": ["privacy_data"]},
+            "delegated_judgment": {
+                "requested outcome": "Record verification evidence for assurance closeout.",
+                "hard constraints": "Do not embed raw transcripts in closeout.",
+                "agent may decide locally": "Exact compact wording.",
+                "escalate when": "Verification evidence is missing.",
+            },
+            "immediate_next_action": ["Close after proof and evidence are visible."],
+            "completion_criteria": ["Proof and verification evidence support the claim."],
+            "validation_commands": ["uv run pytest tests/test_direct.py"],
+            "intent_continuity": {
+                "larger intended outcome": "Record assurance-gated proof.",
+                "this slice completes the larger intended outcome": "yes",
+                "continuation surface": "none",
+            },
+            "required_continuation": {
+                "required follow-on for the larger intended outcome": "no",
+                "owner surface": "none",
+                "activation trigger": "none",
+            },
+            "execution_run": {
+                "run status": "complete",
+                "executor": "test",
+                "handoff source": "uv run agentic-workspace preflight --format json",
+                "what happened": "Proof passed and verification evidence bundle is present.",
+                "scope touched": "test",
+                "changed surfaces": "test",
+                "validations run": "uv run pytest tests/test_direct.py",
+                "result for continuation": "close",
+                "next step": "close",
+            },
+            "proof_report": {
+                "validation proof": "uv run pytest tests/test_direct.py passed",
+                "acceptance reconciliation": "requested verification evidence -> delivered bundle -> proof passed",
+                "proof achieved now": "yes",
+                "intent_proof": {
+                    "status": "sufficient_for_claim",
+                    "claim_boundary": "work",
+                    "intended_behavior": ["direct behavior"],
+                    "proof_dimensions": ["focused direct behavior", "verification evidence cited"],
+                    "unproven_after_tests": [],
+                },
+            },
+            "closure_check": {
+                "slice status": "complete",
+                "larger-intent status": "closed",
+                "closure decision": "archive-and-close",
+                "why this decision is honest": "The focused proof and verification evidence are present.",
+                "evidence carried forward": "report closeout_trust",
+                "reopen trigger": "verification evidence expires",
+            },
+        },
+    )
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        "[todo]\n"
+        "active_items = [\n"
+        "  { id = 'verification-proof', title = 'Verification proof', surface = '.agentic-workspace/planning/execplans/verification-proof.plan.json' },\n"
+        "]\n"
+        "queued_items = []\n\n"
+        "[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
+
+    closeout = json.loads(capsys.readouterr().out)["answer"]
+    assert closeout["verification"]["active_protocols"][0]["id"] == "privacy_review"
+    assert closeout["verification"]["evidence_status"][0]["state"] == "satisfied"
+    assurance_status = closeout["assurance_requirements"]["evidence_status"][0]
+    assert assurance_status["verification_protocols"][0]["protocol_id"] == "privacy_review"
+    assert assurance_status["verification_protocols"][0]["evidence_bundle_ids"] == ["privacy_review_2026"]
 
 
 def test_report_closeout_trust_waiver_clears_assurance_evidence_claim_gate(tmp_path: Path, capsys) -> None:

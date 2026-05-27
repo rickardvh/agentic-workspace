@@ -83,6 +83,30 @@
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
+      "pattern": "packages/verification/src/repo_verification_bootstrap/contracts/operations/*.json",
+      "format": "json",
+      "owner": "verification-contracts",
+      "status": "schema-backed",
+      "schema_or_validator": "src/agentic_workspace/contracts/schemas/operation.schema.json",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Verification operation contracts are module-owned product truth consumed by command generation through operation_contract_root.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
+    },
+    {
+      "pattern": "packages/verification/src/repo_verification_bootstrap/contracts/conformance/*.json",
+      "format": "json",
+      "owner": "verification-contracts",
+      "status": "schema-backed",
+      "schema_or_validator": "src/agentic_workspace/contracts/schemas/conformance.schema.json",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Verification conformance contracts are module-owned process fixtures consumed by generated command conformance checks.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
+    },
+    {
       "pattern": "packages/memory/src/repo_memory_bootstrap/contracts/payload_verification.memory.json",
       "format": "json",
       "owner": "memory-contracts",
@@ -1008,6 +1032,23 @@
       "routed_to": "#1007"
     },
     {
+      "pattern": "generated/verification/python/_contracts/**/*.json",
+      "format": "json",
+      "owner": "generated-command-adapters",
+      "status": "generated-derived",
+      "schema_or_validator": "generated command package checks",
+      "editable_by_agents": false,
+      "generated": true,
+      "notes": "Generated Verification contract resource mirrors are adapter outputs copied from verification-owned module contracts.",
+      "storage_class": "generated-required-adapter",
+      "checked_in_justification": "Checked in so generated Python packages can load module-owned contract resources at runtime without depending on source-tree contract paths.",
+      "reconstructable_from": [
+        "uv run python scripts/generate/generate_command_packages.py",
+        "packages/verification/src/repo_verification_bootstrap/contracts"
+      ],
+      "routed_to": "#1159"
+    },
+    {
       "pattern": "generated/memory/python/_payload/**/*.json",
       "format": "json",
       "owner": "generated-command-adapters",
@@ -1252,6 +1293,16 @@
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
       "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
       "removal_or_demotion_path": "demote only after generated Python packages no longer need packaged Memory contract artifacts",
+      "max_bytes": 250000
+    },
+    {
+      "pattern": "generated/verification/python/_contracts/**/*.json",
+      "source_command": "uv run python scripts/generate/generate_command_packages.py",
+      "named_consumer": "generated Verification Python contract resource loaders",
+      "checked_in_justification": "Generated Verification contract mirrors are kept as files so runtime-consumed operations load module-owned policy IR from the generated package.",
+      "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
+      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "removal_or_demotion_path": "demote only after generated Python packages no longer need packaged Verification contract artifacts",
       "max_bytes": 250000
     },
     {

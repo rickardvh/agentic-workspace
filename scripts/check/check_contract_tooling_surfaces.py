@@ -615,13 +615,20 @@ def _validate_operation_ir_plans() -> list[str]:
 def _validate_module_operation_contract_locations() -> list[str]:
     errors: list[str] = []
     root_operations = REPO_ROOT / "src" / "agentic_workspace" / "contracts" / "operations"
-    misplaced = sorted(path.name for prefix in ("planning.", "memory.") for path in root_operations.glob(f"{prefix}*.json"))
+    misplaced = sorted(path.name for prefix in ("planning.", "memory.", "verification.") for path in root_operations.glob(f"{prefix}*.json"))
     if misplaced:
         errors.append("module-owned operation contracts must not live under root workspace operations: " + ", ".join(misplaced))
 
     module_roots = {
         "planning.": REPO_ROOT / "packages" / "planning" / "src" / "repo_planning_bootstrap" / "contracts" / "operations",
         "memory.": REPO_ROOT / "packages" / "memory" / "src" / "repo_memory_bootstrap" / "contracts" / "operations",
+        "verification.": REPO_ROOT
+        / "packages"
+        / "verification"
+        / "src"
+        / "repo_verification_bootstrap"
+        / "contracts"
+        / "operations",
     }
     for operation_ref in operation_contracts_manifest()["operations"]:
         operation_id = str(operation_ref.get("id", ""))
@@ -1345,13 +1352,13 @@ def _known_command_names_for_program(program: str) -> set[str]:
 
 
 def _program_generated_parser(program: str) -> argparse.ArgumentParser | None:
-    if program in {"agentic-workspace", "agentic-planning", "agentic-memory"}:
+    if program in {"agentic-workspace", "agentic-planning", "agentic-memory", "agentic-verification"}:
         return load_generated_command_package_for_entrypoint(program).build_generated_parser()
     return None
 
 
 def _program_generated_command_names(program: str) -> set[str]:
-    if program in {"agentic-workspace", "agentic-planning", "agentic-memory"}:
+    if program in {"agentic-workspace", "agentic-planning", "agentic-memory", "agentic-verification"}:
         return set(load_generated_command_package_for_entrypoint(program).generated_command_names())
     return set()
 
@@ -1363,6 +1370,8 @@ def _program_parser(program: str) -> argparse.ArgumentParser | None:
         return load_generated_command_module_for_entrypoint("agentic-planning", "cli.py").build_parser()
     if program == "agentic-memory":
         return load_generated_command_module_for_entrypoint("agentic-memory", "cli.py").build_parser()
+    if program == "agentic-verification":
+        return load_generated_command_module_for_entrypoint("agentic-verification", "cli.py").build_parser()
     return None
 
 

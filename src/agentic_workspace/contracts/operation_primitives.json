@@ -73,6 +73,13 @@
         "contract_owner": "packages/memory",
         "current_contract_root": "packages/memory/src/repo_memory_bootstrap/contracts/operations",
         "future_contract_root": "packages/memory/src/repo_memory_bootstrap/contracts"
+      },
+      {
+        "id": "verification",
+        "operation_id_prefix": "verification.",
+        "contract_owner": "packages/verification",
+        "current_contract_root": "packages/verification/src/repo_verification_bootstrap/contracts/operations",
+        "future_contract_root": "packages/verification/src/repo_verification_bootstrap/contracts"
       }
     ]
   },

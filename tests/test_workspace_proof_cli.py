@@ -178,6 +178,131 @@ review_hint = "Workspace orchestration applies to workspace paths."
     assert routine["knowledge_authority_review"]["workflow_obligation_match_count"] == 1
 
 
+def test_proof_routes_changed_path_to_verification_protocol(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/verification/manifest.toml",
+        """
+schema_version = "agentic-workspace/verification-manifest/v1"
+
+[scenarios.runbook_walkthrough]
+protocol_id = "runbook_review"
+title = "Runbook walkthrough"
+steps = ["Review the recovery runbook"]
+expected_observations = ["Recovery steps and owner are visible"]
+pass_evidence_labels = ["manual_runbook_review"]
+fail_evidence_labels = ["runbook_gap"]
+
+[protocols.runbook_review]
+title = "Runbook review"
+purpose = "Manual verification for runbook changes."
+applies_to_paths = ["docs/runbooks/**"]
+scenario_refs = ["runbook_walkthrough"]
+steps = ["Run the runbook walkthrough"]
+expected_evidence = ["manual_runbook_review"]
+review_owner = "ops-review"
+review_aids = ["Record observations in the closeout evidence."]
+
+[proof_routes.runbook_review_route]
+protocol_refs = ["runbook_review"]
+scenario_refs = ["runbook_walkthrough"]
+commands = ["uv run pytest tests/test_runbook_review.py"]
+review_aids = ["Record route-specific proof notes."]
+proof_lane_hint = "runbook-verification"
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "docs/runbooks/recovery.md",
+                "--verbose",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert answer["verification"]["active_count"] == 1
+    assert answer["verification"]["evidence_status"][0]["state"] == "missing-evidence"
+    lanes = {lane["id"]: lane for lane in answer["selected_lanes"]}
+    assert "verification:runbook_review" in lanes
+    assert lanes["verification:runbook_review"]["verification_scenario_refs"] == ["runbook_walkthrough"]
+    assert lanes["verification:runbook_review"]["verification_proof_route_ids"] == ["runbook_review_route"]
+    assert lanes["verification:runbook_review"]["required_commands"] == ["uv run pytest tests/test_runbook_review.py"]
+    assert answer["routine_work_context"]["categories"]["evidence_proof"]["signals"]["active_verification_protocols"] == 1
+
+
+def test_proof_routes_active_assurance_requirement_to_verification_protocol(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[assurance.proof_profiles.privacy]
+required_commands = ["uv run pytest tests/test_privacy.py"]
+review_aids = ["Review privacy data handling manually."]
+
+[assurance.requirements.privacy_data]
+level = "high"
+applies_to_paths = ["src/privacy/**"]
+required_evidence = ["manual_privacy_review"]
+proof_profile = "privacy"
+force = "required-before-closeout"
+blocking_claims = ["claim-work-complete", "close-parent-lane"]
+review_owner = "privacy-review"
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace/verification/manifest.toml",
+        """
+schema_version = "agentic-workspace/verification-manifest/v1"
+
+[protocols.privacy_manual_review]
+title = "Privacy manual review"
+purpose = "Repeatable review protocol for privacy-sensitive code."
+applies_to_paths = ["src/privacy/**"]
+assurance_requirement_refs = ["privacy_data"]
+proof_profiles = ["privacy"]
+expected_evidence = ["manual_privacy_review"]
+review_owner = "privacy-review"
+review_aids = ["Confirm data minimisation and retention assumptions."]
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/privacy/export.py",
+                "--verbose",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert answer["verification"]["active_protocols"][0]["id"] == "privacy_manual_review"
+    lanes = {lane["id"]: lane for lane in answer["selected_lanes"]}
+    assert "assurance-requirement:privacy_data" in lanes
+    assert "verification:privacy_manual_review" in lanes
+    status = answer["assurance_requirements"]["evidence_status"][0]
+    assert status["verification_protocols"][0]["protocol_id"] == "privacy_manual_review"
+    assert status["verification_missing_evidence"] == ["manual_privacy_review"]
+
+
 def test_proof_accumulates_repeated_changed_flags(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
 

@@ -25,6 +25,7 @@
     "objective_drift",
     "reuse_pressure",
     "assurance_requirements",
+    "verification",
     "routine_work_context",
     "orientation",
     "inference_limits",
@@ -152,6 +153,11 @@
     "assurance_requirements": {
       "type": "object",
       "description": "Repo-declared assurance requirements matched to the task or changed paths, with evidence status and claim-boundary facts.",
+      "additionalProperties": true
+    },
+    "verification": {
+      "type": "object",
+      "description": "Matched repo-native verification protocols and bounded evidence status for the task or changed paths.",
       "additionalProperties": true
     },
     "routine_work_context": {

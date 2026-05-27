@@ -294,6 +294,7 @@ def _install_workspace_stack_venv(*, wheel_path: Path, tmpdir_path: Path) -> Pat
             str(python_path),
             str(WORKSPACE_ROOT / "packages" / "memory"),
             str(WORKSPACE_ROOT / "packages" / "planning"),
+            str(WORKSPACE_ROOT / "packages" / "verification"),
             str(wheel_path),
         ],
         cwd=WORKSPACE_ROOT,

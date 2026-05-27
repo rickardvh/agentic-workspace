@@ -1,0 +1,272 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Verification Module Boundary Investigation",
+  "date": "2026-05-27",
+  "scope": [
+    "GitHub #1159 investigation"
+  ],
+  "classification": "design-investigation",
+  "goal": [
+    "Determine whether Agentic Workspace should add a repo-native verification module for soft verification protocols, evidence bundles, transcripts, proof-route artifacts, and reusable review evidence."
+  ],
+  "non_goals": [
+    "Do not implement a verification module in this investigation slice.",
+    "Do not create a generic compliance, evaluator, or UI automation subsystem.",
+    "Do not make Memory, Planning, Assurance, Proof, or Closeout own each other's responsibilities."
+  ],
+  "review_mode": {
+    "mode": "design-investigation",
+    "review_question": "Does verification deserve a distinct repo-native module boundary, and if so what is the smallest useful model?",
+    "default_finding_cap": "bounded",
+    "inputs_inspected_first": "GitHub #1159, prior assurance investigation, routine work context, proof/closeout/Memory/Planning/harness docs and surfaces"
+  },
+  "review_method": {
+    "commands_used": "uv run agentic-workspace start --task \"Ingest GitHub issue #1159 on a new branch and do the investigation\" --format json; gh issue view 1159 --json number,title,state,url,body,labels,comments; rg assurance/proof/workflow/closeout/routine/intent_proof surfaces; targeted reads of assurance investigation, routine context, proof selection docs, Memory metadata, knowledge promotion, Planning intent verification, Planning closeout trust, payload verification policy, and model CLI harness docs/schemas.",
+    "evidence_sources": [
+      "GitHub #1159",
+      ".agentic-workspace/planning/reviews/2026-05-26-assurance-evidence-gate-model.md",
+      ".agentic-workspace/planning/reviews/2026-05-26-assurance-evidence-gate-model.review.json",
+      "docs/routine-work-context.md",
+      "docs/reference/proof-selection-rules.md",
+      "docs/reference/payload-verification-policy.md",
+      ".agentic-workspace/docs/memory-metadata-contract.md",
+      ".agentic-workspace/docs/knowledge-promotion-workflow.md",
+      "packages/planning/skills/planning-intent-verification/SKILL.md",
+      "packages/planning/skills/planning-closeout-trust/SKILL.md",
+      "docs/maintainer/model-cli-dogfooding-harness.md",
+      "tools/model-cli-harness/schemas/long-horizon-episode.schema.json",
+      "tools/model-cli-harness/schemas/long-horizon-evaluation.schema.json",
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "src/agentic_workspace/config.py",
+      "tests/test_workspace_proof_cli.py",
+      "tests/test_workspace_report_cli.py"
+    ]
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1159",
+      "label": "#1159",
+      "role": "investigation"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1130",
+      "label": "#1130",
+      "role": "assurance parent precedent"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1124",
+      "label": "#1124",
+      "role": "long-horizon evidence precedent"
+    },
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1151",
+      "label": "#1151",
+      "role": "routine context precedent"
+    }
+  ],
+  "findings": [
+    {
+      "title": "Verification deserves a narrow module boundary",
+      "summary": "Planning, Assurance, Proof, Closeout, Memory, and the harness can each use verification evidence, but none should own reusable verification protocols and bounded soft-evidence artifacts. A small verification module is justified when protocols, scenarios, evidence bundles, and transcript summaries need to be checked in, durable, reviewable, and branch-aware.",
+      "evidence": "#1159 asks for reusable soft/semi-structured verification protocols, manual scenarios, evidence bundles, transcripts, and proof-route artifacts. Existing Planning surfaces own active work; Assurance owns required evidence; Proof owns validation selection; Closeout owns claim boundaries; Memory owns durable anti-rediscovery; the harness owns disposable model/evaluator runs.",
+      "risk_if_unchanged": "Reusable manual scenarios and soft-evidence procedures will either be hidden in active plans, over-promoted into Memory, embedded in assurance requirements, or re-invented per task.",
+      "suggested_action": "Create a verification module boundary for protocol, scenario, proof-route, evidence-bundle, transcript-summary, and known-gap artifacts. Keep v1 read/projection oriented.",
+      "confidence": "high",
+      "source": "#1159 investigation",
+      "promotion_target": "follow-up issue: verification protocol manifest and report projection",
+      "promotion_trigger": "Before implementing verification support",
+      "post_remediation_note_shape": "Retain as review evidence until child issues exist; no Memory note needed unless repeated implementation confusion occurs."
+    },
+    {
+      "title": "Verification should produce evidence, not require or certify it",
+      "summary": "The clean boundary is that Assurance declares required evidence and claim force, Verification describes how evidence is produced and recorded, Proof routes matched protocols into validation work, and Closeout decides what claims remain honest.",
+      "evidence": "The #1131 assurance investigation already established requirement refs, required_evidence, proof_profile, force, blocking_claims, waiver, and dismissal as Assurance-owned. planning-closeout-trust explicitly separates validation, intent satisfaction, issue closure, and residue routing. proof selection is already the validation lane selector.",
+      "risk_if_unchanged": "Verification could become a competing authority for assurance gates or completion claims, weakening the owner model.",
+      "suggested_action": "Make protocol artifacts descriptive and routable. Do not let verification decide that evidence is required, that a waiver is accepted, or that a completion claim is allowed.",
+      "confidence": "high",
+      "source": "#1159 investigation",
+      "promotion_target": "verification module design and first implementation child",
+      "promotion_trigger": "When writing schema or report projection acceptance criteria",
+      "post_remediation_note_shape": "Encode in docs and schema comments rather than Memory."
+    },
+    {
+      "title": "Start with protocol manifest and report projection",
+      "summary": "The smallest useful implementation is a checked-in protocol/scenario manifest plus `report --section verification`. Evidence bundle writing, transcript stores, and closeout gates should follow only after routing proves useful.",
+      "evidence": "Routine work context keeps assembled router views separate from canonical owners. The assurance investigation used config/report projection before evidence gates. The model harness already has bounded run artifacts and should not be moved wholesale into a new store.",
+      "risk_if_unchanged": "A writer-heavy first slice would create another state surface before agents have proven they can benefit from protocol routing.",
+      "suggested_action": "Create a child issue for `.agentic-workspace/verification/manifest.toml` schema support, protocol/scenario records, activation signals, and `report --section verification` projection.",
+      "confidence": "medium-high",
+      "source": "#1159 investigation",
+      "promotion_target": "first implementation child issue",
+      "promotion_trigger": "Immediately after investigation acceptance",
+      "post_remediation_note_shape": "Child issue acceptance should require quiet defaults and no evidence writer."
+    },
+    {
+      "title": "Evidence and transcripts need retention bounds",
+      "summary": "Verification evidence should be compact, citeable, and expirable. Raw transcripts should be optional refs with summaries, hashes, redaction/retention posture, and clear post-score handling for hidden/reference oracle material.",
+      "evidence": "The long-horizon harness already separates hidden/reference oracle metadata from evaluator prompts, stores transcripts and run.json in scratch, and treats real model executions as maintainer evidence rather than CI. Memory metadata treats Memory as anti-rediscovery and warns against copying source/evidence into notes.",
+      "risk_if_unchanged": "The module could become a transcript landfill or leak hidden evaluator material into future prompts and Memory notes.",
+      "suggested_action": "Require evidence bundle records to carry summaries, refs, retention, stale_when, residual risk, and claim boundaries. Keep raw transcripts out of durable Memory and expose hidden/reference oracle material only as post-score review metadata.",
+      "confidence": "high",
+      "source": "#1159 investigation",
+      "promotion_target": "follow-up issue: bounded evidence bundles and transcript retention",
+      "promotion_trigger": "Before adding an evidence writer or harness adapter",
+      "post_remediation_note_shape": "Promote only recurring lessons to Memory; keep run evidence in verification or scratch-linked summaries."
+    },
+    {
+      "title": "Module value should be proven by concrete workflows",
+      "summary": "The module should be promoted only if it improves at least two workflows: intent-proof manual scenario reuse, high-assurance evidence recording, long-horizon evaluator evidence, or non-code verification.",
+      "evidence": "#1159 lists those four candidate workflows. Existing AW surfaces can already summarize current evidence, but reusable protocol/scenario libraries and bounded soft-evidence records are missing.",
+      "risk_if_unchanged": "A verification module could become architecture taxonomy without changing agent behavior.",
+      "suggested_action": "Require follow-up implementation issues to include at least one matched protocol projection and one end-to-end fixture where proof/closeout cites verification evidence or residual risk.",
+      "confidence": "medium-high",
+      "source": "#1159 investigation",
+      "promotion_target": "verification implementation lane acceptance criteria",
+      "promotion_trigger": "Before closing a verification parent lane",
+      "post_remediation_note_shape": "Retain until fixtures demonstrate value, then shrink."
+    }
+  ],
+  "recommendation": {
+    "promote": [
+      "Create a first child issue for minimal `.agentic-workspace/verification/manifest.toml` protocol/scenario schema and `report --section verification` projection.",
+      "Create a child issue for proof routing from changed paths, task markers, Assurance requirements, and proof profiles into matched protocols.",
+      "Create a child issue for bounded evidence bundle schema and closeout citation support.",
+      "Create a child issue for transcript summarization, retention, redaction, and hidden/reference oracle handling.",
+      "Create a fixture issue proving at least one high-assurance/manual scenario and one long-horizon/non-code workflow."
+    ],
+    "defer": [
+      "Evidence writer commands until read projection and proof routing prove useful.",
+      "Closeout gates until evidence bundle records exist.",
+      "Harness adapter integration until transcript retention rules are explicit."
+    ],
+    "dismiss": [
+      "A broad verification/compliance platform.",
+      "A general UI automation system.",
+      "Raw transcript retention by default.",
+      "Memory as the store for active verification evidence.",
+      "Verification as the authority for completion claims."
+    ]
+  },
+  "retention": {
+    "protocols_and_scenarios": "durable repo artifacts",
+    "evidence_bundles": "retain while supporting active work, issue closure, parent closure, assurance gates, or recurring evaluator analysis; otherwise shrink or expire",
+    "transcripts": "summary-first, raw refs optional, retention/redaction explicit, source tool/model recorded, hidden/reference oracle metadata post-score only",
+    "memory": "durable lessons and anti-rediscovery only",
+    "planning": "current-work refs, evidence status, continuation decisions"
+  },
+  "summary": {
+    "recommended_model": "Verification should be a repo-native module for reusable protocols, scenarios, proof routes, bounded evidence bundles, transcript summaries, and known gaps. It should compose with existing Planning, Assurance, Proof, Closeout, Memory, workflow obligations, and harness surfaces rather than replacing them.",
+    "module_threshold": "Use a module when artifacts must be checked in, durable, reviewable, branch-aware, and reused across agents. Use only a report section when summarizing existing state is enough.",
+    "minimal_artifact_model": {
+      "protocol": [
+        "id",
+        "title",
+        "purpose",
+        "applies_to_paths",
+        "applies_to_task_markers",
+        "assurance_requirement_refs",
+        "proof_profiles",
+        "scenario_refs",
+        "steps",
+        "expected_evidence",
+        "review_owner",
+        "authority_refs",
+        "stale_when",
+        "retention",
+        "non_goals"
+      ],
+      "scenario": [
+        "id",
+        "protocol_id",
+        "title",
+        "steps",
+        "expected_observations",
+        "pass_evidence_labels",
+        "fail_evidence_labels",
+        "automation_hint",
+        "manual_boundary"
+      ],
+      "evidence_bundle": [
+        "id",
+        "protocol_id",
+        "scenario_id",
+        "task_refs",
+        "issue_refs",
+        "pr_refs",
+        "changed_paths",
+        "executor",
+        "executed_at",
+        "outcome",
+        "evidence_items",
+        "transcript_refs",
+        "transcript_summaries",
+        "residual_risk",
+        "claim_boundaries",
+        "reviewer",
+        "retention_until",
+        "stale_when"
+      ],
+      "proof_route": [
+        "id",
+        "matches",
+        "protocol_refs",
+        "scenario_refs",
+        "proof_lane_hint",
+        "assurance_requirement_refs",
+        "reason"
+      ],
+      "known_gap": [
+        "id",
+        "protocol_id",
+        "reason",
+        "owner",
+        "created_from",
+        "reopen_trigger",
+        "blocked_claims",
+        "residual_risk",
+        "status"
+      ]
+    },
+    "surface_integration": {
+      "planning": "Reference verification protocols and evidence status for active work; do not store reusable protocol bodies.",
+      "assurance": "Declare required evidence, force, claim blockers, authority refs, waiver, and dismissal; optionally map evidence labels to protocol ids.",
+      "workflow_obligations": "Continue to own lifecycle commands and review hints; verification can cite or be cited by obligations.",
+      "proof": "Select matched protocols as review aids or lanes and separate automated proof from soft evidence.",
+      "closeout_trust": "Consume verification evidence status and evidence bundle ids when deciding completion options.",
+      "memory": "Capture only durable lessons, repeated gaps, or anti-rediscovery notes after verification.",
+      "harness": "Keep scratch runs disposable; verification may retain bounded summaries/refs for reusable long-horizon evidence."
+    },
+    "first_implementation_slice": {
+      "title": "[Verification]: Add minimal verification protocol manifest and report projection",
+      "scope": [
+        "Add `.agentic-workspace/verification/manifest.toml` schema support.",
+        "Support protocol and scenario records with activation signals.",
+        "Require stable ids, purpose, at least one activation signal, and review owner or explicit ownerless posture.",
+        "Add `report --section verification` projection.",
+        "Include matched protocol ids in proof/report surfaces when explicitly selected or verbose.",
+        "Keep default start/implement/proof output quiet unless a route affects the next action or claim boundary.",
+        "Do not add an evidence writer, transcript store, or closeout gate yet."
+      ]
+    },
+    "non_goals": [
+      "generic compliance platform",
+      "UI automation platform",
+      "CI replacement",
+      "raw transcript database",
+      "Memory evidence store",
+      "completion-claim authority"
+    ]
+  },
+  "validation_commands": [
+    "uv run agentic-workspace implement --changed .agentic-workspace/planning/reviews/2026-05-27-verification-module-boundary.md .agentic-workspace/planning/reviews/2026-05-27-verification-module-boundary.review.json --task \"Ingest #1159 and complete verification module boundary investigation\" --format json",
+    "uv run python scripts/check/check_planning_surfaces.py",
+    "uv run python -m json.tool .agentic-workspace/planning/reviews/2026-05-27-verification-module-boundary.review.json"
+  ],
+  "drift_log": [
+    "2026-05-27: Review record created for #1159 verification module boundary investigation."
+  ]
+}

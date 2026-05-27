@@ -1,0 +1,73 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agentic-verification"
+version = "0.1.0"
+description = "Repo-native verification protocols and bounded evidence records for Agentic Workspace."
+readme = "README.md"
+requires-python = ">=3.11"
+keywords = ["agents", "developer-tools", "evidence", "repository", "verification"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Quality Assurance",
+]
+authors = [
+  { name = "Rickard von Haugwitz" },
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/rickardvh/agentic-workspace/tree/master/packages/verification"
+Repository = "https://github.com/rickardvh/agentic-workspace"
+Issues = "https://github.com/rickardvh/agentic-workspace/issues"
+
+[project.scripts]
+agentic-verification = "repo_verification_bootstrap.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/repo_verification_bootstrap"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"../../generated/verification/python/__init__.py" = "src/repo_verification_bootstrap/_generated_cli_package_impl/__init__.py"
+"../../generated/verification/python/cli.py" = "src/repo_verification_bootstrap/_generated_cli_package_impl/cli.py"
+"../../generated/verification/python/command_package.json" = "src/repo_verification_bootstrap/_generated_cli_package_impl/command_package.json"
+"../../generated/verification/python/adapter_commands.json" = "src/repo_verification_bootstrap/_generated_cli_package_impl/adapter_commands.json"
+"../../generated/verification/python/operations" = "src/repo_verification_bootstrap/_generated_cli_package_impl/operations"
+"../../generated/verification/python/commands" = "src/repo_verification_bootstrap/_generated_cli_package_impl/commands"
+"../../generated/verification/python/primitives" = "src/repo_verification_bootstrap/_generated_cli_package_impl/primitives"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/README.md",
+  "/src/repo_verification_bootstrap",
+  "/tests",
+]
+
+[tool.hatch.build.targets.sdist.force-include]
+"../../generated/verification/python/__init__.py" = "src/repo_verification_bootstrap/_generated_cli_package_impl/__init__.py"
+"../../generated/verification/python/cli.py" = "src/repo_verification_bootstrap/_generated_cli_package_impl/cli.py"
+"../../generated/verification/python/command_package.json" = "src/repo_verification_bootstrap/_generated_cli_package_impl/command_package.json"
+"../../generated/verification/python/adapter_commands.json" = "src/repo_verification_bootstrap/_generated_cli_package_impl/adapter_commands.json"
+"../../generated/verification/python/operations" = "src/repo_verification_bootstrap/_generated_cli_package_impl/operations"
+"../../generated/verification/python/commands" = "src/repo_verification_bootstrap/_generated_cli_package_impl/commands"
+"../../generated/verification/python/primitives" = "src/repo_verification_bootstrap/_generated_cli_package_impl/primitives"
+
+[tool.pytest.ini_options]
+addopts = ["--import-mode=importlib"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 140
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+ignore = ["E501"]
+select = ["E", "F", "I"]

@@ -80,7 +80,8 @@
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_skills_report_adapter|agentic_workspace.workspace_runtime_primitives|_run_skills_report_adapter",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_start_context_adapter|agentic_workspace.workspace_runtime_primitives|_run_start_context_adapter",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_summary_report_adapter|agentic_workspace.workspace_runtime_primitives|_run_summary_report_adapter",
-      "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_select_workspace_operation_fields|agentic_workspace.workspace_runtime_primitives|_select_workspace_operation_fields"
+      "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_select_workspace_operation_fields|agentic_workspace.workspace_runtime_primitives|_select_workspace_operation_fields",
+      "operation-function-call|generated/verification/python/operations/verification.report.report.json|verification.report.report|repo_verification_bootstrap.runtime_primitives|verification_report_payload"
     ],
     "entries": [
       {
@@ -1457,6 +1458,27 @@
         "conformance_ref": "config.report.process",
         "status": "accepted-permanent-package-domain-boundary",
         "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, and generated output owns selected-output text. Domain primitive refs (workspace.root.resolve, workspace.config.load, output.fields.select, workspace.config.emit) remain explicit package-boundary calls for config loading, profile projection, and tiny/full text. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      },
+      {
+        "binding_kind": "operation-function-call",
+        "operation_path": "generated/verification/python/operations/verification.report.report.json",
+        "operation_id": "verification.report.report",
+        "source_module": "repo_verification_bootstrap.runtime_primitives",
+        "source_symbol": "verification_report_payload",
+        "owner_package": "verification package runtime boundary",
+        "operation_ids": [
+          "verification.report.report"
+        ],
+        "primitive_refs": [
+          "path.target_root.resolve",
+          "python.function.call",
+          "output.emit"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "Verification report semantics classify repo-specific protocol activation, bounded evidence, stale conditions, and known gaps behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "verification.report.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own target resolution, dataflow, and emission, while repo_verification_bootstrap.runtime_primitives owns the first-party module's verification protocol and evidence semantics. This entry is not accepted as portable codegen coverage."
       }
     ]
   },
@@ -1529,6 +1551,30 @@
       "provenance_status": "rendered-by-command-generation",
       "current_owner": "command-generation render_outputs",
       "source_of_truth": "src/agentic_workspace/contracts/command_package_ir.json python_runtime_binding.operation_executor plus generated memory operation IR resources",
+      "blocking_full_completion": false,
+      "why_blocking": "not blocking; this operation executor is mechanically rendered from command-package binding metadata",
+      "required_resolution": "Keep generated freshness proof covering this file."
+    },
+    {
+      "path": "generated/verification/python/cli.py",
+      "package_id": "verification-cli",
+      "program": "agentic-verification",
+      "artifact_kind": "cli-entrypoint",
+      "provenance_status": "rendered-by-command-generation",
+      "current_owner": "command-generation render_outputs",
+      "source_of_truth": "src/agentic_workspace/contracts/command_package_ir.json python_runtime_binding.render_runtime_module plus generated verification operation IR resources",
+      "blocking_full_completion": false,
+      "why_blocking": "not blocking; this runtime handler map is mechanically rendered from command-package binding metadata",
+      "required_resolution": "Keep generated freshness proof covering this file."
+    },
+    {
+      "path": "generated/verification/python/primitives/operation_executor.py",
+      "package_id": "verification-cli",
+      "program": "agentic-verification",
+      "artifact_kind": "operation-ir-executor",
+      "provenance_status": "rendered-by-command-generation",
+      "current_owner": "command-generation render_outputs",
+      "source_of_truth": "src/agentic_workspace/contracts/command_package_ir.json python_runtime_binding.operation_executor plus generated verification operation IR resources",
       "blocking_full_completion": false,
       "why_blocking": "not blocking; this operation executor is mechanically rendered from command-package binding metadata",
       "required_resolution": "Keep generated freshness proof covering this file."

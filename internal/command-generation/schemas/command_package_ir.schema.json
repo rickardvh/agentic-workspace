@@ -372,7 +372,8 @@
           "enum": [
             "root-workspace-cli",
             "planning-module-cli",
-            "memory-module-cli"
+            "memory-module-cli",
+            "verification-module-cli"
           ],
           "description": "Allowed package role value for routing or validation."
         },

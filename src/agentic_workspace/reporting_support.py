@@ -318,6 +318,8 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
         proof_confidence = proof_confidence if isinstance(proof_confidence, dict) else {}
         assurance_requirements = answer.get("assurance_requirements", {})
         assurance_requirements = assurance_requirements if isinstance(assurance_requirements, dict) else {}
+        verification = answer.get("verification", {})
+        verification = verification if isinstance(verification, dict) else {}
         knowledge_authority_review = answer.get("knowledge_authority_review", {})
         knowledge_authority_review = knowledge_authority_review if isinstance(knowledge_authority_review, dict) else {}
         architecture_decision = answer.get("architecture_decision_closeout", {})
@@ -351,6 +353,14 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
                 "active_count": assurance_requirements.get("active_count", 0),
                 "missing_required_evidence_count": assurance_requirements.get("missing_required_evidence_count", 0),
                 "evidence_status": assurance_requirements.get("evidence_status", []),
+            },
+            "verification": {
+                "status": verification.get("status", "absent"),
+                "configured": verification.get("configured", False),
+                "protocol_count": verification.get("protocol_count", 0),
+                "active_count": verification.get("active_count", 0),
+                "active_protocols": verification.get("active_protocols", []),
+                "evidence_status": verification.get("evidence_status", []),
             },
             "knowledge_authority_review": {
                 key: knowledge_authority_review.get(key)

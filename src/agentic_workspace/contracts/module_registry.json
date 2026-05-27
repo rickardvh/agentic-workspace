@@ -3,7 +3,7 @@
   "package_footprint": {
     "decision": "bundle-first-party-modules-for-now",
     "status": "intentional-temporary",
-    "python_package_dependency_model": "root package currently depends on the bundled planning and memory module packages unconditionally.",
+    "python_package_dependency_model": "The AW Python package currently depends on the bundled planning, memory, and verification module distributions unconditionally.",
     "repo_footprint_rule": "Presets choose checked-in repository footprint; routing-only minimizes installed repo state, not Python package dependencies.",
     "why": "Keeping first-party modules installed with the root command preserves simple installed-CLI lifecycle orchestration while generic module manifests and optional-module loading are still being shaped.",
     "bounded_by": [
@@ -13,13 +13,13 @@
     "future_options": [
       "keep bundled first-party distribution intentionally",
       "add optional extras for selected first-party modules",
-      "load module packages lazily from generic module declarations",
+      "load module distributions lazily from generic module declarations",
       "publish a separate core orchestrator and first-party bundle"
     ],
     "must_preserve": [
       "simple root lifecycle invocation",
       "routing-only as smallest checked-in repo footprint",
-      "planning and memory as first-party examples of the same module contract third parties use"
+      "planning, memory, and verification as first-party examples of the same module contract third parties use"
     ]
   },
   "component_model": {
@@ -818,6 +818,108 @@
           "kind",
           "path",
           "detail"
+        ],
+        "warning_fields": [
+          "path",
+          "message"
+        ]
+      }
+    },
+    {
+      "name": "verification",
+      "description": "Repo-native soft verification protocols, bounded evidence records, and proof route hints.",
+      "selection_rank": 30,
+      "include_in_full_preset": false,
+      "install_signals": [
+        ".agentic-workspace/verification/manifest.toml"
+      ],
+      "workflow_surfaces": [
+        ".agentic-workspace/verification/manifest.toml",
+        "docs/verification.md"
+      ],
+      "generated_artifacts": [
+        "generated/verification/python"
+      ],
+      "startup_steps": [
+        "Use `agentic-workspace report --section verification --format json` only when the task, changed paths, assurance requirements, or proof selection activates verification protocols.",
+        "Use `agentic-verification report --target <repo> --format json` when working directly on the Verification module boundary."
+      ],
+      "sources_of_truth": [
+        "Verification module runtime: `packages/verification/src/repo_verification_bootstrap/runtime_primitives.py`",
+        "Generated command contract: `packages/verification/src/repo_verification_bootstrap/contracts/operations/verification.report.report.json`",
+        "Host repo protocols and bounded evidence: `.agentic-workspace/verification/manifest.toml`"
+      ],
+      "root_agents_cleanup_blocks": [],
+      "capabilities": [
+        "soft-verification-protocols",
+        "bounded-evidence-records",
+        "proof-route-hints"
+      ],
+      "dependencies": [],
+      "conflicts": [],
+      "components": {
+        "resources": [
+          {
+            "uri": "verification://report",
+            "description": "Configured verification protocols, proof routes, evidence bundles, and known gaps.",
+            "read_only": true,
+            "source": ".agentic-workspace/verification/manifest.toml",
+            "command": "agentic-verification report --target <repo> --format json",
+            "result_schema": "agentic-workspace/verification/v1"
+          }
+        ],
+        "tools": [
+          {
+            "name": "verification.report",
+            "description": "Inspect repo-native verification protocols and bounded evidence.",
+            "command": "agentic-verification report --target <repo> --format json",
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "requires_dry_run": false,
+            "input_schema": "generated-command:verification.report.report",
+            "result_schema": "agentic-workspace/verification/v1",
+            "safety": {
+              "requires_approval_when": [],
+              "owned_paths": [],
+              "dry_run_command": ""
+            }
+          }
+        ],
+        "prompts": [],
+        "schemas": [
+          {
+            "id": "verification-manifest",
+            "path": ".agentic-workspace/verification/manifest.toml",
+            "schema_kind": "typed-validator"
+          }
+        ],
+        "roots": [
+          {
+            "id": "verification-root",
+            "path": ".agentic-workspace/verification",
+            "ownership": "repo-owned-config"
+          }
+        ]
+      },
+      "result_contract": {
+        "schema_version": "agentic-workspace/verification/v1",
+        "guaranteed_fields": [
+          "kind",
+          "status",
+          "configured",
+          "path",
+          "active_count",
+          "active_protocols",
+          "evidence_status",
+          "active_proof_routes",
+          "known_gaps"
+        ],
+        "action_fields": [
+          "protocol_id",
+          "route_id",
+          "evidence_id",
+          "gap_id"
         ],
         "warning_fields": [
           "path",

@@ -120,14 +120,15 @@
       "properties": {
         "path": {
           "type": "string",
-          "pattern": "^generated/(workspace|planning|memory)/python/(cli|primitives/operation_executor)\\.py$",
+          "pattern": "^generated/(workspace|planning|memory|verification)/python/(cli|primitives/operation_executor)\\.py$",
           "description": "Repo-relative generated Python runtime projection path."
         },
         "package_id": {
           "enum": [
             "root-workspace",
             "planning-bootstrap",
-            "memory-bootstrap"
+            "memory-bootstrap",
+            "verification-cli"
           ],
           "description": "Command package that owns this generated projection."
         },
@@ -135,7 +136,8 @@
           "enum": [
             "agentic-workspace",
             "agentic-planning",
-            "agentic-memory"
+            "agentic-memory",
+            "agentic-verification"
           ],
           "description": "CLI program exposed by this generated projection."
         },
@@ -217,7 +219,7 @@
         },
         "operation_path": {
           "type": "string",
-          "pattern": "^generated/(workspace|planning|memory)/python/operations/[A-Za-z0-9_.-]+\\.json$",
+          "pattern": "^generated/(workspace|planning|memory|verification)/python/operations/[A-Za-z0-9_.-]+\\.json$",
           "description": "Generated operation contract path containing the exact function-call step."
         },
         "operation_id": {
@@ -233,7 +235,8 @@
             "repo_planning_bootstrap.runtime_projection",
             "repo_memory_bootstrap.installer",
             "repo_memory_bootstrap.runtime_search",
-            "repo_memory_bootstrap.runtime_primitives"
+            "repo_memory_bootstrap.runtime_primitives",
+            "repo_verification_bootstrap.runtime_primitives"
           ],
           "description": "Package-domain source module imported by the generated facade wrapper."
         },

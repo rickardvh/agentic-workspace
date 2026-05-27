@@ -453,6 +453,12 @@
       "path": "operations/upgrade.lifecycle.json",
       "command": "upgrade",
       "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "verification.report.report",
+      "path": "operations/verification.report.report.json",
+      "command": "report",
+      "migration_status": "runtime-consumed"
     }
   ]
 }

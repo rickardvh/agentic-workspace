@@ -25,6 +25,7 @@ for SOURCE_ROOT in (
     REPO_ROOT / "internal" / "command-generation" / "src",
     REPO_ROOT / "packages" / "planning" / "src",
     REPO_ROOT / "packages" / "memory" / "src",
+    REPO_ROOT / "packages" / "verification" / "src",
 ):
     if str(SOURCE_ROOT) not in sys.path:
         sys.path.insert(0, str(SOURCE_ROOT))
@@ -39,6 +40,7 @@ from workspace_command_generation import (  # noqa: E402
 
 from agentic_workspace.contract_tooling import (  # noqa: E402
     command_package_ir_manifest,
+    load_contract_json,
     operation_manifest,
     python_runtime_projection_inventory_manifest,
 )
@@ -78,6 +80,7 @@ CONFORMANCE_PLACEHOLDER_BY_PACKAGE = {
     "root-workspace": "agentic_workspace_cli",
     "planning-bootstrap": "agentic_planning_cli",
     "memory-bootstrap": "agentic_memory_cli",
+    "verification-cli": "agentic_verification_cli",
 }
 PYTHON_COMPLETION_STATES = {
     "adapter-layer-proven-not-full-generated-cli",
@@ -155,25 +158,31 @@ PYTHON_SHIPPED_MODULE_SOURCE_ROOTS = (
     "src/agentic_workspace/",
     "packages/planning/src/repo_planning_bootstrap/",
     "packages/memory/src/repo_memory_bootstrap/",
+    "packages/verification/src/repo_verification_bootstrap/",
 )
 PYTHON_PRODUCT_RUNTIME_SOURCE_PATTERNS = (
     "workspace_runtime_cli.py",
     "planning_runtime_cli.py",
     "memory_runtime_cli.py",
+    "verification_runtime_cli.py",
     "workspace_operation_ir_executor.py",
     "planning_operation_ir_executor.py",
     "memory_operation_ir_executor.py",
+    "verification_operation_ir_executor.py",
 )
 PYTHON_FULL_COMPLETION_BLOCKING_EXECUTABLE_PATHS = (
     "src/agentic_workspace/_runtime_cli.py",
     "packages/planning/src/repo_planning_bootstrap/_runtime_cli.py",
     "packages/memory/src/repo_memory_bootstrap/_runtime_cli.py",
+    "packages/verification/src/repo_verification_bootstrap/_runtime_cli.py",
     "src/agentic_workspace/generated_cli_package.py",
     "packages/planning/src/repo_planning_bootstrap/generated_cli_package.py",
     "packages/memory/src/repo_memory_bootstrap/generated_cli_package.py",
+    "packages/verification/src/repo_verification_bootstrap/generated_cli_package.py",
     "src/agentic_workspace/operation_ir_executor.py",
     "packages/planning/src/repo_planning_bootstrap/operation_ir_executor.py",
     "packages/memory/src/repo_memory_bootstrap/operation_ir_executor.py",
+    "packages/verification/src/repo_verification_bootstrap/operation_ir_executor.py",
 )
 PYTHON_FULL_COMPLETION_BLOCKING_RUNTIME_SOURCE_PATHS = (
     "src/agentic_workspace/workspace_runtime_primitives.py",
@@ -182,6 +191,7 @@ PYTHON_FULL_COMPLETION_BLOCKING_RUNTIME_SOURCE_PATHS = (
     "packages/memory/src/repo_memory_bootstrap/installer.py",
     "packages/memory/src/repo_memory_bootstrap/runtime_search.py",
     "packages/memory/src/repo_memory_bootstrap/runtime_primitives.py",
+    "packages/verification/src/repo_verification_bootstrap/runtime_primitives.py",
 )
 PYTHON_FULL_COMPLETION_ACCEPTED_RUNTIME_FACADE_PATHS = (
     "generated/workspace/python/primitives/workspace_runtime.py",
@@ -200,6 +210,7 @@ GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST = {
     "pyproject.toml": "installed private bridge compatibility",
     "packages/planning/pyproject.toml": "installed private bridge compatibility",
     "packages/memory/pyproject.toml": "installed private bridge compatibility",
+    "packages/verification/pyproject.toml": "installed private bridge compatibility",
     "packages/planning/payload-surface-classification.json": "installed private bridge compatibility inventory",
     ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json": (
         "historical generated target-layout migration context"
@@ -208,6 +219,7 @@ GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST = {
     "src/agentic_workspace/cli.py": "source-checkout fallback to checked-in generated workspace CLI package",
     "packages/planning/src/repo_planning_bootstrap/cli.py": "source-checkout fallback to checked-in generated planning CLI package",
     "packages/memory/src/repo_memory_bootstrap/cli.py": "source-checkout fallback to checked-in generated memory CLI package",
+    "packages/verification/src/repo_verification_bootstrap/cli.py": "source-checkout fallback to checked-in generated verification CLI package",
     "src/agentic_workspace/workspace_runtime_primitives.py": "legacy parser helper compatibility wrapper",
     "scripts/check/check_generated_command_packages.py": "static compatibility allowlist and obsolete-layout guards",
     "tests/test_command_generation_artifacts.py": "obsolete target-specific runtime guard",
@@ -227,15 +239,18 @@ COMMAND_GENERATION_FORBIDDEN_PRODUCT_IMPORT_ROOTS = (
     "agentic_workspace",
     "repo_planning_bootstrap",
     "repo_memory_bootstrap",
+    "repo_verification_bootstrap",
 )
 COMMAND_GENERATION_PRODUCT_LITERAL_TOKENS = (
     "agentic-workspace",
     "agentic-planning",
     "agentic-memory",
+    "agentic-verification",
     ".agentic-workspace",
     "workspace.",
     "planning.",
     "memory.",
+    "verification.",
 )
 DOMAIN_RUNTIME_PRIMITIVE_SOURCE_CALLS = {
     "memory.promotion_report.load": {
@@ -272,6 +287,16 @@ PYTHON_REQUIRED_RUNTIME_PROJECTION_OUTPUTS = {
     "generated/memory/python/primitives/operation_executor.py": (
         "memory-bootstrap",
         "agentic-memory",
+        "operation-ir-executor",
+    ),
+    "generated/verification/python/cli.py": (
+        "verification-cli",
+        "agentic-verification",
+        "cli-entrypoint",
+    ),
+    "generated/verification/python/primitives/operation_executor.py": (
+        "verification-cli",
+        "agentic-verification",
         "operation-ir-executor",
     ),
 }
@@ -377,6 +402,7 @@ def _conformance_env(*, runtime: str | None = None) -> dict[str, str]:
         str(REPO_ROOT / "src"),
         str(REPO_ROOT / "packages" / "planning" / "src"),
         str(REPO_ROOT / "packages" / "memory" / "src"),
+        str(REPO_ROOT / "packages" / "verification" / "src"),
         str(REPO_ROOT / "internal" / "command-generation" / "src"),
     ]
     existing_pythonpath = env.get("PYTHONPATH")
@@ -395,6 +421,7 @@ def _entrypoint_for_package(package_id: str) -> str:
         "root-workspace": "agentic-workspace",
         "planning-bootstrap": "agentic-planning",
         "memory-bootstrap": "agentic-memory",
+        "verification-cli": "agentic-verification",
     }
     return entrypoints[package_id]
 
@@ -416,6 +443,7 @@ def _python_command_for_package(package_id: str) -> list[str]:
         "root-workspace": "agentic_workspace.cli",
         "planning-bootstrap": "repo_planning_bootstrap.cli",
         "memory-bootstrap": "repo_memory_bootstrap.cli",
+        "verification-cli": "repo_verification_bootstrap.cli",
     }
     module = module_by_package[package_id]
     return [
@@ -529,7 +557,7 @@ def _load_json(relative_path: str) -> dict[str, object]:
     return (
         operation_manifest(relative_path)
         if relative_path.startswith("operations/")
-        else json.loads((REPO_ROOT / "src" / "agentic_workspace" / "contracts" / relative_path).read_text(encoding="utf-8"))
+        else load_contract_json(relative_path)
     )
 
 
@@ -864,6 +892,7 @@ def _run_python_adapter_conformance() -> list[str]:
                     "root-workspace": "agentic_workspace.cli",
                     "planning-bootstrap": "repo_planning_bootstrap.cli",
                     "memory-bootstrap": "repo_memory_bootstrap.cli",
+                    "verification-cli": "repo_verification_bootstrap.cli",
                 }
                 shim = temp_root / f"{package_id.replace('-', '_')}_cli_shim.py"
                 shim.write_text(
@@ -871,6 +900,7 @@ def _run_python_adapter_conformance() -> list[str]:
                     f"sys.path.insert(0, {str(REPO_ROOT / 'src')!r})\n"
                     f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'planning' / 'src')!r})\n"
                     f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'memory' / 'src')!r})\n"
+                    f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'verification' / 'src')!r})\n"
                     f"from {module_by_package[package_id]} import main\n"
                     "raise SystemExit(main(sys.argv[1:]))\n",
                     encoding="utf-8",
@@ -1156,6 +1186,7 @@ def _validate_full_python_completion_runtime_ownership(ir: dict[str, object]) ->
         "generated/workspace/python/cli.py": "workspace",
         "generated/planning/python/cli.py": "planning",
         "generated/memory/python/cli.py": "memory",
+        "generated/verification/python/cli.py": "verification",
     }
     for relative_path in generated_runtime_adapters:
         text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
@@ -1472,6 +1503,7 @@ def _validate_python_completion_accepted_runtime_boundaries(*, require_exact: bo
         "repo_memory_bootstrap.installer": "packages/memory/src/repo_memory_bootstrap/installer.py",
         "repo_memory_bootstrap.runtime_search": "packages/memory/src/repo_memory_bootstrap/runtime_search.py",
         "repo_memory_bootstrap.runtime_primitives": "packages/memory/src/repo_memory_bootstrap/runtime_primitives.py",
+        "repo_verification_bootstrap.runtime_primitives": "packages/verification/src/repo_verification_bootstrap/runtime_primitives.py",
     }
     source_path_keys: dict[str, set[tuple[str, str, str, str, str]]] = {path: set() for path in source_path_by_module.values()}
     for key in expected_keys:
@@ -1848,6 +1880,7 @@ def _generated_runtime_facade_package_runtime_bindings() -> list[dict[str, str]]
         "repo_memory_bootstrap.installer",
         "repo_memory_bootstrap.runtime_search",
         "repo_memory_bootstrap.runtime_primitives",
+        "repo_verification_bootstrap.runtime_primitives",
     }
     metadata = _python_runtime_boundary_metadata()
     bindings: list[dict[str, str]] = []
@@ -1886,6 +1919,7 @@ def _generated_operation_package_runtime_bindings() -> list[dict[str, object]]:
         "repo_memory_bootstrap.installer",
         "repo_memory_bootstrap.runtime_search",
         "repo_memory_bootstrap.runtime_primitives",
+        "repo_verification_bootstrap.runtime_primitives",
     }
     metadata = _python_runtime_boundary_metadata()
     operation_inventory_refs = _python_operation_inventory_domain_refs()
@@ -1894,6 +1928,7 @@ def _generated_operation_package_runtime_bindings() -> list[dict[str, object]]:
         REPO_ROOT / "generated" / "workspace" / "python" / "operations",
         REPO_ROOT / "generated" / "planning" / "python" / "operations",
         REPO_ROOT / "generated" / "memory" / "python" / "operations",
+        REPO_ROOT / "generated" / "verification" / "python" / "operations",
     ):
         if not operations_dir.is_dir():
             continue
@@ -1983,6 +2018,7 @@ def _python_runtime_boundary_metadata() -> dict[tuple[str, str], dict[str, list[
         ("root-workspace", REPO_ROOT / "generated" / "workspace" / "python" / "operations"),
         ("planning-bootstrap", REPO_ROOT / "generated" / "planning" / "python" / "operations"),
         ("memory-bootstrap", REPO_ROOT / "generated" / "memory" / "python" / "operations"),
+        ("verification-cli", REPO_ROOT / "generated" / "verification" / "python" / "operations"),
     )
     for entry in operation_inventory.get("entries", []):
         if not isinstance(entry, dict):
@@ -1993,6 +2029,7 @@ def _python_runtime_boundary_metadata() -> dict[tuple[str, str], dict[str, list[
             "agentic-workspace": "root-workspace",
             "agentic-planning": "planning-bootstrap",
             "agentic-memory": "memory-bootstrap",
+            "agentic-verification": "verification-cli",
         }.get(program, "")
         if not operation_id:
             continue
@@ -2089,6 +2126,7 @@ def _source_tree_python_files() -> list[str]:
         REPO_ROOT / "src" / "agentic_workspace",
         REPO_ROOT / "packages" / "planning" / "src" / "repo_planning_bootstrap",
         REPO_ROOT / "packages" / "memory" / "src" / "repo_memory_bootstrap",
+        REPO_ROOT / "packages" / "verification" / "src" / "repo_verification_bootstrap",
         REPO_ROOT / "internal" / "command-generation" / "src" / "command_generation",
     ]
     paths = []
@@ -2190,6 +2228,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
             "root-workspace": "generated/workspace/python/cli.py",
             "planning-bootstrap": "generated/planning/python/cli.py",
             "memory-bootstrap": "generated/memory/python/cli.py",
+            "verification-cli": "generated/verification/python/cli.py",
         }.get(package_id)
         for command in package.get("commands", []):
             if not isinstance(command, dict):
@@ -2309,6 +2348,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         "prompt.uninstall",
         "prompt.upgrade",
         "system-intent.sync",
+        "verification.report.report",
     }
     portable_primitive_operations = {
         "memory.list-files.report",
@@ -2375,6 +2415,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         "prompt.uninstall": "root-workspace",
         "prompt.upgrade": "root-workspace",
         "system-intent.sync": "root-workspace",
+        "verification.report.report": "verification-cli",
     }
     for operation_id, package_id in sorted(generated_operation_packages.items()):
         try:
@@ -2595,7 +2636,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
 
 def _validate_python_runtime_handler_boundary() -> list[str]:
     errors: list[str] = []
-    for package_id in ("root-workspace", "planning-bootstrap", "memory-bootstrap"):
+    for package_id in ("root-workspace", "planning-bootstrap", "memory-bootstrap", "verification-cli"):
         runtime_module_name = f"{_entrypoint_for_package(package_id)}:commands"
         try:
             generated_module = _generated_package_for_package(package_id)
@@ -2666,7 +2707,7 @@ def _validate_generated_python_target_layout() -> list[str]:
                 "generated/python must contain only shared Python proof support files; legacy generated Python "
                 "package directories must live under generated/<package>/python: " + ", ".join(legacy_dirs)
             )
-    for package_name in ("workspace", "planning", "memory"):
+    for package_name in ("workspace", "planning", "memory", "verification"):
         package_root = REPO_ROOT / "generated" / package_name / "python"
         if not package_root.is_dir():
             errors.append(f"generated/{package_name}/python is missing")
@@ -2681,7 +2722,7 @@ def _validate_generated_python_target_layout() -> list[str]:
 
 def _validate_generated_python_commands_absent_from_handwritten_parsers() -> list[str]:
     errors: list[str] = []
-    for package_id in ("root-workspace", "planning-bootstrap", "memory-bootstrap"):
+    for package_id in ("root-workspace", "planning-bootstrap", "memory-bootstrap", "verification-cli"):
         runtime_module_name = f"{_entrypoint_for_package(package_id)}:{_runtime_module_file_for_package(package_id)}"
         generated_module = _generated_package_for_package(package_id)
         runtime_module = _generated_runtime_module_for_package(package_id)
@@ -2936,6 +2977,7 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
                     "root-workspace": "agentic_workspace.cli",
                     "planning-bootstrap": "repo_planning_bootstrap.cli",
                     "memory-bootstrap": "repo_memory_bootstrap.cli",
+                    "verification-cli": "repo_verification_bootstrap.cli",
                 }
                 shim = temp_root / f"{package_id.replace('-', '_')}_cli_shim.py"
                 shim.write_text(
@@ -2943,6 +2985,7 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
                     f"sys.path.insert(0, {str(REPO_ROOT / 'src')!r})\n"
                     f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'planning' / 'src')!r})\n"
                     f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'memory' / 'src')!r})\n"
+                    f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'verification' / 'src')!r})\n"
                     f"from {module_by_package[package_id]} import main\n"
                     "raise SystemExit(main(sys.argv[1:]))\n",
                     encoding="utf-8",
@@ -3195,6 +3238,7 @@ def _validate_static_surfaces() -> list[str]:
             "root-workspace": ("agentic-workspace", "generated/workspace/python"),
             "planning-bootstrap": ("agentic-planning", "generated/planning/python"),
             "memory-bootstrap": ("agentic-memory", "generated/memory/python"),
+            "verification-cli": ("agentic-verification", "generated/verification/python"),
         }
         for package_id, (program, generated_root) in expected_python_promotions.items():
             package = packages.get(package_id)
@@ -3208,14 +3252,17 @@ def _validate_static_surfaces() -> list[str]:
                 errors.append(f"command_package_ir.json package {package_id!r} is missing a Python generated target")
                 continue
             python_target = python_targets[0]
-            if python_target.get("maturity_level_ref") != "mutation-capable-adapter":
+            expected_maturity = (
+                "runtime-backed-read-only-adapter" if package_id == "verification-cli" else "mutation-capable-adapter"
+            )
+            if python_target.get("maturity_level_ref") != expected_maturity:
                 errors.append(
-                    f"command_package_ir.json package {package_id!r} Python target is not mutation-capable; "
+                    f"command_package_ir.json package {package_id!r} Python target maturity drifted; "
                     f"got {python_target.get('maturity_level_ref')!r}"
                 )
-            if python_target.get("generation_status") != "mutation-capable-adapter":
+            if python_target.get("generation_status") != expected_maturity:
                 errors.append(
-                    f"command_package_ir.json package {package_id!r} Python generation_status is not mutation-capable; "
+                    f"command_package_ir.json package {package_id!r} Python generation_status drifted; "
                     f"got {python_target.get('generation_status')!r}"
                 )
             if package.get("program") != program:
@@ -3251,8 +3298,9 @@ def _validate_static_surfaces() -> list[str]:
                     errors.append(f"{generated_root}/cli.py is missing generated_operation_contract")
                 if "from .commands import GENERATED_COMMAND_HANDLERS" not in generated_text:
                     errors.append(f"{generated_root}/cli.py does not route through generated command modules")
-                if "_GENERATED_WEAK_AGENT_ROUTING = 'allowed-mutation-with-review'" not in generated_text:
-                    errors.append(f"{generated_root}/cli.py does not advertise mutation review routing")
+                expected_routing = "review-required" if package_id == "verification-cli" else "allowed-mutation-with-review"
+                if f"_GENERATED_WEAK_AGENT_ROUTING = {expected_routing!r}" not in generated_text:
+                    errors.append(f"{generated_root}/cli.py does not advertise expected weak-agent routing {expected_routing!r}")
                 if "0.0.0-generated" in generated_text:
                     errors.append(f"{generated_root}/cli.py hardcodes generated placeholder version output")
                 if "def generated_package_version()" not in generated_text or "package_version(distribution)" not in generated_text:
@@ -3299,6 +3347,7 @@ def _validate_static_surfaces() -> list[str]:
             "generated/workspace/python/cli.py": "from .commands import GENERATED_COMMAND_HANDLERS",
             "generated/planning/python/cli.py": "from .commands import GENERATED_COMMAND_HANDLERS",
             "generated/memory/python/cli.py": "from .commands import GENERATED_COMMAND_HANDLERS",
+            "generated/verification/python/cli.py": "from .commands import GENERATED_COMMAND_HANDLERS",
         }
         for relative_path, command_import in generated_entrypoints.items():
             text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
@@ -3328,6 +3377,9 @@ def _validate_static_surfaces() -> list[str]:
             "packages/memory/src/repo_memory_bootstrap/generated_cli_package.py",
             "packages/memory/src/repo_memory_bootstrap/generated_cli_entrypoint.py",
             "packages/memory/src/repo_memory_bootstrap/generated_cli_package/__init__.py",
+            "packages/verification/src/repo_verification_bootstrap/generated_cli_package.py",
+            "packages/verification/src/repo_verification_bootstrap/generated_cli_entrypoint.py",
+            "packages/verification/src/repo_verification_bootstrap/generated_cli_package/__init__.py",
         ]
         for relative_path in forbidden_generated_entrypoints:
             if (REPO_ROOT / relative_path).exists():

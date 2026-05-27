@@ -30,6 +30,13 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, cast, overload
 
+from repo_verification_bootstrap.runtime_primitives import (
+    VerificationUsageError,
+)
+from repo_verification_bootstrap.runtime_primitives import (
+    verification_report_payload as verification_module_report_payload,
+)
+
 from agentic_workspace import __version__, doctor
 from agentic_workspace import config as config_lib
 from agentic_workspace._schema import ModuleDescriptor, ModuleResultContract, RootAgentsCleanupBlock
@@ -137,6 +144,10 @@ _GENERATED_CLI_MODULES = {
     "agentic-workspace": ("agentic_workspace._generated_cli_package_impl.cli", "generated.workspace.python.cli"),
     "agentic-planning": ("repo_planning_bootstrap._generated_cli_package_impl.cli", "generated.planning.python.cli"),
     "agentic-memory": ("repo_memory_bootstrap._generated_cli_package_impl.cli", "generated.memory.python.cli"),
+    "agentic-verification": (
+        "repo_verification_bootstrap._generated_cli_package_impl.cli",
+        "generated.verification.python.cli",
+    ),
 }
 
 
@@ -887,6 +898,698 @@ def _compact_assurance_requirements(value: Any) -> dict[str, Any]:
             for item in required_missing[:3]
         ],
         "detail_command": "agentic-workspace report --target ./repo --section assurance_requirements --format json",
+    }
+
+
+VERIFICATION_MANIFEST_PATH = Path(".agentic-workspace/verification/manifest.toml")
+
+
+def _verification_required_string(*, payload: dict[str, Any], key: str, surface: str) -> str:
+    value = payload.get(key)
+    if not isinstance(value, str) or not value.strip():
+        raise WorkspaceUsageError(f"{surface} {key} must be a non-empty string.")
+    return value.strip()
+
+
+def _verification_optional_string(*, payload: dict[str, Any], key: str, surface: str) -> str | None:
+    value = payload.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.strip():
+        raise WorkspaceUsageError(f"{surface} {key} must be a non-empty string when present.")
+    return value.strip()
+
+
+def _verification_string_list(*, payload: dict[str, Any], key: str, surface: str) -> list[str]:
+    value = payload.get(key, [])
+    if value is None:
+        return []
+    if isinstance(value, str):
+        raise WorkspaceUsageError(f"{surface} {key} must be a list of strings, not a scalar string.")
+    if not isinstance(value, list):
+        raise WorkspaceUsageError(f"{surface} {key} must be a list of strings.")
+    result: list[str] = []
+    for index, item in enumerate(value):
+        if not isinstance(item, str) or not item.strip():
+            raise WorkspaceUsageError(f"{surface} {key}[{index}] must be a non-empty string.")
+        result.append(item.strip())
+    return result
+
+
+def _verification_table(payload: dict[str, Any], key: str, *, surface: str) -> dict[str, Any]:
+    value = payload.get(key, {})
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        raise WorkspaceUsageError(f"{surface} [{key}] section must be a table.")
+    return value
+
+
+def _verification_manifest_raw(*, target_root: Path) -> tuple[Path, dict[str, Any] | None]:
+    manifest_path = target_root / VERIFICATION_MANIFEST_PATH
+    if not manifest_path.exists():
+        return manifest_path, None
+    return (
+        manifest_path,
+        config_lib.load_toml_payload(path=manifest_path, surface_name=VERIFICATION_MANIFEST_PATH.as_posix()),
+    )
+
+
+def _verification_load_manifest(*, target_root: Path) -> dict[str, Any]:
+    manifest_path, payload = _verification_manifest_raw(target_root=target_root)
+    if payload is None:
+        return {
+            "configured": False,
+            "path": VERIFICATION_MANIFEST_PATH.as_posix(),
+            "protocols": [],
+            "scenarios": [],
+            "evidence_bundles": [],
+            "proof_routes": [],
+            "known_gaps": [],
+        }
+    schema_version = payload.get("schema_version")
+    if schema_version != "agentic-workspace/verification-manifest/v1":
+        raise WorkspaceUsageError(
+            f'{VERIFICATION_MANIFEST_PATH.as_posix()} schema_version must be "agentic-workspace/verification-manifest/v1".'
+        )
+    unknown_top = sorted(set(payload) - {"schema_version", "protocols", "scenarios", "evidence_bundles", "proof_routes", "known_gaps"})
+    if unknown_top:
+        raise WorkspaceUsageError(
+            f"{VERIFICATION_MANIFEST_PATH.as_posix()} contains unsupported top-level field(s): {', '.join(unknown_top)}."
+        )
+
+    protocols: list[dict[str, Any]] = []
+    scenarios_by_id: dict[str, dict[str, Any]] = {}
+    raw_scenarios = _verification_table(payload, "scenarios", surface=VERIFICATION_MANIFEST_PATH.as_posix())
+    for scenario_id, raw_scenario in sorted(raw_scenarios.items()):
+        surface = f"{VERIFICATION_MANIFEST_PATH.as_posix()} scenarios.{scenario_id}"
+        if not isinstance(raw_scenario, dict):
+            raise WorkspaceUsageError(f"{surface} must be a table.")
+        unknown = sorted(
+            set(raw_scenario)
+            - {
+                "protocol_id",
+                "title",
+                "steps",
+                "expected_observations",
+                "pass_evidence_labels",
+                "fail_evidence_labels",
+                "automation_hint",
+                "manual_boundary",
+            }
+        )
+        if unknown:
+            raise WorkspaceUsageError(f"{surface} contains unsupported field(s): {', '.join(unknown)}.")
+        scenario = {
+            "id": str(scenario_id).strip(),
+            "protocol_id": _verification_required_string(payload=raw_scenario, key="protocol_id", surface=surface),
+            "title": _verification_required_string(payload=raw_scenario, key="title", surface=surface),
+            "steps": _verification_string_list(payload=raw_scenario, key="steps", surface=surface),
+            "expected_observations": _verification_string_list(payload=raw_scenario, key="expected_observations", surface=surface),
+            "pass_evidence_labels": _verification_string_list(payload=raw_scenario, key="pass_evidence_labels", surface=surface),
+            "fail_evidence_labels": _verification_string_list(payload=raw_scenario, key="fail_evidence_labels", surface=surface),
+            "automation_hint": _verification_optional_string(payload=raw_scenario, key="automation_hint", surface=surface),
+            "manual_boundary": _verification_optional_string(payload=raw_scenario, key="manual_boundary", surface=surface),
+        }
+        if not scenario["id"]:
+            raise WorkspaceUsageError(f"{surface} id must be non-empty.")
+        scenarios_by_id[scenario["id"]] = scenario
+
+    raw_protocols = _verification_table(payload, "protocols", surface=VERIFICATION_MANIFEST_PATH.as_posix())
+    activation_fields = {
+        "applies_to_paths",
+        "applies_to_task_markers",
+        "assurance_requirement_refs",
+        "proof_profiles",
+        "planning_refs",
+        "protocol_refs",
+    }
+    for protocol_id, raw_protocol in sorted(raw_protocols.items()):
+        surface = f"{VERIFICATION_MANIFEST_PATH.as_posix()} protocols.{protocol_id}"
+        if not isinstance(raw_protocol, dict):
+            raise WorkspaceUsageError(f"{surface} must be a table.")
+        unknown = sorted(
+            set(raw_protocol)
+            - {
+                "title",
+                "purpose",
+                *activation_fields,
+                "scenario_refs",
+                "steps",
+                "expected_evidence",
+                "review_owner",
+                "ownerless_reason",
+                "authority_refs",
+                "stale_when",
+                "retention",
+                "non_goals",
+                "commands",
+                "review_aids",
+            }
+        )
+        if unknown:
+            raise WorkspaceUsageError(f"{surface} contains unsupported field(s): {', '.join(unknown)}.")
+        activation_values = {key: _verification_string_list(payload=raw_protocol, key=key, surface=surface) for key in activation_fields}
+        if not any(activation_values.values()):
+            raise WorkspaceUsageError(f"{surface} requires at least one activation signal: {', '.join(sorted(activation_fields))}.")
+        review_owner = _verification_optional_string(payload=raw_protocol, key="review_owner", surface=surface)
+        ownerless_reason = _verification_optional_string(payload=raw_protocol, key="ownerless_reason", surface=surface)
+        if not (review_owner or ownerless_reason):
+            raise WorkspaceUsageError(f"{surface} requires review_owner or ownerless_reason.")
+        scenario_refs = _verification_string_list(payload=raw_protocol, key="scenario_refs", surface=surface)
+        missing_scenarios = sorted(ref for ref in scenario_refs if ref not in scenarios_by_id)
+        if missing_scenarios:
+            raise WorkspaceUsageError(f"{surface} references unknown scenario(s): {', '.join(missing_scenarios)}.")
+        protocol = {
+            "id": str(protocol_id).strip(),
+            "title": _verification_required_string(payload=raw_protocol, key="title", surface=surface),
+            "purpose": _verification_required_string(payload=raw_protocol, key="purpose", surface=surface),
+            **activation_values,
+            "scenario_refs": scenario_refs,
+            "steps": _verification_string_list(payload=raw_protocol, key="steps", surface=surface),
+            "expected_evidence": _verification_string_list(payload=raw_protocol, key="expected_evidence", surface=surface),
+            "review_owner": review_owner,
+            "ownerless_reason": ownerless_reason,
+            "authority_refs": _verification_string_list(payload=raw_protocol, key="authority_refs", surface=surface),
+            "stale_when": _verification_string_list(payload=raw_protocol, key="stale_when", surface=surface),
+            "retention": _verification_optional_string(payload=raw_protocol, key="retention", surface=surface),
+            "non_goals": _verification_string_list(payload=raw_protocol, key="non_goals", surface=surface),
+            "commands": _verification_string_list(payload=raw_protocol, key="commands", surface=surface),
+            "review_aids": _verification_string_list(payload=raw_protocol, key="review_aids", surface=surface),
+        }
+        if not protocol["id"]:
+            raise WorkspaceUsageError(f"{surface} id must be non-empty.")
+        protocols.append(protocol)
+
+    raw_bundles = _verification_table(payload, "evidence_bundles", surface=VERIFICATION_MANIFEST_PATH.as_posix())
+    evidence_bundles: list[dict[str, Any]] = []
+    protocol_ids = {str(protocol["id"]) for protocol in protocols}
+    for bundle_id, raw_bundle in sorted(raw_bundles.items()):
+        surface = f"{VERIFICATION_MANIFEST_PATH.as_posix()} evidence_bundles.{bundle_id}"
+        if not isinstance(raw_bundle, dict):
+            raise WorkspaceUsageError(f"{surface} must be a table.")
+        unknown = sorted(
+            set(raw_bundle)
+            - {
+                "protocol_id",
+                "scenario_id",
+                "task_refs",
+                "issue_refs",
+                "pr_refs",
+                "changed_paths",
+                "executor",
+                "executed_at",
+                "outcome",
+                "evidence_items",
+                "transcript_refs",
+                "transcript_summaries",
+                "residual_risk",
+                "claim_boundaries",
+                "reviewer",
+                "retention_until",
+                "stale_when",
+                "redaction",
+                "source_tool",
+                "source_model",
+                "post_score_reference",
+            }
+        )
+        if unknown:
+            raise WorkspaceUsageError(f"{surface} contains unsupported field(s): {', '.join(unknown)}.")
+        protocol_id = _verification_required_string(payload=raw_bundle, key="protocol_id", surface=surface)
+        if protocol_id not in protocol_ids:
+            raise WorkspaceUsageError(f"{surface} references unknown protocol_id {protocol_id}.")
+        scenario_id = _verification_optional_string(payload=raw_bundle, key="scenario_id", surface=surface)
+        if scenario_id and scenario_id not in scenarios_by_id:
+            raise WorkspaceUsageError(f"{surface} references unknown scenario_id {scenario_id}.")
+        evidence_bundles.append(
+            {
+                "id": str(bundle_id).strip(),
+                "protocol_id": protocol_id,
+                "scenario_id": scenario_id,
+                "task_refs": _verification_string_list(payload=raw_bundle, key="task_refs", surface=surface),
+                "issue_refs": _verification_string_list(payload=raw_bundle, key="issue_refs", surface=surface),
+                "pr_refs": _verification_string_list(payload=raw_bundle, key="pr_refs", surface=surface),
+                "changed_paths": _verification_string_list(payload=raw_bundle, key="changed_paths", surface=surface),
+                "executor": _verification_optional_string(payload=raw_bundle, key="executor", surface=surface),
+                "executed_at": _verification_optional_string(payload=raw_bundle, key="executed_at", surface=surface),
+                "outcome": _verification_optional_string(payload=raw_bundle, key="outcome", surface=surface) or "recorded",
+                "evidence_items": _verification_string_list(payload=raw_bundle, key="evidence_items", surface=surface),
+                "transcript_refs": _verification_string_list(payload=raw_bundle, key="transcript_refs", surface=surface),
+                "transcript_summaries": _verification_string_list(payload=raw_bundle, key="transcript_summaries", surface=surface),
+                "residual_risk": _verification_optional_string(payload=raw_bundle, key="residual_risk", surface=surface),
+                "claim_boundaries": _verification_string_list(payload=raw_bundle, key="claim_boundaries", surface=surface),
+                "reviewer": _verification_optional_string(payload=raw_bundle, key="reviewer", surface=surface),
+                "retention_until": _verification_optional_string(payload=raw_bundle, key="retention_until", surface=surface),
+                "stale_when": _verification_string_list(payload=raw_bundle, key="stale_when", surface=surface),
+                "redaction": _verification_optional_string(payload=raw_bundle, key="redaction", surface=surface),
+                "source_tool": _verification_optional_string(payload=raw_bundle, key="source_tool", surface=surface),
+                "source_model": _verification_optional_string(payload=raw_bundle, key="source_model", surface=surface),
+                "post_score_reference": _verification_optional_string(payload=raw_bundle, key="post_score_reference", surface=surface),
+            }
+        )
+
+    raw_proof_routes = _verification_table(payload, "proof_routes", surface=VERIFICATION_MANIFEST_PATH.as_posix())
+    proof_routes: list[dict[str, Any]] = []
+    for route_id, raw_route in sorted(raw_proof_routes.items()):
+        surface = f"{VERIFICATION_MANIFEST_PATH.as_posix()} proof_routes.{route_id}"
+        if not isinstance(raw_route, dict):
+            raise WorkspaceUsageError(f"{surface} must be a table.")
+        unknown = sorted(
+            set(raw_route)
+            - {
+                "protocol_refs",
+                "scenario_refs",
+                "assurance_requirement_refs",
+                "proof_profiles",
+                "commands",
+                "review_aids",
+                "proof_lane_hint",
+                "reason",
+            }
+        )
+        if unknown:
+            raise WorkspaceUsageError(f"{surface} contains unsupported field(s): {', '.join(unknown)}.")
+        route_protocol_refs = _verification_string_list(payload=raw_route, key="protocol_refs", surface=surface)
+        route_scenario_refs = _verification_string_list(payload=raw_route, key="scenario_refs", surface=surface)
+        missing_protocols = sorted(ref for ref in route_protocol_refs if ref not in protocol_ids)
+        if missing_protocols:
+            raise WorkspaceUsageError(f"{surface} references unknown protocol(s): {', '.join(missing_protocols)}.")
+        missing_scenarios = sorted(ref for ref in route_scenario_refs if ref not in scenarios_by_id)
+        if missing_scenarios:
+            raise WorkspaceUsageError(f"{surface} references unknown scenario(s): {', '.join(missing_scenarios)}.")
+        if not (route_protocol_refs or route_scenario_refs):
+            raise WorkspaceUsageError(f"{surface} requires protocol_refs or scenario_refs.")
+        route_commands = _verification_string_list(payload=raw_route, key="commands", surface=surface)
+        route_review_aids = _verification_string_list(payload=raw_route, key="review_aids", surface=surface)
+        if not (route_commands or route_review_aids):
+            raise WorkspaceUsageError(f"{surface} requires commands or review_aids.")
+        proof_routes.append(
+            {
+                "id": str(route_id).strip(),
+                "protocol_refs": route_protocol_refs,
+                "scenario_refs": route_scenario_refs,
+                "assurance_requirement_refs": _verification_string_list(
+                    payload=raw_route, key="assurance_requirement_refs", surface=surface
+                ),
+                "proof_profiles": _verification_string_list(payload=raw_route, key="proof_profiles", surface=surface),
+                "commands": route_commands,
+                "review_aids": route_review_aids,
+                "proof_lane_hint": _verification_optional_string(payload=raw_route, key="proof_lane_hint", surface=surface),
+                "reason": _verification_optional_string(payload=raw_route, key="reason", surface=surface),
+            }
+        )
+
+    raw_known_gaps = _verification_table(payload, "known_gaps", surface=VERIFICATION_MANIFEST_PATH.as_posix())
+    known_gaps: list[dict[str, Any]] = []
+    for gap_id, raw_gap in sorted(raw_known_gaps.items()):
+        surface = f"{VERIFICATION_MANIFEST_PATH.as_posix()} known_gaps.{gap_id}"
+        if not isinstance(raw_gap, dict):
+            raise WorkspaceUsageError(f"{surface} must be a table.")
+        unknown = sorted(
+            set(raw_gap)
+            - {
+                "protocol_id",
+                "scenario_id",
+                "reason",
+                "owner",
+                "status",
+                "evidence_labels",
+                "blocked_claims",
+                "residual_risk",
+                "reopen_trigger",
+                "created_from",
+            }
+        )
+        if unknown:
+            raise WorkspaceUsageError(f"{surface} contains unsupported field(s): {', '.join(unknown)}.")
+        protocol_id = _verification_required_string(payload=raw_gap, key="protocol_id", surface=surface)
+        if protocol_id not in protocol_ids:
+            raise WorkspaceUsageError(f"{surface} references unknown protocol_id {protocol_id}.")
+        scenario_id = _verification_optional_string(payload=raw_gap, key="scenario_id", surface=surface)
+        if scenario_id and scenario_id not in scenarios_by_id:
+            raise WorkspaceUsageError(f"{surface} references unknown scenario_id {scenario_id}.")
+        known_gaps.append(
+            {
+                "id": str(gap_id).strip(),
+                "protocol_id": protocol_id,
+                "scenario_id": scenario_id,
+                "reason": _verification_required_string(payload=raw_gap, key="reason", surface=surface),
+                "owner": _verification_optional_string(payload=raw_gap, key="owner", surface=surface),
+                "status": _verification_optional_string(payload=raw_gap, key="status", surface=surface) or "open",
+                "evidence_labels": _verification_string_list(payload=raw_gap, key="evidence_labels", surface=surface),
+                "blocked_claims": _verification_string_list(payload=raw_gap, key="blocked_claims", surface=surface),
+                "residual_risk": _verification_optional_string(payload=raw_gap, key="residual_risk", surface=surface),
+                "reopen_trigger": _verification_optional_string(payload=raw_gap, key="reopen_trigger", surface=surface),
+                "created_from": _verification_optional_string(payload=raw_gap, key="created_from", surface=surface),
+            }
+        )
+
+    return {
+        "configured": True,
+        "path": _repo_relative_path(manifest_path, target_root),
+        "protocols": protocols,
+        "scenarios": list(scenarios_by_id.values()),
+        "evidence_bundles": evidence_bundles,
+        "proof_routes": proof_routes,
+        "known_gaps": known_gaps,
+    }
+
+
+def _verification_planning_refs(active_planning_record: dict[str, Any] | None) -> list[str]:
+    facts = _assurance_requirement_planning_facts(active_planning_record)
+    refs: list[str] = []
+    refs.extend(str(item) for item in _list_payload(facts.get("refs")))
+    refs.extend(str(item) for item in _list_payload(facts.get("proof_profiles")))
+    if isinstance(active_planning_record, dict):
+        refs.extend(str(item) for item in _list_payload(active_planning_record.get("verification_protocol_refs")) if str(item).strip())
+        refs.extend(str(item) for item in _list_payload(active_planning_record.get("verification_refs")) if str(item).strip())
+    return _dedupe([ref.strip() for ref in refs if ref.strip()])
+
+
+def _verification_bundle_state(bundle: dict[str, Any], *, changed_paths: list[str]) -> dict[str, Any]:
+    state = "present"
+    retention_until = str(bundle.get("retention_until") or "").strip()
+    if retention_until:
+        try:
+            if date.fromisoformat(retention_until) < date.today():
+                state = "expired"
+        except ValueError:
+            state = "invalid-retention-date"
+    stale_matches: list[str] = []
+    for path in _normalize_changed_paths(changed_paths):
+        for pattern in _list_payload(bundle.get("stale_when")):
+            pattern_text = str(pattern).strip()
+            if pattern_text and fnmatch.fnmatch(path, pattern_text):
+                stale_matches.append(f"changed path matched {pattern_text}")
+    if stale_matches and state == "present":
+        state = "stale"
+    return {
+        "bundle_id": bundle.get("id"),
+        "protocol_id": bundle.get("protocol_id"),
+        "state": state,
+        "outcome": bundle.get("outcome"),
+        "evidence_items": bundle.get("evidence_items", []),
+        "claim_boundaries": bundle.get("claim_boundaries", []),
+        "retention_until": retention_until,
+        "stale_because": _dedupe(stale_matches),
+        "transcript_summary_count": len(_list_payload(bundle.get("transcript_summaries"))),
+        "raw_transcript_ref_count": len(_list_payload(bundle.get("transcript_refs"))),
+    }
+
+
+def _verification_match_protocol(
+    *,
+    protocol: dict[str, Any],
+    changed_paths: list[str] | None,
+    task_text: str | None,
+    active_planning_record: dict[str, Any] | None,
+    assurance_requirements: dict[str, Any] | None,
+) -> tuple[bool, list[str]]:
+    applies_because: list[str] = []
+    for path in _normalize_changed_paths(changed_paths or []):
+        for pattern in _list_payload(protocol.get("applies_to_paths")):
+            pattern_text = str(pattern).strip()
+            if pattern_text and fnmatch.fnmatch(path, pattern_text):
+                applies_because.append(f"changed path matched {pattern_text}")
+        for pattern in _list_payload(protocol.get("stale_when")):
+            pattern_text = str(pattern).strip()
+            if pattern_text and fnmatch.fnmatch(path, pattern_text):
+                applies_because.append(f"changed path may stale protocol via {pattern_text}")
+    normalized_task = (task_text or "").lower()
+    for marker in _list_payload(protocol.get("applies_to_task_markers")):
+        marker_text = str(marker).strip()
+        if marker_text and marker_text.lower() in normalized_task:
+            applies_because.append(f"task marker matched {marker_text}")
+    planning_refs = set(_verification_planning_refs(active_planning_record))
+    for ref in _list_payload(protocol.get("planning_refs")):
+        ref_text = str(ref).strip()
+        if ref_text and ref_text in planning_refs:
+            applies_because.append(f"planning ref matched {ref_text}")
+    for ref in _list_payload(protocol.get("protocol_refs")):
+        ref_text = str(ref).strip()
+        if ref_text and ref_text in planning_refs:
+            applies_because.append(f"active planning protocol ref matched {ref_text}")
+    active_requirements = []
+    if isinstance(assurance_requirements, dict):
+        active_requirements = [item for item in _list_payload(assurance_requirements.get("active")) if isinstance(item, dict)]
+    for requirement in active_requirements:
+        requirement_id = str(requirement.get("id", "")).strip()
+        proof_profile = str(requirement.get("proof_profile") or "").strip()
+        required_evidence = {str(item).strip() for item in _list_payload(requirement.get("required_evidence")) if str(item).strip()}
+        protocol_evidence = {str(item).strip() for item in _list_payload(protocol.get("expected_evidence")) if str(item).strip()}
+        if requirement_id and requirement_id in {str(item).strip() for item in _list_payload(protocol.get("assurance_requirement_refs"))}:
+            applies_because.append(f"assurance requirement matched {requirement_id}")
+        if proof_profile and proof_profile in {str(item).strip() for item in _list_payload(protocol.get("proof_profiles"))}:
+            applies_because.append(f"assurance proof profile matched {proof_profile}")
+        for label in sorted(required_evidence & protocol_evidence):
+            applies_because.append(f"required evidence label matched {label}")
+    return (bool(applies_because), _dedupe(applies_because))
+
+
+def _verification_report_payload(
+    *,
+    target_root: Path | None,
+    changed_paths: list[str] | None = None,
+    task_text: str | None = None,
+    active_planning_record: dict[str, Any] | None = None,
+    assurance_requirements: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    try:
+        return verification_module_report_payload(
+            target_root=target_root,
+            changed_paths=changed_paths,
+            task_text=task_text,
+            active_planning_record=active_planning_record,
+            assurance_requirements=assurance_requirements,
+        )
+    except VerificationUsageError as exc:
+        raise WorkspaceUsageError(str(exc)) from exc
+    if target_root is None:
+        return {"kind": "agentic-workspace/verification/v1", "status": "unavailable", "configured": False}
+    manifest = _verification_load_manifest(target_root=target_root)
+    configured_protocols = manifest["protocols"]
+    configured_scenarios = manifest["scenarios"]
+    evidence_bundles = manifest["evidence_bundles"]
+    proof_routes = manifest["proof_routes"]
+    known_gaps = manifest["known_gaps"]
+    evidence_by_protocol: dict[str, list[dict[str, Any]]] = {}
+    for bundle in evidence_bundles:
+        evidence_by_protocol.setdefault(str(bundle.get("protocol_id", "")), []).append(bundle)
+    active_protocols: list[dict[str, Any]] = []
+    match_records: list[dict[str, Any]] = []
+    evidence_status: list[dict[str, Any]] = []
+    normalized_paths = _normalize_changed_paths(changed_paths or [])
+    for protocol in configured_protocols:
+        matched, applies_because = _verification_match_protocol(
+            protocol=protocol,
+            changed_paths=normalized_paths,
+            task_text=task_text,
+            active_planning_record=active_planning_record,
+            assurance_requirements=assurance_requirements,
+        )
+        match_records.append(
+            {
+                "id": protocol["id"],
+                "matched": matched,
+                "applies_because": applies_because,
+                "non_match_reason": "" if matched else "no verification activation signal matched current work",
+            }
+        )
+        bundles = evidence_by_protocol.get(str(protocol["id"]), [])
+        bundle_states = [_verification_bundle_state(bundle, changed_paths=normalized_paths) for bundle in bundles]
+        evidence_present = _dedupe(
+            [
+                str(item).strip()
+                for bundle in bundles
+                if _verification_bundle_state(bundle, changed_paths=normalized_paths)["state"] in {"present", "stale"}
+                for item in _list_payload(bundle.get("evidence_items"))
+                if str(item).strip()
+            ]
+        )
+        expected_evidence = [str(item).strip() for item in _list_payload(protocol.get("expected_evidence")) if str(item).strip()]
+        missing_evidence = [item for item in expected_evidence if item not in evidence_present]
+        if matched:
+            active_protocols.append({**protocol, "applies_because": applies_because, "evidence_bundle_ids": [b["id"] for b in bundles]})
+            state = "satisfied" if expected_evidence and not missing_evidence else "missing-evidence" if missing_evidence else "matched"
+            evidence_status.append(
+                {
+                    "protocol_id": protocol["id"],
+                    "state": state,
+                    "applies_because": applies_because,
+                    "expected_evidence": expected_evidence,
+                    "evidence_present": evidence_present,
+                    "missing_evidence": missing_evidence,
+                    "evidence_bundle_ids": [str(bundle.get("id")) for bundle in bundles],
+                    "bundle_states": bundle_states,
+                    "residual_risk": [str(bundle.get("residual_risk")) for bundle in bundles if bundle.get("residual_risk")],
+                    "claim_boundaries": _dedupe(
+                        [
+                            str(item).strip()
+                            for bundle in bundles
+                            for item in _list_payload(bundle.get("claim_boundaries"))
+                            if str(item).strip()
+                        ]
+                    ),
+                }
+            )
+    active_protocol_ids = {str(protocol.get("id", "")).strip() for protocol in active_protocols if isinstance(protocol, dict)}
+    active_scenario_refs = {
+        str(ref).strip() for protocol in active_protocols for ref in _list_payload(protocol.get("scenario_refs")) if str(ref).strip()
+    }
+    active_proof_routes = [
+        route
+        for route in proof_routes
+        if active_protocol_ids.intersection({str(ref).strip() for ref in _list_payload(route.get("protocol_refs"))})
+        or active_scenario_refs.intersection({str(ref).strip() for ref in _list_payload(route.get("scenario_refs"))})
+    ]
+    active_known_gaps = [
+        gap for gap in known_gaps if str(gap.get("protocol_id", "")).strip() in active_protocol_ids and gap.get("status") != "closed"
+    ]
+    return {
+        "kind": "agentic-workspace/verification/v1",
+        "status": "attention"
+        if any(item.get("state") == "missing-evidence" for item in evidence_status)
+        else "matched"
+        if active_protocols
+        else "configured"
+        if manifest["configured"]
+        else "absent",
+        "configured": bool(manifest["configured"]),
+        "path": manifest["path"],
+        "rule": "Verification owns reusable protocols and bounded evidence records; Assurance requires evidence and Closeout decides claim honesty.",
+        "protocol_count": len(configured_protocols),
+        "scenario_count": len(configured_scenarios),
+        "evidence_bundle_count": len(evidence_bundles),
+        "proof_route_count": len(proof_routes),
+        "known_gap_count": len(known_gaps),
+        "configured_protocols": configured_protocols,
+        "configured_scenarios": configured_scenarios,
+        "proof_routes": proof_routes,
+        "known_gaps": known_gaps,
+        "evidence_bundles": evidence_bundles,
+        "active_protocols": active_protocols,
+        "active_proof_routes": active_proof_routes,
+        "active_known_gaps": active_known_gaps,
+        "active_count": len(active_protocols),
+        "evidence_status": evidence_status,
+        "evidence_bundle_status": [_verification_bundle_state(bundle, changed_paths=normalized_paths) for bundle in evidence_bundles],
+        "match_evidence": {
+            "observed_scope_source": ", ".join(
+                source
+                for source, present in (
+                    ("changed paths", bool(normalized_paths)),
+                    ("task text", bool(task_text)),
+                    ("active planning", bool(active_planning_record)),
+                    ("active assurance", bool(assurance_requirements and assurance_requirements.get("active_count"))),
+                )
+                if present
+            )
+            or "no active planning record, task text, changed paths, or assurance requirement",
+            "match_count": len(active_protocols),
+            "matching": match_records,
+        },
+        "transcript_policy": {
+            "status": "active",
+            "summary_first": True,
+            "raw_transcript_refs": "optional-bounded",
+            "hidden_oracle_rule": "Keep hidden/reference oracle material out of primary evaluator prompts; expose it only as post-score review metadata.",
+            "memory_rule": "Promote only durable lessons or anti-rediscovery findings to Memory; do not store raw transcripts in Memory.",
+        },
+        "detail_command": "agentic-workspace report --target ./repo --section verification --format json",
+    }
+
+
+def _compact_verification(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"status": "absent", "active_count": 0}
+    active = value.get("active_protocols", [])
+    active = active if isinstance(active, list) else []
+    evidence_status = value.get("evidence_status", [])
+    evidence_status = evidence_status if isinstance(evidence_status, list) else []
+    return {
+        "kind": value.get("kind", "agentic-workspace/verification/v1"),
+        "status": value.get("status", "absent"),
+        "configured": bool(value.get("configured")),
+        "protocol_count": value.get("protocol_count", 0),
+        "active_count": value.get("active_count", 0),
+        "active_protocols": [
+            {
+                key: item.get(key)
+                for key in ("id", "title", "applies_because", "expected_evidence", "review_owner", "scenario_refs", "evidence_bundle_ids")
+                if isinstance(item, dict) and key in item
+            }
+            for item in active[:3]
+            if isinstance(item, dict)
+        ],
+        "evidence_status": [
+            {
+                key: item.get(key)
+                for key in ("protocol_id", "state", "missing_evidence", "evidence_bundle_ids", "residual_risk", "claim_boundaries")
+                if isinstance(item, dict) and key in item
+            }
+            for item in evidence_status[:3]
+            if isinstance(item, dict)
+        ],
+        "detail_command": "agentic-workspace report --target ./repo --section verification --format json",
+    }
+
+
+def _assurance_requirements_with_verification(assurance_requirements: dict[str, Any], verification: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(assurance_requirements, dict) or not isinstance(verification, dict):
+        return assurance_requirements
+    evidence_status = assurance_requirements.get("evidence_status", [])
+    if not isinstance(evidence_status, list):
+        return assurance_requirements
+    protocols = [item for item in _list_payload(verification.get("active_protocols")) if isinstance(item, dict)]
+    protocol_status = {
+        str(item.get("protocol_id", "")): item for item in _list_payload(verification.get("evidence_status")) if isinstance(item, dict)
+    }
+    enriched_status: list[Any] = []
+    for status in evidence_status:
+        if not isinstance(status, dict):
+            enriched_status.append(status)
+            continue
+        requirement_id = str(status.get("requirement_id", "")).strip()
+        required_evidence = {str(item).strip() for item in _list_payload(status.get("required_evidence")) if str(item).strip()}
+        matched_protocols: list[dict[str, Any]] = []
+        for protocol in protocols:
+            protocol_requirement_refs = {str(item).strip() for item in _list_payload(protocol.get("assurance_requirement_refs"))}
+            protocol_evidence = {str(item).strip() for item in _list_payload(protocol.get("expected_evidence"))}
+            applies_because = " ".join(str(item) for item in _list_payload(protocol.get("applies_because")))
+            if (
+                (requirement_id and requirement_id in protocol_requirement_refs)
+                or (requirement_id and f"assurance requirement matched {requirement_id}" in applies_because)
+                or bool(required_evidence & protocol_evidence)
+            ):
+                protocol_id = str(protocol.get("id", "")).strip()
+                matched_protocols.append(
+                    {
+                        "protocol_id": protocol_id,
+                        "title": protocol.get("title"),
+                        "review_owner": protocol.get("review_owner"),
+                        "state": protocol_status.get(protocol_id, {}).get("state", "matched"),
+                        "missing_evidence": protocol_status.get(protocol_id, {}).get("missing_evidence", []),
+                        "evidence_bundle_ids": protocol_status.get(protocol_id, {}).get("evidence_bundle_ids", []),
+                    }
+                )
+        if matched_protocols:
+            status = {
+                **status,
+                "verification_protocols": matched_protocols,
+                "verification_missing_evidence": _dedupe(
+                    [
+                        str(item).strip()
+                        for protocol in matched_protocols
+                        for item in _list_payload(protocol.get("missing_evidence"))
+                        if str(item).strip()
+                    ]
+                ),
+            }
+        enriched_status.append(status)
+    return {
+        **assurance_requirements,
+        "evidence_status": enriched_status,
     }
 
 
@@ -2473,6 +3176,16 @@ def _validate_descriptor_contract(descriptors: dict[str, ModuleDescriptor]) -> N
             raise WorkspaceUsageError(f"Module '{descriptor.name}' declares unknown conflicts: {conflict_text}.")
 
 
+@dataclass
+class _VerificationLifecycleResult:
+    target_root: Path
+    message: str
+    dry_run: bool
+    actions: list[dict[str, str]]
+    warnings: list[dict[str, str]]
+    force: bool = False
+
+
 def _module_operations() -> dict[str, ModuleDescriptor]:
     from repo_memory_bootstrap.installer import adopt_bootstrap as memory_adopt_bootstrap
     from repo_memory_bootstrap.installer import collect_status as memory_collect_status
@@ -2486,6 +3199,27 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
     from repo_planning_bootstrap.installer import install_bootstrap as planning_install_bootstrap
     from repo_planning_bootstrap.installer import uninstall_bootstrap as planning_uninstall_bootstrap
     from repo_planning_bootstrap.installer import upgrade_bootstrap as planning_upgrade_bootstrap
+
+    def verification_lifecycle_report(*, target: str | None = None, dry_run: bool = True, force: bool = False) -> dict[str, Any]:
+        target_root = _resolve_target_root(target)
+        return _VerificationLifecycleResult(
+            target_root=target_root,
+            message="Verification uses repo-owned manifest configuration; no managed lifecycle mutation is required.",
+            dry_run=dry_run,
+            force=force,
+            actions=[],
+            warnings=[],
+        )
+
+    def verification_status_report(*, target: str | None = None) -> dict[str, Any]:
+        target_root = _resolve_target_root(target)
+        return _VerificationLifecycleResult(
+            target_root=target_root,
+            message="Verification status",
+            dry_run=True,
+            actions=[],
+            warnings=[],
+        )
 
     handlers = {
         "planning": {
@@ -2511,6 +3245,15 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
                 (target_root / ".agentic-workspace" / "memory" / "repo" / "index.md").exists()
                 and (target_root / ".agentic-workspace" / "memory").exists()
             ),
+        },
+        "verification": {
+            "install_handler": verification_lifecycle_report,
+            "adopt_handler": verification_lifecycle_report,
+            "upgrade_handler": verification_lifecycle_report,
+            "uninstall_handler": verification_lifecycle_report,
+            "doctor_handler": verification_status_report,
+            "status_handler": verification_status_report,
+            "detector": lambda target_root: (target_root / ".agentic-workspace" / "verification" / "manifest.toml").exists(),
         },
     }
     return {
@@ -5955,6 +6698,12 @@ def _run_report_command(
         config=config,
         active_planning_record=raw_active_planning_record or active_planning_record,
     )
+    verification = _verification_report_payload(
+        target_root=target_root,
+        active_planning_record=raw_active_planning_record or active_planning_record,
+        assurance_requirements=assurance_requirements,
+    )
+    assurance_requirements = _assurance_requirements_with_verification(assurance_requirements, verification)
     payload = {
         "kind": "workspace-report/v1",
         "schema": _reporting_schema_payload(),
@@ -5993,6 +6742,7 @@ def _run_report_command(
         "system_intent_mirror": _system_intent_report_payload(target_root=target_root, config=config),
         "workflow_obligations": _workflow_obligations_report_payload(config=config, active_planning_record=active_planning_record),
         "assurance_requirements": assurance_requirements,
+        "verification": verification,
         "product_managed_enclave": _product_managed_enclave_payload(target_root=target_root, ownership_payload=ownership_payload),
         "ownership_diagnostics": ownership_payload["diagnostics"],
         "surface_value_guardrail": surface_value_guardrail,
@@ -8237,6 +8987,7 @@ def _routine_work_context_payload(
 
     workflow_obligations = _as_dict(source_payload.get("workflow_obligations"))
     assurance_requirements = _as_dict(source_payload.get("assurance_requirements"))
+    verification = _as_dict(source_payload.get("verification"))
     durable_intent = _as_dict(source_payload.get("durable_intent"))
     durable_subsystem = _as_dict(durable_intent.get("subsystem_intent"))
     memory_consult = _as_dict(source_payload.get("memory_consult"))
@@ -8256,6 +9007,14 @@ def _routine_work_context_payload(
 
     assurance_active = _routine_count(assurance_requirements.get("active_count"))
     assurance_missing = _routine_count(assurance_requirements.get("missing_required_evidence_count"))
+    verification_active = _routine_count(verification.get("active_count"))
+    verification_missing = len(
+        [
+            item
+            for item in _list_payload(verification.get("evidence_status"))
+            if isinstance(item, dict) and item.get("state") == "missing-evidence"
+        ]
+    )
     workflow_matches = _workflow_obligation_match_count(workflow_obligations)
     durable_matches = _routine_count(durable_subsystem.get("matched_count"))
     improvement_candidates = len(_list_payload(improvement_intake.get("improvement_signal_candidates")))
@@ -8280,18 +9039,20 @@ def _routine_work_context_payload(
     categories = {
         "authority": {
             "question": "What source, policy, or owner governs this work?",
-            "status": "attention" if assurance_active or workflow_matches else "available",
+            "status": "attention" if assurance_active or workflow_matches or verification_active else "available",
             "fronts": [
                 "effective_authority",
                 "authority_hierarchy",
                 "standing_intent",
                 "workflow_obligations",
                 "assurance_requirements",
+                "verification",
                 "decision_pressure",
             ],
             "signals": {
                 "workflow_obligation_matches": workflow_matches,
                 "active_assurance_requirements": assurance_active,
+                "active_verification_protocols": verification_active,
                 "effective_authority_status": effective_authority.get("status", "unknown"),
                 "decision_pressure_status": decision_status,
             },
@@ -8300,6 +9061,7 @@ def _routine_work_context_payload(
                 "authority_hierarchy",
                 "workflow_obligations",
                 "assurance_requirements",
+                "verification",
                 "decision_pressure",
             ],
         },
@@ -8326,17 +9088,19 @@ def _routine_work_context_payload(
         },
         "evidence_proof": {
             "question": "What must be shown before a completion claim is safe?",
-            "status": "attention" if assurance_missing or workflow_matches or lower_trust_count else "available",
-            "fronts": ["proof", "assurance_requirements", "workflow_obligations", "closeout_trust", "completion_options"],
+            "status": "attention" if assurance_missing or verification_missing or workflow_matches or lower_trust_count else "available",
+            "fronts": ["proof", "verification", "assurance_requirements", "workflow_obligations", "closeout_trust", "completion_options"],
             "signals": {
                 "proof_command_count": len(proof_commands),
+                "active_verification_protocols": verification_active,
+                "missing_verification_evidence": verification_missing,
                 "active_assurance_requirements": assurance_active,
                 "missing_required_assurance_evidence": assurance_missing,
                 "workflow_obligation_matches": workflow_matches,
                 "closeout_status": closeout_status,
                 "lower_trust_closeout_count": lower_trust_count,
             },
-            "detail_selectors": ["proof", "assurance_requirements", "workflow_obligations", "closeout_trust"],
+            "detail_selectors": ["proof", "verification", "assurance_requirements", "workflow_obligations", "closeout_trust"],
         },
         "durable_knowledge": {
             "question": "What durable knowledge applies here that future agents should not rediscover?",
@@ -8434,6 +9198,8 @@ def _routine_work_context_payload(
             ],
             "evidence_proof": [
                 "proof_command_count",
+                "active_verification_protocols",
+                "missing_verification_evidence",
                 "workflow_obligation_matches",
                 "missing_required_assurance_evidence",
                 "lower_trust_closeout_count",
@@ -8933,6 +9699,11 @@ def _report_closeout_trust_payload(
         intent_proof_check = _intent_proof_check_payload(planning_report={}, target_root=target_root)
         architecture_decision_closeout = _architecture_decision_closeout_payload(planning_report={}, target_root=target_root, config=config)
         assurance_requirements = _assurance_requirements_report_payload(config=config)
+        verification = _verification_report_payload(
+            target_root=target_root,
+            assurance_requirements=assurance_requirements,
+        )
+        assurance_requirements = _assurance_requirements_with_verification(assurance_requirements, verification)
         residue_action = durable_residue_action(trust="unavailable")
         return {
             "status": "unavailable",
@@ -8944,6 +9715,7 @@ def _report_closeout_trust_payload(
             "intent_proof_check": intent_proof_check,
             "proof_confidence": _proof_confidence_payload(intent_proof=intent_proof_check),
             "assurance_requirements": assurance_requirements,
+            "verification": verification,
             "knowledge_authority_review": knowledge_authority_review,
             "architecture_decision_closeout": architecture_decision_closeout,
             "historical_review_artifacts": _historical_review_artifacts_policy(
@@ -8976,6 +9748,11 @@ def _report_closeout_trust_payload(
             planning_report=planning_report, target_root=target_root, config=config
         )
         assurance_requirements = _assurance_requirements_report_payload(config=config)
+        verification = _verification_report_payload(
+            target_root=target_root,
+            assurance_requirements=assurance_requirements,
+        )
+        assurance_requirements = _assurance_requirements_with_verification(assurance_requirements, verification)
         residue_action = durable_residue_action(trust="unavailable")
         return {
             "status": "unavailable",
@@ -8987,6 +9764,7 @@ def _report_closeout_trust_payload(
             "intent_proof_check": intent_proof_check,
             "proof_confidence": _proof_confidence_payload(intent_proof=intent_proof_check),
             "assurance_requirements": assurance_requirements,
+            "verification": verification,
             "knowledge_authority_review": knowledge_authority_review,
             "architecture_decision_closeout": architecture_decision_closeout,
             "historical_review_artifacts": _historical_review_artifacts_policy(
@@ -9037,6 +9815,12 @@ def _report_closeout_trust_payload(
         config=config,
         active_planning_record=raw_active_planning_record,
     )
+    verification = _verification_report_payload(
+        target_root=target_root,
+        active_planning_record=raw_active_planning_record,
+        assurance_requirements=assurance_requirements,
+    )
+    assurance_requirements = _assurance_requirements_with_verification(assurance_requirements, verification)
     active_planning_record = package_workflow_evidence.get("status") == "present"
     package_absence_signals: list[str] = []
     if package_workflow_evidence.get("status") == "present" and package_workflow_evidence.get("trust") == "lower-trust":
@@ -9092,6 +9876,7 @@ def _report_closeout_trust_payload(
         "intent_proof_check": intent_proof_check,
         "proof_confidence": _proof_confidence_payload(intent_proof=intent_proof_check),
         "assurance_requirements": assurance_requirements,
+        "verification": verification,
         "knowledge_authority_review": knowledge_authority_review,
         "architecture_decision_closeout": architecture_decision_closeout,
         "historical_review_artifacts": _historical_review_artifacts_policy(
@@ -15267,6 +16052,7 @@ def _implement_payload(
     include_change_impact: bool = True,
     include_task_contract: bool = True,
     include_assurance_requirements: bool = True,
+    include_verification: bool = True,
     include_routine_work_context: bool = True,
 ) -> dict[str, Any]:
     implementer_template = _CONTEXT_TEMPLATES["implementer_context"]
@@ -15467,6 +16253,21 @@ def _implement_payload(
             task_text=task_text,
             changed_paths=normalized_paths,
         )
+    if include_verification:
+        assurance_for_verification = payload.get("assurance_requirements", {})
+        if not isinstance(assurance_for_verification, dict):
+            assurance_for_verification = _assurance_requirements_report_payload(
+                config=config,
+                active_planning_record=None,
+                task_text=task_text,
+                changed_paths=normalized_paths,
+            )
+        payload["verification"] = _verification_report_payload(
+            target_root=target_root,
+            changed_paths=normalized_paths,
+            task_text=task_text,
+            assurance_requirements=assurance_for_verification,
+        )
     if include_routine_work_context:
         payload["routine_work_context"] = _routine_work_context_payload(
             source_payload=payload,
@@ -15621,6 +16422,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "task_contract",
                 "change_impact",
                 "assurance_requirements",
+                "verification",
                 "routine_work_context",
                 "context.delegation_decision",
                 "context.routing",
@@ -20693,6 +21495,10 @@ def _selector_requests_assurance_requirements(select: str | None) -> bool:
     return any(token == "assurance_requirements" or token.startswith("assurance_requirements.") for token in _selector_tokens(select))
 
 
+def _selector_requests_verification(select: str | None) -> bool:
+    return any(token == "verification" or token.startswith("verification.") for token in _selector_tokens(select))
+
+
 def _selector_requests_routine_work_context(select: str | None) -> bool:
     return any(token == "routine_work_context" or token.startswith("routine_work_context.") for token in _selector_tokens(select))
 
@@ -20710,6 +21516,7 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
     change_impact_selected = _selector_requests_change_impact(selected_fields)
     task_contract_selected = _selector_requests_task_contract(selected_fields)
     assurance_requirements_selected = _selector_requests_assurance_requirements(selected_fields)
+    verification_selected = _selector_requests_verification(selected_fields)
     routine_work_context_selected = _selector_requests_routine_work_context(selected_fields)
     full_payload = _implement_payload(
         target_root=target_root,
@@ -20718,6 +21525,7 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
         include_change_impact=(profile != "tiny" or change_impact_selected),
         include_task_contract=(profile != "tiny" or task_contract_selected),
         include_assurance_requirements=(profile != "tiny" or assurance_requirements_selected or routine_work_context_selected),
+        include_verification=(profile != "tiny" or verification_selected or routine_work_context_selected),
         include_routine_work_context=(profile != "tiny" or routine_work_context_selected),
     )
     payload = full_payload
@@ -20729,6 +21537,8 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
             payload["change_impact"] = full_payload["change_impact"]
         if assurance_requirements_selected:
             payload["assurance_requirements"] = full_payload["assurance_requirements"]
+        if verification_selected:
+            payload["verification"] = full_payload["verification"]
         if routine_work_context_selected:
             payload["routine_work_context"] = full_payload["routine_work_context"]
     if getattr(args, "select", None):
@@ -23145,8 +23955,62 @@ def _proof_selection_for_changed_paths(
             }
         )
         existing_concern_profiles.add(profile_id)
+    verification = (
+        _verification_report_payload(
+            target_root=target_root,
+            changed_paths=changed_paths,
+            task_text=task_text,
+            active_planning_record=planning_assurance if planning_assurance.get("status") == "present" else None,
+            assurance_requirements=active_assurance_requirements,
+        )
+        if target_root is not None
+        else {"status": "unavailable", "active_count": 0}
+    )
+    active_assurance_requirements = _assurance_requirements_with_verification(active_assurance_requirements, verification)
+    verification_lanes: list[dict[str, Any]] = []
+    active_verification_routes = [route for route in _list_payload(verification.get("active_proof_routes")) if isinstance(route, dict)]
+    for protocol in _list_payload(verification.get("active_protocols")):
+        if not isinstance(protocol, dict):
+            continue
+        protocol_id = str(protocol.get("id", "")).strip()
+        if not protocol_id:
+            continue
+        protocol_routes = [
+            route
+            for route in active_verification_routes
+            if protocol_id in {str(ref).strip() for ref in _list_payload(route.get("protocol_refs"))}
+            or set(_list_payload(protocol.get("scenario_refs"))).intersection(
+                {str(ref).strip() for ref in _list_payload(route.get("scenario_refs"))}
+            )
+        ]
+        route_commands = _dedupe(
+            [str(command).strip() for route in protocol_routes for command in _list_payload(route.get("commands")) if str(command).strip()]
+        )
+        verification_lanes.append(
+            {
+                "id": f"verification:{protocol_id}",
+                "when": "matched repo verification protocol selects soft verification proof",
+                "enough_proof": _dedupe(
+                    [str(command) for command in _list_payload(protocol.get("commands")) if str(command).strip()] + route_commands
+                ),
+                "recovery_signal": "missing verification evidence should be recorded as residual risk or evidence before broad closeout",
+                "proof_kind": "diff-review" if not protocol.get("commands") and not route_commands else "targeted-test",
+                "proof_responsibility": "local-closeout",
+                "execution_mode": "serial-recommended",
+                "verification_protocol_id": protocol_id,
+                "verification_scenario_refs": _list_payload(protocol.get("scenario_refs")),
+                "verification_expected_evidence": _list_payload(protocol.get("expected_evidence")),
+                "verification_proof_route_ids": [str(route.get("id")) for route in protocol_routes if route.get("id")],
+                "review_aids": _dedupe(
+                    [str(item) for item in _list_payload(protocol.get("review_aids"))]
+                    + [str(item) for route in protocol_routes for item in _list_payload(route.get("review_aids"))]
+                ),
+                "applies_because": _list_payload(protocol.get("applies_because")),
+            }
+        )
     selected_lanes.extend(concern_lanes)
     selected_lanes.extend(requirement_lanes)
+    selected_lanes.extend(verification_lanes)
     make_targets = _makefile_targets(target_root)
     package_scripts = _package_json_scripts(target_root)
     project_roots = _project_roots_for_changed_paths(target_root=target_root, changed_paths=changed_paths)
@@ -23347,7 +24211,7 @@ def _proof_selection_for_changed_paths(
         proof_execution_evidence=proof_execution_evidence,
     )
     optional_commands = ["agentic-workspace proof --target ./repo --current --format json", "agentic-workspace summary --format json"]
-    for concern_lane in [*concern_lanes, *requirement_lanes]:
+    for concern_lane in [*concern_lanes, *requirement_lanes, *verification_lanes]:
         for command in concern_lane.get("optional_commands", []):
             if command not in optional_commands:
                 optional_commands.append(str(command))
@@ -23402,6 +24266,7 @@ def _proof_selection_for_changed_paths(
         "learned_route_hints": learned_route_hints,
         "proof_intents": proof_intents,
         "configured_policy": configured_policy,
+        "verification": verification,
         "selected_commands": selected_commands,
         "unavailable_commands": unavailable_commands,
         "host_policy_blocked_commands": host_policy_blocked_commands,
@@ -23429,6 +24294,18 @@ def _proof_selection_for_changed_paths(
                 "recovery_signal": lane.get("recovery_signal", ""),
                 **({"proof_profile": lane["proof_profile"]} if lane.get("proof_profile") else {}),
                 **({"requirement_id": lane["requirement_id"]} if lane.get("requirement_id") else {}),
+                **({"verification_protocol_id": lane["verification_protocol_id"]} if lane.get("verification_protocol_id") else {}),
+                **({"verification_scenario_refs": lane["verification_scenario_refs"]} if lane.get("verification_scenario_refs") else {}),
+                **(
+                    {"verification_expected_evidence": lane["verification_expected_evidence"]}
+                    if lane.get("verification_expected_evidence")
+                    else {}
+                ),
+                **(
+                    {"verification_proof_route_ids": lane["verification_proof_route_ids"]}
+                    if lane.get("verification_proof_route_ids")
+                    else {}
+                ),
                 **({"applies_because": lane["applies_because"]} if lane.get("applies_because") else {}),
                 **({"review_aids": lane["review_aids"]} if lane.get("review_aids") else {}),
                 **({"matched_paths": lane["matched_paths"]} if lane.get("matched_paths") else {}),
@@ -23489,7 +24366,7 @@ def _proof_selection_for_changed_paths(
             changed_paths=changed_paths,
         )
         proof_routine_context = _routine_work_context_payload(
-            source_payload={"proof": proof_selection, "workflow_obligations": workflow_obligations},
+            source_payload={"proof": proof_selection, "workflow_obligations": workflow_obligations, "verification": verification},
             surface="proof",
             cli_invoke=cli_invoke,
             target_root=target_root,
@@ -25892,6 +26769,8 @@ def _sync_update_policy_actions(
     actions: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
     for module_name in selected_modules:
+        if module_name not in config.update_modules or module_name not in MODULE_UPGRADE_SOURCE_PATHS:
+            continue
         policy = config.update_modules[module_name]
         relative = MODULE_UPGRADE_SOURCE_PATHS[module_name]
         destination = target_root / relative

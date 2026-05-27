@@ -31,6 +31,7 @@
     "agent_configuration_queries",
     "workflow_obligations",
     "assurance_requirements",
+    "verification",
     "durable_intent",
     "product_managed_enclave",
     "ownership_diagnostics",
@@ -212,6 +213,10 @@
     "assurance_requirements": {
       "type": "object",
       "description": "Repo-declared assurance requirements, active matches, and evidence status projection."
+    },
+    "verification": {
+      "type": "object",
+      "description": "Repo-native verification protocols, scenarios, bounded evidence bundles, and soft verification routing projection."
     },
     "authority_hierarchy": {
       "type": "object",

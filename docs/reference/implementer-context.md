@@ -72,6 +72,7 @@ Cheap implementer context for a bounded changed-path scope.
 | `intent_acknowledgement` | object | yes |  | Guidance for stating inferred intent, first slice, non-goals, and correction point before non-direct implementation. |  |  |
 | `reuse_pressure` | object | yes |  | Changed-path reuse and abstraction-pressure facts that help the agent decide whether to reuse, accept duplication, or route extraction follow-up. |  |  |
 | `assurance_requirements` | object | yes |  | Repo-declared assurance requirements matched to the task or changed paths, with evidence status and claim-boundary facts. |  |  |
+| `verification` | object | yes |  | Matched repo-native verification protocols and bounded evidence status for the task or changed paths. |  |  |
 | `routine_work_context` | object | yes |  | Assembled routine router projection grouping existing owner surfaces into authority, active work, evidence/proof, durable knowledge, and promotion/residue. |  |  |
 | `objective_drift` | object | yes |  | Heuristic warning when changed files do not mention explicit requested outcomes. |  |  |
 | `objective_drift.kind` | const `"agentic-workspace/objective-drift/v1"` | yes |  | Discriminator for the lightweight objective-drift heuristic. |  |  |
