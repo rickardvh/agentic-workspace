@@ -5,17 +5,17 @@ export UV_CACHE_DIR
 PYTEST_PARALLEL_ARGS ?= -n auto
 COMPACT_RUN = uv run python scripts/check/run_compact_command.py
 
-.PHONY: help sync-all sync-memory sync-planning \
+.PHONY: help sync-all sync-memory sync-planning sync-verification \
 	setup install-hooks \
-	test test-workspace test-memory test-planning \
-	lint lint-workspace lint-memory lint-planning markdownlint markdownlint-memory \
-	typecheck typecheck-workspace typecheck-memory typecheck-planning \
-	format format-workspace format-memory format-planning \
-	format-check format-check-workspace format-check-memory format-check-planning \
-	verify verify-workspace verify-memory verify-planning \
+	test test-workspace test-memory test-planning test-verification \
+	lint lint-workspace lint-memory lint-planning lint-verification markdownlint markdownlint-memory \
+	typecheck typecheck-workspace typecheck-memory typecheck-planning typecheck-verification \
+	format format-workspace format-memory format-planning format-verification \
+	format-check format-check-workspace format-check-memory format-check-planning format-check-verification \
+	verify verify-workspace verify-memory verify-planning verify-verification \
 	memory-freshness memory-freshness-strict recurring-friction-ledger planning-surfaces planning-surfaces-strict structured-file-inventory package-artifact-duplicates agent-aids source-payload-operational-install source-payload-operational-install-strict maintainer-surfaces maintainer-surfaces-strict render-agent-docs render-schema-reference render-command-packages schema-reference-docs absolute-paths \
 	generated-command-packages generated-command-packages-docker \
-	check check-memory check-planning check-all
+	check check-memory check-planning check-verification check-all
 
 help:
 	@echo "Available targets:"
@@ -25,6 +25,7 @@ help:
 	@echo "  sync-all             Sync merged root environment for all workspace packages."
 	@echo "  sync-memory          Sync consolidated root dev environment for memory package checks."
 	@echo "  sync-planning        Sync consolidated root dev environment for planning package checks."
+	@echo "  sync-verification    Sync consolidated root dev environment for verification package checks."
 	@echo "  test                 Run workspace and package test suites with pytest-xdist."
 	@echo "                       Override worker selection with PYTEST_PARALLEL_ARGS='-n <count>' or empty."
 	@echo "  lint                 Run non-mutating lint checks across workspace and packages."
@@ -50,7 +51,8 @@ help:
 	@echo "  check                Run the full root validation lane."
 	@echo "  check-memory         Run package-local checks for packages/memory."
 	@echo "  check-planning       Run package-local checks for packages/planning."
-	@echo "  check-all            Run checks for both imported packages."
+	@echo "  check-verification   Run package-local checks for packages/verification."
+	@echo "  check-all            Run checks for imported packages."
 
 sync-all:
 	@$(COMPACT_RUN) --label "sync-all" -- uv sync --all-packages --all-groups
@@ -66,6 +68,9 @@ sync-memory:
 sync-planning:
 	@$(COMPACT_RUN) --label "sync-planning" -- uv sync --all-packages --group dev
 
+sync-verification:
+	@$(COMPACT_RUN) --label "sync-verification" -- uv sync --all-packages --group dev
+
 test-workspace:
 	@$(COMPACT_RUN) --label "workspace tests" -- uv run pytest $(PYTEST_PARALLEL_ARGS) tests
 
@@ -75,7 +80,10 @@ test-memory:
 test-planning:
 	@$(COMPACT_RUN) --label "planning tests" --cwd packages/planning -- uv run pytest $(PYTEST_PARALLEL_ARGS)
 
-test: sync-all test-workspace test-memory test-planning
+test-verification:
+	@$(COMPACT_RUN) --label "verification tests" --cwd packages/verification -- uv run pytest $(PYTEST_PARALLEL_ARGS)
+
+test: sync-all test-workspace test-memory test-planning test-verification
 
 lint-workspace:
 	@$(COMPACT_RUN) --label "workspace lint" -- uv run ruff check src tests
@@ -87,7 +95,10 @@ lint-memory:
 lint-planning:
 	@$(COMPACT_RUN) --label "planning lint" --cwd packages/planning -- uv run ruff check .
 
-lint: sync-all lint-workspace lint-memory lint-planning
+lint-verification:
+	@$(COMPACT_RUN) --label "verification lint" --cwd packages/verification -- uv run ruff check .
+
+lint: sync-all lint-workspace lint-memory lint-planning lint-verification
 
 markdownlint-memory:
 	@$(COMPACT_RUN) --label "memory markdownlint" --cwd packages/memory -- uv run pymarkdown -d md013,md024 scan AGENTS.md README.md bootstrap skills
@@ -103,7 +114,10 @@ typecheck-memory:
 typecheck-planning:
 	@$(COMPACT_RUN) --label "planning typecheck" --cwd packages/planning -- uv run ty check src
 
-typecheck: sync-all typecheck-workspace typecheck-memory typecheck-planning
+typecheck-verification:
+	@$(COMPACT_RUN) --label "verification typecheck" --cwd packages/verification -- uv run ty check src
+
+typecheck: sync-all typecheck-workspace typecheck-memory typecheck-planning typecheck-verification
 
 format-workspace:
 	@$(COMPACT_RUN) --label "workspace format" -- uv run ruff format src tests
@@ -114,7 +128,10 @@ format-memory:
 format-planning:
 	@$(COMPACT_RUN) --label "planning format" --cwd packages/planning -- uv run ruff format .
 
-format: sync-all format-workspace format-memory format-planning
+format-verification:
+	@$(COMPACT_RUN) --label "verification format" --cwd packages/verification -- uv run ruff format .
+
+format: sync-all format-workspace format-memory format-planning format-verification
 
 format-check-workspace:
 	@$(COMPACT_RUN) --label "workspace format-check" -- uv run ruff format --check src tests
@@ -125,7 +142,10 @@ format-check-memory:
 format-check-planning:
 	@$(COMPACT_RUN) --label "planning format-check" --cwd packages/planning -- uv run ruff format --check .
 
-format-check: sync-all format-check-workspace format-check-memory format-check-planning
+format-check-verification:
+	@$(COMPACT_RUN) --label "verification format-check" --cwd packages/verification -- uv run ruff format --check .
+
+format-check: sync-all format-check-workspace format-check-memory format-check-planning format-check-verification
 
 verify-workspace:
 	@$(COMPACT_RUN) --label "workspace verify" -- uv run agentic-workspace modules --format json
@@ -136,7 +156,10 @@ verify-memory:
 verify-planning:
 	@$(COMPACT_RUN) --label "planning verify-payload" --cwd packages/planning -- uv run agentic-planning verify-payload
 
-verify: sync-all verify-workspace verify-memory verify-planning
+verify-verification:
+	@$(COMPACT_RUN) --label "verification report" --cwd packages/verification -- uv run agentic-verification report --target . --format json
+
+verify: sync-all verify-workspace verify-memory verify-planning verify-verification
 
 memory-freshness:
 	@$(COMPACT_RUN) --label "memory doctor" -- uv run agentic-workspace doctor --target . --format json
@@ -199,6 +222,9 @@ check-memory: sync-all test-memory lint-memory typecheck-memory verify-memory me
 
 check-planning: sync-all test-planning lint-planning typecheck-planning maintainer-surfaces memory-freshness
 
+check-verification: sync-all test-verification lint-verification typecheck-verification verify-verification
+	@$(COMPACT_RUN) --label "generated command packages" -- uv run python scripts/check/check_generated_command_packages.py
+
 check: sync-all test lint typecheck format-check verify memory-freshness-strict maintainer-surfaces structured-file-inventory package-artifact-duplicates agent-aids absolute-paths
 
-check-all: check-memory check-planning
+check-all: check-memory check-planning check-verification

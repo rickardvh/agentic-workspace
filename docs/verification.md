@@ -1,0 +1,99 @@
+# Verification Module
+
+Agentic Workspace Verification is the repo-native home for reusable soft
+verification protocols and bounded evidence records.
+
+Boundary:
+
+```text
+Planning says what work is active.
+Assurance says what evidence is required.
+Verification says how evidence is produced, repeated, recorded, bounded, and reviewed.
+Proof routes verification work into validation choices.
+Closeout says what may honestly be claimed.
+Memory keeps durable anti-rediscovery lessons after verification, not raw evidence.
+```
+
+The first implementation uses `.agentic-workspace/verification/manifest.toml`.
+It supports protocol, scenario, proof-route, evidence-bundle, and known-gap
+records and exposes them through:
+
+```text
+agentic-verification report --target . --format json
+agentic-workspace report --section verification --format json
+agentic-workspace proof --changed <paths> --verbose --format json
+agentic-workspace implement --select verification --changed <paths> --format json
+```
+
+The module implementation lives in `packages/verification/`. Its
+`agentic-verification` CLI is generated from the Verification operation contract
+under `packages/verification/src/repo_verification_bootstrap/contracts/operations/`;
+module-owned runtime primitives own manifest semantics, while root workspace
+surfaces adapt the resulting projection.
+
+## Manifest Shape
+
+```toml
+schema_version = "agentic-workspace/verification-manifest/v1"
+
+[scenarios.manual_walkthrough]
+protocol_id = "manual_review"
+title = "Manual walkthrough"
+steps = ["Exercise the user-visible flow"]
+expected_observations = ["The expected behavior is visible"]
+pass_evidence_labels = ["manual_walkthrough_passed"]
+fail_evidence_labels = ["manual_walkthrough_failed"]
+
+[protocols.manual_review]
+title = "Manual review"
+purpose = "Repeatable verification when automated tests are not enough."
+applies_to_paths = ["src/ui/**"]
+scenario_refs = ["manual_walkthrough"]
+expected_evidence = ["manual_walkthrough_passed"]
+review_owner = "ui-review"
+
+[proof_routes.manual_review_route]
+protocol_refs = ["manual_review"]
+scenario_refs = ["manual_walkthrough"]
+commands = ["uv run pytest tests/test_ui_flow.py"]
+review_aids = ["Capture a short observation summary."]
+
+[evidence_bundles.manual_review_2026_05]
+protocol_id = "manual_review"
+scenario_id = "manual_walkthrough"
+outcome = "passed"
+evidence_items = ["manual_walkthrough_passed"]
+transcript_summaries = ["Manual walkthrough passed; raw transcript not retained."]
+claim_boundaries = ["slice"]
+retention_until = "2099-01-01"
+
+[known_gaps.manual_review_mobile_gap]
+protocol_id = "manual_review"
+scenario_id = "manual_walkthrough"
+reason = "Desktop walkthrough does not prove mobile layout."
+owner = "ui-review"
+evidence_labels = ["mobile_walkthrough_passed"]
+blocked_claims = ["close-parent-lane"]
+residual_risk = "Mobile behavior remains unverified."
+```
+
+## Retention
+
+Protocols and scenarios are durable repo artifacts. Evidence bundles are compact
+claim evidence and should carry retention or staleness metadata when they can
+expire.
+
+Transcript evidence is summary-first. Raw transcript refs are optional and
+bounded. Hidden/reference oracle material from evaluator workflows must stay out
+of primary evaluator prompts and appear only as post-score review metadata.
+
+Memory receives durable lessons or repeated gaps after verification. It should
+not store raw transcript content or active evidence.
+
+## Non-Goals
+
+- No generic QA management system.
+- No CI replacement.
+- No raw transcript database.
+- No Assurance ownership transfer.
+- No Closeout ownership transfer.

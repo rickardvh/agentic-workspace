@@ -10932,6 +10932,204 @@
         }
       ],
       "operation_contract_root": "packages/memory/src/repo_memory_bootstrap/contracts"
+    },
+    {
+      "id": "verification-cli",
+      "program": "agentic-verification",
+      "package_role": "verification-module-cli",
+      "version_metadata": {
+        "source": "python-package-metadata",
+        "distribution": "agentic-verification",
+        "fallback_version": "0.1.0"
+      },
+      "python_runtime_binding": {
+        "entrypoint": "agentic-verification",
+        "default_runtime_command": "python -c \"import sys; from repo_verification_bootstrap.cli import main; raise SystemExit(main(sys.argv[1:]))\"",
+        "runtime_module_file": "cli",
+        "resource_copies": [
+          {
+            "source_root": "packages/verification/src/repo_verification_bootstrap/contracts",
+            "generated_root": "_contracts",
+            "required_marker": "operations/verification.report.report.json"
+          }
+        ],
+        "operation_executor": {
+          "module_file": "primitives.operation_executor",
+          "supported_operation_ids": [
+            "verification.report.report"
+          ],
+          "initial_values": [
+            {
+              "name": "target",
+              "arg": "target",
+              "default": null
+            },
+            {
+              "name": "changed_paths",
+              "arg": "changed_paths",
+              "default": []
+            },
+            {
+              "name": "task_text",
+              "arg": "task_text",
+              "default": ""
+            },
+            {
+              "name": "format",
+              "arg": "format",
+              "default": "text"
+            }
+          ],
+          "context_roots": [
+            {
+              "name": "verification.contracts",
+              "generated_root": "_contracts",
+              "required_marker": "operations/verification.report.report.json"
+            }
+          ],
+          "handlers": [
+            {
+              "primitive": "path.target_root.resolve",
+              "handler": "generated_target_root_resolve",
+              "project_markers": [
+                "pyproject.toml",
+                "package.json",
+                "Cargo.toml",
+                ".hg"
+              ]
+            }
+          ]
+        },
+        "local_runtime_bindings": [
+          {
+            "source_import_module": "repo_verification_bootstrap.runtime_primitives",
+            "module_file": "primitives.verification_runtime"
+          }
+        ],
+        "render_runtime_module": true
+      },
+      "targets": [
+        {
+          "kind": "python",
+          "package_name": "agentic-verification",
+          "generated_root": "generated/verification/python",
+          "entrypoints": [
+            "agentic-verification"
+          ],
+          "test_environment": "python-dev",
+          "maturity_level_ref": "runtime-backed-read-only-adapter",
+          "generation_status": "runtime-backed-read-only-adapter"
+        },
+        {
+          "kind": "typescript",
+          "package_name": "@agentic-workspace/verification-cli",
+          "generated_root": "generated/typescript/verification-cli",
+          "entrypoints": [
+            "agentic-verification"
+          ],
+          "test_environment": "docker",
+          "maturity_level_ref": "runtime-backed-read-only-adapter",
+          "generation_status": "runtime-backed-read-only-adapter"
+        }
+      ],
+      "commands": [
+        {
+          "adapter_id": "verification.report.cli",
+          "status": "generated",
+          "command": {
+            "name": "report",
+            "manifest_ref": "package:verification:cli"
+          },
+          "interface": {
+            "name": "report",
+            "help": "Report configured repo-native verification protocols and evidence.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path. Defaults to the current directory."
+              },
+              {
+                "name": "changed_paths",
+                "flags": [
+                  "--changed"
+                ],
+                "nargs": "*",
+                "default": [],
+                "help": "Changed paths used to activate matching verification protocols."
+              },
+              {
+                "name": "task_text",
+                "flags": [
+                  "--task"
+                ],
+                "default": "",
+                "help": "Task text used to activate matching verification protocols."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "verification.report.report",
+            "path": "operations/verification.report.report.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "path.target_root.resolve",
+              "python.function.call",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "verification.report.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "verification manifest semantics",
+              "bounded evidence report projection"
+            ]
+          }
+        }
+      ],
+      "operation_contract_root": "packages/verification/src/repo_verification_bootstrap/contracts"
     }
   ]
 }

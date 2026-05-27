@@ -40,7 +40,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: [memory, planning]
+        package: [memory, planning, verification]
         python-version: ["3.13"]
     steps:
       - name: Checkout
@@ -54,18 +54,8 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v8.1.0
 
-      - name: Sync package-scoped dependencies (memory)
-        if: matrix.package == 'memory'
-        run: make sync-memory
+      - name: Sync package-scoped dependencies
+        run: make sync-${{ matrix.package }}
 
-      - name: Sync package-scoped dependencies (planning)
-        if: matrix.package == 'planning'
-        run: make sync-planning
-
-      - name: Run package checks (memory)
-        if: matrix.package == 'memory'
-        run: make check-memory
-
-      - name: Run package checks (planning)
-        if: matrix.package == 'planning'
-        run: make check-planning
+      - name: Run package checks
+        run: make check-${{ matrix.package }}

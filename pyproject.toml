@@ -11,6 +11,7 @@ requires-python = ">=3.11"
 dependencies = [
   "agentic-memory",
   "agentic-planning",
+  "agentic-verification",
 ]
 
 [project.scripts]
@@ -35,12 +36,14 @@ package = true
 command-generation = { workspace = true }
 agentic-memory = { workspace = true }
 agentic-planning = { workspace = true }
+agentic-verification = { workspace = true }
 
 [tool.uv.workspace]
 members = [
   "internal/command-generation",
   "packages/memory",
   "packages/planning",
+  "packages/verification",
 ]
 
 [tool.hatch.build.targets.wheel]

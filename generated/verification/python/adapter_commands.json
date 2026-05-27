@@ -1,0 +1,49 @@
+[
+  {
+    "adapter_id": "verification.report.cli",
+    "interface": {
+      "help": "Report configured repo-native verification protocols and evidence.",
+      "name": "report",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        },
+        {
+          "default": [],
+          "flags": [
+            "--changed"
+          ],
+          "help": "Changed paths used to activate matching verification protocols.",
+          "name": "changed_paths",
+          "nargs": "*"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--task"
+          ],
+          "help": "Task text used to activate matching verification protocols.",
+          "name": "task_text"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "verification.report.report",
+    "operation_path": "operations/verification.report.report.json"
+  }
+]

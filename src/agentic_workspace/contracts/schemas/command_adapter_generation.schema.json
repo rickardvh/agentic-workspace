@@ -189,7 +189,8 @@
               "enum": [
                 "cli_commands.json",
                 "package:planning:cli",
-                "package:memory:cli"
+                "package:memory:cli",
+                "package:verification:cli"
               ],
               "description": "Allowed command manifest value for routing or validation."
             },
@@ -197,7 +198,8 @@
               "enum": [
                 "cli_option_groups.json",
                 "package:planning:cli",
-                "package:memory:cli"
+                "package:memory:cli",
+                "package:verification:cli"
               ],
               "description": "Allowed option group manifest value for routing or validation."
             }

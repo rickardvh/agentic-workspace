@@ -1,0 +1,370 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Implement verification module lane",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement the full #1159 verification lane (#1160-#1165) on this branch.",
+    "hard_constraints": "Preserve the reviewed owner boundary: Verification owns reusable protocols and bounded evidence, not Assurance requirements, Planning active work, Proof authority, Closeout claims, Memory, CI, or raw transcript storage.",
+    "agent_may_decide": "Concrete schema shape, report/proof projection details, tests, and docs needed to satisfy the lane while keeping ordinary tiny paths quiet.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Finish validation for the verification manifest/report/proof/closeout implementation.",
+    "proof_expectations": [
+      "Focused report and proof tests for verification behavior pass.",
+      "Ruff passes on changed source and tests.",
+      "Planning surface checks pass.",
+      "Workspace proof-selected commands are run or any broader test not run is reported."
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "src/agentic_workspace/reporting_support.py",
+      "tests/test_workspace_report_cli.py",
+      "tests/test_workspace_proof_cli.py",
+      "docs/verification.md",
+      "docs/routine-work-context.md",
+      "docs/reference/workspace-report.md",
+      "docs/reference/implementer-context.md",
+      "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+      "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
+      ".agentic-workspace/planning/reviews/2026-05-27-verification-module-boundary.md",
+      ".agentic-workspace/planning/reviews/2026-05-27-verification-module-boundary.review.json",
+      ".agentic-workspace/planning/state.toml",
+      ".agentic-workspace/planning/execplans/github-1159-verification-lane.plan.json"
+    ],
+    "completion_criteria": [
+      "#1160: verification manifest is parsed and projected through report.",
+      "#1161: matched protocols route into proof and routine context.",
+      "#1162: bounded evidence bundles are projected and closeout can cite them.",
+      "#1163: transcript retention/summarization policy is documented and represented.",
+      "#1164: assurance requirements can map to verification protocols.",
+      "#1165: tests cover manual/non-code and high-assurance/long-horizon evidence workflows."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Implement the full #1159 verification lane (#1160-#1165) on this branch."
+  ],
+  "non_goals": [
+    "Do not build a separate package.",
+    "Do not add a generic QA management system, CI runner, raw transcript database, or broad compliance interpreter.",
+    "Do not move Assurance, Planning, Proof, Closeout, or Memory ownership into Verification."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Implement the full #1159 verification lane (#1160-#1165) on this branch.",
+      "constraints": "Preserve owner boundaries and quiet default/tiny behavior.",
+      "latitude": "Choose concrete manifest/report/proof/closeout integration details and fixtures.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+      "proof": "focused tests, full workspace test/lint, contract/inventory/schema checks, maintainer surfaces, summary, and doctor were run"
+    },
+    "execution": {
+      "milestone": "github-1159-verification-lane",
+      "status": "active",
+      "next_step": "Completed; ready for review/PR.",
+      "proof": "Focused verification tests, ruff, planning surface checks, and workspace proof-selected checks."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "src/agentic_workspace/reporting_support.py",
+        "tests/test_workspace_report_cli.py",
+        "tests/test_workspace_proof_cli.py",
+        "docs/verification.md",
+        "docs/routine-work-context.md",
+        "docs/reference/workspace-report.md",
+        "docs/reference/implementer-context.md",
+        "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+        "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
+        ".agentic-workspace/planning/reviews/2026-05-27-verification-module-boundary.md",
+        ".agentic-workspace/planning/reviews/2026-05-27-verification-module-boundary.review.json",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/github-1159-verification-lane.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Implement the full #1159 verification lane (#1160-#1165) on this branch.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Verification is now a repo-native projection over manifest protocols, scenarios, proof routes, evidence bundles, and known gaps; matched protocols route into proof, routine work context, assurance, and closeout trust.",
+    "intentionally deferred": "none",
+    "discovered implications": "Doctor currently reports unrelated local scratch conflict-marker residue under .agentic-workspace/local/scratch from a model harness run; this branch does not mutate scratch.",
+    "proof achieved now": "Full proof-selected workspace commands passed by exit status; doctor reported only the unrelated local scratch residue.",
+    "validation still needed": "none for this slice",
+    "next likely slice": "review and PR"
+  },
+  "intent_interpretation": {
+    "literal request": "Implement the full lane on this branch.",
+    "inferred intended outcome": "Implement #1159/#1160-#1165 as a repo-native verification module slice.",
+    "chosen concrete what": "Add manifest parsing, report projection, proof/routine/assurance/closeout integration, docs, and deterministic fixtures.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Workspace runtime/reporting source, focused report/proof tests, verification/routine docs, and planning evidence for this lane.",
+    "max changed files": "About 10-12 checked-in files.",
+    "required validation commands": "Focused verification report/proof tests; ruff changed files; planning surface checks; proof-selected workspace checks as feasible.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue from verification manifest/report/proof/closeout implementation and run selected validation.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement the full #1159 verification lane (#1160-#1165) on this branch.",
+    "hard constraints": "Preserve owner boundaries and quiet default/tiny behavior.",
+    "agent may decide locally": "Concrete schema, projection, and fixture details.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "Implementation is already local and cross-cuts runtime contracts, generated schema docs, and focused tests; delegating now would add handoff cost without reducing proof burden.",
+    "decision command": "agentic-planning delegation-decision",
+    "planning revision observed": "342df9ac8528143a",
+    "recorded at": "2026-05-27T13:14:14+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "github-1159-verification-lane",
+    "status": "completed",
+    "scope": "Implement verification manifest/report/proof/closeout integration and tests for #1160-#1165.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Review the completed verification lane implementation."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "src/agentic_workspace/reporting_support.py",
+    "tests/test_workspace_report_cli.py",
+    "tests/test_workspace_proof_cli.py",
+    "docs/verification.md",
+    "docs/routine-work-context.md",
+    "docs/reference/workspace-report.md",
+    "docs/reference/implementer-context.md",
+    "src/agentic_workspace/contracts/schemas/workspace_report.schema.json",
+    "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
+    ".agentic-workspace/planning/reviews/2026-05-27-verification-module-boundary.md",
+    ".agentic-workspace/planning/reviews/2026-05-27-verification-module-boundary.review.json",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/github-1159-verification-lane.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_report_cli.py -q -k \"verification or assurance_requirement or closeout_trust_cites_verification\"",
+    "uv run pytest tests/test_workspace_proof_cli.py -q -k \"verification or assurance_requirement\"",
+    "uv run ruff check src/agentic_workspace/workspace_runtime_primitives.py src/agentic_workspace/reporting_support.py tests/test_workspace_report_cli.py tests/test_workspace_proof_cli.py",
+    "uv run python scripts/check/check_planning_surfaces.py"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "#1160-#1165 acceptance is represented in code, docs, and focused tests.",
+    "Proof and closeout surfaces cite verification protocols/evidence without changing owner boundaries.",
+    "Ordinary quiet/default behavior remains selector-driven.",
+    "Validation is run and any residual risk is recorded."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Implemented the #1159 verification lane: manifest parsing/validation, report projection, proof/routine/assurance/closeout integration, compact closeout projection, schema docs, docs, and focused fixtures.",
+    "scope touched": "workspace runtime/reporting source, report/implementer schemas, generated schema references, verification/routine docs, focused report/proof tests, and lane planning evidence",
+    "changed surfaces": "Verification now projects protocols, scenarios, proof routes, evidence bundles, known gaps, active protocols, active proof routes, active known gaps, evidence status, and transcript policy.",
+    "validations run": "uv run pytest tests/test_workspace_report_cli.py -q -k \"verification\"; uv run pytest tests/test_workspace_proof_cli.py -q -k \"verification\"; uv run ruff check changed source/tests; make test-workspace; make lint-workspace; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make maintainer-surfaces; uv run agentic-workspace summary --target . --format json; uv run agentic-workspace doctor --target . --modules planning --format json; make schema-reference-docs",
+    "result for continuation": "implementation complete; doctor has unrelated local scratch attention only",
+    "next step": "review and create PR when requested"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed with unrelated local scratch doctor attention",
+    "intent served": "yes",
+    "config compliance": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "no additional lane required for #1159 completion"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "Implementation is already local and cross-cuts runtime contracts, generated schema docs, and focused tests; delegating now would add handoff cost without reducing proof burden.",
+    "expected savings": "unknown",
+    "actual friction": "none recorded",
+    "proof result": "passed",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "focused tests, full workspace test/lint, contract/inventory/schema checks, maintainer surfaces, summary, and doctor were run",
+    "proof achieved now": "sufficient_for_claim",
+    "evidence for \"proof achieved\" state": "Focused verification report/proof tests passed; make test-workspace and make lint-workspace passed; contract tooling, structured inventory, maintainer surfaces, and schema reference checks passed. Doctor exited 0 but reported unrelated local scratch conflict-marker residue."
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement the full #1159 verification lane (#1160-#1165) on this branch.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "#1160-#1165 behavior is implemented in code, docs, schemas, and focused report/proof fixtures; proof-selected validation passed.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Implemented the repo-native Verification lane.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "none; #1159 continuation is not required",
+    "post-work posterity capture": "docs/verification.md and docs/routine-work-context.md updated",
+    "knowledge promoted (Memory/Docs/Config)": "docs",
+    "resume from": "review/PR"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "docs/verification.md",
+    "target scope": "verification lane",
+    "proposed durable intent": "none yet",
+    "confidence": "medium",
+    "needs review": false,
+    "owner surface": "docs"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "complete",
+    "larger-intent status": "completed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "All verification lane completion criteria are represented in branch changes and selected validation passed.",
+    "evidence carried forward": "Verification manifest/report/proof/routine/assurance/closeout integration plus focused tests and full workspace proof.",
+    "reopen trigger": "Review finds a missing #1159-owned verification behavior or proof-selected validation fails for repo-owned changes."
+  },
+  "improvement_signal_review": {
+    "status": "signals_routed",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [
+      "Doctor reports conflict markers inside .agentic-workspace/local/scratch harness venv residue even when the requested proof is Planning-focused."
+    ],
+    "signals fixed": [],
+    "signals routed": [
+      "Recorded as residual risk in this plan; not mutated because it is local scratch/runtime residue outside the branch-owned lane."
+    ],
+    "signals dismissed": [],
+    "next owner": "scratch cleanup or doctor-local-scratch filtering follow-up if repeated"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Recorded as residual risk in this plan; not mutated because it is local scratch/runtime residue outside the branch-owned lane.",
+          "owner": "",
+          "source": "improvement_signal_review.signals routed"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [
+        {
+          "summary": "docs",
+          "owner": "docs",
+          "source": "execution_summary"
+        }
+      ],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-05-27: Scaffolded by agentic-planning new-plan.",
+    "2026-05-27: Recorded delegation decision route=keep-local."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Implement the full #1159 verification lane (#1160-#1165) on this branch.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: focused tests, full workspace test/lint, contract/inventory/schema checks, maintainer surfaces, summary, and doctor were run\nChanged surfaces: Verification now projects protocols, scenarios, proof routes, evidence bundles, known gaps, active protocols, active proof routes, active known gaps, evidence status, and transcript policy.\nDurable residue: none (none)\nMemory learning: none\nFollow-up: none yet"
+  }
+}

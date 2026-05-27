@@ -22,6 +22,7 @@ def contract_roots() -> tuple[Path, ...]:
         contracts_root(),
         repo_root / "packages" / "planning" / "src" / "repo_planning_bootstrap" / "contracts",
         repo_root / "packages" / "memory" / "src" / "repo_memory_bootstrap" / "contracts",
+        repo_root / "packages" / "verification" / "src" / "repo_verification_bootstrap" / "contracts",
     )
 
 

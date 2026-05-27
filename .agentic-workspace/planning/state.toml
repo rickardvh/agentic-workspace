@@ -17,5 +17,4 @@ queued_items = []
 
 [roadmap]
 lanes = []
-candidates = [
-]
+candidates = []

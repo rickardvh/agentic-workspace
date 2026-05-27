@@ -6,6 +6,7 @@ requires-python = ">=3.11"
 members = [
     "agentic-memory",
     "agentic-planning",
+    "agentic-verification",
     "agentic-workspace",
     "command-generation",
 ]
@@ -27,12 +28,18 @@ dependencies = [
 requires-dist = [{ name = "jsonschema", specifier = ">=4.0" }]
 
 [[package]]
+name = "agentic-verification"
+version = "0.1.0"
+source = { editable = "packages/verification" }
+
+[[package]]
 name = "agentic-workspace"
 version = "0.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "agentic-memory" },
     { name = "agentic-planning" },
+    { name = "agentic-verification" },
 ]
 
 [package.dev-dependencies]
@@ -51,6 +58,7 @@ dev = [
 requires-dist = [
     { name = "agentic-memory", editable = "packages/memory" },
     { name = "agentic-planning", editable = "packages/planning" },
+    { name = "agentic-verification", editable = "packages/verification" },
 ]
 
 [package.metadata.requires-dev]

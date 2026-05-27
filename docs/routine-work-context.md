@@ -30,6 +30,7 @@ matches, proof expectations, and closeout residue without becoming a new owner.
 | `external_work_reconciliation` | Router/projection concept | Active work |
 | Standing intent and effective authority | Authority projection | Authority |
 | Assurance requirements | Config-owned evidence gate | Authority, evidence / proof |
+| Verification protocols and evidence bundles | Repo-owned soft verification procedures and bounded evidence | Authority, evidence / proof |
 | Workflow obligations | Config-owned lifecycle obligation | Authority, evidence / proof |
 | Decision records / ADRs | Canonical owner surface | Authority, promotion / residue |
 | `decision_pressure` | Router/projection concept | Authority, promotion / residue |
@@ -75,9 +76,10 @@ paths, especially where authority, evidence, durable knowledge, or residue could
 change the next safe action.
 
 `proof` should continue to own proof selection. The routine context should only
-explain which proof expectations are activated by repo authority or claim gates.
-When a changed path activates a workflow obligation, proof can show the authority
-and evidence/proof categories so the obligation is not missed before validation.
+explain which proof expectations are activated by repo authority, verification
+protocols, or claim gates. When a changed path activates a workflow obligation or
+verification protocol, proof can show the authority and evidence/proof
+categories so the obligation or protocol is not missed before validation.
 
 `report` is the best inspection home for the full assembled view:
 `agentic-workspace report --section routine_work_context --format json`.
@@ -100,7 +102,8 @@ belongs behind selectors or report sections. The projection should surface when:
 - a discovered constraint needs promotion, follow-up, or explicit dismissal.
 
 The projection should stay quiet for unmatched assurance requirements, unrelated
-Memory notes, unrelated ADR candidates, and broad historical audit detail.
+verification protocols, unrelated Memory notes, unrelated ADR candidates, and
+broad historical audit detail.
 
 Default `report` is intentionally a discriminator-only route signal:
 
