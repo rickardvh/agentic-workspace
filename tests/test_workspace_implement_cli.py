@@ -104,7 +104,7 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(tmp_pat
     assert payload["planning_safety_gate"]["status"] == "attention"
     assert payload["planning_safety_gate"]["decision"] == "agent-work-shape-decision-required"
     assert payload["planning_safety_gate"]["implementation_allowed"] is True
-    assert payload["planning_safety_gate"]["work_shape_facts"]["hard_blockers"] == []
+    assert payload["planning_safety_gate"]["work_shape_guidance"]["hard_blockers"] == []
 
 
 def test_implement_selects_active_assurance_requirements_from_changed_paths(tmp_path: Path, capsys) -> None:
@@ -740,7 +740,9 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     assert "make test-workspace" in payload["proof"]["required_commands"]
     assert "uv run python scripts/check/check_generated_command_packages.py" in payload["proof"]["required_commands"]
     assert payload["proof"]["acceptance_guidance"]["status"] == "present"
-    assert context["routing"]["work_shape"] == "bounded"
+    guidance = context["guidance"]
+    assert guidance["rule"].startswith("AW exposes facts")
+    assert guidance["work_shape_guidance"]["agent_decision_required"] is True
     acknowledgement = context["intent_acknowledgement"]
     assert acknowledgement["decision"] == "proceed-with-stated-assumption"
     assert acknowledgement["fields"] == [
@@ -955,7 +957,7 @@ def test_implement_task_text_does_not_route_broad_issue_ingestion_to_planning(tm
     payload = json.loads(capsys.readouterr().out)
     assert "task_routing" not in payload
     assert payload["planning_safety_gate"]["status"] == "clear"
-    assert payload["planning_safety_gate"]["work_shape_facts"]["agent_decision_required"] is True
+    assert payload["planning_safety_gate"]["work_shape_guidance"]["agent_decision_required"] is True
     assert payload["next_allowed_action"] == "Provide --changed paths or use start/preflight before broad implementation."
     assert payload["handoff_requirements"]["stop_when"][0] != "task routing status is needs-planning for broad external-work ingestion"
 
@@ -969,8 +971,8 @@ def test_implement_task_allows_narrow_single_issue_context(tmp_path: Path, capsy
     payload = json.loads(capsys.readouterr().out)
     assert "task_routing" not in payload
     assert payload["planning_safety_gate"]["status"] == "clear"
-    assert payload["planning_safety_gate"]["work_shape_facts"]["scope_factors"]["issue_refs"] == ["#424"]
-    assert payload["planning_safety_gate"]["work_shape_facts"]["agent_decision_required"] is True
+    assert payload["planning_safety_gate"]["work_shape_guidance"]["scope_factors"]["issue_refs"] == ["#424"]
+    assert payload["planning_safety_gate"]["work_shape_guidance"]["agent_decision_required"] is True
     assert payload["next_allowed_action"] == "Provide --changed paths or use start/preflight before broad implementation."
 
 
@@ -1162,8 +1164,8 @@ def test_implement_command_surfaces_reasoning_heavy_execution_posture(tmp_path: 
     payload = json.loads(capsys.readouterr().out)
     posture = payload["execution_posture"]
     assert posture["capability_posture"]["posture"]["execution class"] == "boundary-shaping"
-    assert posture["capability_posture"]["work_shape"] == "bounded"
-    assert posture["capability_posture"]["proof_burden"] == "high"
+    assert posture["capability_posture"]["work_shape_guidance"]["structural_hint"] == "bounded"
+    assert posture["capability_posture"]["proof_factors"]["structural_hint"] == "high"
     assert "schema" in posture["capability_posture"]["risk_flags"]
     assert "proof route" in posture["capability_posture"]["inspection_evidence_required"]
     assert posture["capability_posture"]["self_assessment_authority"] == "advisory-only"
@@ -1250,8 +1252,8 @@ def test_implement_auto_delegation_exposes_bounded_slice_handoff(tmp_path: Path,
     assert decision["decision"] == "delegate-bounded-slice"
     assert decision["target"] == "mini"
     assert decision["required_next_action"] == "execute-when-safe"
-    assert decision["token_savings_expected"] == "likely"
-    effort = decision["effort_recommendation"]
+    assert decision["token_savings_guidance"]["signal"] == "likely"
+    effort = decision["effort_guidance"]
     assert effort["cost_posture"] == "save-tokens-where-safe"
     assert effort["orchestrator"] == "medium"
     assert effort["implementer"] == "medium delegate"
@@ -1341,7 +1343,7 @@ def test_implement_epic_decomposition_prefers_reusable_worker_over_manual_relay(
     assert decision["decision"] == "suggest-delegation"
     assert decision["target"] == "reusable-worker"
     assert decision["required_next_action"] == "select-or-promote-bounded-lane"
-    assert decision["token_savings_expected"] == "possible"
+    assert decision["token_savings_guidance"]["signal"] == "possible"
     assert decision["config_effect"]["execution_authority"] == "auto-execution-permitted"
     assert "handoff_command" not in decision
     assert decision["delegation_next_step"]["status"] == "prepare-or-report"
@@ -1401,11 +1403,11 @@ def test_implement_suppresses_manual_external_relay_for_code_local_changed_paths
     decision = _implement_context(payload)["delegation_decision"]
     assert decision["decision"] == "stay-local"
     assert decision["required_next_action"] == "continue-local"
-    assert decision["effort_recommendation"]["orchestrator"] == "medium"
-    assert decision["effort_recommendation"]["implementer"] == "medium"
-    assert decision["effort_recommendation"]["validator"] == "high"
-    assert decision["effort_recommendation"]["cost_posture"] == "quality-first"
-    assert "target" not in decision["effort_recommendation"]
+    assert decision["effort_guidance"]["orchestrator"] == "medium"
+    assert decision["effort_guidance"]["implementer"] == "medium"
+    assert decision["effort_guidance"]["validator"] == "high"
+    assert decision["effort_guidance"]["cost_posture"] == "quality-first"
+    assert "target" not in decision["effort_guidance"]
     assert "manual_external_relay" not in decision
     assert "config_effect" not in decision
     assert "manual_prompt" not in decision
@@ -1447,7 +1449,7 @@ def test_implement_supports_selector_drilldown(tmp_path: Path, capsys) -> None:
                 "--task",
                 "Implement bounded text helper behavior",
                 "--select",
-                "context.delegation_decision.required_next_action,context.delegation_decision.delegation_next_step.must_report_if_not_run,context.delegation_decision.effort_recommendation.cost_posture",
+                "context.delegation_decision.required_next_action,context.delegation_decision.delegation_next_step.must_report_if_not_run,context.delegation_decision.effort_guidance.cost_posture",
                 "--format",
                 "json",
             ]
@@ -1461,7 +1463,7 @@ def test_implement_supports_selector_drilldown(tmp_path: Path, capsys) -> None:
     assert "available_selectors" not in payload
     assert payload["values"]["context.delegation_decision.required_next_action"] == "execute-when-safe"
     assert payload["values"]["context.delegation_decision.delegation_next_step.must_report_if_not_run"] is True
-    assert payload["values"]["context.delegation_decision.effort_recommendation.cost_posture"] == "save-tokens-where-safe"
+    assert payload["values"]["context.delegation_decision.effort_guidance.cost_posture"] == "save-tokens-where-safe"
 
 
 def test_implement_selector_surfaces_reuse_pressure_without_blocking_direct_work(tmp_path: Path, capsys) -> None:
@@ -1569,8 +1571,9 @@ def test_implement_reuse_pressure_surfaces_repeated_special_case(tmp_path: Path,
     )
 
     reuse_pressure = json.loads(capsys.readouterr().out)["values"]["reuse_pressure"]
-    assert reuse_pressure["state"] == "abstraction_pressure"
-    finding = reuse_pressure["findings"][0]
+    assert reuse_pressure["state"] == "similar_pattern_candidate"
+    finding = next(item for item in reuse_pressure["findings"] if item["kind"] == "repeated_special_case")
+    assert finding["evidence_confidence"] == "medium"
     assert finding["kind"] == "repeated_special_case"
     assert finding["candidate_paths"] == ["src/sample_app/legacy_a.py", "src/sample_app/legacy_b.py"]
 

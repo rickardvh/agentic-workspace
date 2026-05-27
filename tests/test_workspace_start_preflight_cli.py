@@ -1330,7 +1330,7 @@ def test_start_tiny_prepares_manual_external_relay_for_early_epic_shaping(tmp_pa
 
     decision = _start_context_value(json.loads(capsys.readouterr().out), "delegation_decision")
     assert decision["required_next_action"] == "prepare-manual-handoff"
-    effort = decision["effort_recommendation"]
+    effort = decision["effort_guidance"]
     assert effort["orchestrator"] == "medium"
     assert effort["planner"] == "external-high-judgment"
     assert effort["cost_posture"] == "human-interrupt-only-if-worth-it"
@@ -1639,7 +1639,8 @@ def test_implement_flags_scope_growth_without_active_execplan(tmp_path: Path, ca
     assert gate["status"] == "attention"
     assert gate["decision"] == "agent-work-shape-decision-required"
     assert gate["implementation_allowed"] is True
-    assert gate["work_shape_facts"]["hard_blockers"] == []
+    guidance = payload["context"]["guidance"]["work_shape_guidance"]
+    assert guidance["hard_blockers"] == []
     assert gate["changed_path_classification"]["dirty_shape"] == "implementation-only"
     assert "generated artifacts changed with source or tests" in gate["changed_path_classification"]["scope_growth_reasons"]
     assert _start_workflow_sufficiency(payload)["decision"] == "enough-for-bounded-implementation"
@@ -1674,16 +1675,11 @@ def test_implement_allows_routine_pr_comment_repair_without_plan_scaffold(tmp_pa
     assert gate["decision"] == "direct-work-allowed"
     assert gate["implementation_allowed"] is True
     assert gate["repair_route"]["status"] == "retired"
-    assert gate["work_shape_facts"]["hard_blockers"] == []
-    assert gate["work_shape_facts"]["agent_decision_required"] is True
-    assert gate["work_shape_facts"]["suggested_shape"] == "direct"
-    assert gate["work_shape_facts"]["judgment_boundary"]["aw_owns"] == [
-        "hard blockers",
-        "changed-path facts",
-        "active planning state",
-        "proof candidates",
-    ]
-    assert "semantic work shape" in gate["work_shape_facts"]["judgment_boundary"]["agent_owns"]
+    guidance = payload["context"]["guidance"]["work_shape_guidance"]
+    assert guidance["hard_blockers"] == []
+    assert guidance["agent_decision_required"] is True
+    assert "changed implementation paths are within a narrow top-level surface" in guidance["direct_work_is_reasonable_when"]
+    assert payload["context"]["guidance"]["rule"].startswith("AW exposes facts")
     assert gate["changed_path_classification"]["scope_growth_detected"] is False
     assert gate["changed_path_classification"]["ancillary_paths"] == [".agentic-workspace/memory/repo/current/routing-feedback.md"]
     assert _start_workflow_sufficiency(payload)["decision"] == "enough-for-bounded-implementation"
@@ -1718,10 +1714,11 @@ def test_implement_allows_single_issue_followthrough_with_memory_feedback_note(t
     assert gate["decision"] == "direct-work-allowed"
     assert gate["implementation_allowed"] is True
     assert gate["repair_route"]["status"] == "retired"
-    assert gate["work_shape_facts"]["hard_blockers"] == []
-    assert gate["work_shape_facts"]["agent_decision_required"] is True
-    assert gate["work_shape_facts"]["suggested_shape"] == "direct"
-    assert gate["work_shape_facts"]["scope_factors"]["issue_refs"] == ["#1058"]
+    guidance = payload["context"]["guidance"]["work_shape_guidance"]
+    assert guidance["hard_blockers"] == []
+    assert guidance["agent_decision_required"] is True
+    assert "changed implementation paths are within a narrow top-level surface" in guidance["direct_work_is_reasonable_when"]
+    assert guidance["scope_factors"]["issue_refs"] == ["#1058"]
     assert gate["changed_path_classification"]["ancillary_paths"] == [".agentic-workspace/memory/repo/current/routing-feedback.md"]
     assert _start_workflow_sufficiency(payload)["decision"] == "enough-for-bounded-implementation"
 

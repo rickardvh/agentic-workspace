@@ -43,7 +43,7 @@ Each gate is a compact SkillSpec-shaped record:
 
 - Trigger: changed paths are known or a completion claim is near.
 - Preferred CLI: `agentic-workspace implement --changed <paths> --format json` or `agentic-workspace proof --changed <paths> --format json`.
-- Interpreted fields: required commands, proof burden, acceptance guidance, completion-claim boundary.
+- Interpreted fields: required commands, proof factors, acceptance guidance, completion-claim boundary.
 - Allowed: run the selected narrow proof and classify gaps.
 - Forbidden: substitute passing commands for intent satisfaction.
 - Fallback: choose the narrowest existing test, lint, contract, or inspection route for the changed surface.

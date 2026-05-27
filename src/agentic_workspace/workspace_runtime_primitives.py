@@ -12198,16 +12198,26 @@ def _compact_start_delegation_decision(value: Any) -> dict[str, Any]:
         "mode",
         "clarification_mode",
         "decision",
-        "work_shape",
-        "proof_burden",
-        "quality_risk",
-        "token_savings_expected",
+        "quality_factors",
+        "token_savings_guidance",
         "required_next_action",
-        "effort_recommendation",
+        "effort_guidance",
     )
     compact = {key: value.get(key) for key in common_keys if key in value}
-    if isinstance(compact.get("effort_recommendation"), dict):
-        compact["effort_recommendation"] = _compact_effort_recommendation(compact["effort_recommendation"])
+    if isinstance(compact.get("quality_factors"), dict):
+        factors = compact["quality_factors"]
+        compact["quality_factors"] = {
+            key: factors.get(key)
+            for key in ("tier", "proof_factor_hint", "work_shape_hint", "agent_judgment_required")
+            if factors.get(key) not in (None, "")
+        }
+    if isinstance(compact.get("token_savings_guidance"), dict):
+        savings = compact["token_savings_guidance"]
+        compact["token_savings_guidance"] = {
+            key: savings.get(key) for key in ("signal", "agent_judgment_required") if savings.get(key) not in (None, "")
+        }
+    if isinstance(compact.get("effort_guidance"), dict):
+        compact["effort_guidance"] = _compact_effort_guidance(compact["effort_guidance"])
     decision = str(value.get("decision", ""))
     config_effect = value.get("config_effect")
     manual_external_relay = value.get("manual_external_relay")
@@ -12335,7 +12345,7 @@ def _compact_start_delegation_decision(value: Any) -> dict[str, Any]:
     return compact
 
 
-def _compact_effort_recommendation(value: dict[str, Any]) -> dict[str, Any]:
+def _compact_effort_guidance(value: dict[str, Any]) -> dict[str, Any]:
     return {
         key: value.get(key)
         for key in ("orchestrator", "planner", "implementer", "validator", "cost_posture")
@@ -12810,7 +12820,7 @@ def _start_payload(
     execution_posture = _execution_posture_payload(
         config=config, changed_paths=_normalize_changed_paths(changed_paths), task_text=task_text, target_root=target_root
     )
-    payload["delegation_decision"] = execution_posture["delegation_decision"]
+    payload["delegation_decision"] = _compact_start_delegation_decision(execution_posture["delegation_decision"])
     planning_safety_gate = _planning_safety_gate_payload(
         target_root=target_root,
         config=config,
@@ -13115,7 +13125,7 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "context.delegation_decision",
         "context.intent_acknowledgement",
         "context.workflow_sufficiency",
-        "context.routing",
+        "context.guidance",
         "context.acceptance_reconciliation",
         "context.objective_drift",
         "context.reuse_pressure",
@@ -13238,8 +13248,6 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
         "reason": gate.get("reason"),
         "required_next_action": gate.get("required_next_action"),
         "active_planning_present": gate.get("active_planning_present"),
-        "work_shape": gate.get("work_shape"),
-        "proof_burden": gate.get("proof_burden"),
         "issue_refs": gate.get("issue_refs", []),
         "promotion_command": gate.get("promotion_command"),
         "delegation_decision_command": gate.get("delegation_decision_command"),
@@ -13254,7 +13262,7 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
         "active_delegation_requirement",
         "active_parent_decomposition_requirement",
         "repair_route",
-        "work_shape_facts",
+        "work_shape_guidance",
     ):
         if key in gate:
             compact[key] = gate[key]
@@ -13554,7 +13562,7 @@ def _start_tiny_payload_fast(
     execution_posture = _execution_posture_payload(
         config=config, changed_paths=_normalize_changed_paths(changed_paths), task_text=task_text, target_root=target_root
     )
-    payload["delegation_decision"] = execution_posture["delegation_decision"]
+    payload["delegation_decision"] = _compact_start_delegation_decision(execution_posture["delegation_decision"])
     planning_safety_gate = _planning_safety_gate_payload(
         target_root=target_root,
         config=config,
@@ -14331,8 +14339,6 @@ def _intent_acknowledgement_payload(
     *, task_text: str | None, execution_posture: dict[str, Any], vague_orientation: dict[str, Any] | None = None
 ) -> dict[str, Any]:
     task = str(task_text or "").strip()
-    capability = execution_posture.get("capability_posture", {}) if isinstance(execution_posture, dict) else {}
-    work_shape = capability.get("work_shape") if isinstance(capability, dict) else None
     task_lower = " ".join(task.lower().split())
     if not task:
         return {
@@ -14370,15 +14376,12 @@ def _intent_acknowledgement_payload(
     direct_only = any((marker in task_lower for marker in direct_markers)) and (
         not any((marker in task_lower for marker in non_direct_markers))
     )
-    should_state = (
-        vague_applies or has_issue_ref or work_shape in {"lane", "epic"} or any((marker in task_lower for marker in non_direct_markers))
-    )
+    should_state = vague_applies or has_issue_ref or any((marker in task_lower for marker in non_direct_markers))
     if direct_only or not should_state:
         return {
             "kind": "agentic-workspace/intent-acknowledgement/v1",
             "status": "available",
             "decision": "silent-ok",
-            "work_shape": work_shape or "unknown",
             "reason": "Task appears direct enough that a separate stated-assumption preface is optional.",
             "use_stated_assumption_when": "Use the middle path if the edit stops being obvious, proof becomes non-obvious, or scope starts to widen.",
         }
@@ -14386,8 +14389,7 @@ def _intent_acknowledgement_payload(
         "kind": "agentic-workspace/intent-acknowledgement/v1",
         "status": "recommended",
         "decision": "proceed-with-stated-assumption",
-        "work_shape": work_shape or "unknown",
-        "rule": "Before editing non-direct, vague-outcome, bounded, lane, or epic work, briefly state the inferred intent and first slice, then proceed unless corrected.",
+        "rule": "Before editing non-direct or vague-outcome work, briefly state the inferred intent and first slice, then proceed unless corrected.",
         "before_editing": ["inferred_intent", "concrete_first_slice", "non_goals_or_deferred_scope", "correction_point"],
         "correction_point": "Say that you will proceed on the stated interpretation unless the user corrects it.",
         "silent_inference_ok_when": "The change is direct, local, low-risk, and validation is obvious.",
@@ -14519,10 +14521,10 @@ def _objective_drift_payload(*, target_root: Path, changed_paths: list[str], tas
 
 def _reuse_pressure_taxonomy() -> list[dict[str, str]]:
     return [
-        {"state": "none_found", "meaning": "cheap repo facts did not find nearby reuse or abstraction pressure"},
+        {"state": "none_found", "meaning": "cheap repo facts did not find nearby reuse evidence"},
         {"state": "existing_helper_candidate", "meaning": "a named helper or primitive already appears to exist"},
         {"state": "similar_pattern_candidate", "meaning": "nearby files or similarly named surfaces suggest an existing pattern"},
-        {"state": "abstraction_pressure", "meaning": "the same helper or pattern appears in multiple places"},
+        {"state": "abstraction_pressure", "meaning": "a named helper or semantic concept appears in multiple places"},
         {"state": "duplication_accepted_with_reason", "meaning": "duplication may proceed when the agent records why it is acceptable"},
         {"state": "extraction_deferred_with_owner", "meaning": "extraction is routed to a durable owner instead of hidden in chat"},
     ]
@@ -14534,7 +14536,7 @@ def _reuse_pressure_payload(
     normalized_paths = _normalize_changed_paths(changed_paths or [])
     base: dict[str, Any] = {
         "kind": "agentic-workspace/reuse-pressure/v1",
-        "rule": "AW exposes cheap reuse and abstraction facts; the agent owns the engineering decision.",
+        "rule": "AW exposes cheap reuse evidence and confidence; the agent owns the engineering decision.",
         "taxonomy": _reuse_pressure_taxonomy(),
         "changed_paths": normalized_paths,
         "allowed_outcomes": [
@@ -14693,6 +14695,7 @@ def _reuse_pressure_python_findings(*, target_root: Path, changed_path: str, pat
                 "state": state,
                 "changed_path": changed_path,
                 "symbol": name,
+                "evidence_confidence": "high" if state == "abstraction_pressure" else "medium",
                 "candidate_paths": matches[:5],
                 "why": f"{name} is already defined elsewhere in the repository.",
             }
@@ -14713,6 +14716,7 @@ def _reuse_pressure_python_findings(*, target_root: Path, changed_path: str, pat
                 "changed_path": changed_path,
                 "kind": "sibling_helper_hint",
                 "prominence": "normal" if has_token_overlap else "weak",
+                "evidence_confidence": "medium" if has_token_overlap else "low",
                 "candidate_paths": candidate_paths[:5],
                 "matched_tokens": sorted({token for candidate in sibling_candidates for token in candidate.get("matched_tokens", [])})[:8],
                 "why": "Nearby module files share changed-path tokens and may express the same local pattern."
@@ -14729,15 +14733,15 @@ def _repeated_special_case_findings(*, target_root: Path, changed_path: str, pat
         matches = _find_special_case_matches(target_root=target_root, marker=marker, exclude=path)
         if not matches:
             continue
-        state = "abstraction_pressure" if len(matches) >= 2 else "similar_pattern_candidate"
         findings.append(
             {
-                "state": state,
+                "state": "similar_pattern_candidate",
                 "changed_path": changed_path,
                 "kind": "repeated_special_case",
                 "pattern": marker,
+                "evidence_confidence": "medium",
                 "candidate_paths": matches[:5],
-                "why": "The same conditional special case appears elsewhere; consider reusing or extracting the policy.",
+                "why": "The same conditional special case appears elsewhere; inspect whether it is a real shared policy before adding another local branch.",
             }
         )
     return findings
@@ -14793,6 +14797,7 @@ def _reuse_pressure_surface_findings(*, target_root: Path, changed_path: str, pa
         {
             "state": "similar_pattern_candidate",
             "changed_path": changed_path,
+            "evidence_confidence": "low",
             "candidate_paths": matches,
             "why": f"Other surfaces share the filename {path.name!r}.",
         }
@@ -14827,6 +14832,7 @@ def _reuse_pressure_inventory_findings(*, target_root: Path, changed_path: str, 
             "state": "existing_helper_candidate",
             "changed_path": changed_path,
             "kind": "contract_or_inventory_candidate",
+            "evidence_confidence": "medium",
             "candidate_paths": matches[:5],
             "why": "Generated command, primitive, schema, or contract inventories mention related names; check ownership before adding a parallel surface.",
         }
@@ -15006,7 +15012,9 @@ def _compact_reuse_pressure_payload(payload: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(finding, dict):
             continue
         compact_finding = {
-            key: finding[key] for key in ("state", "changed_path", "kind", "symbol", "pattern", "matched_tokens", "why") if key in finding
+            key: finding[key]
+            for key in ("state", "changed_path", "kind", "symbol", "pattern", "matched_tokens", "evidence_confidence", "why")
+            if key in finding
         }
         candidate_paths = finding.get("candidate_paths")
         if isinstance(candidate_paths, list):
@@ -15181,9 +15189,9 @@ def _reuse_pressure_state(findings: list[dict[str, Any]]) -> str:
 def _reuse_pressure_summary(*, state: str, finding_count: int, weak_hint_count: int = 0) -> str:
     if state == "none_found":
         if weak_hint_count:
-            return f"No actionable reuse pressure found; {weak_hint_count} weak sibling hint(s) available for optional context."
-        return "No cheap reuse or abstraction pressure found for the changed paths."
-    return f"{finding_count} reuse-pressure finding(s) surfaced; inspect before adding another local implementation."
+            return f"No actionable reuse evidence found; {weak_hint_count} weak sibling hint(s) available for optional context."
+        return "No cheap reuse evidence found for the changed paths."
+    return f"{finding_count} reuse evidence finding(s) surfaced; inspect before adding another local implementation."
 
 
 def _change_impact_owner_guess(*, path: str, ownership_answer: dict[str, Any], authority_marker: dict[str, Any]) -> str:
@@ -15390,17 +15398,15 @@ def _task_contract_payload(
 ) -> dict[str, Any]:
     task_present = bool(task_intent.get("task_text_available"))
     acceptance_items = acceptance.get("items", []) if isinstance(acceptance.get("items"), list) else []
-    capability = execution_posture.get("capability_posture", {}) if isinstance(execution_posture, dict) else {}
-    runtime_resolution = execution_posture.get("runtime_resolution", {}) if isinstance(execution_posture, dict) else {}
     delegation_decision = execution_posture.get("delegation_decision", {}) if isinstance(execution_posture, dict) else {}
     acceptance_guidance = proof.get("acceptance_guidance", {}) if isinstance(proof, dict) else {}
     intent_proof = proof.get("intent_proof", {}) if isinstance(proof, dict) else {}
-    work_shape_facts = planning_safety_gate.get("work_shape_facts", {}) if isinstance(planning_safety_gate, dict) else {}
+    work_shape_guidance = planning_safety_gate.get("work_shape_guidance", {}) if isinstance(planning_safety_gate, dict) else {}
 
     stop_conditions: list[str] = []
     for source in (
         handoff_requirements.get("stop_when") if isinstance(handoff_requirements, dict) else [],
-        work_shape_facts.get("stop_conditions") if isinstance(work_shape_facts, dict) else [],
+        work_shape_guidance.get("stop_conditions") if isinstance(work_shape_guidance, dict) else [],
         proof.get("escalate_when") if isinstance(proof, dict) else [],
     ):
         if isinstance(source, list):
@@ -15460,16 +15466,30 @@ def _task_contract_payload(
         "autonomy_and_escalation": {
             "delegation_decision": delegation_decision.get("decision"),
             "delegation_mode": delegation_decision.get("mode"),
-            "work_shape": capability.get("work_shape"),
-            "proof_burden": capability.get("proof_burden"),
-            "runtime_recommendation": runtime_resolution.get("recommendation") if isinstance(runtime_resolution, dict) else None,
+            "work_shape_guidance": {
+                key: work_shape_guidance.get(key)
+                for key in (
+                    "hard_blockers",
+                    "scope_factors",
+                    "proof_factors",
+                    "direct_work_is_reasonable_when",
+                    "planning_may_help_when",
+                    "agent_decision_required",
+                    "judgment_boundary",
+                )
+                if key in work_shape_guidance
+            },
+            "delegation_guidance": {
+                "mode": delegation_decision.get("mode"),
+                "decision": delegation_decision.get("decision"),
+                "rule": "Delegation posture is a control/guidance surface; the agent owns whether delegation fits the current engineering task unless a hard blocker applies.",
+            },
             "planning_safety": planning_safety_gate.get("status") if isinstance(planning_safety_gate, dict) else None,
             "intent_acknowledgement": intent_acknowledgement.get("decision"),
             "ask_human_when": intent_acknowledgement.get("ask_human_when"),
             "source_fields": [
                 "execution_posture.delegation_decision",
-                "execution_posture.capability_posture",
-                "execution_posture.runtime_resolution",
+                "planning_safety_gate.work_shape_guidance",
                 "planning_safety_gate.status",
                 "intent_acknowledgement",
             ],
@@ -15502,7 +15522,7 @@ def _task_contract_payload(
             "items": stop_conditions,
             "source_fields": [
                 "handoff_requirements.stop_when",
-                "planning_safety_gate.work_shape_facts.stop_conditions",
+                "planning_safety_gate.work_shape_guidance.stop_conditions",
                 "proof.escalate_when",
             ],
             "missing_fields": [] if stop_conditions else ["handoff_requirements.stop_when"],
@@ -15766,8 +15786,6 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     proof_commands = payload.get("required_validation_commands", [])
     primary_command = proof_commands[0] if isinstance(proof_commands, list) and proof_commands else None
     execution_posture = payload.get("execution_posture", {})
-    capability = execution_posture.get("capability_posture", {}) if isinstance(execution_posture, dict) else {}
-    runtime_resolution = execution_posture.get("runtime_resolution", {}) if isinstance(execution_posture, dict) else {}
     intent_acknowledgement = payload.get("intent_acknowledgement", {})
     reuse_pressure = (
         _reuse_pressure_payload(
@@ -15864,11 +15882,12 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "objective_drift": _tiny_objective_drift(payload.get("objective_drift", {})),
             "reuse_pressure": context_reuse_pressure,
             "durable_intent_promotion": _tiny_task_intent_promotion_guidance(payload.get("durable_intent_promotion", {})),
-            "routing": {
-                "work_shape": capability.get("work_shape"),
-                "proof_burden": capability.get("proof_burden"),
-                "delegation_recommendation": runtime_resolution.get("recommendation"),
+            "guidance": {
+                "work_shape_guidance": _tiny_work_shape_guidance(planning_safety_gate.get("work_shape_guidance"))
+                if isinstance(planning_safety_gate, dict)
+                else None,
                 "planning_safety": planning_safety_gate.get("status") if isinstance(planning_safety_gate, dict) else None,
+                "rule": "AW exposes facts, blockers, and guidelines; the agent owns work-shape and proof proportionality judgment.",
             },
             "delegation_decision": _compact_start_delegation_decision(execution_posture.get("delegation_decision", {})),
         },
@@ -15891,7 +15910,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "verification",
                 "routine_work_context",
                 "context.delegation_decision",
-                "context.routing",
+                "context.guidance",
             ],
         },
     }
@@ -15911,6 +15930,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         compact_gate = _selector_first_planning_safety_gate(planning_safety_gate)
         compact_gate.pop("planning_revision", None)
         compact_gate.pop("active_plan_reliance", None)
+        compact_gate.pop("work_shape_guidance", None)
         projected["context"]["planning_safety_gate"] = compact_gate
     if isinstance(intent_acknowledgement, dict) and intent_acknowledgement.get("decision") == "proceed-with-stated-assumption":
         projected["context"]["intent_acknowledgement"] = {
@@ -16009,6 +16029,37 @@ def _tiny_objective_drift(value: Any) -> dict[str, Any]:
         "removed_or_retired_outcomes": value.get("removed_or_retired_outcomes", []),
         "missing_from_changed_surface": value.get("missing_from_changed_surface", []),
         "recommended_next_action": value.get("recommended_next_action", ""),
+    }
+
+
+def _tiny_work_shape_guidance(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"status": "unavailable"}
+    scope = value.get("scope_factors", {}) if isinstance(value.get("scope_factors"), dict) else {}
+    return {
+        "hard_blockers": value.get("hard_blockers", []),
+        "scope_factors": {
+            key: scope.get(key)
+            for key in (
+                "dirty_shape",
+                "changed_roots",
+                "surface_root_count",
+                "scope_growth_detected",
+                "scope_growth_reasons",
+                "active_planning_present",
+                "issue_refs",
+            )
+            if key in scope
+        },
+        "proof_factors": value.get("proof_factors", []),
+        "direct_work_is_reasonable_when": value.get("direct_work_is_reasonable_when", [])[:2]
+        if isinstance(value.get("direct_work_is_reasonable_when"), list)
+        else [],
+        "planning_may_help_when": value.get("planning_may_help_when", [])[:2]
+        if isinstance(value.get("planning_may_help_when"), list)
+        else [],
+        "agent_decision_required": bool(value.get("agent_decision_required")),
+        "rule": value.get("rule", "AW exposes facts and guidelines; the agent owns work-shape judgment."),
     }
 
 
@@ -16112,7 +16163,7 @@ def _allow_issue_scoped_planning_state_reconciliation(path_classification: dict[
     }
 
 
-def _work_shape_facts_payload(
+def _work_shape_guidance_payload(
     *,
     path_classification: dict[str, Any],
     issue_refs: list[str],
@@ -16128,16 +16179,25 @@ def _work_shape_facts_payload(
     hard_blockers: list[str] = []
     if not workflow_sufficient:
         hard_blockers.append(decision)
-    suggested_shape = work_shape or "unknown"
     implementation_paths = path_classification.get("implementation_paths", [])
-    if not hard_blockers:
-        if active_planning_present:
-            suggested_shape = "bounded"
-        elif implementation_paths and not path_classification.get("scope_growth_detected"):
-            suggested_shape = "direct"
-        elif path_classification.get("dirty_shape") == "planning-only":
-            suggested_shape = "direct"
-    confidence = "high" if hard_blockers else "medium"
+    direct_reasons = []
+    planning_reasons = []
+    if implementation_paths and not path_classification.get("scope_growth_detected"):
+        direct_reasons.append("changed implementation paths are within a narrow top-level surface")
+    if path_classification.get("dirty_shape") == "planning-only":
+        direct_reasons.append("only Planning surfaces are named; validate Planning state before treating this as implementation")
+    if path_classification.get("scope_growth_detected"):
+        planning_reasons.extend(str(reason) for reason in path_classification.get("scope_growth_reasons", []) if str(reason))
+    if active_planning_present:
+        planning_reasons.append("active Planning state is present and should be reviewed before relying on it")
+    if issue_refs:
+        planning_reasons.append("task text references external issue(s); preserve intent/proof mapping explicitly")
+    proof_factors = [
+        "selected proof commands",
+        "changed path categories",
+        "active planning state" if active_planning_present else "",
+        "scope growth reasons" if path_classification.get("scope_growth_detected") else "",
+    ]
     return {
         "hard_blockers": hard_blockers,
         "scope_factors": {
@@ -16149,10 +16209,17 @@ def _work_shape_facts_payload(
             "ancillary_paths": path_classification.get("ancillary_paths", []),
             "active_planning_present": active_planning_present,
             "issue_refs": issue_refs,
-            "proof_burden": proof_burden or "unknown",
         },
-        "suggested_shape": suggested_shape,
-        "confidence": confidence,
+        "proof_factors": [item for item in proof_factors if item],
+        "structural_signals": {
+            "work_shape_hint": work_shape or "unknown",
+            "proof_factor_hint": proof_burden or "unknown",
+            "authority": "structural path/task heuristic only",
+        },
+        "direct_work_is_reasonable_when": direct_reasons
+        or ["no AW-owned hard blocker is present and the agent judges intent, scope, and proof to be bounded"],
+        "planning_may_help_when": planning_reasons
+        or ["changed paths, proof surfaces, or user intent widen beyond the agent's current bounded understanding"],
         "agent_decision_required": workflow_sufficient,
         "judgment_boundary": {
             "aw_owns": ["hard blockers", "changed-path facts", "active planning state", "proof candidates"],
@@ -16172,8 +16239,31 @@ def _work_shape_facts_payload(
         "status": status,
         "decision": decision,
         "required_next_action": required_next_action,
-        "rule": "AW reports hard blockers and work-shape facts; the agent owns soft semantic work-shape judgment when no hard blocker applies.",
+        "rule": "AW reports hard blockers, facts, and decision guidelines; the agent owns soft semantic work-shape judgment when no hard blocker applies.",
     }
+
+
+def _capability_structural_hints(capability: Any) -> tuple[str, str]:
+    if not isinstance(capability, dict):
+        return "", ""
+    posture = capability.get("posture", {}) if isinstance(capability.get("posture"), dict) else {}
+    work_shape_guidance = capability.get("work_shape_guidance", {}) if isinstance(capability.get("work_shape_guidance"), dict) else {}
+    proof_factors = capability.get("proof_factors", {}) if isinstance(capability.get("proof_factors"), dict) else {}
+    work_shape = (
+        work_shape_guidance.get("structural_hint")
+        or posture.get("structural work-shape hint")
+        or posture.get("work shape")
+        or capability.get("work_shape")
+        or ""
+    )
+    proof_burden = (
+        proof_factors.get("structural_hint")
+        or posture.get("proof factor hint")
+        or posture.get("proof burden")
+        or capability.get("proof_burden")
+        or ""
+    )
+    return str(work_shape), str(proof_burden)
 
 
 def _planning_revision_payload(*, target_root: Path) -> dict[str, Any]:
@@ -16308,9 +16398,7 @@ def _active_plan_delegation_requirement(
     status = str(delegation.get("status", "")).strip().lower()
     normalized_task = " ".join((task_text or "").lower().split())
     capability = execution_posture.get("capability_posture", {}) if isinstance(execution_posture, dict) else {}
-    posture = capability.get("posture", {}) if isinstance(capability.get("posture"), dict) else {}
-    work_shape = str(capability.get("work_shape") or posture.get("work shape") or "")
-    proof_burden = str(capability.get("proof_burden") or posture.get("proof burden") or "")
+    work_shape, proof_burden = _capability_structural_hints(capability)
     trigger_terms = ("decomposed", "decomposition", "delegate", "delegation", "mechanical", "lane", "epic", "high-assurance")
     active_plan_continuation = _task_appears_to_continue_active_plan(
         active_surface=active_surface,
@@ -16500,9 +16588,7 @@ def _planning_safety_gate_payload(
     active_summary = _fast_planning_active_summary(target_root=target_root)
     active_planning_present = bool(active_summary.get("todo_active_count") or active_summary.get("active_execplan"))
     capability = execution_posture.get("capability_posture", {}) if isinstance(execution_posture, dict) else {}
-    posture = capability.get("posture", {}) if isinstance(capability.get("posture"), dict) else {}
-    work_shape = str(capability.get("work_shape") or posture.get("work shape") or "")
-    proof_burden = str(capability.get("proof_burden") or posture.get("proof burden") or "")
+    work_shape, proof_burden = _capability_structural_hints(capability)
     decomposition_delegation = execution_posture.get("decomposition_delegation", {}) if isinstance(execution_posture, dict) else {}
     decomposition_status = str(decomposition_delegation.get("status", "")) if isinstance(decomposition_delegation, dict) else ""
     path_classification = _planning_safety_path_classification(changed_paths)
@@ -16568,7 +16654,7 @@ def _planning_safety_gate_payload(
         status = "attention"
         decision = "agent-work-shape-decision-required"
         reason = (
-            "Changed paths cross implementation boundaries; AW reports the scope facts and proof burden, and the agent owns "
+            "Changed paths cross implementation boundaries; AW reports the scope facts and proof factors, and the agent owns "
             "whether to continue direct or create planning."
         )
         required_next_action = "decide-work-shape-from-scope-facts"
@@ -16595,18 +16681,16 @@ def _planning_safety_gate_payload(
         "planning_revision": planning_revision,
         "active_plan_reliance": active_plan_reliance,
         "active_state_summary": active_summary,
-        "work_shape": work_shape or "unknown",
-        "proof_burden": proof_burden or "unknown",
         "issue_refs": issue_refs,
         "repair_route": {
             "status": "retired",
             "fit_criteria": [
-                "use work_shape_facts instead of prompt phrase exceptions",
+                "use work_shape_guidance instead of prompt phrase exceptions",
                 "agent decides whether a repair is small enough when hard_blockers is empty",
             ],
-            "rule": "Narrow repair is no longer a prompt-text gate; work_shape_facts reports hard blockers, factors, proof, and stop conditions.",
+            "rule": "Narrow repair is no longer a prompt-text gate; work-shape guidance reports hard blockers, factors, proof, and stop conditions.",
         },
-        "work_shape_facts": _work_shape_facts_payload(
+        "work_shape_guidance": _work_shape_guidance_payload(
             path_classification=path_classification,
             issue_refs=issue_refs,
             work_shape=work_shape or "unknown",
@@ -16695,21 +16779,30 @@ def _capability_posture_for_implementation(*, changed_paths: list[str], task_tex
             inspection_evidence.append("active planning state")
         enriched_posture = {
             **posture,
-            "work shape": work_shape,
-            "proof burden": proof_burden,
+            "structural work-shape hint": work_shape,
+            "proof factor hint": proof_burden,
             "risk flags": risk_flags,
             "inspection evidence required": inspection_evidence,
-            "classification authority": "structural task/path signals",
+            "guidance authority": "structural task/path signals",
             "self-assessment authority": "advisory-only",
         }
         return {
             "status": "inferred",
             "posture": enriched_posture,
-            "work_shape": work_shape,
-            "proof_burden": proof_burden,
+            "work_shape_guidance": {
+                "structural_hint": work_shape,
+                "authority": "path/task heuristic only",
+                "agent_decision_required": True,
+            },
+            "proof_factors": {
+                "structural_hint": proof_burden,
+                "risk_flags": risk_flags,
+                "inspection_evidence_required": inspection_evidence,
+                "authority": "path/task heuristic only",
+            },
             "risk_flags": risk_flags,
             "inspection_evidence_required": inspection_evidence,
-            "classification_authority": "structural task/path signals",
+            "guidance_authority": "structural task/path signals",
             "self_assessment_authority": "advisory-only",
             "reason": reason,
         }
@@ -16825,9 +16918,7 @@ def _delegation_next_action_decision(
     target_location = str(selected_target.get("location", "")) if isinstance(selected_target, dict) else ""
     target_strength = str(selected_target.get("strength", "")) if isinstance(selected_target, dict) else ""
     capability_status = str(capability.get("status", "unknown")) if isinstance(capability, dict) else "unknown"
-    posture = capability.get("posture", {}) if isinstance(capability, dict) else {}
-    work_shape = capability.get("work_shape") or (posture.get("work shape") if isinstance(posture, dict) else None)
-    proof_burden = capability.get("proof_burden") or (posture.get("proof burden") if isinstance(posture, dict) else None)
+    work_shape, proof_burden = _capability_structural_hints(capability)
     reasons = list(runtime_resolution.get("reasons", [])) if isinstance(runtime_resolution.get("reasons", []), list) else []
     if not reasons:
         reasons = [str(runtime_resolution.get("guidance", "Local posture did not produce a specific reason."))]
@@ -17048,9 +17139,9 @@ def _delegation_next_action_decision(
     if decision != "delegate-bounded-slice":
         auto_skip_reasons.append(f"delegation decision is {decision}, not delegate-bounded-slice")
     if proof_burden == "high":
-        auto_skip_reasons.append("proof burden is high")
+        auto_skip_reasons.append("proof factor hint is high")
     if work_shape not in {"direct", "bounded"}:
-        auto_skip_reasons.append(f"work shape is {work_shape or 'unknown'}")
+        auto_skip_reasons.append(f"work-shape hint is {work_shape or 'unknown'}")
     auto_audit_applies = bool(
         configured_auto_targets
         and decision not in {"delegate-bounded-slice", "suggest-delegation"}
@@ -17076,8 +17167,8 @@ def _delegation_next_action_decision(
         else [],
         "reporting_rule": "When auto-capable configured targets are not used, report the skip reason so the orchestrator can distinguish human-control gating, proof risk, and ordinary stay-local execution.",
     }
-    quality_risk = "high" if proof_burden == "high" else "medium" if proof_burden == "non-obvious" else "low"
-    token_savings_expected = (
+    quality_tier = "high" if proof_burden == "high" else "medium" if proof_burden == "non-obvious" else "low"
+    token_savings_signal = (
         "likely"
         if decision in {"suggest-downroute", "delegate-bounded-slice"}
         else "possible"
@@ -17091,18 +17182,27 @@ def _delegation_next_action_decision(
         "clarification_mode": clarification_mode,
         "decision": decision,
         "target": target_name if decision != "stay-local" else None,
-        "work_shape": work_shape,
-        "proof_burden": proof_burden,
-        "quality_risk": quality_risk,
-        "token_savings_expected": token_savings_expected,
+        "quality_factors": {
+            "tier": quality_tier,
+            "proof_factor_hint": proof_burden or "unknown",
+            "work_shape_hint": work_shape or "unknown",
+            "risk_flags": capability.get("risk_flags", []) if isinstance(capability, dict) else [],
+            "agent_judgment_required": True,
+            "rule": "AW exposes structural factors for delegation posture; the agent owns whether the factors justify delegation.",
+        },
+        "token_savings_guidance": {
+            "signal": token_savings_signal,
+            "authority": "configured-target and route fit only",
+            "agent_judgment_required": True,
+        },
         "required_next_action": required_next_action,
-        "effort_recommendation": _effort_recommendation_payload(
+        "effort_guidance": _effort_guidance_payload(
             work_shape=str(work_shape or "unknown"),
             proof_burden=str(proof_burden or "unknown"),
-            quality_risk=quality_risk,
+            quality_tier=quality_tier,
             decision=decision,
             required_next_action=required_next_action,
-            token_savings_expected=token_savings_expected,
+            token_savings_signal=token_savings_signal,
             target_name=target_name if decision != "stay-local" else None,
             target_strength=target_strength,
             manual_external_relay=manual_external_relay,
@@ -17123,26 +17223,30 @@ def _delegation_next_action_decision(
     }
 
 
-def _effort_recommendation_payload(
+def _effort_guidance_payload(
     *,
     work_shape: str,
     proof_burden: str,
-    quality_risk: str,
+    quality_tier: str,
     decision: str,
     required_next_action: str,
-    token_savings_expected: str,
+    token_savings_signal: str,
     target_name: str | None,
     target_strength: str,
     manual_external_relay: dict[str, Any],
 ) -> dict[str, Any]:
-    """Recommend cost/effort posture from already-computed routing signals."""
+    """Expose cost/effort guidance from already-computed routing signals."""
     orchestrator = "medium"
     planner = "none"
     implementer = "medium"
     validator = "medium"
     cost_posture = "balanced"
     escalation_trigger = "escalate only if inspection reveals broader uncertainty, high risk, or proof gaps"
-    rationale: list[str] = [f"work_shape={work_shape}", f"proof_burden={proof_burden}", f"quality_risk={quality_risk}"]
+    rationale: list[str] = [
+        f"work_shape_hint={work_shape}",
+        f"proof_factor_hint={proof_burden}",
+        f"quality_factor_tier={quality_tier}",
+    ]
     if work_shape == "direct" and proof_burden == "obvious":
         implementer = "low"
         validator = "low"
@@ -17152,7 +17256,7 @@ def _effort_recommendation_payload(
         implementer = "medium"
         validator = "medium" if proof_burden == "non-obvious" else "low"
         cost_posture = "bounded-medium"
-    elif work_shape in {"lane", "epic"} or proof_burden == "high" or quality_risk == "high":
+    elif work_shape in {"lane", "epic"} or proof_burden == "high" or quality_tier == "high":
         planner = "high" if work_shape != "epic" else "xhigh"
         implementer = "medium-after-plan" if work_shape in {"lane", "epic"} else "medium"
         validator = "high"
@@ -17161,7 +17265,7 @@ def _effort_recommendation_payload(
     if decision in {"suggest-downroute", "delegate-bounded-slice"} and target_name:
         implementer = f"{target_strength or 'configured'} delegate"
         cost_posture = "save-tokens-where-safe"
-        rationale.append(f"token_savings_expected={token_savings_expected}")
+        rationale.append(f"token_savings_signal={token_savings_signal}")
     elif decision in {"suggest-escalation", "manual-handoff"}:
         planner = "high"
         cost_posture = "buy-quality-before-coding"
@@ -17175,9 +17279,9 @@ def _effort_recommendation_payload(
         escalation_trigger = "prepare the manual relay prompt early, before code-local work consumes the question"
         rationale.append("manual_external_relay=appropriate")
     return {
-        "kind": "agentic-workspace/effort-recommendation/v1",
+        "kind": "agentic-workspace/effort-guidance/v1",
         "status": "evaluated",
-        "principle": "Start with cheap routing, then spend higher reasoning effort only where it improves quality or safely saves tokens.",
+        "principle": "Start with cheap routing, then spend higher reasoning effort only where the agent judges it improves quality or safely saves tokens.",
         "orchestrator": orchestrator,
         "planner": planner,
         "implementer": implementer,
@@ -17185,7 +17289,8 @@ def _effort_recommendation_payload(
         "cost_posture": cost_posture,
         "escalation_trigger": escalation_trigger,
         "target": target_name,
-        "reason": "; ".join(rationale),
+        "factor_summary": "; ".join(rationale),
+        "agent_decision_required": True,
     }
 
 
@@ -17289,8 +17394,8 @@ def _manual_external_relay_payload(
             ],
             "return_to": "Paste the answer back into the current coding-agent session; the coding agent remains responsible for repo implementation and proof.",
             "source_reason": reason,
-            "proof_burden": proof_burden,
-            "work_shape": work_shape,
+            "proof_factors": {"structural_hint": proof_burden},
+            "work_shape_guidance": {"structural_hint": work_shape, "agent_decision_required": True},
         },
     }
 
@@ -25099,7 +25204,10 @@ def _capability_resolution_for_profile(*, profile: DelegationTargetProfile, capa
         elif profile_reasoning_rank and required_rank and (profile_reasoning_rank > required_rank):
             score += 1
             reasons.append("target reasoning profile exceeds the recommended strength")
-    if profile.context_capacity == "small" and str(capability_posture.get("work shape", "")).strip() in ("lane", "epic"):
+    if profile.context_capacity == "small" and str(capability_posture.get("structural work-shape hint", "")).strip() in (
+        "lane",
+        "epic",
+    ):
         capability_mismatch = True
         score -= 2
         reasons.append("target context capacity is too small for lane or epic shaped work")
@@ -25515,16 +25623,19 @@ def _ready_capability_handoff_packet(
 ) -> dict[str, Any]:
     templates = _capability_handoff_packet_templates()
     packet_template = templates["packet_types"].get(packet_type, {})
+    posture_detail = posture.get("posture", {}) if isinstance(posture.get("posture"), dict) else {}
+    proof_factors = posture.get("proof_factors", {}) if isinstance(posture.get("proof_factors"), dict) else {}
+    work_shape_guidance = posture.get("work_shape_guidance", {}) if isinstance(posture.get("work_shape_guidance"), dict) else {}
     return {
         "kind": "agentic-workspace/capability-handoff-packet/v1",
         "packet_type": packet_type,
         "mode": mode,
         "target": target,
         "template": packet_template,
-        "task_shape": posture.get("work_shape") or posture.get("posture", {}).get("work shape"),
+        "task_shape": work_shape_guidance.get("structural_hint") or posture_detail.get("structural work-shape hint"),
         "route_reason": runtime_resolution.get("guidance"),
         "inspected_context": posture.get("inspection_evidence_required", []),
-        "proof_expectations": posture.get("proof_burden"),
+        "proof_expectations": proof_factors.get("structural_hint") or posture_detail.get("proof factor hint"),
         "allowed_write_scope": "Use the active plan or implementer-context path boundaries; do not infer broader ownership.",
         "stop_conditions": [
             "capability mismatch remains unresolved",
