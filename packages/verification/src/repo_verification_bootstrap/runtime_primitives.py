@@ -253,7 +253,8 @@ def _load_manifest(*, target_root: Path) -> dict[str, Any]:
             raise VerificationUsageError(f"{surface} id must be non-empty.")
         protocols.append(protocol)
 
-    protocol_ids = {str(protocol["id"]) for protocol in protocols}
+    protocols_by_id = {str(protocol["id"]): protocol for protocol in protocols}
+    protocol_ids = set(protocols_by_id)
     evidence_bundles: list[dict[str, Any]] = []
     raw_bundles = _table(payload, "evidence_bundles", surface=VERIFICATION_MANIFEST_PATH.as_posix())
     for bundle_id, raw_bundle in sorted(raw_bundles.items()):
@@ -294,6 +295,27 @@ def _load_manifest(*, target_root: Path) -> dict[str, Any]:
         scenario_id = _optional_string(payload=raw_bundle, key="scenario_id", surface=surface)
         if scenario_id and scenario_id not in scenarios_by_id:
             raise VerificationUsageError(f"{surface} references unknown scenario_id {scenario_id}.")
+        transcript_refs = _string_list(payload=raw_bundle, key="transcript_refs", surface=surface)
+        transcript_summaries = _string_list(payload=raw_bundle, key="transcript_summaries", surface=surface)
+        retention_until = _optional_string(payload=raw_bundle, key="retention_until", surface=surface)
+        redaction = _optional_string(payload=raw_bundle, key="redaction", surface=surface)
+        protocol_retention = _optional_string(
+            payload=protocols_by_id[protocol_id],
+            key="retention",
+            surface=f"{VERIFICATION_MANIFEST_PATH.as_posix()} protocols.{protocol_id}",
+        )
+        if transcript_refs:
+            missing_bounds: list[str] = []
+            if not transcript_summaries:
+                missing_bounds.append("transcript_summaries")
+            if not (retention_until or protocol_retention):
+                missing_bounds.append("retention_until or protocol retention")
+            if not redaction:
+                missing_bounds.append("redaction")
+            if missing_bounds:
+                raise VerificationUsageError(
+                    f"{surface} transcript_refs requires bounded transcript metadata: {', '.join(missing_bounds)}."
+                )
         evidence_bundles.append(
             {
                 "id": str(bundle_id).strip(),
@@ -307,14 +329,14 @@ def _load_manifest(*, target_root: Path) -> dict[str, Any]:
                 "executed_at": _optional_string(payload=raw_bundle, key="executed_at", surface=surface),
                 "outcome": _optional_string(payload=raw_bundle, key="outcome", surface=surface) or "recorded",
                 "evidence_items": _string_list(payload=raw_bundle, key="evidence_items", surface=surface),
-                "transcript_refs": _string_list(payload=raw_bundle, key="transcript_refs", surface=surface),
-                "transcript_summaries": _string_list(payload=raw_bundle, key="transcript_summaries", surface=surface),
+                "transcript_refs": transcript_refs,
+                "transcript_summaries": transcript_summaries,
                 "residual_risk": _optional_string(payload=raw_bundle, key="residual_risk", surface=surface),
                 "claim_boundaries": _string_list(payload=raw_bundle, key="claim_boundaries", surface=surface),
                 "reviewer": _optional_string(payload=raw_bundle, key="reviewer", surface=surface),
-                "retention_until": _optional_string(payload=raw_bundle, key="retention_until", surface=surface),
+                "retention_until": retention_until,
                 "stale_when": _string_list(payload=raw_bundle, key="stale_when", surface=surface),
-                "redaction": _optional_string(payload=raw_bundle, key="redaction", surface=surface),
+                "redaction": redaction,
                 "source_tool": _optional_string(payload=raw_bundle, key="source_tool", surface=surface),
                 "source_model": _optional_string(payload=raw_bundle, key="source_model", surface=surface),
                 "post_score_reference": _optional_string(payload=raw_bundle, key="post_score_reference", surface=surface),
@@ -559,21 +581,40 @@ def verification_report_payload(
             }
         )
         bundles = evidence_by_protocol.get(str(protocol["id"]), [])
-        bundle_states = [_bundle_state(bundle, changed_paths=normalized_paths) for bundle in bundles]
+        bundle_state_by_id = {str(bundle.get("id")): _bundle_state(bundle, changed_paths=normalized_paths) for bundle in bundles}
+        bundle_states = list(bundle_state_by_id.values())
         evidence_present = _dedupe(
             [
                 str(item).strip()
                 for bundle in bundles
-                if _bundle_state(bundle, changed_paths=normalized_paths)["state"] in {"present", "stale"}
+                if bundle_state_by_id.get(str(bundle.get("id")), {}).get("state") == "present"
+                for item in _list_payload(bundle.get("evidence_items"))
+                if str(item).strip()
+            ]
+        )
+        stale_evidence = _dedupe(
+            [
+                str(item).strip()
+                for bundle in bundles
+                if bundle_state_by_id.get(str(bundle.get("id")), {}).get("state") == "stale"
                 for item in _list_payload(bundle.get("evidence_items"))
                 if str(item).strip()
             ]
         )
         expected_evidence = [str(item).strip() for item in _list_payload(protocol.get("expected_evidence")) if str(item).strip()]
         missing_evidence = [item for item in expected_evidence if item not in evidence_present]
+        stale_expected_evidence = [item for item in missing_evidence if item in stale_evidence]
         if matched:
             active_protocols.append({**protocol, "applies_because": applies_because, "evidence_bundle_ids": [b["id"] for b in bundles]})
-            state = "satisfied" if expected_evidence and not missing_evidence else "missing-evidence" if missing_evidence else "matched"
+            state = (
+                "satisfied"
+                if expected_evidence and not missing_evidence
+                else "stale-evidence"
+                if stale_expected_evidence
+                else "missing-evidence"
+                if missing_evidence
+                else "matched"
+            )
             evidence_status.append(
                 {
                     "protocol_id": protocol["id"],
@@ -581,6 +622,8 @@ def verification_report_payload(
                     "applies_because": applies_because,
                     "expected_evidence": expected_evidence,
                     "evidence_present": evidence_present,
+                    "stale_evidence": stale_evidence,
+                    "stale_expected_evidence": stale_expected_evidence,
                     "missing_evidence": missing_evidence,
                     "evidence_bundle_ids": [str(bundle.get("id")) for bundle in bundles],
                     "bundle_states": bundle_states,
@@ -612,7 +655,7 @@ def verification_report_payload(
     return {
         "kind": "agentic-workspace/verification/v1",
         "status": "attention"
-        if any(item.get("state") == "missing-evidence" for item in evidence_status)
+        if any(item.get("state") in {"missing-evidence", "stale-evidence"} for item in evidence_status)
         else "matched"
         if active_protocols
         else "configured"

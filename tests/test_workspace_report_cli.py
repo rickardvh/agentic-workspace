@@ -254,6 +254,7 @@ source_tool = "model-cli-harness"
 source_model = "claude-sonnet"
 post_score_reference = "hidden oracle compared only after primary score"
 retention_until = "2000-01-01"
+redaction = "summary-only; raw transcript is local scratch evidence"
 """,
     )
 
@@ -2590,6 +2591,143 @@ retention_until = "2099-01-01"
     assurance_status = closeout["assurance_requirements"]["evidence_status"][0]
     assert assurance_status["verification_protocols"][0]["protocol_id"] == "privacy_review"
     assert assurance_status["verification_protocols"][0]["evidence_bundle_ids"] == ["privacy_review_2026"]
+
+
+def test_report_closeout_trust_blocks_known_gap_claims_from_verification(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        """
+schema_version = 1
+
+[assurance.requirements.privacy_data]
+level = "high"
+applies_to_planning_refs = ["privacy_data"]
+required_evidence = ["manual_privacy_review"]
+force = "recommended"
+blocking_claims = []
+review_owner = "privacy-review"
+""",
+    )
+    _write(
+        target / ".agentic-workspace/verification/manifest.toml",
+        """
+schema_version = "agentic-workspace/verification-manifest/v1"
+
+[protocols.privacy_review]
+title = "Privacy review"
+purpose = "Bounded evidence protocol for privacy assurance."
+assurance_requirement_refs = ["privacy_data"]
+planning_refs = ["privacy_data"]
+expected_evidence = ["manual_privacy_review"]
+review_owner = "privacy-review"
+
+[evidence_bundles.privacy_review_2026]
+protocol_id = "privacy_review"
+outcome = "passed"
+evidence_items = ["manual_privacy_review"]
+residual_risk = "Manual review evidence only."
+claim_boundaries = ["work"]
+reviewer = "privacy-review"
+retention_until = "2099-01-01"
+
+[known_gaps.privacy_parent_gap]
+protocol_id = "privacy_review"
+reason = "Parent lane needs a separate privacy owner signoff before closure."
+owner = "privacy-review"
+status = "open"
+blocked_claims = ["close-parent-lane"]
+residual_risk = "Work evidence is present, but parent closure still needs review."
+reopen_trigger = "privacy owner has not signed off"
+""",
+    )
+    plan = target / ".agentic-workspace" / "planning" / "execplans" / "verification-gap.plan.json"
+    _write_json(
+        plan,
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Verification Gap",
+            "active_milestone": {"id": "verification-gap", "status": "complete"},
+            "adaptive_assurance": {"level": "high", "requirement_refs": ["privacy_data"]},
+            "assurance_evidence": {"privacy_data": {"evidence_present": ["manual_privacy_review"]}},
+            "delegated_judgment": {
+                "requested outcome": "Record verification evidence while a parent-close known gap remains.",
+                "hard constraints": "Do not close parent lane before owner signoff.",
+                "agent may decide locally": "Exact compact wording.",
+                "escalate when": "Privacy owner signoff is unavailable.",
+            },
+            "immediate_next_action": ["Close work after proof; keep parent closure blocked by known gap."],
+            "completion_criteria": ["Proof and verification evidence support the work claim."],
+            "validation_commands": ["uv run pytest tests/test_direct.py"],
+            "intent_continuity": {
+                "larger intended outcome": "Record assurance-gated proof.",
+                "this slice completes the larger intended outcome": "yes",
+                "continuation surface": "none",
+            },
+            "required_continuation": {
+                "required follow-on for the larger intended outcome": "no",
+                "owner surface": "none",
+                "activation trigger": "none",
+            },
+            "execution_run": {
+                "run status": "complete",
+                "executor": "test",
+                "handoff source": "uv run agentic-workspace preflight --format json",
+                "what happened": "Proof passed and verification evidence bundle is present.",
+                "scope touched": "test",
+                "changed surfaces": "test",
+                "validations run": "uv run pytest tests/test_direct.py",
+                "result for continuation": "close",
+                "next step": "close",
+            },
+            "proof_report": {
+                "validation proof": "uv run pytest tests/test_direct.py passed",
+                "acceptance reconciliation": "requested verification evidence -> delivered bundle -> proof passed",
+                "proof achieved now": "yes",
+                "intent_proof": {
+                    "status": "sufficient_for_claim",
+                    "claim_boundary": "work",
+                    "intended_behavior": ["direct behavior"],
+                    "proof_dimensions": ["focused direct behavior", "verification evidence cited"],
+                    "unproven_after_tests": [],
+                },
+            },
+            "closure_check": {
+                "slice status": "complete",
+                "larger-intent status": "closed",
+                "closure decision": "archive-and-close",
+                "why this decision is honest": "The focused proof and verification evidence are present.",
+                "evidence carried forward": "report closeout_trust",
+                "reopen trigger": "privacy owner signoff missing",
+            },
+        },
+    )
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        "[todo]\n"
+        "active_items = [\n"
+        "  { id = 'verification-gap', title = 'Verification gap', surface = '.agentic-workspace/planning/execplans/verification-gap.plan.json' },\n"
+        "]\n"
+        "queued_items = []\n\n"
+        "[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
+
+    closeout = json.loads(capsys.readouterr().out)["answer"]
+    assurance_status = closeout["assurance_requirements"]["evidence_status"][0]
+    assert assurance_status["state"] == "review-required"
+    assert assurance_status["verification_known_gaps"][0]["id"] == "privacy_parent_gap"
+    options = {option["id"]: option for option in closeout["completion_options"]}
+    assert "verification_known_gap:privacy_parent_gap" not in options["claim-work-complete"].get("blocking_fields", [])
+    assert options["close-parent-lane"]["allowed"] is False
+    assert "verification_known_gap:privacy_parent_gap" in options["close-parent-lane"]["blocking_fields"]
+    assert options["request-review"]["allowed"] is True
+    assert options["stop-with-status"]["allowed"] is True
 
 
 def test_report_closeout_trust_waiver_clears_assurance_evidence_claim_gate(tmp_path: Path, capsys) -> None:

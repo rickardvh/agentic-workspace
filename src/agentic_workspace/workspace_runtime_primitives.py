@@ -1545,6 +1545,13 @@ def _assurance_requirements_with_verification(assurance_requirements: dict[str, 
     protocol_status = {
         str(item.get("protocol_id", "")): item for item in _list_payload(verification.get("evidence_status")) if isinstance(item, dict)
     }
+    known_gaps_by_protocol: dict[str, list[dict[str, Any]]] = {}
+    for gap in _list_payload(verification.get("active_known_gaps")):
+        if not isinstance(gap, dict):
+            continue
+        protocol_id = str(gap.get("protocol_id", "")).strip()
+        if protocol_id:
+            known_gaps_by_protocol.setdefault(protocol_id, []).append(gap)
     enriched_status: list[Any] = []
     for status in evidence_status:
         if not isinstance(status, dict):
@@ -1553,6 +1560,7 @@ def _assurance_requirements_with_verification(assurance_requirements: dict[str, 
         requirement_id = str(status.get("requirement_id", "")).strip()
         required_evidence = {str(item).strip() for item in _list_payload(status.get("required_evidence")) if str(item).strip()}
         matched_protocols: list[dict[str, Any]] = []
+        matched_known_gaps: list[dict[str, Any]] = []
         for protocol in protocols:
             protocol_requirement_refs = {str(item).strip() for item in _list_payload(protocol.get("assurance_requirement_refs"))}
             protocol_evidence = {str(item).strip() for item in _list_payload(protocol.get("expected_evidence"))}
@@ -1563,6 +1571,8 @@ def _assurance_requirements_with_verification(assurance_requirements: dict[str, 
                 or bool(required_evidence & protocol_evidence)
             ):
                 protocol_id = str(protocol.get("id", "")).strip()
+                protocol_known_gaps = known_gaps_by_protocol.get(protocol_id, [])
+                matched_known_gaps.extend(protocol_known_gaps)
                 matched_protocols.append(
                     {
                         "protocol_id": protocol_id,
@@ -1571,9 +1581,18 @@ def _assurance_requirements_with_verification(assurance_requirements: dict[str, 
                         "state": protocol_status.get(protocol_id, {}).get("state", "matched"),
                         "missing_evidence": protocol_status.get(protocol_id, {}).get("missing_evidence", []),
                         "evidence_bundle_ids": protocol_status.get(protocol_id, {}).get("evidence_bundle_ids", []),
+                        "known_gap_ids": [str(gap.get("id")) for gap in protocol_known_gaps if gap.get("id")],
                     }
                 )
         if matched_protocols:
+            verification_blocked_claims = _dedupe(
+                [
+                    str(claim).strip()
+                    for gap in matched_known_gaps
+                    for claim in _list_payload(gap.get("blocked_claims"))
+                    if str(claim).strip()
+                ]
+            )
             status = {
                 **status,
                 "verification_protocols": matched_protocols,
@@ -1586,6 +1605,25 @@ def _assurance_requirements_with_verification(assurance_requirements: dict[str, 
                     ]
                 ),
             }
+            if matched_known_gaps:
+                status = {
+                    **status,
+                    "verification_known_gaps": [
+                        {
+                            "id": gap.get("id"),
+                            "protocol_id": gap.get("protocol_id"),
+                            "reason": gap.get("reason"),
+                            "owner": gap.get("owner"),
+                            "blocked_claims": _list_payload(gap.get("blocked_claims")),
+                            "residual_risk": gap.get("residual_risk"),
+                            "reopen_trigger": gap.get("reopen_trigger"),
+                        }
+                        for gap in matched_known_gaps
+                    ],
+                    "verification_blocked_claims": verification_blocked_claims,
+                }
+                if status.get("state") not in {"waived", "dismissed"} and verification_blocked_claims:
+                    status = {**status, "state": "review-required"}
         enriched_status.append(status)
     return {
         **assurance_requirements,
@@ -9588,6 +9626,13 @@ def _assurance_claim_blockers(assurance_requirements: dict[str, Any] | None) -> 
     for status in evidence_status:
         if not isinstance(status, dict):
             continue
+        for gap in _list_payload(status.get("verification_known_gaps")):
+            if not isinstance(gap, dict):
+                continue
+            gap_id = str(gap.get("id", "")).strip() or "unknown"
+            for claim in [str(item).strip() for item in _list_payload(gap.get("blocked_claims")) if str(item).strip()]:
+                if claim in blockers:
+                    blockers[claim].append(f"verification_known_gap:{gap_id}")
         if status.get("state") not in {"missing-evidence", "review-required"}:
             continue
         force = str(status.get("force", "recommended"))
