@@ -455,6 +455,33 @@ force = "required-before-closeout"
     assert "routine_work_context" in payload["drill_down"]["available_selectors"]
 
 
+def test_start_keeps_routine_work_context_quiet_without_active_pressure(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(target),
+                "--task",
+                "Fix a spelling mistake",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    routine = payload["context"]["routine_work_context"]
+    assert routine["status"] == "present"
+    assert routine["categories"] == {}
+    assert "knowledge_authority_review" not in routine
+
+
 def test_preflight_active_only_includes_active_todo_without_execplan(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

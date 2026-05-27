@@ -427,6 +427,48 @@ def test_report_closeout_trust_routes_architecture_decision_candidate_to_discove
     assert candidate["route"]["command_target"]["target"] == "<repo>"
 
 
+def test_report_closeout_trust_surfaces_memory_promotion_pressure_in_knowledge_review(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
+) -> None:
+    from repo_memory_bootstrap import installer as memory_installer
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--preset", "memory"]) == 0
+    capsys.readouterr()
+
+    def _memory_report_with_promotion_pressure(*, target=None):
+        return {
+            "module": "memory",
+            "health": "attention-needed",
+            "findings": [],
+            "habitual_pull": {},
+            "promotion_pressure": {
+                "status": "attention",
+                "candidate_count": 1,
+                "sample": [
+                    {
+                        "path": ".agentic-workspace/memory/repo/domains/token-policy.md",
+                        "preferred_remediation": "validation",
+                        "promotion_target": "assurance.requirements.token_policy",
+                        "improvement_note": "Promote token policy into a reusable evidence gate.",
+                    }
+                ],
+            },
+        }
+
+    monkeypatch.setattr(memory_installer, "memory_report", _memory_report_with_promotion_pressure)
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    review = answer["knowledge_authority_review"]
+    assert review["status"] == "attention"
+    assert review["promotion_candidate_count"] == 1
+    assert review["next_actions"][0]["id"] == "route-memory-promotion-pressure"
+
+
 def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

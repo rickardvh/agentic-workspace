@@ -6023,6 +6023,7 @@ def _run_report_command(
         source_payload=payload,
         surface="report",
         cli_invoke=config.cli_invoke,
+        target_root=target_root,
         compact=False,
     )
     payload["operational_compression"] = _operational_compression_payload(
@@ -6372,6 +6373,7 @@ def _run_report_router_command(
         source_payload=router_source,
         surface="report",
         cli_invoke=config.cli_invoke,
+        target_root=target_root,
         compact=True,
     )
     return _report_router_payload(router_source)
@@ -7964,9 +7966,256 @@ def _routine_count(value: Any) -> int:
     return _as_int(value)
 
 
+def _workflow_obligation_match_count(workflow_obligations: dict[str, Any]) -> int:
+    match_evidence = _as_dict(workflow_obligations.get("match_evidence"))
+    if "match_count" in match_evidence:
+        return _routine_count(match_evidence.get("match_count"))
+    return _routine_count(workflow_obligations.get("match_count"))
+
+
 def _routine_detail_command(*, section: str, cli_invoke: str, target_arg: str = "./repo") -> str:
     command = f"agentic-workspace report --target {target_arg} --section {section} --format json"
     return _command_with_cli_invoke(command=command, cli_invoke=cli_invoke) or command
+
+
+def _memory_manifest_notes(target_root: Path | None) -> dict[str, dict[str, Any]]:
+    if target_root is None:
+        return {}
+    manifest_path = target_root / ".agentic-workspace/memory/repo/manifest.toml"
+    if not manifest_path.is_file():
+        return {}
+    try:
+        manifest = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return {}
+    notes = manifest.get("notes", {})
+    if not isinstance(notes, dict):
+        return {}
+    return {str(path): note for path, note in notes.items() if isinstance(note, dict)}
+
+
+def _note_glob_matches(*, changed_paths: list[str], patterns: Any) -> list[dict[str, str]]:
+    matches: list[dict[str, str]] = []
+    for pattern in [str(item) for item in _list_payload(patterns) if str(item).strip()]:
+        for changed_path in changed_paths:
+            if fnmatch.fnmatch(changed_path, pattern):
+                matches.append({"path": changed_path, "pattern": pattern})
+                break
+    return matches
+
+
+def _note_task_matches(*, task_text: str | None, values: Any) -> list[str]:
+    if not task_text:
+        return []
+    haystack = task_text.lower()
+    matches = []
+    for value in [str(item).strip() for item in _list_payload(values) if str(item).strip()]:
+        if value.lower() in haystack:
+            matches.append(value)
+    return matches
+
+
+def _memory_promotion_pressure_samples(source_payload: dict[str, Any]) -> list[dict[str, Any]]:
+    samples: list[dict[str, Any]] = []
+    module_reports = _list_payload(source_payload.get("module_reports"))
+    memory_report = next((report for report in module_reports if isinstance(report, dict) and report.get("module") == "memory"), {})
+    memory_report = memory_report if isinstance(memory_report, dict) else {}
+    memory_consult = _as_dict(source_payload.get("memory_consult"))
+    candidate_sources = [
+        _as_dict(memory_report.get("promotion_pressure")),
+        _as_dict(_as_dict(memory_report.get("habitual_pull")).get("promotion_pressure")),
+        _as_dict(memory_consult.get("promotion_pressure")),
+    ]
+    seen: set[str] = set()
+    for source in candidate_sources:
+        for item in _list_payload(source.get("sample")):
+            if not isinstance(item, dict):
+                continue
+            path = str(item.get("path", "")).strip()
+            if not path or path in seen:
+                continue
+            seen.add(path)
+            samples.append(item)
+    return samples
+
+
+def _knowledge_authority_review_payload(
+    *,
+    target_root: Path | None,
+    source_payload: dict[str, Any],
+    changed_paths: list[str] | None,
+    task_text: str | None,
+    cli_invoke: str,
+    compact: bool,
+) -> dict[str, Any]:
+    normalized_paths = _normalize_changed_paths(changed_paths or [])
+    notes = _memory_manifest_notes(target_root)
+    route_matches = {
+        str(match.get("path", "")).strip(): match
+        for match in _list_payload(_as_dict(source_payload.get("memory_consult")).get("route_matches"))
+        if isinstance(match, dict) and str(match.get("path", "")).strip()
+    }
+    promotion_samples = {str(item.get("path", "")).strip(): item for item in _memory_promotion_pressure_samples(source_payload)}
+    matched_sources: list[dict[str, Any]] = []
+    for note_path, note in notes.items():
+        route_pattern_matches = _note_glob_matches(changed_paths=normalized_paths, patterns=note.get("routes_from"))
+        stale_pattern_matches = _note_glob_matches(changed_paths=normalized_paths, patterns=note.get("stale_when"))
+        applies_matches = _note_glob_matches(changed_paths=normalized_paths, patterns=note.get("applies_to"))
+        task_matches = [
+            *_note_task_matches(task_text=task_text, values=note.get("surfaces")),
+            *_note_task_matches(task_text=task_text, values=note.get("subsystems")),
+            *_note_task_matches(task_text=task_text, values=note.get("use_when")),
+        ]
+        promotion_sample = promotion_samples.get(note_path)
+        applies_because = []
+        if note_path in route_matches:
+            applies_because.append(str(route_matches[note_path].get("reason") or "memory route matched current scope"))
+        applies_because.extend(f"changed path matched route {match['pattern']}" for match in route_pattern_matches)
+        applies_because.extend(f"changed path matched stale_when {match['pattern']}" for match in stale_pattern_matches)
+        applies_because.extend(f"changed path matched applies_to {match['pattern']}" for match in applies_matches)
+        applies_because.extend(f"task text matched {match}" for match in task_matches)
+        canonicality = str(note.get("canonicality", "")).strip()
+        memory_role = str(note.get("memory_role", "")).strip()
+        promotion_target = str(note.get("promotion_target") or note.get("preferred_remediation") or "").strip()
+        promotion_trigger = str(note.get("promotion_trigger") or note.get("improvement_note") or "").strip()
+        promotion_candidate = bool(
+            promotion_sample
+            or canonicality == "candidate_for_promotion"
+            or memory_role == "improvement_signal"
+            or note.get("improvement_candidate") is True
+            or promotion_target
+        )
+        superseded = canonicality in {"canonical_elsewhere", "deprecated"}
+        if not applies_because and not promotion_sample:
+            continue
+        freshness_status = "needs-review" if stale_pattern_matches else "not-triggered"
+        source = {
+            "id": f"memory:{note_path}",
+            "owner_surface": note_path,
+            "authority": str(note.get("authority", "unknown")),
+            "canonicality": canonicality or "unknown",
+            "canonical_home": str(note.get("canonical_home", note_path)),
+            "applies_because": _dedupe(applies_because)[:4],
+            "evidence": [str(item) for item in _list_payload(note.get("evidence"))][:3],
+            "freshness": {
+                "status": freshness_status,
+                "matched_stale_when": [match["pattern"] for match in stale_pattern_matches],
+            },
+            "promotion_pressure": {
+                "status": "candidate" if promotion_candidate else "none",
+                "target": promotion_target or (promotion_sample.get("promotion_target", "") if isinstance(promotion_sample, dict) else ""),
+                "trigger": promotion_trigger,
+            },
+            "supersession": {
+                "status": "attention" if superseded else "none",
+                "why": "Memory manifest says canonicality is deprecated or canonical elsewhere." if superseded else "",
+            },
+            "claim_effect": {
+                "blocks": [],
+                "advises": [
+                    item
+                    for item in (
+                        "review memory freshness before relying on this note" if freshness_status == "needs-review" else "",
+                        "route promotion or dismissal during closeout" if promotion_candidate else "",
+                    )
+                    if item
+                ],
+            },
+        }
+        matched_sources.append(source)
+        if len(matched_sources) >= 5:
+            break
+    for sample in promotion_samples.values():
+        path = str(sample.get("path", "")).strip()
+        if not path or any(source["owner_surface"] == path for source in matched_sources):
+            continue
+        matched_sources.append(
+            {
+                "id": f"memory:{path}",
+                "owner_surface": path,
+                "authority": "unknown",
+                "canonicality": "unknown",
+                "applies_because": ["memory promotion pressure sample"],
+                "freshness": {"status": "not-triggered", "matched_stale_when": []},
+                "promotion_pressure": {
+                    "status": "candidate",
+                    "target": str(sample.get("promotion_target") or sample.get("preferred_remediation") or ""),
+                    "trigger": str(sample.get("improvement_note") or ""),
+                },
+                "supersession": {"status": "none", "why": ""},
+                "claim_effect": {"blocks": [], "advises": ["route promotion or dismissal during closeout"]},
+            }
+        )
+        if len(matched_sources) >= 5:
+            break
+    stale_count = sum(1 for source in matched_sources if source.get("freshness", {}).get("status") == "needs-review")
+    promotion_count = sum(1 for source in matched_sources if source.get("promotion_pressure", {}).get("status") == "candidate")
+    supersession_count = sum(1 for source in matched_sources if source.get("supersession", {}).get("status") == "attention")
+    workflow_matches = _workflow_obligation_match_count(_as_dict(source_payload.get("workflow_obligations")))
+    status = "attention" if matched_sources or workflow_matches else "present"
+    payload: dict[str, Any] = {
+        "kind": "agentic-workspace/knowledge-authority-review/v1",
+        "status": status,
+        "matched_source_count": len(matched_sources),
+        "workflow_obligation_match_count": workflow_matches,
+        "stale_source_count": stale_count,
+        "promotion_candidate_count": promotion_count,
+        "supersession_attention_count": supersession_count,
+        "rule": "Compose existing Memory metadata, workflow obligations, proof, and closeout effects; do not create a new knowledge owner.",
+        "next_actions": [],
+    }
+    if promotion_count:
+        payload["next_actions"].append(
+            {
+                "id": "route-memory-promotion-pressure",
+                "owner": "Memory/docs/config/checks/ADR as named by the source",
+                "command": _memory_command_with_invoke(
+                    command="agentic-workspace memory promotion-report --target ./repo --mode remediation --format json",
+                    workspace_cli_invoke=cli_invoke,
+                ),
+            }
+        )
+    if stale_count:
+        payload["next_actions"].append(
+            {
+                "id": "review-memory-freshness",
+                "owner": "Memory",
+                "command": _memory_command_with_invoke(
+                    command="agentic-workspace memory sync-memory --target ./repo --files <changed paths> --format json",
+                    workspace_cli_invoke=cli_invoke,
+                ),
+            }
+        )
+    if workflow_matches:
+        payload["next_actions"].append(
+            {
+                "id": "inspect-workflow-obligations",
+                "owner": "workspace config",
+                "command": _command_with_cli_invoke(
+                    command="agentic-workspace report --target ./repo --section workflow_obligations --format json",
+                    cli_invoke=cli_invoke,
+                ),
+            }
+        )
+    if compact:
+        if status != "attention":
+            return {"kind": payload["kind"], "status": status}
+        return {
+            key: payload[key]
+            for key in (
+                "kind",
+                "status",
+                "matched_source_count",
+                "workflow_obligation_match_count",
+                "stale_source_count",
+                "promotion_candidate_count",
+                "supersession_attention_count",
+                "next_actions",
+            )
+            if key in payload
+        }
+    payload["matched_sources"] = matched_sources
+    return payload
 
 
 def _routine_work_context_payload(
@@ -7975,6 +8224,9 @@ def _routine_work_context_payload(
     surface: str,
     cli_invoke: str,
     target_arg: str = "./repo",
+    target_root: Path | None = None,
+    changed_paths: list[str] | None = None,
+    task_text: str | None = None,
     compact: bool = False,
 ) -> dict[str, Any]:
     """Assemble routine work router categories from existing owner surfaces.
@@ -8004,11 +8256,19 @@ def _routine_work_context_payload(
 
     assurance_active = _routine_count(assurance_requirements.get("active_count"))
     assurance_missing = _routine_count(assurance_requirements.get("missing_required_evidence_count"))
-    workflow_matches = _routine_count(workflow_obligations.get("match_count"))
+    workflow_matches = _workflow_obligation_match_count(workflow_obligations)
     durable_matches = _routine_count(durable_subsystem.get("matched_count"))
     improvement_candidates = len(_list_payload(improvement_intake.get("improvement_signal_candidates")))
     lower_trust_count = _routine_count(closeout_trust.get("lower_trust_closeout_count"))
     proof_commands = _list_payload(proof.get("required_commands") or proof.get("required_validation_commands"))
+    knowledge_review = _knowledge_authority_review_payload(
+        target_root=target_root,
+        source_payload=source_payload,
+        changed_paths=changed_paths,
+        task_text=task_text,
+        cli_invoke=cli_invoke,
+        compact=compact,
+    )
 
     decision_status = str(decision_pressure.get("status", "unknown"))
     task_promotion_status = str(task_promotion.get("status", "unknown"))
@@ -8066,7 +8326,7 @@ def _routine_work_context_payload(
         },
         "evidence_proof": {
             "question": "What must be shown before a completion claim is safe?",
-            "status": "attention" if assurance_missing or lower_trust_count else "available",
+            "status": "attention" if assurance_missing or workflow_matches or lower_trust_count else "available",
             "fronts": ["proof", "assurance_requirements", "workflow_obligations", "closeout_trust", "completion_options"],
             "signals": {
                 "proof_command_count": len(proof_commands),
@@ -8080,20 +8340,37 @@ def _routine_work_context_payload(
         },
         "durable_knowledge": {
             "question": "What durable knowledge applies here that future agents should not rediscover?",
-            "status": "attention" if memory_status in {"recommended", "required", "attention"} or durable_matches else "available",
-            "fronts": ["memory_consult", "durable_intent", "standing_intent", "system_intent_mirror"],
+            "status": "attention"
+            if _routine_count(memory_consult.get("changed_path_route_count"))
+            or _routine_count(knowledge_review.get("matched_source_count"))
+            or durable_matches
+            else "available",
+            "fronts": ["memory_consult", "knowledge_authority_review", "durable_intent", "standing_intent", "system_intent_mirror"],
             "signals": {
                 "memory_consult_status": memory_status,
                 "memory_read_first": memory_consult.get("read_first", []),
                 "durable_intent_status": durable_intent.get("status", "unknown"),
                 "subsystem_intent_matches": durable_matches,
+                "knowledge_authority_sources": knowledge_review.get("matched_source_count", 0),
+                "stale_knowledge_sources": knowledge_review.get("stale_source_count", 0),
             },
-            "detail_selectors": ["memory_consult", "durable_intent", "standing_intent", "system_intent_mirror"],
+            "detail_selectors": [
+                "memory_consult",
+                "knowledge_authority_review",
+                "durable_intent",
+                "standing_intent",
+                "system_intent_mirror",
+            ],
         },
         "promotion_residue": {
             "question": "What should move to a stronger owner, become follow-up, or be dismissed?",
             "status": "attention"
-            if task_promotion_status == "candidate" or decision_status == "attention" or improvement_candidates or lower_trust_count
+            if task_promotion_status == "candidate"
+            or decision_status == "attention"
+            or improvement_candidates
+            or lower_trust_count
+            or _routine_count(knowledge_review.get("promotion_candidate_count"))
+            or _routine_count(knowledge_review.get("supersession_attention_count"))
             else "available",
             "fronts": [
                 "durable_intent_promotion",
@@ -8107,8 +8384,16 @@ def _routine_work_context_payload(
                 "decision_pressure_status": decision_status,
                 "improvement_candidate_count": improvement_candidates,
                 "closeout_lower_trust_count": lower_trust_count,
+                "knowledge_promotion_candidates": knowledge_review.get("promotion_candidate_count", 0),
+                "knowledge_supersession_attention": knowledge_review.get("supersession_attention_count", 0),
             },
-            "detail_selectors": ["durable_intent_promotion", "improvement_intake", "decision_pressure", "closeout_trust"],
+            "detail_selectors": [
+                "durable_intent_promotion",
+                "knowledge_authority_review",
+                "improvement_intake",
+                "decision_pressure",
+                "closeout_trust",
+            ],
         },
     }
     attention_categories = [key for key, value in categories.items() if value.get("status") == "attention"]
@@ -8122,6 +8407,7 @@ def _routine_work_context_payload(
         "rule": "Separate canonical owners internally; compress ordinary agent routing into routine work questions.",
         "categories": categories,
         "attention_categories": attention_categories,
+        "knowledge_authority_review": knowledge_review,
         "activation": {
             "default_rule": "Surface compact categories in routine router views; keep owner detail behind selectors and report sections.",
             "small_work_rule": "If no category is attention, this projection is guidance and must not block direct bounded work.",
@@ -8132,7 +8418,6 @@ def _routine_work_context_payload(
         if surface == "report":
             return {
                 "kind": payload["kind"],
-                "status": status,
             }
         compact_signal_allowlist = {
             "authority": [
@@ -8149,6 +8434,7 @@ def _routine_work_context_payload(
             ],
             "evidence_proof": [
                 "proof_command_count",
+                "workflow_obligation_matches",
                 "missing_required_assurance_evidence",
                 "lower_trust_closeout_count",
             ],
@@ -8156,15 +8442,19 @@ def _routine_work_context_payload(
                 "memory_consult_status",
                 "durable_intent_status",
                 "subsystem_intent_matches",
+                "knowledge_authority_sources",
+                "stale_knowledge_sources",
             ],
             "promotion_residue": [
                 "task_intent_promotion_status",
                 "decision_pressure_status",
                 "improvement_candidate_count",
                 "closeout_lower_trust_count",
+                "knowledge_promotion_candidates",
+                "knowledge_supersession_attention",
             ],
         }
-        return {
+        compact_payload = {
             "kind": payload["kind"],
             "status": status,
             "surface": surface,
@@ -8182,6 +8472,9 @@ def _routine_work_context_payload(
                 if value.get("status") == "attention"
             },
         }
+        if knowledge_review.get("status") == "attention":
+            compact_payload["knowledge_authority_review"] = knowledge_review
+        return compact_payload
 
     payload["owner_surface_inventory"] = [
         {
@@ -8552,6 +8845,14 @@ def _report_closeout_trust_payload(
     cli_invoke: str = DEFAULT_CLI_INVOKE,
 ) -> dict[str, Any]:
     strict_closeout = bool(config.assurance.strict_closeout) if config is not None else False
+    knowledge_authority_review = _knowledge_authority_review_payload(
+        target_root=target_root,
+        source_payload={"module_reports": module_reports},
+        changed_paths=[],
+        task_text=None,
+        cli_invoke=cli_invoke,
+        compact=True,
+    )
 
     def strict_gate(*, trust: str, reason: str = "", active_planning_record: bool = False) -> dict[str, Any]:
         if not strict_closeout:
@@ -8643,6 +8944,7 @@ def _report_closeout_trust_payload(
             "intent_proof_check": intent_proof_check,
             "proof_confidence": _proof_confidence_payload(intent_proof=intent_proof_check),
             "assurance_requirements": assurance_requirements,
+            "knowledge_authority_review": knowledge_authority_review,
             "architecture_decision_closeout": architecture_decision_closeout,
             "historical_review_artifacts": _historical_review_artifacts_policy(
                 planning_report={}, intent_validation={}, target_root=target_root
@@ -8685,6 +8987,7 @@ def _report_closeout_trust_payload(
             "intent_proof_check": intent_proof_check,
             "proof_confidence": _proof_confidence_payload(intent_proof=intent_proof_check),
             "assurance_requirements": assurance_requirements,
+            "knowledge_authority_review": knowledge_authority_review,
             "architecture_decision_closeout": architecture_decision_closeout,
             "historical_review_artifacts": _historical_review_artifacts_policy(
                 planning_report=planning_report, intent_validation={}, target_root=target_root
@@ -8789,6 +9092,7 @@ def _report_closeout_trust_payload(
         "intent_proof_check": intent_proof_check,
         "proof_confidence": _proof_confidence_payload(intent_proof=intent_proof_check),
         "assurance_requirements": assurance_requirements,
+        "knowledge_authority_review": knowledge_authority_review,
         "architecture_decision_closeout": architecture_decision_closeout,
         "historical_review_artifacts": _historical_review_artifacts_policy(
             planning_report=planning_report, intent_validation=intent_validation, target_root=target_root
@@ -12434,6 +12738,9 @@ def _start_payload(
             source_payload=payload,
             surface="start",
             cli_invoke=config.cli_invoke,
+            target_root=target_root,
+            changed_paths=normalized_paths,
+            task_text=task_text,
             compact=True,
         )
         payload["cli_invocation"] = _cli_invocation_payload(config=config)
@@ -13156,6 +13463,9 @@ def _start_tiny_payload_fast(
         source_payload=payload,
         surface="start",
         cli_invoke=config.cli_invoke,
+        target_root=target_root,
+        changed_paths=changed_paths,
+        task_text=task_text,
         compact=True,
     )
     return _tiny_start_payload(payload)
@@ -14970,6 +15280,7 @@ def _implement_payload(
             task_text=task_text,
             acceptance=_task_acceptance_payload(task_text=task_text, requested_outcomes=_extract_requested_outcomes(task_text)),
             include_assurance_requirements=include_assurance_requirements,
+            include_routine_work_context=include_routine_work_context,
         )
         if normalized_paths
         else copy.deepcopy(implementer_template["unknown_scope_proof"])
@@ -15161,6 +15472,9 @@ def _implement_payload(
             source_payload=payload,
             surface="implement",
             cli_invoke=config.cli_invoke,
+            target_root=target_root,
+            changed_paths=normalized_paths,
+            task_text=task_text,
             compact=False,
         )
     return payload
@@ -22660,6 +22974,7 @@ def _proof_selection_for_changed_paths(
     task_text: str | None = None,
     acceptance: dict[str, Any] | None = None,
     include_assurance_requirements: bool = True,
+    include_routine_work_context: bool = True,
 ) -> dict[str, Any]:
     defaults = _defaults_payload()
     cli_invoke = DEFAULT_CLI_INVOKE
@@ -23166,6 +23481,24 @@ def _proof_selection_for_changed_paths(
             )
             if intent_effect not in proof_selection["escalate_when"]:
                 proof_selection["escalate_when"].append(intent_effect)
+    if include_routine_work_context and config is not None and target_root is not None:
+        workflow_obligations = _workflow_obligations_report_payload(
+            config=config,
+            active_planning_record=None,
+            task_text=task_text,
+            changed_paths=changed_paths,
+        )
+        proof_routine_context = _routine_work_context_payload(
+            source_payload={"proof": proof_selection, "workflow_obligations": workflow_obligations},
+            surface="proof",
+            cli_invoke=cli_invoke,
+            target_root=target_root,
+            changed_paths=changed_paths,
+            task_text=task_text,
+            compact=True,
+        )
+        if proof_routine_context.get("status") == "attention":
+            proof_selection["routine_work_context"] = proof_routine_context
     if subsystem_matches["matched_subsystems"]:
         proof_selection["subsystem_ownership"] = subsystem_matches
     if planning_assurance.get("status") == "present":
