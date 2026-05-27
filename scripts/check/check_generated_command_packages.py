@@ -1052,7 +1052,7 @@ def _validate_typescript_runtime_handoff_thinness(*, package: str, cli_text: str
     import_lines = {line.strip() for line in cli_text.splitlines() if line.startswith("import ")}
     unexpected_imports = sorted(import_lines - expected_imports)
     if unexpected_imports:
-        errors.append(f"generated/typescript/{package}/src/cli.mjs imports runtime-owned modules: {unexpected_imports!r}")
+        errors.append(f"{package}/src/cli.mjs imports runtime-owned modules: {unexpected_imports!r}")
     required_fragments = [
         "function splitRuntimeCommand(commandLine)",
         "const [runtimeExecutable, ...runtimeArgs] = splitRuntimeCommand(runtimeCommand);",
@@ -1063,7 +1063,7 @@ def _validate_typescript_runtime_handoff_thinness(*, package: str, cli_text: str
     ]
     for fragment in required_fragments:
         if fragment not in cli_text:
-            errors.append(f"generated/typescript/{package}/src/cli.mjs is missing thin runtime handoff fragment: {fragment}")
+            errors.append(f"{package}/src/cli.mjs is missing thin runtime handoff fragment: {fragment}")
     forbidden_fragments = [
         "shell: true",
         "readFile",
@@ -1074,7 +1074,7 @@ def _validate_typescript_runtime_handoff_thinness(*, package: str, cli_text: str
     ]
     for fragment in forbidden_fragments:
         if fragment in cli_text:
-            errors.append(f"generated/typescript/{package}/src/cli.mjs contains runtime-owned behavior marker: {fragment}")
+            errors.append(f"{package}/src/cli.mjs contains runtime-owned behavior marker: {fragment}")
     return errors
 
 
@@ -3130,7 +3130,8 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
                     f"adapter failure: {runnable_case.package_id} unsupported command refusal drifted; "
                     f"exit={unsupported.returncode}, stdout={unsupported.stdout!r}, stderr={unsupported.stderr!r}"
                 )
-            if runnable_case.weak_agent_routing in {"allowed-read-only", "allowed-mutation-with-review"}:
+            exercises_runtime_handoff = "--help" not in runnable_case.case.success_args
+            if runnable_case.weak_agent_routing in {"allowed-read-only", "allowed-mutation-with-review"} and exercises_runtime_handoff:
                 handoff_failure = _capture(
                     [node, str(runnable_case.cli), *runnable_case.case.success_args],
                     cwd=fixture_root,
@@ -3390,9 +3391,9 @@ def _validate_static_surfaces() -> list[str]:
             errors.append(
                 "static conformance coverage drift: no runnable TypeScript conformance cases were derived from contract artifacts"
             )
-    dockerfile = REPO_ROOT / "generated" / "typescript" / "Dockerfile"
+    dockerfile = REPO_ROOT / "generated" / "typescript.Dockerfile"
     if not dockerfile.is_file():
-        errors.append("generated/typescript/Dockerfile is missing")
+        errors.append("generated/typescript.Dockerfile is missing")
     python_conformance_dockerfile = REPO_ROOT / "generated" / "python" / "Dockerfile.conformance"
     if not python_conformance_dockerfile.is_file():
         errors.append("generated/python/Dockerfile.conformance is missing")
@@ -3407,14 +3408,23 @@ def _validate_static_surfaces() -> list[str]:
         for primitive_id in sorted(REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE):
             if primitive_id not in primitive_conformance_text:
                 errors.append(f"primitive conformance is missing required primitive case: {primitive_id}")
-    conformance_dockerfile = REPO_ROOT / "generated" / "typescript" / "Dockerfile.conformance"
+    conformance_dockerfile = REPO_ROOT / "generated" / "typescript.conformance.Dockerfile"
     if not conformance_dockerfile.is_file():
-        errors.append("generated/typescript/Dockerfile.conformance is missing")
-    for package in ("workspace-cli", "planning-cli", "memory-cli"):
-        package_root = REPO_ROOT / "generated" / "typescript" / package
+        errors.append("generated/typescript.conformance.Dockerfile is missing")
+    ir = load_workspace_command_package_ir(repo_root=REPO_ROOT)
+    typescript_targets = [
+        (package, target)
+        for package in ir.get("packages", [])
+        if isinstance(package, dict)
+        for target in package.get("targets", [])
+        if isinstance(target, dict) and target.get("kind") == "typescript"
+    ]
+    for expected_package, target in typescript_targets:
+        package_root = REPO_ROOT / str(target.get("generated_root", ""))
+        package_label = package_root.relative_to(REPO_ROOT).as_posix()
         for relative in ("package.json", "src/commandPackage.ts", "resources/command_package.json", "test/command-package.test.mjs"):
             if not (package_root / relative).is_file():
-                errors.append(f"generated/typescript/{package}/{relative} is missing")
+                errors.append(f"{package_label}/{relative} is missing")
         package_json_path = package_root / "package.json"
         command_package_resource_path = package_root / "resources" / "command_package.json"
         command_package_resource: dict[str, object] | None = None
@@ -3422,67 +3432,55 @@ def _validate_static_surfaces() -> list[str]:
             try:
                 command_package_resource = json.loads(command_package_resource_path.read_text(encoding="utf-8"))
             except json.JSONDecodeError as exc:
-                errors.append(f"generated/typescript/{package}/resources/command_package.json is invalid JSON: {exc}")
+                errors.append(f"{package_label}/resources/command_package.json is invalid JSON: {exc}")
         command_package_source_path = package_root / "src" / "commandPackage.ts"
         if command_package_source_path.is_file():
             source_text = command_package_source_path.read_text(encoding="utf-8")
             if "resources/command_package.json" not in source_text:
-                errors.append(f"generated/typescript/{package}/src/commandPackage.ts does not load generated resource JSON")
+                errors.append(f"{package_label}/src/commandPackage.ts does not load generated resource JSON")
             if '"commands": [' in source_text or "adapter_id" in source_text:
-                errors.append(f"generated/typescript/{package}/src/commandPackage.ts embeds command-package payload instead of loading resources")
+                errors.append(f"{package_label}/src/commandPackage.ts embeds command-package payload instead of loading resources")
         if package_json_path.is_file():
             payload = json.loads(package_json_path.read_text(encoding="utf-8"))
             metadata = payload.get("agenticWorkspace", {})
             maturity = metadata.get("maturity", {})
-            expected_package = next(
-                (
-                    item
-                    for item in load_workspace_command_package_ir(repo_root=REPO_ROOT).get("packages", [])
-                    if any(
-                        isinstance(target, dict)
-                        and target.get("kind") == "typescript"
-                        and Path(str(target.get("generated_root", ""))).name == package
-                        for target in item.get("targets", [])
-                    )
-                ),
-                None,
-            )
             if command_package_resource is not None and expected_package is not None and command_package_resource != expected_package:
-                errors.append(f"generated/typescript/{package}/resources/command_package.json drifted from command_package_ir.json")
+                errors.append(f"{package_label}/resources/command_package.json drifted from command_package_ir.json")
             if payload.get("files") != ["src", "resources"]:
-                errors.append(f"generated/typescript/{package}/package.json does not include generated resources")
+                errors.append(f"{package_label}/package.json does not include generated resources")
             is_runnable = maturity.get("id") in {
                 "runnable-read-only-adapter",
+                "runtime-backed-read-only-adapter",
                 "weak-agent-safe-adapter",
                 "mutation-capable-adapter",
             }
             is_weak_agent_safe = maturity.get("id") == "weak-agent-safe-adapter"
             is_mutation_capable = maturity.get("id") == "mutation-capable-adapter"
             if not maturity.get("summary") or not maturity.get("promotion_requires"):
-                errors.append(f"generated/typescript/{package}/package.json maturity is missing summary or promotion criteria")
+                errors.append(f"{package_label}/package.json maturity is missing summary or promotion criteria")
             if is_runnable and not (package_root / "src" / "cli.mjs").is_file():
-                errors.append(f"generated/typescript/{package}/src/cli.mjs is missing for runnable target")
+                errors.append(f"{package_label}/src/cli.mjs is missing for runnable target")
             if is_runnable and "bin" not in payload:
-                errors.append(f"generated/typescript/{package}/package.json is missing bin entry for runnable target")
+                errors.append(f"{package_label}/package.json is missing bin entry for runnable target")
             cli_path = package_root / "src" / "cli.mjs"
             if is_runnable and cli_path.is_file():
                 cli_text = cli_path.read_text(encoding="utf-8")
-                errors.extend(_validate_typescript_runtime_handoff_thinness(package=package, cli_text=cli_text))
+                errors.extend(_validate_typescript_runtime_handoff_thinness(package=package_label, cli_text=cli_text))
             if is_weak_agent_safe and maturity.get("weak_agent_routing") != "allowed-read-only":
-                errors.append(f"generated/typescript/{package}/package.json weak-agent-safe target is missing allowed-read-only routing")
+                errors.append(f"{package_label}/package.json weak-agent-safe target is missing allowed-read-only routing")
             if is_mutation_capable and maturity.get("weak_agent_routing") != "allowed-mutation-with-review":
-                errors.append(f"generated/typescript/{package}/package.json mutation-capable target is missing mutation review routing")
+                errors.append(f"{package_label}/package.json mutation-capable target is missing mutation review routing")
             if (
                 is_runnable
                 and not is_weak_agent_safe
                 and not is_mutation_capable
                 and maturity.get("weak_agent_routing") != "review-required"
             ):
-                errors.append(f"generated/typescript/{package}/package.json runnable target is missing review-required weak-agent routing")
+                errors.append(f"{package_label}/package.json runnable target is missing review-required weak-agent routing")
             if not is_runnable and (maturity.get("weak_agent_routing") != "forbidden" or maturity.get("runnable") is not False):
-                errors.append(f"generated/typescript/{package}/package.json maturity does not mark proof fixture as non-runnable")
+                errors.append(f"{package_label}/package.json maturity does not mark proof fixture as non-runnable")
             if bool(metadata.get("fixtureOnly")) == is_runnable:
-                errors.append(f"generated/typescript/{package}/package.json fixtureOnly does not match maturity runnable state")
+                errors.append(f"{package_label}/package.json fixtureOnly does not match maturity runnable state")
     return errors
 
 
@@ -3773,7 +3771,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.docker:
         docker_status = _run_docker(
             str(args.tag),
-            dockerfile="generated/typescript/Dockerfile",
+            dockerfile="generated/typescript.Dockerfile",
             proof_label="generated TypeScript package Docker proof",
             require_docker=bool(args.require_docker),
         )
@@ -3782,7 +3780,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.docker_conformance:
         docker_status = _run_docker(
             f"{args.tag}-conformance",
-            dockerfile="generated/typescript/Dockerfile.conformance",
+            dockerfile="generated/typescript.conformance.Dockerfile",
             proof_label="generated TypeScript package Docker conformance proof",
             require_docker=bool(args.require_docker),
         )

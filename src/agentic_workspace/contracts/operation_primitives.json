@@ -115,7 +115,7 @@
         "target": "typescript",
         "status": "unsupported-reported",
         "implemented_shared_primitives": [],
-        "domain_runtime_extension_behavior": "TypeScript generated packages currently expose weak-agent-safe process adapters and must report runtime handoff or unsupported routing instead of claiming independent primitive execution.",
+        "domain_runtime_extension_behavior": "TypeScript generated packages expose generated parser/help/validation process adapters and must report runtime handoff or unsupported routing instead of claiming independent primitive execution.",
         "conformance_ref": "scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
         "unsupported_behavior": "Primitive IR execution is not implemented for TypeScript; conformance proves generated adapters surface runtime handoff and unsupported-command recovery guidance."
       },

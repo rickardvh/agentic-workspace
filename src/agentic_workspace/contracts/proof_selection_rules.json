@@ -130,7 +130,10 @@
         "generated/workspace/python/",
         "generated/planning/python/",
         "generated/memory/python/",
-        "generated/typescript/",
+        "generated/workspace/typescript/",
+        "generated/planning/typescript/",
+        "generated/memory/typescript/",
+        "generated/verification/typescript/",
         "scripts/generate/generate_command_packages.py",
         "scripts/check/check_generated_command_packages.py",
         "internal/command-generation/src/command_generation/"
@@ -271,7 +274,10 @@
           "generated/workspace/python/",
           "generated/planning/python/",
           "generated/memory/python/",
-          "generated/typescript/"
+          "generated/workspace/typescript/",
+          "generated/planning/typescript/",
+          "generated/memory/typescript/",
+          "generated/verification/typescript/"
         ],
         "direct_edit_allowed": false,
         "source_contract": "src/agentic_workspace/contracts/command_package_ir.json",
@@ -294,4 +300,3 @@
     ]
   }
 }
-

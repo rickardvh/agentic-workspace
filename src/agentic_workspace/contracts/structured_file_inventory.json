@@ -896,7 +896,7 @@
       "checked_in_justification": "Canonical checked-in structured input used by generated workspace defaults behavior."
     },
     {
-      "pattern": "generated/typescript/*/package.json",
+      "pattern": "generated/*/typescript/package.json",
       "format": "json",
       "owner": "generated-command-adapters",
       "status": "generated-derived",
@@ -913,7 +913,7 @@
       "routed_to": "#539"
     },
     {
-      "pattern": "generated/typescript/*/resources/command_package.json",
+      "pattern": "generated/*/typescript/resources/command_package.json",
       "format": "json",
       "owner": "generated-command-adapters",
       "status": "generated-derived",
@@ -1336,7 +1336,7 @@
       "max_bytes": 250000
     },
     {
-      "pattern": "generated/typescript/*/package.json",
+      "pattern": "generated/*/typescript/package.json",
       "source_command": "uv run python scripts/generate/generate_command_packages.py",
       "named_consumer": "generated TypeScript package tests and package publishing preparation",
       "checked_in_justification": "Generated package metadata is kept as a reviewable adapter output while multi-language generation matures.",
@@ -1346,7 +1346,7 @@
       "max_bytes": 5000
     },
     {
-      "pattern": "generated/typescript/*/resources/command_package.json",
+      "pattern": "generated/*/typescript/resources/command_package.json",
       "source_command": "uv run python scripts/generate/generate_command_packages.py",
       "named_consumer": "generated TypeScript command-package resource loader",
       "checked_in_justification": "Generated TypeScript command-package resources are kept as files so executable adapter source stays thin and does not embed large JSON blocks.",

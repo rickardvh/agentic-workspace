@@ -1249,7 +1249,7 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
                 "proof",
                 "--verbose",
                 "--changed",
-                "generated/typescript/workspace-cli/src/commandPackage.ts",
+                "generated/workspace/typescript/src/commandPackage.ts",
                 "--format",
                 "json",
             ]
@@ -1296,7 +1296,7 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
     assert answer["validation_plan"]["optional"][0]["required"] is False
     review = answer["cli_authority_review"]
     assert review["status"] == "blocked-direct-edit-route-to-source"
-    assert review["blocked_direct_edit_paths"] == ["generated/typescript/workspace-cli/src/commandPackage.ts"]
+    assert review["blocked_direct_edit_paths"] == ["generated/workspace/typescript/src/commandPackage.ts"]
     generated = review["classifications"][0]
     assert generated["role"] == "projection"
     assert generated["direct_edit_allowed"] is False
