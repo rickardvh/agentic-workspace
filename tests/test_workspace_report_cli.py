@@ -173,8 +173,7 @@ def test_report_router_surfaces_compact_routine_work_context(tmp_path: Path, cap
 
     payload = json.loads(capsys.readouterr().out)
     routine = payload["context"]["routine_work_context"]
-    assert routine["kind"] == "agentic-workspace/routine-work-context/v1"
-    assert "owner_surface_inventory" not in routine
+    assert routine == {"kind": "agentic-workspace/routine-work-context/v1"}
     assert "context.routine_work_context" in payload["drill_down"]["available_selectors"]
 
 

@@ -102,6 +102,17 @@ belongs behind selectors or report sections. The projection should surface when:
 The projection should stay quiet for unmatched assurance requirements, unrelated
 Memory notes, unrelated ADR candidates, and broad historical audit detail.
 
+Default `report` is intentionally a discriminator-only route signal:
+
+```json
+{"kind": "agentic-workspace/routine-work-context/v1"}
+```
+
+Do not add category details, owner inventory, Memory samples, or obligation
+detail to the default report router. Those belong in
+`report --section routine_work_context`, selected/verbose `implement`, compact
+activated `start`, proof pressure, or closeout trust as appropriate.
+
 ## Boundary
 
 This closes #1150, #1151, and #1152 by providing the routine router model, the
