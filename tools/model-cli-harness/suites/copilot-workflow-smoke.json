@@ -23,16 +23,34 @@
       "env": {
         "COPILOT_ALLOW_ALL": "true"
       },
+      "model_args": [
+        "--effort",
+        "low"
+      ],
+      "model_args_by_model": {
+        "claude-haiku-4.5": []
+      },
+      "prompt_transport": {
+        "threshold_chars": 8000,
+        "mode": "file-attachment",
+        "file_args": [
+          "--attachment",
+          "{prompt_file}"
+        ],
+        "file_prompt": "Read the attached prompt file and follow its instructions exactly. Treat it as the complete task prompt."
+      },
       "inject_repo_startup_instructions": true,
       "postmortem_feedback_supported": false,
       "command": [
         "copilot",
         "--model",
         "{model}",
+        "{model_args}",
         "-C",
         "{repo}",
         "-p",
         "{prompt}",
+        "{prompt_transport_args}",
         "--allow-all",
         "--allow-tool=write",
         "--no-ask-user",
@@ -53,8 +71,10 @@
         "copilot",
         "--model",
         "{model}",
+        "{model_args}",
         "-p",
         "{prompt}",
+        "{prompt_transport_args}",
         "--allow-all",
         "--no-ask-user",
         "--disable-builtin-mcps",
@@ -600,4 +620,3 @@
     }
   ]
 }
-

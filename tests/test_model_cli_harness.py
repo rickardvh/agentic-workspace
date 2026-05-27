@@ -147,6 +147,30 @@ def test_model_cli_harness_ignores_uv_lock_runtime_byproduct(tmp_path: Path) -> 
     assert harness._snapshot_diff(before, harness._file_snapshot(repo))["status"] == "clean"
 
 
+def test_model_cli_harness_separates_source_changes_from_cache_noise(tmp_path: Path) -> None:
+    harness = _load_harness()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    before = harness._file_snapshot(repo, include_ignored=True)
+
+    (repo / ".mypy_cache" / "cache.json").parent.mkdir()
+    (repo / ".mypy_cache" / "cache.json").write_text("{}", encoding="utf-8")
+    (repo / ".ruff_cache" / "cache.bin").parent.mkdir()
+    (repo / ".ruff_cache" / "cache.bin").write_text("cache", encoding="utf-8")
+    (repo / "src" / "pluggy.egg-info").mkdir(parents=True)
+    (repo / "src" / "pluggy.egg-info" / "PKG-INFO").write_text("metadata", encoding="utf-8")
+    (repo / "src" / "pluggy" / "_manager.py").parent.mkdir(parents=True)
+    (repo / "src" / "pluggy" / "_manager.py").write_text("source", encoding="utf-8")
+
+    diff = harness._snapshot_diff(before, harness._file_snapshot(repo, include_ignored=True))
+
+    assert diff["status"] == "changed"
+    assert diff["created"] == ["src/pluggy/_manager.py"]
+    assert diff["ignored_noise_count"] == 3
+    assert "src/pluggy.egg-info/PKG-INFO" in diff["raw_created"]
+    assert "src/pluggy.egg-info/PKG-INFO" in diff["ignored_created"]
+
+
 def test_model_cli_harness_marks_mixed_package_commands_approximate() -> None:
     harness = _load_harness()
     stdout = json.dumps(
@@ -737,6 +761,85 @@ def test_model_cli_harness_suite_renders_copilot_adapter_with_explicit_cwd(tmp_p
     assert result["repo_path"] in command
 
 
+def test_model_cli_harness_copilot_uses_per_model_args(tmp_path: Path) -> None:
+    harness = _load_harness()
+
+    haiku_payload = harness.run_suite(
+        suite_path=REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json",
+        adapter_id="copilot",
+        model="claude-haiku-4.5",
+        scenario_filter="startup-orientation",
+        execute=False,
+        output_root=tmp_path / "haiku",
+        timeout_seconds=None,
+    )
+    sonnet_payload = harness.run_suite(
+        suite_path=REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json",
+        adapter_id="copilot",
+        model="claude-sonnet-4.6",
+        scenario_filter="startup-orientation",
+        execute=False,
+        output_root=tmp_path / "sonnet",
+        timeout_seconds=None,
+    )
+
+    assert "--effort" not in haiku_payload["results"][0]["command"]
+    sonnet_command = sonnet_payload["results"][0]["command"]
+    assert sonnet_command[sonnet_command.index("--effort") + 1] == "low"
+
+
+def test_model_cli_harness_prompt_transport_writes_large_prompt_to_file(tmp_path: Path) -> None:
+    fixture = tmp_path / "fixtures" / "repo"
+    fixture.mkdir(parents=True)
+    suite = tmp_path / "suites" / "suite.json"
+    suite.parent.mkdir()
+    suite.write_text(
+        json.dumps(
+            {
+                "schema": "agentic-workspace/model-cli-harness-suite/v1",
+                "id": "unit",
+                "adapters": {
+                    "fake": {
+                        "default_model": "fake-model",
+                        "block_on_preflight_failure": False,
+                        "prompt_transport": {
+                            "threshold_chars": 20,
+                            "mode": "file-attachment",
+                            "file_args": ["--attachment", "{prompt_file}"],
+                            "file_prompt": "Read {prompt_file}.",
+                        },
+                        "command": ["fake-cli", "-p", "{prompt}", "{prompt_transport_args}"],
+                    }
+                },
+                "scenarios": [{"id": "large", "fixture": "repo", "prompt": "x" * 80}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    harness = _load_harness()
+
+    payload = harness.run_suite(
+        suite_path=suite,
+        adapter_id="fake",
+        model=None,
+        scenario_filter="large",
+        execute=False,
+        output_root=tmp_path / "out",
+        timeout_seconds=None,
+    )
+
+    result = payload["results"][0]
+    prompt_transport = result["prompt_transport"]
+    command = result["command"]
+    prompt_file = Path(prompt_transport["prompt_file"])
+    assert prompt_transport["mode"] == "file-attachment"
+    assert prompt_file.exists()
+    assert prompt_file.read_text(encoding="utf-8") == "x" * 80
+    assert command[command.index("-p") + 1].startswith("Read ")
+    assert "--attachment" in command
+    assert str(prompt_file) in command
+
+
 def test_model_cli_harness_resolves_path_shims(tmp_path: Path, monkeypatch) -> None:
     harness = _load_harness()
     shim = tmp_path / "fake-cli.cmd"
@@ -780,6 +883,21 @@ def test_model_cli_harness_runtime_failure_gets_structured_status(tmp_path: Path
 
     assert result["status"] == "runtime_failed"
     assert "model_cli_runtime_failed" in {warning["warning_class"] for warning in warnings}
+
+
+def test_model_cli_harness_adapter_configuration_rejection_gets_structured_status(tmp_path: Path) -> None:
+    harness = _load_harness()
+
+    result = {
+        "returncode": 1,
+        "stdout": "",
+        "stderr": "model does not support reasoning effort configuration",
+    }
+    result["status"] = harness._classify_result_status(result)
+    warnings = harness._execution_warnings(result=result, repo_path=tmp_path, mutation_summary={"status": "clean"})
+
+    assert result["status"] == "adapter_configuration_rejected"
+    assert "model_cli_adapter_configuration_rejected" in {warning["warning_class"] for warning in warnings}
 
 
 def test_model_cli_harness_extracts_execution_warnings(tmp_path: Path) -> None:

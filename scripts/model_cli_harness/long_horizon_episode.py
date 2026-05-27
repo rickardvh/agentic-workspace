@@ -199,8 +199,9 @@ def _phase_overrides(mode: dict[str, Any], *, field: str) -> dict[str, dict[str,
     return overrides
 
 
-def _prepare_mode_repo(*, suite_path: Path, mode: dict[str, Any], paths: harness.HarnessPaths, execute: bool) -> None:
+def _prepare_mode_repo(*, suite_path: Path, mode: dict[str, Any], paths: harness.HarnessPaths, execute: bool) -> dict[str, Any]:
     paths.run_root.mkdir(parents=True, exist_ok=False)
+    setup_before: dict[str, dict[str, Any]] | None = None
     fixture = mode.get("fixture")
     if isinstance(fixture, str):
         fixture_path = (suite_path.parent / ".." / "fixtures" / fixture).resolve()
@@ -210,10 +211,11 @@ def _prepare_mode_repo(*, suite_path: Path, mode: dict[str, Any], paths: harness
             raise FileNotFoundError(f"fixture not found: {fixture}")
         shutil.copytree(fixture_path, paths.repo_path)
         if mode.get("aw_enabled"):
+            setup_before = harness._file_snapshot(paths.repo_path, include_ignored=True)
             _bootstrap_aw_mode(paths.repo_path)
         else:
             harness._prepare_source_checkout_invocation(paths.repo_path)
-        return
+        return _setup_mutation_summary(setup_before=setup_before, repo_path=paths.repo_path)
     repo_url = mode.get("repo_url")
     base_commit = mode.get("base_commit")
     if not isinstance(repo_url, str) or not isinstance(base_commit, str):
@@ -222,8 +224,9 @@ def _prepare_mode_repo(*, suite_path: Path, mode: dict[str, Any], paths: harness
         paths.repo_path.mkdir(parents=True)
         (paths.repo_path / "PINNED-REPO.txt").write_text(f"{repo_url}\n{base_commit}\n", encoding="utf-8")
         if mode.get("aw_enabled"):
+            setup_before = harness._file_snapshot(paths.repo_path, include_ignored=True)
             _bootstrap_aw_mode(paths.repo_path)
-        return
+        return _setup_mutation_summary(setup_before=setup_before, repo_path=paths.repo_path)
     result = harness._run_command(["git", "clone", repo_url, str(paths.repo_path)], cwd=paths.run_root, timeout_seconds=900)
     if result["returncode"] != 0:
         raise RuntimeError(f"git clone failed for {repo_url}: {result['stderr']}")
@@ -231,7 +234,19 @@ def _prepare_mode_repo(*, suite_path: Path, mode: dict[str, Any], paths: harness
     if checkout["returncode"] != 0:
         raise RuntimeError(f"git checkout failed for {base_commit}: {checkout['stderr']}")
     if mode.get("aw_enabled"):
+        setup_before = harness._file_snapshot(paths.repo_path, include_ignored=True)
         _bootstrap_aw_mode(paths.repo_path)
+    return _setup_mutation_summary(setup_before=setup_before, repo_path=paths.repo_path)
+
+
+def _setup_mutation_summary(*, setup_before: dict[str, dict[str, Any]] | None, repo_path: Path) -> dict[str, Any]:
+    if setup_before is None:
+        return {"status": "not-applicable"}
+    return harness._snapshot_diff(
+        setup_before,
+        harness._file_snapshot(repo_path, include_ignored=True),
+        harness_setup_patterns=harness.HARNESS_SETUP_MUTATION_PATHS,
+    )
 
 
 def _adapter_command(
@@ -240,16 +255,20 @@ def _adapter_command(
     adapter_id: str,
     model: str | None,
     replacements: dict[str, str],
-) -> tuple[list[str], str, dict[str, Any]]:
+) -> tuple[list[str], str, dict[str, Any], dict[str, Any], dict[str, str]]:
     adapter = suite.get("adapters", {}).get(adapter_id)
     if not isinstance(adapter, dict):
         raise ValueError(f"adapter '{adapter_id}' is not defined")
     resolved_model = model or str(adapter.get("default_model") or "default")
-    replacements = {**replacements, "model": resolved_model}
-    command_template = adapter.get("command")
-    if not isinstance(command_template, list) or not all(isinstance(item, str) for item in command_template):
-        raise ValueError(f"adapter '{adapter_id}' must define command as a string list")
-    return harness._render_list(command_template, replacements=replacements), resolved_model, adapter
+    command, prompt_transport, command_replacements = harness._adapter_invocation_command(
+        adapter,
+        adapter_id=adapter_id,
+        model=resolved_model,
+        replacements={**replacements, "model": resolved_model},
+        run_root=Path(replacements["run_root"]),
+        prompt_id=f"{replacements.get('mode_id', 'mode')}-{replacements.get('phase_id', 'phase')}",
+    )
+    return command, resolved_model, adapter, prompt_transport, command_replacements
 
 
 def _run_validation_commands(
@@ -391,12 +410,18 @@ def _comparison_summary(mode_results: list[dict[str, Any]]) -> dict[str, Any]:
 def _continuation_comparison(mode_results: list[dict[str, Any]]) -> dict[str, Any]:
     modes: list[dict[str, Any]] = []
     kinds: set[str] = set()
+    continuation_contribution_by_mode: dict[str, str] = {}
     for result in mode_results:
         phases = result.get("phases", [])
         if not isinstance(phases, list):
             phases = []
         adapters = [str(phase.get("adapter_id", "")) for phase in phases if isinstance(phase, dict)]
         models = [str(phase.get("model", "")) for phase in phases if isinstance(phase, dict)]
+        contributions = [
+            str(phase.get("continuation_contribution", "unknown"))
+            for phase in phases
+            if isinstance(phase, dict)
+        ]
         if len(adapters) <= 1:
             kind = "single-phase"
         elif len(set(adapters)) == 1 and len(set(models)) == 1:
@@ -404,6 +429,7 @@ def _continuation_comparison(mode_results: list[dict[str, Any]]) -> dict[str, An
         else:
             kind = "agent-switch-continuation"
         kinds.add(kind)
+        continuation_contribution_by_mode[str(result.get("mode_id", ""))] = contributions[-1] if contributions else "unknown"
         modes.append(
             {
                 "mode_id": result.get("mode_id", ""),
@@ -411,6 +437,7 @@ def _continuation_comparison(mode_results: list[dict[str, Any]]) -> dict[str, An
                 "phase_count": len(adapters),
                 "phase_adapter_ids": adapters,
                 "phase_models": models,
+                "phase_contributions": contributions,
                 "continuation_kind": kind,
             }
         )
@@ -420,7 +447,42 @@ def _continuation_comparison(mode_results: list[dict[str, Any]]) -> dict[str, An
         "status": "present" if has_same_agent and has_agent_switch else "partial" if modes else "absent",
         "has_same_agent_continuation": has_same_agent,
         "has_agent_switch_continuation": has_agent_switch,
+        "continuation_contribution_by_mode": continuation_contribution_by_mode,
+        "substantive_continuation_count": sum(
+            1
+            for contribution in continuation_contribution_by_mode.values()
+            if contribution in {"changed-source", "changed-tests", "changed-non-source"}
+        ),
         "modes": modes,
+    }
+
+
+def _path_contribution_kind(paths: list[str]) -> str:
+    if any(path.startswith(("src/", "lib/", "packages/")) and not path.endswith((".md", ".txt")) for path in paths):
+        return "changed-source"
+    if any(path.startswith(("test/", "tests/", "testing/")) or path.endswith(("_test.py", "test.py")) or "/test_" in path for path in paths):
+        return "changed-tests"
+    if paths:
+        return "changed-non-source"
+    return "no-op"
+
+
+def _phase_contribution(mutation_summary: dict[str, Any]) -> dict[str, Any]:
+    paths = sorted(
+        set(mutation_summary.get("created", []))
+        | set(mutation_summary.get("modified", []))
+        | set(mutation_summary.get("deleted", []))
+    )
+    kind = _path_contribution_kind([str(path) for path in paths])
+    if kind == "no-op" and mutation_summary.get("raw_status") == "changed":
+        kind = "ignored-or-setup-only"
+    return {
+        "kind": kind,
+        "source_change_count": len(paths),
+        "raw_change_count": int(mutation_summary.get("raw_created_count", 0) or 0)
+        + int(mutation_summary.get("raw_modified_count", 0) or 0)
+        + int(mutation_summary.get("raw_deleted_count", 0) or 0),
+        "paths": paths[:20],
     }
 
 
@@ -442,7 +504,7 @@ def run_episode(
     mode_results: list[dict[str, Any]] = []
     for mode in modes:
         paths = _episode_paths(episode=episode, mode_id=mode["id"], output_root=output_root)
-        _prepare_mode_repo(suite_path=suite_path, mode=mode, paths=paths, execute=execute)
+        setup_mutation_summary = _prepare_mode_repo(suite_path=suite_path, mode=mode, paths=paths, execute=execute)
         replacements = {
             "repo": str(paths.repo_path),
             "run_root": str(paths.run_root),
@@ -459,7 +521,7 @@ def run_episode(
         )
         prior_context: list[str] = []
         phase_results: list[dict[str, Any]] = []
-        previous_snapshot = harness._file_snapshot(paths.repo_path)
+        previous_snapshot = harness._file_snapshot(paths.repo_path, include_ignored=True)
         for phase in episode["phases"]:
             phase = _effective_phase(phase=phase, mode=mode)
             phase_prompt, prior_included = _phase_prompt(episode=episode, mode=mode, phase=phase, prior_context=prior_context)
@@ -472,14 +534,14 @@ def run_episode(
                 "transcript_path": str(phase_transcript),
                 "prompt": phase_prompt,
             }
-            command, resolved_model, adapter = _adapter_command(
+            command, resolved_model, adapter, prompt_transport, command_replacements = _adapter_command(
                 suite=suite,
                 adapter_id=str(phase.get("adapter") or episode.get("default_adapter") or "copilot"),
                 model=phase.get("model") if isinstance(phase.get("model"), str) else None,
                 replacements=phase_replacements,
             )
-            env = harness._adapter_environment(adapter, replacements=phase_replacements, isolate_provider_home=False)
-            preflight = harness._adapter_preflight(adapter, command=command, replacements=phase_replacements)
+            env = harness._adapter_environment(adapter, replacements=command_replacements, isolate_provider_home=False)
+            preflight = harness._adapter_preflight(adapter, command=command, replacements=command_replacements)
             env = harness._prepend_env_path(env, preflight["path_prepend"])
             result: dict[str, Any]
             if execute:
@@ -490,9 +552,10 @@ def run_episode(
                 harness._copy_transcript(str(result.get("stdout", "")), phase_transcript)
             else:
                 result = {"status": "dry-run", "command": command}
-            current_snapshot = harness._file_snapshot(paths.repo_path)
+            current_snapshot = harness._file_snapshot(paths.repo_path, include_ignored=True)
             mutation_summary = harness._snapshot_diff(previous_snapshot, current_snapshot)
             previous_snapshot = current_snapshot
+            contribution = _phase_contribution(mutation_summary)
             validation_commands = _list_of_commands(
                 phase.get("validation_commands", episode.get("visible_validation_commands")),
                 field=f"phase.{phase['id']}.validation_commands",
@@ -513,12 +576,15 @@ def run_episode(
                     "adapter_id": str(phase.get("adapter") or episode.get("default_adapter") or "copilot"),
                     "model": resolved_model,
                     "prompt": phase_prompt,
+                    "prompt_transport": prompt_transport,
                     "prior_transcript_included": prior_included,
                     "hide_transcript_for_resume": bool(phase.get("hide_transcript_for_resume")),
                     "command": command,
                     "preflight": preflight,
                     "result": result,
                     "mutation_summary": mutation_summary,
+                    "continuation_contribution": contribution["kind"],
+                    "continuation_contribution_detail": contribution,
                     "validation_results": validation_results,
                     "checkpoint": {
                         "transcript_path": str(phase_transcript),
@@ -532,6 +598,7 @@ def run_episode(
             "aw_enabled": bool(mode.get("aw_enabled", False)),
             "repo_path": str(paths.repo_path),
             "run_root": str(paths.run_root),
+            "setup_mutation_summary": setup_mutation_summary,
             "setup_results": setup_results,
             "phases": phase_results,
         }
@@ -545,14 +612,14 @@ def run_episode(
                 "share_path": str(evaluator_share),
                 "prompt": evaluator_prompt,
             }
-            command, resolved_model, adapter = _adapter_command(
+            command, resolved_model, adapter, prompt_transport, command_replacements = _adapter_command(
                 suite=suite,
                 adapter_id=str(evaluator_config.get("adapter") or episode.get("default_evaluator_adapter") or episode.get("default_adapter") or "copilot"),
                 model=evaluator_config.get("model") if isinstance(evaluator_config.get("model"), str) else None,
                 replacements=evaluator_replacements,
             )
-            env = harness._adapter_environment(adapter, replacements=evaluator_replacements, isolate_provider_home=False)
-            preflight = harness._adapter_preflight(adapter, command=command, replacements=evaluator_replacements)
+            env = harness._adapter_environment(adapter, replacements=command_replacements, isolate_provider_home=False)
+            preflight = harness._adapter_preflight(adapter, command=command, replacements=command_replacements)
             env = harness._prepend_env_path(env, preflight["path_prepend"])
             if execute:
                 evaluator_result = harness._run_command(command, cwd=paths.repo_path, timeout_seconds=timeout_seconds, env=env)
@@ -574,6 +641,7 @@ def run_episode(
                 "adapter_id": str(evaluator_config.get("adapter") or episode.get("default_evaluator_adapter") or episode.get("default_adapter") or "copilot"),
                 "model": resolved_model,
                 "prompt": evaluator_prompt,
+                "prompt_transport": prompt_transport,
                 "command": command,
                 "preflight": preflight,
                 "result": evaluator_result,

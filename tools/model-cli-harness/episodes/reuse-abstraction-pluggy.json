@@ -61,13 +61,13 @@
   "phases": [
     {
       "id": "strong-agent-investigation",
-      "prompt": "Investigate the multi-implementation unregister bug, identify the abstraction boundary, and leave a continuation-safe partial fix or plan.",
+      "prompt": "Investigate the multi-implementation unregister bug and identify the abstraction boundary, but do not edit implementation files under src/pluggy. Leave either focused failing tests or a continuation-safe plan that makes the next phase perform substantive implementation work.",
       "adapter": "codex",
       "model": "gpt-5.3-codex-spark"
     },
     {
       "id": "weaker-agent-continuation",
-      "prompt": "Resume from repo state only as a different agent. Finish the implementation without duplicating hook bookkeeping concepts.",
+      "prompt": "Resume from repo state only as a different agent. Perform the substantive source implementation now, without duplicating hook bookkeeping concepts.",
       "adapter": "copilot",
       "model": "claude-haiku-4.5",
       "hide_transcript_for_resume": true

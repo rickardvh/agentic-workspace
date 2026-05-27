@@ -326,6 +326,7 @@ def test_long_horizon_episode_comparison_reports_same_agent_vs_switch(tmp_path: 
     assert comparison["status"] == "present"
     assert comparison["has_same_agent_continuation"] is True
     assert comparison["has_agent_switch_continuation"] is True
+    assert comparison["continuation_contribution_by_mode"]["agent-switch"] == "no-op"
     assert kinds == {
         "agent-switch": "agent-switch-continuation",
         "same-agent": "same-agent-continuation",
@@ -382,6 +383,10 @@ def test_long_horizon_episode_bootstraps_aw_mode_for_pinned_repo_dry_run(tmp_pat
     assert (aw_repo / ".agentic-workspace" / "WORKFLOW.md").exists()
     assert "uv run agentic-workspace start" in (aw_repo / "AGENTS.md").read_text(encoding="utf-8")
     assert 'cli_invoke = "uv run agentic-workspace"' in (aw_repo / ".agentic-workspace" / "config.local.toml").read_text(encoding="utf-8")
+    setup_summary = payload["modes"][1]["setup_mutation_summary"]
+    assert setup_summary["status"] == "clean"
+    assert setup_summary["raw_status"] == "changed"
+    assert setup_summary["harness_setup_count"] > 0
 
 
 def test_long_horizon_episode_evaluator_excludes_hidden_oracle_and_reports_comparison(tmp_path: Path) -> None:
@@ -428,3 +433,151 @@ def test_long_horizon_episode_invalid_evaluator_json_is_failure(tmp_path: Path) 
     evaluation = payload["modes"][0]["evaluation"]
     assert evaluation["status"] == "invalid"
     assert "evaluator did not return" in evaluation["payload"]["error"]
+
+
+def test_long_horizon_episode_uses_model_args_by_phase_model(tmp_path: Path) -> None:
+    module = _load_episode_module()
+    fixtures = tmp_path / "fixtures"
+    fixture = fixtures / "repo"
+    fixture.mkdir(parents=True)
+    (fixture / "README.md").write_text("repo\n", encoding="utf-8")
+    suite = tmp_path / "suites" / "suite.json"
+    suite.parent.mkdir()
+    suite.write_text(
+        json.dumps(
+            {
+                "schema": "agentic-workspace/model-cli-harness-suite/v1",
+                "id": "unit",
+                "adapters": {
+                    "fake": {
+                        "default_model": "haiku",
+                        "model_args": ["--effort", "low"],
+                        "model_args_by_model": {"haiku": []},
+                        "command": ["fake", "--model", "{model}", "{model_args}", "-p", "{prompt}"],
+                    }
+                },
+                "scenarios": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    episode_payload = {
+        "kind": "agentic-workspace/long-horizon-episode/v1",
+        "id": "model-args",
+        "title": "Model args",
+        "task_prompt": "Run phases.",
+        "modes": [{"id": "mode", "aw_enabled": False, "fixture": "repo"}],
+        "visible_validation_commands": [[sys.executable, "-c", "print('ok')"]],
+        "phases": [
+            {"id": "phase-one", "prompt": "Use default.", "adapter": "fake"},
+            {"id": "phase-two", "prompt": "Use sonnet.", "adapter": "fake", "model": "sonnet"},
+        ],
+        "known_traps": ["model-options"],
+        "expected_mistake_classes": ["restart_failed"],
+        "rubric": {"intent_satisfied": "phases run"},
+    }
+    episode = tmp_path / "episode-model-args.json"
+    episode.write_text(json.dumps(episode_payload), encoding="utf-8")
+    payload = module.run_episode(
+        episode_path=episode,
+        suite_path=suite,
+        output_root=tmp_path / "out",
+        execute=False,
+        evaluator=False,
+    )
+
+    commands = [phase["command"] for phase in payload["modes"][0]["phases"]]
+    assert "--effort" not in commands[0]
+    assert commands[1][commands[1].index("--effort") + 1] == "low"
+
+
+def test_long_horizon_episode_evaluator_uses_prompt_file_transport(tmp_path: Path) -> None:
+    module = _load_episode_module()
+    fixtures = tmp_path / "fixtures"
+    fixture = fixtures / "repo"
+    fixture.mkdir(parents=True)
+    (fixture / "README.md").write_text("repo\n", encoding="utf-8")
+    suite = tmp_path / "suites" / "suite.json"
+    suite.parent.mkdir()
+    suite.write_text(
+        json.dumps(
+            {
+                "schema": "agentic-workspace/model-cli-harness-suite/v1",
+                "id": "unit",
+                "adapters": {
+                    "fake": {
+                        "default_model": "fake-model",
+                        "block_on_preflight_failure": False,
+                        "command": [sys.executable, "-c", "import sys; sys.exit(0)", "{repo}", "{phase_id}", "{share_path}", "{prompt}"],
+                    },
+                    "fake-evaluator": {
+                        "default_model": "fake-eval-model",
+                        "block_on_preflight_failure": False,
+                        "prompt_transport": {
+                            "threshold_chars": 20,
+                            "mode": "file-attachment",
+                            "file_args": ["--attachment", "{prompt_file}"],
+                            "file_prompt": "Read {prompt_file}.",
+                        },
+                        "command": [
+                            sys.executable,
+                            "-c",
+                            "import sys; sys.exit(0)",
+                            "{repo}",
+                            "{phase_id}",
+                            "{share_path}",
+                            "{prompt}",
+                            "{prompt_transport_args}",
+                        ],
+                    },
+                },
+                "scenarios": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    episode_payload = {
+        "kind": "agentic-workspace/long-horizon-episode/v1",
+        "id": "transport",
+        "title": "Transport",
+        "task_prompt": "Run evaluator with a large prompt.",
+        "modes": [{"id": "mode", "aw_enabled": False, "fixture": "repo"}],
+        "visible_validation_commands": [[sys.executable, "-c", "print('ok')"]],
+        "phases": [{"id": "phase-one", "prompt": "Do work.", "adapter": "fake"}],
+        "known_traps": ["large-prompt"],
+        "expected_mistake_classes": ["weak_proof"],
+        "rubric": {"intent_satisfied": "prompt is transported"},
+        "evaluator": {"adapter": "fake-evaluator"},
+    }
+    episode = tmp_path / "episode-transport.json"
+    episode.write_text(json.dumps(episode_payload), encoding="utf-8")
+
+    payload = module.run_episode(
+        episode_path=episode,
+        suite_path=suite,
+        output_root=tmp_path / "out",
+        execute=False,
+        evaluator=True,
+    )
+
+    evaluation = payload["modes"][0]["evaluation"]
+    prompt_transport = evaluation["prompt_transport"]
+    prompt_file = Path(prompt_transport["prompt_file"])
+    assert prompt_transport["mode"] == "file-attachment"
+    assert prompt_file.exists()
+    assert "--attachment" in evaluation["command"]
+    assert str(prompt_file) in evaluation["command"]
+
+
+def test_long_horizon_episode_classifies_phase_contribution() -> None:
+    module = _load_episode_module()
+
+    assert module._phase_contribution({"created": ["src/pluggy/_manager.py"], "modified": [], "deleted": []})["kind"] == "changed-source"
+    assert (
+        module._phase_contribution({"created": ["testing/test_pluginmanager.py"], "modified": [], "deleted": []})["kind"] == "changed-tests"
+    )
+    assert (
+        module._phase_contribution({"created": [], "modified": [], "deleted": [], "raw_status": "changed"})["kind"]
+        == "ignored-or-setup-only"
+    )
+    assert module._phase_contribution({"created": [], "modified": [], "deleted": [], "raw_status": "clean"})["kind"] == "no-op"
