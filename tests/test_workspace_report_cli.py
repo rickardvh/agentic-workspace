@@ -3963,6 +3963,91 @@ def test_external_intent_refresh_github_applies_prioritized_candidates(tmp_path:
     assert 'priority = "P1"' in state_text
 
 
+def test_external_intent_refresh_github_applies_candidates_to_inline_empty_array(tmp_path: Path, monkeypatch, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--preset", "planning", "--format", "json"]) == 0
+    capsys.readouterr()
+    state_path = target / ".agentic-workspace" / "planning" / "state.toml"
+    _write(
+        state_path,
+        'kind = "agentic-planning-state"\n'
+        'schema_version = "planning-state/v1"\n\n'
+        "work_items = []\n\n"
+        "[active]\nexecplans = []\n\n"
+        "[todo]\nactive_items = []\nqueued_items = []\n\n"
+        "[roadmap]\nlanes = []\ncandidates = []\n",
+    )
+
+    class Result:
+        returncode = 0
+        stderr = ""
+        stdout = json.dumps(
+            [
+                {
+                    "number": 99,
+                    "title": "Inline candidate array",
+                    "state": "OPEN",
+                    "url": "https://github.com/acme/project/issues/99",
+                    "labels": [{"name": "priority/medium"}],
+                    "createdAt": "2026-04-01T00:00:00Z",
+                    "updatedAt": "2026-04-27T00:00:00Z",
+                    "closedAt": None,
+                    "body": "",
+                    "comments": 0,
+                },
+            ]
+        )
+
+    monkeypatch.setattr(cli.subprocess, "run", lambda *args, **kwargs: Result())
+
+    assert (
+        cli.main(
+            [
+                "external-intent",
+                "refresh-github",
+                "--target",
+                str(target),
+                "--repo",
+                "acme/project",
+                "--apply-planning-candidates",
+                "--dry-run",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    dry_run_payload = json.loads(capsys.readouterr().out)
+    assert dry_run_payload["planning_candidate_apply"]["status"] == "dry-run"
+    assert dry_run_payload["planning_candidate_apply"]["candidate_ids"] == ["github-99-inline-candidate-array"]
+    assert "parser_error" not in dry_run_payload["planning_candidate_apply"]
+
+    assert (
+        cli.main(
+            [
+                "external-intent",
+                "refresh-github",
+                "--target",
+                str(target),
+                "--repo",
+                "acme/project",
+                "--apply-planning-candidates",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["planning_candidate_apply"]["status"] == "applied"
+    state_text = state_path.read_text(encoding="utf-8")
+    assert state_text.count("lanes = []") == 1
+    assert "GitHub #99" in state_text
+
+
 def test_external_intent_refresh_github_compacts_old_unreferenced_closed_cache_items(tmp_path: Path, monkeypatch, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

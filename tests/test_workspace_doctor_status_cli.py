@@ -275,6 +275,10 @@ def test_doctor_json_exposes_standardised_summary_fields(monkeypatch, tmp_path: 
         '{"schema_version":"skill-registry.v1","owner":"agentic-workspace","source_kind":"installed-workspace-skills","skills":[]}\n',
     )
     _write((tmp_path / ".agentic-workspace" / "skills" / "workspace-startup" / "SKILL.md"), "# Workspace Startup\n")
+    _write(
+        (tmp_path / ".agentic-workspace" / "skills" / "workspace-intent-discovery" / "SKILL.md"),
+        "# Workspace Intent Discovery\n",
+    )
     _write((tmp_path / ".agentic-workspace" / "skills" / "workspace-work-shape" / "SKILL.md"), "# Workspace Work Shape\n")
     _write(
         (tmp_path / ".agentic-workspace" / "skills" / "workspace-proof-selection" / "SKILL.md"),

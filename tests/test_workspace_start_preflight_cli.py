@@ -2322,6 +2322,75 @@ def test_start_task_surfaces_vague_outcome_orientation(tmp_path: Path, capsys) -
     assert "skills" in payload
 
 
+def test_start_vague_high_stakes_task_routes_to_intent_discovery_dialogue(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(target),
+                "--task",
+                "Improve onboarding",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    discovery = _start_context_value(payload, "intent_discovery_dialogue")
+    assert discovery["status"] == "ask-human"
+    assert discovery["inferred_intent_confidence"] == "low"
+    assert discovery["stakes_if_wrong"] == "high"
+    assert discovery["required_next_action"] == "ask-intent-discovery-question"
+    assert len(discovery["candidate_interpretations"]) >= 2
+    assert "question_to_user" in discovery["dialogue_packet"]
+    assert discovery["loop_control"]["max_questions_before_progress"] == 1
+    assert "captured_intent_after_reply" in discovery["output_shape"]["fields"]
+    assert "Planning" in discovery["output_shape"]["promotion_targets"]
+
+    next_action = payload["next_safe_action"]
+    assert next_action["next_safe_action"] == "ask-intent-discovery-question"
+    assert next_action["required_skill"] == "workspace-intent-discovery"
+    assert next_action["implementation_allowed"] is False
+    assert "begin implementation" in next_action["forbidden_actions"]
+
+
+def test_start_detailed_issue_uses_intent_discovery_without_interrupting(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(target),
+                "--task",
+                "Implement #1197",
+                "--select",
+                "intent_discovery_dialogue,intent_acknowledgement,immediate_next_allowed_action",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)["values"]
+    discovery = payload["intent_discovery_dialogue"]
+    assert discovery["status"] == "acknowledge-and-proceed"
+    assert discovery["required_next_action"] == "state-assumptions-before-editing"
+    assert payload["immediate_next_allowed_action"]["action"] != "ask-intent-discovery-question"
+    assert payload["intent_acknowledgement"]["decision"] == "proceed-with-stated-assumption"
+
+
 def test_start_task_surfaces_stated_assumption_middle_path(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
@@ -2377,6 +2446,7 @@ def test_start_direct_task_keeps_stated_assumption_out_of_default(tmp_path: Path
 
     payload = json.loads(capsys.readouterr().out)
     assert "intent_acknowledgement" not in payload
+    assert "intent_discovery_dialogue" not in payload
 
 
 def test_startup_skillspec_pilot_keeps_direct_work_light_and_blocks_epic_work(tmp_path: Path, capsys) -> None:

@@ -60,6 +60,7 @@ def test_generated_codex_plugin_is_compact_framework_native_projection() -> None
 def test_critical_skills_include_anti_rationalization_and_behavior_evidence() -> None:
     root = Path(__file__).resolve().parents[1]
     startup = (root / ".agentic-workspace" / "skills" / "workspace-startup" / "SKILL.md").read_text(encoding="utf-8")
+    intent_discovery = (root / ".agentic-workspace" / "skills" / "workspace-intent-discovery" / "SKILL.md").read_text(encoding="utf-8")
     proof = (root / ".agentic-workspace" / "skills" / "workspace-proof-selection" / "SKILL.md").read_text(encoding="utf-8")
     closeout = (root / ".agentic-workspace" / "planning" / "skills" / "planning-closeout-trust" / "SKILL.md").read_text(encoding="utf-8")
     memory = (root / ".agentic-workspace" / "memory" / "skills" / "memory-consultation-and-residue" / "SKILL.md").read_text(
@@ -68,6 +69,9 @@ def test_critical_skills_include_anti_rationalization_and_behavior_evidence() ->
 
     assert "Red flag:" in startup
     assert "Use instead:" in startup
+    assert "candidate_interpretations" in intent_discovery
+    assert "Stop the dialogue after one bounded clarification" in intent_discovery
+    assert "`task_intent`, `acceptance`, `durable_intent`, Memory, Planning, or an issue" in intent_discovery
     assert "Tests passed, so completion is claimable" in proof
     assert "Behavior-Impact Evidence" in proof
     assert "Archive or close is safe because validation passed" in closeout
@@ -89,6 +93,7 @@ def test_skills_command_lists_registered_workspace_skills(tmp_path: Path, capsys
     skill_ids = {entry["id"] for entry in payload["skills"]}
     assert "workspace-startup" in skill_ids
     assert "workspace-setup-jumpstart" in skill_ids
+    assert "workspace-intent-discovery" in skill_ids
     assert "workspace-proof-selection" in skill_ids
     assert "workspace-transition-gates" in skill_ids
     assert "workspace-operating-loop" in skill_ids
@@ -103,6 +108,9 @@ def test_skills_command_lists_registered_workspace_skills(tmp_path: Path, capsys
     assert setup_jumpstart["source_kind"] == "installed-workspace-skills"
     assert "lived-in repo" in setup_jumpstart["activation_hints"]["phrases"]
     assert "mature repo" in setup_jumpstart["activation_hints"]["nouns"]
+    intent_discovery = next(entry for entry in payload["skills"] if entry["id"] == "workspace-intent-discovery")
+    assert "candidate interpretations" in intent_discovery["activation_hints"]["phrases"]
+    assert "first slice" in intent_discovery["activation_hints"]["nouns"]
     autopilot = next(entry for entry in payload["skills"] if entry["id"] == "planning-autopilot")
     assert "run autopilot" in autopilot["activation_hints"]["phrases"]
 
@@ -484,6 +492,7 @@ def test_skills_command_recommends_high_risk_workflow_decision_skills(tmp_path: 
 
     cases = [
         ("large vague feature request classify shape before implementation", "workspace-work-shape"),
+        ("clarify human intent with candidate interpretations before planning", "workspace-intent-discovery"),
         ("decompose an epic into lanes before execplans", "planning-decompose"),
         ("tighten a new execplan before coding", "planning-new-plan-tighten"),
         ("assurance classification and delegation posture before implementation", "planning-assurance-delegation"),

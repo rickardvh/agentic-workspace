@@ -12205,10 +12205,19 @@ def _append_planning_candidate_rows(*, target_root: Path, candidates: list[dict[
     if roadmap_match is None:
         updated = original.rstrip() + "\n\n[roadmap]\nlanes = []\ncandidates = [\n" + ",\n".join(rows) + "\n]\n"
     else:
-        candidates_match = re.search(r"(?ms)^candidates\s*=\s*\[(.*?)^\]", original[roadmap_match.end() :])
-        if candidates_match is None:
+        roadmap_body = original[roadmap_match.end() :]
+        empty_inline_candidates_match = re.search(r"(?m)^candidates\s*=\s*\[\s*\]\s*$", roadmap_body)
+        candidates_match = re.search(r"(?ms)^candidates\s*=\s*\[(.*?)^\]", roadmap_body)
+        if empty_inline_candidates_match is not None:
+            block_start = roadmap_match.end() + empty_inline_candidates_match.start()
+            block_end = roadmap_match.end() + empty_inline_candidates_match.end()
+            replacement = "candidates = [\n" + ",\n".join(rows) + "\n]"
+            updated = original[:block_start] + replacement + original[block_end:]
+        elif candidates_match is None:
             insert_at = roadmap_match.end()
-            updated = original[:insert_at] + "\nlanes = []\ncandidates = [\n" + ",\n".join(rows) + "\n]\n" + original[insert_at:]
+            has_lanes = bool(re.search(r"(?m)^lanes\s*=", roadmap_body))
+            prefix = "\ncandidates = [\n" if has_lanes else "\nlanes = []\ncandidates = [\n"
+            updated = original[:insert_at] + prefix + ",\n".join(rows) + "\n]\n" + original[insert_at:]
         else:
             block_start = roadmap_match.end() + candidates_match.start()
             block_end = roadmap_match.end() + candidates_match.end()
@@ -12226,9 +12235,12 @@ def _append_planning_candidate_rows(*, target_root: Path, candidates: list[dict[
         return {
             "status": "blocked",
             "path": relative_path,
-            "reason": f"candidate append would make planning state invalid: {exc}",
+            "reason": "candidate append would make planning state invalid",
+            "parser_error": str(exc),
+            "error_location": {"line": exc.lineno, "column": exc.colno},
+            "recovery": "Inspect the reported TOML location, then ensure [roadmap] has one candidates array before rerunning.",
             "applied_count": 0,
-            "candidate_ids": [],
+            "candidate_ids": [candidate["id"] for candidate in candidates],
         }
     if not dry_run:
         state_path.write_text(updated, encoding="utf-8")
@@ -13400,7 +13412,9 @@ def _next_safe_action_packet(
     decision = str((workflow_sufficiency or {}).get("decision", "") or "")
     preferred_routes = (skill_routing or {}).get("preferred_routes", [])
     skill = ""
-    if action != "choose-smallest-workflow-shape" and isinstance(preferred_routes, list):
+    if action == "ask-intent-discovery-question":
+        skill = "workspace-intent-discovery"
+    elif action != "choose-smallest-workflow-shape" and isinstance(preferred_routes, list):
         for route in preferred_routes:
             if isinstance(route, dict) and route.get("skill"):
                 skill = str(route.get("skill"))
@@ -13411,6 +13425,8 @@ def _next_safe_action_packet(
         module_slot = "planning.closeout"
     elif "proof" in action or "validation" in proof_hint:
         module_slot = "workspace.proof"
+    elif "intent-discovery" in action:
+        module_slot = "workspace.intent"
     elif "memory" in action:
         module_slot = "memory"
     else:
@@ -13420,6 +13436,8 @@ def _next_safe_action_packet(
         forbidden_actions.extend(["edit product source", "claim implementation complete"])
     if action in {"continue-active-planning-record", "run summary"}:
         forbidden_actions.extend(["open raw planning files before compact summary", "claim completion"])
+    if action == "ask-intent-discovery-question":
+        forbidden_actions.extend(["begin implementation", "create planning artifact before clarified intent is captured"])
     if "closeout" in action:
         forbidden_actions.append("claim completion before closeout trust is reconciled")
     if decision in {"active-execplan-required", "planning-escalation-required", "implementation-owner-missing"}:
@@ -13624,6 +13642,22 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             }
         else:
             projected["vague_outcome_orientation"] = vague_orientation
+    intent_discovery = payload.get("intent_discovery_dialogue", {})
+    if isinstance(intent_discovery, dict) and intent_discovery.get("applies_to_current_task") is True:
+        projected["intent_discovery_dialogue"] = {
+            "kind": intent_discovery.get("kind", "agentic-workspace/intent-discovery-dialogue/v1"),
+            "status": intent_discovery.get("status"),
+            "skill": intent_discovery.get("skill"),
+            "inferred_intent_confidence": intent_discovery.get("inferred_intent_confidence"),
+            "stakes_if_wrong": intent_discovery.get("stakes_if_wrong"),
+            "required_next_action": intent_discovery.get("required_next_action"),
+            "candidate_interpretations": intent_discovery.get("candidate_interpretations", [])[:3],
+            "dialogue_packet": intent_discovery.get("dialogue_packet", {}),
+            "output_shape": intent_discovery.get("output_shape", {}),
+            "loop_control": intent_discovery.get("loop_control", {}),
+            "visible_residue_when_proceeding_without_answer": intent_discovery.get("visible_residue_when_proceeding_without_answer", []),
+            "examples": intent_discovery.get("examples", []),
+        }
     intent_acknowledgement = payload.get("intent_acknowledgement", {})
     if (
         isinstance(intent_acknowledgement, dict)
@@ -14334,6 +14368,13 @@ def _start_payload(
     vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
     if vague_orientation["applies_to_current_task"]:
         payload["vague_outcome_orientation"] = vague_orientation
+    intent_discovery = _intent_discovery_dialogue_payload(
+        task_text=task_text,
+        vague_orientation=vague_orientation,
+        cli_invoke=config.cli_invoke,
+    )
+    if intent_discovery["applies_to_current_task"]:
+        payload["intent_discovery_dialogue"] = intent_discovery
     if changed_paths:
         durable_intent = _intent_decision_projection(target_root=target_root, config=config, changed_paths=changed_paths, compact=True)
         subsystem_projection = durable_intent.get("subsystem_intent", {})
@@ -14384,6 +14425,33 @@ def _start_payload(
         and (not _is_prep_only_handoff_task(task_text))
     ):
         payload["intent_acknowledgement"] = intent_acknowledgement
+    if (
+        intent_discovery.get("status") == "ask-human"
+        and not active_planning_present
+        and not changed_paths
+        and not _is_config_posture_task(task_text)
+        and not _is_prep_only_handoff_task(task_text)
+    ):
+        question = str(intent_discovery.get("dialogue_packet", {}).get("question_to_user", ""))
+        payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
+            surface="start",
+            decision="intent-discovery-required",
+            reason="Task intent is low-confidence and the stakes of silently choosing a slice are high.",
+            required_next_action="ask-intent-discovery-question",
+            evidence_required=["captured clarified intent before implementation or Planning"],
+        )
+        payload["immediate_next_allowed_action"] = {
+            "action": "ask-intent-discovery-question",
+            "summary": "Ask one bounded intent-discovery question before implementation or Planning narrows the work.",
+            "command": None,
+            "run": None,
+            "risk": "human-intent ambiguity",
+            "required_inputs": ["why/outcome/non-goals/acceptable first slice"],
+            "next_proof": "carry captured_intent_after_reply into task_intent, acceptance, durable_intent, Memory, Planning, or an issue",
+            "read_first": [],
+            "open_execplan_only_when": startup_template["open_execplan_only_when"],
+            "question_to_user": question,
+        }
     if not active_planning_present and task_mentioned_paths and (not changed_paths) and (not _is_config_posture_task(task_text)):
         implement_command = str(task_intent.get("implement_changed_command", "")) if isinstance(task_intent, dict) else ""
         if implement_command:
@@ -14623,6 +14691,7 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "acceptance",
         "durable_intent_promotion",
         "delegation_decision",
+        "intent_discovery_dialogue",
         "intent_acknowledgement",
         "workflow_sufficiency",
         "next_safe_action",
@@ -14650,6 +14719,7 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "context.acceptance",
         "context.durable_intent_promotion",
         "context.delegation_decision",
+        "context.intent_discovery_dialogue",
         "context.intent_acknowledgement",
         "context.workflow_sufficiency",
         "context.guidance",
@@ -14926,6 +14996,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         "prep_only_handoff",
         "routine_work_context",
         "closeout_trust_inspection",
+        "intent_discovery_dialogue",
         "vague_outcome_orientation",
         "intent_acknowledgement",
     ):
@@ -15082,6 +15153,13 @@ def _start_tiny_payload_fast(
     vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
     if vague_orientation["applies_to_current_task"]:
         payload["vague_outcome_orientation"] = vague_orientation
+    intent_discovery = _intent_discovery_dialogue_payload(
+        task_text=task_text,
+        vague_orientation=vague_orientation,
+        cli_invoke=config.cli_invoke,
+    )
+    if intent_discovery.get("status") == "ask-human":
+        payload["intent_discovery_dialogue"] = intent_discovery
     if changed_paths:
         durable_intent = _intent_decision_projection(target_root=target_root, config=config, changed_paths=changed_paths, compact=True)
         subsystem_projection = durable_intent.get("subsystem_intent", {})
@@ -15113,6 +15191,33 @@ def _start_tiny_payload_fast(
         and (not _is_prep_only_handoff_task(task_text))
     ):
         payload["intent_acknowledgement"] = intent_acknowledgement
+    if (
+        intent_discovery.get("status") == "ask-human"
+        and not active_planning_present
+        and not changed_paths
+        and not _is_config_posture_task(task_text)
+        and not _is_prep_only_handoff_task(task_text)
+    ):
+        question = str(intent_discovery.get("dialogue_packet", {}).get("question_to_user", ""))
+        payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
+            surface="start",
+            decision="intent-discovery-required",
+            reason="Task intent is low-confidence and the stakes of silently choosing a slice are high.",
+            required_next_action="ask-intent-discovery-question",
+            evidence_required=["captured clarified intent before implementation or Planning"],
+        )
+        payload["immediate_next_allowed_action"] = {
+            "action": "ask-intent-discovery-question",
+            "summary": "Ask one bounded intent-discovery question before implementation or Planning narrows the work.",
+            "command": None,
+            "run": None,
+            "risk": "human-intent ambiguity",
+            "required_inputs": ["why/outcome/non-goals/acceptable first slice"],
+            "next_proof": "carry captured_intent_after_reply into task_intent, acceptance, durable_intent, Memory, Planning, or an issue",
+            "read_first": [],
+            "open_execplan_only_when": startup_template["open_execplan_only_when"],
+            "question_to_user": question,
+        }
     if not active_planning_present and task_mentioned_paths and (not changed_paths) and (not _is_config_posture_task(task_text)):
         implement_command = str(task_intent.get("implement_changed_command", "")) if isinstance(task_intent, dict) else ""
         if implement_command:
@@ -21960,18 +22065,37 @@ def _startup_skill_routing_payload(
         ),
         cli_invoke=cli_invoke,
     )
-    core_routes = [
-        {
-            "task_shape": "active planning report, restart, or proof posture",
-            "skill": "planning-reporting",
-            "fallback": "agentic-workspace summary --format json",
-        },
-        {
-            "task_shape": "managed planning bootstrap upgrade",
-            "skill": "bootstrap-upgrade",
-            "fallback": "agentic-workspace doctor --target ./repo --modules planning --format json",
-        },
-    ]
+    core_routes = []
+    intent_discovery_route_first = False
+    if task_text and task_text.strip():
+        intent_discovery = _intent_discovery_dialogue_payload(
+            task_text=task_text,
+            vague_orientation=_vague_outcome_orientation_payload(task_text=task_text, cli_invoke=cli_invoke),
+            cli_invoke=cli_invoke,
+        )
+        intent_discovery_route_first = intent_discovery.get("status") == "ask-human"
+    if intent_discovery_route_first:
+        core_routes.append(
+            {
+                "task_shape": "vague, broad, high-stakes, or under-specified human intent before implementation or Planning",
+                "skill": "workspace-intent-discovery",
+                "fallback": "agentic-workspace start --task <task> --select intent_discovery_dialogue --format json",
+            }
+        )
+    core_routes.extend(
+        [
+            {
+                "task_shape": "active planning report, restart, or proof posture",
+                "skill": "planning-reporting",
+                "fallback": "agentic-workspace summary --format json",
+            },
+            {
+                "task_shape": "managed planning bootstrap upgrade",
+                "skill": "bootstrap-upgrade",
+                "fallback": "agentic-workspace doctor --target ./repo --modules planning --format json",
+            },
+        ]
+    )
     configured_features = set(enabled_advanced_features)
     available_advanced_routes = [
         {
@@ -22120,6 +22244,189 @@ def _vague_outcome_orientation_payload(*, task_text: str | None, cli_invoke: str
             "separate one possible solution from the intended outcome",
         ],
         "raw_read_rule": "Open raw .agentic-workspace files only after compact output points there or the CLI is unavailable.",
+    }
+
+
+def _intent_discovery_dialogue_payload(
+    *, task_text: str | None, vague_orientation: dict[str, Any] | None = None, cli_invoke: str = DEFAULT_CLI_INVOKE
+) -> dict[str, Any]:
+    task = str(task_text or "").strip()
+    task_lower = " ".join(task.lower().split())
+    skill_command = _command_with_cli_invoke(
+        command=f"agentic-workspace skills --target . --task {_shell_quote(task or '<task>')} --format json",
+        cli_invoke=cli_invoke,
+    )
+    output_shape = {
+        "fields": [
+            "inferred_intent",
+            "uncertainty",
+            "candidate_interpretations",
+            "likely_non_goals",
+            "stakes_if_wrong",
+            "proposed_first_slice",
+            "question_to_user",
+            "proceed_without_answer_when",
+            "captured_intent_after_reply",
+            "promotion_target",
+        ],
+        "promotion_targets": ["task_intent", "acceptance", "durable_intent", "Memory", "Planning", "issue"],
+        "residue_rule": "Promote only the clarified intent, non-goals, first slice, and proof expectations; do not store raw brainstorming unless it materially helps continuation.",
+    }
+    examples = [
+        {
+            "id": "ask",
+            "prompt_shape": "Make onboarding better.",
+            "decision": "ask-human",
+            "why": "Outcome, audience, non-goals, and first slice are all under-specified.",
+        },
+        {
+            "id": "acknowledge-and-proceed",
+            "prompt_shape": "Implement #1234 from the detailed issue body.",
+            "decision": "proceed-with-stated-assumption",
+            "why": "An external issue can own detail; state the interpretation and correction point before editing.",
+        },
+        {
+            "id": "direct-work",
+            "prompt_shape": "Fix the typo in README.md.",
+            "decision": "silent-ok",
+            "why": "The target, outcome, and proof are obvious enough that clarification would interrupt direct work.",
+        },
+    ]
+    if not task:
+        return {
+            "kind": "agentic-workspace/intent-discovery-dialogue/v1",
+            "status": "available",
+            "applies_to_current_task": False,
+            "skill": "workspace-intent-discovery",
+            "skill_command": skill_command,
+            "output_shape": output_shape,
+            "examples": examples,
+        }
+
+    direct_markers = ("typo", "spelling", "formatting", "rename", "fix lint", "readme.md")
+    broad_markers = (
+        "improve",
+        "better",
+        "build",
+        "design",
+        "implement",
+        "create",
+        "make",
+        "workflow",
+        "protocol",
+        "onboarding",
+        "experience",
+        "system",
+        "architecture",
+        "planning",
+        "intent",
+        "clarify",
+        "discover",
+        "trust",
+        "safe",
+    )
+    high_stakes_markers = (
+        "workflow",
+        "protocol",
+        "planning",
+        "architecture",
+        "migration",
+        "auth",
+        "security",
+        "delete",
+        "remove",
+        "production",
+        "system",
+        "all",
+    )
+    question_words = ("why", "outcome", "non-goal", "scope", "first slice", "acceptable")
+    has_issue_ref = bool(re.search(r"#\d+\b", task))
+    has_named_path = bool(re.search(r"\b[\w./-]+\.(md|py|json|toml|ts|tsx|js|mjs|yaml|yml)\b", task_lower))
+    token_count = len(task_lower.split())
+    broad_signal = any(marker in task_lower for marker in broad_markers)
+    direct_signal = any(marker in task_lower for marker in direct_markers) or has_named_path
+    explicit_workflow_instruction = any(
+        marker in task_lower for marker in ("decompose", "epic", "lane", "execplan", "active planning", "implement #")
+    )
+    task_already_answers_intent = sum(1 for marker in question_words if marker in task_lower) >= 2
+    vague_applies = bool(isinstance(vague_orientation, dict) and vague_orientation.get("applies_to_current_task"))
+    confidence = "high" if direct_signal or task_already_answers_intent or has_issue_ref else "medium"
+    if (broad_signal and token_count <= 8) or (vague_applies and token_count <= 18):
+        confidence = "low"
+    if has_issue_ref and token_count <= 4:
+        confidence = "medium"
+    stakes = "high" if any(marker in task_lower for marker in high_stakes_markers) or (broad_signal and not direct_signal) else "medium"
+    if direct_signal and not broad_signal:
+        stakes = "low"
+    should_ask = confidence == "low" and stakes == "high" and not explicit_workflow_instruction
+    should_acknowledge = (
+        (confidence in {"low", "medium"} or broad_signal or has_issue_ref) and not should_ask and not (direct_signal and not broad_signal)
+    )
+    status = "ask-human" if should_ask else "acknowledge-and-proceed" if should_acknowledge else "available"
+    candidates = [
+        {
+            "id": "workflow-behavior",
+            "interpretation": "Change agent workflow behavior so vague requests get bounded intent discovery before implementation.",
+            "proposed_first_slice": "Add startup/skill routing and focused examples before broader Planning changes.",
+            "promotion_target": "task_intent",
+        },
+        {
+            "id": "planning-surface",
+            "interpretation": "Capture the clarified outcome as Planning state before decomposing work.",
+            "proposed_first_slice": "Create or tighten a planning item after the human confirms the intended outcome.",
+            "promotion_target": "Planning",
+        },
+        {
+            "id": "documentation-only",
+            "interpretation": "Document the intended behavior without changing runtime routing.",
+            "proposed_first_slice": "Update reference docs and leave runtime behavior unchanged.",
+            "promotion_target": "issue",
+        },
+    ]
+    question = (
+        "Which outcome should I optimize for, what is explicitly out of scope, and what first slice would be acceptable?"
+        if should_ask
+        else ""
+    )
+    return {
+        "kind": "agentic-workspace/intent-discovery-dialogue/v1",
+        "status": status,
+        "applies_to_current_task": status != "available",
+        "skill": "workspace-intent-discovery",
+        "skill_command": skill_command,
+        "inferred_intent_confidence": confidence,
+        "stakes_if_wrong": stakes,
+        "required_next_action": "ask-intent-discovery-question" if should_ask else "state-assumptions-before-editing",
+        "candidate_interpretations": candidates if status != "available" else [],
+        "likely_non_goals": [
+            "Do not silently choose a convenient implementation slice.",
+            "Do not create Planning state until the intended outcome is clear enough.",
+            "Do not store raw brainstorming when a compact clarified-intent record is enough.",
+        ],
+        "dialogue_packet": {
+            "why_it_matters": "High-ambiguity work can look bounded while missing the user's desired outcome.",
+            "desired_outcome": "<capture after reply>",
+            "non_goals": "<capture after reply>",
+            "acceptable_first_slice": "<capture after reply>",
+            "uncertainty": confidence,
+            "question_to_user": question,
+            "proceed_without_answer_when": "After one bounded question, proceed only if the first slice is low-risk, reversible, and the stated assumptions are visible.",
+        },
+        "output_shape": output_shape,
+        "loop_control": {
+            "max_questions_before_progress": 1,
+            "proceed_rule": "Ask one compact intent question, then either proceed with visible assumptions or route unresolved ambiguity to Planning/issue residue.",
+            "stop_rule": "Do not keep asking if the user has supplied enough why/outcome/non-goals/first-slice detail.",
+        },
+        "visible_residue_when_proceeding_without_answer": [
+            "inferred_intent",
+            "candidate_interpretation_chosen",
+            "non_goals_or_deferred_scope",
+            "first_slice",
+            "correction_point",
+            "promotion_target",
+        ],
+        "examples": examples,
     }
 
 
