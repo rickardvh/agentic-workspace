@@ -108,7 +108,7 @@
           "output.emit.install-result"
         ],
         "domain_runtime_extension_behavior": "Python generated packages may bridge explicit domain-runtime primitives through the declared runtime module binding; that bridge is not counted as shared primitive executor coverage.",
-        "conformance_ref": "internal/command-generation/tests/primitive_conformance.py and scripts/check/check_generated_command_packages.py --primitive-docker-conformance --require-docker",
+        "conformance_ref": "command_generation.primitive_conformance and scripts/check/check_generated_command_packages.py --primitive-docker-conformance --require-docker",
         "unsupported_behavior": "Unsupported primitive ids must fail as executor errors rather than silently falling back to package internals."
       },
       {
@@ -991,7 +991,7 @@
       "tier_reason": "Promotion candidate selection depends on Memory note metadata policy, remediation grouping, and package-owned judgment rather than portable target-executor behavior.",
       "conformance_ref": "memory.promotion-report.process",
       "migration_path": "Extract deterministic note scanning or grouping into schema-backed Tier 1 primitives only after promotion/remediation policy is modeled as data.",
-      "generic_behavior_audit": "Not counted as portable codegen completion; the primitive replaces the generic python.function.call bridge with a named Memory domain boundary so future targets can report unsupported/domain-runtime behavior explicitly."
+      "generic_behavior_audit": "Not counted as portable codegen completion; retained as a named Memory domain boundary for host runtimes while Python operation IR declares the checked-in package call through python.function.call."
     },
     {
       "id": "python.function.call",

@@ -15,7 +15,7 @@
       "command": "config",
       "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/config.report.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "workspace config loading",
         "workspace config tiny/full text compatibility formatting"
@@ -39,7 +39,7 @@
       "command": "defaults",
       "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/defaults.report.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "none for defaults payload truth; generated workspace runtime loads generated _contracts/payload.json and generated selection/output owns tiny-router, compact-answer, and selected-output text"
       ],
@@ -60,7 +60,7 @@
       "command": "note-delegation-outcome",
       "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/delegation-outcome.append.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "workspace.root.resolve",
         "local-only delegation outcome append"
@@ -190,7 +190,7 @@
       "command": "doctor",
       "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.doctor.report.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "memory.bootstrap.doctor.load for verbose or strict ownership fallback"
       ],
@@ -213,7 +213,7 @@
       "command": "capture-note",
       "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.capture-note.report.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "memory.capture_note.load",
         "capture recommendation text/json compatibility formatting"
@@ -234,7 +234,7 @@
       "command": "install",
       "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.install.lifecycle.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "memory.install.apply for mutation or customized install policy"
       ],
@@ -257,7 +257,7 @@
       "command": "init",
       "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.init.lifecycle.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "memory.init.apply for mutation or customized init policy"
       ],
@@ -280,7 +280,7 @@
       "command": "adopt",
       "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.adopt.lifecycle.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "memory.adopt.apply for mutation or customized adoption policy"
       ],
@@ -303,7 +303,7 @@
       "command": "upgrade",
       "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.upgrade.lifecycle.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "memory.upgrade.apply",
         "module-result text/json compatibility formatting"
@@ -324,7 +324,7 @@
       "command": "migrate-layout",
       "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.migrate-layout.lifecycle.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "memory.migrate_layout.apply",
         "module-result text/json compatibility formatting"
@@ -345,7 +345,7 @@
       "command": "uninstall",
       "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.uninstall.lifecycle.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "memory.uninstall.apply",
         "module-result text/json compatibility formatting"
@@ -366,7 +366,7 @@
       "command": "bootstrap-cleanup",
       "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.bootstrap-cleanup.apply.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "memory.bootstrap.cleanup",
         "module-result text/json compatibility formatting"
@@ -387,7 +387,7 @@
       "command": "create-note",
       "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.create-note.apply.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "memory.note.create",
         "module-result text/json compatibility formatting"
@@ -408,7 +408,7 @@
       "command": "current",
       "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.current.report.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "memory.current.load",
         "current-view/module-result text/json compatibility formatting"
@@ -448,7 +448,7 @@
       "command": "list-files",
       "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.list-files.report.json",
-      "primitive_executor": "generated/memory/python/commands/memory_list_files_report.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "none; generated command projection composes target-root resolution, package payload listing, payload assembly, and output emission directly"
       ],
@@ -467,7 +467,7 @@
       "command": "list-skills",
       "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.list-skills.report.json",
-      "primitive_executor": "generated/memory/python/commands/memory_list_skills_report.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "none; generated command projection composes package-resource JSON read, payload assembly, and output emission directly"
       ],
@@ -486,7 +486,7 @@
       "command": "promotion-report",
       "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.promotion-report.report.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "repo_memory_bootstrap.installer.promotion_report",
         "module-result text/json compatibility formatting"
@@ -494,12 +494,13 @@
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "memory.promotion-report.process",
       "domain_runtime_primitive_refs": [
-        "memory.promotion_report.load"
+        "python.function.call"
       ],
+      "external_adapter_note": "python.function.call is package-domain runtime delegation for Memory promotion-report semantics, not portable primitive coverage.",
       "runtime_boundary_class": "package-specific-judgment",
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but package-domain primitive steps still own product judgment or compatibility behavior.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while memory.promotion_report.load names the package-domain promotion report boundary. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while python.function.call names the checked-in package-domain promotion report boundary. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
     },
     {
       "operation_id": "memory.prompt.render",
@@ -507,7 +508,7 @@
       "command": "prompt",
       "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.prompt.render.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "memory.prompt.render",
         "prompt text compatibility formatting"
@@ -528,7 +529,7 @@
       "command": "report",
       "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.report.report.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "memory.report.load verbose fallback",
         "module-result verbose compatibility formatting"
@@ -552,7 +553,7 @@
       "command": "route-report",
       "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.route-report.report.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "memory.route_report.load verbose fallback",
         "module-result verbose compatibility formatting"
@@ -577,7 +578,7 @@
       "command": "route",
       "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.route.report.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "memory.route.load",
         "module-result text/json compatibility formatting"
@@ -598,7 +599,7 @@
       "command": "route-review",
       "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.route-review.report.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "memory.route_review.load",
         "module-result text/json compatibility formatting"
@@ -619,7 +620,7 @@
       "command": "search",
       "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.search.report.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "memory.search.load",
         "module-result text/json compatibility formatting"
@@ -640,7 +641,7 @@
       "command": "verify-payload",
       "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.verify-payload.report.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [],
       "status": "portable-codegen-primitive-executed",
       "conformance_ref": "memory.verify-payload.process",
@@ -660,7 +661,7 @@
       "command": "status",
       "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.status.report.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [],
       "status": "portable-codegen-primitive-executed",
       "conformance_ref": "memory.status.process",
@@ -682,7 +683,7 @@
       "command": "sync-memory",
       "generated_transport": "generated/memory/python/cli.py",
       "operation_contract": "operations/memory.sync-memory.report.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "memory.sync_memory.load",
         "module-result text/json compatibility formatting"
@@ -741,7 +742,7 @@
       "command": "adopt",
       "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.adopt.lifecycle.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "planning.adopt.apply",
         "module-result text/json compatibility formatting"
@@ -762,7 +763,7 @@
       "command": "archive-plan",
       "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.archive-plan.lifecycle.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "planning.archive-plan.apply",
         "module-result text/json compatibility formatting"
@@ -783,7 +784,7 @@
       "command": "closeout",
       "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.closeout.lifecycle.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "planning.closeout.apply",
         "module-result text/json compatibility formatting"
@@ -804,7 +805,7 @@
       "command": "close-item",
       "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.close-item.lifecycle.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "planning.close-item.apply",
         "module-result text/json compatibility formatting"
@@ -825,7 +826,7 @@
       "command": "create-review",
       "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.create-review.lifecycle.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "planning.create-review.apply",
         "module-result text/json compatibility formatting"
@@ -846,7 +847,7 @@
       "command": "delegation-decision",
       "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.delegation-decision.lifecycle.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "planning.delegation-decision.apply",
         "module-result text/json compatibility formatting"
@@ -867,7 +868,7 @@
       "command": "doctor",
       "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.doctor.report.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "planning.bootstrap.doctor.load",
         "module-result text/json compatibility formatting"
@@ -907,7 +908,7 @@
       "command": "handoff",
       "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.handoff.report.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "planning.handoff.load",
         "module-result text/json compatibility formatting"
@@ -928,7 +929,7 @@
       "command": "init",
       "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.init.lifecycle.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "planning.init.apply",
         "module-result text/json compatibility formatting"
@@ -949,7 +950,7 @@
       "command": "install",
       "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.install.lifecycle.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "planning.install.apply",
         "module-result text/json compatibility formatting"
@@ -970,7 +971,7 @@
       "command": "list-files",
       "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.list-files.report.json",
-      "primitive_executor": "generated/planning/python/commands/planning_list_files_report.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "none; generated command projection composes package payload listing, bundled skill listing, payload assembly, and output emission directly"
       ],
@@ -988,7 +989,7 @@
       "command": "new-plan",
       "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.new-plan.lifecycle.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "planning.new-plan.apply",
         "module-result text/json compatibility formatting"
@@ -1009,7 +1010,7 @@
       "command": "intake-artifact",
       "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.intake-artifact.lifecycle.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "planning.intake-artifact.apply",
         "module-result text/json compatibility formatting"
@@ -1030,7 +1031,7 @@
       "command": "promote-to-plan",
       "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.promote-to-plan.lifecycle.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "planning.promote-to-plan.apply",
         "module-result text/json compatibility formatting"
@@ -1051,7 +1052,7 @@
       "command": "prompt",
       "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.prompt.render.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "planning.prompt.render",
         "text output emission"
@@ -1091,7 +1092,7 @@
       "command": "report",
       "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.report.report.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "planning.report.load",
         "verbose module-result compatibility formatting"
@@ -1112,7 +1113,7 @@
       "command": "status",
       "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.status.report.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "planning.bootstrap.status.load",
         "module-result text/json compatibility formatting"
@@ -1151,7 +1152,7 @@
       "command": "uninstall",
       "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.uninstall.lifecycle.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "planning.uninstall.apply",
         "module-result text/json compatibility formatting"
@@ -1172,7 +1173,7 @@
       "command": "upgrade",
       "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.upgrade.lifecycle.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "planning.upgrade.apply",
         "module-result text/json compatibility formatting"
@@ -1193,7 +1194,7 @@
       "command": "verify-payload",
       "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.verify-payload.report.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "planning.verify-payload.load",
         "module-result text/json compatibility formatting"
@@ -1237,7 +1238,7 @@
       "command": "prompt",
       "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/prompt.init.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "workspace.selection.resolve",
         "prompt.render compatibility payload",
@@ -1260,7 +1261,7 @@
       "command": "prompt",
       "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/prompt.uninstall.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "workspace.selection.resolve",
         "prompt.render compatibility payload",
@@ -1283,7 +1284,7 @@
       "command": "prompt",
       "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/prompt.upgrade.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "workspace.selection.resolve",
         "prompt.render compatibility payload",
@@ -1470,7 +1471,7 @@
       "command": "system-intent",
       "generated_transport": "generated/workspace/python/cli.py",
       "operation_contract": "operations/system-intent.sync.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "workspace.root.resolve",
         "workspace operation compatibility formatting"
@@ -1495,7 +1496,7 @@
       "command": "report",
       "generated_transport": "generated/verification/python/cli.py",
       "operation_contract": "operations/verification.report.report.json",
-      "primitive_executor": "internal/command-generation/src/command_generation/primitive_executor.py",
+      "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
         "verification manifest parsing",
         "verification activation matching",

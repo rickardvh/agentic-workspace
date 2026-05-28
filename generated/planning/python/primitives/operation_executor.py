@@ -39,6 +39,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
         'planning.init.lifecycle',
         'planning.install.lifecycle',
         'planning.intake-artifact.lifecycle',
+        'planning.list-files.report',
         'planning.new-plan.lifecycle',
         'planning.promote-to-plan.lifecycle',
         'planning.prompt.render',
@@ -124,7 +125,10 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'expect_planning_revision': getattr(args, 'expect_planning_revision', ''),
                 'paths': getattr(args, 'paths', []),
             },
-            context=PrimitiveContext(cwd=Path.cwd(), roots={}),
+            context=PrimitiveContext(cwd=Path.cwd(), roots={
+                'planning.package-payload': _handle_context_root_planning_package_payload(),
+                'planning.package-skills': _handle_context_root_planning_package_skills(),
+            }),
             handlers={
                 'planning.report.load': _handle_planning_report_load,
                 'planning.summary.load': _handle_planning_summary_load,
@@ -145,6 +149,18 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
     except PrimitiveExecutionError as exc:
         raise OperationIrExecutionError(str(exc)) from exc
     return 0
+
+
+def _handle_context_root_planning_package_payload() -> Path:
+    from .resources import find_resource_root
+
+    return find_resource_root(__file__, [('_payload', 'AGENTS.template.md')])
+
+
+def _handle_context_root_planning_package_skills() -> Path:
+    from .resources import find_resource_root
+
+    return find_resource_root(__file__, [('_skills', 'REGISTRY.json')])
 
 
 def _handle_planning_report_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:

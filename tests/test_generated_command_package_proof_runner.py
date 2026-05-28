@@ -262,14 +262,20 @@ def test_python_completion_blocker_report_accepts_exact_symbol_runtime_boundarie
     assert runtime_metrics["status"] == "available"
     assert runtime_metrics["accepted_runtime_symbol_count"] == sum(runtime_metrics["accepted_runtime_symbol_count_by_package"].values())
     assert runtime_metrics["accepted_runtime_symbol_count"] == sum(runtime_metrics["accepted_runtime_symbol_count_by_class"].values())
-    assert runtime_metrics["python_bridge_step_count"] == 1
+    assert runtime_metrics["python_bridge_step_count"] == 2
     assert runtime_metrics["python_bridge_symbols"] == [
+        {
+            "operation_id": "memory.promotion-report.report",
+            "runtime_boundary_class": "package-specific-judgment",
+            "source_module": "repo_memory_bootstrap.installer",
+            "source_symbol": "promotion_report",
+        },
         {
             "operation_id": "verification.report.report",
             "runtime_boundary_class": "package-specific-judgment",
             "source_module": "repo_verification_bootstrap.runtime_primitives",
             "source_symbol": "verification_report_payload",
-        }
+        },
     ]
     assert runtime_metrics["generic_debt_symbol_count"] == 0
     assert runtime_metrics["baseline_symbol_count"] == runtime_metrics["accepted_runtime_symbol_count"]
@@ -350,31 +356,42 @@ def test_python_completion_blocker_report_has_json_cli_mode(capsys) -> None:
     runtime_metrics = payload["accepted_runtime_boundary_metrics"]
     assert runtime_metrics["accepted_runtime_symbol_count_by_package"]
     assert runtime_metrics["output_fallback_symbol_count"] == runtime_metrics["accepted_output_emission_symbol_count"]
-    assert runtime_metrics["python_bridge_step_count"] == 1
+    assert runtime_metrics["python_bridge_step_count"] == 2
     assert runtime_metrics["python_bridge_symbols"] == [
+        {
+            "operation_id": "memory.promotion-report.report",
+            "runtime_boundary_class": "package-specific-judgment",
+            "source_module": "repo_memory_bootstrap.installer",
+            "source_symbol": "promotion_report",
+        },
         {
             "operation_id": "verification.report.report",
             "runtime_boundary_class": "package-specific-judgment",
             "source_module": "repo_verification_bootstrap.runtime_primitives",
             "source_symbol": "verification_report_payload",
-        }
+        },
     ]
     assert runtime_metrics["generic_debt_symbol_count"] == 0
     assert payload["lifecycle_dry_run_metrics"]["codegen_default_dry_run_operation_count"] >= 3
 
 
-def test_memory_list_commands_are_direct_generated_python_projections() -> None:
+def test_memory_list_commands_are_portable_resource_python_projections() -> None:
     checker = _load_checker()
 
-    errors = checker._validate_direct_generated_python_command_projection()
+    errors = checker._validate_portable_resource_python_command_projection()
 
     assert errors == []
     list_files = (checker.REPO_ROOT / "generated/memory/python/commands/memory_list_files_report.py").read_text(encoding="utf-8")
     list_skills = (checker.REPO_ROOT / "generated/memory/python/commands/memory_list_skills_report.py").read_text(encoding="utf-8")
+    planning_list_files = (checker.REPO_ROOT / "generated/planning/python/commands/planning_list_files_report.py").read_text(
+        encoding="utf-8"
+    )
     assert "packages/memory/bootstrap" not in list_files
     assert "packages/memory/skills" not in list_skills
-    assert "PAYLOAD_ROOT_CANDIDATES = (('_payload', 'AGENTS.template.md'),)" in list_files
-    assert "SKILLS_ROOT_CANDIDATES = (('_skills', 'REGISTRY.json'),)" in list_skills
+    assert "packages/planning/bootstrap" not in planning_list_files
+    assert "run_operation_ir(generated_operation_contract('memory.list-files.report'), args)" in list_files
+    assert "run_operation_ir(generated_operation_contract('memory.list-skills.report'), args)" in list_skills
+    assert "run_operation_ir(generated_operation_contract('planning.list-files.report'), args)" in planning_list_files
 
 
 def test_memory_status_has_no_source_runtime_status_fallback() -> None:
@@ -1041,7 +1058,7 @@ def test_tracked_python_source_files_falls_back_without_git(monkeypatch) -> None
     sources = checker._tracked_python_source_files()
 
     assert "src/agentic_workspace/contract_tooling.py" in sources
-    assert "internal/command-generation/src/command_generation/generator.py" in sources
+    assert "scripts/check/check_generated_command_packages.py" in sources
 
 
 def test_static_generated_package_proof_rejects_satisfied_gate_for_non_full_state(monkeypatch) -> None:

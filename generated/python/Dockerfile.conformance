@@ -2,15 +2,14 @@ FROM python:3.12
 
 WORKDIR /work
 
-RUN python -m pip install --no-cache-dir jsonschema
+RUN python -m pip install --no-cache-dir jsonschema "command-generation @ git+https://github.com/rickardvh/command-generation.git@codex/extract-command-generation-package"
 
 COPY src ./src
 COPY scripts ./scripts
 COPY packages ./packages
-COPY internal ./internal
 COPY generated ./generated
 
-ENV PYTHONPATH=/work/src:/work/packages/planning/src:/work/packages/memory/src:/work/internal/command-generation/src
+ENV PYTHONPATH=/work/src:/work/packages/planning/src:/work/packages/memory/src
 ENV AGENTIC_GENERATED_CONFORMANCE_CONTAINER=python
 
 CMD ["python", "scripts/check/check_generated_command_packages.py", "--python-conformance"]

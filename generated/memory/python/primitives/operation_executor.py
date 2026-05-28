@@ -36,6 +36,8 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
         'memory.doctor.report',
         'memory.init.lifecycle',
         'memory.install.lifecycle',
+        'memory.list-files.report',
+        'memory.list-skills.report',
         'memory.migrate-layout.lifecycle',
         'memory.promotion-report.report',
         'memory.prompt.render',

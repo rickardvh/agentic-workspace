@@ -872,7 +872,7 @@
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
-      "pattern": "internal/command-generation/pyproject.toml",
+      "pattern": "command-generation/pyproject.toml",
       "format": "toml",
       "owner": "command-generation",
       "status": "typed-validator-backed",
@@ -884,7 +884,7 @@
       "checked_in_justification": "Host repository tooling metadata consumed by the external platform or developer tools."
     },
     {
-      "pattern": "internal/command-generation/schemas/*.schema.json",
+      "pattern": "command_generation/schemas/*.schema.json",
       "format": "json",
       "owner": "command-generation",
       "status": "schema-backed",
@@ -1265,6 +1265,176 @@
       "routed_to": "#892"
     },
     {
+      "pattern": "generated/planning/python/_payload/**/*.json",
+      "format": "json",
+      "owner": "generated-command-adapters",
+      "status": "generated-derived",
+      "schema_or_validator": "generated command package checks",
+      "editable_by_agents": false,
+      "generated": true,
+      "notes": "Generated Planning payload JSON mirrors are adapter outputs copied from package payload resources.",
+      "storage_class": "generated-required-adapter",
+      "checked_in_justification": "Checked in so generated Python packages can load payload resources at runtime without depending on source-tree package paths.",
+      "reconstructable_from": [
+        "uv run python scripts/generate/generate_command_packages.py",
+        "packages/planning/bootstrap"
+      ],
+      "routed_to": "#1201"
+    },
+    {
+      "pattern": "generated/planning/python/_payload/**/*.toml",
+      "format": "toml",
+      "owner": "generated-command-adapters",
+      "status": "generated-derived",
+      "schema_or_validator": "generated command package checks",
+      "editable_by_agents": false,
+      "generated": true,
+      "notes": "Generated Planning payload TOML mirrors are adapter outputs copied from package payload resources.",
+      "storage_class": "generated-required-adapter",
+      "checked_in_justification": "Checked in so generated Python packages can load payload resources at runtime without depending on source-tree package paths.",
+      "reconstructable_from": [
+        "uv run python scripts/generate/generate_command_packages.py",
+        "packages/planning/bootstrap"
+      ],
+      "routed_to": "#1201"
+    },
+    {
+      "pattern": "generated/planning/python/_payload/**/*.yaml",
+      "format": "yaml",
+      "owner": "generated-command-adapters",
+      "status": "generated-derived",
+      "schema_or_validator": "generated command package checks",
+      "editable_by_agents": false,
+      "generated": true,
+      "notes": "Generated Planning payload YAML mirrors are adapter outputs copied from package payload resources.",
+      "storage_class": "generated-required-adapter",
+      "checked_in_justification": "Checked in so generated Python packages can load payload resources at runtime without depending on source-tree package paths.",
+      "reconstructable_from": [
+        "uv run python scripts/generate/generate_command_packages.py",
+        "packages/planning/bootstrap"
+      ],
+      "routed_to": "#1201"
+    },
+    {
+      "pattern": "generated/planning/python/_skills/**/*.json",
+      "format": "json",
+      "owner": "generated-command-adapters",
+      "status": "generated-derived",
+      "schema_or_validator": "generated command package checks",
+      "editable_by_agents": false,
+      "generated": true,
+      "notes": "Generated Planning skill registry mirrors are adapter outputs copied from package skill resources.",
+      "storage_class": "generated-required-adapter",
+      "checked_in_justification": "Checked in so generated Python packages can load skill resources at runtime without depending on source-tree package paths.",
+      "reconstructable_from": [
+        "uv run python scripts/generate/generate_command_packages.py",
+        "packages/planning/skills"
+      ],
+      "routed_to": "#1201"
+    },
+    {
+      "pattern": "generated/planning/python/_skills/**/*.yaml",
+      "format": "yaml",
+      "owner": "generated-command-adapters",
+      "status": "generated-derived",
+      "schema_or_validator": "generated command package checks",
+      "editable_by_agents": false,
+      "generated": true,
+      "notes": "Generated Planning skill YAML mirrors are adapter outputs copied from package skill resources.",
+      "storage_class": "generated-required-adapter",
+      "checked_in_justification": "Checked in so generated Python packages can load skill resources at runtime without depending on source-tree package paths.",
+      "reconstructable_from": [
+        "uv run python scripts/generate/generate_command_packages.py",
+        "packages/planning/skills"
+      ],
+      "routed_to": "#1201"
+    },
+    {
+      "pattern": "generated/planning/typescript/resources/_payload/**/*.json",
+      "format": "json",
+      "owner": "generated-command-adapters",
+      "status": "generated-derived",
+      "schema_or_validator": "generated command package checks",
+      "editable_by_agents": false,
+      "generated": true,
+      "notes": "Generated Planning TypeScript payload JSON mirrors are adapter outputs copied from package payload resources.",
+      "storage_class": "generated-required-adapter",
+      "checked_in_justification": "Checked in so generated TypeScript packages can load payload resources at runtime without depending on source-tree package paths.",
+      "reconstructable_from": [
+        "uv run python scripts/generate/generate_command_packages.py",
+        "packages/planning/bootstrap"
+      ],
+      "routed_to": "#1201"
+    },
+    {
+      "pattern": "generated/planning/typescript/resources/_payload/**/*.toml",
+      "format": "toml",
+      "owner": "generated-command-adapters",
+      "status": "generated-derived",
+      "schema_or_validator": "generated command package checks",
+      "editable_by_agents": false,
+      "generated": true,
+      "notes": "Generated Planning TypeScript payload TOML mirrors are adapter outputs copied from package payload resources.",
+      "storage_class": "generated-required-adapter",
+      "checked_in_justification": "Checked in so generated TypeScript packages can load payload resources at runtime without depending on source-tree package paths.",
+      "reconstructable_from": [
+        "uv run python scripts/generate/generate_command_packages.py",
+        "packages/planning/bootstrap"
+      ],
+      "routed_to": "#1201"
+    },
+    {
+      "pattern": "generated/planning/typescript/resources/_payload/**/*.yaml",
+      "format": "yaml",
+      "owner": "generated-command-adapters",
+      "status": "generated-derived",
+      "schema_or_validator": "generated command package checks",
+      "editable_by_agents": false,
+      "generated": true,
+      "notes": "Generated Planning TypeScript payload YAML mirrors are adapter outputs copied from package payload resources.",
+      "storage_class": "generated-required-adapter",
+      "checked_in_justification": "Checked in so generated TypeScript packages can load payload resources at runtime without depending on source-tree package paths.",
+      "reconstructable_from": [
+        "uv run python scripts/generate/generate_command_packages.py",
+        "packages/planning/bootstrap"
+      ],
+      "routed_to": "#1201"
+    },
+    {
+      "pattern": "generated/planning/typescript/resources/_skills/**/*.json",
+      "format": "json",
+      "owner": "generated-command-adapters",
+      "status": "generated-derived",
+      "schema_or_validator": "generated command package checks",
+      "editable_by_agents": false,
+      "generated": true,
+      "notes": "Generated Planning TypeScript skill registry mirrors are adapter outputs copied from package skill resources.",
+      "storage_class": "generated-required-adapter",
+      "checked_in_justification": "Checked in so generated TypeScript packages can load skill resources at runtime without depending on source-tree package paths.",
+      "reconstructable_from": [
+        "uv run python scripts/generate/generate_command_packages.py",
+        "packages/planning/skills"
+      ],
+      "routed_to": "#1201"
+    },
+    {
+      "pattern": "generated/planning/typescript/resources/_skills/**/*.yaml",
+      "format": "yaml",
+      "owner": "generated-command-adapters",
+      "status": "generated-derived",
+      "schema_or_validator": "generated command package checks",
+      "editable_by_agents": false,
+      "generated": true,
+      "notes": "Generated Planning TypeScript skill YAML mirrors are adapter outputs copied from package skill resources.",
+      "storage_class": "generated-required-adapter",
+      "checked_in_justification": "Checked in so generated TypeScript packages can load skill resources at runtime without depending on source-tree package paths.",
+      "reconstructable_from": [
+        "uv run python scripts/generate/generate_command_packages.py",
+        "packages/planning/skills"
+      ],
+      "routed_to": "#1201"
+    },
+    {
       "pattern": "tests/fixtures/**/*.json",
       "format": "json",
       "owner": "workspace-tests",
@@ -1457,6 +1627,26 @@
       "max_bytes": 250000
     },
     {
+      "pattern": "generated/planning/python/_payload/**/*.*",
+      "source_command": "uv run python scripts/generate/generate_command_packages.py",
+      "named_consumer": "generated Planning Python payload resource loaders",
+      "checked_in_justification": "Generated Planning payload mirrors are kept as files so runtime-consumed operations load package payload data from the generated package.",
+      "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
+      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "removal_or_demotion_path": "demote only after generated Python packages no longer need packaged Planning payload artifacts",
+      "max_bytes": 250000
+    },
+    {
+      "pattern": "generated/planning/python/_skills/**/*.*",
+      "source_command": "uv run python scripts/generate/generate_command_packages.py",
+      "named_consumer": "generated Planning Python skill resource loaders",
+      "checked_in_justification": "Generated Planning skill mirrors are kept as files so runtime-consumed operations load package skill data from the generated package.",
+      "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
+      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "removal_or_demotion_path": "demote only after generated Python packages no longer need packaged Planning skill artifacts",
+      "max_bytes": 250000
+    },
+    {
       "pattern": "generated/*/python/generated_command_adapters.json",
       "source_command": "uv run python scripts/generate/generate_command_adapters.py",
       "named_consumer": "generated adapter conformance and package proof loaders",
@@ -1524,6 +1714,26 @@
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
       "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
       "removal_or_demotion_path": "demote only after generated TypeScript packages no longer need packaged Memory skill artifacts",
+      "max_bytes": 250000
+    },
+    {
+      "pattern": "generated/planning/typescript/resources/_payload/**/*.*",
+      "source_command": "uv run python scripts/generate/generate_command_packages.py",
+      "named_consumer": "generated Planning TypeScript payload resource loaders",
+      "checked_in_justification": "Generated Planning TypeScript payload mirrors are kept as files so runtime-consumed operations load package payload data from the generated package.",
+      "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
+      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "removal_or_demotion_path": "demote only after generated TypeScript packages no longer need packaged Planning payload artifacts",
+      "max_bytes": 250000
+    },
+    {
+      "pattern": "generated/planning/typescript/resources/_skills/**/*.*",
+      "source_command": "uv run python scripts/generate/generate_command_packages.py",
+      "named_consumer": "generated Planning TypeScript skill resource loaders",
+      "checked_in_justification": "Generated Planning TypeScript skill mirrors are kept as files so runtime-consumed operations load package skill data from the generated package.",
+      "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
+      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "removal_or_demotion_path": "demote only after generated TypeScript packages no longer need packaged Planning skill artifacts",
       "max_bytes": 250000
     },
     {

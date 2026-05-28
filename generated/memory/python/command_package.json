@@ -2412,7 +2412,7 @@
       "runtime_binding": {
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
-          "memory.promotion_report.load",
+          "python.function.call",
           "output.emit"
         ]
       },
@@ -2875,7 +2875,9 @@
         "memory.search.report",
         "memory.verify-payload.report",
         "memory.status.report",
-        "memory.sync-memory.report"
+        "memory.sync-memory.report",
+        "memory.list-files.report",
+        "memory.list-skills.report"
       ]
     },
     "render_runtime_module": true,

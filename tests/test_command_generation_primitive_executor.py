@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 from command_generation.primitive_executor import (
     PrimitiveContext,
     PrimitiveExecutionError,
@@ -178,7 +177,9 @@ def test_payload_assemble_supports_file_and_skill_records(primitive_context: Pri
     )
 
     assert file_payload["actions"] == [{"kind": "file", "path": "alpha.txt"}]
-    assert skill_payload["actions"] == [{"kind": "skill", "id": "review", "path": "review/SKILL.md"}]
+    assert skill_payload["mode"] == "skills"
+    assert skill_payload["actions"][0]["kind"] == "bundled skill"
+    assert skill_payload["actions"][0]["path"] == "review"
 
 
 def test_payload_assemble_supports_template_records(primitive_context: PrimitiveContext) -> None:
@@ -453,30 +454,33 @@ def test_python_function_call_rejects_missing_value_bindings(primitive_context: 
         )
 
 
-def test_memory_promotion_report_load_is_named_domain_primitive(
-    monkeypatch: pytest.MonkeyPatch, primitive_context: PrimitiveContext
-) -> None:
-    from repo_memory_bootstrap import installer
+def test_run_operation_steps_accepts_host_domain_primitive_handlers(primitive_context: PrimitiveContext) -> None:
+    def handle_promotion_report(values: dict[str, object], _arguments: dict[str, object], _context: PrimitiveContext) -> dict[str, object]:
+        return {
+            "kind": "memory-promotion-report/test",
+            "kwargs": {"target": values["target"], "notes": values["notes"], "mode": values["mode"]},
+        }
 
-    def fake_promotion_report(**kwargs: object) -> dict[str, object]:
-        return {"kind": "memory-promotion-report/test", "kwargs": kwargs}
+    operation = {
+        "ir_plan": {
+            "steps": [
+                {
+                    "id": "load_report",
+                    "uses": "memory.promotion_report.load",
+                    "outputs": ["result"],
+                }
+            ]
+        }
+    }
 
-    monkeypatch.setattr(installer, "promotion_report", fake_promotion_report)
-
-    result = execute_primitive(
-        "memory.promotion_report.load",
-        values={"target": "repo", "notes": ["note.md"], "mode": "remediation"},
-        arguments={
-            "kwargs": {
-                "target": {"value": "target"},
-                "notes": {"value": "notes"},
-                "mode": {"value": "mode"},
-            }
-        },
+    values = run_operation_steps(
+        operation,
+        initial_values={"target": "repo", "notes": ["note.md"], "mode": "remediation"},
         context=primitive_context,
+        handlers={"memory.promotion_report.load": handle_promotion_report},
     )
 
-    assert result == {
+    assert values["result"] == {
         "kind": "memory-promotion-report/test",
         "kwargs": {"target": "repo", "notes": ["note.md"], "mode": "remediation"},
     }
@@ -506,7 +510,7 @@ def test_run_operation_steps_executes_declared_dataflow(primitive_context: Primi
 
     values = run_operation_steps(operation, initial_values={"format": "json"}, context=primitive_context)
 
-    assert json.loads(values["emitted"])["actions"][0]["id"] == "review"
+    assert json.loads(values["emitted"])["actions"][0]["source"] == "review"
 
 
 def test_run_operation_steps_honors_simple_when_conditions(primitive_context: PrimitiveContext) -> None:

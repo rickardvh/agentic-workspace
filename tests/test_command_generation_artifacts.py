@@ -4,17 +4,12 @@ import sys
 import types
 from pathlib import Path
 
-COMMAND_GENERATION_SRC = Path(__file__).resolve().parents[1] / "internal" / "command-generation" / "src"
-if str(COMMAND_GENERATION_SRC) not in sys.path:
-    sys.path.insert(0, str(COMMAND_GENERATION_SRC))
-
 GENERATOR_SCRIPT_ROOT = Path(__file__).resolve().parents[1] / "scripts" / "generate"
 if str(GENERATOR_SCRIPT_ROOT) not in sys.path:
     sys.path.insert(0, str(GENERATOR_SCRIPT_ROOT))
 
-from workspace_command_generation import load_workspace_command_package_ir  # noqa: E402
-
 from command_generation import canonical_command_artifacts, generator  # noqa: E402
+from workspace_command_generation import load_workspace_command_package_ir  # noqa: E402
 
 
 def test_canonical_command_artifacts_expose_implementation_independent_truth() -> None:
@@ -63,15 +58,13 @@ def test_canonical_command_artifacts_exclude_target_specific_package_fields() ->
 
 
 def test_command_generation_package_does_not_hardcode_host_runtime_modules() -> None:
-    package_root = Path(__file__).resolve().parents[1] / "internal" / "command-generation"
+    package_root = Path(generator.__file__).resolve().parent
     target_specific_runtime = ("_generated_cli_package.py", "_operation_ir_executor.py", "_runtime_cli.py")
     assert not [
-        path.relative_to(package_root).as_posix()
-        for path in (package_root / "src").rglob("*.py")
-        if path.name.endswith(target_specific_runtime)
+        path.relative_to(package_root).as_posix() for path in package_root.rglob("*.py") if path.name.endswith(target_specific_runtime)
     ]
     text = "\n".join(
-        path.read_text(encoding="utf-8") for path in (package_root / "src").rglob("*.py") if not path.name.endswith(target_specific_runtime)
+        path.read_text(encoding="utf-8") for path in package_root.rglob("*.py") if not path.name.endswith(target_specific_runtime)
     )
 
     assert "agentic_workspace" not in text

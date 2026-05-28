@@ -3858,7 +3858,7 @@
         ],
         "ci_relationship": "CI is not expected to prove docs intent; local diff review owns the trust question.",
         "enough_proof": [
-          "git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md internal/command-generation/README.md"
+          "git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md https://github.com/rickardvh/command-generation/blob/main/README.md"
         ],
         "escalate_when": [
           "the documentation outcome cannot be verified from the diff and nearby docs alone"

@@ -13241,11 +13241,7 @@ def _authority_marker_for_path(path_text: str, *, agent_instructions_file: str =
         return _authority_marker_payload(marker_id="memory-surface", normalized=normalized)
     if "/bootstrap/" in normalized or normalized.endswith("/bootstrap"):
         return _authority_marker_payload(marker_id="package-bootstrap-payload", normalized=normalized)
-    if (
-        normalized.startswith("src/agentic_workspace/")
-        or normalized.startswith("packages/")
-        or normalized.startswith("internal/command-generation/")
-    ):
+    if normalized.startswith("src/agentic_workspace/") or normalized.startswith("packages/"):
         return _authority_marker_payload(marker_id="source", normalized=normalized)
     if normalized.startswith(".agentic-workspace/"):
         return _authority_marker_payload(marker_id="managed-workspace-surface", normalized=normalized)
@@ -13292,8 +13288,6 @@ def _boundary_warning_for_path(path_text: str, *, agent_instructions_file: str =
         warning = "Installed workspace surfaces are shared operational state; verify ownership before editing."
     elif normalized.startswith("packages/") and "/src/" in normalized:
         warning = "Package source edits may need matching payload or installed-surface proof before closeout."
-    elif normalized.startswith("internal/command-generation/"):
-        warning = "Internal command-generation edits must be proven through generated package freshness and conformance checks."
     elif marker["authority"] == "generated-adapter":
         warning = "Generated adapter content should be refreshed from its canonical source rather than hand-edited."
     return {"path": normalized, "authority": marker["authority"], "warning": warning, "requires_attention": warning is not None}

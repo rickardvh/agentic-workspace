@@ -60,7 +60,7 @@
       "safe_to_edit": true,
       "refresh_command": null,
       "representative_paths": [
-        "internal/command-generation/src/command_generation/generator.py",
+        "src/agentic_workspace/workspace_runtime_primitives.py",
         "packages/planning/src/repo_planning_bootstrap/installer.py"
       ]
     },

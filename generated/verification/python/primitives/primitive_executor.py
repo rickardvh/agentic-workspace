@@ -107,8 +107,6 @@ def execute_primitive(
         return _emit_output(values=values, arguments={"text_style": "install-result"})
     if primitive == "output.emit.current-memory":
         return _emit_output(values=values, arguments={"text_style": "current-memory"})
-    if primitive == "memory.promotion_report.load":
-        return _load_memory_promotion_report(values=values, arguments=arguments)
     if primitive == "python.function.call":
         return _call_python_function(values=values, arguments=arguments)
     raise PrimitiveExecutionError(f"unsupported portable primitive: {primitive!r}")
@@ -263,6 +261,17 @@ def _assemble_payload(*, values: dict[str, Any], arguments: dict[str, Any]) -> d
     if "template" in fields:
         return _resolve_template(fields["template"], values=values)
     actions_from = str(fields.get("actions_from", ""))
+    if not fields and isinstance(values.get("files"), list):
+        return {
+            "dry_run": True,
+            "files": values.get("files", []),
+            "bundled_skill_files": values.get("bundled_skill_files", []),
+            "optional_enable_commands": [
+                "agentic-planning install --include-optional",
+                "agentic-planning adopt --include-optional",
+                "agentic-planning upgrade --include-optional",
+            ],
+        }
     payload: dict[str, Any] = {
         "dry_run": bool(fields.get("dry_run", True)),
         "message": str(fields.get("message", "")),
@@ -281,10 +290,30 @@ def _assemble_payload(*, values: dict[str, Any], arguments: dict[str, Any]) -> d
         if not isinstance(registry, dict):
             raise PrimitiveExecutionError("registry.skills payload source must be an object")
         payload["mode"] = str(fields.get("mode", "skills"))
-        payload["actions"] = [
-            {"kind": "skill", "id": str(item.get("id", "")), "path": str(item.get("path", ""))}
-            for item in _list_of_objects(registry.get("skills", []), source="registry.skills")
-        ]
+        payload["bootstrap_version"] = _resolve_dotted_value(registry, str(fields.get("bootstrap_version_from", "")))
+        payload["actions"] = []
+        for item in _list_of_objects(registry.get("skills", []), source="registry.skills"):
+            skill_id = str(item.get("id", "")).strip()
+            path = str(item.get("path", "")).strip()
+            if not skill_id or not path:
+                continue
+            payload["actions"].append(
+                {
+                    "kind": "bundled skill",
+                    "path": str(Path(path).parent).replace("\\", "/"),
+                    "detail": "registered packaged product skill",
+                    "role": "skill",
+                    "safety": "safe",
+                    "source": skill_id,
+                    "category": "safe-update",
+                    "remediation_kind": "",
+                    "remediation_target": "",
+                    "remediation_reason": "",
+                    "remediation_confidence": "",
+                    "memory_action": "",
+                    "match_source": "",
+                }
+            )
         return payload
     raise PrimitiveExecutionError(f"unsupported payload.assemble actions_from: {actions_from!r}")
 
@@ -979,14 +1008,6 @@ def _call_python_function(*, values: dict[str, Any], arguments: dict[str, Any]) 
     return function(**kwargs)
 
 
-def _load_memory_promotion_report(*, values: dict[str, Any], arguments: dict[str, Any]) -> Any:
-    module_name = "_".join(("repo", "memory", "bootstrap")) + ".installer"
-    promotion_report = getattr(importlib.import_module(module_name), "promotion_report")
-
-    kwargs = _resolve_call_kwargs(values=values, raw_kwargs=arguments.get("kwargs", {}))
-    return promotion_report(**kwargs)
-
-
 def _resolve_call_kwargs(*, values: dict[str, Any], raw_kwargs: Any) -> dict[str, Any]:
     if not isinstance(raw_kwargs, dict):
         raise PrimitiveExecutionError("python.function.call kwargs must be an object")
@@ -1005,6 +1026,17 @@ def _resolve_call_kwargs(*, values: dict[str, Any], raw_kwargs: Any) -> dict[str
         else:
             raise PrimitiveExecutionError(f"python.function.call kwarg {name!r} must declare value or literal")
     return kwargs
+
+
+def _resolve_dotted_value(payload: Mapping[str, Any], dotted_path: str) -> Any:
+    if not dotted_path:
+        return None
+    current: Any = payload
+    for part in dotted_path.split("."):
+        if not isinstance(current, Mapping) or part not in current:
+            return None
+        current = current[part]
+    return current
 
 
 def _resolve_inside(root: Path, relative: str) -> Path:

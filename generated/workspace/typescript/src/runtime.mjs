@@ -1,5 +1,11 @@
 // Generated native TypeScript operation runtime.
 // Source: src/agentic_workspace/contracts/command_package_ir.json
+// Host runtime support: src/agentic_workspace/contracts/typescript_runtime_support.mjs
+// Regenerate with: uv run python scripts/generate/generate_command_packages.py
+// DO NOT EDIT DIRECTLY.
+
+// Generated native TypeScript operation runtime.
+// Source: src/agentic_workspace/contracts/command_package_ir.json
 // Regenerate with: uv run python scripts/generate/generate_command_packages.py
 // DO NOT EDIT DIRECTLY.
 
@@ -658,3 +664,4 @@ export function runGeneratedOperation({ operationId, operationPath, values }) {
   writeSync(1, output);
   return 0;
 }
+

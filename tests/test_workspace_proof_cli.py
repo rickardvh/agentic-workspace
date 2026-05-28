@@ -1273,7 +1273,7 @@ def test_proof_changed_selector_routes_readme_to_docs_review(capsys) -> None:
     answer = payload["answer"]
     docs_diff = (
         "git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md "
-        "packages/memory/README.md internal/command-generation/README.md"
+        "packages/memory/README.md https://github.com/rickardvh/command-generation/blob/main/README.md"
     )
     assert [lane["id"] for lane in answer["selected_lanes"]] == ["repo_docs_review"]
     assert answer["selected_lanes"][0]["proof_kind"] == "diff-review"
@@ -1526,7 +1526,7 @@ def test_proof_tiny_readme_profile_keeps_docs_only_validation_light(capsys) -> N
     encoded = json.dumps(payload)
     docs_diff = (
         "git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md "
-        "packages/memory/README.md internal/command-generation/README.md"
+        "packages/memory/README.md https://github.com/rickardvh/command-generation/blob/main/README.md"
     )
     assert payload["kind"] == "proof-next-decision/v1"
     assert payload["next"]["command"] == docs_diff

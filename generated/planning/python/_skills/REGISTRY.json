@@ -1,0 +1,288 @@
+{
+  "schema_version": "skill-registry.v1",
+  "owner": "agentic-planning",
+  "source_kind": "bundled-package-skills",
+  "skills": [
+    {
+      "id": "bootstrap-upgrade",
+      "path": "bootstrap-upgrade/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "upgrade planning bootstrap files for an already bootstrapped repository safely",
+      "activation_hints": {
+        "verbs": ["upgrade", "refresh", "sync"],
+        "nouns": ["planning bootstrap", "planning payload", "managed surfaces"],
+        "phrases": ["upgrade planning bootstrap", "refresh planning payload"],
+        "when": ["installed planning surfaces drift", "package payload refresh"]
+      }
+    },
+    {
+      "id": "planning-autopilot",
+      "path": "planning-autopilot/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "execute one bounded planning milestone at a time from the checked-in planning surfaces",
+      "activation_hints": {
+        "verbs": ["run", "execute", "implement", "continue", "finish", "ship"],
+        "nouns": ["autopilot", "milestone", "execplan", "planned work", "active task"],
+        "phrases": ["run autopilot", "execute active milestone", "implement current milestone", "continue planned work"],
+        "when": ["active milestone", "bounded slice", "checked-in plan"]
+      }
+    },
+    {
+      "id": "planning-orchestrator-workflow",
+      "path": "planning-orchestrator-workflow/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "run planner-to-worker delegated execution from checked-in planning using the local mixed-agent posture and a derived handoff contract",
+      "activation_hints": {
+        "verbs": ["delegate", "orchestrate", "handoff", "split", "route"],
+        "nouns": ["worker", "planner", "delegation", "handoff", "orchestrator workflow"],
+        "phrases": [
+          "delegate this lane",
+          "run planner to worker workflow",
+          "derive worker handoff",
+          "orchestrate delegated execution"
+        ],
+        "when": ["strong planner then bounded worker", "external or internal delegation", "delegated handoff reuse"]
+      }
+    },
+    {
+      "id": "planning-intake-upstream-task",
+      "path": "planning-intake-upstream-task/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "turn an externally tracked issue or task into checked-in planning while keeping the upstream tracker as intake only",
+      "activation_hints": {
+        "verbs": ["ingest", "intake", "sync", "import", "triage"],
+        "nouns": ["github issue", "upstream task", "ticket", "tracker"],
+        "phrases": ["ingest github issue", "intake upstream task", "sync issue into roadmap"],
+        "when": ["tracker intake", "external issue promotion"]
+      }
+    },
+    {
+      "id": "planning-decompose",
+      "path": "planning-decompose/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "own parent/lane/slice structure by decomposing epic or lane shaped work before execplans",
+      "activation_hints": {
+        "verbs": ["decompose", "split", "triage", "break", "shape"],
+        "nouns": ["epic", "lane", "decomposition", "progressive maturity", "bounded tasks"],
+        "phrases": [
+          "decompose an epic",
+          "split into lanes",
+          "progressive maturity",
+          "before execplans",
+          "break down broad work"
+        ],
+        "when": ["epic-shaped work", "multi-lane work", "large work is not ready for an execplan"]
+      }
+    },
+    {
+      "id": "planning-new-plan-tighten",
+      "path": "planning-new-plan-tighten/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "create or tighten a schema-backed execplan scaffold before coding",
+      "activation_hints": {
+        "verbs": ["create", "tighten", "promote", "fill", "prepare", "scaffold", "record"],
+        "nouns": [
+          "execplan",
+          "new plan",
+          "plan scaffold",
+          "execution bounds",
+          "validation commands",
+          "architecture decision",
+          "architectural decision",
+          "ADR",
+          "decision record",
+          "database migration",
+          "storage migration"
+        ],
+        "phrases": [
+          "tighten a new execplan",
+          "create a valid plan",
+          "before coding",
+          "fill execution bounds",
+          "promote to plan",
+          "architecture decision",
+          "architectural decision",
+          "ADR record",
+          "decision record",
+          "database migration",
+          "storage migration"
+        ],
+        "when": [
+          "checked-in planning is required",
+          "new-plan scaffold exists",
+          "plan is too generic",
+          "architecture decisions need decision-scaffold or decision-promote routing",
+          "database or storage migrations may need ADR promotion"
+        ]
+      }
+    },
+    {
+      "id": "planning-assurance-delegation",
+      "path": "planning-assurance-delegation/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "apply assurance and delegation posture before handing off or implementing planned work",
+      "activation_hints": {
+        "verbs": ["assess", "classify", "delegate", "escalate", "handoff"],
+        "nouns": ["assurance", "delegation posture", "risk", "human input", "strong planner", "weak implementer"],
+        "phrases": [
+          "assurance classification",
+          "delegation posture",
+          "escalate to planner",
+          "handoff to weaker implementer",
+          "human input needed"
+        ],
+        "when": ["risk or capability fit is unclear", "delegation may improve quality", "delegation may save tokens safely"]
+      }
+    },
+    {
+      "id": "planning-high-assurance-lifecycle",
+      "path": "planning-high-assurance-lifecycle/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "route broad or high-assurance planning work across intent, decomposition, assurance, delegation, proof, and closeout owners",
+      "activation_hints": {
+        "verbs": ["classify", "decompose", "plan", "delegate", "prove", "close"],
+        "nouns": ["high assurance", "lifecycle", "intent satisfaction", "multi-lane work", "epic", "closeout", "delegation packet"],
+        "phrases": [
+          "high assurance planning lifecycle",
+          "preserve intent satisfaction",
+          "broad high assurance work",
+          "multi-lane planning work",
+          "whole epic",
+          "recoverable planned work",
+          "intent proof closeout"
+        ],
+        "when": [
+          "work is broad or cross-boundary",
+          "an initially small slice grows into multiple planning lanes",
+          "intent preservation matters more than local task completion",
+          "delegation should be possible from structured planning artifacts"
+        ]
+      }
+    },
+    {
+      "id": "planning-intent-verification",
+      "path": "planning-intent-verification/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "own semantic intent satisfaction for original, interpreted, parent, and negative intent before completion claims",
+      "activation_hints": {
+        "verbs": ["verify", "extract", "preserve", "compare", "validate", "close"],
+        "nouns": ["intent", "parent intent", "negative invariants", "completion claim", "continuation owner"],
+        "phrases": [
+          "intent verification",
+          "verify intent",
+          "parent intent",
+          "negative invariants",
+          "completion claim allowed",
+          "intent satisfaction",
+          "larger intent"
+        ],
+        "when": [
+          "work may satisfy a narrower proxy",
+          "parent lane or epic intent matters",
+          "negative invariants or non-goals must be preserved",
+          "before claiming planned work is complete"
+        ]
+      }
+    },
+    {
+      "id": "planning-closeout-trust",
+      "path": "planning-closeout-trust/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "own closeout procedure while invoking intent verification for semantic satisfaction and routing residue",
+      "activation_hints": {
+        "verbs": ["close", "archive", "distill", "finish", "validate", "resolve", "satisfy"],
+        "nouns": [
+          "closeout",
+          "closeout trust",
+          "residue",
+          "proof",
+          "intent satisfaction",
+          "intent resolution",
+          "larger intent",
+          "archive-plan"
+        ],
+        "phrases": [
+          "closeout trust",
+          "intent resolution",
+          "intent satisfaction",
+          "larger intent satisfaction",
+          "separate proof from intent",
+          "residue distillation",
+          "archive plan",
+          "after implementation",
+          "proof and intent satisfaction"
+        ],
+        "when": [
+          "planned work is done",
+          "before closing an issue",
+          "completed work may leave reusable knowledge",
+          "validation success may not satisfy the larger request",
+          "local task completion and original intent need separate answers"
+        ]
+      }
+    },
+    {
+      "id": "planning-promote-review-findings",
+      "path": "planning-promote-review-findings/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "turn selected review findings into roadmap or active-planning candidates without collapsing capture and promotion",
+      "activation_hints": {
+        "verbs": ["promote", "convert", "turn", "prioritize"],
+        "nouns": ["review findings", "roadmap candidate", "follow-up"],
+        "phrases": ["promote review findings", "turn review into roadmap", "promote findings into planning"],
+        "when": ["review follow-up selection", "promotion from review"]
+      }
+    },
+    {
+      "id": "planning-review-pass",
+      "path": "planning-review-pass/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "run a bounded review pass and capture compact findings under .agentic-workspace/planning/reviews",
+      "activation_hints": {
+        "verbs": ["review", "audit", "inspect", "check", "perform"],
+        "nouns": ["review", "review pass", "review mode", "review portfolio", "code review", "package review", "contract integrity", "regression", "change"],
+        "phrases": [
+          "run review pass",
+          "review this change",
+          "review the repo",
+          "perform a review",
+          "perform reviews",
+          "review the planning package",
+          "do a review"
+        ],
+        "when": ["bounded review", "finding capture", "review-shaped request"]
+      }
+    },
+    {
+      "id": "planning-reporting",
+      "path": "planning-reporting/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "project active planning state, proof expectations, and next-action guidance from canonical summary JSON",
+      "activation_hints": {
+        "verbs": ["report", "summarize", "inspect", "check"],
+        "nouns": ["planning state", "active work", "next action", "proof posture", "blockers"],
+        "phrases": [
+          "planning report",
+          "summarize planning state",
+          "what is active",
+          "what should happen next",
+          "proof expectations"
+        ],
+        "when": ["active state inspection", "handoff summary", "restart orientation"]
+      }
+    }
+  ]
+}

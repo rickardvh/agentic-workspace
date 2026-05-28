@@ -10,15 +10,10 @@ import sys
 from pathlib import Path
 
 import pytest
+from command_generation.generated_package_loader import load_generated_command_package_for_entrypoint
 from jsonschema import Draft202012Validator
 
 from agentic_workspace import contract_tooling
-
-COMMAND_GENERATION_SRC = Path(__file__).resolve().parents[1] / "internal" / "command-generation" / "src"
-if str(COMMAND_GENERATION_SRC) not in sys.path:
-    sys.path.insert(0, str(COMMAND_GENERATION_SRC))
-
-from command_generation.generated_package_loader import load_generated_command_package_for_entrypoint  # noqa: E402
 
 
 def _command_operation_ids(command: dict[str, object]) -> set[str]:
@@ -900,6 +895,8 @@ def test_generated_command_package_docker_conformance_surface_exists() -> None:
 
 
 def test_command_generation_schema_boundary_is_checked() -> None:
+    from command_generation import command_package_schema_path
+
     script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
     spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)
     assert spec is not None and spec.loader is not None
@@ -910,16 +907,16 @@ def test_command_generation_schema_boundary_is_checked() -> None:
     workspace_schema = (
         Path(__file__).resolve().parents[1] / "src" / "agentic_workspace" / "contracts" / "schemas" / "command_package_ir.schema.json"
     )
-    package_schema = Path(__file__).resolve().parents[1] / "internal" / "command-generation" / "schemas" / "command_package_ir.schema.json"
+    package_schema = command_package_schema_path()
     assert workspace_schema.read_text(encoding="utf-8") == package_schema.read_text(encoding="utf-8")
 
 
 def test_command_generation_loader_uses_explicit_ir_and_schema_paths() -> None:
-    from command_generation import load_command_package_ir
+    from command_generation import command_package_schema_path, load_command_package_ir
 
     repo_root = Path(__file__).resolve().parents[1]
     ir_path = repo_root / "src" / "agentic_workspace" / "contracts" / "command_package_ir.json"
-    schema_path = repo_root / "internal" / "command-generation" / "schemas" / "command_package_ir.schema.json"
+    schema_path = command_package_schema_path()
 
     manifest = load_command_package_ir(ir_path, schema_path)
 
@@ -1074,16 +1071,18 @@ def test_operation_primitives_classify_operation_step_tiers(monkeypatch: pytest.
     assert any("tier-2 primitive workspace.root.resolve missing audit field" in error for error in errors)
 
 
-def test_python_operation_execution_inventory_tracks_direct_generated_memory_commands() -> None:
+def test_python_operation_execution_inventory_tracks_portable_generated_commands() -> None:
     inventory = contract_tooling.load_contract_json("python_operation_execution_inventory.json")
     entries = {entry["operation_id"]: entry for entry in inventory["entries"]}
 
     list_files = entries["memory.list-files.report"]
 
     assert list_files["status"] == "portable-codegen-primitive-executed"
-    assert list_files["primitive_executor"] == "generated/memory/python/commands/memory_list_files_report.py"
+    assert list_files["primitive_executor"] == "command_generation/primitive_executor.py"
     assert entries["memory.list-skills.report"]["status"] == "portable-codegen-primitive-executed"
-    assert entries["memory.list-skills.report"]["primitive_executor"] == "generated/memory/python/commands/memory_list_skills_report.py"
+    assert entries["memory.list-skills.report"]["primitive_executor"] == "command_generation/primitive_executor.py"
+    assert entries["planning.list-files.report"]["status"] == "portable-codegen-primitive-executed"
+    assert entries["planning.list-files.report"]["primitive_executor"] == "command_generation/primitive_executor.py"
     assert entries["memory.report.report"]["status"] == "domain-runtime-primitive-via-ir"
     assert "compatibility-runtime-handler" not in {entry["status"] for entry in entries.values()}
     assert "accepted-hand-owned-runtime-primitive" in {entry["status"] for entry in entries.values()}
@@ -1114,7 +1113,7 @@ def test_workspace_command_generation_integration_owns_repo_paths() -> None:
     spec.loader.exec_module(module)
 
     assert module.SOURCE_PATH == "src/agentic_workspace/contracts/command_package_ir.json"
-    assert module.SCHEMA_PATH == "internal/command-generation/schemas/command_package_ir.schema.json"
+    assert module.SCHEMA_PATH == "command_generation:schemas/command_package_ir.schema.json"
     manifest = module.load_workspace_command_package_ir()
     assert manifest["schema_version"] == "agentic-workspace/command-package-ir/v1"
 
@@ -1129,27 +1128,22 @@ def test_generate_command_packages_wrapper_uses_workspace_consumer_integration()
 
 
 def test_command_package_generator_normalizes_line_endings() -> None:
-    generator = Path(__file__).resolve().parents[1] / "internal" / "command-generation" / "src" / "command_generation" / "generator.py"
+    from command_generation import generator
+
+    generator_path = Path(generator.__file__).resolve()
     wrapper = Path(__file__).resolve().parents[1] / "scripts" / "generate" / "generate_command_packages.py"
 
-    assert 'newline="\\n"' in generator.read_text(encoding="utf-8")
+    assert 'newline="\\n"' in generator_path.read_text(encoding="utf-8")
     assert "line-ending drift" in wrapper.read_text(encoding="utf-8")
 
 
 def test_command_package_generator_renders_planning_runtime_module_from_binding() -> None:
-    repo_root = Path(__file__).resolve().parents[1]
-    generator_path = repo_root / "internal" / "command-generation" / "src" / "command_generation" / "generator.py"
-    spec = importlib.util.spec_from_file_location("command_generation_generator_render_outputs", generator_path)
-    assert spec is not None and spec.loader is not None
-    generator = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = generator
-    spec.loader.exec_module(generator)
+    from workspace_command_generation import render_workspace_command_package_outputs
 
-    outputs = generator.render_outputs(
+    repo_root = Path(__file__).resolve().parents[1]
+    outputs = render_workspace_command_package_outputs(
         contract_tooling.command_package_ir_manifest(),
         repo_root=repo_root,
-        source_path="src/agentic_workspace/contracts/command_package_ir.json",
-        regenerate_command="uv run python scripts/generate/generate_command_packages.py",
     )
     rendered = {str(output.path.relative_to(repo_root)).replace("\\", "/"): output.content for output in outputs}
 
@@ -1175,12 +1169,8 @@ def test_command_package_generator_renders_planning_runtime_module_from_binding(
 
 
 def test_generated_python_module_collects_nested_operation_refs(tmp_path: Path) -> None:
-    generator_path = Path(__file__).resolve().parents[1] / "internal" / "command-generation" / "src" / "command_generation" / "generator.py"
-    spec = importlib.util.spec_from_file_location("command_generation_generator", generator_path)
-    assert spec is not None and spec.loader is not None
-    generator = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = generator
-    spec.loader.exec_module(generator)
+    from command_generation import generator
+
     package = {
         "program": "example",
         "summary": "Example generated package",
@@ -1251,7 +1241,9 @@ def test_generated_python_module_collects_nested_operation_refs(tmp_path: Path) 
 
 
 def test_generic_command_generation_package_has_no_workspace_imports() -> None:
-    package_root = Path(__file__).resolve().parents[1] / "internal" / "command-generation" / "src" / "command_generation"
+    from command_generation import generator
+
+    package_root = Path(generator.__file__).resolve().parent
     for path in package_root.rglob("*.py"):
         if path.name.endswith(("_generated_cli_package.py", "_operation_ir_executor.py", "_runtime_cli.py")):
             continue
@@ -1261,22 +1253,12 @@ def test_generic_command_generation_package_has_no_workspace_imports() -> None:
 
 
 def test_command_generation_readme_defines_lift_out_criteria() -> None:
-    readme = Path(__file__).resolve().parents[1] / "internal" / "command-generation" / "README.md"
-    text = readme.read_text(encoding="utf-8")
+    pyproject = (Path(__file__).resolve().parents[1] / "pyproject.toml").read_text(encoding="utf-8")
+    wrapper = (Path(__file__).resolve().parents[1] / "scripts" / "generate" / "workspace_command_generation.py").read_text(encoding="utf-8")
 
-    assert "## Lift-Out Readiness" in text
-    assert "Technical criteria:" in text
-    assert "Ownership criteria:" in text
-    assert "Migration criteria:" in text
-    assert "Stability criteria:" in text
-    for required in (
-        "no imports from `agentic_workspace`",
-        "Agentic Workspace command truth remains in workspace-owned contracts",
-        "Runtime primitives",
-        "Replace local path injection with normal package imports",
-        "schema versioning rules",
-    ):
-        assert required in text
+    assert 'command-generation = { git = "https://github.com/rickardvh/command-generation.git"' in pyproject
+    assert "CommandGenerationHostManifest" in wrapper
+    assert "typescript_runtime_support.mjs" in wrapper
 
 
 def test_generated_python_command_package_metadata_is_current() -> None:

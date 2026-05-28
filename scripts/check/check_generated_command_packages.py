@@ -22,7 +22,6 @@ if str(GENERATOR_SCRIPT_ROOT) not in sys.path:
     sys.path.insert(0, str(GENERATOR_SCRIPT_ROOT))
 for SOURCE_ROOT in (
     REPO_ROOT / "src",
-    REPO_ROOT / "internal" / "command-generation" / "src",
     REPO_ROOT / "packages" / "planning" / "src",
     REPO_ROOT / "packages" / "memory" / "src",
     REPO_ROOT / "packages" / "verification" / "src",
@@ -30,9 +29,14 @@ for SOURCE_ROOT in (
     if str(SOURCE_ROOT) not in sys.path:
         sys.path.insert(0, str(SOURCE_ROOT))
 
+import command_generation  # noqa: E402
+from command_generation import command_package_schema_path  # noqa: E402
+from command_generation.generated_package_loader import (  # noqa: E402
+    load_generated_command_module_for_entrypoint,
+    load_generated_command_package_for_entrypoint,
+)
 from jsonschema import Draft202012Validator  # noqa: E402
 from workspace_command_generation import (  # noqa: E402
-    SCHEMA_PATH,
     SOURCE_PATH,
     load_workspace_command_package_ir,
     render_workspace_command_package_outputs,
@@ -43,10 +47,6 @@ from agentic_workspace.contract_tooling import (  # noqa: E402
     load_contract_json,
     operation_manifest,
     python_runtime_projection_inventory_manifest,
-)
-from command_generation.generated_package_loader import (  # noqa: E402
-    load_generated_command_module_for_entrypoint,
-    load_generated_command_package_for_entrypoint,
 )
 
 SelectedFields = Callable[[str], dict[str, object]]
@@ -215,7 +215,6 @@ GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST = {
     ".agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json": (
         "historical generated target-layout migration context"
     ),
-    "internal/command-generation/src/command_generation/generated_package_loader.py": "legacy loader compatibility wrappers and legacy layout fallback",
     "src/agentic_workspace/cli.py": "source-checkout fallback to checked-in generated workspace CLI package",
     "packages/planning/src/repo_planning_bootstrap/cli.py": "source-checkout fallback to checked-in generated planning CLI package",
     "packages/memory/src/repo_memory_bootstrap/cli.py": "source-checkout fallback to checked-in generated memory CLI package",
@@ -234,7 +233,8 @@ GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST_PREFIXES = {
     ".agentic-workspace/planning/execplans/archive/": "historical planning evidence",
     "docs/reviews/": "historical review evidence",
 }
-COMMAND_GENERATION_SOURCE_ROOT = "internal/command-generation/src/command_generation"
+COMMAND_GENERATION_PACKAGE_ROOT = Path(command_generation.__file__).resolve().parent
+COMMAND_GENERATION_SOURCE_ROOT = "command_generation"
 COMMAND_GENERATION_FORBIDDEN_PRODUCT_IMPORT_ROOTS = (
     "agentic_workspace",
     "repo_planning_bootstrap",
@@ -1427,58 +1427,29 @@ def _generated_command_module_package_runtime_imports() -> list[str]:
     return findings
 
 
-def _validate_direct_generated_python_command_projection() -> list[str]:
+def _validate_portable_resource_python_command_projection() -> list[str]:
     errors: list[str] = []
-    direct_commands = {
+    portable_commands = {
         "memory.list-files.report": REPO_ROOT / "generated" / "memory" / "python" / "commands" / "memory_list_files_report.py",
         "memory.list-skills.report": REPO_ROOT / "generated" / "memory" / "python" / "commands" / "memory_list_skills_report.py",
         "planning.list-files.report": REPO_ROOT / "generated" / "planning" / "python" / "commands" / "planning_list_files_report.py",
     }
     forbidden_fragments = (
-        "generated_operation_contract",
-        "run_operation_ir",
         "command_generation.primitive_executor",
         "repo_memory_bootstrap.runtime_primitives",
         "repo_planning_bootstrap.runtime_projection",
     )
-    required_fragments_by_operation = {
-        "memory.list-files.report": (
-            "from ..primitives.resources import (",
-            "project_payload_entries(",
-            "resolve_repo_target_root(getattr(args, 'target', None), PROJECT_MARKERS)",
-            "def _assemble_payload(",
-            "emit_action_report(payload, str(getattr(args, 'format', 'text') or 'text'))",
-        ),
-        "memory.list-skills.report": (
-            "from ..primitives.resources import find_resource_root, read_json_object",
-            "def _assemble_payload(",
-            "def _emit_output(",
-            "registry = read_json_object(skills_root, 'REGISTRY.json')",
-        ),
-        "planning.list-files.report": (
-            "from ..primitives.resources import emit_json_or_lines, find_resource_root, list_resource_files",
-            "payload_root = find_resource_root(__file__, PAYLOAD_ROOT_CANDIDATES)",
-            "skills_root = find_resource_root(__file__, SKILLS_ROOT_CANDIDATES)",
-            "def _assemble_payload(",
-            "list_resource_files(payload_root)",
-            "emit_json_or_lines(payload, str(getattr(args, 'format', 'text') or 'text'), line_field='files')",
-        ),
-    }
-    for operation_id, path in direct_commands.items():
+    for operation_id, path in portable_commands.items():
         if not path.is_file():
-            errors.append(f"{path.relative_to(REPO_ROOT).as_posix()} is missing for direct generated command {operation_id}")
+            errors.append(f"{path.relative_to(REPO_ROOT).as_posix()} is missing for portable generated command {operation_id}")
             continue
         text = path.read_text(encoding="utf-8")
+        if "run_operation_ir(generated_operation_contract(" not in text:
+            errors.append(f"{path.relative_to(REPO_ROOT).as_posix()} must execute {operation_id} through generated operation IR")
         for fragment in forbidden_fragments:
             if fragment in text:
                 errors.append(
-                    f"{path.relative_to(REPO_ROOT).as_posix()} direct generated command {operation_id} must not contain {fragment!r}"
-                )
-        for fragment in required_fragments_by_operation[operation_id]:
-            if fragment not in text:
-                errors.append(
-                    f"{path.relative_to(REPO_ROOT).as_posix()} direct generated command {operation_id} "
-                    f"must contain concrete primitive fragment {fragment!r}"
+                    f"{path.relative_to(REPO_ROOT).as_posix()} portable generated command {operation_id} must not contain {fragment!r}"
                 )
     return errors
 
@@ -2236,7 +2207,8 @@ def _source_tree_python_files() -> list[str]:
         REPO_ROOT / "packages" / "planning" / "src" / "repo_planning_bootstrap",
         REPO_ROOT / "packages" / "memory" / "src" / "repo_memory_bootstrap",
         REPO_ROOT / "packages" / "verification" / "src" / "repo_verification_bootstrap",
-        REPO_ROOT / "internal" / "command-generation" / "src" / "command_generation",
+        REPO_ROOT / "scripts" / "check",
+        REPO_ROOT / "scripts" / "generate",
     ]
     paths = []
     for root in roots:
@@ -2297,9 +2269,7 @@ def _validate_python_shipped_source_executable_retirement() -> list[str]:
     tracked_sources = _tracked_python_source_files()
     for relative_path in tracked_sources:
         is_shipped_module_source = relative_path.startswith(PYTHON_SHIPPED_MODULE_SOURCE_ROOTS)
-        is_product_command_generation_source = relative_path.startswith(
-            "internal/command-generation/src/command_generation/"
-        ) and relative_path.endswith(PYTHON_PRODUCT_RUNTIME_SOURCE_PATTERNS)
+        is_product_command_generation_source = False
         if not is_shipped_module_source and not is_product_command_generation_source:
             continue
         path = REPO_ROOT / relative_path
@@ -2466,11 +2436,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         "memory.verify-payload.report",
         "planning.list-files.report",
     }
-    expected_primitive_executors = {
-        "memory.list-files.report": "generated/memory/python/commands/memory_list_files_report.py",
-        "memory.list-skills.report": "generated/memory/python/commands/memory_list_skills_report.py",
-        "planning.list-files.report": "generated/planning/python/commands/planning_list_files_report.py",
-    }
+    expected_primitive_executors: dict[str, str] = {}
     for operation_id in sorted(ir_consumed_operations):
         entry = by_operation.get(operation_id)
         if not isinstance(entry, dict):
@@ -2484,7 +2450,7 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
             errors.append(f"{operation_id} must be marked {expected_status} in python_operation_execution_inventory.json")
         expected_primitive_executor = expected_primitive_executors.get(
             operation_id,
-            "internal/command-generation/src/command_generation/primitive_executor.py",
+            "command_generation/primitive_executor.py",
         )
         if entry.get("primitive_executor") != expected_primitive_executor:
             errors.append(f"{operation_id} must point at {expected_primitive_executor}")
@@ -2632,9 +2598,9 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         errors.append("memory operation IR executor must use the generated target-root primitive instead of memory runtime")
     if "resolve_repo_target_root(values.get('target')" not in memory_operation_executor_text:
         errors.append("memory operation IR executor must render target-root resolution through target-local resource primitives")
-    for direct_operation_id in ("memory.list-files.report", "memory.list-skills.report"):
-        if direct_operation_id in memory_operation_executor_text:
-            errors.append(f"{direct_operation_id} must be executed by its direct generated command module, not memory run_operation_ir")
+    for portable_operation_id in ("memory.list-files.report", "memory.list-skills.report"):
+        if portable_operation_id not in memory_operation_executor_text:
+            errors.append(f"{portable_operation_id} must be supported by memory run_operation_ir")
     if "_handle_memory_promotion_report_load" in memory_operation_executor_text:
         errors.append("memory promotion-report must execute through declared memory.promotion_report.load, not a runtime facade handler")
     if "_assemble_memory_operation_payload" in memory_operation_executor_text:
@@ -2675,8 +2641,8 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
         facade_path = REPO_ROOT / "generated" / "planning" / "python" / "primitives" / facade_name
         if not facade_path.is_file():
             errors.append(f"generated planning runtime facade is missing: {facade_path.relative_to(REPO_ROOT).as_posix()}")
-    if "planning.list-files.report" in planning_operation_executor_text:
-        errors.append("planning.list-files.report must be executed by its direct generated command module, not planning run_operation_ir")
+    if "planning.list-files.report" not in planning_operation_executor_text:
+        errors.append("planning.list-files.report must be supported by planning run_operation_ir")
     if "planning.list-files.load" in planning_operation_executor_text:
         errors.append("planning.list-files.load must not remain as dead handler wiring in planning run_operation_ir")
     planning_runtime_text = (REPO_ROOT / "generated" / "planning" / "python" / "primitives" / "planning_runtime.py").read_text(
@@ -2992,8 +2958,11 @@ def _source_import_roots(text: str) -> set[str]:
 
 
 def _command_generation_source_files() -> list[Path]:
-    source_root = REPO_ROOT / COMMAND_GENERATION_SOURCE_ROOT
-    return sorted(path for path in source_root.rglob("*.py") if path.is_file())
+    return sorted(path for path in COMMAND_GENERATION_PACKAGE_ROOT.rglob("*.py") if path.is_file())
+
+
+def _command_generation_relative(path: Path) -> str:
+    return f"{COMMAND_GENERATION_SOURCE_ROOT}/{path.relative_to(COMMAND_GENERATION_PACKAGE_ROOT).as_posix()}"
 
 
 def _accepted_extraction_coupling_paths(ir: dict[str, object]) -> tuple[set[str], list[str]]:
@@ -3029,7 +2998,7 @@ def _accepted_extraction_coupling_paths(ir: dict[str, object]) -> tuple[set[str]
             if not relative_path.startswith(f"{COMMAND_GENERATION_SOURCE_ROOT}/"):
                 errors.append(f"{location} path is outside command-generation source: {relative_path}")
                 continue
-            if not (REPO_ROOT / relative_path).is_file():
+            if not (COMMAND_GENERATION_PACKAGE_ROOT.parent / relative_path).is_file():
                 errors.append(f"{location} path does not exist: {relative_path}")
                 continue
             accepted_paths.add(relative_path)
@@ -3040,7 +3009,7 @@ def _validate_command_generation_extraction_readiness(ir: dict[str, object]) -> 
     accepted_paths, errors = _accepted_extraction_coupling_paths(ir)
     product_literal_paths: set[str] = set()
     for source_path in _command_generation_source_files():
-        relative_path = _repo_relative(source_path)
+        relative_path = _command_generation_relative(source_path)
         text = source_path.read_text(encoding="utf-8")
         forbidden_imports = sorted(set(COMMAND_GENERATION_FORBIDDEN_PRODUCT_IMPORT_ROOTS) & _source_import_roots(text))
         if forbidden_imports:
@@ -3238,11 +3207,11 @@ def _validate_static_surfaces() -> list[str]:
         "deferred",
     }
     ir_path = REPO_ROOT / SOURCE_PATH
-    schema_path = REPO_ROOT / SCHEMA_PATH
+    schema_path = command_package_schema_path()
     if not ir_path.is_file():
         errors.append("src/agentic_workspace/contracts/command_package_ir.json is missing")
     if not schema_path.is_file():
-        errors.append("internal/command-generation/schemas/command_package_ir.schema.json is missing")
+        errors.append("command-generation packaged command_package_ir.schema.json is missing")
     if errors:
         return errors
     try:
@@ -3440,7 +3409,7 @@ def _validate_static_surfaces() -> list[str]:
         errors.extend(_validate_python_shipped_source_executable_retirement())
         errors.extend(_validate_python_runtime_handler_boundary())
         errors.extend(_validate_generated_python_target_layout())
-        errors.extend(_validate_direct_generated_python_command_projection())
+        errors.extend(_validate_portable_resource_python_command_projection())
         errors.extend(_validate_planning_generated_force_include_classification())
         errors.extend(_validate_generated_python_commands_absent_from_handwritten_parsers())
         errors.extend(_validate_generated_cli_compatibility_vocabulary())
@@ -3476,9 +3445,16 @@ def _validate_static_surfaces() -> list[str]:
     primitive_conformance_dockerfile = REPO_ROOT / "generated" / "python" / "Dockerfile.primitive-conformance"
     if not primitive_conformance_dockerfile.is_file():
         errors.append("generated/python/Dockerfile.primitive-conformance is missing")
-    primitive_conformance_script = REPO_ROOT / "internal" / "command-generation" / "tests" / "primitive_conformance.py"
-    if not primitive_conformance_script.is_file():
-        errors.append("internal/command-generation/tests/primitive_conformance.py is missing")
+    try:
+        import command_generation.primitive_conformance as primitive_conformance  # noqa: PLC0415
+    except ModuleNotFoundError:
+        primitive_conformance_script = None
+    else:
+        primitive_conformance_script = Path(primitive_conformance.__file__).resolve()
+    if primitive_conformance_script is None:
+        errors.append("command_generation.primitive_conformance is missing")
+    elif not primitive_conformance_script.is_file():
+        errors.append("command_generation.primitive_conformance is missing")
     else:
         primitive_conformance_text = primitive_conformance_script.read_text(encoding="utf-8")
         for primitive_id in sorted(REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE):
@@ -3642,7 +3618,7 @@ def _run_docker(
 
 
 def _run_primitive_conformance() -> int:
-    return _run([_python_executable(), "internal/command-generation/tests/primitive_conformance.py"])
+    return _run([_python_executable(), "-m", "command_generation.primitive_conformance"])
 
 
 def _python_completion_blockers_report(ir: dict[str, object]) -> dict[str, object]:
