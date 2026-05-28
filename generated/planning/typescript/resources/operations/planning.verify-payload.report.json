@@ -1,0 +1,90 @@
+{
+  "classification": "read-only-report",
+  "command_surface": {
+    "command": "verify-payload",
+    "format_option": "format",
+    "program": "agentic-planning"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": true,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
+  },
+  "guards": [
+    "Verification must remain read-only."
+  ],
+  "id": "planning.verify-payload.report",
+  "inputs": [
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "arguments": {
+          "function": "verify_payload",
+          "import_module": "repo_planning_bootstrap.installer",
+          "kwargs": {}
+        },
+        "description": "Verify bundled planning payload files and generated operation resources.",
+        "id": "load_verification",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "python.function.call"
+      },
+      {
+        "arguments": {},
+        "description": "Emit planning payload verification result in the requested format.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Planning verify-payload executes generated operation IR through codegen-owned primitive dataflow while the planning module supplies package payload verification."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "module-result"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated verify-payload process conformance passes"
+  ],
+  "reads": [
+    {
+      "required": true,
+      "surface": "planning package payload files"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Verify bundled planning payload files and generated operation resources.",
+      "id": "load_verification",
+      "uses": "python.function.call"
+    },
+    {
+      "description": "Emit planning payload verification result in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Verify bundled planning payload and generated operation resources.",
+  "writes": []
+}

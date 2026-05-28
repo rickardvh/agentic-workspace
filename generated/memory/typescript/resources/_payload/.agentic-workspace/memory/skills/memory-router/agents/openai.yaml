@@ -1,0 +1,4 @@
+interface:
+  display_name: "Memory Router"
+  short_description: "Route to the smallest relevant memory set."
+  default_prompt: "Use $memory-router to identify the smallest relevant set of memory notes for the current work."

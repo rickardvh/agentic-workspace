@@ -1,0 +1,178 @@
+{
+  "classification": "lifecycle-mutation",
+  "command_surface": {
+    "command": "archive-plan",
+    "format_option": "format",
+    "program": "agentic-planning"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": false,
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": true
+  },
+  "guards": [
+    "Respect dry-run mode by avoiding writes.",
+    "Route planning state edits through package lifecycle functions instead of hand-editing state files."
+  ],
+  "id": "planning.archive-plan.lifecycle",
+  "inputs": [
+    {
+      "name": "plan",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "dry_run",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "apply_cleanup",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "prepare_closeout",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "retain_archive",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "parent_lane_closeout",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "closure_decision",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "intent_satisfied",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "unsolved_intent",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "intent_evidence",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "closure_reason",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "closure_evidence",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "reopen_trigger",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "discard_summary",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "continuation_summary",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "expect_planning_revision",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "arguments": {},
+        "description": "Close a completed execplan or parent lane after distillation.",
+        "id": "apply_lifecycle_operation",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "result"
+        ],
+        "uses": "planning.archive-plan.apply"
+      },
+      {
+        "arguments": {},
+        "description": "Emit planning lifecycle result in the requested format.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Planning archive-plan executes generated operation IR through codegen-owned primitive dataflow while the planning module owns state mutation policy."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "module-result"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated archive-plan dry-run process conformance passes"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": "target repository Planning state"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Close a completed execplan or parent lane after distillation.",
+      "id": "apply_lifecycle_operation",
+      "uses": "planning.archive-plan.apply"
+    },
+    {
+      "description": "Emit planning lifecycle result in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Close a completed execplan or parent lane after distillation.",
+  "writes": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/",
+      "when": "not a dry run"
+    }
+  ]
+}

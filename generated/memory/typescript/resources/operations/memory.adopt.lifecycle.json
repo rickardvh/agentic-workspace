@@ -1,0 +1,360 @@
+{
+  "classification": "lifecycle-mutation",
+  "command_surface": {
+    "command": "adopt",
+    "format_option": "format",
+    "program": "agentic-memory"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": true
+  },
+  "guards": [
+    "Generated code owns parser/help/dispatch shape; memory-owned lifecycle policy remains behind the declared primitive.",
+    "Dry-run conformance must prove generated lifecycle adapters can execute without repository writes."
+  ],
+  "id": "memory.adopt.lifecycle",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "dry_run",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "apply_local_entrypoint",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "project_name",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "project_purpose",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "key_repo_docs",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "key_subsystems",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "primary_build_command",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "primary_test_command",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "other_key_commands",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "policy_profile",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "arguments": {
+          "must_be_dir": true,
+          "must_exist": true
+        },
+        "description": "Resolve the target root for declarative dry-run planning.",
+        "id": "resolve_target_root",
+        "on_error": "fail",
+        "outputs": [
+          "target_root"
+        ],
+        "uses": "path.target_root.resolve",
+        "when": {
+          "all": [
+            {
+              "equals": true,
+              "value": "dry_run"
+            },
+            {
+              "equals": false,
+              "value": "apply_local_entrypoint"
+            },
+            {
+              "equals": null,
+              "value": "project_name"
+            },
+            {
+              "equals": null,
+              "value": "project_purpose"
+            },
+            {
+              "equals": null,
+              "value": "key_repo_docs"
+            },
+            {
+              "equals": null,
+              "value": "key_subsystems"
+            },
+            {
+              "equals": null,
+              "value": "primary_build_command"
+            },
+            {
+              "equals": null,
+              "value": "primary_test_command"
+            },
+            {
+              "equals": null,
+              "value": "other_key_commands"
+            },
+            {
+              "equals": "default",
+              "value": "policy_profile"
+            }
+          ]
+        }
+      },
+      {
+        "arguments": {
+          "dry_run": true,
+          "message": "Adopt plan",
+          "mode": "adopt",
+          "policy_path": "payload_verification.memory.json",
+          "policy_root": "memory.contracts",
+          "target_root_value": "target_root"
+        },
+        "description": "Plan default dry-run adopt actions from declarative payload policy.",
+        "id": "plan_default_dry_run",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "payload.lifecycle-plan",
+        "when": {
+          "all": [
+            {
+              "equals": true,
+              "value": "dry_run"
+            },
+            {
+              "equals": false,
+              "value": "apply_local_entrypoint"
+            },
+            {
+              "equals": null,
+              "value": "project_name"
+            },
+            {
+              "equals": null,
+              "value": "project_purpose"
+            },
+            {
+              "equals": null,
+              "value": "key_repo_docs"
+            },
+            {
+              "equals": null,
+              "value": "key_subsystems"
+            },
+            {
+              "equals": null,
+              "value": "primary_build_command"
+            },
+            {
+              "equals": null,
+              "value": "primary_test_command"
+            },
+            {
+              "equals": null,
+              "value": "other_key_commands"
+            },
+            {
+              "equals": "default",
+              "value": "policy_profile"
+            }
+          ]
+        }
+      },
+      {
+        "arguments": {
+          "function": "adopt_bootstrap",
+          "import_module": "repo_memory_bootstrap.installer",
+          "kwargs": {
+            "apply_local_entrypoint": {
+              "value": "apply_local_entrypoint"
+            },
+            "dry_run": {
+              "value": "dry_run"
+            },
+            "key_repo_docs": {
+              "value": "key_repo_docs"
+            },
+            "key_subsystems": {
+              "value": "key_subsystems"
+            },
+            "other_key_commands": {
+              "value": "other_key_commands"
+            },
+            "policy_profile": {
+              "value": "policy_profile"
+            },
+            "primary_build_command": {
+              "value": "primary_build_command"
+            },
+            "primary_test_command": {
+              "value": "primary_test_command"
+            },
+            "project_name": {
+              "value": "project_name"
+            },
+            "project_purpose": {
+              "value": "project_purpose"
+            },
+            "target": {
+              "value": "target"
+            }
+          }
+        },
+        "description": "Apply or plan Memory bootstrap adoption through package runtime when mutation or customized adoption policy is required.",
+        "id": "apply_memory_lifecycle",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "python.function.call",
+        "when": {
+          "not": {
+            "all": [
+              {
+                "equals": true,
+                "value": "dry_run"
+              },
+              {
+                "equals": false,
+                "value": "apply_local_entrypoint"
+              },
+              {
+                "equals": null,
+                "value": "project_name"
+              },
+              {
+                "equals": null,
+                "value": "project_purpose"
+              },
+              {
+                "equals": null,
+                "value": "key_repo_docs"
+              },
+              {
+                "equals": null,
+                "value": "key_subsystems"
+              },
+              {
+                "equals": null,
+                "value": "primary_build_command"
+              },
+              {
+                "equals": null,
+                "value": "primary_test_command"
+              },
+              {
+                "equals": null,
+                "value": "other_key_commands"
+              },
+              {
+                "equals": "default",
+                "value": "policy_profile"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "arguments": {},
+        "description": "Emit the adopt result in the requested format.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit.install-result"
+      }
+    ],
+    "summary": "Default dry-run Memory adopt executes generated operation IR through codegen-owned payload.lifecycle-plan. Mutating and customized adoption policy paths remain package-domain runtime."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": true
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "text-or-json"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated memory adopt dry-run process conformance passes"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": "target repository Memory install state"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the target root for declarative dry-run planning.",
+      "id": "resolve_target_root",
+      "uses": "path.target_root.resolve"
+    },
+    {
+      "description": "Plan default dry-run adopt actions from declarative payload policy.",
+      "id": "plan_default_dry_run",
+      "uses": "payload.lifecycle-plan"
+    },
+    {
+      "description": "Apply or plan Memory bootstrap adoption through package runtime when mutation or customized adoption policy is required.",
+      "id": "apply_memory_lifecycle",
+      "uses": "python.function.call"
+    },
+    {
+      "description": "Emit the adopt result in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit.install-result"
+    }
+  ],
+  "summary": "Adopt Memory bootstrap capability in an existing repository.",
+  "writes": [
+    {
+      "required": false,
+      "surface": "target repository Memory managed surfaces",
+      "when": "not a dry run"
+    }
+  ]
+}

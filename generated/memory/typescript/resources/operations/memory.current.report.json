@@ -1,0 +1,173 @@
+{
+  "classification": "read-only-report",
+  "command_surface": {
+    "command": "current",
+    "format_option": "format",
+    "program": "agentic-memory"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": true,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
+  },
+  "guards": [
+    "Keep current show/check read-only.",
+    "Generated code owns parser/help/dispatch shape and current show output; memory-owned current-memory review heuristics remain behind the declared primitive for current check."
+  ],
+  "id": "memory.current.report",
+  "inputs": [
+    {
+      "name": "current_command",
+      "required": true,
+      "source": "derived"
+    },
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "arguments": {
+          "must_be_dir": true,
+          "must_exist": true
+        },
+        "description": "Resolve the target root for target-local current-memory view checks.",
+        "id": "resolve_target_root",
+        "on_error": "fail",
+        "outputs": [
+          "target_root"
+        ],
+        "uses": "path.target_root.resolve",
+        "when": {
+          "equals": "show",
+          "value": "current_command"
+        }
+      },
+      {
+        "arguments": {},
+        "description": "Load legacy current-memory show or check result based on the current subcommand.",
+        "id": "load_current",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "memory.current.load",
+        "when": {
+          "not": {
+            "equals": "show",
+            "value": "current_command"
+          }
+        }
+      },
+      {
+        "arguments": {
+          "policy_path": "payload_verification.memory.json",
+          "policy_root": "memory.contracts",
+          "target_root_value": "target_root"
+        },
+        "description": "Assemble current show JSON from declared target-local current-memory note files.",
+        "id": "assemble_current_view",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "payload.current-memory",
+        "when": {
+          "equals": "show",
+          "value": "current_command"
+        }
+      },
+      {
+        "arguments": {},
+        "description": "Emit legacy current-memory output in the requested format.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit",
+        "when": {
+          "not": {
+            "equals": "show",
+            "value": "current_command"
+          }
+        }
+      },
+      {
+        "arguments": {},
+        "description": "Emit current show output from the generated current-memory payload.",
+        "id": "emit_current_show",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit.current-memory",
+        "when": {
+          "equals": "show",
+          "value": "current_command"
+        }
+      }
+    ],
+    "summary": "Memory current show executes generated operation IR through codegen-owned portable primitives. Current check keeps using the explicit package-domain source runtime."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "module-result"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated memory current show/check process conformance passes"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": "target repository legacy current-memory notes and planning state"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the target root for target-local current-memory view checks.",
+      "id": "resolve_target_root",
+      "uses": "path.target_root.resolve"
+    },
+    {
+      "description": "Load legacy current-memory show or check result based on the current subcommand.",
+      "id": "load_current",
+      "uses": "memory.current.load"
+    },
+    {
+      "description": "Assemble current show JSON from declared target-local current-memory note files.",
+      "id": "assemble_current_view",
+      "uses": "payload.current-memory"
+    },
+    {
+      "description": "Emit legacy current-memory output in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    },
+    {
+      "description": "Emit current show output from the generated current-memory payload.",
+      "id": "emit_current_show",
+      "uses": "output.emit.current-memory"
+    }
+  ],
+  "summary": "Inspect or check legacy current-memory migration residue through the memory module CLI; current show output is assembled from declared target-local files while current check behavior remains package-domain.",
+  "writes": []
+}

@@ -1,0 +1,147 @@
+{
+  "classification": "derived-output",
+  "command_surface": {
+    "command": "start",
+    "format_option": "format"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": true,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
+  },
+  "guards": [
+    "Do not open broad planning surfaces unless compact state routes there."
+  ],
+  "id": "start.context",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "changed",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "task",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "select",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "verbose",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "complete",
+    "steps": [
+      {
+        "arguments": {
+          "operation_id": "start.context"
+        },
+        "description": "Execute the operation through the generated TypeScript domain operation table.",
+        "id": "execute_typescript_domain_operation",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "typescript.domain.execute"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the TypeScript-native operation result.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Generated TypeScript native runtime binding for a command whose source operation has not yet been decomposed into portable IR."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "draft-contract-only",
+  "output": {
+    "kind": "text-or-json",
+    "schema_ref": "schemas/startup_context.schema.json"
+  },
+  "proof": [
+    "startup context sample validates against startup_context.schema.json",
+    "start command tests remain compatible"
+  ],
+  "reads": [
+    {
+      "required": true,
+      "surface": "startup defaults and resolved config"
+    },
+    {
+      "required": false,
+      "surface": "active planning state"
+    },
+    {
+      "required": false,
+      "surface": "changed path arguments"
+    },
+    {
+      "required": false,
+      "surface": "task text for skill recommendations"
+    },
+    {
+      "required": false,
+      "surface": "field selector for exact startup context drill-down"
+    },
+    {
+      "required": false,
+      "surface": "verbose flag for broad diagnostic startup output"
+    },
+    {
+      "required": false,
+      "surface": "verbose flag for broad diagnostic startup projection"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the target root.",
+      "id": "resolve_root",
+      "uses": "workspace.root.resolve"
+    },
+    {
+      "description": "Collect startup guidance, config, active state, and optional task-specific skill recommendations.",
+      "id": "assemble_preflight",
+      "uses": "preflight.context.assemble"
+    },
+    {
+      "description": "Build bounded startup context and optional proof/path boundary data.",
+      "id": "assemble_context",
+      "uses": "startup.context.assemble"
+    },
+    {
+      "description": "Emit the startup context in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Return the minimum safe startup context for beginning work in a target repository.",
+  "writes": []
+}

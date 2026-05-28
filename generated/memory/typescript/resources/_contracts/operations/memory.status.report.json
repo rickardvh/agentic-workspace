@@ -1,0 +1,123 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "memory.status.report",
+  "command_surface": {
+    "program": "agentic-memory",
+    "command": "status",
+    "format_option": "format"
+  },
+  "summary": "Report whether memory bootstrap files are present for a target repository.",
+  "classification": "read-only-report",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "verbose",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "module-result"
+  },
+  "effects": {
+    "read_only": true,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": false,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": "target repository memory bootstrap files",
+      "required": false
+    },
+    {
+      "surface": "verbose flag for broad diagnostic output",
+      "required": false
+    }
+  ],
+  "writes": [],
+  "steps": [
+    {
+      "id": "resolve_target_root",
+      "uses": "path.target_root.resolve",
+      "description": "Resolve the target root for target-local memory status checks."
+    },
+    {
+      "id": "assemble_status",
+      "uses": "payload.status",
+      "description": "Assemble Memory status from declarative payload status policy."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit.install-result",
+      "description": "Emit Memory status as JSON or install-result text without package-runtime formatting."
+    }
+  ],
+  "guards": [
+    "Status must remain read-only."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "memory status command conformance remains compatible"
+  ],
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Memory status text, JSON, and verbose-compatible output execute generated operation IR through a schema-backed payload.status primitive.",
+    "steps": [
+      {
+        "id": "resolve_target_root",
+        "uses": "path.target_root.resolve",
+        "description": "Resolve the target root for target-local memory status checks.",
+        "arguments": {
+          "must_exist": true,
+          "must_be_dir": true
+        },
+        "outputs": [
+          "target_root"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "assemble_status",
+        "uses": "payload.status",
+        "description": "Assemble Memory status from declarative payload status policy.",
+        "arguments": {
+          "policy_root": "memory.contracts",
+          "policy_path": "payload_verification.memory.json",
+          "target_root_value": "target_root",
+          "message": "Status report"
+        },
+        "outputs": [
+          "result"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit.install-result",
+        "description": "Emit Memory status as JSON or install-result text without package-runtime formatting.",
+        "arguments": {},
+        "outputs": [
+          "emitted"
+        ],
+        "on_error": "emit_usage_error"
+      }
+    ]
+  }
+}

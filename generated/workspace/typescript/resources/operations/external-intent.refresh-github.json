@@ -1,0 +1,164 @@
+{
+  "classification": "metadata-refresh",
+  "command_surface": {
+    "command": "external-intent",
+    "format_option": "format",
+    "subcommand": "refresh-github"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
+  },
+  "guards": [
+    "Core planning must continue to consume only provider-agnostic evidence.",
+    "GitHub-specific behavior must stay inside this optional adapter path.",
+    "Ordinary refresh should stay small; closed-history audit refresh requires explicit --state all.",
+    "Default writes go to ignored local cache, not checked-in planning state.",
+    "Do not write secrets, tokens, or gh authentication data into evidence."
+  ],
+  "id": "external-intent.refresh-github",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "repo",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "state",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "limit",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "storage",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "dry_run",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "complete",
+    "steps": [
+      {
+        "arguments": {
+          "operation_id": "external-intent.refresh-github"
+        },
+        "description": "Execute the operation through the generated TypeScript domain operation table.",
+        "id": "execute_typescript_domain_operation",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "typescript.domain.execute"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the TypeScript-native operation result.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Generated TypeScript native runtime binding for a command whose source operation has not yet been decomposed into portable IR."
+  },
+  "locality": {
+    "network": "allowed",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": true
+  },
+  "migration_status": "draft-contract-only",
+  "output": {
+    "kind": "text-or-json"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "workspace CLI tests cover GitHub issue normalization and evidence writes",
+    "planning summary tests cover refresh metadata consumption"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/local/cache/external-intent-evidence.json"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/external-intent-evidence.json",
+      "when": "legacy planning storage is explicitly selected"
+    },
+    {
+      "required": true,
+      "surface": "GitHub issues via optional gh CLI"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the target repository root.",
+      "id": "resolve_root",
+      "uses": "workspace.root.resolve"
+    },
+    {
+      "description": "Use the explicit --repo value or ask gh for the current repository.",
+      "id": "resolve_repo",
+      "uses": "external_intent.github.repo.resolve"
+    },
+    {
+      "description": "Read GitHub issues through gh using the selected state and limit.",
+      "id": "load_issues",
+      "uses": "external_intent.github.issues.list"
+    },
+    {
+      "description": "Convert GitHub issue data into provider-agnostic external intent evidence records.",
+      "id": "normalize_evidence",
+      "uses": "external_intent.evidence.normalize"
+    },
+    {
+      "description": "Write the refreshed evidence artifact.",
+      "id": "write_evidence",
+      "uses": "external_intent.evidence.write",
+      "when": "dry_run is false"
+    },
+    {
+      "description": "Emit refresh counts, repository, state, and provider-boundary metadata.",
+      "id": "emit_result",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Refresh provider-agnostic external intent evidence from GitHub issues through the optional gh CLI adapter.",
+  "writes": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/local/cache/external-intent-evidence.json",
+      "when": "dry_run is false and storage is cache"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/external-intent-evidence.json",
+      "when": "dry_run is false and storage is planning"
+    }
+  ]
+}

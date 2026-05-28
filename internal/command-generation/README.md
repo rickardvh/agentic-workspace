@@ -26,7 +26,13 @@ Ownership criteria:
 
 - Agentic Workspace command truth remains in workspace-owned contracts such as `src/agentic_workspace/contracts/command_package_ir.json`.
 - Runtime primitives, live workspace inspection, mutation guards, and output assembly remain outside this package.
-- Host repositories own their integration wrapper, runtime handoff defaults, generated output locations, and any tracker-specific evidence refresh.
+- Host repositories own their integration wrapper, generated output locations, and any tracker-specific evidence refresh.
+
+## TypeScript Runtime Boundary
+
+Generated TypeScript targets execute their declared command surface with Node/TypeScript runtime code only. The generated CLI does not shell out to Python, import Python packages, or require `AGENTIC_WORKSPACE_RUNTIME` for ordinary command execution.
+
+The TypeScript runtime is contract-backed: command parsing, validation, operation dispatch, output shape projection, and failure classification are generated from command-package IR and conformance contracts. Python remains available as the source implementation and generator runtime during development, but it is not a runtime dependency of the generated TypeScript CLI packages.
 
 Migration criteria:
 

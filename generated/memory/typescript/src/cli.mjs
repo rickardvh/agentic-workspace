@@ -5,10 +5,11 @@
 // Regenerate with: uv run python scripts/generate/generate_command_packages.py
 // DO NOT EDIT DIRECTLY.
 
-import { spawnSync } from 'node:child_process';
 import { writeSync } from 'node:fs';
+import { runGeneratedOperation } from './runtime.mjs';
 
 const supportedCommands = new Set(["adopt", "bootstrap-cleanup", "capture-note", "create-note", "current", "doctor", "init", "install", "list-files", "list-skills", "migrate-layout", "promotion-report", "prompt", "report", "route", "route-report", "route-review", "search", "status", "sync-memory", "uninstall", "upgrade", "verify-payload"]);
+const nativeOperationIds = new Set(["memory.adopt.lifecycle", "memory.bootstrap-cleanup.apply", "memory.capture-note.report", "memory.create-note.apply", "memory.current.report", "memory.doctor.report", "memory.init.lifecycle", "memory.install.lifecycle", "memory.list-files.report", "memory.list-skills.report", "memory.migrate-layout.lifecycle", "memory.promotion-report.report", "memory.prompt.render", "memory.report.report", "memory.route-report.report", "memory.route-review.report", "memory.route.report", "memory.search.report", "memory.status.report", "memory.sync-memory.report", "memory.uninstall.lifecycle", "memory.upgrade.lifecycle", "memory.verify-payload.report"]);
 const commandDefinitions = [
   {
     "interface": {
@@ -44,7 +45,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "status"
+    "name": "status",
+    "operation_ref": {
+      "id": "memory.status.report",
+      "path": "operations/memory.status.report.json"
+    }
   },
   {
     "interface": {
@@ -88,7 +93,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "doctor"
+    "name": "doctor",
+    "operation_ref": {
+      "id": "memory.doctor.report",
+      "path": "operations/memory.doctor.report.json"
+    }
   },
   {
     "interface": {
@@ -193,7 +202,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "install"
+    "name": "install",
+    "operation_ref": {
+      "id": "memory.install.lifecycle",
+      "path": "operations/memory.install.lifecycle.json"
+    }
   },
   {
     "interface": {
@@ -298,7 +311,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "init"
+    "name": "init",
+    "operation_ref": {
+      "id": "memory.init.lifecycle",
+      "path": "operations/memory.init.lifecycle.json"
+    }
   },
   {
     "interface": {
@@ -403,7 +420,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "adopt"
+    "name": "adopt",
+    "operation_ref": {
+      "id": "memory.adopt.lifecycle",
+      "path": "operations/memory.adopt.lifecycle.json"
+    }
   },
   {
     "interface": {
@@ -516,7 +537,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "upgrade"
+    "name": "upgrade",
+    "operation_ref": {
+      "id": "memory.upgrade.lifecycle",
+      "path": "operations/memory.upgrade.lifecycle.json"
+    }
   },
   {
     "interface": {
@@ -552,7 +577,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "migrate-layout"
+    "name": "migrate-layout",
+    "operation_ref": {
+      "id": "memory.migrate-layout.lifecycle",
+      "path": "operations/memory.migrate-layout.lifecycle.json"
+    }
   },
   {
     "interface": {
@@ -649,7 +678,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "uninstall"
+    "name": "uninstall",
+    "operation_ref": {
+      "id": "memory.uninstall.lifecycle",
+      "path": "operations/memory.uninstall.lifecycle.json"
+    }
   },
   {
     "interface": {
@@ -677,7 +710,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "bootstrap-cleanup"
+    "name": "bootstrap-cleanup",
+    "operation_ref": {
+      "id": "memory.bootstrap-cleanup.apply",
+      "path": "operations/memory.bootstrap-cleanup.apply.json"
+    }
   },
   {
     "interface": {
@@ -755,7 +792,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "capture-note"
+    "name": "capture-note",
+    "operation_ref": {
+      "id": "memory.capture-note.report",
+      "path": "operations/memory.capture-note.report.json"
+    }
   },
   {
     "interface": {
@@ -905,7 +946,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "create-note"
+    "name": "create-note",
+    "operation_ref": {
+      "id": "memory.create-note.apply",
+      "path": "operations/memory.create-note.apply.json"
+    }
   },
   {
     "interface": {
@@ -967,7 +1012,11 @@ const commandDefinitions = [
       ],
       "subcommands_required": true
     },
-    "name": "current"
+    "name": "current",
+    "operation_ref": {
+      "id": "memory.current.report",
+      "path": "operations/memory.current.report.json"
+    }
   },
   {
     "interface": {
@@ -1044,7 +1093,11 @@ const commandDefinitions = [
       ],
       "subcommands_required": true
     },
-    "name": "prompt"
+    "name": "prompt",
+    "operation_ref": {
+      "id": "memory.prompt.render",
+      "path": "operations/memory.prompt.render.json"
+    }
   },
   {
     "interface": {
@@ -1080,7 +1133,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "report"
+    "name": "report",
+    "operation_ref": {
+      "id": "memory.report.report",
+      "path": "operations/memory.report.report.json"
+    }
   },
   {
     "interface": {
@@ -1116,7 +1173,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "route-report"
+    "name": "route-report",
+    "operation_ref": {
+      "id": "memory.route-report.report",
+      "path": "operations/memory.route-report.report.json"
+    }
   },
   {
     "interface": {
@@ -1173,7 +1234,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "route"
+    "name": "route",
+    "operation_ref": {
+      "id": "memory.route.report",
+      "path": "operations/memory.route.report.json"
+    }
   },
   {
     "interface": {
@@ -1219,7 +1284,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "sync-memory"
+    "name": "sync-memory",
+    "operation_ref": {
+      "id": "memory.sync-memory.report",
+      "path": "operations/memory.sync-memory.report.json"
+    }
   },
   {
     "interface": {
@@ -1247,7 +1316,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "route-review"
+    "name": "route-review",
+    "operation_ref": {
+      "id": "memory.route-review.report",
+      "path": "operations/memory.route-review.report.json"
+    }
   },
   {
     "interface": {
@@ -1281,7 +1354,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "search"
+    "name": "search",
+    "operation_ref": {
+      "id": "memory.search.report",
+      "path": "operations/memory.search.report.json"
+    }
   },
   {
     "interface": {
@@ -1309,7 +1386,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "verify-payload"
+    "name": "verify-payload",
+    "operation_ref": {
+      "id": "memory.verify-payload.report",
+      "path": "operations/memory.verify-payload.report.json"
+    }
   },
   {
     "interface": {
@@ -1358,7 +1439,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "promotion-report"
+    "name": "promotion-report",
+    "operation_ref": {
+      "id": "memory.promotion-report.report",
+      "path": "operations/memory.promotion-report.report.json"
+    }
   },
   {
     "interface": {
@@ -1386,7 +1471,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "list-files"
+    "name": "list-files",
+    "operation_ref": {
+      "id": "memory.list-files.report",
+      "path": "operations/memory.list-files.report.json"
+    }
   },
   {
     "interface": {
@@ -1407,10 +1496,15 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "list-skills"
+    "name": "list-skills",
+    "operation_ref": {
+      "id": "memory.list-skills.report",
+      "path": "operations/memory.list-skills.report.json"
+    }
   }
 ];
 const commandByName = new Map(commandDefinitions.map((definition) => [definition.name, definition.interface]));
+const commandDefinitionByName = new Map(commandDefinitions.map((definition) => [definition.name, definition]));
 const argv = process.argv.slice(2);
 const command = argv[0];
 
@@ -1438,8 +1532,8 @@ function printRootHelp() {
   console.log(`Usage: agentic-memory <command> [options]`);
   console.log(`Supported generated commands: ${Array.from(supportedCommands).join(', ')}`);
   console.log('Weak-agent routing: allowed-mutation-with-review');
-  console.log('TypeScript CLI boundary: generated parser/help/validation, then canonical Python runtime handoff.');
-  console.log('Recovery: use a supported generated command or route back to the canonical Python CLI.');
+  console.log('TypeScript CLI boundary: generated parser, validation, and command execution are Node/TypeScript only.');
+  console.log('Recovery: use a supported generated command or inspect the generated command contract.');
 }
 
 function printInterfaceHelp(path, iface) {
@@ -1550,6 +1644,103 @@ function validateInterface(iface, tokens, path) {
   }
 }
 
+function optionDefault(option) {
+  if (Object.prototype.hasOwnProperty.call(option, 'default')) return option.default;
+  if (option.action === 'store_true') return false;
+  if (option.nargs === '*') return [];
+  return undefined;
+}
+
+function initialValues(iface) {
+  const values = {};
+  for (const option of interfaceOptions(iface)) {
+    const optionName = option.name ?? optionFlags(option)[0];
+    if (!optionName) continue;
+    const defaultValue = optionDefault(option);
+    if (defaultValue !== undefined) values[optionName] = Array.isArray(defaultValue) ? [...defaultValue] : defaultValue;
+  }
+  return values;
+}
+
+function optionValue(option, token) {
+  const value = String(token);
+  return option.type === 'integer' ? Number(value) : value;
+}
+
+function parseInvocation(definition, tokens, path) {
+  const iface = definition.interface;
+  const values = initialValues(iface);
+  const positional = [];
+  let index = 0;
+  while (index < tokens.length) {
+    const token = String(tokens[index]);
+    if (isHelpToken(token)) {
+      printInterfaceHelp(path, iface);
+      process.exit(0);
+    }
+    if (token.startsWith('-')) {
+      const option = optionByFlag(iface, token);
+      if (!option) failValidation(`unknown option ${token} for ${path.join(' ')}`);
+      const optionName = option.name ?? optionFlags(option)[0];
+      if (option.action === 'store_true') {
+        values[optionName] = true;
+        index += 1;
+        continue;
+      }
+      if (option.nargs === '*') {
+        const collected = [];
+        let cursor = index + 1;
+        while (cursor < tokens.length && !String(tokens[cursor]).startsWith('-')) {
+          collected.push(optionValue(option, tokens[cursor]));
+          cursor += 1;
+        }
+        values[optionName] = collected;
+        index = cursor;
+        continue;
+      }
+      values[optionName] = optionValue(option, tokens[index + 1]);
+      index += 2;
+      continue;
+    }
+    const subcommand = interfaceSubcommands(iface).find((candidate) => candidate.name === token);
+    if (subcommand) {
+      const nested = parseInvocation({ interface: subcommand, operation_ref: subcommand.operation_ref ?? definition.operation_ref }, tokens.slice(index + 1), [...path, token]);
+      if (iface.subcommand_dest) nested.values[iface.subcommand_dest] = token;
+      return nested;
+    }
+    positional.push(token);
+    index += 1;
+  }
+  interfaceArguments(iface).forEach((argument, position) => {
+    if (position < positional.length) values[argument.name] = positional[position];
+    else if (Object.prototype.hasOwnProperty.call(argument, 'default')) values[argument.name] = argument.default;
+  });
+  values._command_path = path;
+  return { values, operationRef: definition.operation_ref ?? iface.operation_ref ?? null };
+}
+
+function runNativeOperation(operationId, operationPath, values) {
+  if (!nativeOperationIds.has(operationId)) {
+    console.error(`Unsupported native TypeScript operation: ${operationId}`);
+    return 2;
+  }
+  return runGeneratedOperation({ operationId, operationPath, values });
+}
+
+function maybeRunNativeOperation() {
+  const invocation = parseInvocation(commandDefinitionByName.get(command), argv.slice(1), [command]);
+  const operationId = invocation.operationRef?.id;
+  const operationPath = invocation.operationRef?.path;
+  try {
+    const nativeStatus = runNativeOperation(operationId, operationPath, invocation.values);
+    process.exit(nativeStatus);
+  } catch (error) {
+    console.error(`TypeScript native runtime failed: ${error.message}`);
+    console.error('Recovery: run agentic-memory --help and inspect the generated command contract.');
+    process.exit(1);
+  }
+}
+
 if (!command || command === '--help' || command === '-h') {
   printRootHelp();
   process.exit(0);
@@ -1563,47 +1754,4 @@ if (!supportedCommands.has(command)) {
 
 validateInterface(commandByName.get(command), argv.slice(1), [command]);
 
-const runtimeCommand = process.env.AGENTIC_WORKSPACE_RUNTIME ?? "python -c \"import sys; from repo_memory_bootstrap.cli import main; raise SystemExit(main(sys.argv[1:]))\"";
-
-function splitRuntimeCommand(commandLine) {
-  const parts = [];
-  let current = '';
-  let quote = null;
-  for (const char of commandLine.trim()) {
-    if (quote) {
-      if (char === quote) quote = null;
-      else current += char;
-    } else if (char === '"' || char === "'") {
-      quote = char;
-    } else if (/\s/.test(char)) {
-      if (current) {
-        parts.push(current);
-        current = '';
-      }
-    } else {
-      current += char;
-    }
-  }
-  if (quote) throw new Error('runtime command has an unterminated quote');
-  if (current) parts.push(current);
-  if (parts.length === 0) throw new Error('runtime command is empty');
-  return parts;
-}
-
-let result;
-try {
-  const [runtimeExecutable, ...runtimeArgs] = splitRuntimeCommand(runtimeCommand);
-  result = spawnSync(runtimeExecutable, [...runtimeArgs, ...argv], { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
-} catch (error) {
-  console.error(`Adapter runtime handoff failed: ${error.message}`);
-  console.error('Recovery: verify AGENTIC_WORKSPACE_RUNTIME or run the canonical Python CLI directly.');
-  process.exit(1);
-}
-if (result.error) {
-  console.error(`Adapter runtime handoff failed: ${result.error.message}`);
-  console.error('Recovery: verify AGENTIC_WORKSPACE_RUNTIME or run the canonical Python CLI directly.');
-  process.exit(1);
-}
-if (result.stdout) writeSync(1, result.stdout);
-if (result.stderr) writeSync(2, result.stderr);
-process.exit(result.status ?? 1);
+maybeRunNativeOperation();

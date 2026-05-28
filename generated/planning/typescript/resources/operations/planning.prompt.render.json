@@ -1,0 +1,90 @@
+{
+  "classification": "read-only-report",
+  "command_surface": {
+    "command": "prompt",
+    "program": "agentic-planning"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": true,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
+  },
+  "guards": [
+    "Prompt rendering must not mutate the repository."
+  ],
+  "id": "planning.prompt.render",
+  "inputs": [
+    {
+      "name": "prompt_command",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "arguments": {},
+        "description": "Render the selected planning bootstrap prompt guidance.",
+        "id": "render_prompt",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "planning.prompt.render"
+      },
+      {
+        "arguments": {},
+        "description": "Emit prompt guidance as text.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Planning prompt executes generated operation IR through codegen-owned primitive dataflow while the planning module supplies package-specific upgrade-source guidance."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "text"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated prompt process conformance passes"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": "planning upgrade source metadata"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Render the selected planning bootstrap prompt guidance.",
+      "id": "render_prompt",
+      "uses": "planning.prompt.render"
+    },
+    {
+      "description": "Emit prompt guidance as text.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Render planning bootstrap prompt guidance for install/adopt workflows.",
+  "writes": []
+}
