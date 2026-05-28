@@ -6244,6 +6244,104 @@ def _run_report_command(
     return payload
 
 
+def _report_section_base_payload(
+    *,
+    target_root: Path,
+    selected_modules: list[str],
+    resolved_preset: str | None,
+    config: WorkspaceConfig,
+) -> dict[str, Any]:
+    installed_modules = _fast_installed_modules(target_root=target_root)
+    if (target_root / ".agentic-workspace" / "verification" / "manifest.toml").exists() and "verification" not in installed_modules:
+        installed_modules.append("verification")
+    return {
+        "kind": "workspace-report/v1",
+        "schema": _reporting_schema_payload(),
+        "command": "report",
+        "target": target_root.as_posix(),
+        "selected_modules": selected_modules,
+        "installed_modules": installed_modules,
+        "feature_tier": _feature_tier_payload(
+            selected_modules=selected_modules,
+            installed_modules=installed_modules,
+            resolved_preset=resolved_preset,
+            config=config,
+        ),
+        "report_profile": _report_profile_payload(cli_invoke=config.cli_invoke),
+        "config": {"workspace": {"cli_invoke": config.cli_invoke}},
+        "findings": [],
+    }
+
+
+def _active_planning_record_for_report_section(*, target_root: Path) -> dict[str, Any]:
+    return _raw_active_planning_record_for_closeout(planning_record={}, target_root=target_root)
+
+
+def _run_lazy_report_section_command(
+    *,
+    target_root: Path,
+    selected_modules: list[str],
+    resolved_preset: str | None,
+    config: WorkspaceConfig,
+    section: str | None,
+) -> dict[str, Any] | None:
+    if section is None:
+        return None
+    normalized = section.strip()
+    if normalized not in {
+        "assurance_requirements",
+        "verification",
+        "successful_completion_cost",
+        "operational_compression",
+    }:
+        return None
+
+    payload = _report_section_base_payload(
+        target_root=target_root,
+        selected_modules=selected_modules,
+        resolved_preset=resolved_preset,
+        config=config,
+    )
+    active_planning_record = _active_planning_record_for_report_section(target_root=target_root)
+
+    if normalized in {"assurance_requirements", "verification"}:
+        assurance_requirements = _assurance_requirements_report_payload(
+            config=config,
+            active_planning_record=active_planning_record,
+        )
+        verification = _verification_report_payload(
+            target_root=target_root,
+            active_planning_record=active_planning_record,
+            assurance_requirements=assurance_requirements,
+        )
+        payload["verification"] = verification
+        payload["assurance_requirements"] = _assurance_requirements_with_verification(assurance_requirements, verification)
+        return _select_report_payload(payload, profile="router", section=normalized)
+
+    if normalized == "successful_completion_cost":
+        payload["successful_completion_cost"] = _successful_completion_cost_payload(target_root=target_root, cli_invoke=config.cli_invoke)
+        return _select_report_payload(payload, profile="router", section=normalized)
+
+    if normalized == "operational_compression":
+        payload["closeout_trust"] = {
+            "historical_review_artifacts": _historical_review_artifacts_policy(
+                planning_report={},
+                intent_validation={},
+                target_root=target_root,
+            )
+        }
+        operational_compression = _operational_compression_payload(
+            report_payload=payload,
+            module_reports=[],
+            findings=[],
+            surface_value_guardrail=_surface_value_guardrail_payload(),
+        )
+        payload["operational_compression"] = operational_compression
+        return _select_report_payload(payload, profile="router", section=normalized)
+
+    return None
+
+
 def _decision_slug(value: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", value.strip().lower())
     slug = re.sub(r"-+", "-", slug).strip("-")
@@ -20910,15 +21008,31 @@ def _select_proof_payload(
     return payload
 
 
+def _tiny_required_proof_commands(answer: dict[str, Any]) -> list[str]:
+    required_commands = [str(command) for command in _list_payload(answer.get("required_commands"))]
+    verification_commands = {
+        str(command)
+        for lane in _list_payload(answer.get("selected_lanes"))
+        if isinstance(lane, dict) and str(lane.get("id", "")).startswith("verification:")
+        for command in _list_payload(lane.get("required_commands"))
+    }
+    if not verification_commands:
+        return required_commands
+    non_verification_commands = [command for command in required_commands if command not in verification_commands]
+    return non_verification_commands or required_commands
+
+
 def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
     if payload.get("profile") == "compact-contract-answer/v1":
         answer = payload.get("answer", {})
+        tiny_required_commands = _tiny_required_proof_commands(answer) if isinstance(answer, dict) else []
         include_intent_proof = False
         if isinstance(answer, dict) and answer.get("intent_proof"):
-            required_for_intent = [str(command) for command in _list_payload(answer.get("required_commands"))]
+            required_for_intent = tiny_required_commands
             include_intent_proof = not required_for_intent or not all(command.startswith("git diff --") for command in required_for_intent)
         if isinstance(answer, dict) and isinstance(answer.get("proof_next_decision"), dict):
             next_decision = dict(answer["proof_next_decision"])
+            next_decision["required_commands"] = tiny_required_commands
             next_decision.setdefault("target", payload.get("target"))
             next_decision.setdefault("selector", payload.get("selector", {}))
             next_decision.setdefault("sufficiency", answer.get("sufficiency", {}))
@@ -20950,7 +21064,7 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
             )
             next_decision = _guidance_with_cli_invoke(value=next_decision, cli_invoke=cli_invoke)
             return next_decision
-        required_commands = answer.get("required_commands", []) if isinstance(answer, dict) else []
+        required_commands = tiny_required_commands
         validation_plan = answer.get("validation_plan", {}) if isinstance(answer, dict) else {}
         primary = validation_plan.get("primary_next_action") if isinstance(validation_plan, dict) else None
         if isinstance(answer, dict) and (not required_commands) and answer.get("unavailable_proof_commands"):
@@ -21366,6 +21480,18 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
         payload = _rewrite_module_cli_commands(payload)
         _emit_payload(payload=payload, format_name=args.format)
         return 0
+    if profile == "router" and section is not None:
+        payload = _run_lazy_report_section_command(
+            target_root=target_root,
+            selected_modules=selected_modules,
+            resolved_preset=resolved_preset,
+            config=config,
+            section=section,
+        )
+        if payload is not None:
+            payload = _rewrite_module_cli_commands(payload)
+            _emit_payload(payload=payload, format_name=args.format)
+            return 0
     payload = _run_report_command(
         target_root=target_root, selected_modules=selected_modules, resolved_preset=resolved_preset, descriptors=descriptors, config=config
     )

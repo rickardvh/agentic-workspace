@@ -303,6 +303,34 @@ review_aids = ["Confirm data minimisation and retention assumptions."]
     assert status["verification_missing_evidence"] == ["manual_privacy_review"]
 
 
+def test_proof_routes_generated_adapter_path_to_repo_verification_protocol(capsys) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(repo_root),
+                "--changed",
+                "src/agentic_workspace/contracts/command_package_ir.json",
+                "--verbose",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert answer["verification"]["active_protocols"][0]["id"] == "generated_adapter_conformance"
+    lanes = {lane["id"]: lane for lane in answer["selected_lanes"]}
+    assert "verification:generated_adapter_conformance" in lanes
+    lane = lanes["verification:generated_adapter_conformance"]
+    assert lane["verification_proof_route_ids"] == ["generated_adapter_conformance"]
+    assert "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node" in lane["required_commands"]
+
+
 def test_proof_accumulates_repeated_changed_flags(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
 
@@ -1269,6 +1297,7 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
     assert [lane["id"] for lane in answer["selected_lanes"]] == [
         "generated_command_packages",
         "cli_authority",
+        "verification:generated_adapter_conformance",
     ]
     assert "route back through command-package checks" in answer["selected_lanes"][0]["recovery_signal"]
     assert answer["required_commands"] == [
@@ -1277,6 +1306,8 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
         "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
         "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
         "uv run agentic-workspace defaults --section root_cli_authority --format json",
+        "uv run python scripts/generate/generate_command_packages.py --check",
+        "uv run python scripts/check/check_generated_command_packages.py --require-node",
     ]
     assert [step["lane_id"] for step in answer["validation_plan"]["required"]] == [
         "generated_command_packages",
@@ -1284,6 +1315,8 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
         "generated_command_packages",
         "generated_command_packages",
         "cli_authority",
+        "verification:generated_adapter_conformance",
+        "verification:generated_adapter_conformance",
     ]
     generated_steps = [step for step in answer["validation_plan"]["required"] if step["lane_id"] == "generated_command_packages"]
     assert {step["execution_mode"] for step in generated_steps} == {"serial"}
@@ -1326,6 +1359,7 @@ def test_proof_changed_selector_routes_python_generated_packages_to_python_docke
         "generated_command_packages",
         "cli_authority",
         "subsystem:workspace-cli-runtime",
+        "verification:generated_adapter_conformance",
     ]
     assert answer["required_commands"] == [
         "uv run python scripts/check/check_generated_command_packages.py",
@@ -1333,6 +1367,11 @@ def test_proof_changed_selector_routes_python_generated_packages_to_python_docke
         "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
         "uv run agentic-workspace defaults --section root_cli_authority --format json",
         "uv run pytest tests/test_workspace_cli.py -q",
+        "uv run python scripts/generate/generate_command_packages.py --check",
+        "uv run python scripts/check/check_generated_command_packages.py --require-node",
+        "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
+        "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
+        "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
     ]
     assert (
         "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker"
@@ -1688,6 +1727,7 @@ def test_proof_changed_selector_flags_direct_cli_edits(capsys) -> None:
         "cli_authority",
         "generated_command_packages",
         "subsystem:workspace-cli-runtime",
+        "verification:generated_adapter_conformance",
     ]
     authority_review = answer["cli_authority_review"]
     assert authority_review["status"] == "review-ready"
@@ -1730,6 +1770,7 @@ def test_proof_changed_selector_broadens_contract_plus_cli_changes(capsys) -> No
         "cli_authority",
         "generated_command_packages",
         "subsystem:workspace-cli-runtime",
+        "verification:generated_adapter_conformance",
     ]
     assert answer["escalate_when"][0] == "changed paths span multiple validation lanes; run all selected commands or split the work"
     assert "make test-workspace" in answer["required_commands"]
@@ -1760,6 +1801,7 @@ def test_proof_changed_selector_escalates_for_cross_lane_changes(capsys) -> None
         "generated_command_packages",
         "subsystem:workspace-cli-runtime",
         "planning_source_typecheck_ci_parity",
+        "verification:generated_adapter_conformance",
     ]
     assert answer["escalate_when"][0] == "changed paths span multiple validation lanes; run all selected commands or split the work"
     assert "make typecheck-planning" in answer["required_commands"]

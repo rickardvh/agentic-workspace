@@ -211,6 +211,68 @@ reopen_trigger = "runbook recovery environment matrix changes"
     assert answer["transcript_policy"]["summary_first"] is True
 
 
+def test_report_verification_section_uses_lazy_payload_without_full_report(tmp_path: Path, capsys, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/verification/manifest.toml",
+        """
+schema_version = "agentic-workspace/verification-manifest/v1"
+
+[protocols.generated_adapter_conformance]
+title = "Generated adapter conformance"
+purpose = "Check generated adapter proof evidence."
+applies_to_paths = ["generated/*/typescript/**"]
+expected_evidence = ["generated_adapter_local_conformance"]
+review_owner = "maintainer"
+""",
+    )
+
+    def fail_full_report(**_kwargs: object) -> dict[str, object]:
+        raise AssertionError("sectioned verification report should not build the full report")
+
+    monkeypatch.setattr(workspace_runtime_primitives, "_run_report_command", fail_full_report)
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "verification", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert answer["kind"] == "agentic-workspace/verification/v1"
+    assert answer["configured"] is True
+    assert answer["configured_protocols"][0]["id"] == "generated_adapter_conformance"
+
+
+def test_report_operational_compression_section_uses_lazy_payload_without_full_report(tmp_path: Path, capsys, monkeypatch) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    def fail_full_report(**_kwargs: object) -> dict[str, object]:
+        raise AssertionError("sectioned operational compression report should not build the full report")
+
+    monkeypatch.setattr(workspace_runtime_primitives, "_run_report_command", fail_full_report)
+
+    assert cli.main(["report", "--target", str(target), "--section", "operational_compression", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert answer["kind"] == "workspace-operational-compression/v1"
+    assert "artifact_footprint_by_class" in answer["measures"]
+
+
+def test_report_verification_section_loads_repo_generated_adapter_manifest(capsys) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+
+    assert cli.main(["report", "--target", str(repo_root), "--section", "verification", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    protocols = {protocol["id"]: protocol for protocol in answer["configured_protocols"]}
+    routes = {route["id"]: route for route in answer["proof_routes"]}
+    assert answer["configured"] is True
+    assert "generated_adapter_conformance" in protocols
+    assert protocols["generated_adapter_conformance"]["expected_evidence"]
+    assert "generated_adapter_conformance" in routes
+
+
 def test_report_verification_manifest_rejects_protocol_without_activation(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(

@@ -277,6 +277,18 @@
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
+      "pattern": ".agentic-workspace/verification/manifest.toml",
+      "format": "toml",
+      "owner": "verification",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "repo_verification_bootstrap.runtime_primitives.verification_report_payload",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Verification manifest TOML is parsed into typed protocols, scenarios, proof routes, evidence bundles, and known gaps by the Verification module.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
+    },
+    {
       "pattern": ".agentic-workspace/memory/UPGRADE-SOURCE.toml",
       "format": "toml",
       "owner": "memory-payload",

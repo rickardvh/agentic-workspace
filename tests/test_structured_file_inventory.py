@@ -154,6 +154,16 @@ def test_memory_manifest_entries_are_typed_validator_backed() -> None:
         assert "routed_to" not in entry
 
 
+def test_verification_manifest_entry_is_typed_validator_backed() -> None:
+    inventory = check_structured_file_inventory.load_inventory()
+    entry = next(entry for entry in inventory["entries"] if entry["pattern"] == ".agentic-workspace/verification/manifest.toml")
+
+    assert entry["status"] == "typed-validator-backed"
+    assert "verification_report_payload" in entry["schema_or_validator"]
+    assert entry["storage_class"] == "source-of-truth"
+    assert "routed_to" not in entry
+
+
 def test_planning_record_entries_are_schema_backed() -> None:
     inventory = check_structured_file_inventory.load_inventory()
     planning_patterns = {

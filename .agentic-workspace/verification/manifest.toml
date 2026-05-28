@@ -1,0 +1,138 @@
+schema_version = "agentic-workspace/verification-manifest/v1"
+
+[scenarios.generated_adapter_local_conformance]
+protocol_id = "generated_adapter_conformance"
+title = "Generated adapter local conformance"
+steps = [
+  "Check generated package freshness and static surfaces.",
+  "Run local generated adapter conformance against the canonical Python runtime.",
+  "Run generated TypeScript package tests with Node.",
+]
+expected_observations = [
+  "Generated resources are fresh from command_package_ir.",
+  "Generated TypeScript adapters validate interface shape before runtime handoff.",
+  "Local adapter conformance matches the canonical runtime boundary.",
+]
+pass_evidence_labels = [
+  "generated_package_freshness_static",
+  "generated_adapter_local_conformance",
+  "generated_typescript_node_tests",
+]
+fail_evidence_labels = [
+  "generated_package_drift",
+  "generated_adapter_conformance_drift",
+]
+automation_hint = "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node"
+
+[scenarios.generated_adapter_docker_conformance]
+protocol_id = "generated_adapter_conformance"
+title = "Generated adapter Docker conformance"
+steps = [
+  "Run generated TypeScript package Docker proof.",
+  "Run generated TypeScript adapter Docker conformance.",
+  "Run generated Python adapter Docker conformance when Python package surfaces changed.",
+]
+expected_observations = [
+  "Container proof includes generated package resources and support code.",
+  "Docker conformance can import command-generation support and canonical runtime modules.",
+]
+pass_evidence_labels = [
+  "generated_typescript_docker_proof",
+  "generated_typescript_docker_conformance",
+  "generated_python_docker_conformance",
+]
+fail_evidence_labels = [
+  "generated_docker_proof_failure",
+  "generated_docker_conformance_failure",
+]
+automation_hint = "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker"
+
+[protocols.generated_adapter_conformance]
+title = "Generated adapter conformance"
+purpose = "Keep generated command package adapters honest across generated Python and TypeScript surfaces without making Verification the proof authority."
+applies_to_paths = [
+  "src/agentic_workspace/contracts/command_package_ir.json",
+  "internal/command-generation/src/command_generation/**",
+  "scripts/check/check_generated_command_packages.py",
+  "scripts/generate/generate_command_packages.py",
+  "scripts/generate/workspace_command_generation.py",
+  "generated/*/python/**",
+  "generated/*/typescript/**",
+  "generated/python/Dockerfile*",
+  "generated/typescript*.Dockerfile",
+]
+applies_to_task_markers = [
+  "generated adapter",
+  "generated command package",
+  "command_package_ir",
+  "typescript cli",
+  "adapter conformance",
+]
+scenario_refs = [
+  "generated_adapter_local_conformance",
+  "generated_adapter_docker_conformance",
+]
+steps = [
+  "Regenerate or check generated command packages from command_package_ir.",
+  "Run local static and conformance checks for generated package adapters.",
+  "Run Docker proof when generated adapter packaging, runtime handoff, or Docker support changed.",
+]
+expected_evidence = [
+  "generated_package_freshness_static",
+  "generated_adapter_local_conformance",
+  "generated_typescript_node_tests",
+  "generated_typescript_docker_proof",
+  "generated_typescript_docker_conformance",
+]
+review_owner = "maintainer"
+authority_refs = [
+  "src/agentic_workspace/contracts/command_package_ir.json",
+  "scripts/check/check_generated_command_packages.py",
+  "internal/command-generation/src/command_generation/generator.py",
+]
+stale_when = [
+  "src/agentic_workspace/contracts/command_package_ir.json",
+  "internal/command-generation/src/command_generation/**",
+  "scripts/check/check_generated_command_packages.py",
+  "scripts/generate/generate_command_packages.py",
+  "scripts/generate/workspace_command_generation.py",
+  "generated/*/python/**",
+  "generated/*/typescript/**",
+  "generated/python/Dockerfile*",
+  "generated/typescript*.Dockerfile",
+]
+retention = "retain-summary"
+non_goals = [
+  "Verification does not decide whether a feature is correct.",
+  "Verification does not store raw command output or long transcripts by default.",
+]
+commands = [
+  "uv run python scripts/generate/generate_command_packages.py --check",
+  "uv run python scripts/check/check_generated_command_packages.py --require-node",
+  "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
+  "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
+  "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
+]
+review_aids = [
+  "If Docker is unavailable, record the proof-environment gap rather than treating missing Docker as adapter success.",
+  "Do not let stale generated adapter evidence satisfy changed command_package_ir, generator, checker, or generated-root changes.",
+]
+
+[proof_routes.generated_adapter_conformance]
+protocol_refs = ["generated_adapter_conformance"]
+scenario_refs = [
+  "generated_adapter_local_conformance",
+  "generated_adapter_docker_conformance",
+]
+commands = [
+  "uv run python scripts/generate/generate_command_packages.py --check",
+  "uv run python scripts/check/check_generated_command_packages.py --require-node",
+  "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
+  "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
+  "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
+]
+review_aids = [
+  "Compare the generated adapter evidence to the changed generated surfaces and claim boundary.",
+]
+proof_lane_hint = "generated-adapter-conformance"
+reason = "Generated command package changes need repeatable local and Docker conformance evidence."
