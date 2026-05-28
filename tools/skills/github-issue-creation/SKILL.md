@@ -27,4 +27,9 @@ Use this repo-owned skill before creating GitHub issues for this repository.
 - Apply the labels emitted by the helper.
 - Fill required fields with concrete evidence; do not leave `TODO` values in a created issue.
 - Use `review` for dogfooding findings unless the finding is clearly a product direction or bug.
+- Preserve the completion boundary fields:
+  - `final_satisfaction`: what must be true before the issue is complete.
+  - `bounded_slice_success`: useful partial progress that may land without final closure.
+  - `partial_pr_may_close`: default `no` for direction/proposal work unless the issue owner says otherwise.
+  - `required_follow_up_owner`, `required_residual_intent`, and `evidence_required_for_final_completion`: where remaining intent lives and what proves final completion.
 - If the helper output and the YAML template disagree, trust the YAML template and fix the helper.

@@ -8,7 +8,7 @@ Use them when a compact report answer should make continuation cheaper without m
 
 | Report section | Purpose |
 | --- | --- |
-| `completion_contract` | Shows the Planning completion-contract lens: what must become true, what proves it, constraints, out-of-bounds work, iteration rule, and blocked stop condition. |
+| `completion_contract` | Shows the Planning completion-contract lens: what must become true, what proves it, how final satisfaction differs from bounded slice success, constraints, out-of-bounds work, iteration rule, and blocked stop condition. |
 | `repair_loop_residue` | Summarizes validation-driven repair residue: observed problem, inspection findings, focused change, validation evidence, remaining gap, continuation input, and stop reason. |
 | `structured_findings` | Provides a compact finding shape with owner and disposition fields so review, friction, Verification, and promotion residue can be routed or dismissed. |
 | `external_evidence_safety` | Summarizes external source freshness, local state, divergence, stale-after, closeout safety, and refresh route without making external systems authoritative. |
@@ -51,5 +51,12 @@ agentic-workspace report --target ./repo --section completion_contract --format 
 agentic-workspace report --target ./repo --section external_evidence_safety --format json
 agentic-workspace report --target ./repo --section continuation_next_actions --format json
 ```
+
+For closeout, preserve the completion boundary explicitly:
+
+- `final_satisfaction`: what must be true before the issue or lane is complete.
+- `bounded_slice_success`: useful partial progress that may land without claiming final closure.
+- `partial_pr_may_close`: defaults to `no` for direction/proposal work unless the issue author says otherwise.
+- `required_follow_up_owner`, `required_residual_intent`, and `evidence_required_for_final_completion`: where remaining intent lives and what proves final completion.
 
 The projections are designed to be restartable: a future session should recover the current intent, evidence, next action, stop condition, changed surfaces or selector, and unresolved risk without rereading chat history.

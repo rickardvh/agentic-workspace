@@ -295,6 +295,23 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
             }
             if "continuation_surface" in value:
                 compact["continuation_surface"] = value.get("continuation_surface")
+            completion_boundary = value.get("completion_boundary", {})
+            if isinstance(completion_boundary, dict):
+                compact["completion_boundary"] = {
+                    key: completion_boundary.get(key)
+                    for key in (
+                        "status",
+                        "final_satisfaction",
+                        "bounded_slice_success",
+                        "partial_pr_may_close",
+                        "required_follow_up_owner",
+                        "required_residual_intent",
+                        "evidence_required_for_final_completion",
+                        "closure_rule",
+                        "default_rule",
+                    )
+                    if key in completion_boundary
+                }
             package_continuation = value.get("package_owned_continuation", {})
             if isinstance(package_continuation, dict):
                 compact["package_owned_continuation"] = {

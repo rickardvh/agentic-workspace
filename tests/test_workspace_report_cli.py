@@ -383,6 +383,14 @@ def test_report_completion_contract_distinguishes_closure_states(tmp_path: Path,
                 "status": "present",
                 "closure_check": {"bounded_slice_complete": True},
                 "intent_continuity": {"larger_intent_complete": False, "required_continuation": {"owner": "#1184"}},
+                "completion_boundary": {
+                    "final_satisfaction": "The parent issue is complete only when every continuation gap is closed.",
+                    "bounded_slice_success": "This slice may land with the parent issue open.",
+                    "partial_pr_may_close": "no",
+                    "required_follow_up_owner": "#1184",
+                    "required_residual_intent": "Finish the parent continuation gap.",
+                    "evidence_required_for_final_completion": "Closeout evidence proves final satisfaction, not only local proof.",
+                },
                 "validation": {"status": "passed"},
             },
         ),
@@ -403,6 +411,16 @@ def test_report_completion_contract_distinguishes_closure_states(tmp_path: Path,
         assert answer["completion_decision"] == expected
         assert answer["evidence_state"]
         assert answer["decision_reasons"]
+        if expected == "continuation-required":
+            boundary = answer["completion_boundary"]
+            assert boundary["final_satisfaction"] == "The parent issue is complete only when every continuation gap is closed."
+            assert boundary["bounded_slice_success"] == "This slice may land with the parent issue open."
+            assert boundary["partial_pr_may_close"] == "no"
+            assert boundary["required_follow_up_owner"] == "#1184"
+            assert boundary["required_residual_intent"] == "Finish the parent continuation gap."
+            assert boundary["evidence_required_for_final_completion"] == (
+                "Closeout evidence proves final satisfaction, not only local proof."
+            )
 
 
 def test_report_repair_loop_residue_carries_source_fields_for_continuation(tmp_path: Path, capsys, monkeypatch) -> None:
@@ -2317,6 +2335,14 @@ def test_report_closeout_trust_surfaces_package_workflow_evidence(tmp_path: Path
                 "owner surface": ".agentic-workspace/planning/state.toml",
                 "activation trigger": "after proof passes",
             },
+            "completion_boundary": {
+                "final_satisfaction": "The broad package workflow lane closes only when issue authoring and closeout both separate final satisfaction from partial progress.",
+                "bounded_slice_success": "A first slice may land package workflow evidence while the larger lane remains open.",
+                "partial_pr_may_close": "no",
+                "required_follow_up_owner": ".agentic-workspace/planning/state.toml",
+                "required_residual_intent": "Finish the broad package workflow lane after this slice.",
+                "evidence_required_for_final_completion": "closeout_trust shows final satisfaction evidence and no required continuation.",
+            },
             "iterative_follow_through": {
                 "what this slice enabled": "package workflow evidence",
                 "intentionally deferred": "broad package workflow lane closeout",
@@ -2396,6 +2422,16 @@ def test_report_closeout_trust_surfaces_package_workflow_evidence(tmp_path: Path
     assert closure_scope["larger_intent_closure"]["status"] == "open"
     assert closure_scope["larger_intent_closure"]["closure_decision"] == "archive-but-keep-lane-open"
     assert closure_scope["non_substitution_rule"] == "Validation success alone is not closure evidence."
+    completion_boundary = intent_check["completion_boundary"]
+    assert completion_boundary["status"] == "present"
+    assert completion_boundary["partial_pr_may_close"] == "no"
+    assert completion_boundary["required_follow_up_owner"] == ".agentic-workspace/planning/state.toml"
+    assert completion_boundary["bounded_slice_success"] == (
+        "A first slice may land package workflow evidence while the larger lane remains open."
+    )
+    assert completion_boundary["required_residual_intent"] == "Finish the broad package workflow lane after this slice."
+    assert "issue authoring and closeout" in completion_boundary["final_satisfaction"]
+    assert "final satisfaction evidence" in completion_boundary["evidence_required_for_final_completion"]
     acceptance = payload["closeout_trust"]["acceptance_criteria_reconciliation"]
     assert acceptance["status"] == "present"
     assert acceptance["trust"] == "normal"
@@ -2427,6 +2463,12 @@ def test_report_closeout_trust_surfaces_package_workflow_evidence(tmp_path: Path
     assert options["close-parent-lane"]["allowed"] is False
     assert options["route-residue"]["allowed"] is True
     assert options["stop-with-status"]["allowed"] is True
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
+    compact = json.loads(capsys.readouterr().out)["answer"]
+    compact_boundary = compact["checks"]["intent_satisfaction"]["completion_boundary"]
+    assert compact_boundary["partial_pr_may_close"] == "no"
+    assert compact_boundary["required_follow_up_owner"] == ".agentic-workspace/planning/state.toml"
 
 
 def test_report_closeout_trust_request_review_for_ambiguous_intent(tmp_path: Path, capsys) -> None:

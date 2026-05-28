@@ -22,6 +22,15 @@ TEMPLATE_BY_KIND = {
     "dogfooding": "03-review-friction.yml",
 }
 
+COMPLETION_BOUNDARY_FIELDS = {
+    "final_satisfaction",
+    "bounded_slice_success",
+    "partial_pr_may_close",
+    "required_follow_up_owner",
+    "required_residual_intent",
+    "evidence_required_for_final_completion",
+}
+
 
 def _parse_field(value: str) -> tuple[str, str]:
     if "=" not in value:
@@ -94,6 +103,55 @@ def _default_value(item: dict[str, Any]) -> str:
     return "TODO"
 
 
+def _first_field(fields: dict[str, str], *field_ids: str) -> str:
+    for field_id in field_ids:
+        value = str(fields.get(field_id, "")).strip()
+        if value:
+            return value
+    return ""
+
+
+def _completion_boundary_default(*, field_id: str, fields: dict[str, str]) -> str:
+    if field_id not in COMPLETION_BOUNDARY_FIELDS:
+        return ""
+    final_hint = _first_field(
+        fields,
+        "intended_outcome",
+        "expected_behavior",
+        "outcome",
+        "desired_signal",
+        "acceptance",
+    )
+    evidence_hint = _first_field(
+        fields,
+        "acceptance",
+        "evidence",
+        "reproduction",
+        "expected_behavior",
+        "desired_signal",
+    )
+    if field_id == "final_satisfaction":
+        if final_hint:
+            return f"Final completion requires satisfying: {final_hint}"
+        return "The issue is complete only when the final intended outcome is delivered and proven, or explicitly re-scoped by the issue owner."
+    if field_id == "bounded_slice_success":
+        return (
+            "A partial slice may land when it is coherent, proves its local behavior, records remaining intent, "
+            "and names the continuation owner."
+        )
+    if field_id == "partial_pr_may_close":
+        return "no"
+    if field_id == "required_follow_up_owner":
+        return "This issue remains the follow-up owner unless a specific owner is named."
+    if field_id == "required_residual_intent":
+        return "Any part of final satisfaction not delivered by a partial slice remains open here."
+    if field_id == "evidence_required_for_final_completion":
+        if evidence_hint:
+            return f"Final completion evidence must prove the final intended state, including: {evidence_hint}"
+        return "Proof or review evidence must show the final intended outcome, not only a useful local change."
+    return ""
+
+
 def render_issue(*, kind: str, title: str, fields: dict[str, str]) -> dict[str, Any]:
     template = _load_template(kind)
     title_prefix = str(template.get("title", "")).strip()
@@ -107,7 +165,11 @@ def render_issue(*, kind: str, title: str, fields: dict[str, str]) -> dict[str, 
         field_id = str(item.get("id", "")).strip()
         if not field_id:
             continue
-        value = fields.get(field_id, _default_value(item)).strip()
+        value = fields.get(field_id, "").strip()
+        if not value:
+            value = _completion_boundary_default(field_id=field_id, fields=fields)
+        if not value:
+            value = _default_value(item).strip()
         sections.append(f"## {_field_label(item)}\n{value or 'TODO'}")
     raw_title = title.strip()
     normalized_title = raw_title

@@ -6322,6 +6322,152 @@ def _required_continuation_present(*values: Any) -> bool:
     return False
 
 
+def _first_boundary_text(*sources: dict[str, Any], keys: Sequence[str]) -> str:
+    normalized_keys = {key.strip().lower().replace("_", " ") for key in keys}
+    for source in sources:
+        if not isinstance(source, dict):
+            continue
+        for raw_key, raw_value in source.items():
+            key = str(raw_key).strip().lower().replace("_", " ")
+            if key not in normalized_keys:
+                continue
+            value = str(raw_value).strip()
+            if value and value.lower() not in {"none", "null", "unknown"}:
+                return value
+    return ""
+
+
+def _completion_boundary_payload(
+    *,
+    active_planning_record: dict[str, Any],
+    raw_planning_record: dict[str, Any] | None = None,
+    closure_check: dict[str, Any] | None = None,
+    intent_continuity: dict[str, Any] | None = None,
+    required_continuation: dict[str, Any] | None = None,
+    iterative: dict[str, Any] | None = None,
+    proof_report: dict[str, Any] | None = None,
+    active_milestone: dict[str, Any] | None = None,
+    proof_expectations: Sequence[str] | None = None,
+) -> dict[str, Any]:
+    active_planning_record = active_planning_record if isinstance(active_planning_record, dict) else {}
+    raw_planning_record = raw_planning_record if isinstance(raw_planning_record, dict) else {}
+    boundary = active_planning_record.get("completion_boundary", {})
+    if not isinstance(boundary, dict):
+        boundary = {}
+    raw_boundary = raw_planning_record.get("completion_boundary", {})
+    if not isinstance(raw_boundary, dict):
+        raw_boundary = {}
+    closure_check = closure_check if isinstance(closure_check, dict) else {}
+    intent_continuity = intent_continuity if isinstance(intent_continuity, dict) else {}
+    required_continuation = required_continuation if isinstance(required_continuation, dict) else {}
+    iterative = iterative if isinstance(iterative, dict) else {}
+    proof_report = proof_report if isinstance(proof_report, dict) else {}
+    active_milestone = active_milestone if isinstance(active_milestone, dict) else {}
+    sources = (raw_boundary, boundary, closure_check, intent_continuity, required_continuation, iterative, proof_report, active_milestone)
+    final_satisfaction = _first_boundary_text(
+        *sources,
+        keys=(
+            "final_satisfaction",
+            "final intended state",
+            "final intended outcome",
+            "larger intended outcome",
+            "larger_intent_complete",
+            "larger outcome complete",
+        ),
+    )
+    bounded_slice_success = _first_boundary_text(
+        *sources,
+        keys=(
+            "bounded_slice_success",
+            "bounded slice success",
+            "what this slice enabled",
+            "slice status",
+            "bounded_slice_complete",
+            "done_when",
+        ),
+    )
+    partial_close = _first_boundary_text(
+        raw_boundary,
+        boundary,
+        closure_check,
+        keys=("partial_pr_may_close", "partial pr may close", "partial slice may close", "slice may close issue"),
+    ).lower()
+    if partial_close in {"true", "yes", "y", "allowed"}:
+        partial_pr_may_close = "yes"
+    elif partial_close in {"false", "no", "n", "blocked"}:
+        partial_pr_may_close = "no"
+    else:
+        partial_pr_may_close = "unknown"
+    required_follow_up_owner = _first_boundary_text(
+        *sources,
+        keys=(
+            "required_follow_up_owner",
+            "required follow up owner",
+            "required follow-up owner",
+            "owner surface",
+            "continuation surface",
+            "owner",
+        ),
+    )
+    required_residual_intent = _first_boundary_text(
+        *sources,
+        keys=(
+            "required_residual_intent",
+            "required residual intent",
+            "required follow-on for the larger intended outcome",
+            "remaining gap",
+            "intentionally deferred",
+            "larger intended outcome",
+        ),
+    )
+    evidence_required = _first_boundary_text(
+        *sources,
+        keys=(
+            "evidence_required_for_final_completion",
+            "evidence required for final completion",
+            "evidence carried forward",
+            "acceptance reconciliation",
+            "validation proof",
+        ),
+    )
+    if not evidence_required and proof_expectations:
+        evidence_required = "; ".join(str(item).strip() for item in proof_expectations if str(item).strip())
+    has_specific_fields = (
+        any((final_satisfaction, bounded_slice_success, required_follow_up_owner, required_residual_intent, evidence_required))
+        or partial_pr_may_close != "unknown"
+    )
+    return {
+        "kind": "agentic-workspace/completion-boundary/v1",
+        "status": "present" if has_specific_fields else "guidance-only",
+        "final_satisfaction": final_satisfaction,
+        "bounded_slice_success": bounded_slice_success,
+        "partial_pr_may_close": partial_pr_may_close,
+        "required_follow_up_owner": required_follow_up_owner,
+        "required_residual_intent": required_residual_intent,
+        "evidence_required_for_final_completion": evidence_required,
+        "issue_authoring_fields": [
+            "final_satisfaction",
+            "bounded_slice_success",
+            "partial_pr_may_close",
+            "required_follow_up_owner",
+            "required_residual_intent",
+            "evidence_required_for_final_completion",
+        ],
+        "closure_rule": (
+            "Treat useful progress and final intended outcome satisfaction as separate claims. "
+            "A bounded slice may land only if remaining intent and owner are preserved; it closes the issue only when partial_pr_may_close is yes or final satisfaction evidence is present."
+        ),
+        "default_rule": "Direction/proposal issues default partial_pr_may_close to no unless the issue author says otherwise.",
+        "sources": [
+            "planning.active.raw_execplan.completion_boundary",
+            "planning.active.planning_record.completion_boundary",
+            "planning.active.planning_record.intent_continuity",
+            "planning.active.planning_record.required_continuation",
+            "planning.active.planning_record.closure_check",
+        ],
+    }
+
+
 def _completion_contract_decision(
     *,
     active_planning_record: dict[str, Any],
@@ -6425,6 +6571,8 @@ def _completion_contract_payload(
     delegated = delegated if isinstance(delegated, dict) else {}
     validation = active_planning_record.get("validation", {})
     validation = validation if isinstance(validation, dict) else {}
+    active_milestone = active_planning_record.get("active_milestone", {})
+    active_milestone = active_milestone if isinstance(active_milestone, dict) else {}
     proof_expectations = _list_payload(
         validation.get("required_commands") or validation.get("proof") or validation.get("proof_expectations")
     )
@@ -6455,6 +6603,17 @@ def _completion_contract_payload(
             "Stop as blocked when required proof, external freshness, owner routing, or larger-intent closure cannot be established."
         )
     external_evidence_safety = external_evidence_safety if isinstance(external_evidence_safety, dict) else {}
+    completion_boundary = _completion_boundary_payload(
+        active_planning_record=active_planning_record,
+        raw_planning_record=active_planning_record,
+        closure_check=closure_check,
+        intent_continuity=intent_continuity,
+        required_continuation=active_planning_record.get("required_continuation", {}),
+        iterative=iterative,
+        proof_report=active_planning_record.get("proof_report", {}),
+        active_milestone=active_milestone,
+        proof_expectations=[str(item) for item in proof_expectations],
+    )
     decision = _completion_contract_decision(
         active_planning_record=active_planning_record,
         closure_check=closure_check,
@@ -6474,6 +6633,7 @@ def _completion_contract_payload(
         "evidence_state": decision["evidence_state"],
         "must_be_true": must_be_true,
         "evidence_that_proves_it": [str(item).strip() for item in proof_expectations if str(item).strip()],
+        "completion_boundary": completion_boundary,
         "constraints_to_preserve": constraints,
         "out_of_bounds": out_of_bounds,
         "iteration_when_evidence_is_insufficient": [
@@ -10727,6 +10887,14 @@ def _intent_satisfaction_check_payload(*, planning_report: dict[str, Any], targe
         if open_continuation.get("status") == "present":
             owner_surfaces = [str(item) for item in _list_payload(open_continuation.get("owner_surfaces"))]
             continuation_surface = owner_surfaces[0] if owner_surfaces else ".agentic-workspace/planning/"
+            completion_boundary = _completion_boundary_payload(
+                active_planning_record={},
+                closure_check={"larger-intent status": "open"},
+                required_continuation={
+                    "required follow-on for the larger intended outcome": "yes",
+                    "owner surface": continuation_surface,
+                },
+            )
             return {
                 "status": "present",
                 "trust": "follow-up-required",
@@ -10737,6 +10905,7 @@ def _intent_satisfaction_check_payload(*, planning_report: dict[str, Any], targe
                 "required_follow_on": "yes",
                 "continuation_surface": continuation_surface,
                 "package_owned_continuation": open_continuation,
+                "completion_boundary": completion_boundary,
                 "rule": "Validation success is not enough; package-owned roadmap or decomposition continuation must be routed before closeout can claim larger intent satisfaction.",
                 "closure_scope": {
                     "validation_proof": {
@@ -10758,15 +10927,18 @@ def _intent_satisfaction_check_payload(*, planning_report: dict[str, Any], targe
                         "source": "planning roadmap/decomposition state",
                         "rule": "External tracker state is evidence only; package-owned continuation controls intent satisfaction.",
                     },
+                    "completion_boundary": completion_boundary,
                     "non_substitution_rule": "Validation success alone is not closure evidence.",
                 },
                 "recommended_next_action": "Promote, continue, or explicitly close the package-owned continuation surface before treating broad closeout as satisfied.",
             }
+        completion_boundary = _completion_boundary_payload(active_planning_record={})
         return {
             "status": "unavailable",
             "reason": "no active planning record exposes intent-continuity evidence",
             "required_for_broad_work": True,
             "rule": "Validation success is not enough; closeout should say whether the larger intent is satisfied, partially satisfied, or needs follow-up.",
+            "completion_boundary": completion_boundary,
             "closure_scope": {
                 "validation_proof": {
                     "status": "separate-answer",
@@ -10776,6 +10948,7 @@ def _intent_satisfaction_check_payload(*, planning_report: dict[str, Any], targe
                 "requested_slice": {"status": "unavailable"},
                 "lane_or_system_intent": {"status": "unavailable"},
                 "larger_intent_closure": {"status": "unavailable"},
+                "completion_boundary": completion_boundary,
                 "non_substitution_rule": "Validation success alone is not closure evidence.",
             },
         }
@@ -10845,6 +11018,17 @@ def _intent_satisfaction_check_payload(*, planning_report: dict[str, Any], targe
     if trust == "satisfied" and external_closeout.get("trust") != "normal":
         trust = "follow-up-required"
         recommended_next_action = str(external_closeout.get("recommended_next_action") or recommended_next_action)
+    completion_boundary = _completion_boundary_payload(
+        active_planning_record=planning_record,
+        raw_planning_record=raw_planning_record,
+        closure_check=closure_check,
+        intent_continuity=intent_continuity,
+        required_continuation=required_continuation,
+        iterative=planning_record.get("iterative_follow_through", {}),
+        proof_report=proof_report,
+        active_milestone=active_milestone,
+        proof_expectations=proof_expectations,
+    )
     return {
         "status": "present",
         "required_for_broad_work": True,
@@ -10853,6 +11037,7 @@ def _intent_satisfaction_check_payload(*, planning_report: dict[str, Any], targe
         "slice_completes_larger_intent": intent_continuity.get("this slice completes the larger intended outcome", ""),
         "required_follow_on": required_continuation.get("required follow-on for the larger intended outcome", ""),
         "continuation_surface": intent_continuity.get("continuation surface", required_continuation.get("owner surface", "")),
+        "completion_boundary": completion_boundary,
         "rule": "Proof and validation answer whether the implementation works; this check answers whether the intended outcome is actually closed.",
         "closure_scope": {
             "validation_proof": {
@@ -10890,6 +11075,7 @@ def _intent_satisfaction_check_payload(*, planning_report: dict[str, Any], targe
                 "source": "planning.active.hierarchy_contract.closure_check",
                 "rule": "Only explicit closure-check evidence may close the larger intent.",
             },
+            "completion_boundary": completion_boundary,
             "external_intent_evidence": external_closeout,
             "non_substitution_rule": "Validation success alone is not closure evidence.",
         },
