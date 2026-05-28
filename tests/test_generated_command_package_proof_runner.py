@@ -1151,6 +1151,8 @@ def test_typescript_runtime_check_rejects_python_handoff_behavior() -> None:
             "export function runGeneratedOperation({ operationId, operationPath, values }) {}",
             "function runSteps(operation, values) {}",
             "function executePrimitive(primitive, values, args, operationId) {}",
+            "function executeTypescriptDomainOperation(operationId, values) {}",
+            "if (primitive === 'typescript.domain.execute') return executeTypescriptDomainOperation(String(args.operation_id ?? operationId), values);",
             "throw new Error('unsupported native TypeScript primitive');",
         ]
     )
@@ -1165,6 +1167,35 @@ def test_typescript_runtime_check_rejects_python_handoff_behavior() -> None:
     assert any("Python/runtime-handoff marker: node:child_process" in error for error in errors)
     assert any("Python/runtime-handoff marker: Adapter runtime handoff failed" in error for error in errors)
     assert any("Python/runtime-handoff marker: nativeContractCases" in error for error in errors)
+
+
+def test_typescript_native_execution_check_rejects_missing_ir_steps(tmp_path: Path) -> None:
+    checker = _load_checker()
+    package_root = tmp_path / "package"
+    operation_path = package_root / "resources" / "operations" / "summary.report.json"
+    operation_path.parent.mkdir(parents=True)
+    operation_path.write_text(
+        checker.json.dumps({"id": "summary.report", "ir_plan": {"status": "draft", "steps": []}}),
+        encoding="utf-8",
+    )
+    command_package = {
+        "commands": [
+            {
+                "status": "generated",
+                "command": {"name": "summary"},
+                "operation_ref": {"id": "summary.report", "path": "operations/summary.report.json"},
+                "interface": {"name": "summary"},
+            }
+        ]
+    }
+
+    errors = checker._validate_typescript_native_operation_execution(
+        package="workspace-cli",
+        package_root=package_root,
+        command_package=command_package,
+    )
+
+    assert errors == ["workspace-cli operation 'summary.report' is native but has no executable ir_plan.steps"]
 
 
 def test_generated_command_projection_boundary_rejects_target_owned_runtime_behavior() -> None:

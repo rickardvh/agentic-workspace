@@ -1,1 +1,121 @@
-{"schema_version":"agentic-workspace/operation/v1","id":"ownership.report","command_surface":{"command":"ownership","format_option":"format"},"summary":"Show canonical ownership, authority, and optional host-repo subsystem mapping for the target repository.","classification":"read-only-report","inputs":[{"name":"target","source":"cli-option","required":false},{"name":"concern","source":"cli-option","required":false},{"name":"path","source":"cli-option","required":false},{"name":"format","source":"cli-option","required":false}],"output":{"kind":"text-or-json"},"effects":{"read_only":true,"destructive":false,"idempotent":true,"writes_repo_state":false,"requires_preflight_gate":false},"locality":{"requires_repo":false,"network":"forbidden","outside_repo_writes":"forbidden"},"reads":[{"surface":".agentic-workspace/OWNERSHIP.toml","required":false},{"surface":"workspace ownership defaults","required":true},{"surface":"path argument","required":false},{"surface":"optional [[subsystems]] declarations","required":false}],"writes":[],"steps":[{"id":"resolve_root","uses":"workspace.root.resolve","description":"Resolve the target root."},{"id":"resolve_answer","uses":"ownership.answer.resolve","description":"Resolve overview, concern, path-specific authority, or subsystem answer."},{"id":"emit_output","uses":"output.emit","description":"Emit ownership answer in the requested format."}],"guards":["Path answers describe authority, subsystem proof hints, and warnings without modifying files.","Subsystem declarations are host-repo boundaries and must stay distinct from package/module ownership."],"proof":["operation contract validates against operation.schema.json","ownership path tests remain compatible","ownership path tests cover overlapping subsystem handling"],"migration_status":"draft-contract-only"}
+{
+  "classification": "read-only-report",
+  "command_surface": {
+    "command": "ownership",
+    "format_option": "format"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": true,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
+  },
+  "guards": [
+    "Path answers describe authority, subsystem proof hints, and warnings without modifying files.",
+    "Subsystem declarations are host-repo boundaries and must stay distinct from package/module ownership."
+  ],
+  "id": "ownership.report",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "concern",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "path",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "complete",
+    "steps": [
+      {
+        "arguments": {
+          "operation_id": "ownership.report"
+        },
+        "description": "Execute the operation through the generated TypeScript domain operation table.",
+        "id": "execute_typescript_domain_operation",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "typescript.domain.execute"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the TypeScript-native operation result.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Generated TypeScript native runtime binding for a command whose source operation has not yet been decomposed into portable IR."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "draft-contract-only",
+  "output": {
+    "kind": "text-or-json"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "ownership path tests remain compatible",
+    "ownership path tests cover overlapping subsystem handling"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/OWNERSHIP.toml"
+    },
+    {
+      "required": true,
+      "surface": "workspace ownership defaults"
+    },
+    {
+      "required": false,
+      "surface": "path argument"
+    },
+    {
+      "required": false,
+      "surface": "optional [[subsystems]] declarations"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the target root.",
+      "id": "resolve_root",
+      "uses": "workspace.root.resolve"
+    },
+    {
+      "description": "Resolve overview, concern, path-specific authority, or subsystem answer.",
+      "id": "resolve_answer",
+      "uses": "ownership.answer.resolve"
+    },
+    {
+      "description": "Emit ownership answer in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Show canonical ownership, authority, and optional host-repo subsystem mapping for the target repository.",
+  "writes": []
+}

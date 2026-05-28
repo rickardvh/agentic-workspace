@@ -1,324 +1,215 @@
 {
-  "schema_version": "agentic-workspace/operation/v1",
-  "id": "memory.install.lifecycle",
-  "command_surface": {
-    "program": "agentic-memory",
-    "command": "install",
-    "format_option": "format"
-  },
-  "summary": "Install Memory bootstrap files into a repository.",
   "classification": "lifecycle-mutation",
-  "inputs": [
-    {
-      "name": "target",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "dry_run",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "force",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "project_name",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "project_purpose",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "key_repo_docs",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "key_subsystems",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "primary_build_command",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "primary_test_command",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "other_key_commands",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "policy_profile",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "format",
-      "source": "cli-option",
-      "required": false
-    }
-  ],
-  "output": {
-    "kind": "text-or-json"
+  "command_surface": {
+    "command": "install",
+    "format_option": "format",
+    "program": "agentic-memory"
   },
   "effects": {
-    "read_only": false,
     "destructive": false,
     "idempotent": true,
-    "writes_repo_state": true,
-    "requires_preflight_gate": false
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": true
   },
-  "locality": {
-    "requires_repo": true,
-    "network": "forbidden",
-    "outside_repo_writes": "forbidden"
-  },
-  "reads": [
-    {
-      "surface": "target repository Memory install state",
-      "required": false
-    }
-  ],
-  "writes": [
-    {
-      "surface": "target repository Memory managed surfaces",
-      "required": false,
-      "when": "not a dry run"
-    }
-  ],
-  "steps": [
-    {
-      "id": "resolve_target_root",
-      "uses": "path.target_root.resolve",
-      "description": "Resolve the target root for declarative dry-run planning."
-    },
-    {
-      "id": "plan_default_dry_run",
-      "uses": "payload.lifecycle-plan",
-      "description": "Plan default dry-run install actions from declarative payload policy."
-    },
-    {
-      "id": "apply_memory_lifecycle",
-      "uses": "python.function.call",
-      "description": "Apply or plan Memory bootstrap install through package runtime when mutation or customized install policy is required."
-    },
-    {
-      "id": "emit_output",
-      "uses": "output.emit.install-result",
-      "description": "Emit the install result in the requested format."
-    }
-  ],
   "guards": [
     "Generated code owns parser/help/dispatch shape; memory-owned lifecycle policy remains behind the declared primitive.",
     "Dry-run conformance must prove generated lifecycle adapters can execute without repository writes."
   ],
-  "proof": [
-    "operation contract validates against operation.schema.json",
-    "generated memory install dry-run process conformance passes"
+  "id": "memory.install.lifecycle",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "dry_run",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "force",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "project_name",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "project_purpose",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "key_repo_docs",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "key_subsystems",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "primary_build_command",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "primary_test_command",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "other_key_commands",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "policy_profile",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
   ],
-  "migration_status": "runtime-consumed",
   "ir_plan": {
     "status": "representative",
-    "summary": "Default dry-run Memory install executes generated operation IR through codegen-owned payload.lifecycle-plan. Mutating and customized install policy paths remain package-domain runtime.",
     "steps": [
       {
-        "id": "resolve_target_root",
-        "uses": "path.target_root.resolve",
-        "description": "Resolve the target root for declarative dry-run planning.",
-        "when": {
-          "all": [
-            {
-              "value": "dry_run",
-              "equals": true
-            },
-            {
-              "value": "force",
-              "equals": false
-            },
-            {
-              "value": "project_name",
-              "equals": null
-            },
-            {
-              "value": "project_purpose",
-              "equals": null
-            },
-            {
-              "value": "key_repo_docs",
-              "equals": null
-            },
-            {
-              "value": "key_subsystems",
-              "equals": null
-            },
-            {
-              "value": "primary_build_command",
-              "equals": null
-            },
-            {
-              "value": "primary_test_command",
-              "equals": null
-            },
-            {
-              "value": "other_key_commands",
-              "equals": null
-            },
-            {
-              "value": "policy_profile",
-              "equals": "default"
-            }
-          ]
-        },
         "arguments": {
-          "must_exist": true,
-          "must_be_dir": true
+          "must_be_dir": true,
+          "must_exist": true
         },
+        "description": "Resolve the target root for declarative dry-run planning.",
+        "id": "resolve_target_root",
+        "on_error": "fail",
         "outputs": [
           "target_root"
         ],
-        "on_error": "fail"
-      },
-      {
-        "id": "plan_default_dry_run",
-        "uses": "payload.lifecycle-plan",
-        "description": "Plan default dry-run install actions from declarative payload policy.",
+        "uses": "path.target_root.resolve",
         "when": {
           "all": [
             {
-              "value": "dry_run",
-              "equals": true
+              "equals": true,
+              "value": "dry_run"
             },
             {
-              "value": "force",
-              "equals": false
+              "equals": false,
+              "value": "force"
             },
             {
-              "value": "project_name",
-              "equals": null
+              "equals": null,
+              "value": "project_name"
             },
             {
-              "value": "project_purpose",
-              "equals": null
+              "equals": null,
+              "value": "project_purpose"
             },
             {
-              "value": "key_repo_docs",
-              "equals": null
+              "equals": null,
+              "value": "key_repo_docs"
             },
             {
-              "value": "key_subsystems",
-              "equals": null
+              "equals": null,
+              "value": "key_subsystems"
             },
             {
-              "value": "primary_build_command",
-              "equals": null
+              "equals": null,
+              "value": "primary_build_command"
             },
             {
-              "value": "primary_test_command",
-              "equals": null
+              "equals": null,
+              "value": "primary_test_command"
             },
             {
-              "value": "other_key_commands",
-              "equals": null
+              "equals": null,
+              "value": "other_key_commands"
             },
             {
-              "value": "policy_profile",
-              "equals": "default"
+              "equals": "default",
+              "value": "policy_profile"
             }
           ]
-        },
+        }
+      },
+      {
         "arguments": {
-          "policy_root": "memory.contracts",
-          "policy_path": "payload_verification.memory.json",
-          "target_root_value": "target_root",
           "dry_run": true,
+          "message": "Install plan",
           "mode": "bootstrap",
-          "message": "Install plan"
+          "policy_path": "payload_verification.memory.json",
+          "policy_root": "memory.contracts",
+          "target_root_value": "target_root"
         },
+        "description": "Plan default dry-run install actions from declarative payload policy.",
+        "id": "plan_default_dry_run",
+        "on_error": "fail",
         "outputs": [
           "result"
         ],
-        "on_error": "fail"
+        "uses": "payload.lifecycle-plan",
+        "when": {
+          "all": [
+            {
+              "equals": true,
+              "value": "dry_run"
+            },
+            {
+              "equals": false,
+              "value": "force"
+            },
+            {
+              "equals": null,
+              "value": "project_name"
+            },
+            {
+              "equals": null,
+              "value": "project_purpose"
+            },
+            {
+              "equals": null,
+              "value": "key_repo_docs"
+            },
+            {
+              "equals": null,
+              "value": "key_subsystems"
+            },
+            {
+              "equals": null,
+              "value": "primary_build_command"
+            },
+            {
+              "equals": null,
+              "value": "primary_test_command"
+            },
+            {
+              "equals": null,
+              "value": "other_key_commands"
+            },
+            {
+              "equals": "default",
+              "value": "policy_profile"
+            }
+          ]
+        }
       },
       {
-        "id": "apply_memory_lifecycle",
-        "uses": "python.function.call",
-        "description": "Apply or plan Memory bootstrap install through package runtime when mutation or customized install policy is required.",
-        "when": {
-          "not": {
-            "all": [
-              {
-                "value": "dry_run",
-                "equals": true
-              },
-              {
-                "value": "force",
-                "equals": false
-              },
-              {
-                "value": "project_name",
-                "equals": null
-              },
-              {
-                "value": "project_purpose",
-                "equals": null
-              },
-              {
-                "value": "key_repo_docs",
-                "equals": null
-              },
-              {
-                "value": "key_subsystems",
-                "equals": null
-              },
-              {
-                "value": "primary_build_command",
-                "equals": null
-              },
-              {
-                "value": "primary_test_command",
-                "equals": null
-              },
-              {
-                "value": "other_key_commands",
-                "equals": null
-              },
-              {
-                "value": "policy_profile",
-                "equals": "default"
-              }
-            ]
-          }
-        },
         "arguments": {
-          "import_module": "repo_memory_bootstrap.installer",
           "function": "install_bootstrap",
+          "import_module": "repo_memory_bootstrap.installer",
           "kwargs": {
-            "target": {
-              "value": "target"
-            },
             "dry_run": {
               "value": "dry_run"
             },
             "force": {
               "value": "force"
-            },
-            "project_name": {
-              "value": "project_name"
-            },
-            "project_purpose": {
-              "value": "project_purpose"
             },
             "key_repo_docs": {
               "value": "key_repo_docs"
@@ -326,35 +217,144 @@
             "key_subsystems": {
               "value": "key_subsystems"
             },
+            "other_key_commands": {
+              "value": "other_key_commands"
+            },
+            "policy_profile": {
+              "value": "policy_profile"
+            },
             "primary_build_command": {
               "value": "primary_build_command"
             },
             "primary_test_command": {
               "value": "primary_test_command"
             },
-            "other_key_commands": {
-              "value": "other_key_commands"
+            "project_name": {
+              "value": "project_name"
             },
-            "policy_profile": {
-              "value": "policy_profile"
+            "project_purpose": {
+              "value": "project_purpose"
+            },
+            "target": {
+              "value": "target"
             }
           }
         },
+        "description": "Apply or plan Memory bootstrap install through package runtime when mutation or customized install policy is required.",
+        "id": "apply_memory_lifecycle",
+        "on_error": "fail",
         "outputs": [
           "result"
         ],
-        "on_error": "fail"
+        "uses": "python.function.call",
+        "when": {
+          "not": {
+            "all": [
+              {
+                "equals": true,
+                "value": "dry_run"
+              },
+              {
+                "equals": false,
+                "value": "force"
+              },
+              {
+                "equals": null,
+                "value": "project_name"
+              },
+              {
+                "equals": null,
+                "value": "project_purpose"
+              },
+              {
+                "equals": null,
+                "value": "key_repo_docs"
+              },
+              {
+                "equals": null,
+                "value": "key_subsystems"
+              },
+              {
+                "equals": null,
+                "value": "primary_build_command"
+              },
+              {
+                "equals": null,
+                "value": "primary_test_command"
+              },
+              {
+                "equals": null,
+                "value": "other_key_commands"
+              },
+              {
+                "equals": "default",
+                "value": "policy_profile"
+              }
+            ]
+          }
+        }
       },
       {
-        "id": "emit_output",
-        "uses": "output.emit.install-result",
-        "description": "Emit the install result in the requested format.",
         "arguments": {},
+        "description": "Emit the install result in the requested format.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
         "outputs": [
           "emitted"
         ],
-        "on_error": "emit_usage_error"
+        "uses": "output.emit.install-result"
       }
-    ]
-  }
+    ],
+    "summary": "Default dry-run Memory install executes generated operation IR through codegen-owned payload.lifecycle-plan. Mutating and customized install policy paths remain package-domain runtime."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": true
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "text-or-json"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated memory install dry-run process conformance passes"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": "target repository Memory install state"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the target root for declarative dry-run planning.",
+      "id": "resolve_target_root",
+      "uses": "path.target_root.resolve"
+    },
+    {
+      "description": "Plan default dry-run install actions from declarative payload policy.",
+      "id": "plan_default_dry_run",
+      "uses": "payload.lifecycle-plan"
+    },
+    {
+      "description": "Apply or plan Memory bootstrap install through package runtime when mutation or customized install policy is required.",
+      "id": "apply_memory_lifecycle",
+      "uses": "python.function.call"
+    },
+    {
+      "description": "Emit the install result in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit.install-result"
+    }
+  ],
+  "summary": "Install Memory bootstrap files into a repository.",
+  "writes": [
+    {
+      "required": false,
+      "surface": "target repository Memory managed surfaces",
+      "when": "not a dry run"
+    }
+  ]
 }

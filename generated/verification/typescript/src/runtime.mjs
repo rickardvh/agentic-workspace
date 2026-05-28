@@ -558,6 +558,7 @@ function reportMemory(values) {
 }
 
 function executePrimitive(primitive, values, args, operationId) {
+  if (primitive === 'typescript.domain.execute') return executeTypescriptDomainOperation(String(args.operation_id ?? operationId), values);
   if (primitive === 'path.target_root.resolve' || primitive === 'workspace.root.resolve') {
     const targetRoot = resolve(String(values.target ?? '.'));
     if (args.must_exist && !existsSync(targetRoot)) throw new RuntimeError(`target root does not exist: ${targetRoot}`);
@@ -617,7 +618,7 @@ function runSteps(operation, values) {
   return values;
 }
 
-function frontDoorPayload(operationId, values) {
+function executeTypescriptDomainOperation(operationId, values) {
   const target = resolve(String(values.target ?? '.'));
   if (operationId === 'planning.front-door') return { kind: 'agentic-workspace/planning-help/v1', command: values._command_path?.join(' ') ?? operationId, target };
   if (operationId === 'memory.front-door') return { kind: 'agentic-workspace/memory-help/v1', command: values._command_path?.join(' ') ?? operationId, target };
@@ -645,18 +646,14 @@ export function runGeneratedOperation({ operationId, operationPath, values }) {
     return 2;
   }
   let output;
-  if (operationPath && existsSync(resolveInside(resourcesRoot, operationPath))) {
-    const operation = loadJsonResource(operationPath);
-    const steps = operation?.ir_plan?.steps;
-    if (Array.isArray(steps) && steps.length > 0) {
-      const finalValues = runSteps(operation, { ...values });
-      output = finalValues.emitted ?? emitOutput({ ...finalValues, result: finalValues.result ?? frontDoorPayload(operationId, values) });
-    } else {
-      output = emitOutput({ ...values, result: frontDoorPayload(operationId, values) });
-    }
-  } else {
-    output = emitOutput({ ...values, result: frontDoorPayload(operationId, values) });
-  }
+  if (!operationPath) throw new RuntimeError(`operation ${operationId} has no operation resource path`);
+  const resourcePath = resolveInside(resourcesRoot, operationPath);
+  if (!existsSync(resourcePath)) throw new RuntimeError(`operation resource is missing: ${operationPath}`);
+  const operation = loadJsonResource(operationPath);
+  const steps = operation?.ir_plan?.steps;
+  if (!Array.isArray(steps) || steps.length === 0) throw new RuntimeError(`operation ${operationId} has no executable ir_plan.steps`);
+  const finalValues = runSteps(operation, { ...values });
+  output = finalValues.emitted ?? emitOutput({ ...finalValues, result: finalValues.result });
   if (typeof output !== 'string') output = `${JSON.stringify(output, null, 2)}\n`;
   writeSync(1, output);
   return 0;

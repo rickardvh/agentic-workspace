@@ -1,144 +1,144 @@
 {
-  "schema_version": "agentic-workspace/operation/v1",
-  "id": "planning.intake-artifact.lifecycle",
-  "command_surface": {
-    "program": "agentic-planning",
-    "command": "intake-artifact",
-    "format_option": "format"
-  },
-  "summary": "Route a freehand planning artifact into a canonical Planning surface.",
   "classification": "lifecycle-mutation",
-  "inputs": [
-    {
-      "name": "artifact",
-      "source": "cli-option",
-      "required": true
-    },
-    {
-      "name": "target",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "route",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "id",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "title",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "activate",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "queue",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "switch_active",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "remove_source",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "dry_run",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "format",
-      "source": "cli-option",
-      "required": false
-    }
-  ],
-  "output": {
-    "kind": "module-result"
+  "command_surface": {
+    "command": "intake-artifact",
+    "format_option": "format",
+    "program": "agentic-planning"
   },
   "effects": {
-    "read_only": false,
     "destructive": false,
     "idempotent": false,
-    "writes_repo_state": true,
-    "requires_preflight_gate": false
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": true
   },
-  "locality": {
-    "requires_repo": true,
-    "network": "forbidden",
-    "outside_repo_writes": "forbidden"
-  },
-  "reads": [
-    {
-      "surface": "freehand planning artifact",
-      "required": true
-    }
-  ],
-  "writes": [
-    {
-      "surface": ".agentic-workspace/planning/",
-      "required": true,
-      "when": "not a dry run"
-    }
-  ],
-  "steps": [
-    {
-      "id": "apply_lifecycle_operation",
-      "uses": "planning.intake-artifact.apply",
-      "description": "Route the source artifact into a canonical Planning record or refuse with a concrete next action."
-    },
-    {
-      "id": "emit_output",
-      "uses": "output.emit",
-      "description": "Emit planning lifecycle result in the requested format."
-    }
-  ],
   "guards": [
     "Respect dry-run mode by avoiding writes.",
     "Only read or remove artifacts inside the target repository.",
     "Do not guess when route-specific validation fails."
   ],
+  "id": "planning.intake-artifact.lifecycle",
+  "inputs": [
+    {
+      "name": "artifact",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "route",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "id",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "title",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "activate",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "queue",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "switch_active",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "remove_source",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "dry_run",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "arguments": {},
+        "description": "Route the source artifact into a canonical Planning record or refuse with a concrete next action.",
+        "id": "apply_lifecycle_operation",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "result"
+        ],
+        "uses": "planning.intake-artifact.apply"
+      },
+      {
+        "arguments": {},
+        "description": "Emit planning lifecycle result in the requested format.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Planning intake-artifact executes generated operation IR through codegen-owned dataflow while the planning module owns artifact routing policy."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": true
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "module-result"
+  },
   "proof": [
     "operation contract validates against operation.schema.json",
     "generated intake-artifact dry-run process conformance passes"
   ],
-  "migration_status": "runtime-consumed",
-  "ir_plan": {
-    "status": "representative",
-    "summary": "Planning intake-artifact executes generated operation IR through codegen-owned dataflow while the planning module owns artifact routing policy.",
-    "steps": [
-      {
-        "id": "apply_lifecycle_operation",
-        "uses": "planning.intake-artifact.apply",
-        "description": "Route the source artifact into a canonical Planning record or refuse with a concrete next action.",
-        "arguments": {},
-        "outputs": [
-          "result"
-        ],
-        "on_error": "emit_usage_error"
-      },
-      {
-        "id": "emit_output",
-        "uses": "output.emit",
-        "description": "Emit planning lifecycle result in the requested format.",
-        "arguments": {},
-        "outputs": [
-          "emitted"
-        ],
-        "on_error": "emit_usage_error"
-      }
-    ]
-  }
+  "reads": [
+    {
+      "required": true,
+      "surface": "freehand planning artifact"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Route the source artifact into a canonical Planning record or refuse with a concrete next action.",
+      "id": "apply_lifecycle_operation",
+      "uses": "planning.intake-artifact.apply"
+    },
+    {
+      "description": "Emit planning lifecycle result in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Route a freehand planning artifact into a canonical Planning surface.",
+  "writes": [
+    {
+      "required": true,
+      "surface": ".agentic-workspace/planning/",
+      "when": "not a dry run"
+    }
+  ]
 }

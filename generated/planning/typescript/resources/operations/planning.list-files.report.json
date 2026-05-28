@@ -1,128 +1,128 @@
 {
-  "schema_version": "agentic-workspace/operation/v1",
-  "id": "planning.list-files.report",
-  "command_surface": {
-    "program": "agentic-planning",
-    "command": "list-files",
-    "format_option": "format"
-  },
-  "summary": "List bundled planning payload files and optional payload enablement commands.",
   "classification": "read-only-report",
-  "inputs": [
-    {
-      "name": "format",
-      "source": "cli-option",
-      "required": false
-    }
-  ],
-  "output": {
-    "kind": "text-or-json"
+  "command_surface": {
+    "command": "list-files",
+    "format_option": "format",
+    "program": "agentic-planning"
   },
   "effects": {
-    "read_only": true,
     "destructive": false,
     "idempotent": true,
-    "writes_repo_state": false,
-    "requires_preflight_gate": false
+    "read_only": true,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
   },
-  "locality": {
-    "requires_repo": false,
-    "network": "forbidden",
-    "outside_repo_writes": "forbidden"
-  },
-  "reads": [
-    {
-      "surface": "planning package payload manifest",
-      "required": true
-    }
-  ],
-  "writes": [],
-  "steps": [
-    {
-      "id": "list_payload_files",
-      "uses": "filesystem.glob",
-      "description": "List bundled planning payload files as stable relative paths."
-    },
-    {
-      "id": "list_bundled_skill_files",
-      "uses": "filesystem.glob",
-      "description": "List bundled planning skill files as stable relative paths."
-    },
-    {
-      "id": "assemble_payload",
-      "uses": "payload.assemble",
-      "description": "Build the list-files payload containing required, optional, bundled skill, and optional enablement data."
-    },
-    {
-      "id": "emit_output",
-      "uses": "output.emit",
-      "description": "Emit the planning payload file list in the requested format."
-    }
-  ],
   "guards": [
     "Listing bundled files must remain read-only."
   ],
-  "proof": [
-    "operation contract validates against operation.schema.json",
-    "generated list-files process conformance passes"
+  "id": "planning.list-files.report",
+  "inputs": [
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
   ],
-  "migration_status": "runtime-consumed",
   "ir_plan": {
     "status": "complete",
-    "summary": "Planning list-files is a complete generated command projection over package payload and skill resources without importing package runtime code or the generic operation IR runner.",
     "steps": [
       {
-        "id": "list_payload_files",
-        "uses": "filesystem.glob",
-        "description": "List bundled planning payload files as stable relative paths.",
         "arguments": {
-          "root": "planning.package-payload",
           "pattern": "**/*",
+          "root": "planning.package-payload",
           "sort": "lexicographic"
         },
+        "description": "List bundled planning payload files as stable relative paths.",
+        "id": "list_payload_files",
+        "on_error": "fail",
         "outputs": [
           "files"
         ],
-        "on_error": "fail"
+        "uses": "filesystem.glob"
       },
       {
-        "id": "list_bundled_skill_files",
-        "uses": "filesystem.glob",
-        "description": "List bundled planning skill files as stable relative paths.",
         "arguments": {
-          "root": "planning.package-skills",
           "pattern": "**/*",
+          "root": "planning.package-skills",
           "sort": "lexicographic"
         },
+        "description": "List bundled planning skill files as stable relative paths.",
+        "id": "list_bundled_skill_files",
+        "on_error": "fail",
         "outputs": [
           "bundled_skill_files"
         ],
-        "on_error": "fail"
+        "uses": "filesystem.glob"
       },
       {
-        "id": "assemble_payload",
-        "uses": "payload.assemble",
-        "description": "Build the planning list-files payload from package resources and static enablement commands.",
         "arguments": {},
+        "description": "Build the planning list-files payload from package resources and static enablement commands.",
+        "id": "assemble_payload",
         "inputs": [
           "files",
           "bundled_skill_files"
         ],
+        "on_error": "fail",
         "outputs": [
           "result"
         ],
-        "on_error": "fail"
+        "uses": "payload.assemble"
       },
       {
-        "id": "emit_output",
-        "uses": "output.emit",
-        "description": "Emit the planning payload file list in the requested format.",
         "arguments": {},
+        "description": "Emit the planning payload file list in the requested format.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
         "outputs": [
           "emitted"
         ],
-        "on_error": "emit_usage_error"
+        "uses": "output.emit"
       }
-    ]
-  }
+    ],
+    "summary": "Planning list-files is a complete generated command projection over package payload and skill resources without importing package runtime code or the generic operation IR runner."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "text-or-json"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated list-files process conformance passes"
+  ],
+  "reads": [
+    {
+      "required": true,
+      "surface": "planning package payload manifest"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "List bundled planning payload files as stable relative paths.",
+      "id": "list_payload_files",
+      "uses": "filesystem.glob"
+    },
+    {
+      "description": "List bundled planning skill files as stable relative paths.",
+      "id": "list_bundled_skill_files",
+      "uses": "filesystem.glob"
+    },
+    {
+      "description": "Build the list-files payload containing required, optional, bundled skill, and optional enablement data.",
+      "id": "assemble_payload",
+      "uses": "payload.assemble"
+    },
+    {
+      "description": "Emit the planning payload file list in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "List bundled planning payload files and optional payload enablement commands.",
+  "writes": []
 }

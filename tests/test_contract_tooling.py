@@ -1589,6 +1589,10 @@ def test_generated_typescript_command_package_fixture_is_current() -> None:
     runtime_text = (package_root / "src" / "runtime.mjs").read_text(encoding="utf-8")
     assert "function runSteps(operation, values)" in runtime_text
     assert "function executePrimitive(primitive, values, args, operationId)" in runtime_text
+    assert "function executeTypescriptDomainOperation(operationId, values)" in runtime_text
+    assert "frontDoorPayload" not in runtime_text
+    summary_operation = json.loads((package_root / "resources" / "operations" / "summary.report.json").read_text(encoding="utf-8"))
+    assert [step["uses"] for step in summary_operation["ir_plan"]["steps"]] == ["typescript.domain.execute", "output.emit"]
     assert "writeSync(1," in runtime_text
     assert "writeSync(2," in runtime_text
     assert "Weak-agent routing: allowed-mutation-with-review" in cli_text

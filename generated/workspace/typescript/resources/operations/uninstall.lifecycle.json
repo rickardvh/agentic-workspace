@@ -1,1 +1,160 @@
-{"schema_version":"agentic-workspace/operation/v1","id":"uninstall.lifecycle","command_surface":{"command":"uninstall"},"summary":"Remove managed surfaces conservatively for selected installed modules.","classification":"lifecycle-mutation","inputs":[{"name":"target","source":"cli-option","required":false},{"name":"module","source":"cli-option","required":false},{"name":"preset","source":"cli-option","required":false},{"name":"dry_run","source":"cli-option","required":false},{"name":"local_only","source":"cli-option","required":false},{"name":"format","source":"cli-option","required":false},{"name":"preflight_token","source":"cli-option","required":false}],"output":{"kind":"module-result"},"effects":{"read_only":false,"destructive":true,"idempotent":true,"writes_repo_state":true,"requires_preflight_gate":true},"locality":{"requires_repo":true,"network":"forbidden","outside_repo_writes":"forbidden"},"reads":[{"surface":"workspace config","required":false},{"surface":"target repository managed surfaces","required":false},{"surface":"local-only install state","required":false}],"writes":[{"surface":"target repository managed workspace surfaces","required":true,"when":"not a dry run"},{"surface":"local-only workspace tree","required":false,"when":"--local-only is used and not a dry run"}],"steps":[{"id":"resolve_root","uses":"workspace.root.resolve","description":"Resolve the target repository."},{"id":"load_config","uses":"workspace.config.load","description":"Load config defaults and selection policy."},{"id":"resolve_selection","uses":"workspace.selection.resolve","description":"Resolve selected modules."},{"id":"plan_lifecycle","uses":"workspace.lifecycle.plan","description":"Plan uninstall changes."},{"id":"apply_lifecycle","uses":"workspace.lifecycle.apply","description":"Apply lifecycle changes when not a dry run."},{"id":"emit_output","uses":"output.emit","description":"Emit lifecycle result."}],"guards":["Enforce strict preflight when configured.","Respect dry-run mode by avoiding writes.","Keep local-only removal scoped to the configured local-only workspace tree.","Refuse ambiguous destructive removal by surfacing review-required plan output instead of deleting files."],"proof":["operation contract validates against operation.schema.json","uninstall lifecycle tests remain compatible","uninstall.lifecycle.destructive-refusal.process proves ambiguous destructive removal is review-required and write-free in dry-run","uninstall.lifecycle.strict-preflight-refusal.process proves strict preflight refuses before mutation without writes"],"migration_status":"draft-contract-only"}
+{
+  "classification": "lifecycle-mutation",
+  "command_surface": {
+    "command": "uninstall"
+  },
+  "effects": {
+    "destructive": true,
+    "idempotent": true,
+    "read_only": false,
+    "requires_preflight_gate": true,
+    "writes_repo_state": true
+  },
+  "guards": [
+    "Enforce strict preflight when configured.",
+    "Respect dry-run mode by avoiding writes.",
+    "Keep local-only removal scoped to the configured local-only workspace tree.",
+    "Refuse ambiguous destructive removal by surfacing review-required plan output instead of deleting files."
+  ],
+  "id": "uninstall.lifecycle",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "module",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "preset",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "dry_run",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "local_only",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "preflight_token",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "complete",
+    "steps": [
+      {
+        "arguments": {
+          "operation_id": "uninstall.lifecycle"
+        },
+        "description": "Execute the operation through the generated TypeScript domain operation table.",
+        "id": "execute_typescript_domain_operation",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "typescript.domain.execute"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the TypeScript-native operation result.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Generated TypeScript native runtime binding for a command whose source operation has not yet been decomposed into portable IR."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": true
+  },
+  "migration_status": "draft-contract-only",
+  "output": {
+    "kind": "module-result"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "uninstall lifecycle tests remain compatible",
+    "uninstall.lifecycle.destructive-refusal.process proves ambiguous destructive removal is review-required and write-free in dry-run",
+    "uninstall.lifecycle.strict-preflight-refusal.process proves strict preflight refuses before mutation without writes"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": "workspace config"
+    },
+    {
+      "required": false,
+      "surface": "target repository managed surfaces"
+    },
+    {
+      "required": false,
+      "surface": "local-only install state"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the target repository.",
+      "id": "resolve_root",
+      "uses": "workspace.root.resolve"
+    },
+    {
+      "description": "Load config defaults and selection policy.",
+      "id": "load_config",
+      "uses": "workspace.config.load"
+    },
+    {
+      "description": "Resolve selected modules.",
+      "id": "resolve_selection",
+      "uses": "workspace.selection.resolve"
+    },
+    {
+      "description": "Plan uninstall changes.",
+      "id": "plan_lifecycle",
+      "uses": "workspace.lifecycle.plan"
+    },
+    {
+      "description": "Apply lifecycle changes when not a dry run.",
+      "id": "apply_lifecycle",
+      "uses": "workspace.lifecycle.apply"
+    },
+    {
+      "description": "Emit lifecycle result.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Remove managed surfaces conservatively for selected installed modules.",
+  "writes": [
+    {
+      "required": true,
+      "surface": "target repository managed workspace surfaces",
+      "when": "not a dry run"
+    },
+    {
+      "required": false,
+      "surface": "local-only workspace tree",
+      "when": "--local-only is used and not a dry run"
+    }
+  ]
+}

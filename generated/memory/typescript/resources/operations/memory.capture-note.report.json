@@ -1,148 +1,148 @@
 {
-  "schema_version": "agentic-workspace/operation/v1",
-  "id": "memory.capture-note.report",
-  "command_surface": {
-    "program": "agentic-memory",
-    "command": "capture-note",
-    "format_option": "format"
-  },
-  "summary": "Recommend a Memory note capture action through the memory module CLI.",
   "classification": "derived-output",
-  "inputs": [
-    {
-      "name": "slug",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "summary",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "files",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "surface",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "existing_note",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "force_new_reason",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "target",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "format",
-      "source": "cli-option",
-      "required": false
-    }
-  ],
-  "output": {
-    "kind": "text-or-json"
+  "command_surface": {
+    "command": "capture-note",
+    "format_option": "format",
+    "program": "agentic-memory"
   },
   "effects": {
-    "read_only": true,
     "destructive": false,
     "idempotent": true,
-    "writes_repo_state": false,
-    "requires_preflight_gate": false
+    "read_only": true,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
   },
-  "locality": {
-    "requires_repo": false,
-    "network": "forbidden",
-    "outside_repo_writes": "forbidden"
-  },
-  "reads": [
-    {
-      "surface": "target repository Memory notes",
-      "required": false
-    }
-  ],
-  "writes": [],
-  "steps": [
-    {
-      "id": "load_capture_recommendation",
-      "uses": "python.function.call",
-      "description": "Load the Memory capture recommendation."
-    },
-    {
-      "id": "emit_output",
-      "uses": "output.emit",
-      "description": "Emit Memory capture recommendation output in the requested format."
-    }
-  ],
   "guards": [
     "Keep capture-note read-only.",
     "Generated code owns parser/help/dispatch shape; memory-owned recommendation policy remains behind the declared primitive."
   ],
-  "proof": [
-    "operation contract validates against operation.schema.json",
-    "generated memory capture-note process conformance passes"
+  "id": "memory.capture-note.report",
+  "inputs": [
+    {
+      "name": "slug",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "summary",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "files",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "surface",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "existing_note",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "force_new_reason",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
   ],
-  "migration_status": "runtime-consumed",
   "ir_plan": {
     "status": "representative",
-    "summary": "Memory capture-note executes generated operation IR through codegen-owned primitive dataflow while the memory module owns capture recommendation policy.",
     "steps": [
       {
-        "id": "load_capture_recommendation",
-        "uses": "python.function.call",
-        "description": "Load the Memory capture recommendation.",
         "arguments": {
-          "import_module": "repo_memory_bootstrap.installer",
           "function": "suggest_memory_note_capture",
+          "import_module": "repo_memory_bootstrap.installer",
           "kwargs": {
-            "slug": {
-              "value": "slug"
-            },
-            "target": {
-              "value": "target"
-            },
-            "summary": {
-              "value": "summary"
+            "existing_note": {
+              "value": "existing_note"
             },
             "files": {
               "value": "files"
             },
+            "force_new_reason": {
+              "value": "force_new_reason"
+            },
+            "slug": {
+              "value": "slug"
+            },
+            "summary": {
+              "value": "summary"
+            },
             "surfaces": {
               "value": "surface"
             },
-            "existing_note": {
-              "value": "existing_note"
-            },
-            "force_new_reason": {
-              "value": "force_new_reason"
+            "target": {
+              "value": "target"
             }
           }
         },
+        "description": "Load the Memory capture recommendation.",
+        "id": "load_capture_recommendation",
+        "on_error": "fail",
         "outputs": [
           "result"
         ],
-        "on_error": "fail"
+        "uses": "python.function.call"
       },
       {
-        "id": "emit_output",
-        "uses": "output.emit",
-        "description": "Emit Memory capture recommendation output in the requested format.",
         "arguments": {},
+        "description": "Emit Memory capture recommendation output in the requested format.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
         "outputs": [
           "emitted"
         ],
-        "on_error": "emit_usage_error"
+        "uses": "output.emit"
       }
-    ]
-  }
+    ],
+    "summary": "Memory capture-note executes generated operation IR through codegen-owned primitive dataflow while the memory module owns capture recommendation policy."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "text-or-json"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated memory capture-note process conformance passes"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": "target repository Memory notes"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Load the Memory capture recommendation.",
+      "id": "load_capture_recommendation",
+      "uses": "python.function.call"
+    },
+    {
+      "description": "Emit Memory capture recommendation output in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Recommend a Memory note capture action through the memory module CLI.",
+  "writes": []
 }

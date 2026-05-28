@@ -1,120 +1,120 @@
 {
-  "schema_version": "agentic-workspace/operation/v1",
-  "id": "memory.verify-payload.report",
-  "command_surface": {
-    "program": "agentic-memory",
-    "command": "verify-payload",
-    "format_option": "format"
-  },
-  "summary": "Verify bundled memory payload and generated operation resources against the package-owned declarative payload verification policy.",
   "classification": "read-only-report",
-  "inputs": [
-    {
-      "name": "target",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "format",
-      "source": "cli-option",
-      "required": false
-    }
-  ],
-  "output": {
-    "kind": "module-result"
+  "command_surface": {
+    "command": "verify-payload",
+    "format_option": "format",
+    "program": "agentic-memory"
   },
   "effects": {
-    "read_only": true,
     "destructive": false,
     "idempotent": true,
-    "writes_repo_state": false,
-    "requires_preflight_gate": false
+    "read_only": true,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
   },
-  "locality": {
-    "requires_repo": false,
-    "network": "forbidden",
-    "outside_repo_writes": "forbidden"
-  },
-  "reads": [
-    {
-      "surface": "memory package payload files",
-      "required": true
-    },
-    {
-      "surface": "packages/memory/src/repo_memory_bootstrap/contracts/payload_verification.memory.json",
-      "required": true
-    }
-  ],
-  "writes": [],
-  "steps": [
-    {
-      "id": "resolve_target_root",
-      "uses": "path.target_root.resolve",
-      "description": "Resolve the target repository root for version detection and relative output paths."
-    },
-    {
-      "id": "verify_payload_policy",
-      "uses": "payload.verify",
-      "description": "Verify bundled memory payload files through package-owned payload verification policy."
-    },
-    {
-      "id": "emit_output",
-      "uses": "output.emit.install-result",
-      "description": "Emit memory payload verification result in the requested format."
-    }
-  ],
   "guards": [
     "Verification must remain read-only.",
     "Generated code owns parser/help/dispatch shape.",
     "Text and JSON output must execute payload verification through the codegen-owned payload.verify primitive and package-owned policy JSON."
   ],
+  "id": "memory.verify-payload.report",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "arguments": {
+          "must_be_dir": true,
+          "must_exist": true
+        },
+        "description": "Resolve the target repository root for version detection and relative output paths.",
+        "id": "resolve_target_root",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "target_root"
+        ],
+        "uses": "path.target_root.resolve"
+      },
+      {
+        "arguments": {
+          "payload_root": "memory.package-payload",
+          "policy_path": "payload_verification.memory.json",
+          "policy_root": "memory.contracts",
+          "target_root_value": "target_root"
+        },
+        "description": "Verify bundled memory payload files through package-owned payload verification policy.",
+        "id": "verify_payload_policy",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "payload.verify"
+      },
+      {
+        "arguments": {},
+        "description": "Emit memory payload verification result in the requested format.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit.install-result"
+      }
+    ],
+    "summary": "Memory verify-payload text and JSON execute generated operation IR through codegen-owned primitive dataflow and package-owned payload verification policy."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "module-result"
+  },
   "proof": [
     "operation contract validates against operation.schema.json",
     "generated memory verify-payload process conformance passes"
   ],
-  "migration_status": "runtime-consumed",
-  "ir_plan": {
-    "status": "representative",
-    "summary": "Memory verify-payload text and JSON execute generated operation IR through codegen-owned primitive dataflow and package-owned payload verification policy.",
-    "steps": [
-      {
-        "id": "resolve_target_root",
-        "uses": "path.target_root.resolve",
-        "description": "Resolve the target repository root for version detection and relative output paths.",
-        "arguments": {
-          "must_exist": true,
-          "must_be_dir": true
-        },
-        "outputs": [
-          "target_root"
-        ],
-        "on_error": "emit_usage_error"
-      },
-      {
-        "id": "verify_payload_policy",
-        "uses": "payload.verify",
-        "description": "Verify bundled memory payload files through package-owned payload verification policy.",
-        "arguments": {
-          "policy_root": "memory.contracts",
-          "policy_path": "payload_verification.memory.json",
-          "payload_root": "memory.package-payload",
-          "target_root_value": "target_root"
-        },
-        "outputs": [
-          "result"
-        ],
-        "on_error": "fail"
-      },
-      {
-        "id": "emit_output",
-        "uses": "output.emit.install-result",
-        "description": "Emit memory payload verification result in the requested format.",
-        "arguments": {},
-        "outputs": [
-          "emitted"
-        ],
-        "on_error": "emit_usage_error"
-      }
-    ]
-  }
+  "reads": [
+    {
+      "required": true,
+      "surface": "memory package payload files"
+    },
+    {
+      "required": true,
+      "surface": "packages/memory/src/repo_memory_bootstrap/contracts/payload_verification.memory.json"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the target repository root for version detection and relative output paths.",
+      "id": "resolve_target_root",
+      "uses": "path.target_root.resolve"
+    },
+    {
+      "description": "Verify bundled memory payload files through package-owned payload verification policy.",
+      "id": "verify_payload_policy",
+      "uses": "payload.verify"
+    },
+    {
+      "description": "Emit memory payload verification result in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit.install-result"
+    }
+  ],
+  "summary": "Verify bundled memory payload and generated operation resources against the package-owned declarative payload verification policy.",
+  "writes": []
 }

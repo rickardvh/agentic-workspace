@@ -1,234 +1,234 @@
 {
-  "schema_version": "agentic-workspace/operation/v1",
-  "id": "memory.route-report.report",
-  "command_surface": {
-    "program": "agentic-memory",
-    "command": "route-report",
-    "format_option": "format"
-  },
-  "summary": "Show a compact aggregate memory routing snapshot from checked-in feedback cases and fixtures; non-verbose text/JSON is assembled from portable target-file primitives while verbose behavior remains on the explicit source fallback.",
   "classification": "read-only-report",
-  "inputs": [
-    {
-      "name": "target",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "verbose",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "format",
-      "source": "cli-option",
-      "required": false
-    }
-  ],
-  "output": {
-    "kind": "text-or-json"
+  "command_surface": {
+    "command": "route-report",
+    "format_option": "format",
+    "program": "agentic-memory"
   },
   "effects": {
-    "read_only": true,
     "destructive": false,
     "idempotent": true,
-    "writes_repo_state": false,
-    "requires_preflight_gate": false
+    "read_only": true,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
   },
-  "locality": {
-    "requires_repo": false,
-    "network": "forbidden",
-    "outside_repo_writes": "forbidden"
-  },
-  "reads": [
-    {
-      "surface": "memory routing feedback fixtures",
-      "required": false
-    },
-    {
-      "surface": "verbose flag for broad diagnostic output",
-      "required": false
-    }
-  ],
-  "writes": [],
-  "steps": [
-    {
-      "id": "resolve_target_root",
-      "uses": "path.target_root.resolve",
-      "description": "Resolve the target root for target-local route report checks."
-    },
-    {
-      "id": "check_feedback",
-      "uses": "filesystem.exists",
-      "description": "Check whether routing feedback is present."
-    },
-    {
-      "id": "list_route_fixtures",
-      "uses": "filesystem.glob",
-      "description": "List target-local routing fixture JSON files."
-    },
-    {
-      "id": "assemble_route_snapshot",
-      "uses": "payload.assemble",
-      "description": "Assemble the compact route-report payload from primitive outputs."
-    },
-    {
-      "id": "load_verbose_route_report",
-      "uses": "memory.route_report.load",
-      "description": "Load the package-domain route report when verbose output is requested."
-    },
-    {
-      "id": "emit_output",
-      "uses": "output.emit",
-      "description": "Emit route report in the requested format."
-    }
-  ],
   "guards": [
     "Route report must remain read-only."
   ],
-  "proof": [
-    "operation contract validates against operation.schema.json",
-    "operation command parity checks agentic-memory live parser"
+  "id": "memory.route-report.report",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "verbose",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
   ],
-  "migration_status": "runtime-consumed",
   "ir_plan": {
     "status": "representative",
-    "summary": "Memory route-report non-verbose text/JSON executes generated operation IR through codegen-owned portable primitives. Verbose route-report behavior remains package-domain source runtime.",
     "steps": [
       {
-        "id": "resolve_target_root",
-        "uses": "path.target_root.resolve",
-        "description": "Resolve the target root for target-local route report checks.",
-        "when": {
-          "value": "verbose",
-          "equals": false
-        },
         "arguments": {
-          "must_exist": true,
-          "must_be_dir": true
+          "must_be_dir": true,
+          "must_exist": true
         },
+        "description": "Resolve the target root for target-local route report checks.",
+        "id": "resolve_target_root",
+        "on_error": "fail",
         "outputs": [
           "target_root"
         ],
-        "on_error": "fail"
+        "uses": "path.target_root.resolve",
+        "when": {
+          "equals": false,
+          "value": "verbose"
+        }
       },
       {
-        "id": "check_feedback",
-        "uses": "filesystem.exists",
-        "description": "Check whether routing feedback is present.",
-        "when": {
-          "value": "verbose",
-          "equals": false
-        },
         "arguments": {
           "base_value": "target_root",
-          "path": ".agentic-workspace/memory/repo/current/routing-feedback.md",
-          "kind": "file"
+          "kind": "file",
+          "path": ".agentic-workspace/memory/repo/current/routing-feedback.md"
         },
+        "description": "Check whether routing feedback is present.",
+        "id": "check_feedback",
+        "on_error": "fail",
         "outputs": [
           "feedback_exists"
         ],
-        "on_error": "fail"
+        "uses": "filesystem.exists",
+        "when": {
+          "equals": false,
+          "value": "verbose"
+        }
       },
       {
-        "id": "list_route_fixtures",
-        "uses": "filesystem.glob",
-        "description": "List target-local routing fixture JSON files.",
-        "when": {
-          "value": "verbose",
-          "equals": false
-        },
         "arguments": {
           "base_value": "target_root",
           "pattern": "tests/fixtures/routing/*.json"
         },
+        "description": "List target-local routing fixture JSON files.",
+        "id": "list_route_fixtures",
+        "on_error": "fail",
         "outputs": [
           "fixture_files"
         ],
-        "on_error": "fail"
+        "uses": "filesystem.glob",
+        "when": {
+          "equals": false,
+          "value": "verbose"
+        }
       },
       {
-        "id": "assemble_route_snapshot",
-        "uses": "payload.assemble",
-        "description": "Assemble the compact route-report payload from primitive outputs.",
-        "when": {
-          "value": "verbose",
-          "equals": false
-        },
         "arguments": {
           "fields": {
             "template": {
-              "target_root": {
-                "$value": "target_root"
-              },
+              "detail_command": "agentic-memory route-report --target . --verbose --format json",
               "dry_run": true,
-              "message": "Routing report",
               "health": "healthy",
+              "message": "Routing report",
               "route_report_summary": {
+                "detail": "Run full route-report for fixture evaluation and feedback-case matching.",
                 "feedback": {
-                  "status": {
-                    "$exists_status": {
-                      "value": "feedback_exists",
-                      "present": "present",
-                      "missing": "missing"
-                    }
-                  },
                   "path": {
                     "$join_path": {
                       "base": "target_root",
                       "path": ".agentic-workspace/memory/repo/current/routing-feedback.md"
                     }
+                  },
+                  "status": {
+                    "$exists_status": {
+                      "missing": "missing",
+                      "present": "present",
+                      "value": "feedback_exists"
+                    }
                   }
                 },
                 "fixtures": {
-                  "status": {
-                    "$count_status": {
-                      "value": "fixture_files",
-                      "present": "present",
-                      "missing": "missing"
-                    }
-                  },
                   "fixture_count": {
                     "$count": "fixture_files"
+                  },
+                  "status": {
+                    "$count_status": {
+                      "missing": "missing",
+                      "present": "present",
+                      "value": "fixture_files"
+                    }
                   }
-                },
-                "detail": "Run full route-report for fixture evaluation and feedback-case matching."
+                }
               },
-              "detail_command": "agentic-memory route-report --target . --verbose --format json"
+              "target_root": {
+                "$value": "target_root"
+              }
             }
           }
         },
+        "description": "Assemble the compact route-report payload from primitive outputs.",
+        "id": "assemble_route_snapshot",
+        "on_error": "fail",
         "outputs": [
           "result"
         ],
-        "on_error": "fail"
+        "uses": "payload.assemble",
+        "when": {
+          "equals": false,
+          "value": "verbose"
+        }
       },
       {
-        "id": "load_verbose_route_report",
-        "uses": "memory.route_report.load",
+        "arguments": {},
         "description": "Load the package-domain route report when verbose output is requested.",
+        "id": "load_verbose_route_report",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "memory.route_report.load",
         "when": {
           "not": {
-            "value": "verbose",
-            "equals": false
+            "equals": false,
+            "value": "verbose"
           }
-        },
-        "arguments": {},
-        "outputs": [
-          "result"
-        ],
-        "on_error": "fail"
+        }
       },
       {
-        "id": "emit_output",
-        "uses": "output.emit",
-        "description": "Emit the memory report payload in the requested format.",
         "arguments": {},
+        "description": "Emit the memory report payload in the requested format.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
         "outputs": [
           "emitted"
         ],
-        "on_error": "emit_usage_error"
+        "uses": "output.emit"
       }
-    ]
-  }
+    ],
+    "summary": "Memory route-report non-verbose text/JSON executes generated operation IR through codegen-owned portable primitives. Verbose route-report behavior remains package-domain source runtime."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "text-or-json"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "operation command parity checks agentic-memory live parser"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": "memory routing feedback fixtures"
+    },
+    {
+      "required": false,
+      "surface": "verbose flag for broad diagnostic output"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the target root for target-local route report checks.",
+      "id": "resolve_target_root",
+      "uses": "path.target_root.resolve"
+    },
+    {
+      "description": "Check whether routing feedback is present.",
+      "id": "check_feedback",
+      "uses": "filesystem.exists"
+    },
+    {
+      "description": "List target-local routing fixture JSON files.",
+      "id": "list_route_fixtures",
+      "uses": "filesystem.glob"
+    },
+    {
+      "description": "Assemble the compact route-report payload from primitive outputs.",
+      "id": "assemble_route_snapshot",
+      "uses": "payload.assemble"
+    },
+    {
+      "description": "Load the package-domain route report when verbose output is requested.",
+      "id": "load_verbose_route_report",
+      "uses": "memory.route_report.load"
+    },
+    {
+      "description": "Emit route report in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Show a compact aggregate memory routing snapshot from checked-in feedback cases and fixtures; non-verbose text/JSON is assembled from portable target-file primitives while verbose behavior remains on the explicit source fallback.",
+  "writes": []
 }

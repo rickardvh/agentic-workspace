@@ -942,6 +942,40 @@
       "routed_to": "#929"
     },
     {
+      "pattern": "generated/*/typescript/resources/operations/*.json",
+      "format": "json",
+      "owner": "generated-command-adapters",
+      "status": "generated-derived",
+      "schema_or_validator": "generated command package checks",
+      "editable_by_agents": false,
+      "generated": true,
+      "notes": "Generated TypeScript operation-contract resources are adapter outputs derived from operation contracts consumed by generated CLI packages.",
+      "storage_class": "generated-required-adapter",
+      "checked_in_justification": "Checked in so generated TypeScript packages can load executable operation contracts at runtime without depending on source-tree contract paths.",
+      "reconstructable_from": [
+        "uv run python scripts/generate/generate_command_packages.py",
+        "src/agentic_workspace/contracts/operations/*.json"
+      ],
+      "routed_to": "#931"
+    },
+    {
+      "pattern": "generated/*/typescript/resources/_contracts/**/*.json",
+      "format": "json",
+      "owner": "generated-command-adapters",
+      "status": "generated-derived",
+      "schema_or_validator": "generated command package checks",
+      "editable_by_agents": false,
+      "generated": true,
+      "notes": "Generated TypeScript contract resource mirrors are adapter outputs copied from workspace and module-owned package contracts.",
+      "storage_class": "generated-required-adapter",
+      "checked_in_justification": "Checked in so generated TypeScript packages can load package-owned contract resources at runtime without depending on source-tree contract paths.",
+      "reconstructable_from": [
+        "uv run python scripts/generate/generate_command_packages.py",
+        "workspace and module-owned contract resources"
+      ],
+      "routed_to": "#1005"
+    },
+    {
       "pattern": "generated/workspace/python/_contracts/**/*.json",
       "format": "json",
       "owner": "generated-command-adapters",
@@ -1061,6 +1095,57 @@
       "routed_to": "#1159"
     },
     {
+      "pattern": "generated/memory/typescript/resources/_payload/**/*.json",
+      "format": "json",
+      "owner": "generated-command-adapters",
+      "status": "generated-derived",
+      "schema_or_validator": "generated command package checks",
+      "editable_by_agents": false,
+      "generated": true,
+      "notes": "Generated Memory TypeScript payload JSON mirrors are adapter outputs copied from package payload resources.",
+      "storage_class": "generated-required-adapter",
+      "checked_in_justification": "Checked in so generated TypeScript packages can load payload resources at runtime without depending on source-tree package paths.",
+      "reconstructable_from": [
+        "uv run python scripts/generate/generate_command_packages.py",
+        "packages/memory/bootstrap"
+      ],
+      "routed_to": "#892"
+    },
+    {
+      "pattern": "generated/memory/typescript/resources/_payload/**/*.toml",
+      "format": "toml",
+      "owner": "generated-command-adapters",
+      "status": "generated-derived",
+      "schema_or_validator": "generated command package checks",
+      "editable_by_agents": false,
+      "generated": true,
+      "notes": "Generated Memory TypeScript payload TOML mirrors are adapter outputs copied from package payload resources.",
+      "storage_class": "generated-required-adapter",
+      "checked_in_justification": "Checked in so generated TypeScript packages can load payload resources at runtime without depending on source-tree package paths.",
+      "reconstructable_from": [
+        "uv run python scripts/generate/generate_command_packages.py",
+        "packages/memory/bootstrap"
+      ],
+      "routed_to": "#892"
+    },
+    {
+      "pattern": "generated/memory/typescript/resources/_payload/**/*.yaml",
+      "format": "yaml",
+      "owner": "generated-command-adapters",
+      "status": "generated-derived",
+      "schema_or_validator": "generated command package checks",
+      "editable_by_agents": false,
+      "generated": true,
+      "notes": "Generated Memory TypeScript payload YAML mirrors are adapter outputs copied from package payload resources.",
+      "storage_class": "generated-required-adapter",
+      "checked_in_justification": "Checked in so generated TypeScript packages can load payload resources at runtime without depending on source-tree package paths.",
+      "reconstructable_from": [
+        "uv run python scripts/generate/generate_command_packages.py",
+        "packages/memory/bootstrap"
+      ],
+      "routed_to": "#892"
+    },
+    {
       "pattern": "generated/memory/python/_payload/**/*.json",
       "format": "json",
       "owner": "generated-command-adapters",
@@ -1122,6 +1207,40 @@
       "notes": "Generated Memory skill registry mirrors are adapter outputs copied from package skill resources.",
       "storage_class": "generated-required-adapter",
       "checked_in_justification": "Checked in so generated Python packages can load skill resources at runtime without depending on source-tree package paths.",
+      "reconstructable_from": [
+        "uv run python scripts/generate/generate_command_packages.py",
+        "packages/memory/skills"
+      ],
+      "routed_to": "#892"
+    },
+    {
+      "pattern": "generated/memory/typescript/resources/_skills/**/*.json",
+      "format": "json",
+      "owner": "generated-command-adapters",
+      "status": "generated-derived",
+      "schema_or_validator": "generated command package checks",
+      "editable_by_agents": false,
+      "generated": true,
+      "notes": "Generated Memory TypeScript skill registry mirrors are adapter outputs copied from package skill resources.",
+      "storage_class": "generated-required-adapter",
+      "checked_in_justification": "Checked in so generated TypeScript packages can load skill resources at runtime without depending on source-tree package paths.",
+      "reconstructable_from": [
+        "uv run python scripts/generate/generate_command_packages.py",
+        "packages/memory/skills"
+      ],
+      "routed_to": "#892"
+    },
+    {
+      "pattern": "generated/memory/typescript/resources/_skills/**/*.yaml",
+      "format": "yaml",
+      "owner": "generated-command-adapters",
+      "status": "generated-derived",
+      "schema_or_validator": "generated command package checks",
+      "editable_by_agents": false,
+      "generated": true,
+      "notes": "Generated Memory TypeScript skill YAML mirrors are adapter outputs copied from package skill resources.",
+      "storage_class": "generated-required-adapter",
+      "checked_in_justification": "Checked in so generated TypeScript packages can load skill resources at runtime without depending on source-tree package paths.",
       "reconstructable_from": [
         "uv run python scripts/generate/generate_command_packages.py",
         "packages/memory/skills"
@@ -1365,6 +1484,46 @@
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
       "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
       "removal_or_demotion_path": "demote to generated-on-demand once publishing no longer requires checked-in generated TypeScript resource files",
+      "max_bytes": 250000
+    },
+    {
+      "pattern": "generated/*/typescript/resources/operations/*.json",
+      "source_command": "uv run python scripts/generate/generate_command_packages.py",
+      "named_consumer": "generated TypeScript operation-contract resource loaders",
+      "checked_in_justification": "Generated TypeScript operation-contract resources are kept as files so native runtime execution loads the declared operation IR from the generated package.",
+      "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
+      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "removal_or_demotion_path": "demote only after generated TypeScript packages no longer need packaged operation artifacts",
+      "max_bytes": 250000
+    },
+    {
+      "pattern": "generated/*/typescript/resources/_contracts/**/*.json",
+      "source_command": "uv run python scripts/generate/generate_command_packages.py",
+      "named_consumer": "generated TypeScript contract resource loaders",
+      "checked_in_justification": "Generated TypeScript contract mirrors are kept as files so runtime-consumed operations load package-owned policy IR from the generated package.",
+      "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
+      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "removal_or_demotion_path": "demote only after generated TypeScript packages no longer need packaged contract artifacts",
+      "max_bytes": 250000
+    },
+    {
+      "pattern": "generated/memory/typescript/resources/_payload/**/*.*",
+      "source_command": "uv run python scripts/generate/generate_command_packages.py",
+      "named_consumer": "generated Memory TypeScript payload resource loaders",
+      "checked_in_justification": "Generated Memory TypeScript payload mirrors are kept as files so runtime-consumed operations load package payload data from the generated package.",
+      "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
+      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "removal_or_demotion_path": "demote only after generated TypeScript packages no longer need packaged Memory payload artifacts",
+      "max_bytes": 250000
+    },
+    {
+      "pattern": "generated/memory/typescript/resources/_skills/**/*.*",
+      "source_command": "uv run python scripts/generate/generate_command_packages.py",
+      "named_consumer": "generated Memory TypeScript skill resource loaders",
+      "checked_in_justification": "Generated Memory TypeScript skill mirrors are kept as files so runtime-consumed operations load package skill data from the generated package.",
+      "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
+      "ordinary_agent_route": "agentic-workspace defaults --section root_cli_authority --format json",
+      "removal_or_demotion_path": "demote only after generated TypeScript packages no longer need packaged Memory skill artifacts",
       "max_bytes": 250000
     },
     {

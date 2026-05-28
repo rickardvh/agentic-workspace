@@ -241,11 +241,59 @@ def _typescript_resource_copy_outputs(
             if operation_id not in native_ids or not operation_path or operation_path in emitted_operation_paths:
                 continue
             source = operation_contract_root / operation_path
-            if not source.is_file():
-                continue
+            operation = (
+                json.loads(source.read_text(encoding="utf-8"))
+                if source.is_file()
+                else _typescript_minimal_operation(operation_id=operation_id)
+            )
             emitted_operation_paths.add(operation_path)
-            outputs.append(GeneratedOutput(root / "resources" / operation_path, source.read_text(encoding="utf-8")))
+            outputs.append(
+                GeneratedOutput(
+                    root / "resources" / operation_path,
+                    _json_block(_typescript_executable_operation(operation, operation_id=operation_id)) + "\n",
+                )
+            )
     return outputs
+
+
+def _typescript_minimal_operation(*, operation_id: str) -> dict[str, Any]:
+    return {
+        "schema_version": "agentic-workspace/operation/v1",
+        "id": operation_id,
+        "summary": "Generated TypeScript native operation binding.",
+        "migration_status": "generated-typescript-native",
+    }
+
+
+def _typescript_executable_operation(operation: dict[str, Any], *, operation_id: str) -> dict[str, Any]:
+    ir_plan = operation.get("ir_plan", {})
+    steps = ir_plan.get("steps", []) if isinstance(ir_plan, dict) else []
+    if isinstance(steps, list) and steps:
+        return operation
+    executable = dict(operation)
+    executable["ir_plan"] = {
+        "status": "complete",
+        "summary": "Generated TypeScript native runtime binding for a command whose source operation has not yet been decomposed into portable IR.",
+        "steps": [
+            {
+                "id": "execute_typescript_domain_operation",
+                "uses": "typescript.domain.execute",
+                "description": "Execute the operation through the generated TypeScript domain operation table.",
+                "arguments": {"operation_id": operation_id},
+                "outputs": ["result"],
+                "on_error": "fail",
+            },
+            {
+                "id": "emit_output",
+                "uses": "output.emit",
+                "description": "Emit the TypeScript-native operation result.",
+                "arguments": {},
+                "outputs": ["emitted"],
+                "on_error": "emit_usage_error",
+            },
+        ],
+    }
+    return executable
 
 
 def _module_name_for_operation(operation_id: str) -> str:
@@ -2564,6 +2612,7 @@ function reportMemory(values) {{
 }}
 
 function executePrimitive(primitive, values, args, operationId) {{
+  if (primitive === 'typescript.domain.execute') return executeTypescriptDomainOperation(String(args.operation_id ?? operationId), values);
   if (primitive === 'path.target_root.resolve' || primitive === 'workspace.root.resolve') {{
     const targetRoot = resolve(String(values.target ?? '.'));
     if (args.must_exist && !existsSync(targetRoot)) throw new RuntimeError(`target root does not exist: ${{targetRoot}}`);
@@ -2623,7 +2672,7 @@ function runSteps(operation, values) {{
   return values;
 }}
 
-function frontDoorPayload(operationId, values) {{
+function executeTypescriptDomainOperation(operationId, values) {{
   const target = resolve(String(values.target ?? '.'));
   if (operationId === 'planning.front-door') return {{ kind: 'agentic-workspace/planning-help/v1', command: values._command_path?.join(' ') ?? operationId, target }};
   if (operationId === 'memory.front-door') return {{ kind: 'agentic-workspace/memory-help/v1', command: values._command_path?.join(' ') ?? operationId, target }};
@@ -2651,18 +2700,14 @@ export function runGeneratedOperation({{ operationId, operationPath, values }}) 
     return 2;
   }}
   let output;
-  if (operationPath && existsSync(resolveInside(resourcesRoot, operationPath))) {{
-    const operation = loadJsonResource(operationPath);
-    const steps = operation?.ir_plan?.steps;
-    if (Array.isArray(steps) && steps.length > 0) {{
-      const finalValues = runSteps(operation, {{ ...values }});
-      output = finalValues.emitted ?? emitOutput({{ ...finalValues, result: finalValues.result ?? frontDoorPayload(operationId, values) }});
-    }} else {{
-      output = emitOutput({{ ...values, result: frontDoorPayload(operationId, values) }});
-    }}
-  }} else {{
-    output = emitOutput({{ ...values, result: frontDoorPayload(operationId, values) }});
-  }}
+  if (!operationPath) throw new RuntimeError(`operation ${{operationId}} has no operation resource path`);
+  const resourcePath = resolveInside(resourcesRoot, operationPath);
+  if (!existsSync(resourcePath)) throw new RuntimeError(`operation resource is missing: ${{operationPath}}`);
+  const operation = loadJsonResource(operationPath);
+  const steps = operation?.ir_plan?.steps;
+  if (!Array.isArray(steps) || steps.length === 0) throw new RuntimeError(`operation ${{operationId}} has no executable ir_plan.steps`);
+  const finalValues = runSteps(operation, {{ ...values }});
+  output = finalValues.emitted ?? emitOutput({{ ...finalValues, result: finalValues.result }});
   if (typeof output !== 'string') output = `${{JSON.stringify(output, null, 2)}}\\n`;
   writeSync(1, output);
   return 0;

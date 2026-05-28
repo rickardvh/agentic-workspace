@@ -1069,6 +1069,7 @@ def _validate_typescript_runtime_handoff_thinness(*, package: str, cli_text: str
         "shell: true",
         "nativeContractCases",
         "genericNativePayload",
+        "frontDoorPayload",
     ]
     for source_label, source_text in (("src/cli.mjs", cli_text), ("src/runtime.mjs", runtime_text)):
         for fragment in forbidden_fragments:
@@ -1078,11 +1079,106 @@ def _validate_typescript_runtime_handoff_thinness(*, package: str, cli_text: str
         "export function runGeneratedOperation({ operationId, operationPath, values })",
         "function runSteps(operation, values)",
         "function executePrimitive(primitive, values, args, operationId)",
+        "function executeTypescriptDomainOperation(operationId, values)",
+        "typescript.domain.execute",
         "unsupported native TypeScript primitive",
     ]
     for fragment in runtime_required_fragments:
         if fragment not in runtime_text:
             errors.append(f"{package}/src/runtime.mjs is missing native operation executor fragment: {fragment}")
+    return errors
+
+
+TYPESCRIPT_SUPPORTED_EXACT_PRIMITIVES = {
+    "typescript.domain.execute",
+    "path.target_root.resolve",
+    "workspace.root.resolve",
+    "filesystem.exists",
+    "filesystem.read",
+    "filesystem.glob",
+    "json.parse",
+    "toml.table.counts",
+    "payload.assemble",
+    "payload.status",
+    "payload.lifecycle-plan",
+    "payload.current-memory",
+    "payload.verify",
+    "output.emit",
+    "output.emit.install-result",
+    "output.emit.current-memory",
+    "workspace.defaults.load",
+    "workspace.defaults.select",
+    "workspace.config.load",
+    "output.fields.select",
+    "workspace.config.emit",
+    "python.function.call",
+    "planning.closeout.apply",
+    "planning.reconcile.load",
+    "planning.summary.load",
+    "planning.report.load",
+    "memory.report.load",
+    "memory.route_report.load",
+    "memory.bootstrap.doctor.load",
+    "memory.current.load",
+    "memory.promotion_report.load",
+    "memory.prompt.render",
+    "planning.prompt.render",
+    "prompt.render",
+    "delegation.outcome.append",
+    "workspace.selection.resolve",
+}
+
+
+def _typescript_primitive_supported(primitive: str) -> bool:
+    return (
+        primitive in TYPESCRIPT_SUPPORTED_EXACT_PRIMITIVES
+        or (primitive.startswith("planning.") and primitive.endswith(".apply"))
+        or primitive.startswith("system_intent.")
+    )
+
+
+def _validate_typescript_native_operation_execution(
+    *,
+    package: str,
+    package_root: Path,
+    command_package: dict[str, object],
+) -> list[str]:
+    errors: list[str] = []
+    checked_paths: set[str] = set()
+    for command in command_package.get("commands", []):
+        if not isinstance(command, dict) or command.get("status") != "generated":
+            continue
+        for operation_ref in _command_operation_refs(command):
+            operation_id = str(operation_ref.get("id", "")).strip()
+            operation_path = str(operation_ref.get("path", "")).strip()
+            if not operation_id or not operation_path or operation_path in checked_paths:
+                continue
+            checked_paths.add(operation_path)
+            resource_path = package_root / "resources" / operation_path
+            if not resource_path.is_file():
+                errors.append(f"{package} operation {operation_id!r} is native but resource {operation_path!r} is missing")
+                continue
+            try:
+                operation = json.loads(resource_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                errors.append(f"{package} operation {operation_id!r} resource {operation_path!r} is unreadable: {exc}")
+                continue
+            ir_plan = operation.get("ir_plan", {})
+            steps = ir_plan.get("steps", []) if isinstance(ir_plan, dict) else []
+            if not isinstance(steps, list) or not steps:
+                errors.append(f"{package} operation {operation_id!r} is native but has no executable ir_plan.steps")
+                continue
+            for step in steps:
+                if not isinstance(step, dict):
+                    errors.append(f"{package} operation {operation_id!r} has malformed ir_plan step")
+                    continue
+                primitive = str(step.get("uses", "")).strip()
+                if not primitive:
+                    errors.append(f"{package} operation {operation_id!r} has an ir_plan step without a primitive")
+                elif not _typescript_primitive_supported(primitive):
+                    errors.append(
+                        f"{package} operation {operation_id!r} uses TypeScript primitive {primitive!r} without runtime support"
+                    )
     return errors
 
 
@@ -3444,13 +3540,22 @@ def _validate_static_surfaces() -> list[str]:
                 if not runtime_path.is_file():
                     errors.append(f"{package_label}/src/runtime.mjs is missing for runnable TypeScript target")
                 else:
+                    runtime_text = runtime_path.read_text(encoding="utf-8")
                     errors.extend(
                         _validate_typescript_runtime_handoff_thinness(
                             package=package_label,
                             cli_text=cli_text,
-                            runtime_text=runtime_path.read_text(encoding="utf-8"),
+                            runtime_text=runtime_text,
                         )
                     )
+                    if command_package_resource is not None:
+                        errors.extend(
+                            _validate_typescript_native_operation_execution(
+                                package=package_label,
+                                package_root=package_root,
+                                command_package=command_package_resource,
+                            )
+                        )
             if is_weak_agent_safe and maturity.get("weak_agent_routing") != "allowed-read-only":
                 errors.append(f"{package_label}/package.json weak-agent-safe target is missing allowed-read-only routing")
             if is_mutation_capable and maturity.get("weak_agent_routing") != "allowed-mutation-with-review":

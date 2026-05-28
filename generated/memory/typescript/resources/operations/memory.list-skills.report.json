@@ -1,139 +1,139 @@
 {
-  "schema_version": "agentic-workspace/operation/v1",
-  "id": "memory.list-skills.report",
-  "command_surface": {
-    "program": "agentic-memory",
-    "command": "list-skills",
-    "format_option": "format"
-  },
-  "summary": "List bundled memory bootstrap lifecycle skills.",
   "classification": "read-only-report",
-  "inputs": [
-    {
-      "name": "format",
-      "source": "cli-option",
-      "required": false
-    }
-  ],
-  "output": {
-    "kind": "text-or-json"
+  "command_surface": {
+    "command": "list-skills",
+    "format_option": "format",
+    "program": "agentic-memory"
   },
   "effects": {
-    "read_only": true,
     "destructive": false,
     "idempotent": true,
-    "writes_repo_state": false,
-    "requires_preflight_gate": false
-  },
-  "locality": {
-    "requires_repo": false,
-    "network": "forbidden",
-    "outside_repo_writes": "forbidden"
-  },
-  "reads": [
-    {
-      "surface": "packaged memory bootstrap skill registry",
-      "required": true
-    }
-  ],
-  "writes": [],
-  "steps": [
-    {
-      "id": "load_skill_registry",
-      "uses": "filesystem.read",
-      "description": "Read the packaged memory skill registry."
-    },
-    {
-      "id": "parse_skill_registry",
-      "uses": "json.parse",
-      "description": "Parse the packaged memory skill registry."
-    },
-    {
-      "id": "assemble_payload",
-      "uses": "payload.assemble",
-      "description": "Build the module-result payload containing bundled skill actions."
-    },
-    {
-      "id": "emit_output",
-      "uses": "output.emit",
-      "description": "Emit skill list in the requested format."
-    }
-  ],
-  "ir_plan": {
-    "status": "complete",
-    "summary": "Complete target-executor IR for a read-only package-resource command that loads a JSON registry and emits module-result output.",
-    "steps": [
-      {
-        "id": "load_skill_registry",
-        "uses": "filesystem.read",
-        "description": "Read the packaged memory skill registry.",
-        "arguments": {
-          "root": "memory.package-skills",
-          "path": "REGISTRY.json"
-        },
-        "reads": [
-          "packaged memory bootstrap skill registry"
-        ],
-        "outputs": [
-          "registry_text"
-        ],
-        "on_error": "fail"
-      },
-      {
-        "id": "parse_skill_registry",
-        "uses": "json.parse",
-        "description": "Parse the packaged memory skill registry.",
-        "inputs": [
-          "registry_text"
-        ],
-        "outputs": [
-          "registry"
-        ],
-        "on_error": "fail"
-      },
-      {
-        "id": "assemble_payload",
-        "uses": "payload.assemble",
-        "description": "Build the module-result payload containing bundled skill actions.",
-        "arguments": {
-          "fields": {
-            "dry_run": true,
-            "message": "Bundled skills",
-            "actions_from": "registry.skills",
-            "mode": "skills",
-            "bootstrap_version_from": "registry.bootstrap_version"
-          }
-        },
-        "inputs": [
-          "registry"
-        ],
-        "outputs": [
-          "result"
-        ],
-        "on_error": "fail"
-      },
-      {
-        "id": "emit_output",
-        "uses": "output.emit",
-        "description": "Emit the result as JSON or text according to the format option.",
-        "inputs": [
-          "result",
-          "format"
-        ],
-        "on_error": "emit_usage_error"
-      }
-    ],
-    "portability_notes": [
-      "Target executors can implement this complete plan with package-resource file reads, JSON parsing, payload assembly, and output emission.",
-      "The generated Python command projection composes these primitive operations directly; remaining report commands stay on runtime-consumed operation execution until promoted."
-    ]
+    "read_only": true,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
   },
   "guards": [
     "List-skills must remain read-only."
   ],
+  "id": "memory.list-skills.report",
+  "inputs": [
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "portability_notes": [
+      "Target executors can implement this complete plan with package-resource file reads, JSON parsing, payload assembly, and output emission.",
+      "The generated Python command projection composes these primitive operations directly; remaining report commands stay on runtime-consumed operation execution until promoted."
+    ],
+    "status": "complete",
+    "steps": [
+      {
+        "arguments": {
+          "path": "REGISTRY.json",
+          "root": "memory.package-skills"
+        },
+        "description": "Read the packaged memory skill registry.",
+        "id": "load_skill_registry",
+        "on_error": "fail",
+        "outputs": [
+          "registry_text"
+        ],
+        "reads": [
+          "packaged memory bootstrap skill registry"
+        ],
+        "uses": "filesystem.read"
+      },
+      {
+        "description": "Parse the packaged memory skill registry.",
+        "id": "parse_skill_registry",
+        "inputs": [
+          "registry_text"
+        ],
+        "on_error": "fail",
+        "outputs": [
+          "registry"
+        ],
+        "uses": "json.parse"
+      },
+      {
+        "arguments": {
+          "fields": {
+            "actions_from": "registry.skills",
+            "bootstrap_version_from": "registry.bootstrap_version",
+            "dry_run": true,
+            "message": "Bundled skills",
+            "mode": "skills"
+          }
+        },
+        "description": "Build the module-result payload containing bundled skill actions.",
+        "id": "assemble_payload",
+        "inputs": [
+          "registry"
+        ],
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "payload.assemble"
+      },
+      {
+        "description": "Emit the result as JSON or text according to the format option.",
+        "id": "emit_output",
+        "inputs": [
+          "result",
+          "format"
+        ],
+        "on_error": "emit_usage_error",
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Complete target-executor IR for a read-only package-resource command that loads a JSON registry and emits module-result output."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "text-or-json"
+  },
   "proof": [
     "operation contract validates against operation.schema.json",
     "operation command parity checks agentic-memory live parser"
   ],
-  "migration_status": "runtime-consumed"
+  "reads": [
+    {
+      "required": true,
+      "surface": "packaged memory bootstrap skill registry"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Read the packaged memory skill registry.",
+      "id": "load_skill_registry",
+      "uses": "filesystem.read"
+    },
+    {
+      "description": "Parse the packaged memory skill registry.",
+      "id": "parse_skill_registry",
+      "uses": "json.parse"
+    },
+    {
+      "description": "Build the module-result payload containing bundled skill actions.",
+      "id": "assemble_payload",
+      "uses": "payload.assemble"
+    },
+    {
+      "description": "Emit skill list in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "List bundled memory bootstrap lifecycle skills.",
+  "writes": []
 }

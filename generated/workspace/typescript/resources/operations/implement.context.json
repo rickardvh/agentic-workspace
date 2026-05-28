@@ -1,1 +1,172 @@
-{"schema_version":"agentic-workspace/operation/v1","id":"implement.context","command_surface":{"command":"implement","format_option":"format"},"summary":"Return a cheap-implementer context for a bounded changed-path scope.","classification":"derived-output","inputs":[{"name":"target","source":"cli-option","required":false},{"name":"changed","source":"cli-option","required":false},{"name":"task","source":"cli-option","required":false},{"name":"task_file","source":"cli-option","required":false},{"name":"select","source":"cli-option","required":false},{"name":"verbose","source":"cli-option","required":false},{"name":"format","source":"cli-option","required":false}],"output":{"kind":"text-or-json","schema_ref":"schemas/implementer_context.schema.json"},"effects":{"read_only":true,"destructive":false,"idempotent":true,"writes_repo_state":false,"requires_preflight_gate":false},"locality":{"requires_repo":false,"network":"forbidden","outside_repo_writes":"forbidden"},"reads":[{"surface":"changed path arguments","required":false},{"surface":"task text","required":false},{"surface":"repo-local task text file","required":false},{"surface":"planning summary","required":false},{"surface":"proof selection rules","required":true},{"surface":"ownership ledger","required":false},{"surface":"context templates","required":true},{"surface":"verbose flag for broad diagnostic output","required":false},{"surface":"field selector for exact JSON drill-down","required":false}],"writes":[],"steps":[{"id":"resolve_root","uses":"workspace.root.resolve","description":"Resolve the target root."},{"id":"assemble_context","uses":"implementer.context.assemble","description":"Build inspect scope, boundary warnings, proof commands, task routing guardrails, and handoff requirements."},{"id":"select_profile","uses":"output.profile.select","description":"Select verbose implementer context or default next-decision output."},{"id":"select_fields","uses":"output.fields.select","description":"Return only requested JSON fields when --select is provided."},{"id":"emit_output","uses":"output.emit","description":"Emit implementer context in the requested format."}],"guards":["Escalate rather than guess when changed paths are missing or too broad.","Use either --task or --task-file for task-intent carry-forward, not both.","Broad external-work ingestion must route to active planning or narrow to one explicit issue before implementation.","Tiny output must preserve the next action, changed-path inspect scope, blocking warnings, and selected proof commands.","Prefer --select for exact field drill-down and --verbose only for broad diagnostics."],"proof":["implementer context sample validates against implementer_context.schema.json","implement command tests remain compatible","broad external-work task text receives a planning route when no active planning record exists","implement tiny profile omits diagnostic/provenance fields while preserving next-decision data","implement selectors return exact fields from the implementer context"],"migration_status":"draft-contract-only"}
+{
+  "classification": "derived-output",
+  "command_surface": {
+    "command": "implement",
+    "format_option": "format"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": true,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
+  },
+  "guards": [
+    "Escalate rather than guess when changed paths are missing or too broad.",
+    "Use either --task or --task-file for task-intent carry-forward, not both.",
+    "Broad external-work ingestion must route to active planning or narrow to one explicit issue before implementation.",
+    "Tiny output must preserve the next action, changed-path inspect scope, blocking warnings, and selected proof commands.",
+    "Prefer --select for exact field drill-down and --verbose only for broad diagnostics."
+  ],
+  "id": "implement.context",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "changed",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "task",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "task_file",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "select",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "verbose",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "complete",
+    "steps": [
+      {
+        "arguments": {
+          "operation_id": "implement.context"
+        },
+        "description": "Execute the operation through the generated TypeScript domain operation table.",
+        "id": "execute_typescript_domain_operation",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "typescript.domain.execute"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the TypeScript-native operation result.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Generated TypeScript native runtime binding for a command whose source operation has not yet been decomposed into portable IR."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "draft-contract-only",
+  "output": {
+    "kind": "text-or-json",
+    "schema_ref": "schemas/implementer_context.schema.json"
+  },
+  "proof": [
+    "implementer context sample validates against implementer_context.schema.json",
+    "implement command tests remain compatible",
+    "broad external-work task text receives a planning route when no active planning record exists",
+    "implement tiny profile omits diagnostic/provenance fields while preserving next-decision data",
+    "implement selectors return exact fields from the implementer context"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": "changed path arguments"
+    },
+    {
+      "required": false,
+      "surface": "task text"
+    },
+    {
+      "required": false,
+      "surface": "repo-local task text file"
+    },
+    {
+      "required": false,
+      "surface": "planning summary"
+    },
+    {
+      "required": true,
+      "surface": "proof selection rules"
+    },
+    {
+      "required": false,
+      "surface": "ownership ledger"
+    },
+    {
+      "required": true,
+      "surface": "context templates"
+    },
+    {
+      "required": false,
+      "surface": "verbose flag for broad diagnostic output"
+    },
+    {
+      "required": false,
+      "surface": "field selector for exact JSON drill-down"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the target root.",
+      "id": "resolve_root",
+      "uses": "workspace.root.resolve"
+    },
+    {
+      "description": "Build inspect scope, boundary warnings, proof commands, task routing guardrails, and handoff requirements.",
+      "id": "assemble_context",
+      "uses": "implementer.context.assemble"
+    },
+    {
+      "description": "Select verbose implementer context or default next-decision output.",
+      "id": "select_profile",
+      "uses": "output.profile.select"
+    },
+    {
+      "description": "Return only requested JSON fields when --select is provided.",
+      "id": "select_fields",
+      "uses": "output.fields.select"
+    },
+    {
+      "description": "Emit implementer context in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Return a cheap-implementer context for a bounded changed-path scope.",
+  "writes": []
+}

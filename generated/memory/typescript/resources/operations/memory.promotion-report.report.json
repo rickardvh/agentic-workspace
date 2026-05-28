@@ -1,113 +1,113 @@
 {
-  "schema_version": "agentic-workspace/operation/v1",
-  "id": "memory.promotion-report.report",
-  "command_surface": {
-    "program": "agentic-memory",
-    "command": "promotion-report",
-    "format_option": "format"
-  },
-  "summary": "Report memory notes that should be promoted into canonical docs or eliminated through stronger tooling.",
   "classification": "read-only-report",
-  "inputs": [
-    {
-      "name": "target",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "notes",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "mode",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "format",
-      "source": "cli-option",
-      "required": false
-    }
-  ],
-  "output": {
-    "kind": "text-or-json"
+  "command_surface": {
+    "command": "promotion-report",
+    "format_option": "format",
+    "program": "agentic-memory"
   },
   "effects": {
-    "read_only": true,
     "destructive": false,
     "idempotent": true,
-    "writes_repo_state": false,
-    "requires_preflight_gate": false
+    "read_only": true,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
   },
-  "locality": {
-    "requires_repo": false,
-    "network": "forbidden",
-    "outside_repo_writes": "forbidden"
-  },
-  "reads": [
-    {
-      "surface": "memory manifest and note metadata",
-      "required": false
-    }
-  ],
-  "writes": [],
-  "steps": [
-    {
-      "id": "load_promotion_report",
-      "uses": "memory.promotion_report.load",
-      "description": "Load the memory package promotion report through a named domain primitive."
-    },
-    {
-      "id": "emit_output",
-      "uses": "output.emit",
-      "description": "Emit promotion report in the requested format."
-    }
-  ],
   "guards": [
     "Promotion report must remain read-only."
   ],
-  "proof": [
-    "operation contract validates against operation.schema.json",
-    "operation command parity checks agentic-memory live parser"
+  "id": "memory.promotion-report.report",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "notes",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "mode",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
   ],
-  "migration_status": "runtime-consumed",
   "ir_plan": {
     "status": "representative",
-    "summary": "Memory promotion-report executes generated operation IR through codegen-owned primitive dataflow while the memory package supplies the promotion candidate domain report function and text/json compatibility formatting.",
     "steps": [
       {
-        "id": "load_report",
-        "uses": "memory.promotion_report.load",
-        "description": "Load the memory promotion report domain payload for the requested target and filters.",
         "arguments": {
           "kwargs": {
-            "target": {
-              "value": "target"
+            "mode": {
+              "value": "mode"
             },
             "notes": {
               "value": "notes"
             },
-            "mode": {
-              "value": "mode"
+            "target": {
+              "value": "target"
             }
           }
         },
+        "description": "Load the memory promotion report domain payload for the requested target and filters.",
+        "id": "load_report",
+        "on_error": "fail",
         "outputs": [
           "result"
         ],
-        "on_error": "fail"
+        "uses": "memory.promotion_report.load"
       },
       {
-        "id": "emit_output",
-        "uses": "output.emit",
-        "description": "Emit the memory report payload in the requested format.",
         "arguments": {},
+        "description": "Emit the memory report payload in the requested format.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
         "outputs": [
           "emitted"
         ],
-        "on_error": "emit_usage_error"
+        "uses": "output.emit"
       }
-    ]
-  }
+    ],
+    "summary": "Memory promotion-report executes generated operation IR through codegen-owned primitive dataflow while the memory package supplies the promotion candidate domain report function and text/json compatibility formatting."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "text-or-json"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "operation command parity checks agentic-memory live parser"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": "memory manifest and note metadata"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Load the memory package promotion report through a named domain primitive.",
+      "id": "load_promotion_report",
+      "uses": "memory.promotion_report.load"
+    },
+    {
+      "description": "Emit promotion report in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Report memory notes that should be promoted into canonical docs or eliminated through stronger tooling.",
+  "writes": []
 }
