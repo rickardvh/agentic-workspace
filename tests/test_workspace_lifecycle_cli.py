@@ -283,6 +283,28 @@ def test_upgrade_after_local_only_install_preserves_agents_indirection(tmp_path:
     assert payload["lifecycle_plan"]["mutation_safety"]["local_only_preservation"]["status"] == "explicit-local-only-target"
 
 
+def test_upgrade_local_only_full_install_does_not_request_root_agents_pointer(tmp_path: Path, capsys) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    _init_git_repo(repo_root)
+
+    assert cli.main(["install", "--preset", "full", "--target", str(repo_root), "--local-only", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["upgrade", "--target", str(repo_root), "--non-interactive", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert (repo_root / "AGENTS.md").read_text(encoding="utf-8") == "Follow instructions in `AGENTS.local.md` if present.\n"
+    assert "<!-- agentic-workspace:workflow:start -->" in (repo_root / "AGENTS.local.md").read_text(encoding="utf-8")
+    agent_actions = [
+        action
+        for report in payload["reports"]
+        for action in report["actions"]
+        if action.get("path") == "AGENTS.md" and "apply-local-entrypoint" in action.get("detail", "")
+    ]
+    assert agent_actions == []
+
+
 def test_upgrade_local_only_full_install_honors_configured_agent_instructions_file(tmp_path: Path, capsys) -> None:
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
