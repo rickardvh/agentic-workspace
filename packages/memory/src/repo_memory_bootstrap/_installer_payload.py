@@ -29,6 +29,10 @@ from repo_memory_bootstrap._installer_shared import (
     PayloadEntry,
 )
 
+LOCAL_AGENT_INSTRUCTIONS_PATH = Path("AGENTS.local.md")
+LOCAL_AGENT_REFERENCE_LINE = "Follow instructions in `AGENTS.local.md` if present."
+LOCAL_ONLY_STATE_PATH = Path(".agentic-workspace") / "LOCAL-ONLY.toml"
+
 
 def _payload_entries(
     source_root: Path, *, include_bootstrap_workspace: bool = True, target_layout: str = "managed-root"
@@ -88,6 +92,32 @@ def _payload_entries(
             )
 
     return entries
+
+
+def _has_local_only_state(target_root: Path) -> bool:
+    state_path = target_root / LOCAL_ONLY_STATE_PATH
+    if not state_path.is_file():
+        return False
+    try:
+        state_text = state_path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    return re.search(r'^\s*mode\s*=\s*"local-only"\s*$', state_text, flags=re.MULTILINE) is not None
+
+
+def _has_local_workspace_entrypoint(*, target_root: Path, agents_text: str) -> bool:
+    if LOCAL_AGENT_REFERENCE_LINE not in agents_text:
+        return False
+    if not _has_local_only_state(target_root):
+        return False
+    local_agents_path = target_root / LOCAL_AGENT_INSTRUCTIONS_PATH
+    if not local_agents_path.is_file():
+        return False
+    try:
+        local_agents_text = local_agents_path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    return _agents_has_workspace_workflow_pointer(local_agents_text)
 
 
 def _target_relative_path(relative_path: Path, *, target_layout: str) -> Path:
@@ -436,6 +466,17 @@ def _plan_agents_entrypoint(
     workspace_shared_layer_present = (destination.parent / WORKSPACE_WORKFLOW_PATH).exists()
     workspace_pointer_present = _agents_has_workspace_workflow_pointer(existing)
     delegated_through_workspace = workspace_shared_layer_present and workspace_pointer_present
+
+    if _has_local_workspace_entrypoint(target_root=destination.parent, agents_text=existing):
+        result.add(
+            "current",
+            destination,
+            "local startup indirection points to AGENTS.local.md workspace workflow block",
+            role="local-entrypoint",
+            safety="safe",
+            source=str(AGENTS_PATH),
+        )
+        return
 
     if delegated_through_workspace:
         patched = _remove_memory_workflow_block(existing)

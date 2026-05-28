@@ -446,6 +446,37 @@ def test_doctor_agents_guidance_mentions_apply_local_entrypoint(tmp_path: Path) 
     assert any(action.path == target / "AGENTS.md" and "--apply-local-entrypoint" in action.detail for action in result.actions)
 
 
+def test_doctor_accepts_local_only_agents_indirection(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "memory").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace").mkdir(parents=True, exist_ok=True)
+    (target / "AGENTS.md").write_text("Follow instructions in `AGENTS.local.md` if present.\n", encoding="utf-8")
+    (target / "AGENTS.local.md").write_text(
+        "# Local Agent Instructions\n\n"
+        "<!-- agentic-workspace:workflow:start -->\n"
+        'Run `agentic-workspace start --task "<task>" --format json` and read `.agentic-workspace/WORKFLOW.md` '
+        "only as fallback after `immediate_next_allowed_action`.\n"
+        "<!-- agentic-workspace:workflow:end -->\n",
+        encoding="utf-8",
+    )
+    (target / ".agentic-workspace" / "LOCAL-ONLY.toml").write_text(
+        'schema_version = 1\nmode = "local-only"\nrepo_hook = ".git/info/exclude"\n',
+        encoding="utf-8",
+    )
+    (target / ".agentic-workspace" / "memory" / "VERSION.md").write_text("Version: 10\n", encoding="utf-8")
+
+    result = installer.doctor_bootstrap(target=target)
+
+    assert any(
+        action.path == target / "AGENTS.md"
+        and action.kind == "current"
+        and "local startup indirection points to AGENTS.local.md" in action.detail
+        for action in result.actions
+    )
+    assert not any(action.path == target / "AGENTS.md" and "--apply-local-entrypoint" in action.detail for action in result.actions)
+
+
 def test_doctor_flags_legacy_bootstrap_agents_prose_outside_managed_block(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True, exist_ok=True)

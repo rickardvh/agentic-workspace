@@ -3659,8 +3659,6 @@ def _remove_fenced_block(*, text: str, start_marker: str, end_marker: str) -> tu
 
 
 def _local_agent_indirection_is_current(*, target_root: Path, agents_relative: Path, agents_text: str, cli_invoke: str) -> bool:
-    if agents_relative != LOCAL_AGENT_REFERENCE_FILE:
-        return False
     if LOCAL_AGENT_REFERENCE_LINE not in agents_text:
         return False
     local_agents_path = target_root / LOCAL_AGENT_INSTRUCTIONS_FILE
@@ -3881,7 +3879,6 @@ def _write_generated_text(*, destination: Path, text: str, dry_run: bool) -> Non
 
 
 LOCAL_AGENT_INSTRUCTIONS_FILE = Path("AGENTS.local.md")
-LOCAL_AGENT_REFERENCE_FILE = Path(DEFAULT_AGENT_INSTRUCTIONS_FILE)
 LOCAL_AGENT_REFERENCE_LINE = f"Follow instructions in `{LOCAL_AGENT_INSTRUCTIONS_FILE.as_posix()}` if present."
 EXTERNAL_INTENT_CACHE_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "cache" / "external-intent-evidence.json"
 EXTERNAL_INTENT_PLANNING_RELATIVE_PATH = Path(".agentic-workspace") / "planning" / "external-intent-evidence.json"
@@ -3965,7 +3962,9 @@ def _remove_local_agent_reference_text(text: str) -> tuple[str, bool]:
     return (updated, True)
 
 
-def _sync_local_agent_startup(*, repo_root: Path, dry_run: bool, replace_reference_file: bool, cli_invoke: str) -> list[dict[str, str]]:
+def _sync_local_agent_startup(
+    *, repo_root: Path, reference_file: Path, dry_run: bool, replace_reference_file: bool, cli_invoke: str
+) -> list[dict[str, str]]:
     actions: list[dict[str, str]] = []
     local_path = repo_root / LOCAL_AGENT_INSTRUCTIONS_FILE
     rendered_local = _local_agent_instructions_text(cli_invoke=cli_invoke)
@@ -3984,7 +3983,7 @@ def _sync_local_agent_startup(*, repo_root: Path, dry_run: bool, replace_referen
                 "detail": "refresh local startup instructions with the managed workspace workflow pointer",
             }
         )
-    reference_path = repo_root / LOCAL_AGENT_REFERENCE_FILE
+    reference_path = repo_root / reference_file
     existing_reference = reference_path.read_text(encoding="utf-8") if reference_path.exists() else ""
     if replace_reference_file:
         updated_reference = LOCAL_AGENT_REFERENCE_LINE + "\n"
@@ -3997,20 +3996,18 @@ def _sync_local_agent_startup(*, repo_root: Path, dry_run: bool, replace_referen
         actions.append(
             {
                 "kind": _write_action_kind(dry_run=dry_run, existing=existing_reference if reference_path.exists() else None),
-                "path": LOCAL_AGENT_REFERENCE_FILE.as_posix(),
+                "path": reference_file.as_posix(),
                 "detail": "refresh root startup entrypoint as a tiny local reference"
                 if replace_reference_file
                 else "add tiny local startup reference to AGENTS.local.md",
             }
         )
     else:
-        actions.append(
-            {"kind": "current", "path": LOCAL_AGENT_REFERENCE_FILE.as_posix(), "detail": "tiny local startup reference already present"}
-        )
+        actions.append({"kind": "current", "path": reference_file.as_posix(), "detail": "tiny local startup reference already present"})
     return actions
 
 
-def _remove_local_agent_startup(*, repo_root: Path, dry_run: bool, cli_invoke: str) -> list[dict[str, str]]:
+def _remove_local_agent_startup(*, repo_root: Path, reference_file: Path, dry_run: bool, cli_invoke: str) -> list[dict[str, str]]:
     actions: list[dict[str, str]] = []
     local_path = repo_root / LOCAL_AGENT_INSTRUCTIONS_FILE
     if not local_path.exists():
@@ -4035,11 +4032,9 @@ def _remove_local_agent_startup(*, repo_root: Path, dry_run: bool, cli_invoke: s
                 "detail": "remove managed local startup instructions",
             }
         )
-    reference_path = repo_root / LOCAL_AGENT_REFERENCE_FILE
+    reference_path = repo_root / reference_file
     if not reference_path.exists():
-        actions.append(
-            {"kind": "skipped", "path": LOCAL_AGENT_REFERENCE_FILE.as_posix(), "detail": "root startup reference already absent"}
-        )
+        actions.append({"kind": "skipped", "path": reference_file.as_posix(), "detail": "root startup reference already absent"})
     else:
         existing_reference = reference_path.read_text(encoding="utf-8")
         updated_reference, changed = _remove_local_agent_reference_text(existing_reference)
@@ -4049,14 +4044,12 @@ def _remove_local_agent_startup(*, repo_root: Path, dry_run: bool, cli_invoke: s
             actions.append(
                 {
                     "kind": "would update" if dry_run else "updated",
-                    "path": LOCAL_AGENT_REFERENCE_FILE.as_posix(),
+                    "path": reference_file.as_posix(),
                     "detail": "remove tiny local startup reference",
                 }
             )
         else:
-            actions.append(
-                {"kind": "skipped", "path": LOCAL_AGENT_REFERENCE_FILE.as_posix(), "detail": "root startup reference was not present"}
-            )
+            actions.append({"kind": "skipped", "path": reference_file.as_posix(), "detail": "root startup reference was not present"})
     return actions
 
 
@@ -4310,6 +4303,7 @@ def _workspace_init_or_upgrade_report(
         actions.extend(
             _sync_local_agent_startup(
                 repo_root=local_only_repo_root,
+                reference_file=agents_relative,
                 dry_run=dry_run,
                 replace_reference_file=inspection_mode == "install",
                 cli_invoke=config.cli_invoke,
@@ -4473,7 +4467,14 @@ def _workspace_uninstall_report(
     if local_only_repo_root is not None:
         if dry_run and target_root.exists():
             actions.append({"kind": "would remove", "path": ".agentic-workspace", "detail": "remove the local-only workspace tree"})
-        actions.extend(_remove_local_agent_startup(repo_root=local_only_repo_root, dry_run=dry_run, cli_invoke=config.cli_invoke))
+        actions.extend(
+            _remove_local_agent_startup(
+                repo_root=local_only_repo_root,
+                reference_file=Path(config.agent_instructions_file),
+                dry_run=dry_run,
+                cli_invoke=config.cli_invoke,
+            )
+        )
         actions.append(_remove_local_only_git_exclude(repo_root=local_only_repo_root, dry_run=dry_run))
         actions.append(_remove_legacy_local_only_gitignore(repo_root=local_only_repo_root, dry_run=dry_run))
     return _workspace_report(target_root=target_root, message="Uninstall report", dry_run=dry_run, actions=actions, warnings=warnings)
@@ -4749,6 +4750,7 @@ def _run_init(
                 dry_run=dry_run,
                 force=False,
             ),
+            target_root=target_root,
             config=config,
         )
         for module_name in selected_modules
@@ -5079,6 +5081,7 @@ def _run_lifecycle_command(
                 dry_run=dry_run,
                 force=False,
             ),
+            target_root=target_root,
             config=config,
         )
         for module_name in selected_modules
@@ -21015,12 +21018,21 @@ def _invoke_module_command(
     return adapt_module_result(module=module_name, result=result).to_dict()
 
 
-def _normalize_module_report_startup_paths(report: dict[str, Any], *, config: WorkspaceConfig) -> dict[str, Any]:
-    if (
-        config.agent_instructions_file == DEFAULT_AGENT_INSTRUCTIONS_FILE
-        or DEFAULT_AGENT_INSTRUCTIONS_FILE in config.detected_agent_instructions_files
-    ):
-        return report
+def _configured_local_agent_indirection_is_current(*, target_root: Path, config: WorkspaceConfig) -> bool:
+    agents_relative = Path(config.agent_instructions_file)
+    agents_path = target_root / agents_relative
+    if not agents_path.is_file():
+        return False
+    return _local_agent_indirection_is_current(
+        target_root=target_root,
+        agents_relative=agents_relative,
+        agents_text=agents_path.read_text(encoding="utf-8"),
+        cli_invoke=config.cli_invoke,
+    )
+
+
+def _normalize_module_report_startup_paths(report: dict[str, Any], *, target_root: Path, config: WorkspaceConfig) -> dict[str, Any]:
+    local_indirection_current = _configured_local_agent_indirection_is_current(target_root=target_root, config=config)
 
     def _rewrite_path(value: Any) -> Any:
         if not isinstance(value, str):
@@ -21030,10 +21042,49 @@ def _normalize_module_report_startup_paths(report: dict[str, Any], *, config: Wo
             return config.agent_instructions_file
         return value
 
+    def _normalize_action(action: dict[str, Any]) -> dict[str, Any]:
+        normalized = {**action, "path": _rewrite_path(action.get("path"))}
+        if (
+            local_indirection_current
+            and action.get("path") == DEFAULT_AGENT_INSTRUCTIONS_FILE
+            and action.get("kind") == "manual review"
+            and "--apply-local-entrypoint" in str(action.get("detail", ""))
+        ):
+            normalized = {
+                **normalized,
+                "kind": "current",
+                "detail": "local startup indirection points to AGENTS.local.md workspace workflow block",
+                "safety": "safe",
+                "category": "safe-update",
+            }
+        return normalized
+
+    def _normalize_warning(warning: dict[str, Any]) -> dict[str, Any] | None:
+        if (
+            local_indirection_current
+            and warning.get("path") == DEFAULT_AGENT_INSTRUCTIONS_FILE
+            and "--apply-local-entrypoint" in str(warning.get("message", ""))
+        ):
+            return None
+        return {**warning, "path": _rewrite_path(warning.get("path"))}
+
+    if (
+        config.agent_instructions_file == DEFAULT_AGENT_INSTRUCTIONS_FILE
+        or DEFAULT_AGENT_INSTRUCTIONS_FILE in config.detected_agent_instructions_files
+    ):
+        if not local_indirection_current:
+            return report
+        warnings = [_normalize_warning(warning) for warning in report["warnings"]]
+        return {
+            **report,
+            "actions": [_normalize_action(action) for action in report["actions"]],
+            "warnings": [warning for warning in warnings if warning is not None],
+        }
+
     return {
         **report,
-        "actions": [{**action, "path": _rewrite_path(action.get("path"))} for action in report["actions"]],
-        "warnings": [{**warning, "path": _rewrite_path(warning.get("path"))} for warning in report["warnings"]],
+        "actions": [_normalize_action(action) for action in report["actions"]],
+        "warnings": [warning for warning in (_normalize_warning(warning) for warning in report["warnings"]) if warning is not None],
     }
 
 
