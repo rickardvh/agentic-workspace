@@ -16090,7 +16090,7 @@ def _reuse_pressure_payload(
                 command="agentic-workspace implement --changed <paths> --select reuse_pressure --format json", cli_invoke=cli_invoke
             ),
             "recording_options": _reuse_pressure_recording_options(
-                normalized_paths=normalized_paths, state="changed-paths-required", cli_invoke=cli_invoke
+                normalized_paths=normalized_paths, state="changed-paths-required", cli_invoke=cli_invoke, compact=compact
             ),
         }
 
@@ -16110,7 +16110,9 @@ def _reuse_pressure_payload(
     findings = [finding for finding in raw_findings if finding.get("prominence") != "weak"]
     weak_hints = [finding for finding in raw_findings if finding.get("prominence") == "weak"]
     state = _reuse_pressure_state(findings)
-    recording_options = _reuse_pressure_recording_options(normalized_paths=normalized_paths, state=state, cli_invoke=cli_invoke)
+    recording_options = _reuse_pressure_recording_options(
+        normalized_paths=normalized_paths, state=state, cli_invoke=cli_invoke, compact=compact
+    )
     payload = {
         **base,
         "status": "checked",
@@ -16120,7 +16122,9 @@ def _reuse_pressure_payload(
         "weak_hint_count": len(weak_hints),
         "weak_hints": weak_hints[:5],
         "summary": _reuse_pressure_summary(state=state, finding_count=len(findings), weak_hint_count=len(weak_hints)),
-        "memory_signals": _reuse_pressure_memory_signals(target_root=target_root, changed_paths=normalized_paths, cli_invoke=cli_invoke),
+        "memory_signals": _reuse_pressure_memory_signals(
+            target_root=target_root, changed_paths=normalized_paths, cli_invoke=cli_invoke, compact=compact
+        ),
         "recording_options": recording_options,
         "next_decision_options": recording_options["options"],
     }
@@ -16460,16 +16464,58 @@ def _iter_reuse_scan_files(target_root: Path) -> list[Path]:
     return sorted(files)
 
 
-def _reuse_pressure_recording_options(*, normalized_paths: list[str], state: str, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
-    changed_arg = " ".join(normalized_paths) if normalized_paths else "<changed paths>"
+def _changed_path_command_argument(*, changed_paths: list[str], compact: bool) -> str:
+    if not changed_paths:
+        return "<changed paths>"
+    if not compact:
+        return " ".join(changed_paths)
+    summary = _changed_path_argument_summary(changed_paths=changed_paths)
+    if summary["status"] == "exact":
+        return " ".join(changed_paths)
+    return "<collapsed-changed-paths>"
+
+
+def _changed_path_argument_summary(*, changed_paths: list[str]) -> dict[str, Any]:
+    generated_paths = [path for path in changed_paths if path.startswith("generated/")]
+    if len(changed_paths) <= 8 and len(generated_paths) <= 4:
+        return {"status": "exact", "total_count": len(changed_paths)}
+    generated_groups: dict[str, int] = {}
+    for path in generated_paths:
+        parts = path.split("/")
+        group = "/".join(parts[:4]) if len(parts) >= 4 and parts[3] in {"resources", "src", "test"} else "/".join(parts[:3])
+        generated_groups[group] = generated_groups.get(group, 0) + 1
+    nongenerated_paths = [path for path in changed_paths if not path.startswith("generated/")]
+    return {
+        "status": "collapsed",
+        "total_count": len(changed_paths),
+        "sample_paths": changed_paths[:5],
+        "nongenerated_count": len(nongenerated_paths),
+        "generated_count": len(generated_paths),
+        "generated_groups": [
+            {"root": root, "count": count} for root, count in sorted(generated_groups.items(), key=lambda item: (-item[1], item[0]))[:8]
+        ],
+        "exact_paths_selector": "implement --verbose --select reuse_pressure",
+    }
+
+
+def _reuse_pressure_recording_options(
+    *, normalized_paths: list[str], state: str, cli_invoke: str = DEFAULT_CLI_INVOKE, compact: bool = False
+) -> dict[str, Any]:
+    changed_arg = _changed_path_command_argument(changed_paths=normalized_paths, compact=compact)
     accepted_summary = "duplication accepted for now: <reason>; owner: <owner-or-none>"
     deferred_summary = "extraction deferred: <what should be extracted>; owner: <owner>; trigger: <when>"
     memory_accept = _command_with_cli_invoke(
-        command=(f'agentic-workspace memory capture-note --slug <slug> --summary "{accepted_summary}" --files {changed_arg} --format json'),
+        command=(
+            f'agentic-workspace memory capture-note --target . --slug <slug> --summary "{accepted_summary}" '
+            f"--files {changed_arg} --format json"
+        ),
         cli_invoke=cli_invoke,
     )
     memory_defer = _command_with_cli_invoke(
-        command=(f'agentic-workspace memory capture-note --slug <slug> --summary "{deferred_summary}" --files {changed_arg} --format json'),
+        command=(
+            f'agentic-workspace memory capture-note --target . --slug <slug> --summary "{deferred_summary}" '
+            f"--files {changed_arg} --format json"
+        ),
         cli_invoke=cli_invoke,
     )
     planning_defer = _command_with_cli_invoke(
@@ -16477,7 +16523,7 @@ def _reuse_pressure_recording_options(*, normalized_paths: list[str], state: str
         cli_invoke=cli_invoke,
     )
     memory_route = _command_with_cli_invoke(
-        command=f"agentic-workspace memory route --files {changed_arg} --format json",
+        command=f"agentic-workspace memory route --target . --files {changed_arg} --format json",
         cli_invoke=cli_invoke,
     )
     pressure_found = state in {"existing_helper_candidate", "similar_pattern_candidate", "abstraction_pressure"}
@@ -16536,6 +16582,7 @@ def _reuse_pressure_recording_options(*, normalized_paths: list[str], state: str
             "owner_targets": ["Planning", "GitHub issue", "Memory", "docs", "tests", "contracts"],
             "commands": [planning_defer, memory_defer],
         },
+        "path_argument_summary": _changed_path_argument_summary(changed_paths=normalized_paths) if compact else {"status": "exact"},
     }
 
 
@@ -16554,16 +16601,17 @@ def _compact_reuse_pressure_payload(payload: dict[str, Any]) -> dict[str, Any]:
             compact_finding["candidate_paths"] = candidate_paths[:3]
         compact_findings.append(compact_finding)
     memory_signals = payload.get("memory_signals", {})
-    compact_memory = (
-        {
+    compact_memory: dict[str, Any] = {}
+    if isinstance(memory_signals, dict):
+        compact_memory = {
             "status": memory_signals.get("status"),
             "note_count": memory_signals.get("note_count", 0),
             "matches": memory_signals.get("matches", [])[:2],
             "route_command": memory_signals.get("route_command"),
         }
-        if isinstance(memory_signals, dict)
-        else {}
-    )
+        path_summary = memory_signals.get("path_argument_summary")
+        if isinstance(path_summary, dict) and path_summary.get("status") == "collapsed":
+            compact_memory["path_argument_summary"] = path_summary
     compact_options: list[dict[str, Any]] = []
     for option in payload.get("next_decision_options", []):
         if not isinstance(option, dict):
@@ -16578,6 +16626,21 @@ def _compact_reuse_pressure_payload(payload: dict[str, Any]) -> dict[str, Any]:
     recording_options = payload.get("recording_options", {})
     accept_duplication = recording_options.get("accept_duplication", {}) if isinstance(recording_options, dict) else {}
     route_extraction = recording_options.get("route_extraction", {}) if isinstance(recording_options, dict) else {}
+    compact_recording_options: dict[str, Any] = {
+        "accept_duplication": {
+            "state": accept_duplication.get("state"),
+            "requires": accept_duplication.get("requires", []),
+            "commands": accept_duplication.get("commands", [])[:1],
+        },
+        "route_extraction": {
+            "state": route_extraction.get("state"),
+            "owner_targets": route_extraction.get("owner_targets", []),
+            "commands": route_extraction.get("commands", [])[:2],
+        },
+    }
+    recording_path_summary = recording_options.get("path_argument_summary") if isinstance(recording_options, dict) else None
+    if isinstance(recording_path_summary, dict) and recording_path_summary.get("status") == "collapsed":
+        compact_recording_options["path_argument_summary"] = recording_path_summary
     compact = {
         "kind": payload.get("kind"),
         "status": payload.get("status"),
@@ -16597,18 +16660,7 @@ def _compact_reuse_pressure_payload(payload: dict[str, Any]) -> dict[str, Any]:
         ],
         "allowed_outcomes": payload.get("allowed_outcomes", []),
         "memory_signals": compact_memory,
-        "recording_options": {
-            "accept_duplication": {
-                "state": accept_duplication.get("state"),
-                "requires": accept_duplication.get("requires", []),
-                "commands": accept_duplication.get("commands", [])[:1],
-            },
-            "route_extraction": {
-                "state": route_extraction.get("state"),
-                "owner_targets": route_extraction.get("owner_targets", []),
-                "commands": route_extraction.get("commands", [])[:2],
-            },
-        },
+        "recording_options": compact_recording_options,
         "next_decision_options": compact_options,
     }
     if "generated_artifact_aggregation" in payload:
@@ -16630,9 +16682,12 @@ def _compact_reuse_pressure_payload(payload: dict[str, Any]) -> dict[str, Any]:
     return compact
 
 
-def _reuse_pressure_memory_signals(*, target_root: Path, changed_paths: list[str], cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
+def _reuse_pressure_memory_signals(
+    *, target_root: Path, changed_paths: list[str], cli_invoke: str = DEFAULT_CLI_INVOKE, compact: bool = False
+) -> dict[str, Any]:
+    changed_arg = _changed_path_command_argument(changed_paths=changed_paths, compact=compact)
     route_command = _command_with_cli_invoke(
-        command=f"agentic-workspace memory route --files {' '.join(changed_paths) if changed_paths else '<changed paths>'} --format json",
+        command=f"agentic-workspace memory route --target . --files {changed_arg} --format json",
         cli_invoke=cli_invoke,
     )
     manifest_path = target_root / ".agentic-workspace/memory/repo/manifest.toml"
@@ -16643,9 +16698,10 @@ def _reuse_pressure_memory_signals(*, target_root: Path, changed_paths: list[str
             "matches": [],
             "route_command": route_command,
             "capture_command": _command_with_cli_invoke(
-                command="agentic-workspace memory capture-note --slug <slug> --summary <text> --files <changed paths> --format json",
+                command="agentic-workspace memory capture-note --target . --slug <slug> --summary <text> --files <changed paths> --format json",
                 cli_invoke=cli_invoke,
             ),
+            "path_argument_summary": _changed_path_argument_summary(changed_paths=changed_paths) if compact else {"status": "exact"},
         }
     try:
         manifest = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
@@ -16678,12 +16734,12 @@ def _reuse_pressure_memory_signals(*, target_root: Path, changed_paths: list[str
         "route_command": route_command,
         "capture_command": _command_with_cli_invoke(
             command=(
-                "agentic-workspace memory capture-note --slug <slug> --summary "
-                '"durable reuse/abstraction-boundary lesson: <lesson>" --files '
-                f"{' '.join(changed_paths) if changed_paths else '<changed paths>'} --format json"
+                "agentic-workspace memory capture-note --target . --slug <slug> --summary "
+                f'"durable reuse/abstraction-boundary lesson: <lesson>" --files {changed_arg} --format json'
             ),
             cli_invoke=cli_invoke,
         ),
+        "path_argument_summary": _changed_path_argument_summary(changed_paths=changed_paths) if compact else {"status": "exact"},
     }
 
 

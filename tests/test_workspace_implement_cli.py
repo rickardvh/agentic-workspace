@@ -287,6 +287,59 @@ def test_implement_groups_generated_reuse_pressure_under_source_owner(tmp_path: 
     assert [item["kind"] for item in payload["findings"]] == ["generated_artifact_source_owner"]
 
 
+def test_implement_compact_reuse_pressure_collapses_large_generated_file_sets(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    changed_paths = [f"generated/workspace/typescript/resources/operations/generated-{index}.json" for index in range(12)]
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                *changed_paths,
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    reuse_pressure = payload["reuse_pressure"]
+    route_command = reuse_pressure["memory_signals"]["route_command"]
+    assert "--target ." in route_command
+    assert "<collapsed-changed-paths>" in route_command
+    assert changed_paths[-1] not in route_command
+    summary = reuse_pressure["memory_signals"]["path_argument_summary"]
+    assert summary["status"] == "collapsed"
+    assert summary["generated_groups"] == [{"root": "generated/workspace/typescript/resources", "count": 12}]
+    assert reuse_pressure["recording_options"]["path_argument_summary"]["status"] == "collapsed"
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                *changed_paths,
+                "--verbose",
+                "--select",
+                "reuse_pressure",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    verbose_reuse_pressure = json.loads(capsys.readouterr().out)["values"]["reuse_pressure"]
+    assert changed_paths[-1] in verbose_reuse_pressure["memory_signals"]["route_command"]
+    assert "<collapsed-changed-paths>" not in verbose_reuse_pressure["memory_signals"]["route_command"]
+
+
 def test_implement_selector_surfaces_changed_path_impact_map(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
@@ -1658,6 +1711,7 @@ routes_from = ["src/sample_app/*.py"]
     assert reuse_pressure["memory_signals"]["status"] == "matched"
     assert reuse_pressure["memory_signals"]["matches"][0]["path"] == ".agentic-workspace/memory/repo/decisions/helper-boundaries.md"
     assert "memory route" in reuse_pressure["memory_signals"]["route_command"]
+    assert "--target ." in reuse_pressure["memory_signals"]["route_command"]
 
 
 def test_implement_reuse_pressure_keeps_small_direct_task_unblocked(tmp_path: Path, capsys) -> None:
