@@ -13,9 +13,7 @@ execplans = []
 
 [todo]
 active_items = []
-queued_items = [
-  { id = "workspace-intent-discovery-dialogue-protocol", title = "Add intent-discovery dialogue protocol for vague prompts", maturity = "ready", status = "next", surface = ".agentic-workspace/planning/execplans/workspace-intent-discovery-dialogue-protocol.plan.json", why_now = "https://github.com/rickardvh/agentic-workspace/issues/1197", owner_role = "implementation", review_role = "review", handoff_ready = true, next_action = "When selected, choose the smallest protocol or routing slice and prove vague, detailed, and direct-work examples.", done_when = "A usable bounded intent-discovery protocol exists and #1197 closure blockers are satisfied or preserved in continuation.", proof = "Focused startup or skill-routing tests plus the workspace proof selected by implement --changed.", refs = ["https://github.com/rickardvh/agentic-workspace/issues/1197"] },
-]
+queued_items = []
 
 [roadmap]
 lanes = []

@@ -47,7 +47,7 @@
       "Examples cover when to ask, when to acknowledge and proceed, and when not to interrupt direct work."
     ],
     "continuation_owner": "none",
-    "closeout_decision": "pending"
+    "closeout_decision": "archive-and-close"
   },
   "goal": [
     "Add a clear intent-discovery dialogue protocol for vague prompts before Planning or implementation silently collapses work into a convenient slice.",
@@ -65,17 +65,18 @@
       "outcome": "https://github.com/rickardvh/agentic-workspace/issues/1197",
       "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
       "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
-      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+      "proof": "make test-planning; make lint-planning; make typecheck-planning; make test-workspace; make lint-workspace; contract tooling; planning doctor; planning summary; git diff --check"
     },
     "execution": {
       "milestone": "workspace-intent-discovery-dialogue-protocol",
-      "status": "planned",
-      "next_step": "Fill in execution bounds, touched paths, and validation before implementation starts.",
-      "proof": "Fill in the narrowest command that proves the promoted work."
+      "status": "completed",
+      "next_step": "Archive this completed closeout record.",
+      "proof": "Focused intent-discovery startup/skill tests plus make test-planning, make lint-planning, make typecheck-planning, make test-workspace, make lint-workspace, contract tooling, planning doctor, and planning summary passed."
     },
     "scope": {
       "touched": [
-        "Fill in the concrete files before implementation starts."
+        "closeout scope recorded in closure_check and generated_closeout."
       ],
       "invariants": [
         "Preserve the planning contract and keep the work bounded to this plan."
@@ -93,17 +94,17 @@
     "activation trigger": "none"
   },
   "iterative_follow_through": {
-    "what this slice enabled": "none yet",
+    "what this slice enabled": "AW now has a bounded intent-discovery dialogue protocol and startup route for vague or high-stakes prompts.",
     "intentionally deferred": "none",
     "discovered implications": "none yet",
-    "proof achieved now": "pending",
-    "validation still needed": "current milestone validation remains pending",
-    "next likely slice": "continue the current milestone until the completion criteria are met"
+    "proof achieved now": "yes",
+    "validation still needed": "none for #1197 closure",
+    "next likely slice": "none"
   },
   "intent_interpretation": {
     "literal request": "Add intent-discovery dialogue protocol for vague prompts",
     "inferred intended outcome": "Counteract premature execution bias by making clarification the lower-cost path when stakes_if_wrong is high and inferred_intent_confidence is low.",
-    "chosen concrete what": "Route #1197 into queued Planning with enough normalized intent and closure constraints for a later implementation pass.",
+    "chosen concrete what": "Implement #1197 with a package-managed workspace-intent-discovery skill, startup ask gate, selector-backed protocol output, and focused tests.",
     "interpretation distance": "low",
     "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
   },
@@ -158,14 +159,14 @@
   ],
   "active_milestone": {
     "id": "workspace-intent-discovery-dialogue-protocol",
-    "status": "planned",
-    "scope": "Queued intake for #1197; implementation should first choose the smallest protocol/routing slice that makes vague-prompt clarification visible.",
-    "ready": "ready",
+    "status": "completed",
+    "scope": "#1197 is implemented by PR #1200; archive this intake scaffold as closeout history.",
+    "ready": "completed",
     "blocked": "none",
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "When selected for implementation, run start/implement for #1197, choose the smallest protocol/routing slice, and prove ask/proceed/direct-work examples."
+    "None; #1197 is implemented and ready to archive."
   ],
   "blockers": [
     "None."
@@ -192,52 +193,52 @@
     "Examples cover when to ask, when to acknowledge and proceed, and when not to interrupt direct work."
   ],
   "execution_run": {
-    "run status": "not-run-yet",
-    "executor": "",
+    "run status": "completed",
+    "executor": "Codex",
     "handoff source": "agentic-planning new-plan",
-    "what happened": "execution has not started",
-    "scope touched": "none yet",
-    "changed surfaces": "none yet; execution has not changed files",
-    "validations run": "pending",
-    "result for continuation": "continue from this scaffolded execplan",
-    "next step": "Fill in execution bounds, touched paths, and validation before implementation starts."
+    "what happened": "Implemented a bounded intent-discovery dialogue protocol, startup routing, package-managed skill payload, schema-clean queued-item creation, and external-intent candidate append fixes in PR #1200.",
+    "scope touched": "workspace startup/runtime, workspace skills payloads, planning new-plan state output, external-intent candidate append, and focused regression tests",
+    "changed surfaces": ".agentic-workspace/skills; src/agentic_workspace/_payload/.agentic-workspace/skills; src/agentic_workspace/workspace_runtime_primitives.py; packages/planning/src/repo_planning_bootstrap/installer.py; tests",
+    "validations run": "make test-planning; make lint-planning; make typecheck-planning; make test-workspace; make lint-workspace; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run agentic-workspace doctor --target . --modules planning --format json; uv run agentic-workspace summary --target . --format json; git diff --check",
+    "result for continuation": "no #1197 continuation remains",
+    "next step": "Archive this completed execplan and remove the queued planning item."
   },
   "finished_run_review": {
-    "review status": "pending",
-    "scope respected": "pending",
-    "proof status": "pending",
-    "intent served": "pending",
-    "config compliance": "pending",
-    "misinterpretation risk": "pending",
-    "follow-on decision": "pending"
+    "review status": "completed",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "archive-and-close"
   },
   "delegation_outcome_feedback": {
-    "route chosen": "pending",
-    "route skipped reason": "pending",
-    "expected savings": "pending",
-    "actual friction": "pending",
-    "proof result": "pending",
-    "quality concern": "pending",
-    "decomposition adjustment": "pending"
+    "route chosen": "stay-local",
+    "route skipped reason": "Review-comment cleanup is narrow Planning closeout hygiene.",
+    "expected savings": "none recorded",
+    "actual friction": "none recorded",
+    "proof result": "passed",
+    "quality concern": "none",
+    "decomposition adjustment": "none"
   },
   "proof_report": {
-    "validation proof": "pending",
-    "proof achieved now": "pending",
-    "evidence for \"proof achieved\" state": ""
+    "validation proof": "make test-planning; make lint-planning; make typecheck-planning; make test-workspace; make lint-workspace; contract tooling; planning doctor; planning summary; git diff --check",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Focused startup/skill tests cover ask, acknowledge-and-proceed, and direct-work cases; full workspace and planning proof passed before archive."
   },
   "intent_satisfaction": {
     "original intent": "GitHub #1197: add a bounded intent-discovery dialogue protocol for vague prompts.",
-    "was original intent fully satisfied?": "pending",
-    "evidence of intent satisfaction": "",
-    "unsolved intent passed to": "none yet"
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "PR #1200 implements the bounded intent-discovery skill/protocol, startup ask gate, selector output shape, loop control, and tests for ask, acknowledge-and-proceed, and direct-work cases.",
+    "unsolved intent passed to": "none"
   },
   "execution_summary": {
-    "outcome delivered": "not completed yet",
-    "validation confirmed": "pending",
-    "follow-on routed to": "none yet",
-    "post-work posterity capture": "pending",
+    "outcome delivered": "Implemented #1197 and the two dogfood intake fixes #1198 and #1199.",
+    "validation confirmed": "make test-planning; make lint-planning; make typecheck-planning; make test-workspace; make lint-workspace; contract tooling; planning doctor; planning summary; git diff --check",
+    "follow-on routed to": "none; #1197 is fully satisfied by PR #1200",
+    "post-work posterity capture": "this archived execplan records closeout proof and dogfood signal resolution",
     "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "current milestone"
+    "resume from": "none"
   },
   "durable_residue": {
     "status": "none",
@@ -248,26 +249,26 @@
     "retention after promotion": "retain"
   },
   "task_intent_promotion": {
-    "decision": "pending",
+    "decision": "do-not-promote",
     "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
-    "evidence source": "",
-    "target scope": "",
-    "proposed durable intent": "",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "none",
+    "proposed durable intent": "none yet",
     "confidence": "low",
     "needs review": true,
-    "owner surface": ""
+    "owner surface": "none"
   },
   "closure_check": {
-    "slice status": "pending",
-    "larger-intent status": "pending",
-    "closure decision": "pending",
-    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
-    "why this decision is honest": "",
-    "evidence carried forward": "",
-    "reopen trigger": ""
+    "closeout scope": "slice",
+    "slice status": "complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "#1197's full dialogue protocol is implemented and validated; no remaining #1197 Planning intent is carried by this execplan.",
+    "evidence carried forward": "make test-planning; make lint-planning; make typecheck-planning; make test-workspace; make lint-workspace; contract tooling; planning summary and doctor all passed before this closure hygiene fix.",
+    "reopen trigger": "Reopen if startup no longer routes low-confidence high-stakes vague prompts to intent discovery or cannot expose clarified intent promotion targets."
   },
   "improvement_signal_review": {
-    "status": "not_checked",
+    "status": "signals_fixed",
     "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
     "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
     "source": "operating_posture",
@@ -280,23 +281,73 @@
       "dismissed with reason"
     ],
     "ordinary output cap": 3,
-    "signals found": [],
-    "signals fixed": [],
+    "signals found": [
+      {
+        "summary": "planning new-plan --queue emitted schema-incomplete queued items during #1197 intake.",
+        "owner": "direct fix"
+      },
+      {
+        "summary": "external-intent apply-planning-candidates dry-run returned a parser-level TOML conflict without actionable recovery detail.",
+        "owner": "direct fix"
+      }
+    ],
+    "signals fixed": [
+      {
+        "summary": "#1198 fixed by emitting review_role, next_action, done_when, proof, and handoff_ready for new queued plans.",
+        "owner": "direct fix"
+      },
+      {
+        "summary": "#1199 fixed by handling inline candidates = [] and returning parser_error, error_location, recovery, and candidate_ids on blocked appends.",
+        "owner": "direct fix"
+      }
+    ],
     "signals routed": [],
     "signals dismissed": [],
-    "next owner": ""
+    "next owner": "see routed signal owner"
   },
   "closeout_distillation": {
     "buckets": {
-      "discard": [],
+      "discard": [
+        {
+          "summary": "Initial queued #1197 intake scaffold is superseded by the implementation and retained only as closeout history.",
+          "owner": "none",
+          "source": "review-comment closure hygiene"
+        }
+      ],
       "continuation": [],
       "memory": [],
-      "config_check": [],
+      "config_check": [
+        {
+          "summary": "#1198 fixed by emitting review_role, next_action, done_when, proof, and handoff_ready for new queued plans.",
+          "owner": "direct fix",
+          "source": "improvement_signal_review.signals fixed"
+        },
+        {
+          "summary": "#1199 fixed by handling inline candidates = [] and returning parser_error, error_location, recovery, and candidate_ids on blocked appends.",
+          "owner": "direct fix",
+          "source": "improvement_signal_review.signals fixed"
+        }
+      ],
       "docs": [],
       "issue_follow_up": []
     }
   },
   "drift_log": [
     "2026-05-28: Scaffolded by agentic-planning new-plan."
-  ]
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: GitHub #1197: add a bounded intent-discovery dialogue protocol for vague prompts.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: make test-planning; make lint-planning; make typecheck-planning; make test-workspace; make lint-workspace; contract tooling; planning doctor; planning summary; git diff --check\nChanged surfaces: .agentic-workspace/skills; src/agentic_workspace/_payload/.agentic-workspace/skills; src/agentic_workspace/workspace_runtime_primitives.py; packages/planning/src/repo_planning_bootstrap/installer.py; tests\nDurable residue: none (none)\nMemory learning: none\nFollow-up: none; #1197 is fully satisfied by PR #1200"
+  }
 }
