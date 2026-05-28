@@ -1140,6 +1140,9 @@ def test_typescript_runtime_check_rejects_python_handoff_behavior() -> None:
             "const nativeOperationIds = new Set([]);",
             "import { readFileSync, writeSync } from 'node:fs';",
             "const nativeContractCases = {};",
+            "const selectedFields = {};",
+            "const expectedFields = {};",
+            "function contractProjection() { return fieldAssertions; }",
             "function splitRuntimeCommand(commandLine) { return [commandLine]; }",
             "const [runtimeExecutable, ...runtimeArgs] = splitRuntimeCommand(runtimeCommand);",
             "result = spawnSync(runtimeExecutable, [...runtimeArgs, ...argv], { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });",
@@ -1167,6 +1170,10 @@ def test_typescript_runtime_check_rejects_python_handoff_behavior() -> None:
     assert any("Python/runtime-handoff marker: node:child_process" in error for error in errors)
     assert any("Python/runtime-handoff marker: Adapter runtime handoff failed" in error for error in errors)
     assert any("Python/runtime-handoff marker: nativeContractCases" in error for error in errors)
+    assert any("Python/runtime-handoff marker: contractProjection" in error for error in errors)
+    assert any("Python/runtime-handoff marker: selectedFields" in error for error in errors)
+    assert any("Python/runtime-handoff marker: expectedFields" in error for error in errors)
+    assert any("Python/runtime-handoff marker: fieldAssertions" in error for error in errors)
 
 
 def test_typescript_native_execution_check_rejects_missing_ir_steps(tmp_path: Path) -> None:

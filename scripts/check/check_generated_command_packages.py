@@ -1070,6 +1070,11 @@ def _validate_typescript_runtime_handoff_thinness(*, package: str, cli_text: str
         "nativeContractCases",
         "genericNativePayload",
         "frontDoorPayload",
+        "contractProjection",
+        "contract-projection",
+        "fieldAssertions",
+        "selectedFields",
+        "expectedFields",
     ]
     for source_label, source_text in (("src/cli.mjs", cli_text), ("src/runtime.mjs", runtime_text)):
         for fragment in forbidden_fragments:
