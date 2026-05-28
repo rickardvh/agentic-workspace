@@ -12,10 +12,12 @@ Use them when a compact report answer should make continuation cheaper without m
 | `repair_loop_residue` | Summarizes validation-driven repair residue: observed problem, inspection findings, focused change, validation evidence, remaining gap, continuation input, and stop reason. |
 | `structured_findings` | Provides a compact finding shape with owner and disposition fields so review, friction, Verification, and promotion residue can be routed or dismissed. |
 | `external_evidence_safety` | Summarizes external source freshness, local state, divergence, stale-after, closeout safety, and refresh route without making external systems authoritative. |
+| `workflow_compliance_summary` | Summarizes expected entrypoint, observed workflow use, satisfied or missing gates, skipped or unavailable steps, trust impact, and recovery action for takeover, recovery, review, and closeout. |
 | `continuation_next_actions` | Ranks next actions by available evidence, confidence, validation route, and stop condition. |
 | `migration_pilot_template` | Defines an optional migration-pilot decomposition pattern with inventory, target design, parity proof, validation, and rollout boundaries. |
 | `compact_output_criteria` | Names the fields compact outputs must preserve or point to: intent, evidence, next action, stop condition, changed surfaces, and unresolved risk. |
 | `automation_readiness` | Gives a provider-agnostic checklist for evaluating external workflows while keeping execution, secrets, and side effects outside AW. |
+| `section_catalog` | Lists lazy report selectors and their purpose without computing their full payloads. |
 
 ## Boundary
 
@@ -49,7 +51,9 @@ Use a projection only when the compact answer, task shape, or closeout question 
 ```bash
 agentic-workspace report --target ./repo --section completion_contract --format json
 agentic-workspace report --target ./repo --section external_evidence_safety --format json
+agentic-workspace report --target ./repo --section workflow_compliance_summary --format json
 agentic-workspace report --target ./repo --section continuation_next_actions --format json
+agentic-workspace report --target ./repo --section section_catalog --format json
 ```
 
 For closeout, preserve the completion boundary explicitly:

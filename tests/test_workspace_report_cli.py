@@ -286,6 +286,7 @@ def test_report_continuation_projection_sections_are_lazy(tmp_path: Path, capsys
         "repair_loop_residue": "agentic-workspace/repair-loop-residue/v1",
         "structured_findings": "agentic-workspace/structured-findings/v1",
         "continuation_next_actions": "agentic-workspace/continuation-next-actions/v1",
+        "workflow_compliance_summary": "agentic-workspace/workflow-compliance-summary/v1",
         "migration_pilot_template": "agentic-workspace/migration-pilot-template/v1",
         "compact_output_criteria": "agentic-workspace/compact-output-criteria/v1",
         "automation_readiness": "agentic-workspace/automation-readiness/v1",
@@ -296,6 +297,27 @@ def test_report_continuation_projection_sections_are_lazy(tmp_path: Path, capsys
         payload = json.loads(capsys.readouterr().out)
         assert payload["selector"] == {"section": section}
         assert payload["answer"]["kind"] == kind
+
+
+def test_report_section_catalog_lists_lazy_sections_without_full_report(tmp_path: Path, capsys, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+
+    def fail_full_report(**_kwargs: object) -> dict[str, object]:
+        raise AssertionError("section catalog should not build the full report")
+
+    monkeypatch.setattr(workspace_runtime_primitives, "_run_report_command", fail_full_report)
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "section_catalog", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert answer["kind"] == "agentic-workspace/report-section-catalog/v1"
+    assert answer["section_count"] == len(answer["lazy_sections"])
+    sections = {item["section"]: item for item in answer["lazy_sections"]}
+    assert "workflow_compliance_summary" in sections
+    assert "automation_readiness" in sections
+    assert sections["workflow_compliance_summary"]["payload_is_lazy"] is True
+    assert "--section workflow_compliance_summary" in sections["workflow_compliance_summary"]["command"]
+    assert "--section section_catalog" in answer["default_router_policy"]["catalog_command"]
 
 
 def test_report_external_evidence_safety_surfaces_divergence(tmp_path: Path, capsys) -> None:
@@ -354,6 +376,39 @@ def test_report_external_evidence_safety_blocks_stable_open_external_work(tmp_pa
     assert answer["closeout_blockers"] == ["external_open_items"]
     assert answer["source_state"]["open_count"] == 1
     assert answer["source_state"]["changed_count"] == 0
+
+
+def test_report_workflow_compliance_summary_surfaces_recovery_gates(tmp_path: Path, capsys, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    monkeypatch.setattr(
+        workspace_runtime_primitives,
+        "_active_planning_record_for_report_section",
+        lambda target_root: {
+            "status": "present",
+            "execution_run": {
+                "handoff source": "chat only",
+                "what happened": "Implemented without recording package workflow use.",
+            },
+            "closure_check": {"bounded_slice_complete": False},
+            "intent_continuity": {"larger_intent_complete": False},
+            "validation": {"status": "missing"},
+        },
+    )
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "workflow_compliance_summary", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert answer["kind"] == "agentic-workspace/workflow-compliance-summary/v1"
+    assert answer["status"] == "attention"
+    assert "start/preflight" in answer["expected_entrypoint"]
+    assert answer["observed_or_assumed_entrypoint"] == "chat only"
+    missing = {gate["id"]: gate for gate in answer["missing_gates"]}
+    assert "workflow_entrypoint_record" in missing
+    assert "proof_state" in missing
+    assert "completion_contract" in missing
+    assert answer["trust_impact"] == "lower-trust"
+    assert answer["recovery_action"]["action"] == "resolve-workflow_entrypoint_record"
+    assert answer["skipped_or_unavailable_steps"][0]["id"] == "external_evidence_safety"
 
 
 def test_report_completion_contract_distinguishes_closure_states(tmp_path: Path, capsys, monkeypatch) -> None:
