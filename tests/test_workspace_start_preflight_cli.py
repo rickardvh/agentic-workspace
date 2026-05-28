@@ -692,6 +692,21 @@ maintainer_mode = true
     assert maintainer_mode["primary_next_action"]["summary"].startswith("Use compact dogfooding report routes")
 
 
+def test_start_authority_markers_use_configured_agent_instructions_file(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        'schema_version = 1\n\n[workspace]\nagent_instructions_file = "GEMINI.md"\n',
+    )
+    _write(tmp_path / "GEMINI.md", "# Gemini startup\n")
+
+    assert cli.main(["start", "--target", str(tmp_path), "--changed", "GEMINI.md", "--verbose", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["authority_markers"][0]["path"] == "GEMINI.md"
+    assert payload["authority_markers"][0]["authority"] == "adapter"
+
+
 def test_start_tiny_profile_returns_first_contact_projection(capsys) -> None:
     task = "Start the way the repo instructs a new agent to start. Do not implement anything yet."
     assert cli.main(["start", "--task", task, "--format", "json"]) == 0

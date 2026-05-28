@@ -59,6 +59,23 @@ def test_model_cli_harness_default_output_root_uses_workspace_local_scratch() ->
     assert harness.DEFAULT_OUTPUT_ROOT == REPO_ROOT / ".agentic-workspace" / "local" / "scratch" / "model-cli-harness"
 
 
+def test_model_cli_harness_reads_configured_startup_instruction_file(tmp_path: Path) -> None:
+    harness = _load_harness()
+    (tmp_path / ".agentic-workspace").mkdir()
+    (tmp_path / ".agentic-workspace" / "config.toml").write_text(
+        'schema_version = 1\n\n[workspace]\nagent_instructions_file = "GEMINI.md"\n',
+        encoding="utf-8",
+    )
+    (tmp_path / "GEMINI.md").write_text("Use Gemini startup.\n", encoding="utf-8")
+    (tmp_path / "AGENTS.md").write_text("Wrong startup.\n", encoding="utf-8")
+
+    prompt = harness._startup_instruction_prompt(repo_path=tmp_path, prompt="Do work.")
+
+    assert "Repository startup instruction from GEMINI.md" in prompt
+    assert "Use Gemini startup." in prompt
+    assert "Wrong startup." not in prompt
+
+
 def test_model_cli_harness_tolerates_gemini_string_events_and_stats() -> None:
     harness = _load_harness()
     stdout = "\n".join(

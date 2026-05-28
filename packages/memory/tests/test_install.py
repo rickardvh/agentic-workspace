@@ -227,6 +227,22 @@ def test_direct_memory_install_skips_orchestrator_warning_when_workspace_present
     assert not any(action.kind == "warning" and action.path == target / ".agentic-workspace" / "WORKFLOW.md" for action in result.actions)
 
 
+def test_direct_memory_install_uses_configured_agent_instructions_file(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace").mkdir(parents=True, exist_ok=True)
+    (target / ".agentic-workspace" / "config.toml").write_text(
+        'schema_version = 1\n\n[workspace]\nagent_instructions_file = "GEMINI.md"\n',
+        encoding="utf-8",
+    )
+
+    result = installer.install_bootstrap(target=target)
+
+    assert (target / "GEMINI.md").exists()
+    assert not (target / "AGENTS.md").exists()
+    assert any(action.path == target / "GEMINI.md" for action in result.actions)
+
+
 def test_patch_agents_workflow_block_inserts_pointer_after_heading() -> None:
     existing = "# Agent Instructions\n\nRepo-local rules live here.\n"
 

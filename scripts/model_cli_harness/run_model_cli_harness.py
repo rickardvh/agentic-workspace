@@ -13,12 +13,13 @@ import shutil
 import signal
 import subprocess
 import sys
+import tomllib
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Iterable
 
-from agentic_workspace.config import WORKSPACE_LOCAL_SCRATCH_ROOT_PATH
+from agentic_workspace.config import DEFAULT_AGENT_INSTRUCTIONS_FILE, WORKSPACE_LOCAL_SCRATCH_ROOT_PATH
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SUITE = REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json"
@@ -48,6 +49,9 @@ EPHEMERAL_MUTATION_GLOBS = (
 HARNESS_SETUP_MUTATION_PATHS = (
     ".agentic-workspace/",
     "AGENTS.md",
+    "CLAUDE.md",
+    "GEMINI.md",
+    ".cursorrules",
     "pyproject.toml",
 )
 
@@ -121,22 +125,30 @@ def _prompt_transport(
     config = adapter.get("prompt_transport")
     prompt_length = len(prompt)
     if config is None:
-        return prompt, [], {
-            "mode": "inline",
-            "prompt_length": prompt_length,
-            "threshold_chars": None,
-            "prompt_file": "",
-        }
+        return (
+            prompt,
+            [],
+            {
+                "mode": "inline",
+                "prompt_length": prompt_length,
+                "threshold_chars": None,
+                "prompt_file": "",
+            },
+        )
     if not isinstance(config, dict):
         raise ValueError("adapter.prompt_transport must be an object")
     threshold = int(config.get("threshold_chars", 8000))
     if prompt_length <= threshold:
-        return prompt, [], {
-            "mode": "inline",
-            "prompt_length": prompt_length,
-            "threshold_chars": threshold,
-            "prompt_file": "",
-        }
+        return (
+            prompt,
+            [],
+            {
+                "mode": "inline",
+                "prompt_length": prompt_length,
+                "threshold_chars": threshold,
+                "prompt_file": "",
+            },
+        )
 
     prompt_dir = run_root / "prompts"
     prompt_dir.mkdir(parents=True, exist_ok=True)
@@ -148,8 +160,7 @@ def _prompt_transport(
         "prompt_length": str(prompt_length),
     }
     file_prompt_template = str(
-        config.get("file_prompt")
-        or "Read the attached prompt file and follow it exactly. Treat it as the complete task prompt."
+        config.get("file_prompt") or "Read the attached prompt file and follow it exactly. Treat it as the complete task prompt."
     )
     inline_prompt = _replace_placeholders(file_prompt_template, replacements=transport_replacements)
     file_args = _render_list(
@@ -157,13 +168,17 @@ def _prompt_transport(
         replacements=transport_replacements,
     )
     mode = str(config.get("mode") or "file")
-    return inline_prompt, file_args, {
-        "mode": mode,
-        "prompt_length": prompt_length,
-        "inline_prompt_length": len(inline_prompt),
-        "threshold_chars": threshold,
-        "prompt_file": str(prompt_file),
-    }
+    return (
+        inline_prompt,
+        file_args,
+        {
+            "mode": mode,
+            "prompt_length": prompt_length,
+            "inline_prompt_length": len(inline_prompt),
+            "threshold_chars": threshold,
+            "prompt_file": str(prompt_file),
+        },
+    )
 
 
 def _render_command_template(
@@ -225,8 +240,30 @@ def _render_prompt(template: str, *, replacements: dict[str, str]) -> str:
     return _replace_placeholders(template, replacements=replacements)
 
 
+def startup_instructions_file(repo_path: Path) -> str:
+    startup_file = DEFAULT_AGENT_INSTRUCTIONS_FILE
+    for relative_path in (".agentic-workspace/config.toml", ".agentic-workspace/config.local.toml"):
+        config_path = repo_path / relative_path
+        if not config_path.is_file():
+            continue
+        try:
+            payload = tomllib.loads(config_path.read_text(encoding="utf-8"))
+        except (OSError, tomllib.TOMLDecodeError):
+            continue
+        if relative_path.endswith("config.local.toml") and payload.get("schema_version") != 1:
+            continue
+        workspace = payload.get("workspace")
+        if not isinstance(workspace, dict):
+            continue
+        configured = workspace.get("agent_instructions_file")
+        if isinstance(configured, str) and configured.strip():
+            startup_file = configured.strip()
+    return startup_file
+
+
 def _startup_instruction_prompt(*, repo_path: Path, prompt: str) -> str:
-    agents_path = repo_path / "AGENTS.md"
+    startup_file = startup_instructions_file(repo_path)
+    agents_path = repo_path / startup_file
     if not agents_path.exists():
         return prompt
     startup_text = agents_path.read_text(encoding="utf-8").strip()
@@ -235,7 +272,7 @@ def _startup_instruction_prompt(*, repo_path: Path, prompt: str) -> str:
     compact_startup = " ".join(line.strip() for line in startup_text.splitlines() if line.strip())
     return (
         f"{prompt}\n\n"
-        "Repository startup instruction from AGENTS.md to apply before non-trivial requests: "
+        f"Repository startup instruction from {startup_file or DEFAULT_AGENT_INSTRUCTIONS_FILE} to apply before non-trivial requests: "
         f"{compact_startup}\n"
     )
 
@@ -464,7 +501,9 @@ def _with_git_ceiling(env: dict[str, str], *, run_root: Path) -> dict[str, str]:
 def _is_ephemeral_mutation_path(path: str) -> bool:
     normalized = path.replace("\\", "/")
     parts = normalized.split("/")
-    if any(part in {".git", ".mypy_cache", ".pytest_cache", ".ruff_cache", ".tox", ".venv", "__pycache__", "node_modules"} for part in parts):
+    if any(
+        part in {".git", ".mypy_cache", ".pytest_cache", ".ruff_cache", ".tox", ".venv", "__pycache__", "node_modules"} for part in parts
+    ):
         return True
     return any(normalized.startswith(prefix) or normalized == prefix.rstrip("/") for prefix in EPHEMERAL_MUTATION_PATHS) or any(
         fnmatch.fnmatch(normalized, pattern) for pattern in EPHEMERAL_MUTATION_GLOBS
@@ -476,7 +515,10 @@ def _is_harness_setup_mutation_path(path: str, *, patterns: Iterable[str] | None
         return False
     normalized = path.replace("\\", "/")
     candidates = tuple(patterns)
-    return any(normalized.startswith(pattern) or normalized == pattern.rstrip("/") or fnmatch.fnmatch(normalized, pattern) for pattern in candidates)
+    return any(
+        normalized.startswith(pattern) or normalized == pattern.rstrip("/") or fnmatch.fnmatch(normalized, pattern)
+        for pattern in candidates
+    )
 
 
 def _file_snapshot(root: Path, *, include_ignored: bool = False) -> dict[str, dict[str, Any]]:
@@ -526,7 +568,11 @@ def _snapshot_diff(
     raw_modified = sorted(path for path in before_paths & after_paths if before[path] != after[path])
     changed_paths = sorted(set(raw_created + raw_deleted + raw_modified))
     ignored_paths = [path for path in changed_paths if _is_ephemeral_mutation_path(path)]
-    setup_paths = [path for path in changed_paths if path not in ignored_paths and _is_harness_setup_mutation_path(path, patterns=harness_setup_patterns)]
+    setup_paths = [
+        path
+        for path in changed_paths
+        if path not in ignored_paths and _is_harness_setup_mutation_path(path, patterns=harness_setup_patterns)
+    ]
     source_paths = [path for path in changed_paths if path not in set(ignored_paths) and path not in set(setup_paths)]
     source_changes = _path_changes(before, after, paths=source_paths)
     ignored_changes = _path_changes(before, after, paths=ignored_paths)
@@ -880,7 +926,9 @@ def _proportionality_metrics(
     created = [path.replace("\\", "/") for path in (mutation_summary or {}).get("created", []) if isinstance(path, str)]
     executed_command_text = _normalized_command_text(_executed_command_text(result))
     scored_response_text = _scored_agent_response_text(result)
-    mentioned_paths = sorted(dict.fromkeys([*_mentioned_workspace_paths(scored_response_text), *_mentioned_workspace_paths(executed_command_text)]))
+    mentioned_paths = sorted(
+        dict.fromkeys([*_mentioned_workspace_paths(scored_response_text), *_mentioned_workspace_paths(executed_command_text)])
+    )
     scored_text = _normalized_command_text(scored_response_text)
     combined_agent_text = f"{executed_command_text}\n{scored_text}"
     workspace_mentions = [path for path in mentioned_paths if path.startswith(".agentic-workspace/")]
@@ -1175,10 +1223,7 @@ def _created_path_is_planning_only_side_doc(path: str) -> bool:
     if normalized.startswith(".agentic-workspace/planning/"):
         return False
     return normalized.startswith(".agentic-workspace/") and (
-        name in {"architecture.md", "adr.md", "handoff.md"}
-        or "architecture" in name
-        or "adr" in name
-        or "handoff" in name
+        name in {"architecture.md", "adr.md", "handoff.md"} or "architecture" in name or "adr" in name or "handoff" in name
     )
 
 
@@ -1245,7 +1290,7 @@ def _agentic_workspace_tooling_unavailable(result: dict[str, Any]) -> bool:
     return (
         "Permission denied and could not request permission from user" in combined
         or 'Tool "run_shell_command" not found' in combined
-        or "Tool \"run_shell_command\" not found" in combined
+        or 'Tool "run_shell_command" not found' in combined
     )
 
 
@@ -1261,11 +1306,7 @@ def _raw_planning_before_fallback_workflow(result: dict[str, Any]) -> bool:
     raw_positions = [text.find(marker) for marker in raw_markers if text.find(marker) >= 0]
     if not raw_positions:
         return False
-    workflow_positions = [
-        text.find(marker)
-        for marker in (".agentic-workspace/workflow.md", "workflow.md")
-        if text.find(marker) >= 0
-    ]
+    workflow_positions = [text.find(marker) for marker in (".agentic-workspace/workflow.md", "workflow.md") if text.find(marker) >= 0]
     first_raw = min(raw_positions)
     first_workflow = min(workflow_positions) if workflow_positions else -1
     return first_workflow == -1 or first_raw < first_workflow
@@ -1484,14 +1525,14 @@ def _executed_command_text(result: dict[str, Any]) -> str:
         command_fragments.extend(_copilot_markdown_shell_commands(source))
         command_fragments.extend(_copilot_plain_shell_commands(source))
         for event in _json_objects_from_lines(source):
-                command = event.get("command")
-                if isinstance(command, str):
-                    command_fragments.append(command)
-                item = event.get("item")
-                if isinstance(item, dict):
-                    item_command = item.get("command")
-                    if isinstance(item_command, str):
-                        command_fragments.append(item_command)
+            command = event.get("command")
+            if isinstance(command, str):
+                command_fragments.append(command)
+            item = event.get("item")
+            if isinstance(item, dict):
+                item_command = item.get("command")
+                if isinstance(item_command, str):
+                    command_fragments.append(item_command)
         payload = _json_document(source)
         if payload is None:
             continue
@@ -1658,7 +1699,9 @@ def _read_surface_quality_signals(
         {
             "id": "read_surface_entrypoint_used",
             "status": "satisfied" if used_start or used_implement or used_summary else "weak",
-            "evidence": "start/implement/summary observed" if used_start or used_implement or used_summary else "no package routing command observed",
+            "evidence": "start/implement/summary observed"
+            if used_start or used_implement or used_summary
+            else "no package routing command observed",
         }
     ]
     if scenario_id == "direct-task-minimal-overhead":
@@ -1676,7 +1719,9 @@ def _read_surface_quality_signals(
         signals.append(
             {
                 "id": "read_surface_under_read",
-                "status": "weak" if raw_before_fallback or (unclear and not (used_start or used_implement or used_summary)) else "satisfied",
+                "status": "weak"
+                if raw_before_fallback or (unclear and not (used_start or used_implement or used_summary))
+                else "satisfied",
                 "evidence": (
                     "raw Planning surface was inspected before fallback workflow"
                     if raw_before_fallback
@@ -2086,13 +2131,17 @@ def _semantic_workflow_warnings(
         if variant == "strong-target-mechanical-unclear-proof":
             if not any(marker in response_lower for marker in inspection_markers):
                 add("The unclear-proof variant did not require proof/source-authority inspection before down-routing.")
-            if any(marker in response_lower for marker in downroute_markers) and not any(marker in response_lower for marker in inspection_markers):
+            if any(marker in response_lower for marker in downroute_markers) and not any(
+                marker in response_lower for marker in inspection_markers
+            ):
                 add("The unclear-proof variant down-routed without proof or generated-source guardrails.")
         if variant == "post-run-self-review":
             review_markers = ("why", "because", "evidence", "prevent", "future", "trust", "guardrail")
             if not any(marker in response_lower for marker in review_markers):
                 add("The post-run review variant did not ask for rationale, evidence, or prevention signals.")
-            if "everything is fine" in response_lower and not any(marker in response_lower for marker in ("lower trust", "low trust", "not trust")):
+            if "everything is fine" in response_lower and not any(
+                marker in response_lower for marker in ("lower trust", "low trust", "not trust")
+            ):
                 add("The post-run review variant accepted weak-agent confidence without trust qualification.")
         if variant == "handoff-packet-contents":
             packet_markers = (
@@ -2138,7 +2187,8 @@ def _semantic_workflow_warnings(
             if "config.local" not in full_response_lower and "local-override" not in full_response_lower:
                 add("The agent did not identify local config as the authority for delegation posture.")
             if any(marker in response_lower for marker in ("auto-delegate", "automatically delegate", "spawn", "hand off now")) and not any(
-                marker in response_lower for marker in ("not permitted", "disabled", "manual", "suggest", "human", "safe_to_auto_run_commands")
+                marker in response_lower
+                for marker in ("not permitted", "disabled", "manual", "suggest", "human", "safe_to_auto_run_commands")
             ):
                 add("The agent treated delegation as executable despite local safety controls.")
         if scenario_id == "config-output-posture":
@@ -2181,8 +2231,10 @@ def _semantic_workflow_warnings(
             "planning",
             "issue",
         )
-        if not is_vague_intent_variant and any(marker in response_lower for marker in full_satisfaction_markers) and not any(
-            marker in response_lower for marker in partial_markers
+        if (
+            not is_vague_intent_variant
+            and any(marker in response_lower for marker in full_satisfaction_markers)
+            and not any(marker in response_lower for marker in partial_markers)
         ):
             add("The agent treated local proof or a narrow wording change as full satisfaction of the broader human intent.")
         if "tests passed" in response_lower and "intent" not in response_lower:
@@ -2226,9 +2278,7 @@ def _semantic_workflow_warnings(
             if not any(marker in response_lower for marker in satisfaction_markers):
                 add("The vague-outcome variant did not define how satisfaction would be judged.")
             raw_marker_positions = [
-                full_response_path_normalized.find(marker)
-                for marker in raw_workspace_markers
-                if marker in full_response_path_normalized
+                full_response_path_normalized.find(marker) for marker in raw_workspace_markers if marker in full_response_path_normalized
             ]
             compact_marker_positions = [
                 full_response_lower.find(marker) for marker in compact_command_markers if marker in full_response_lower
@@ -2237,7 +2287,11 @@ def _semantic_workflow_warnings(
             first_compact_marker = min(compact_marker_positions) if compact_marker_positions else None
             if first_raw_marker is not None and (first_compact_marker is None or first_raw_marker < first_compact_marker):
                 add("The vague-outcome variant inspected raw workspace files before using compact startup or summary surfaces.")
-            if any(marker in response_lower for marker in solution_markers) and "rather than" not in response_lower and "not jump" not in response_lower:
+            if (
+                any(marker in response_lower for marker in solution_markers)
+                and "rather than" not in response_lower
+                and "not jump" not in response_lower
+            ):
                 add("The vague-outcome variant jumped to a solution without preserving intent separately.")
 
     deduped: list[dict[str, str]] = []
@@ -2532,11 +2586,7 @@ def _capability_routing_evaluation(
 ) -> dict[str, Any] | None:
     if scenario_id != "capability-fit-routing":
         return None
-    semantic_failures = [
-        warning
-        for warning in warnings
-        if warning.get("warning_class") == "model_cli_semantic_workflow_failure"
-    ]
+    semantic_failures = [warning for warning in warnings if warning.get("warning_class") == "model_cli_semantic_workflow_failure"]
     required_command_misses = [
         warning
         for warning in warnings
@@ -2559,7 +2609,9 @@ def _capability_routing_evaluation(
     feedback_warning_count = 0
     if isinstance(postmortem_feedback, dict):
         feedback_status = str(postmortem_feedback.get("status", "available"))
-        feedback_warning_count = len(postmortem_feedback.get("warnings", [])) if isinstance(postmortem_feedback.get("warnings"), list) else 0
+        feedback_warning_count = (
+            len(postmortem_feedback.get("warnings", [])) if isinstance(postmortem_feedback.get("warnings"), list) else 0
+        )
     return {
         "kind": "agentic-workspace/capability-routing-evaluation/v1",
         "status": status,
@@ -2583,9 +2635,7 @@ def _capability_routing_evaluation(
 
 def _aggregate_capability_routing_evaluations(results: list[dict[str, Any]]) -> dict[str, Any]:
     evaluations = [
-        result.get("capability_routing_evaluation")
-        for result in results
-        if isinstance(result.get("capability_routing_evaluation"), dict)
+        result.get("capability_routing_evaluation") for result in results if isinstance(result.get("capability_routing_evaluation"), dict)
     ]
     statuses: dict[str, int] = {}
     for evaluation in evaluations:
@@ -2648,10 +2698,7 @@ def compare_results(*, baseline_path: Path, current_path: Path) -> dict[str, Any
     proportionality_delta = {
         key: int(current_proportionality.get("totals", {}).get(key, 0) or 0)
         - int(baseline_proportionality.get("totals", {}).get(key, 0) or 0)
-        for key in sorted(
-            set(baseline_proportionality.get("totals", {}))
-            | set(current_proportionality.get("totals", {}))
-        )
+        for key in sorted(set(baseline_proportionality.get("totals", {})) | set(current_proportionality.get("totals", {})))
     }
     if introduced:
         interpretation = "regressed"
@@ -2984,7 +3031,9 @@ def run_suite(
                     followup_dir.mkdir(parents=True, exist_ok=True)
                     followup_share = followup_dir / f"turn-{index}.md"
                     followup_transcript = followup_dir / f"turn-{index}.jsonl"
-                    followup_prompt = _render_prompt(followup_prompt_template, replacements={**replacements, "previous_share_path": str(paths.share_path)})
+                    followup_prompt = _render_prompt(
+                        followup_prompt_template, replacements={**replacements, "previous_share_path": str(paths.share_path)}
+                    )
                     followup_replacements = {
                         **replacements,
                         "prompt": followup_prompt,

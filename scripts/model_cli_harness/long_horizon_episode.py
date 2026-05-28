@@ -173,7 +173,7 @@ def _bootstrap_aw_mode(repo_path: Path) -> None:
     if not target_workspace.exists():
         shutil.copytree(source_workspace, target_workspace)
     source_agents = (AW_MODE_FIXTURE / "AGENTS.md").read_text(encoding="utf-8").strip()
-    target_agents = repo_path / "AGENTS.md"
+    target_agents = repo_path / harness.startup_instructions_file(repo_path)
     if target_agents.exists():
         existing_agents = target_agents.read_text(encoding="utf-8")
         if "<!-- agentic-workspace:workflow:start -->" not in existing_agents:
@@ -323,10 +323,8 @@ def _evaluation_prompt(*, episode: dict[str, Any], mode_result: dict[str, Any]) 
         "mode_result": mode_result,
         "hidden_oracle_excluded": hidden_oracle is not None,
     }
-    return (
-        "Review this long-horizon episode evidence and return only a JSON object matching "
-        f"{EVALUATION_KIND}.\n\n"
-        + json.dumps(evidence_bundle, indent=2, sort_keys=True)
+    return f"Review this long-horizon episode evidence and return only a JSON object matching {EVALUATION_KIND}.\n\n" + json.dumps(
+        evidence_bundle, indent=2, sort_keys=True
     )
 
 
@@ -417,11 +415,7 @@ def _continuation_comparison(mode_results: list[dict[str, Any]]) -> dict[str, An
             phases = []
         adapters = [str(phase.get("adapter_id", "")) for phase in phases if isinstance(phase, dict)]
         models = [str(phase.get("model", "")) for phase in phases if isinstance(phase, dict)]
-        contributions = [
-            str(phase.get("continuation_contribution", "unknown"))
-            for phase in phases
-            if isinstance(phase, dict)
-        ]
+        contributions = [str(phase.get("continuation_contribution", "unknown")) for phase in phases if isinstance(phase, dict)]
         if len(adapters) <= 1:
             kind = "single-phase"
         elif len(set(adapters)) == 1 and len(set(models)) == 1:
@@ -460,7 +454,9 @@ def _continuation_comparison(mode_results: list[dict[str, Any]]) -> dict[str, An
 def _path_contribution_kind(paths: list[str]) -> str:
     if any(path.startswith(("src/", "lib/", "packages/")) and not path.endswith((".md", ".txt")) for path in paths):
         return "changed-source"
-    if any(path.startswith(("test/", "tests/", "testing/")) or path.endswith(("_test.py", "test.py")) or "/test_" in path for path in paths):
+    if any(
+        path.startswith(("test/", "tests/", "testing/")) or path.endswith(("_test.py", "test.py")) or "/test_" in path for path in paths
+    ):
         return "changed-tests"
     if paths:
         return "changed-non-source"
@@ -469,9 +465,7 @@ def _path_contribution_kind(paths: list[str]) -> str:
 
 def _phase_contribution(mutation_summary: dict[str, Any]) -> dict[str, Any]:
     paths = sorted(
-        set(mutation_summary.get("created", []))
-        | set(mutation_summary.get("modified", []))
-        | set(mutation_summary.get("deleted", []))
+        set(mutation_summary.get("created", [])) | set(mutation_summary.get("modified", [])) | set(mutation_summary.get("deleted", []))
     )
     kind = _path_contribution_kind([str(path) for path in paths])
     if kind == "no-op" and mutation_summary.get("raw_status") == "changed":
@@ -614,7 +608,12 @@ def run_episode(
             }
             command, resolved_model, adapter, prompt_transport, command_replacements = _adapter_command(
                 suite=suite,
-                adapter_id=str(evaluator_config.get("adapter") or episode.get("default_evaluator_adapter") or episode.get("default_adapter") or "copilot"),
+                adapter_id=str(
+                    evaluator_config.get("adapter")
+                    or episode.get("default_evaluator_adapter")
+                    or episode.get("default_adapter")
+                    or "copilot"
+                ),
                 model=evaluator_config.get("model") if isinstance(evaluator_config.get("model"), str) else None,
                 replacements=evaluator_replacements,
             )
@@ -638,7 +637,12 @@ def run_episode(
                 evaluation_status = "not-run"
             mode_result["evaluation"] = {
                 "status": evaluation_status,
-                "adapter_id": str(evaluator_config.get("adapter") or episode.get("default_evaluator_adapter") or episode.get("default_adapter") or "copilot"),
+                "adapter_id": str(
+                    evaluator_config.get("adapter")
+                    or episode.get("default_evaluator_adapter")
+                    or episode.get("default_adapter")
+                    or "copilot"
+                ),
                 "model": resolved_model,
                 "prompt": evaluator_prompt,
                 "prompt_transport": prompt_transport,
