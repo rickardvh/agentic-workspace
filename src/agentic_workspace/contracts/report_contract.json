@@ -36,6 +36,14 @@
     "maintenance_pressure",
     "operational_compression",
     "successful_completion_cost",
+    "completion_contract",
+    "repair_loop_residue",
+    "structured_findings",
+    "external_evidence_safety",
+    "continuation_next_actions",
+    "migration_pilot_template",
+    "compact_output_criteria",
+    "automation_readiness",
     "decision_pressure",
     "closeout_trust",
     "external_work_reconciliation",
@@ -66,6 +74,7 @@
     "let optimization bias change rendering density, not canonical truth or execution method",
     "route improvement signals through one intake model before promoting them to work, memory, docs, checks, or dismissal",
     "make recent successful-completion cost evidence inspectable without broad dogfooding or review archaeology",
-    "compress routine agent routing into authority, active work, evidence, durable knowledge, and promotion residue without changing canonical owners"
+    "compress routine agent routing into authority, active work, evidence, durable knowledge, and promotion residue without changing canonical owners",
+    "expose continuation, completion, external-evidence, automation-readiness, and migration-pilot answers as derived projections rather than new stores or runtime ownership"
   ]
 }

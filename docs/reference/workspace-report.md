@@ -82,6 +82,14 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `effective_authority` | object | yes |  | Resolved authority hierarchy for workspace, module, and repo-owned surfaces. |  |  |
 | `operational_compression` | object | yes |  | Compression signals that keep ordinary agent startup and reporting cheap. |  |  |
 | `successful_completion_cost` | object | yes |  | Recent model CLI evaluation cost, package-read overhead, and rework signals for advisory optimization decisions. |  |  |
+| `completion_contract` | object | yes |  | Derived Planning completion-contract lens for done, partial, blocked, and continuation-required decisions. |  |  |
+| `repair_loop_residue` | object | yes |  | Derived validation-driven repair residue across Planning and Verification. |  |  |
+| `structured_findings` | object | yes |  | Structured finding residue shape for review and promotion routing. |  |  |
+| `external_evidence_safety` | object | yes |  | External evidence freshness, divergence, stale-after, and closeout-safety projection. |  |  |
+| `continuation_next_actions` | object | yes |  | Evidence-ranked next actions for safe continuation. |  |  |
+| `migration_pilot_template` | object | yes |  | Optional migration-pilot decomposition template with parity and rollout boundaries. |  |  |
+| `compact_output_criteria` | object | yes |  | Criteria for compact CLI outputs to remain sufficient for cheap continuation. |  |  |
+| `automation_readiness` | object | yes |  | Provider-agnostic automation-readiness checklist that keeps execution outside AW. |  |  |
 | `decision_pressure` | object | yes |  | Host architecture-decision configuration or discovered ADR target, existing decision index, promotion pressure, and command-owned scaffold routes. |  |  |
 | `maintenance_pressure` | object | yes |  | Maintainer-facing pressure signals and optional follow-up routes. |  |  |
 | `closeout_trust` | object | yes |  | Trust signals for whether recent or current work can be safely closed. |  |  |

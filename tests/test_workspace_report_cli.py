@@ -273,6 +273,96 @@ def test_report_verification_section_loads_repo_generated_adapter_manifest(capsy
     assert "generated_adapter_conformance" in routes
 
 
+def test_report_continuation_projection_sections_are_lazy(tmp_path: Path, capsys, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+
+    def fail_full_report(**_kwargs: object) -> dict[str, object]:
+        raise AssertionError("derived continuation sections should not build the full report")
+
+    monkeypatch.setattr(workspace_runtime_primitives, "_run_report_command", fail_full_report)
+
+    sections = {
+        "completion_contract": "agentic-workspace/completion-contract/v1",
+        "repair_loop_residue": "agentic-workspace/repair-loop-residue/v1",
+        "structured_findings": "agentic-workspace/structured-findings/v1",
+        "continuation_next_actions": "agentic-workspace/continuation-next-actions/v1",
+        "migration_pilot_template": "agentic-workspace/migration-pilot-template/v1",
+        "compact_output_criteria": "agentic-workspace/compact-output-criteria/v1",
+        "automation_readiness": "agentic-workspace/automation-readiness/v1",
+    }
+
+    for section, kind in sections.items():
+        assert cli.main(["report", "--target", str(tmp_path), "--section", section, "--format", "json"]) == 0
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["selector"] == {"section": section}
+        assert payload["answer"]["kind"] == kind
+
+
+def test_report_external_evidence_safety_surfaces_divergence(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_json(
+        tmp_path / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json",
+        {
+            "kind": "planning-external-intent-evidence/v1",
+            "refreshed_at": "2026-05-28T08:00:00Z",
+            "items": [
+                {"system": "github", "id": "1179", "status": "open", "title": "External evidence safety"},
+                {"system": "github", "id": "old", "status": "closed", "title": "Closed old work"},
+            ],
+            "previous_items": [
+                {"system": "github", "id": "1179", "status": "closed", "title": "External evidence safety"},
+                {"system": "github", "id": "old", "status": "open", "title": "Closed old work"},
+            ],
+        },
+    )
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "external_evidence_safety", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert answer["kind"] == "agentic-workspace/external-evidence-safety/v1"
+    assert answer["status"] == "attention"
+    assert answer["closeout_safe"] is False
+    assert answer["source_state"]["changed_count"] == 2
+    assert answer["source_state"]["closed_count"] == 1
+    assert answer["divergence"]["present"] is True
+    assert "external-intent refresh-github" in answer["refresh_command"]
+
+
+def test_report_structured_findings_merges_verification_and_external_residue(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "verification" / "manifest.toml",
+        """
+schema_version = "agentic-workspace/verification-manifest/v1"
+
+[protocols.runbook_review]
+title = "Runbook review"
+purpose = "Verify runbook changes."
+applies_to_paths = ["docs/runbooks/**"]
+expected_evidence = ["runbook_reviewed"]
+review_owner = "ops"
+
+[known_gaps.runbook_gap]
+protocol_id = "runbook_review"
+reason = "Environment-specific rollback coverage is still missing."
+owner = "ops"
+status = "open"
+blocked_claims = ["close-parent-lane"]
+""",
+    )
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "structured_findings", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert answer["kind"] == "agentic-workspace/structured-findings/v1"
+    assert answer["entry_count"] == 1
+    finding = answer["entries"][0]
+    assert finding["id"] == "runbook_gap"
+    assert finding["kind"] == "verification-known-gap"
+    assert finding["proposed_owner"] == "ops"
+    assert finding["disposition"] == "route-or-waive"
+
+
 def test_report_verification_manifest_rejects_protocol_without_activation(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(
@@ -694,6 +784,9 @@ def test_report_real_init_summarizes_combined_workspace_state(tmp_path: Path, ca
     assert "execution_shape" in payload["schema"]["shared_fields"]
     assert "external_work_delta" in payload["schema"]["shared_fields"]
     assert "successful_completion_cost" in payload["schema"]["shared_fields"]
+    assert "completion_contract" in payload["schema"]["shared_fields"]
+    assert "external_evidence_safety" in payload["schema"]["shared_fields"]
+    assert "automation_readiness" in payload["schema"]["shared_fields"]
     assert "module_reports" in payload["schema"]["shared_fields"]
     assert payload["selected_modules"] == ["planning", "memory"]
     assert payload["installed_modules"] == ["planning", "memory"]

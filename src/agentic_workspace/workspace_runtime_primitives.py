@@ -6235,6 +6235,18 @@ def _run_report_command(
         target_root=target_root,
         compact=False,
     )
+    payload.update(
+        _derived_continuation_projection_payloads(
+            target_root=target_root,
+            config=config,
+            source_payload=payload,
+            active_planning_record=raw_active_planning_record or active_planning_record,
+            assurance_requirements=assurance_requirements,
+            verification=verification,
+            external_work_delta=external_work_delta,
+            external_work_reconciliation=external_work_reconciliation,
+        )
+    )
     payload["operational_compression"] = _operational_compression_payload(
         report_payload=payload, module_reports=module_reports, findings=aggregated_findings, surface_value_guardrail=surface_value_guardrail
     )
@@ -6277,6 +6289,511 @@ def _active_planning_record_for_report_section(*, target_root: Path) -> dict[str
     return _raw_active_planning_record_for_closeout(planning_record={}, target_root=target_root)
 
 
+def _completion_contract_payload(
+    *,
+    active_planning_record: dict[str, Any],
+    external_evidence_safety: dict[str, Any] | None = None,
+    cli_invoke: str = DEFAULT_CLI_INVOKE,
+) -> dict[str, Any]:
+    active_planning_record = active_planning_record if isinstance(active_planning_record, dict) else {}
+    has_active_plan = bool(active_planning_record) and str(active_planning_record.get("status", "")).strip().lower() != "absent"
+    task = active_planning_record.get("task", {}) if isinstance(active_planning_record.get("task"), dict) else {}
+    closure_check = active_planning_record.get("closure_check", {})
+    closure_check = closure_check if isinstance(closure_check, dict) else {}
+    intent_continuity = active_planning_record.get("intent_continuity", {})
+    intent_continuity = intent_continuity if isinstance(intent_continuity, dict) else {}
+    iterative = active_planning_record.get("iterative_follow_through", {})
+    iterative = iterative if isinstance(iterative, dict) else {}
+    delegated = active_planning_record.get("delegated_judgment", {})
+    delegated = delegated if isinstance(delegated, dict) else {}
+    validation = active_planning_record.get("validation", {})
+    validation = validation if isinstance(validation, dict) else {}
+    proof_expectations = _list_payload(
+        validation.get("required_commands") or validation.get("proof") or validation.get("proof_expectations")
+    )
+    if not proof_expectations:
+        proof_expectations = ["Select proof with `agentic-workspace proof --changed <paths> --format json` once changed paths are known."]
+    must_be_true = []
+    for value in (
+        task.get("done_when"),
+        closure_check.get("bounded_slice_complete"),
+        intent_continuity.get("larger_intent_complete"),
+    ):
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text and text.lower() != "none":
+            must_be_true.append(text)
+    if not must_be_true:
+        must_be_true = ["The requested slice is complete and any broader intent is either satisfied or routed to a checked-in owner."]
+    constraints = [str(item).strip() for item in _list_payload(delegated.get("hard_constraints")) if str(item).strip()]
+    if not constraints:
+        constraints = ["Do not close broader work unless proof, intent, external evidence, and residue ownership agree."]
+    out_of_bounds = [str(item).strip() for item in _list_payload(delegated.get("out_of_bounds")) if str(item).strip()]
+    if not out_of_bounds:
+        out_of_bounds = ["Do not introduce a separate Goals state store, PM system, or runtime orchestration layer."]
+    blocked_stop = str(closure_check.get("blocked_stop_condition") or closure_check.get("reopen_trigger") or "").strip()
+    if not blocked_stop:
+        blocked_stop = (
+            "Stop as blocked when required proof, external freshness, owner routing, or larger-intent closure cannot be established."
+        )
+    external_evidence_safety = external_evidence_safety if isinstance(external_evidence_safety, dict) else {}
+    return {
+        "kind": "agentic-workspace/completion-contract/v1",
+        "status": "active-planning-derived" if has_active_plan else "guidance-only",
+        "authority": "derived-projection",
+        "planning_status": active_planning_record.get("status", "absent") if active_planning_record else "absent",
+        "must_be_true": must_be_true,
+        "evidence_that_proves_it": [str(item).strip() for item in proof_expectations if str(item).strip()],
+        "constraints_to_preserve": constraints,
+        "out_of_bounds": out_of_bounds,
+        "iteration_when_evidence_is_insufficient": [
+            "record what was inspected and what failed",
+            "make the smallest focused change",
+            "rerun or update the proof expectation",
+            "route remaining residue to Planning, Verification, Memory, docs, or an issue",
+        ],
+        "blocked_stop_condition": blocked_stop,
+        "external_evidence_closeout_safe": external_evidence_safety.get("closeout_safe", "unknown"),
+        "owner_surfaces": [
+            ".agentic-workspace/planning/state.toml",
+            ".agentic-workspace/planning/execplans/<plan>.plan.json",
+            ".agentic-workspace/verification/manifest.toml",
+        ],
+        "detail_command": _command_with_cli_invoke(
+            command="agentic-workspace report --target ./repo --section completion_contract --format json",
+            cli_invoke=cli_invoke,
+        ),
+        "rule": "This imports the useful Goal grammar as a Planning lens; AW does not add a separate Goals module or thread-scoped objective store.",
+    }
+
+
+def _repair_loop_residue_payload(
+    *,
+    active_planning_record: dict[str, Any],
+    verification: dict[str, Any],
+    cli_invoke: str = DEFAULT_CLI_INVOKE,
+) -> dict[str, Any]:
+    active_planning_record = active_planning_record if isinstance(active_planning_record, dict) else {}
+    execution = active_planning_record.get("execution_run", {})
+    execution = execution if isinstance(execution, dict) else {}
+    finished_review = active_planning_record.get("finished_run_review", {})
+    finished_review = finished_review if isinstance(finished_review, dict) else {}
+    iterative = active_planning_record.get("iterative_follow_through", {})
+    iterative = iterative if isinstance(iterative, dict) else {}
+    evidence_status = [item for item in _list_payload(verification.get("evidence_bundle_status")) if isinstance(item, dict)]
+    known_gaps = [item for item in _list_payload(verification.get("known_gaps")) if isinstance(item, dict)]
+    observed_problem = str(execution.get("observed_problem") or finished_review.get("observed_problem") or "").strip()
+    focused_change = str(execution.get("focused_change") or execution.get("summary") or finished_review.get("summary") or "").strip()
+    remaining_gap = str(iterative.get("remaining_gap") or iterative.get("deferred") or "").strip()
+    if not remaining_gap and known_gaps:
+        remaining_gap = str(known_gaps[0].get("reason", "")).strip()
+    return {
+        "kind": "agentic-workspace/repair-loop-residue/v1",
+        "status": "active-evidence" if observed_problem or focused_change or evidence_status or known_gaps else "guidance-only",
+        "observed_problem": observed_problem,
+        "inspection_findings": _list_payload(finished_review.get("findings"))[:5],
+        "focused_change_made": focused_change,
+        "validation_evidence": [
+            {
+                "protocol_id": str(item.get("protocol_id", "")),
+                "state": str(item.get("state", "")),
+                "evidence_items": _list_payload(item.get("evidence_items")),
+            }
+            for item in evidence_status[:5]
+        ],
+        "remaining_gap": remaining_gap,
+        "next_input_for_continuation": str(iterative.get("next_input") or iterative.get("next_action") or "").strip(),
+        "stop_reason": str(active_planning_record.get("stop_reason") or finished_review.get("stop_reason") or "").strip(),
+        "required_loop_fields": [
+            "observed_problem",
+            "inspection_findings",
+            "focused_change_made",
+            "validation_evidence",
+            "remaining_gap",
+            "next_input_for_continuation",
+            "stop_reason",
+        ],
+        "owner_boundary": "Derived from Planning and Verification; it is not a workflow runner and does not own CI/tool execution.",
+        "detail_command": _command_with_cli_invoke(
+            command="agentic-workspace report --target ./repo --section repair_loop_residue --format json",
+            cli_invoke=cli_invoke,
+        ),
+    }
+
+
+def _external_evidence_safety_payload(
+    *,
+    external_work_delta: dict[str, Any],
+    external_work_reconciliation: dict[str, Any],
+    cli_invoke: str = DEFAULT_CLI_INVOKE,
+) -> dict[str, Any]:
+    delta_status = str(external_work_delta.get("status", "unavailable"))
+    changed_count = _as_int(external_work_delta.get("changed_count"))
+    new_count = _as_int(external_work_delta.get("new_count"))
+    closed_count = _as_int(external_work_delta.get("closed_count"))
+    open_count = _as_int(external_work_delta.get("open_count"))
+    stale_or_changed = delta_status in {"invalid"} or changed_count or new_count
+    closeout_safe: bool | str
+    if delta_status in {"unavailable", "absent"}:
+        closeout_safe = "unknown"
+    else:
+        closeout_safe = not stale_or_changed
+    freshness = external_work_reconciliation.get("freshness", {})
+    freshness = freshness if isinstance(freshness, dict) else {}
+    return {
+        "kind": "agentic-workspace/external-evidence-safety/v1",
+        "status": "attention"
+        if stale_or_changed
+        else "available"
+        if delta_status not in {"unavailable", "absent"}
+        else "no-external-evidence",
+        "source": external_work_delta.get("source", ""),
+        "fetched_at": external_work_delta.get("refreshed_at") or freshness.get("fetched_at") or freshness.get("refreshed_at") or "",
+        "source_state": {
+            "status": delta_status,
+            "open_count": open_count,
+            "new_count": new_count,
+            "changed_count": changed_count,
+            "closed_count": closed_count,
+        },
+        "local_state": {
+            "primary_owner": external_work_reconciliation.get("primary_owner", ".agentic-workspace/planning/state.toml"),
+            "status": external_work_reconciliation.get("status", "unavailable"),
+        },
+        "divergence": {
+            "present": bool(stale_or_changed),
+            "reason": "external evidence changed or is invalid" if stale_or_changed else "no provider-agnostic divergence detected",
+            "sample_changed": external_work_delta.get("sample_changed", []),
+            "sample_new": external_work_delta.get("sample_new", []),
+            "sample_closed": external_work_delta.get("sample_closed", []),
+        },
+        "stale_after": freshness.get("stale_after", ""),
+        "closeout_safe": closeout_safe,
+        "reason": "Refresh or reconcile external evidence before broad closeout."
+        if stale_or_changed
+        else "Offline Planning remains primary; external evidence is advisory unless present and divergent.",
+        "refresh_command": _command_with_cli_invoke(
+            command="agentic-workspace external-intent refresh-github --target . --state all --format json",
+            cli_invoke=cli_invoke,
+        ),
+        "rule": "External systems inform freshness and reconciliation; they do not become primary Planning authority.",
+    }
+
+
+def _structured_findings_payload(
+    *,
+    source_payload: dict[str, Any],
+    external_evidence_safety: dict[str, Any],
+    verification: dict[str, Any],
+) -> dict[str, Any]:
+    entries: list[dict[str, Any]] = []
+
+    def add_entry(
+        *,
+        finding_id: str,
+        kind: str,
+        evidence: list[str],
+        severity: str = "info",
+        confidence: str = "medium",
+        proposed_owner: str = "workspace",
+        disposition: str = "review",
+        path_refs: list[str] | None = None,
+    ) -> None:
+        entries.append(
+            {
+                "id": finding_id,
+                "kind": kind,
+                "path_refs": path_refs or [],
+                "evidence": evidence,
+                "severity": severity,
+                "confidence": confidence,
+                "proposed_owner": proposed_owner,
+                "disposition": disposition,
+            }
+        )
+
+    for index, finding in enumerate(item for item in _list_payload(source_payload.get("findings")) if isinstance(item, dict)):
+        add_entry(
+            finding_id=str(finding.get("id") or f"workspace-finding-{index + 1}"),
+            kind=str(finding.get("kind") or finding.get("module") or "workspace-warning"),
+            path_refs=[str(finding.get("path", "")).strip()] if str(finding.get("path", "")).strip() else [],
+            evidence=[str(finding.get("message") or finding.get("summary") or finding).strip()],
+            severity=str(finding.get("severity", "warning")),
+            confidence=str(finding.get("confidence", "medium")),
+            proposed_owner=str(finding.get("owner", "workspace")),
+        )
+    for gap in (item for item in _list_payload(verification.get("known_gaps")) if isinstance(item, dict)):
+        add_entry(
+            finding_id=str(gap.get("id", "verification-gap")),
+            kind="verification-known-gap",
+            evidence=[str(gap.get("reason", "")).strip()],
+            severity="warning" if gap.get("blocked_claims") else "info",
+            confidence="high",
+            proposed_owner=str(gap.get("owner", "verification")),
+            disposition="route-or-waive",
+        )
+    divergence = external_evidence_safety.get("divergence", {}) if isinstance(external_evidence_safety, dict) else {}
+    if isinstance(divergence, dict) and divergence.get("present"):
+        add_entry(
+            finding_id="external-evidence-divergence",
+            kind="external-evidence-freshness",
+            evidence=[str(divergence.get("reason", "external evidence diverged"))],
+            severity="warning",
+            confidence="high",
+            proposed_owner="planning",
+            disposition="reconcile-before-closeout",
+        )
+    return {
+        "kind": "agentic-workspace/structured-findings/v1",
+        "status": "present" if entries else "shape-only",
+        "schema": {
+            "required_fields": ["id", "kind", "path_refs", "evidence", "severity", "confidence", "proposed_owner", "disposition"],
+            "routing_rule": "A finding should have one primary home: Planning, Memory, Verification, canonical docs, tests, or an external issue.",
+        },
+        "entries": entries,
+        "entry_count": len(entries),
+        "promotion_guidance": [
+            "promote only durable, evidenced findings with a bounded owner and next action",
+            "dismiss speculative prose residue instead of preserving it beside structured state",
+            "do not duplicate canonical issue tracker state; reference it when it is the owner",
+        ],
+    }
+
+
+def _continuation_next_actions_payload(
+    *,
+    completion_contract: dict[str, Any],
+    repair_loop_residue: dict[str, Any],
+    structured_findings: dict[str, Any],
+    external_evidence_safety: dict[str, Any],
+    cli_invoke: str = DEFAULT_CLI_INVOKE,
+) -> dict[str, Any]:
+    actions: list[dict[str, Any]] = []
+
+    def add_action(
+        action_id: str, rank: int, summary: str, evidence: list[str], confidence: str, validation: str, stop_condition: str
+    ) -> None:
+        actions.append(
+            {
+                "rank": rank,
+                "id": action_id,
+                "summary": summary,
+                "evidence": evidence,
+                "confidence": confidence,
+                "validation": validation,
+                "stop_condition": stop_condition,
+            }
+        )
+
+    if external_evidence_safety.get("closeout_safe") is False:
+        add_action(
+            "reconcile-external-evidence",
+            1,
+            "Refresh or reconcile external evidence before claiming broad completion.",
+            [str(external_evidence_safety.get("reason", ""))],
+            "high",
+            str(external_evidence_safety.get("refresh_command", "")),
+            "stop once external evidence is refreshed or explicitly marked out of scope",
+        )
+    if _as_int(structured_findings.get("entry_count")):
+        add_action(
+            "route-structured-findings",
+            len(actions) + 1,
+            "Promote, dismiss, or defer structured findings through their primary owner.",
+            [f"{structured_findings.get('entry_count')} structured finding(s) are present"],
+            "medium",
+            _command_with_cli_invoke(
+                command="agentic-workspace report --target ./repo --section structured_findings --format json",
+                cli_invoke=cli_invoke,
+            ),
+            "stop when every finding has a disposition",
+        )
+    if repair_loop_residue.get("status") == "active-evidence":
+        add_action(
+            "continue-repair-loop",
+            len(actions) + 1,
+            "Continue from observed repair evidence and remaining gap.",
+            [str(repair_loop_residue.get("remaining_gap") or "repair evidence is present")],
+            "medium",
+            _command_with_cli_invoke(
+                command="agentic-workspace report --target ./repo --section repair_loop_residue --format json",
+                cli_invoke=cli_invoke,
+            ),
+            "stop when validation evidence proves the focused change or the gap is routed",
+        )
+    add_action(
+        "apply-completion-contract",
+        len(actions) + 1,
+        "Use the completion contract to decide whether this is done, partial, blocked, or continuation-required.",
+        [str(completion_contract.get("status", ""))],
+        "high" if completion_contract.get("status") == "active-planning-derived" else "medium",
+        _command_with_cli_invoke(command="agentic-workspace closeout --target ./repo --format json", cli_invoke=cli_invoke),
+        str(completion_contract.get("blocked_stop_condition", "")),
+    )
+    return {
+        "kind": "agentic-workspace/continuation-next-actions/v1",
+        "status": "ranked",
+        "ranked_next_actions": sorted(actions, key=lambda item: int(item["rank"])),
+        "rule": "Next actions are evidence-ranked suggestions. The agent still owns judgment about work shape, proof, and delegation.",
+    }
+
+
+def _migration_pilot_template_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
+    return {
+        "kind": "agentic-workspace/migration-pilot-template/v1",
+        "status": "available",
+        "template_role": "optional decomposition pattern",
+        "phases": [
+            {"id": "pilot_selection", "required_outputs": ["pilot scope", "why bounded", "known owners"]},
+            {"id": "current_behavior_inventory", "required_outputs": ["files/systems involved", "data flow", "business behavior"]},
+            {"id": "target_design", "required_outputs": ["owner module/service", "interface/spec", "risk notes"]},
+            {"id": "parity_strategy", "required_outputs": ["same-input comparison", "expected output", "difference triage"]},
+            {"id": "validation_commands", "required_outputs": ["local proof", "CI or fixture proof", "manual evidence if needed"]},
+            {"id": "rollout_or_retirement", "required_outputs": ["pilot exit condition", "what remains", "next owner"]},
+        ],
+        "non_goals": ["general migration framework", "language-specific modernization rules", "full rollout management"],
+        "how_to_use": _command_with_cli_invoke(
+            command="agentic-workspace report --target ./repo --section migration_pilot_template --format json",
+            cli_invoke=cli_invoke,
+        ),
+        "rule": "Use this only when broad migration work needs a bounded pilot and parity proof; keep ordinary small changes direct.",
+    }
+
+
+def _compact_output_criteria_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
+    criteria = [
+        "current intent",
+        "current evidence",
+        "next action",
+        "stop condition",
+        "changed surfaces or selector",
+        "unresolved risks",
+    ]
+    return {
+        "kind": "agentic-workspace/compact-output-criteria/v1",
+        "status": "defined",
+        "criteria": criteria,
+        "audited_surfaces": [
+            {"surface": "start", "expected_recovery": ["task intent", "next_safe_action", "acceptance", "routine_work_context"]},
+            {"surface": "summary", "expected_recovery": ["active planning state", "continuation state", "proof posture"]},
+            {"surface": "preflight", "expected_recovery": ["takeover/recovery state", "safe action", "blocking state"]},
+            {"surface": "report", "expected_recovery": ["section hints", "authority", "external evidence", "closeout trust"]},
+            {"surface": "proof", "expected_recovery": ["selected proof", "required commands", "residual risk prompt"]},
+        ],
+        "test_rule": "Compact output may omit detail only when it names the selector or detail command that recovers the omitted evidence.",
+        "detail_command": _command_with_cli_invoke(
+            command="agentic-workspace report --target ./repo --section compact_output_criteria --format json",
+            cli_invoke=cli_invoke,
+        ),
+    }
+
+
+def _automation_readiness_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
+    return {
+        "kind": "agentic-workspace/automation-readiness/v1",
+        "status": "checklist-available",
+        "boundary": "AW can evaluate repo-owned readiness; external systems own dispatch, secrets, runtime, and side effects.",
+        "fields": [
+            "trigger_source",
+            "required_secrets",
+            "write_permissions",
+            "branch_or_state_owner",
+            "human_gate",
+            "proof_gate",
+            "rollback_path",
+            "aw_state_to_refresh_after_completion",
+        ],
+        "provider_agnostic_checks": [
+            {"id": "trigger", "question": "What event starts the automation and who can cause it?"},
+            {"id": "secrets", "question": "Which secrets or tokens are required, and are fork/untrusted contexts excluded?"},
+            {"id": "writes", "question": "Which repo, branch, issue, PR, or artifact state can be written?"},
+            {"id": "human_gate", "question": "Where does a human approve broad or destructive changes?"},
+            {"id": "proof_gate", "question": "Which proof output blocks merge or closeout?"},
+            {"id": "rollback", "question": "How is a bad automation output reverted or invalidated?"},
+            {"id": "aw_refresh", "question": "Which AW summary, proof, or external evidence command must run after completion?"},
+        ],
+        "not_owned_by_aw": ["workflow dispatch", "secrets management", "CI execution", "issue tracker synchronization"],
+        "recommended_aw_refresh": [
+            _command_with_cli_invoke(command="agentic-workspace summary --target ./repo --format json", cli_invoke=cli_invoke),
+            _command_with_cli_invoke(
+                command="agentic-workspace proof --target ./repo --changed <paths> --format json", cli_invoke=cli_invoke
+            ),
+            _command_with_cli_invoke(
+                command="agentic-workspace external-intent refresh-github --target . --state all --format json",
+                cli_invoke=cli_invoke,
+            ),
+        ],
+    }
+
+
+def _derived_continuation_projection_payloads(
+    *,
+    target_root: Path,
+    config: WorkspaceConfig,
+    source_payload: dict[str, Any],
+    active_planning_record: dict[str, Any],
+    assurance_requirements: dict[str, Any] | None = None,
+    verification: dict[str, Any] | None = None,
+    external_work_delta: dict[str, Any] | None = None,
+    external_work_reconciliation: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    active_planning_record = active_planning_record if isinstance(active_planning_record, dict) else {}
+    assurance_requirements = assurance_requirements if isinstance(assurance_requirements, dict) else {}
+    verification = verification if isinstance(verification, dict) else {}
+    external_work_delta = (
+        external_work_delta if isinstance(external_work_delta, dict) else _external_work_delta_payload(target_root=target_root)
+    )
+    external_work_reconciliation = (
+        external_work_reconciliation
+        if isinstance(external_work_reconciliation, dict)
+        else _external_work_reconciliation_payload(module_reports=[], external_work_delta=external_work_delta, cli_invoke=config.cli_invoke)
+    )
+    if not verification:
+        verification = _verification_report_payload(
+            target_root=target_root,
+            active_planning_record=active_planning_record,
+            assurance_requirements=assurance_requirements,
+        )
+    external_evidence_safety = _external_evidence_safety_payload(
+        external_work_delta=external_work_delta,
+        external_work_reconciliation=external_work_reconciliation,
+        cli_invoke=config.cli_invoke,
+    )
+    completion_contract = _completion_contract_payload(
+        active_planning_record=active_planning_record,
+        external_evidence_safety=external_evidence_safety,
+        cli_invoke=config.cli_invoke,
+    )
+    repair_loop_residue = _repair_loop_residue_payload(
+        active_planning_record=active_planning_record,
+        verification=verification,
+        cli_invoke=config.cli_invoke,
+    )
+    structured_findings = _structured_findings_payload(
+        source_payload=source_payload,
+        external_evidence_safety=external_evidence_safety,
+        verification=verification,
+    )
+    continuation_next_actions = _continuation_next_actions_payload(
+        completion_contract=completion_contract,
+        repair_loop_residue=repair_loop_residue,
+        structured_findings=structured_findings,
+        external_evidence_safety=external_evidence_safety,
+        cli_invoke=config.cli_invoke,
+    )
+    return {
+        "completion_contract": completion_contract,
+        "repair_loop_residue": repair_loop_residue,
+        "structured_findings": structured_findings,
+        "external_evidence_safety": external_evidence_safety,
+        "continuation_next_actions": continuation_next_actions,
+        "migration_pilot_template": _migration_pilot_template_payload(cli_invoke=config.cli_invoke),
+        "compact_output_criteria": _compact_output_criteria_payload(cli_invoke=config.cli_invoke),
+        "automation_readiness": _automation_readiness_payload(cli_invoke=config.cli_invoke),
+    }
+
+
 def _run_lazy_report_section_command(
     *,
     target_root: Path,
@@ -6293,6 +6810,14 @@ def _run_lazy_report_section_command(
         "verification",
         "successful_completion_cost",
         "operational_compression",
+        "completion_contract",
+        "repair_loop_residue",
+        "structured_findings",
+        "external_evidence_safety",
+        "continuation_next_actions",
+        "migration_pilot_template",
+        "compact_output_criteria",
+        "automation_readiness",
     }:
         return None
 
@@ -6320,6 +6845,49 @@ def _run_lazy_report_section_command(
 
     if normalized == "successful_completion_cost":
         payload["successful_completion_cost"] = _successful_completion_cost_payload(target_root=target_root, cli_invoke=config.cli_invoke)
+        return _select_report_payload(payload, profile="router", section=normalized)
+
+    if normalized in {
+        "completion_contract",
+        "repair_loop_residue",
+        "structured_findings",
+        "external_evidence_safety",
+        "continuation_next_actions",
+        "migration_pilot_template",
+        "compact_output_criteria",
+        "automation_readiness",
+    }:
+        external_work_delta = _external_work_delta_payload(target_root=target_root)
+        external_work_reconciliation = _external_work_reconciliation_payload(
+            module_reports=[],
+            external_work_delta=external_work_delta,
+            cli_invoke=config.cli_invoke,
+        )
+        assurance_requirements = _assurance_requirements_report_payload(
+            config=config,
+            active_planning_record=active_planning_record,
+        )
+        verification = _verification_report_payload(
+            target_root=target_root,
+            active_planning_record=active_planning_record,
+            assurance_requirements=assurance_requirements,
+        )
+        payload["verification"] = verification
+        payload["assurance_requirements"] = _assurance_requirements_with_verification(assurance_requirements, verification)
+        payload["external_work_delta"] = external_work_delta
+        payload["external_work_reconciliation"] = external_work_reconciliation
+        payload.update(
+            _derived_continuation_projection_payloads(
+                target_root=target_root,
+                config=config,
+                source_payload=payload,
+                active_planning_record=active_planning_record,
+                assurance_requirements=payload["assurance_requirements"],
+                verification=verification,
+                external_work_delta=external_work_delta,
+                external_work_reconciliation=external_work_reconciliation,
+            )
+        )
         return _select_report_payload(payload, profile="router", section=normalized)
 
     if normalized == "operational_compression":
