@@ -841,6 +841,46 @@ def test_planning_cli_new_plan_creates_valid_active_scaffold(tmp_path: Path, cap
     assert summary["execplans"]["active_execplans"][0]["path"].endswith("plan-alpha.plan.json")
 
 
+def test_planning_cli_new_plan_queue_creates_schema_clean_ready_item(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+
+    assert (
+        planning_cli.main(
+            [
+                "new-plan",
+                "--id",
+                "Queued Protocol",
+                "--title",
+                "Queued Protocol",
+                "--source",
+                "#1198",
+                "--target",
+                str(tmp_path),
+                "--queue",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+    queued_item = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))["todo"]["queued_items"][
+        0
+    ]
+    assert queued_item["id"] == "queued-protocol"
+    assert queued_item["maturity"] == "ready"
+    assert queued_item["status"] == "next"
+    assert queued_item["owner_role"] == "implementation"
+    assert queued_item["review_role"] == "validation"
+    assert queued_item["handoff_ready"] is True
+    assert queued_item["next_action"].startswith("Tighten scaffold fields")
+    assert queued_item["done_when"] == "Queued Protocol is implemented, validated, and closed out honestly."
+    assert "implement --changed" in queued_item["proof"]
+    assert summary["planning_surface_health"]["status"] == "clean"
+
+
 def test_archive_prepare_closeout_routes_improvement_signal_review_states(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
     record_path = tmp_path / ".agentic-workspace/planning/execplans/signal-closeout.plan.json"

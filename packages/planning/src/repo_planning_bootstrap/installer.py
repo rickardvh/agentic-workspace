@@ -9119,7 +9119,11 @@ def create_execplan_scaffold(
             "surface": record_relative,
             "why_now": source_text or "Created by new-plan scaffold.",
             "owner_role": "implementation",
+            "review_role": "validation",
             "handoff_ready": True,
+            "next_action": "Tighten scaffold fields, touched paths, and validation before implementation starts.",
+            "done_when": f"{plan_title} is implemented, validated, and closed out honestly.",
+            "proof": "Run the proof selected by implement --changed before claiming completion.",
         }
         if source_text:
             state_item["refs"] = [source_text]

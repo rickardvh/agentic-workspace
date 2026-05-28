@@ -27,6 +27,43 @@
       }
     },
     {
+      "id": "workspace-intent-discovery",
+      "path": "workspace-intent-discovery/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "run bounded human intent discovery before vague or high-stakes prompts become Planning or implementation",
+      "activation_hints": {
+        "verbs": ["ask", "clarify", "discover", "resolve", "brainstorm", "extract", "capture"],
+        "nouns": [
+          "intent discovery",
+          "human intent",
+          "vague prompt",
+          "candidate interpretations",
+          "non-goals",
+          "first slice",
+          "stakes if wrong",
+          "clarification"
+        ],
+        "phrases": [
+          "intent-discovery dialogue",
+          "clarify human intent with candidate interpretations before planning",
+          "clarify human intent",
+          "candidate interpretations",
+          "ask before implementation",
+          "ask before planning",
+          "vague high-stakes prompt",
+          "what outcome is desired",
+          "proceed with stated assumptions"
+        ],
+        "when": [
+          "prompt is vague or under-specified",
+          "stakes_if_wrong is high and inferred_intent_confidence is low",
+          "agent might silently choose a convenient implementation slice",
+          "why, desired outcome, non-goals, or acceptable first slice are missing"
+        ]
+      }
+    },
+    {
       "id": "workspace-work-shape",
       "path": "workspace-work-shape/SKILL.md",
       "scope": "bundled",
