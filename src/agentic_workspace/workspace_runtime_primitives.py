@@ -6289,6 +6289,123 @@ def _active_planning_record_for_report_section(*, target_root: Path) -> dict[str
     return _raw_active_planning_record_for_closeout(planning_record={}, target_root=target_root)
 
 
+def _contract_bool(value: Any) -> bool | None:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)) and value in {0, 1}:
+        return bool(value)
+    text = str(value).strip().lower().replace("-", "_") if value is not None else ""
+    if text in {"true", "yes", "y", "done", "complete", "completed", "satisfied", "closed", "passed"}:
+        return True
+    if text in {"false", "no", "n", "open", "incomplete", "partial", "missing", "failed", "blocked"}:
+        return False
+    return None
+
+
+def _required_continuation_present(*values: Any) -> bool:
+    for value in values:
+        if value is None:
+            continue
+        if isinstance(value, bool):
+            if value:
+                return True
+            continue
+        if isinstance(value, dict):
+            if any(item is not None and item != "" and item != [] and item != {} for item in value.values()):
+                return True
+            continue
+        if _list_payload(value):
+            return True
+        text = str(value).strip().lower()
+        if text and text not in {"none", "false", "no", "not-required", "not_required"}:
+            return True
+    return False
+
+
+def _completion_contract_decision(
+    *,
+    active_planning_record: dict[str, Any],
+    closure_check: dict[str, Any],
+    intent_continuity: dict[str, Any],
+    iterative: dict[str, Any],
+    validation: dict[str, Any],
+    external_evidence_safety: dict[str, Any],
+    has_active_plan: bool,
+) -> dict[str, Any]:
+    if not has_active_plan:
+        return {
+            "decision": "guidance-only",
+            "reasons": ["no active Planning record is present"],
+            "evidence_state": {
+                "bounded_slice_complete": "unknown",
+                "larger_intent_complete": "unknown",
+                "continuation_required": False,
+                "proof_state": "unknown",
+                "external_closeout_safe": external_evidence_safety.get("closeout_safe", "unknown"),
+            },
+        }
+    planning_status = str(active_planning_record.get("status", "")).strip().lower().replace("-", "_")
+    bounded_done = _contract_bool(closure_check.get("bounded_slice_complete", active_planning_record.get("bounded_slice_complete")))
+    if bounded_done is None and planning_status in {"done", "complete", "completed", "closed"}:
+        bounded_done = True
+    larger_done = _contract_bool(
+        intent_continuity.get(
+            "larger_intent_complete",
+            closure_check.get("larger_intent_complete", closure_check.get("larger_outcome_complete")),
+        )
+    )
+    continuation_required = _required_continuation_present(
+        active_planning_record.get("required_continuation"),
+        intent_continuity.get("required_continuation"),
+        intent_continuity.get("required_follow_on"),
+        iterative.get("required_continuation"),
+        iterative.get("remaining_gap"),
+    )
+    proof_state = (
+        str(
+            validation.get("proof_state")
+            or validation.get("status")
+            or closure_check.get("proof_state")
+            or closure_check.get("validation_status")
+            or "unknown"
+        )
+        .strip()
+        .lower()
+        .replace("-", "_")
+    )
+    external_closeout_safe = external_evidence_safety.get("closeout_safe", "unknown")
+    blocked_reasons: list[str] = []
+    if planning_status == "blocked" or closure_check.get("blocked_stop_condition"):
+        blocked_reasons.append("Planning says work is blocked")
+    if external_closeout_safe is False:
+        blocked_reasons.append("external evidence blocks broad closeout")
+    if proof_state in {"failed", "missing", "unavailable"}:
+        blocked_reasons.append(f"proof state is {proof_state}")
+    if blocked_reasons:
+        decision = "blocked"
+        reasons = blocked_reasons
+    elif bounded_done is True and (continuation_required or larger_done is False):
+        decision = "continuation-required"
+        reasons = ["bounded slice is complete but larger intent or follow-on remains"]
+    elif bounded_done is True and larger_done is True and proof_state not in {"failed", "missing", "unavailable"}:
+        decision = "done"
+        reasons = ["bounded slice, larger intent, and available proof state support closure"]
+    else:
+        decision = "partial"
+        reasons = ["available evidence does not yet prove completion"]
+    return {
+        "decision": decision,
+        "reasons": reasons,
+        "evidence_state": {
+            "bounded_slice_complete": bounded_done if bounded_done is not None else "unknown",
+            "larger_intent_complete": larger_done if larger_done is not None else "unknown",
+            "continuation_required": continuation_required,
+            "proof_state": proof_state,
+            "external_closeout_safe": external_closeout_safe,
+        },
+    }
+
+
 def _completion_contract_payload(
     *,
     active_planning_record: dict[str, Any],
@@ -6338,11 +6455,23 @@ def _completion_contract_payload(
             "Stop as blocked when required proof, external freshness, owner routing, or larger-intent closure cannot be established."
         )
     external_evidence_safety = external_evidence_safety if isinstance(external_evidence_safety, dict) else {}
+    decision = _completion_contract_decision(
+        active_planning_record=active_planning_record,
+        closure_check=closure_check,
+        intent_continuity=intent_continuity,
+        iterative=iterative,
+        validation=validation,
+        external_evidence_safety=external_evidence_safety,
+        has_active_plan=has_active_plan,
+    )
     return {
         "kind": "agentic-workspace/completion-contract/v1",
         "status": "active-planning-derived" if has_active_plan else "guidance-only",
         "authority": "derived-projection",
         "planning_status": active_planning_record.get("status", "absent") if active_planning_record else "absent",
+        "completion_decision": decision["decision"],
+        "decision_reasons": decision["reasons"],
+        "evidence_state": decision["evidence_state"],
         "must_be_true": must_be_true,
         "evidence_that_proves_it": [str(item).strip() for item in proof_expectations if str(item).strip()],
         "constraints_to_preserve": constraints,
@@ -6415,6 +6544,14 @@ def _repair_loop_residue_payload(
             "stop_reason",
         ],
         "owner_boundary": "Derived from Planning and Verification; it is not a workflow runner and does not own CI/tool execution.",
+        "source_of_truth_fields": {
+            "observed_problem": "planning_record.execution_run.observed_problem or finished_run_review.observed_problem",
+            "focused_change_made": "planning_record.execution_run.focused_change or execution_run.summary",
+            "validation_evidence": "verification.evidence_bundle_status",
+            "remaining_gap": "planning_record.iterative_follow_through.remaining_gap or verification.known_gaps",
+            "next_input_for_continuation": "planning_record.iterative_follow_through.next_input",
+            "stop_reason": "planning_record.stop_reason or finished_run_review.stop_reason",
+        },
         "detail_command": _command_with_cli_invoke(
             command="agentic-workspace report --target ./repo --section repair_loop_residue --format json",
             cli_invoke=cli_invoke,
@@ -6433,18 +6570,27 @@ def _external_evidence_safety_payload(
     new_count = _as_int(external_work_delta.get("new_count"))
     closed_count = _as_int(external_work_delta.get("closed_count"))
     open_count = _as_int(external_work_delta.get("open_count"))
-    stale_or_changed = delta_status in {"invalid"} or changed_count or new_count
+    stale_evidence = delta_status in {"invalid"}
+    freshness_safe: bool | str = "unknown" if delta_status in {"unavailable", "absent"} else not stale_evidence
+    divergence_present = bool(changed_count or new_count or closed_count)
+    closeout_blockers: list[str] = []
+    if open_count:
+        closeout_blockers.append("external_open_items")
+    if changed_count or new_count:
+        closeout_blockers.append("divergent_external_state")
+    if stale_evidence:
+        closeout_blockers.append("stale_external_evidence")
     closeout_safe: bool | str
     if delta_status in {"unavailable", "absent"}:
         closeout_safe = "unknown"
     else:
-        closeout_safe = not stale_or_changed
+        closeout_safe = not closeout_blockers
     freshness = external_work_reconciliation.get("freshness", {})
     freshness = freshness if isinstance(freshness, dict) else {}
     return {
         "kind": "agentic-workspace/external-evidence-safety/v1",
         "status": "attention"
-        if stale_or_changed
+        if closeout_safe is False
         else "available"
         if delta_status not in {"unavailable", "absent"}
         else "no-external-evidence",
@@ -6457,21 +6603,26 @@ def _external_evidence_safety_payload(
             "changed_count": changed_count,
             "closed_count": closed_count,
         },
+        "freshness_safe": freshness_safe,
+        "divergence_present": divergence_present,
         "local_state": {
             "primary_owner": external_work_reconciliation.get("primary_owner", ".agentic-workspace/planning/state.toml"),
             "status": external_work_reconciliation.get("status", "unavailable"),
         },
         "divergence": {
-            "present": bool(stale_or_changed),
-            "reason": "external evidence changed or is invalid" if stale_or_changed else "no provider-agnostic divergence detected",
+            "present": divergence_present,
+            "reason": "external evidence changed since the previous snapshot"
+            if divergence_present
+            else "no provider-agnostic divergence detected",
             "sample_changed": external_work_delta.get("sample_changed", []),
             "sample_new": external_work_delta.get("sample_new", []),
             "sample_closed": external_work_delta.get("sample_closed", []),
         },
         "stale_after": freshness.get("stale_after", ""),
         "closeout_safe": closeout_safe,
-        "reason": "Refresh or reconcile external evidence before broad closeout."
-        if stale_or_changed
+        "closeout_blockers": closeout_blockers,
+        "reason": "Resolve external closeout blockers before broad closeout."
+        if closeout_safe is False
         else "Offline Planning remains primary; external evidence is advisory unless present and divergent.",
         "refresh_command": _command_with_cli_invoke(
             command="agentic-workspace external-intent refresh-github --target . --state all --format json",
@@ -6523,6 +6674,38 @@ def _structured_findings_payload(
             confidence=str(finding.get("confidence", "medium")),
             proposed_owner=str(finding.get("owner", "workspace")),
         )
+    for container_name, default_owner in (("repo_friction", "workspace"), ("improvement_intake", "planning")):
+        container = source_payload.get(container_name, {})
+        container = container if isinstance(container, dict) else {}
+        for index, finding in enumerate(item for item in _list_payload(container.get("findings")) if isinstance(item, dict)):
+            add_entry(
+                finding_id=str(finding.get("id") or f"{container_name}-finding-{index + 1}"),
+                kind=str(finding.get("kind") or container_name),
+                path_refs=[
+                    str(path).strip() for path in _list_payload(finding.get("path_refs") or finding.get("paths")) if str(path).strip()
+                ],
+                evidence=[str(finding.get("evidence") or finding.get("summary") or finding.get("message") or finding).strip()],
+                severity=str(finding.get("severity", "warning")),
+                confidence=str(finding.get("confidence", "medium")),
+                proposed_owner=str(finding.get("owner", finding.get("proposed_owner", default_owner))),
+                disposition=str(finding.get("disposition", "route-or-dismiss")),
+            )
+    closeout_trust = source_payload.get("closeout_trust", {})
+    closeout_trust = closeout_trust if isinstance(closeout_trust, dict) else {}
+    package_continuation = closeout_trust.get("package_owned_continuation", {})
+    package_continuation = package_continuation if isinstance(package_continuation, dict) else {}
+    owner_surfaces = [str(item).strip() for item in _list_payload(package_continuation.get("owner_surfaces")) if str(item).strip()]
+    if owner_surfaces:
+        add_entry(
+            finding_id="package-owned-continuation",
+            kind="promotion-residue",
+            path_refs=owner_surfaces,
+            evidence=["closeout reports package-owned continuation residue"],
+            severity="warning",
+            confidence="high",
+            proposed_owner="planning",
+            disposition="route-continuation",
+        )
     for gap in (item for item in _list_payload(verification.get("known_gaps")) if isinstance(item, dict)):
         add_entry(
             finding_id=str(gap.get("id", "verification-gap")),
@@ -6539,6 +6722,18 @@ def _structured_findings_payload(
             finding_id="external-evidence-divergence",
             kind="external-evidence-freshness",
             evidence=[str(divergence.get("reason", "external evidence diverged"))],
+            severity="warning",
+            confidence="high",
+            proposed_owner="planning",
+            disposition="reconcile-before-closeout",
+        )
+    if isinstance(external_evidence_safety, dict) and "external_open_items" in _list_payload(
+        external_evidence_safety.get("closeout_blockers")
+    ):
+        add_entry(
+            finding_id="external-open-items",
+            kind="external-evidence-closeout-blocker",
+            evidence=["external evidence contains open source-owned work"],
             severity="warning",
             confidence="high",
             proposed_owner="planning",
@@ -6588,9 +6783,9 @@ def _continuation_next_actions_payload(
 
     if external_evidence_safety.get("closeout_safe") is False:
         add_action(
-            "reconcile-external-evidence",
+            "resolve-external-closeout-blockers",
             1,
-            "Refresh or reconcile external evidence before claiming broad completion.",
+            "Resolve external evidence blockers before claiming broad completion.",
             [str(external_evidence_safety.get("reason", ""))],
             "high",
             str(external_evidence_safety.get("refresh_command", "")),
@@ -6653,6 +6848,21 @@ def _migration_pilot_template_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -
             {"id": "rollout_or_retirement", "required_outputs": ["pilot exit condition", "what remains", "next owner"]},
         ],
         "non_goals": ["general migration framework", "language-specific modernization rules", "full rollout management"],
+        "planning_route": {
+            "command": _command_with_cli_invoke(
+                command='agentic-workspace planning new-plan --id <migration-pilot-id> --title "Migration pilot: <scope>" --target ./repo --activate --format json',
+                cli_invoke=cli_invoke,
+            ),
+            "template_fields": [
+                "pilot_selection",
+                "current_behavior_inventory",
+                "target_design",
+                "parity_strategy",
+                "validation_commands",
+                "rollout_or_retirement",
+            ],
+            "route_rule": "Use the route only when the migration cannot stay direct; otherwise keep the template as guidance.",
+        },
         "how_to_use": _command_with_cli_invoke(
             command="agentic-workspace report --target ./repo --section migration_pilot_template --format json",
             cli_invoke=cli_invoke,
@@ -6682,6 +6892,11 @@ def _compact_output_criteria_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) ->
             {"surface": "proof", "expected_recovery": ["selected proof", "required commands", "residual risk prompt"]},
         ],
         "test_rule": "Compact output may omit detail only when it names the selector or detail command that recovers the omitted evidence.",
+        "enforced_by_tests": [
+            "tests/test_workspace_report_cli.py::test_default_command_outputs_stay_router_sized",
+            "tests/test_workspace_proof_cli.py::test_proof_tiny_profile_returns_next_validation_action",
+            "tests/test_workspace_report_cli.py::test_report_continuation_projection_sections_are_lazy",
+        ],
         "detail_command": _command_with_cli_invoke(
             command="agentic-workspace report --target ./repo --section compact_output_criteria --format json",
             cli_invoke=cli_invoke,
@@ -6714,6 +6929,24 @@ def _automation_readiness_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> di
             {"id": "aw_refresh", "question": "Which AW summary, proof, or external evidence command must run after completion?"},
         ],
         "not_owned_by_aw": ["workflow dispatch", "secrets management", "CI execution", "issue tracker synchronization"],
+        "boundary_decision": {
+            "decision": "evaluate-readiness-here-run-automation-elsewhere",
+            "report_boundary": _command_with_cli_invoke(
+                command="agentic-workspace report --target ./repo --section automation_readiness --format json",
+                cli_invoke=cli_invoke,
+            ),
+            "proof_boundary": _command_with_cli_invoke(
+                command="agentic-workspace proof --target ./repo --changed .github/workflows/<workflow>.yml --format json",
+                cli_invoke=cli_invoke,
+            ),
+            "ready_when": [
+                "trigger source is explicit",
+                "required secrets and write permissions are bounded",
+                "human and proof gates are named",
+                "rollback path is known",
+                "AW state refresh after completion is named",
+            ],
+        },
         "recommended_aw_refresh": [
             _command_with_cli_invoke(command="agentic-workspace summary --target ./repo --format json", cli_invoke=cli_invoke),
             _command_with_cli_invoke(

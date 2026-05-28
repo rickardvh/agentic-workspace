@@ -322,10 +322,122 @@ def test_report_external_evidence_safety_surfaces_divergence(tmp_path: Path, cap
     assert answer["kind"] == "agentic-workspace/external-evidence-safety/v1"
     assert answer["status"] == "attention"
     assert answer["closeout_safe"] is False
+    assert answer["freshness_safe"] is True
+    assert answer["divergence_present"] is True
     assert answer["source_state"]["changed_count"] == 2
     assert answer["source_state"]["closed_count"] == 1
     assert answer["divergence"]["present"] is True
+    assert "external_open_items" in answer["closeout_blockers"]
+    assert "divergent_external_state" in answer["closeout_blockers"]
     assert "external-intent refresh-github" in answer["refresh_command"]
+
+
+def test_report_external_evidence_safety_blocks_stable_open_external_work(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    open_item = {"system": "github", "id": "1179", "status": "open", "title": "External evidence safety"}
+    _write_json(
+        tmp_path / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json",
+        {
+            "kind": "planning-external-intent-evidence/v1",
+            "refreshed_at": "2026-05-28T08:00:00Z",
+            "items": [open_item],
+            "previous_items": [open_item],
+        },
+    )
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "external_evidence_safety", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert answer["freshness_safe"] is True
+    assert answer["divergence_present"] is False
+    assert answer["closeout_safe"] is False
+    assert answer["closeout_blockers"] == ["external_open_items"]
+    assert answer["source_state"]["open_count"] == 1
+    assert answer["source_state"]["changed_count"] == 0
+
+
+def test_report_completion_contract_distinguishes_closure_states(tmp_path: Path, capsys, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    cases = [
+        (
+            "done",
+            {
+                "status": "present",
+                "closure_check": {"bounded_slice_complete": True},
+                "intent_continuity": {"larger_intent_complete": True},
+                "validation": {"status": "passed"},
+            },
+        ),
+        (
+            "partial",
+            {
+                "status": "present",
+                "closure_check": {"bounded_slice_complete": False},
+                "intent_continuity": {"larger_intent_complete": False},
+                "validation": {"status": "selected"},
+            },
+        ),
+        (
+            "continuation-required",
+            {
+                "status": "present",
+                "closure_check": {"bounded_slice_complete": True},
+                "intent_continuity": {"larger_intent_complete": False, "required_continuation": {"owner": "#1184"}},
+                "validation": {"status": "passed"},
+            },
+        ),
+        (
+            "blocked",
+            {
+                "status": "blocked",
+                "closure_check": {"blocked_stop_condition": "external owner has not resolved the gate"},
+                "validation": {"status": "passed"},
+            },
+        ),
+    ]
+
+    for expected, record in cases:
+        monkeypatch.setattr(workspace_runtime_primitives, "_active_planning_record_for_report_section", lambda target_root, r=record: r)
+        assert cli.main(["report", "--target", str(tmp_path), "--section", "completion_contract", "--format", "json"]) == 0
+        answer = json.loads(capsys.readouterr().out)["answer"]
+        assert answer["completion_decision"] == expected
+        assert answer["evidence_state"]
+        assert answer["decision_reasons"]
+
+
+def test_report_repair_loop_residue_carries_source_fields_for_continuation(tmp_path: Path, capsys, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    monkeypatch.setattr(
+        workspace_runtime_primitives,
+        "_active_planning_record_for_report_section",
+        lambda target_root: {
+            "status": "present",
+            "execution_run": {"observed_problem": "CLI crashed on empty input", "focused_change": "Guard empty input parsing"},
+            "finished_run_review": {"findings": ["missing empty-input regression"]},
+            "iterative_follow_through": {"remaining_gap": "Windows shell quoting still needs proof", "next_input": "rerun CLI proof"},
+            "stop_reason": "validation still incomplete",
+        },
+    )
+    monkeypatch.setattr(
+        workspace_runtime_primitives,
+        "_verification_report_payload",
+        lambda **_kwargs: {
+            "status": "configured",
+            "evidence_bundle_status": [{"protocol_id": "cli_empty_input", "state": "present", "evidence_items": ["pytest_empty_input"]}],
+            "known_gaps": [],
+        },
+    )
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "repair_loop_residue", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert answer["status"] == "active-evidence"
+    assert answer["observed_problem"] == "CLI crashed on empty input"
+    assert answer["focused_change_made"] == "Guard empty input parsing"
+    assert answer["validation_evidence"][0]["protocol_id"] == "cli_empty_input"
+    assert answer["remaining_gap"] == "Windows shell quoting still needs proof"
+    assert answer["next_input_for_continuation"] == "rerun CLI proof"
+    assert answer["source_of_truth_fields"]["remaining_gap"].startswith("planning_record.iterative_follow_through")
 
 
 def test_report_structured_findings_merges_verification_and_external_residue(tmp_path: Path, capsys) -> None:
@@ -361,6 +473,76 @@ blocked_claims = ["close-parent-lane"]
     assert finding["kind"] == "verification-known-gap"
     assert finding["proposed_owner"] == "ops"
     assert finding["disposition"] == "route-or-waive"
+
+
+def test_report_structured_findings_routes_review_friction_and_promotion_residue() -> None:
+    answer = workspace_runtime_primitives._structured_findings_payload(
+        source_payload={
+            "findings": [{"id": "review-gap", "kind": "review", "message": "Review found a proof gap.", "owner": "verification"}],
+            "repo_friction": {
+                "findings": [
+                    {
+                        "id": "friction-repeat",
+                        "summary": "Agents repeatedly miss the route.",
+                        "owner": "memory",
+                        "disposition": "promote-memory-note",
+                    }
+                ]
+            },
+            "closeout_trust": {
+                "package_owned_continuation": {
+                    "owner_surfaces": [".agentic-workspace/planning/state.toml"],
+                }
+            },
+        },
+        external_evidence_safety={"divergence": {"present": False}, "closeout_blockers": []},
+        verification={"known_gaps": [{"id": "verification-gap", "reason": "Manual proof missing.", "owner": "verification"}]},
+    )
+
+    findings = {item["id"]: item for item in answer["entries"]}
+    assert findings["review-gap"]["proposed_owner"] == "verification"
+    assert findings["friction-repeat"]["proposed_owner"] == "memory"
+    assert findings["friction-repeat"]["disposition"] == "promote-memory-note"
+    assert findings["package-owned-continuation"]["disposition"] == "route-continuation"
+    assert findings["verification-gap"]["disposition"] == "route-or-waive"
+
+
+def test_report_continuation_next_actions_prioritize_external_blockers(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    open_item = {"system": "github", "id": "1180", "status": "open", "title": "Continuation action ranking"}
+    _write_json(
+        tmp_path / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json",
+        {
+            "kind": "planning-external-intent-evidence/v1",
+            "items": [open_item],
+            "previous_items": [open_item],
+        },
+    )
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "continuation_next_actions", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert answer["ranked_next_actions"][0]["id"] == "resolve-external-closeout-blockers"
+    assert answer["ranked_next_actions"][-1]["id"] == "apply-completion-contract"
+
+
+def test_report_guidance_sections_expose_planning_enforcement_and_proof_boundaries(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "migration_pilot_template", "--format", "json"]) == 0
+    migration = json.loads(capsys.readouterr().out)["answer"]
+    assert "planning new-plan" in migration["planning_route"]["command"]
+    assert "parity_strategy" in migration["planning_route"]["template_fields"]
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "compact_output_criteria", "--format", "json"]) == 0
+    compact = json.loads(capsys.readouterr().out)["answer"]
+    assert "tests/test_workspace_report_cli.py::test_default_command_outputs_stay_router_sized" in compact["enforced_by_tests"]
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "automation_readiness", "--format", "json"]) == 0
+    automation = json.loads(capsys.readouterr().out)["answer"]
+    assert automation["boundary_decision"]["decision"] == "evaluate-readiness-here-run-automation-elsewhere"
+    assert "report --target" in automation["boundary_decision"]["report_boundary"]
+    assert "proof --target" in automation["boundary_decision"]["proof_boundary"]
 
 
 def test_report_verification_manifest_rejects_protocol_without_activation(tmp_path: Path, capsys) -> None:
