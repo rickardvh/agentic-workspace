@@ -40,6 +40,14 @@
     "maintenance_pressure",
     "operational_compression",
     "successful_completion_cost",
+    "completion_contract",
+    "repair_loop_residue",
+    "structured_findings",
+    "external_evidence_safety",
+    "continuation_next_actions",
+    "migration_pilot_template",
+    "compact_output_criteria",
+    "automation_readiness",
     "decision_pressure",
     "closeout_trust",
     "external_work_reconciliation",
@@ -257,6 +265,38 @@
     "successful_completion_cost": {
       "type": "object",
       "description": "Recent model CLI evaluation cost, package-read overhead, and rework signals for advisory optimization decisions."
+    },
+    "completion_contract": {
+      "type": "object",
+      "description": "Derived Planning completion-contract lens for done, partial, blocked, and continuation-required decisions."
+    },
+    "repair_loop_residue": {
+      "type": "object",
+      "description": "Derived validation-driven repair residue across Planning and Verification."
+    },
+    "structured_findings": {
+      "type": "object",
+      "description": "Structured finding residue shape for review and promotion routing."
+    },
+    "external_evidence_safety": {
+      "type": "object",
+      "description": "External evidence freshness, divergence, stale-after, and closeout-safety projection."
+    },
+    "continuation_next_actions": {
+      "type": "object",
+      "description": "Evidence-ranked next actions for safe continuation."
+    },
+    "migration_pilot_template": {
+      "type": "object",
+      "description": "Optional migration-pilot decomposition template with parity and rollout boundaries."
+    },
+    "compact_output_criteria": {
+      "type": "object",
+      "description": "Criteria for compact CLI outputs to remain sufficient for cheap continuation."
+    },
+    "automation_readiness": {
+      "type": "object",
+      "description": "Provider-agnostic automation-readiness checklist that keeps execution outside AW."
     },
     "decision_pressure": {
       "type": "object",
