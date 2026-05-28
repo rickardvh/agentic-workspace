@@ -1,0 +1,119 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "prompt.upgrade",
+  "command_surface": {
+    "command": "prompt",
+    "subcommand": "upgrade"
+  },
+  "summary": "Print the workspace upgrade handoff prompt.",
+  "classification": "derived-output",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "module",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "preset",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "text"
+  },
+  "effects": {
+    "read_only": true,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": false,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": "module descriptors",
+      "required": true
+    },
+    {
+      "surface": "workspace defaults",
+      "required": true
+    }
+  ],
+  "writes": [],
+  "steps": [
+    {
+      "id": "resolve_selection",
+      "uses": "workspace.selection.resolve",
+      "description": "Resolve selected modules."
+    },
+    {
+      "id": "render_prompt",
+      "uses": "prompt.render",
+      "description": "Render upgrade handoff prompt."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit prompt text."
+    }
+  ],
+  "guards": [
+    "Prompt rendering must not mutate repository state."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "prompt upgrade tests remain compatible"
+  ],
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Render the workspace upgrade handoff prompt from generated operation IR while workspace runtime supplies module selection and prompt text compatibility.",
+    "steps": [
+      {
+        "id": "resolve_selection",
+        "uses": "workspace.selection.resolve",
+        "description": "Resolve target, selected modules, preset, descriptors, and workspace config for prompt rendering.",
+        "arguments": {},
+        "outputs": [
+          "selection"
+        ],
+        "on_error": "emit_usage_error"
+      },
+      {
+        "id": "render_prompt",
+        "uses": "prompt.render",
+        "description": "Render the requested lifecycle handoff prompt payload.",
+        "arguments": {},
+        "outputs": [
+          "result"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit",
+        "description": "Emit prompt text or JSON payload in the requested format.",
+        "arguments": {},
+        "outputs": [
+          "emitted"
+        ],
+        "on_error": "emit_usage_error"
+      }
+    ]
+  }
+}

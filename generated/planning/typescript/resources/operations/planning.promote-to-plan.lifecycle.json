@@ -1,0 +1,118 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "planning.promote-to-plan.lifecycle",
+  "command_surface": {
+    "program": "agentic-planning",
+    "command": "promote-to-plan",
+    "format_option": "format"
+  },
+  "summary": "Promote a direct TODO item into an execplan scaffold.",
+  "classification": "lifecycle-mutation",
+  "inputs": [
+    {
+      "name": "item_id",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "plan_slug",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "expect_planning_revision",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "dry_run",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "module-result"
+  },
+  "effects": {
+    "read_only": false,
+    "destructive": false,
+    "idempotent": false,
+    "writes_repo_state": true,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": "target repository Planning state",
+      "required": false
+    }
+  ],
+  "writes": [
+    {
+      "surface": ".agentic-workspace/planning/",
+      "required": false,
+      "when": "not a dry run"
+    }
+  ],
+  "steps": [
+    {
+      "id": "apply_lifecycle_operation",
+      "uses": "planning.promote-to-plan.apply",
+      "description": "Promote a direct TODO item into an execplan scaffold."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit planning lifecycle result in the requested format."
+    }
+  ],
+  "guards": [
+    "Respect dry-run mode by avoiding writes.",
+    "Route planning state edits through package lifecycle functions instead of hand-editing state files."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated promote-to-plan dry-run process conformance passes"
+  ],
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Planning promote-to-plan executes generated operation IR through codegen-owned primitive dataflow while the planning module owns state mutation policy.",
+    "steps": [
+      {
+        "id": "apply_lifecycle_operation",
+        "uses": "planning.promote-to-plan.apply",
+        "description": "Promote a direct TODO item into an execplan scaffold.",
+        "arguments": {},
+        "outputs": [
+          "result"
+        ],
+        "on_error": "emit_usage_error"
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit",
+        "description": "Emit planning lifecycle result in the requested format.",
+        "arguments": {},
+        "outputs": [
+          "emitted"
+        ],
+        "on_error": "emit_usage_error"
+      }
+    ]
+  }
+}

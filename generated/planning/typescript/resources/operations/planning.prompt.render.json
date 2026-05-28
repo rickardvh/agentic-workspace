@@ -1,0 +1,90 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "planning.prompt.render",
+  "command_surface": {
+    "program": "agentic-planning",
+    "command": "prompt"
+  },
+  "summary": "Render planning bootstrap prompt guidance for install/adopt workflows.",
+  "classification": "read-only-report",
+  "inputs": [
+    {
+      "name": "prompt_command",
+      "source": "cli-option",
+      "required": true
+    },
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "text"
+  },
+  "effects": {
+    "read_only": true,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": false,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": "planning upgrade source metadata",
+      "required": false
+    }
+  ],
+  "writes": [],
+  "steps": [
+    {
+      "id": "render_prompt",
+      "uses": "planning.prompt.render",
+      "description": "Render the selected planning bootstrap prompt guidance."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit prompt guidance as text."
+    }
+  ],
+  "guards": [
+    "Prompt rendering must not mutate the repository."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated prompt process conformance passes"
+  ],
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Planning prompt executes generated operation IR through codegen-owned primitive dataflow while the planning module supplies package-specific upgrade-source guidance.",
+    "steps": [
+      {
+        "id": "render_prompt",
+        "uses": "planning.prompt.render",
+        "description": "Render the selected planning bootstrap prompt guidance.",
+        "arguments": {},
+        "outputs": [
+          "result"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit",
+        "description": "Emit prompt guidance as text.",
+        "arguments": {},
+        "outputs": [
+          "emitted"
+        ],
+        "on_error": "emit_usage_error"
+      }
+    ]
+  }
+}

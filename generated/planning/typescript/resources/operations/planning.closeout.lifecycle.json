@@ -1,0 +1,169 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "planning.closeout.lifecycle",
+  "command_surface": {
+    "program": "agentic-planning",
+    "command": "closeout",
+    "format_option": "format"
+  },
+  "summary": "Close out a completed execplan through one command-owned writer.",
+  "classification": "lifecycle-mutation",
+  "inputs": [
+    {
+      "name": "plan",
+      "source": "cli-option",
+      "required": true
+    },
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "claim_level",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "intent_status",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "residue",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "proof_from",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "residue_owner",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "what_happened",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "scope_touched",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "changed_surfaces",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "review_summary",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "outcome_summary",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "expect_planning_revision",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "dry_run",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "discard_archive",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "module-result"
+  },
+  "effects": {
+    "read_only": false,
+    "destructive": false,
+    "idempotent": false,
+    "writes_repo_state": true,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": "target repository Planning execplan and state",
+      "required": true
+    }
+  ],
+  "writes": [
+    {
+      "surface": ".agentic-workspace/planning/",
+      "required": false,
+      "when": "not a dry run"
+    }
+  ],
+  "steps": [
+    {
+      "id": "apply_lifecycle_operation",
+      "uses": "planning.closeout.apply",
+      "description": "Write structured closeout fields and run archive validation."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit planning lifecycle result in the requested format."
+    }
+  ],
+  "guards": [
+    "Respect dry-run mode by avoiding writes.",
+    "Use planning closeout as the primary closeout writer instead of hand-editing closeout fields.",
+    "Lane or epic closeout must preserve unresolved parent intent as an explicit continuation."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated closeout dry-run process conformance passes"
+  ],
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Planning closeout executes generated operation IR through codegen-owned dataflow while the planning module owns closeout policy.",
+    "steps": [
+      {
+        "id": "apply_lifecycle_operation",
+        "uses": "planning.closeout.apply",
+        "description": "Write structured closeout fields and run archive validation.",
+        "arguments": {},
+        "outputs": [
+          "result"
+        ],
+        "on_error": "emit_usage_error"
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit",
+        "description": "Emit planning lifecycle result in the requested format.",
+        "arguments": {},
+        "outputs": [
+          "emitted"
+        ],
+        "on_error": "emit_usage_error"
+      }
+    ]
+  }
+}

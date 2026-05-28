@@ -1,0 +1,144 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "verification.report.report",
+  "command_surface": {
+    "program": "agentic-verification",
+    "command": "report",
+    "format_option": "format"
+  },
+  "summary": "Report configured repo-native verification protocols, proof routes, evidence bundles, and known gaps.",
+  "classification": "read-only-report",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "changed_paths",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "task_text",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "text-or-json",
+    "schema_ref": "agentic-workspace/verification/v1"
+  },
+  "effects": {
+    "read_only": true,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": false,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": true,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": ".agentic-workspace/verification/manifest.toml",
+      "required": false
+    }
+  ],
+  "writes": [],
+  "steps": [
+    {
+      "id": "resolve_target_root",
+      "uses": "path.target_root.resolve",
+      "description": "Resolve the repository root used for verification manifest inspection.",
+      "outputs": [
+        "target_root"
+      ]
+    },
+    {
+      "id": "load_verification_report",
+      "uses": "python.function.call",
+      "description": "Load the package-owned Verification report projection.",
+      "outputs": [
+        "result"
+      ]
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit verification report JSON or compact text.",
+      "outputs": [
+        "emitted"
+      ]
+    }
+  ],
+  "guards": [
+    "Report must remain read-only.",
+    "Verification owns manifest semantics; root workspace may only adapt this projection."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated verification report process conformance passes"
+  ],
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Verification report uses generated command parsing and operation dispatch, then calls the package-owned runtime projection.",
+    "steps": [
+      {
+        "id": "resolve_target_root",
+        "uses": "path.target_root.resolve",
+        "description": "Resolve the repository root used for verification manifest inspection.",
+        "arguments": {
+          "must_exist": true,
+          "must_be_dir": true
+        },
+        "outputs": [
+          "target_root"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "load_verification_report",
+        "uses": "python.function.call",
+        "description": "Load the package-owned Verification report projection.",
+        "arguments": {
+          "import_module": "repo_verification_bootstrap.runtime_primitives",
+          "function": "verification_report_payload",
+          "kwargs": {
+            "target_root": {
+              "value": "target_root"
+            },
+            "changed_paths": {
+              "value": "changed_paths"
+            },
+            "task_text": {
+              "value": "task_text"
+            }
+          }
+        },
+        "outputs": [
+          "result"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit",
+        "description": "Emit verification report JSON or compact text.",
+        "arguments": {},
+        "outputs": [
+          "emitted"
+        ],
+        "on_error": "emit_usage_error"
+      }
+    ]
+  }
+}

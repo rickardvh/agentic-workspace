@@ -1,0 +1,302 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "memory.report.report",
+  "command_surface": {
+    "program": "agentic-memory",
+    "command": "report",
+    "format_option": "format"
+  },
+  "summary": "Read-only agentic-memory report; non-verbose text/JSON uses portable manifest-count primitives while verbose behavior remains on the explicit source fallback.",
+  "classification": "read-only-report",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "verbose",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "text-or-json"
+  },
+  "effects": {
+    "read_only": true,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": false,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": "target repository memory manifest",
+      "required": false
+    },
+    {
+      "surface": "verbose flag for broad diagnostic output",
+      "required": false
+    }
+  ],
+  "writes": [],
+  "steps": [
+    {
+      "id": "resolve_target_root",
+      "uses": "path.target_root.resolve",
+      "description": "Resolve the target root for target-local compact report checks."
+    },
+    {
+      "id": "count_manifest_notes",
+      "uses": "toml.table.counts",
+      "description": "Count note records and relevance categories in the target memory manifest."
+    },
+    {
+      "id": "assemble_report",
+      "uses": "payload.assemble",
+      "description": "Assemble the compact report payload from primitive outputs."
+    },
+    {
+      "id": "load_verbose_report",
+      "uses": "memory.report.load",
+      "description": "Load package-domain report payload when verbose output is requested."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit report in the requested format."
+    }
+  ],
+  "guards": [
+    "report must remain read-only."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "process conformance remains compatible"
+  ],
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Memory report non-verbose text/JSON executes generated operation IR through codegen-owned portable primitives. Verbose report behavior remains package-domain source runtime.",
+    "steps": [
+      {
+        "id": "resolve_target_root",
+        "uses": "path.target_root.resolve",
+        "description": "Resolve the target root for target-local compact report checks.",
+        "when": {
+          "value": "verbose",
+          "equals": false
+        },
+        "arguments": {
+          "must_exist": true,
+          "must_be_dir": true
+        },
+        "outputs": [
+          "target_root"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "count_manifest_notes",
+        "uses": "toml.table.counts",
+        "description": "Count note records and relevance categories in the target memory manifest.",
+        "when": {
+          "value": "verbose",
+          "equals": false
+        },
+        "arguments": {
+          "base_value": "target_root",
+          "path": ".agentic-workspace/memory/repo/manifest.toml",
+          "table": "notes",
+          "relevance_field": "task_relevance",
+          "required_value": "required",
+          "optional_value": "optional",
+          "routing_only_field": "routing_only"
+        },
+        "outputs": [
+          "table_counts",
+          "table_present",
+          "table_status"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "assemble_report",
+        "uses": "payload.assemble",
+        "description": "Assemble the compact report payload from primitive outputs.",
+        "when": {
+          "value": "verbose",
+          "equals": false
+        },
+        "arguments": {
+          "fields": {
+            "template": {
+              "kind": "memory-module-report/v1",
+              "profile": "tiny",
+              "module": "memory",
+              "target_root": {
+                "$value": "target_root"
+              },
+              "health": {
+                "$exists_status": {
+                  "value": "table_present",
+                  "present": "healthy",
+                  "missing": "attention-needed"
+                }
+              },
+              "status": {
+                "detected_version": null,
+                "bootstrap_version": null,
+                "note_count": {
+                  "$field": {
+                    "value": "table_counts",
+                    "path": "note_count"
+                  }
+                },
+                "manifest_status": {
+                  "$value": "table_status"
+                }
+              },
+              "active": {
+                "note_count": {
+                  "$field": {
+                    "value": "table_counts",
+                    "path": "note_count"
+                  }
+                },
+                "manifest_note_count": {
+                  "$field": {
+                    "value": "table_counts",
+                    "path": "note_count"
+                  }
+                },
+                "required_count": {
+                  "$field": {
+                    "value": "table_counts",
+                    "path": "required_count"
+                  }
+                },
+                "optional_count": {
+                  "$field": {
+                    "value": "table_counts",
+                    "path": "optional_count"
+                  }
+                },
+                "routing_only_count": {
+                  "$field": {
+                    "value": "table_counts",
+                    "path": "routing_only_count"
+                  }
+                }
+              },
+              "habitual_pull": {
+                "status": {
+                  "$exists_status": {
+                    "value": "table_present",
+                    "present": "available",
+                    "missing": "unavailable"
+                  }
+                },
+                "read_first": [
+                  ".agentic-workspace/memory/repo/index.md"
+                ],
+                "do_not_bulk_read": true
+              },
+              "promotion_pressure": {
+                "status": "not-evaluated",
+                "detail_command": "agentic-memory report --target . --verbose --format json"
+              },
+              "trust": {
+                "status": "not-evaluated",
+                "detail_command": "agentic-memory report --target . --verbose --format json"
+              },
+              "finding_count": {
+                "$exists_status": {
+                  "value": "table_present",
+                  "present": 0,
+                  "missing": 1
+                }
+              },
+              "findings": {
+                "$exists_status": {
+                  "value": "table_present",
+                  "present": [],
+                  "missing": [
+                    {
+                      "severity": "warning",
+                      "path": ".agentic-workspace/memory/repo/manifest.toml",
+                      "message": "Memory manifest is not readable; run full report for remediation detail."
+                    }
+                  ]
+                }
+              },
+              "next_action": {
+                "summary": {
+                  "$exists_status": {
+                    "value": "table_present",
+                    "present": "No immediate memory action.",
+                    "missing": "Run full memory report for remediation detail."
+                  }
+                },
+                "commands": {
+                  "$exists_status": {
+                    "value": "table_present",
+                    "present": [],
+                    "missing": [
+                      "agentic-memory report --target . --verbose --format json"
+                    ]
+                  }
+                }
+              },
+              "detail_commands": {
+                "full": "agentic-memory report --target . --verbose --format json",
+                "route": "agentic-memory route --target . --files <paths> --format json"
+              }
+            }
+          }
+        },
+        "outputs": [
+          "result"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "load_verbose_report",
+        "uses": "memory.report.load",
+        "description": "Load package-domain report payload when verbose output is requested.",
+        "when": {
+          "not": {
+            "value": "verbose",
+            "equals": false
+          }
+        },
+        "arguments": {},
+        "outputs": [
+          "result"
+        ],
+        "on_error": "fail"
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit",
+        "description": "Emit the memory report payload in the requested format.",
+        "arguments": {},
+        "outputs": [
+          "emitted"
+        ],
+        "on_error": "emit_usage_error"
+      }
+    ]
+  }
+}

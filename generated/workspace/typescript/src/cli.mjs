@@ -5,10 +5,11 @@
 // Regenerate with: uv run python scripts/generate/generate_command_packages.py
 // DO NOT EDIT DIRECTLY.
 
-import { spawnSync } from 'node:child_process';
 import { writeSync } from 'node:fs';
+import { runGeneratedOperation } from './runtime.mjs';
 
 const supportedCommands = new Set(["config", "defaults", "doctor", "external-intent", "implement", "init", "install", "memory", "modules", "note-delegation-outcome", "ownership", "planning", "preflight", "prompt", "proof", "reconcile", "report", "setup", "skills", "start", "status", "summary", "system-intent", "uninstall", "upgrade"]);
+const nativeOperationIds = new Set(["config.report", "defaults.report", "delegation-outcome.append", "doctor.report", "external-intent.refresh-github", "implement.context", "init.lifecycle", "install.lifecycle", "memory.front-door", "modules.report", "ownership.report", "planning.front-door", "preflight.report", "prompt.init", "prompt.uninstall", "prompt.upgrade", "proof.report", "reconcile.report", "report.combined", "setup.guidance", "skills.report", "start.context", "status.report", "summary.report", "system-intent.sync", "uninstall.lifecycle", "upgrade.lifecycle"]);
 const commandDefinitions = [
   {
     "interface": {
@@ -44,7 +45,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "modules"
+    "name": "modules",
+    "operation_ref": {
+      "id": "modules.report",
+      "path": "operations/modules.report.json"
+    }
   },
   {
     "interface": {
@@ -104,7 +109,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "summary"
+    "name": "summary",
+    "operation_ref": {
+      "id": "summary.report",
+      "path": "operations/summary.report.json"
+    }
   },
   {
     "interface": {
@@ -1143,7 +1152,11 @@ const commandDefinitions = [
       ],
       "subcommands_required": false
     },
-    "name": "planning"
+    "name": "planning",
+    "operation_ref": {
+      "id": "planning.front-door",
+      "path": "operations/planning.front-door.json"
+    }
   },
   {
     "interface": {
@@ -1435,7 +1448,11 @@ const commandDefinitions = [
       ],
       "subcommands_required": false
     },
-    "name": "memory"
+    "name": "memory",
+    "operation_ref": {
+      "id": "memory.front-door",
+      "path": "operations/memory.front-door.json"
+    }
   },
   {
     "interface": {
@@ -1495,7 +1512,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "start"
+    "name": "start",
+    "operation_ref": {
+      "id": "start.context",
+      "path": "operations/start.context.json"
+    }
   },
   {
     "interface": {
@@ -1562,7 +1583,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "implement"
+    "name": "implement",
+    "operation_ref": {
+      "id": "implement.context",
+      "path": "operations/implement.context.json"
+    }
   },
   {
     "interface": {
@@ -1605,7 +1630,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "defaults"
+    "name": "defaults",
+    "operation_ref": {
+      "id": "defaults.report",
+      "path": "operations/defaults.report.json"
+    }
   },
   {
     "interface": {
@@ -1673,7 +1702,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "proof"
+    "name": "proof",
+    "operation_ref": {
+      "id": "proof.report",
+      "path": "operations/proof.report.json"
+    }
   },
   {
     "interface": {
@@ -1723,7 +1756,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "setup"
+    "name": "setup",
+    "operation_ref": {
+      "id": "setup.guidance",
+      "path": "operations/setup.guidance.json"
+    }
   },
   {
     "interface": {
@@ -1765,7 +1802,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "ownership"
+    "name": "ownership",
+    "operation_ref": {
+      "id": "ownership.report",
+      "path": "operations/ownership.report.json"
+    }
   },
   {
     "interface": {
@@ -1808,7 +1849,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "config"
+    "name": "config",
+    "operation_ref": {
+      "id": "config.report",
+      "path": "operations/config.report.json"
+    }
   },
   {
     "interface": {
@@ -1844,7 +1889,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "system-intent"
+    "name": "system-intent",
+    "operation_ref": {
+      "id": "system-intent.sync",
+      "path": "operations/system-intent.sync.json"
+    }
   },
   {
     "interface": {
@@ -1935,7 +1984,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "note-delegation-outcome"
+    "name": "note-delegation-outcome",
+    "operation_ref": {
+      "id": "delegation-outcome.append",
+      "path": "operations/delegation-outcome.append.json"
+    }
   },
   {
     "interface": {
@@ -1977,7 +2030,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "skills"
+    "name": "skills",
+    "operation_ref": {
+      "id": "skills.report",
+      "path": "operations/skills.report.json"
+    }
   },
   {
     "interface": {
@@ -2050,7 +2107,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "report"
+    "name": "report",
+    "operation_ref": {
+      "id": "report.combined",
+      "path": "operations/report.combined.json"
+    }
   },
   {
     "interface": {
@@ -2094,7 +2155,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "reconcile"
+    "name": "reconcile",
+    "operation_ref": {
+      "id": "reconcile.report",
+      "path": "operations/reconcile.report.json"
+    }
   },
   {
     "interface": {
@@ -2185,7 +2250,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "external-intent"
+    "name": "external-intent",
+    "operation_ref": {
+      "id": "external-intent.refresh-github",
+      "path": "operations/external-intent.refresh-github.json"
+    }
   },
   {
     "interface": {
@@ -2236,7 +2305,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "preflight"
+    "name": "preflight",
+    "operation_ref": {
+      "id": "preflight.report",
+      "path": "operations/preflight.report.json"
+    }
   },
   {
     "interface": {
@@ -2357,7 +2430,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "install"
+    "name": "install",
+    "operation_ref": {
+      "id": "install.lifecycle",
+      "path": "operations/install.lifecycle.json"
+    }
   },
   {
     "interface": {
@@ -2478,7 +2555,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "init"
+    "name": "init",
+    "operation_ref": {
+      "id": "init.lifecycle",
+      "path": "operations/init.lifecycle.json"
+    }
   },
   {
     "interface": {
@@ -2657,7 +2738,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "prompt"
+    "name": "prompt",
+    "operation_ref": {
+      "id": "prompt.init",
+      "path": "operations/prompt.init.json"
+    }
   },
   {
     "interface": {
@@ -2715,7 +2800,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "status"
+    "name": "status",
+    "operation_ref": {
+      "id": "status.report",
+      "path": "operations/status.report.json"
+    }
   },
   {
     "interface": {
@@ -2780,7 +2869,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "doctor"
+    "name": "doctor",
+    "operation_ref": {
+      "id": "doctor.report",
+      "path": "operations/doctor.report.json"
+    }
   },
   {
     "interface": {
@@ -2871,7 +2964,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "upgrade"
+    "name": "upgrade",
+    "operation_ref": {
+      "id": "upgrade.lifecycle",
+      "path": "operations/upgrade.lifecycle.json"
+    }
   },
   {
     "interface": {
@@ -2962,10 +3059,15 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "uninstall"
+    "name": "uninstall",
+    "operation_ref": {
+      "id": "uninstall.lifecycle",
+      "path": "operations/uninstall.lifecycle.json"
+    }
   }
 ];
 const commandByName = new Map(commandDefinitions.map((definition) => [definition.name, definition.interface]));
+const commandDefinitionByName = new Map(commandDefinitions.map((definition) => [definition.name, definition]));
 const argv = process.argv.slice(2);
 const command = argv[0];
 
@@ -2993,8 +3095,8 @@ function printRootHelp() {
   console.log(`Usage: agentic-workspace <command> [options]`);
   console.log(`Supported generated commands: ${Array.from(supportedCommands).join(', ')}`);
   console.log('Weak-agent routing: allowed-mutation-with-review');
-  console.log('TypeScript CLI boundary: generated parser/help/validation, then canonical Python runtime handoff.');
-  console.log('Recovery: use a supported generated command or route back to the canonical Python CLI.');
+  console.log('TypeScript CLI boundary: generated parser, validation, and command execution are Node/TypeScript only.');
+  console.log('Recovery: use a supported generated command or inspect the generated command contract.');
 }
 
 function printInterfaceHelp(path, iface) {
@@ -3105,6 +3207,103 @@ function validateInterface(iface, tokens, path) {
   }
 }
 
+function optionDefault(option) {
+  if (Object.prototype.hasOwnProperty.call(option, 'default')) return option.default;
+  if (option.action === 'store_true') return false;
+  if (option.nargs === '*') return [];
+  return undefined;
+}
+
+function initialValues(iface) {
+  const values = {};
+  for (const option of interfaceOptions(iface)) {
+    const optionName = option.name ?? optionFlags(option)[0];
+    if (!optionName) continue;
+    const defaultValue = optionDefault(option);
+    if (defaultValue !== undefined) values[optionName] = Array.isArray(defaultValue) ? [...defaultValue] : defaultValue;
+  }
+  return values;
+}
+
+function optionValue(option, token) {
+  const value = String(token);
+  return option.type === 'integer' ? Number(value) : value;
+}
+
+function parseInvocation(definition, tokens, path) {
+  const iface = definition.interface;
+  const values = initialValues(iface);
+  const positional = [];
+  let index = 0;
+  while (index < tokens.length) {
+    const token = String(tokens[index]);
+    if (isHelpToken(token)) {
+      printInterfaceHelp(path, iface);
+      process.exit(0);
+    }
+    if (token.startsWith('-')) {
+      const option = optionByFlag(iface, token);
+      if (!option) failValidation(`unknown option ${token} for ${path.join(' ')}`);
+      const optionName = option.name ?? optionFlags(option)[0];
+      if (option.action === 'store_true') {
+        values[optionName] = true;
+        index += 1;
+        continue;
+      }
+      if (option.nargs === '*') {
+        const collected = [];
+        let cursor = index + 1;
+        while (cursor < tokens.length && !String(tokens[cursor]).startsWith('-')) {
+          collected.push(optionValue(option, tokens[cursor]));
+          cursor += 1;
+        }
+        values[optionName] = collected;
+        index = cursor;
+        continue;
+      }
+      values[optionName] = optionValue(option, tokens[index + 1]);
+      index += 2;
+      continue;
+    }
+    const subcommand = interfaceSubcommands(iface).find((candidate) => candidate.name === token);
+    if (subcommand) {
+      const nested = parseInvocation({ interface: subcommand, operation_ref: subcommand.operation_ref ?? definition.operation_ref }, tokens.slice(index + 1), [...path, token]);
+      if (iface.subcommand_dest) nested.values[iface.subcommand_dest] = token;
+      return nested;
+    }
+    positional.push(token);
+    index += 1;
+  }
+  interfaceArguments(iface).forEach((argument, position) => {
+    if (position < positional.length) values[argument.name] = positional[position];
+    else if (Object.prototype.hasOwnProperty.call(argument, 'default')) values[argument.name] = argument.default;
+  });
+  values._command_path = path;
+  return { values, operationRef: definition.operation_ref ?? iface.operation_ref ?? null };
+}
+
+function runNativeOperation(operationId, operationPath, values) {
+  if (!nativeOperationIds.has(operationId)) {
+    console.error(`Unsupported native TypeScript operation: ${operationId}`);
+    return 2;
+  }
+  return runGeneratedOperation({ operationId, operationPath, values });
+}
+
+function maybeRunNativeOperation() {
+  const invocation = parseInvocation(commandDefinitionByName.get(command), argv.slice(1), [command]);
+  const operationId = invocation.operationRef?.id;
+  const operationPath = invocation.operationRef?.path;
+  try {
+    const nativeStatus = runNativeOperation(operationId, operationPath, invocation.values);
+    process.exit(nativeStatus);
+  } catch (error) {
+    console.error(`TypeScript native runtime failed: ${error.message}`);
+    console.error('Recovery: run agentic-workspace --help and inspect the generated command contract.');
+    process.exit(1);
+  }
+}
+
 if (!command || command === '--help' || command === '-h') {
   printRootHelp();
   process.exit(0);
@@ -3118,47 +3317,4 @@ if (!supportedCommands.has(command)) {
 
 validateInterface(commandByName.get(command), argv.slice(1), [command]);
 
-const runtimeCommand = process.env.AGENTIC_WORKSPACE_RUNTIME ?? "python -c \"import sys; from agentic_workspace.cli import main; raise SystemExit(main(sys.argv[1:]))\"";
-
-function splitRuntimeCommand(commandLine) {
-  const parts = [];
-  let current = '';
-  let quote = null;
-  for (const char of commandLine.trim()) {
-    if (quote) {
-      if (char === quote) quote = null;
-      else current += char;
-    } else if (char === '"' || char === "'") {
-      quote = char;
-    } else if (/\s/.test(char)) {
-      if (current) {
-        parts.push(current);
-        current = '';
-      }
-    } else {
-      current += char;
-    }
-  }
-  if (quote) throw new Error('runtime command has an unterminated quote');
-  if (current) parts.push(current);
-  if (parts.length === 0) throw new Error('runtime command is empty');
-  return parts;
-}
-
-let result;
-try {
-  const [runtimeExecutable, ...runtimeArgs] = splitRuntimeCommand(runtimeCommand);
-  result = spawnSync(runtimeExecutable, [...runtimeArgs, ...argv], { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
-} catch (error) {
-  console.error(`Adapter runtime handoff failed: ${error.message}`);
-  console.error('Recovery: verify AGENTIC_WORKSPACE_RUNTIME or run the canonical Python CLI directly.');
-  process.exit(1);
-}
-if (result.error) {
-  console.error(`Adapter runtime handoff failed: ${result.error.message}`);
-  console.error('Recovery: verify AGENTIC_WORKSPACE_RUNTIME or run the canonical Python CLI directly.');
-  process.exit(1);
-}
-if (result.stdout) writeSync(1, result.stdout);
-if (result.stderr) writeSync(2, result.stderr);
-process.exit(result.status ?? 1);
+maybeRunNativeOperation();

@@ -1043,38 +1043,46 @@ def _runnable_typescript_conformance_cases() -> tuple[list[RunnableTypescriptCon
     return selected, errors
 
 
-def _validate_typescript_runtime_handoff_thinness(*, package: str, cli_text: str) -> list[str]:
+def _validate_typescript_runtime_handoff_thinness(*, package: str, cli_text: str, runtime_text: str) -> list[str]:
     errors: list[str] = []
-    expected_imports = {
-        "import { spawnSync } from 'node:child_process';",
-        "import { writeSync } from 'node:fs';",
-    }
+    expected_imports = {"import { writeSync } from 'node:fs';", "import { runGeneratedOperation } from './runtime.mjs';"}
     import_lines = {line.strip() for line in cli_text.splitlines() if line.startswith("import ")}
     unexpected_imports = sorted(import_lines - expected_imports)
     if unexpected_imports:
-        errors.append(f"{package}/src/cli.mjs imports runtime-owned modules: {unexpected_imports!r}")
+        errors.append(f"{package}/src/cli.mjs imports non-native runtime modules: {unexpected_imports!r}")
     required_fragments = [
-        "function splitRuntimeCommand(commandLine)",
-        "const [runtimeExecutable, ...runtimeArgs] = splitRuntimeCommand(runtimeCommand);",
-        "spawnSync(runtimeExecutable, [...runtimeArgs, ...argv], { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 })",
-        "if (result.stdout) writeSync(1, result.stdout);",
-        "if (result.stderr) writeSync(2, result.stderr);",
-        "process.exit(result.status ?? 1);",
+        "const nativeOperationIds = new Set(",
+        "function runNativeOperation(operationId, operationPath, values)",
+        "runGeneratedOperation({ operationId, operationPath, values })",
+        "maybeRunNativeOperation();",
+        "TypeScript CLI boundary: generated parser, validation, and command execution are Node/TypeScript only.",
     ]
     for fragment in required_fragments:
         if fragment not in cli_text:
-            errors.append(f"{package}/src/cli.mjs is missing thin runtime handoff fragment: {fragment}")
+            errors.append(f"{package}/src/cli.mjs is missing native TypeScript runtime fragment: {fragment}")
     forbidden_fragments = [
+        "AGENTIC_WORKSPACE_RUNTIME",
+        "Adapter runtime handoff failed",
+        "canonical Python CLI",
+        "node:child_process",
+        "spawnSync",
         "shell: true",
-        "readFile",
-        "existsSync",
-        "readdir",
-        "statSync",
-        "JSON.stringify",
+        "nativeContractCases",
+        "genericNativePayload",
     ]
-    for fragment in forbidden_fragments:
-        if fragment in cli_text:
-            errors.append(f"{package}/src/cli.mjs contains runtime-owned behavior marker: {fragment}")
+    for source_label, source_text in (("src/cli.mjs", cli_text), ("src/runtime.mjs", runtime_text)):
+        for fragment in forbidden_fragments:
+            if fragment in source_text:
+                errors.append(f"{package}/{source_label} contains Python/runtime-handoff marker: {fragment}")
+    runtime_required_fragments = [
+        "export function runGeneratedOperation({ operationId, operationPath, values })",
+        "function runSteps(operation, values)",
+        "function executePrimitive(primitive, values, args, operationId)",
+        "unsupported native TypeScript primitive",
+    ]
+    for fragment in runtime_required_fragments:
+        if fragment not in runtime_text:
+            errors.append(f"{package}/src/runtime.mjs is missing native operation executor fragment: {fragment}")
     return errors
 
 
@@ -3011,89 +3019,46 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
                 return
             case = runnable_case.case
             fixture_root = materialize_fixture(case)
-            runtime = runtime_for_package(runnable_case.package_id)
-            canonical_process = _capture(
-                [python, str(shims[runnable_case.package_id]), *case.success_args],
-                cwd=fixture_root,
-                env=_conformance_env(),
-            )
-            if canonical_process.returncode != case.expected_exit:
-                errors.append(
-                    f"runtime primitive failure: canonical {runnable_case.package_id} {case.label} command exited "
-                    f"{canonical_process.returncode}, expected {case.expected_exit}; "
-                    f"stderr={canonical_process.stderr!r}"
-                )
-                return
-            if canonical_process.stderr.strip() and not case.allow_stderr:
-                errors.append(
-                    f"runtime primitive failure: canonical {runnable_case.package_id} {case.label} emitted unexpected stderr: "
-                    f"{canonical_process.stderr!r}"
-                )
-                return
-            try:
-                canonical_selected = case.selected_fields(canonical_process.stdout)
-            except (KeyError, ValueError, json.JSONDecodeError) as exc:
-                errors.append(
-                    f"runtime primitive failure: canonical {runnable_case.package_id} {case.label} stdout did not satisfy selected fields: {exc}"
-                )
-                return
-            if case.expected_fields is not None and canonical_selected != case.expected_fields:
-                errors.append(
-                    f"runtime primitive failure: canonical {runnable_case.package_id} {case.label} output shape drifted; "
-                    f"expected selected fields {case.expected_fields!r}, got {canonical_selected!r}"
-                )
-                return
-
             adapter_process = _capture(
                 [node, str(runnable_case.cli), *case.success_args],
                 cwd=fixture_root,
-                env=_conformance_env(runtime=runtime),
+                env=_conformance_env(runtime=""),
             )
-            if adapter_process.returncode != canonical_process.returncode:
+            if adapter_process.returncode != case.expected_exit:
                 errors.append(
-                    f"adapter failure: {runnable_case.package_id} {case.label} exit code drifted from canonical process; "
-                    f"expected {canonical_process.returncode}, got {adapter_process.returncode}; stderr={adapter_process.stderr!r}"
+                    f"adapter failure: {runnable_case.package_id} {case.label} exit code drifted from contract; "
+                    f"expected {case.expected_exit}, got {adapter_process.returncode}; stderr={adapter_process.stderr!r}"
                 )
             else:
-                try:
-                    adapter_selected = case.selected_fields(adapter_process.stdout)
-                except (KeyError, ValueError, json.JSONDecodeError) as exc:
-                    errors.append(
-                        f"adapter failure: {runnable_case.package_id} {case.label} stdout did not satisfy selected fields: {exc}; "
-                        f"stdout={adapter_process.stdout!r}"
-                    )
-                else:
-                    if adapter_selected != canonical_selected:
+                if case.expected_fields is not None:
+                    try:
+                        adapter_selected = case.selected_fields(adapter_process.stdout)
+                    except (KeyError, ValueError, json.JSONDecodeError) as exc:
                         errors.append(
-                            f"adapter failure: {runnable_case.package_id} {case.label} JSON selected fields drifted from canonical process; "
-                            f"expected {canonical_selected!r}, got {adapter_selected!r}"
+                            f"adapter failure: {runnable_case.package_id} {case.label} stdout did not satisfy selected fields: {exc}; "
+                            f"stdout={adapter_process.stdout!r}"
                         )
+                    else:
+                        if adapter_selected != case.expected_fields:
+                            errors.append(
+                                f"adapter failure: {runnable_case.package_id} {case.label} JSON selected fields drifted from contract; "
+                                f"expected {case.expected_fields!r}, got {adapter_selected!r}"
+                            )
             if adapter_process.stderr.strip() and not case.allow_stderr:
                 errors.append(
                     f"adapter failure: {runnable_case.package_id} {case.label} emitted unexpected stderr: {adapter_process.stderr!r}"
                 )
 
-            invalid_args = [*case.success_args, "--definitely-invalid"]
-            canonical_invalid_process = _capture(
-                [python, str(shims[runnable_case.package_id]), *invalid_args],
-                cwd=fixture_root,
-                env=_conformance_env(),
-            )
-            adapter_invalid_process = _capture(
-                [node, str(runnable_case.cli), *invalid_args],
-                cwd=fixture_root,
-                env=_conformance_env(runtime=runtime),
-            )
-            if canonical_invalid_process.returncode >= 0:
-                if adapter_invalid_process.returncode != canonical_invalid_process.returncode:
+            if "--help" not in case.success_args:
+                invalid_args = [*case.success_args, "--definitely-invalid"]
+                adapter_invalid_process = _capture(
+                    [node, str(runnable_case.cli), *invalid_args],
+                    cwd=fixture_root,
+                    env=_conformance_env(runtime=""),
+                )
+                if adapter_invalid_process.returncode == 0 or not adapter_invalid_process.stderr.strip():
                     errors.append(
-                        f"adapter failure: {runnable_case.package_id} {case.label} invalid-option exit code drifted from canonical process; "
-                        f"expected {canonical_invalid_process.returncode}, got {adapter_invalid_process.returncode}"
-                    )
-                if bool(adapter_invalid_process.stderr.strip()) != bool(canonical_invalid_process.stderr.strip()):
-                    errors.append(
-                        f"adapter failure: {runnable_case.package_id} {case.label} invalid-option stderr presence drifted from canonical process; "
-                        f"canonical={canonical_invalid_process.stderr!r}, adapter={adapter_invalid_process.stderr!r}"
+                        f"adapter failure: {runnable_case.package_id} {case.label} invalid-option was not rejected by native TypeScript parser"
                     )
 
         for runnable_case in derived_cases:
@@ -3102,7 +3067,7 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
             help_result = _capture(
                 [node, str(runnable_case.cli), "--help"],
                 cwd=fixture_root,
-                env=_conformance_env(runtime=runtime_for_package(runnable_case.package_id)),
+                env=_conformance_env(runtime=""),
             )
             expected_routing = runnable_case.weak_agent_routing
             if (
@@ -3130,22 +3095,32 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
                     f"adapter failure: {runnable_case.package_id} unsupported command refusal drifted; "
                     f"exit={unsupported.returncode}, stdout={unsupported.stdout!r}, stderr={unsupported.stderr!r}"
                 )
-            exercises_runtime_handoff = "--help" not in runnable_case.case.success_args
-            if runnable_case.weak_agent_routing in {"allowed-read-only", "allowed-mutation-with-review"} and exercises_runtime_handoff:
-                handoff_failure = _capture(
+            exercises_runtime = "--help" not in runnable_case.case.success_args
+            if runnable_case.weak_agent_routing in {"allowed-read-only", "allowed-mutation-with-review"} and exercises_runtime:
+                no_python_result = _capture(
                     [node, str(runnable_case.cli), *runnable_case.case.success_args],
                     cwd=fixture_root,
                     env=_conformance_env(runtime=""),
                 )
-                if (
-                    handoff_failure.returncode != 1
-                    or "Adapter runtime handoff failed:" not in handoff_failure.stderr
-                    or "Recovery:" not in handoff_failure.stderr
-                ):
+                if no_python_result.returncode != runnable_case.case.expected_exit:
                     errors.append(
-                        f"adapter failure: {runnable_case.package_id} weak-agent-safe runtime handoff recovery drifted; "
-                        f"exit={handoff_failure.returncode}, stdout={handoff_failure.stdout!r}, stderr={handoff_failure.stderr!r}"
+                        f"adapter failure: {runnable_case.package_id} native TypeScript execution drifted without Python runtime; "
+                        f"exit={no_python_result.returncode}, stderr={no_python_result.stderr!r}"
                     )
+                elif runnable_case.case.expected_fields is not None:
+                    try:
+                        native_selected = runnable_case.case.selected_fields(no_python_result.stdout)
+                    except (KeyError, ValueError, json.JSONDecodeError) as exc:
+                        errors.append(
+                            f"adapter failure: {runnable_case.package_id} native TypeScript operation stdout did not satisfy "
+                            f"selected fields without Python runtime: {exc}; stdout={no_python_result.stdout!r}"
+                        )
+                    else:
+                        if native_selected != runnable_case.case.expected_fields:
+                            errors.append(
+                                f"adapter failure: {runnable_case.package_id} native TypeScript operation drifted without Python runtime; "
+                                f"selected={native_selected!r}, stderr={no_python_result.stderr!r}"
+                            )
 
     return errors
 
@@ -3465,7 +3440,17 @@ def _validate_static_surfaces() -> list[str]:
             cli_path = package_root / "src" / "cli.mjs"
             if is_runnable and cli_path.is_file():
                 cli_text = cli_path.read_text(encoding="utf-8")
-                errors.extend(_validate_typescript_runtime_handoff_thinness(package=package_label, cli_text=cli_text))
+                runtime_path = package_root / "src" / "runtime.mjs"
+                if not runtime_path.is_file():
+                    errors.append(f"{package_label}/src/runtime.mjs is missing for runnable TypeScript target")
+                else:
+                    errors.extend(
+                        _validate_typescript_runtime_handoff_thinness(
+                            package=package_label,
+                            cli_text=cli_text,
+                            runtime_text=runtime_path.read_text(encoding="utf-8"),
+                        )
+                    )
             if is_weak_agent_safe and maturity.get("weak_agent_routing") != "allowed-read-only":
                 errors.append(f"{package_label}/package.json weak-agent-safe target is missing allowed-read-only routing")
             if is_mutation_capable and maturity.get("weak_agent_routing") != "allowed-mutation-with-review":

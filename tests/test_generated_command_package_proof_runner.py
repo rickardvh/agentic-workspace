@@ -1132,24 +1132,39 @@ def test_python_parser_retirement_rejects_generated_command_in_handwritten_parse
     assert any("handwritten parser still accepts generated command 'defaults'" in error for error in errors)
 
 
-def test_typescript_runtime_handoff_thinness_rejects_runtime_owned_behavior() -> None:
+def test_typescript_runtime_check_rejects_python_handoff_behavior() -> None:
     checker = _load_checker()
     cli_text = "\n".join(
         [
             "import { spawnSync } from 'node:child_process';",
+            "const nativeOperationIds = new Set([]);",
             "import { readFileSync, writeSync } from 'node:fs';",
+            "const nativeContractCases = {};",
             "function splitRuntimeCommand(commandLine) { return [commandLine]; }",
             "const [runtimeExecutable, ...runtimeArgs] = splitRuntimeCommand(runtimeCommand);",
             "result = spawnSync(runtimeExecutable, [...runtimeArgs, ...argv], { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });",
-            "JSON.stringify(readFileSync('AGENTS.md'));",
+            "console.error('Adapter runtime handoff failed');",
+        ]
+    )
+    runtime_text = "\n".join(
+        [
+            "export function runGeneratedOperation({ operationId, operationPath, values }) {}",
+            "function runSteps(operation, values) {}",
+            "function executePrimitive(primitive, values, args, operationId) {}",
+            "throw new Error('unsupported native TypeScript primitive');",
         ]
     )
 
-    errors = checker._validate_typescript_runtime_handoff_thinness(package="workspace-cli", cli_text=cli_text)
+    errors = checker._validate_typescript_runtime_handoff_thinness(
+        package="workspace-cli",
+        cli_text=cli_text,
+        runtime_text=runtime_text,
+    )
 
-    assert any("imports runtime-owned modules" in error for error in errors)
-    assert any("runtime-owned behavior marker: readFile" in error for error in errors)
-    assert any("runtime-owned behavior marker: JSON.stringify" in error for error in errors)
+    assert any("imports non-native runtime modules" in error for error in errors)
+    assert any("Python/runtime-handoff marker: node:child_process" in error for error in errors)
+    assert any("Python/runtime-handoff marker: Adapter runtime handoff failed" in error for error in errors)
+    assert any("Python/runtime-handoff marker: nativeContractCases" in error for error in errors)
 
 
 def test_generated_command_projection_boundary_rejects_target_owned_runtime_behavior() -> None:

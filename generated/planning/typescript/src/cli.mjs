@@ -5,10 +5,11 @@
 // Regenerate with: uv run python scripts/generate/generate_command_packages.py
 // DO NOT EDIT DIRECTLY.
 
-import { spawnSync } from 'node:child_process';
 import { writeSync } from 'node:fs';
+import { runGeneratedOperation } from './runtime.mjs';
 
 const supportedCommands = new Set(["adopt", "archive-plan", "close-item", "closeout", "create-review", "delegation-decision", "doctor", "handoff", "init", "install", "intake-artifact", "list-files", "new-plan", "promote-to-plan", "prompt", "reconcile", "report", "status", "summary", "uninstall", "upgrade", "verify-payload"]);
+const nativeOperationIds = new Set(["planning.adopt.lifecycle", "planning.archive-plan.lifecycle", "planning.close-item.lifecycle", "planning.closeout.lifecycle", "planning.create-review.lifecycle", "planning.delegation-decision.lifecycle", "planning.doctor.report", "planning.handoff.report", "planning.init.lifecycle", "planning.install.lifecycle", "planning.intake-artifact.lifecycle", "planning.list-files.report", "planning.new-plan.lifecycle", "planning.promote-to-plan.lifecycle", "planning.prompt.render", "planning.reconcile.report", "planning.report.report", "planning.status.report", "planning.summary.report", "planning.uninstall.lifecycle", "planning.upgrade.lifecycle", "planning.verify-payload.report"]);
 const commandDefinitions = [
   {
     "interface": {
@@ -52,7 +53,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "adopt"
+    "name": "adopt",
+    "operation_ref": {
+      "id": "planning.adopt.lifecycle",
+      "path": "operations/planning.adopt.lifecycle.json"
+    }
   },
   {
     "interface": {
@@ -207,7 +212,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "archive-plan"
+    "name": "archive-plan",
+    "operation_ref": {
+      "id": "planning.archive-plan.lifecycle",
+      "path": "operations/planning.archive-plan.lifecycle.json"
+    }
   },
   {
     "interface": {
@@ -361,7 +370,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "closeout"
+    "name": "closeout",
+    "operation_ref": {
+      "id": "planning.closeout.lifecycle",
+      "path": "operations/planning.closeout.lifecycle.json"
+    }
   },
   {
     "interface": {
@@ -427,7 +440,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "close-item"
+    "name": "close-item",
+    "operation_ref": {
+      "id": "planning.close-item.lifecycle",
+      "path": "operations/planning.close-item.lifecycle.json"
+    }
   },
   {
     "interface": {
@@ -500,7 +517,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "create-review"
+    "name": "create-review",
+    "operation_ref": {
+      "id": "planning.create-review.lifecycle",
+      "path": "operations/planning.create-review.lifecycle.json"
+    }
   },
   {
     "interface": {
@@ -615,7 +636,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "delegation-decision"
+    "name": "delegation-decision",
+    "operation_ref": {
+      "id": "planning.delegation-decision.lifecycle",
+      "path": "operations/planning.delegation-decision.lifecycle.json"
+    }
   },
   {
     "interface": {
@@ -651,7 +676,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "doctor"
+    "name": "doctor",
+    "operation_ref": {
+      "id": "planning.doctor.report",
+      "path": "operations/planning.doctor.report.json"
+    }
   },
   {
     "interface": {
@@ -679,7 +708,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "handoff"
+    "name": "handoff",
+    "operation_ref": {
+      "id": "planning.handoff.report",
+      "path": "operations/planning.handoff.report.json"
+    }
   },
   {
     "interface": {
@@ -739,7 +772,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "init"
+    "name": "init",
+    "operation_ref": {
+      "id": "planning.init.lifecycle",
+      "path": "operations/planning.init.lifecycle.json"
+    }
   },
   {
     "interface": {
@@ -799,7 +836,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "install"
+    "name": "install",
+    "operation_ref": {
+      "id": "planning.install.lifecycle",
+      "path": "operations/planning.install.lifecycle.json"
+    }
   },
   {
     "interface": {
@@ -820,7 +861,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "list-files"
+    "name": "list-files",
+    "operation_ref": {
+      "id": "planning.list-files.report",
+      "path": "operations/planning.list-files.report.json"
+    }
   },
   {
     "interface": {
@@ -928,7 +973,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "new-plan"
+    "name": "new-plan",
+    "operation_ref": {
+      "id": "planning.new-plan.lifecycle",
+      "path": "operations/planning.new-plan.lifecycle.json"
+    }
   },
   {
     "interface": {
@@ -1033,7 +1082,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "intake-artifact"
+    "name": "intake-artifact",
+    "operation_ref": {
+      "id": "planning.intake-artifact.lifecycle",
+      "path": "operations/planning.intake-artifact.lifecycle.json"
+    }
   },
   {
     "interface": {
@@ -1090,7 +1143,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "promote-to-plan"
+    "name": "promote-to-plan",
+    "operation_ref": {
+      "id": "planning.promote-to-plan.lifecycle",
+      "path": "operations/planning.promote-to-plan.lifecycle.json"
+    }
   },
   {
     "interface": {
@@ -1116,7 +1173,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "prompt"
+    "name": "prompt",
+    "operation_ref": {
+      "id": "planning.prompt.render",
+      "path": "operations/planning.prompt.render.json"
+    }
   },
   {
     "interface": {
@@ -1160,7 +1221,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "reconcile"
+    "name": "reconcile",
+    "operation_ref": {
+      "id": "planning.reconcile.report",
+      "path": "operations/planning.reconcile.report.json"
+    }
   },
   {
     "interface": {
@@ -1196,7 +1261,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "report"
+    "name": "report",
+    "operation_ref": {
+      "id": "planning.report.report",
+      "path": "operations/planning.report.report.json"
+    }
   },
   {
     "interface": {
@@ -1232,7 +1301,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "status"
+    "name": "status",
+    "operation_ref": {
+      "id": "planning.status.report",
+      "path": "operations/planning.status.report.json"
+    }
   },
   {
     "interface": {
@@ -1285,7 +1358,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "summary"
+    "name": "summary",
+    "operation_ref": {
+      "id": "planning.summary.report",
+      "path": "operations/planning.summary.report.json"
+    }
   },
   {
     "interface": {
@@ -1321,7 +1398,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "uninstall"
+    "name": "uninstall",
+    "operation_ref": {
+      "id": "planning.uninstall.lifecycle",
+      "path": "operations/planning.uninstall.lifecycle.json"
+    }
   },
   {
     "interface": {
@@ -1365,7 +1446,11 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "upgrade"
+    "name": "upgrade",
+    "operation_ref": {
+      "id": "planning.upgrade.lifecycle",
+      "path": "operations/planning.upgrade.lifecycle.json"
+    }
   },
   {
     "interface": {
@@ -1386,10 +1471,15 @@ const commandDefinitions = [
         }
       ]
     },
-    "name": "verify-payload"
+    "name": "verify-payload",
+    "operation_ref": {
+      "id": "planning.verify-payload.report",
+      "path": "operations/planning.verify-payload.report.json"
+    }
   }
 ];
 const commandByName = new Map(commandDefinitions.map((definition) => [definition.name, definition.interface]));
+const commandDefinitionByName = new Map(commandDefinitions.map((definition) => [definition.name, definition]));
 const argv = process.argv.slice(2);
 const command = argv[0];
 
@@ -1417,8 +1507,8 @@ function printRootHelp() {
   console.log(`Usage: agentic-planning <command> [options]`);
   console.log(`Supported generated commands: ${Array.from(supportedCommands).join(', ')}`);
   console.log('Weak-agent routing: allowed-mutation-with-review');
-  console.log('TypeScript CLI boundary: generated parser/help/validation, then canonical Python runtime handoff.');
-  console.log('Recovery: use a supported generated command or route back to the canonical Python CLI.');
+  console.log('TypeScript CLI boundary: generated parser, validation, and command execution are Node/TypeScript only.');
+  console.log('Recovery: use a supported generated command or inspect the generated command contract.');
 }
 
 function printInterfaceHelp(path, iface) {
@@ -1529,6 +1619,103 @@ function validateInterface(iface, tokens, path) {
   }
 }
 
+function optionDefault(option) {
+  if (Object.prototype.hasOwnProperty.call(option, 'default')) return option.default;
+  if (option.action === 'store_true') return false;
+  if (option.nargs === '*') return [];
+  return undefined;
+}
+
+function initialValues(iface) {
+  const values = {};
+  for (const option of interfaceOptions(iface)) {
+    const optionName = option.name ?? optionFlags(option)[0];
+    if (!optionName) continue;
+    const defaultValue = optionDefault(option);
+    if (defaultValue !== undefined) values[optionName] = Array.isArray(defaultValue) ? [...defaultValue] : defaultValue;
+  }
+  return values;
+}
+
+function optionValue(option, token) {
+  const value = String(token);
+  return option.type === 'integer' ? Number(value) : value;
+}
+
+function parseInvocation(definition, tokens, path) {
+  const iface = definition.interface;
+  const values = initialValues(iface);
+  const positional = [];
+  let index = 0;
+  while (index < tokens.length) {
+    const token = String(tokens[index]);
+    if (isHelpToken(token)) {
+      printInterfaceHelp(path, iface);
+      process.exit(0);
+    }
+    if (token.startsWith('-')) {
+      const option = optionByFlag(iface, token);
+      if (!option) failValidation(`unknown option ${token} for ${path.join(' ')}`);
+      const optionName = option.name ?? optionFlags(option)[0];
+      if (option.action === 'store_true') {
+        values[optionName] = true;
+        index += 1;
+        continue;
+      }
+      if (option.nargs === '*') {
+        const collected = [];
+        let cursor = index + 1;
+        while (cursor < tokens.length && !String(tokens[cursor]).startsWith('-')) {
+          collected.push(optionValue(option, tokens[cursor]));
+          cursor += 1;
+        }
+        values[optionName] = collected;
+        index = cursor;
+        continue;
+      }
+      values[optionName] = optionValue(option, tokens[index + 1]);
+      index += 2;
+      continue;
+    }
+    const subcommand = interfaceSubcommands(iface).find((candidate) => candidate.name === token);
+    if (subcommand) {
+      const nested = parseInvocation({ interface: subcommand, operation_ref: subcommand.operation_ref ?? definition.operation_ref }, tokens.slice(index + 1), [...path, token]);
+      if (iface.subcommand_dest) nested.values[iface.subcommand_dest] = token;
+      return nested;
+    }
+    positional.push(token);
+    index += 1;
+  }
+  interfaceArguments(iface).forEach((argument, position) => {
+    if (position < positional.length) values[argument.name] = positional[position];
+    else if (Object.prototype.hasOwnProperty.call(argument, 'default')) values[argument.name] = argument.default;
+  });
+  values._command_path = path;
+  return { values, operationRef: definition.operation_ref ?? iface.operation_ref ?? null };
+}
+
+function runNativeOperation(operationId, operationPath, values) {
+  if (!nativeOperationIds.has(operationId)) {
+    console.error(`Unsupported native TypeScript operation: ${operationId}`);
+    return 2;
+  }
+  return runGeneratedOperation({ operationId, operationPath, values });
+}
+
+function maybeRunNativeOperation() {
+  const invocation = parseInvocation(commandDefinitionByName.get(command), argv.slice(1), [command]);
+  const operationId = invocation.operationRef?.id;
+  const operationPath = invocation.operationRef?.path;
+  try {
+    const nativeStatus = runNativeOperation(operationId, operationPath, invocation.values);
+    process.exit(nativeStatus);
+  } catch (error) {
+    console.error(`TypeScript native runtime failed: ${error.message}`);
+    console.error('Recovery: run agentic-planning --help and inspect the generated command contract.');
+    process.exit(1);
+  }
+}
+
 if (!command || command === '--help' || command === '-h') {
   printRootHelp();
   process.exit(0);
@@ -1542,47 +1729,4 @@ if (!supportedCommands.has(command)) {
 
 validateInterface(commandByName.get(command), argv.slice(1), [command]);
 
-const runtimeCommand = process.env.AGENTIC_WORKSPACE_RUNTIME ?? "python -c \"import sys; from repo_planning_bootstrap.cli import main; raise SystemExit(main(sys.argv[1:]))\"";
-
-function splitRuntimeCommand(commandLine) {
-  const parts = [];
-  let current = '';
-  let quote = null;
-  for (const char of commandLine.trim()) {
-    if (quote) {
-      if (char === quote) quote = null;
-      else current += char;
-    } else if (char === '"' || char === "'") {
-      quote = char;
-    } else if (/\s/.test(char)) {
-      if (current) {
-        parts.push(current);
-        current = '';
-      }
-    } else {
-      current += char;
-    }
-  }
-  if (quote) throw new Error('runtime command has an unterminated quote');
-  if (current) parts.push(current);
-  if (parts.length === 0) throw new Error('runtime command is empty');
-  return parts;
-}
-
-let result;
-try {
-  const [runtimeExecutable, ...runtimeArgs] = splitRuntimeCommand(runtimeCommand);
-  result = spawnSync(runtimeExecutable, [...runtimeArgs, ...argv], { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
-} catch (error) {
-  console.error(`Adapter runtime handoff failed: ${error.message}`);
-  console.error('Recovery: verify AGENTIC_WORKSPACE_RUNTIME or run the canonical Python CLI directly.');
-  process.exit(1);
-}
-if (result.error) {
-  console.error(`Adapter runtime handoff failed: ${result.error.message}`);
-  console.error('Recovery: verify AGENTIC_WORKSPACE_RUNTIME or run the canonical Python CLI directly.');
-  process.exit(1);
-}
-if (result.stdout) writeSync(1, result.stdout);
-if (result.stderr) writeSync(2, result.stderr);
-process.exit(result.status ?? 1);
+maybeRunNativeOperation();
