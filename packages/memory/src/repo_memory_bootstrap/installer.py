@@ -119,6 +119,7 @@ from repo_memory_bootstrap._installer_shared import (
     InstallResult,
     MemoryManifest,
     MemoryNoteRecord,
+    PayloadEntry,
     RepoDetectionError,
 )
 from repo_memory_bootstrap.runtime_search import search_memory  # noqa: F401
@@ -151,6 +152,33 @@ def _add_contract_surface_summary(
         source=UPGRADE_SOURCE_PATH.as_posix(),
         category="safe-update",
     )
+
+
+SUPPORTED_AGENT_INSTRUCTIONS_FILES = ("AGENTS.md", "CLAUDE.md", "GEMINI.md", ".cursorrules")
+
+
+def _configured_agents_path(target_root: Path) -> Path:
+    config_path = target_root / ".agentic-workspace" / "config.toml"
+    if config_path.is_file():
+        try:
+            config_text = config_path.read_text(encoding="utf-8")
+        except OSError:
+            config_text = ""
+        match = re.search(r'^\s*agent_instructions_file\s*=\s*"([^"]+)"\s*$', config_text, flags=re.MULTILINE)
+        if match:
+            candidate = Path(match.group(1))
+            if not candidate.is_absolute() and ".." not in candidate.parts:
+                return candidate
+    detected = [Path(filename) for filename in SUPPORTED_AGENT_INSTRUCTIONS_FILES if (target_root / filename).exists()]
+    if len(detected) == 1:
+        return detected[0]
+    return AGENTS_PATH
+
+
+def _entry_target_relative_path(entry: PayloadEntry, *, target_root: Path) -> Path:
+    if entry.role == "local-entrypoint":
+        return _configured_agents_path(target_root)
+    return entry.relative_path
 
 
 def _add_workspace_orchestrator_notice(result: InstallResult, target_root: Path, *, preset: str = "memory") -> None:
@@ -755,7 +783,8 @@ def install_bootstrap(
     _record_repo_context_warnings(target_root, result)
 
     for entry in _payload_entries(source_root, target_layout="managed-root"):
-        destination = target_root / entry.relative_path
+        relative_path = _entry_target_relative_path(entry, target_root=target_root)
+        destination = target_root / relative_path
         if destination.exists() and not force:
             result.add(
                 "skipped",
@@ -1072,7 +1101,8 @@ def collect_status(target: str | Path | None = None) -> InstallResult:
     target_layout = "legacy" if detect_bootstrap_layout(target_root) == "legacy" else "managed-root"
 
     for entry in _payload_entries(payload_root(), include_bootstrap_workspace=False, target_layout=target_layout):
-        destination = target_root / entry.relative_path
+        relative_path = _entry_target_relative_path(entry, target_root=target_root)
+        destination = target_root / relative_path
         result.add(
             "present" if destination.exists() else "missing",
             destination,
@@ -3618,7 +3648,8 @@ def migrate_layout(
             )
             _prune_empty_parents(legacy_path.parent, stop=target_root)
 
-    agents_path = target_root / AGENTS_PATH
+    agents_relative = _configured_agents_path(target_root)
+    agents_path = target_root / agents_relative
     if agents_path.exists():
         existing = agents_path.read_text(encoding="utf-8")
         workspace_shared_layer_present = (target_root / WORKSPACE_WORKFLOW_PATH).exists()
@@ -3633,7 +3664,7 @@ def migrate_layout(
                 result.add(
                     "would patch",
                     agents_path,
-                    "refresh AGENTS.md to point at `.agentic-workspace/memory/WORKFLOW.md`",
+                    f"refresh {agents_relative.as_posix()} to point at `.agentic-workspace/memory/WORKFLOW.md`",
                     role="local-entrypoint",
                     safety="safe",
                     source=AGENTS_PATH.as_posix(),
@@ -3643,7 +3674,7 @@ def migrate_layout(
                 result.add(
                     "patched",
                     agents_path,
-                    "refreshed AGENTS.md to point at `.agentic-workspace/memory/WORKFLOW.md`",
+                    f"refreshed {agents_relative.as_posix()} to point at `.agentic-workspace/memory/WORKFLOW.md`",
                     role="local-entrypoint",
                     safety="safe",
                     source=AGENTS_PATH.as_posix(),
@@ -3696,6 +3727,7 @@ def _plan_upgrade_against_migrated_layout(
     managed_entries = _payload_entries(source_root, include_bootstrap_workspace=False, target_layout="managed-root")
     mirror_relpaths = {
         AGENTS_PATH,
+        _configured_agents_path(target_root),
         *OPTIONAL_APPEND_TARGETS,
         *(entry.relative_path for entry in legacy_entries),
         *(entry.relative_path for entry in managed_entries),
@@ -3756,7 +3788,7 @@ def _rebase_result_actions(
 
 
 def _dedupe_agents_pointer_status(result: InstallResult, *, target_root: Path) -> None:
-    agents_path = target_root / AGENTS_PATH
+    agents_path = target_root / _configured_agents_path(target_root)
     patched_kinds = {"patched", "would patch"}
     if not any(action.path == agents_path and action.kind in patched_kinds for action in result.actions):
         return

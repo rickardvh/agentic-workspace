@@ -1,0 +1,83 @@
+version = 1
+
+[rules]
+routing_only = [".agentic-workspace/memory/repo/index.md"]
+high_level = [".agentic-workspace/memory/repo/index.md"]
+canonical_dirs = [
+  ".agentic-workspace/memory/repo/domains",
+  ".agentic-workspace/memory/repo/invariants",
+  ".agentic-workspace/memory/repo/runbooks",
+  ".agentic-workspace/memory/repo/mistakes",
+  ".agentic-workspace/memory/repo/decisions",
+]
+task_board_globs = ["TODO.md", "tasks/**", ".github/issues/**"]
+core_doc_globs = ["README.md", "docs/**/*.md", "CONTRIBUTING.md", ".github/**/*.md"]
+core_doc_exclude_globs = ["AGENTS.md", ".agentic-workspace/memory/repo/**/*.md", ".agentic-workspace/memory/**/*.md"]
+forbid_core_docs_depend_on_memory = false
+
+# Bootstrap payload policy:
+# - ship repo-memory structure, directory READMEs, machine-readable manifests, and starter templates;
+# - do not ship repo-specific notes, runbooks, decisions, or repo-local skills;
+# - target repositories create their own durable memory notes from local evidence.
+
+[notes.".agentic-workspace/memory/repo/index.md"]
+note_type = "routing"
+canonical_home = ".agentic-workspace/memory/repo/index.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "required"
+subsystems = ["memory-system"]
+surfaces = ["routing"]
+routes_from = ["AGENTS.md", ".agentic-workspace/memory/repo/**/*.md"]
+stale_when = [".agentic-workspace/memory/repo/**/*.md"]
+routing_only = true
+high_level = true
+
+[notes.".agentic-workspace/memory/repo/domains/README.md"]
+note_type = "domain"
+canonical_home = ".agentic-workspace/memory/repo/domains/README.md"
+authority = "advisory"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["memory-system"]
+surfaces = ["architecture", "routing"]
+routes_from = [".agentic-workspace/memory/repo/index.md"]
+stale_when = [".agentic-workspace/memory/repo/index.md"]
+
+[notes.".agentic-workspace/memory/repo/invariants/README.md"]
+note_type = "invariant"
+canonical_home = ".agentic-workspace/memory/repo/invariants/README.md"
+authority = "advisory"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["memory-system"]
+surfaces = ["contracts", "architecture"]
+routes_from = [".agentic-workspace/memory/repo/index.md"]
+stale_when = [".agentic-workspace/memory/repo/index.md"]
+
+[notes.".agentic-workspace/memory/repo/runbooks/README.md"]
+note_type = "runbook"
+canonical_home = ".agentic-workspace/memory/repo/runbooks/README.md"
+authority = "advisory"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["memory-system"]
+surfaces = ["operations", "routing"]
+routes_from = [".agentic-workspace/memory/repo/index.md"]
+stale_when = [".agentic-workspace/memory/repo/index.md"]
+
+[notes.".agentic-workspace/memory/repo/decisions/README.md"]
+note_type = "decision"
+canonical_home = ".agentic-workspace/memory/repo/decisions/README.md"
+authority = "advisory"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["memory-system"]
+surfaces = ["architecture", "decision"]
+routes_from = [".agentic-workspace/memory/repo/index.md"]
+stale_when = [".agentic-workspace/memory/repo/index.md"]

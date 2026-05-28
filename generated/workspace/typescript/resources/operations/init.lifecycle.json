@@ -1,0 +1,149 @@
+{
+  "classification": "lifecycle-mutation",
+  "command_surface": {
+    "command": "init"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": true
+  },
+  "guards": [
+    "Respect dry-run mode by avoiding writes.",
+    "Use conservative behavior when existing repo surfaces are detected."
+  ],
+  "id": "init.lifecycle",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "module",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "preset",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "dry_run",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "command_visibility": "non-command-visible",
+      "description": "Internal lifecycle adapter value; root init exposes --adopt for command-visible forced adoption behavior.",
+      "name": "force",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "complete",
+    "steps": [
+      {
+        "arguments": {
+          "operation_id": "init.lifecycle"
+        },
+        "description": "Execute the operation through the generated TypeScript domain operation table.",
+        "id": "execute_typescript_domain_operation",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "typescript.domain.execute"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the TypeScript-native operation result.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Generated TypeScript native runtime binding for a command whose source operation has not yet been decomposed into portable IR."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": true
+  },
+  "migration_status": "draft-contract-only",
+  "output": {
+    "kind": "module-result"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "init lifecycle tests remain compatible",
+    "init.lifecycle.dry-run.process proves dry-run plan shape and no filesystem writes"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": "workspace config"
+    },
+    {
+      "required": true,
+      "surface": "selected module payloads"
+    },
+    {
+      "required": false,
+      "surface": "target repository managed surfaces"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the target repository.",
+      "id": "resolve_root",
+      "uses": "workspace.root.resolve"
+    },
+    {
+      "description": "Load config defaults and selection policy.",
+      "id": "load_config",
+      "uses": "workspace.config.load"
+    },
+    {
+      "description": "Resolve selected modules.",
+      "id": "resolve_selection",
+      "uses": "workspace.selection.resolve"
+    },
+    {
+      "description": "Plan init changes.",
+      "id": "plan_lifecycle",
+      "uses": "workspace.lifecycle.plan"
+    },
+    {
+      "description": "Apply init changes when not a dry run.",
+      "id": "apply_lifecycle",
+      "uses": "workspace.lifecycle.apply"
+    },
+    {
+      "description": "Emit lifecycle result.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Bootstrap selected modules into a target repository using conservative init/adopt behavior.",
+  "writes": [
+    {
+      "required": true,
+      "surface": "target repository managed workspace surfaces",
+      "when": "not a dry run"
+    }
+  ]
+}

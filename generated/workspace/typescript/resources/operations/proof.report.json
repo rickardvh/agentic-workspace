@@ -1,0 +1,167 @@
+{
+  "classification": "read-only-report",
+  "command_surface": {
+    "command": "proof",
+    "format_option": "format"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": true,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
+  },
+  "guards": [
+    "Unknown proof routes should be treated as usage errors.",
+    "Additive-only durable surfaces should be flagged unless repeated cost, ownership, discovery, and validation answers are explicit.",
+    "Subsystem proof hints must not replace selected package proof lanes; they add host-repo validation context for matching paths.",
+    "Tiny output must preserve the first validation action, all required commands, and blocking warnings."
+  ],
+  "id": "proof.report",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "route",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "current",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "changed",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "select",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "verbose",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "complete",
+    "steps": [
+      {
+        "arguments": {
+          "operation_id": "proof.report"
+        },
+        "description": "Execute the operation through the generated TypeScript domain operation table.",
+        "id": "execute_typescript_domain_operation",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "typescript.domain.execute"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the TypeScript-native operation result.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Generated TypeScript native runtime binding for a command whose source operation has not yet been decomposed into portable IR."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "draft-contract-only",
+  "output": {
+    "kind": "text-or-json"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "proof changed-path tests remain compatible",
+    "proof changed-path tests cover accepted existing durable-surface updates and flagged additive-only surfaces",
+    "proof changed-path tests cover subsystem proof hints",
+    "proof tiny profile omits selected-lane and provenance detail while preserving required commands"
+  ],
+  "reads": [
+    {
+      "required": true,
+      "surface": "proof route contracts"
+    },
+    {
+      "required": false,
+      "surface": "active planning state"
+    },
+    {
+      "required": false,
+      "surface": "changed path arguments"
+    },
+    {
+      "required": false,
+      "surface": "field selector for exact proof drill-down"
+    },
+    {
+      "required": false,
+      "surface": "surface-value guardrail defaults"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/OWNERSHIP.toml [[subsystems]]"
+    },
+    {
+      "required": false,
+      "surface": "verbose flag for broad diagnostic output"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the target root.",
+      "id": "resolve_root",
+      "uses": "workspace.root.resolve"
+    },
+    {
+      "description": "Resolve route, current proof, changed-path proof output, and subsystem proof hints.",
+      "id": "resolve_proof",
+      "uses": "proof.routes.resolve"
+    },
+    {
+      "description": "Attach durable-surface value review when changed paths touch durable surfaces.",
+      "id": "review_surface_value",
+      "uses": "proof.routes.resolve"
+    },
+    {
+      "description": "Select verbose proof detail or default next-validation action output.",
+      "id": "select_profile",
+      "uses": "output.profile.select"
+    },
+    {
+      "description": "Return only requested JSON fields when --select is provided.",
+      "id": "select_fields",
+      "uses": "output.fields.select"
+    },
+    {
+      "description": "Emit proof data in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Show canonical proof routes, current workspace proof summary, changed-path proof recommendations, optional subsystem proof hints, and durable-surface value review.",
+  "writes": []
+}

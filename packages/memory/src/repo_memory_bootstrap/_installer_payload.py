@@ -32,6 +32,7 @@ from repo_memory_bootstrap._installer_shared import (
 LOCAL_AGENT_INSTRUCTIONS_PATH = Path("AGENTS.local.md")
 LOCAL_AGENT_REFERENCE_LINE = "Follow instructions in `AGENTS.local.md` if present."
 LOCAL_ONLY_STATE_PATH = Path(".agentic-workspace") / "LOCAL-ONLY.toml"
+SUPPORTED_AGENT_INSTRUCTIONS_FILES = ("AGENTS.md", "CLAUDE.md", "GEMINI.md", ".cursorrules")
 
 
 def _payload_entries(
@@ -103,6 +104,24 @@ def _has_local_only_state(target_root: Path) -> bool:
     except OSError:
         return False
     return re.search(r'^\s*mode\s*=\s*"local-only"\s*$', state_text, flags=re.MULTILINE) is not None
+
+
+def _configured_agents_path(target_root: Path) -> Path:
+    config_path = target_root / ".agentic-workspace" / "config.toml"
+    if config_path.is_file():
+        try:
+            config_text = config_path.read_text(encoding="utf-8")
+        except OSError:
+            config_text = ""
+        match = re.search(r'^\s*agent_instructions_file\s*=\s*"([^"]+)"\s*$', config_text, flags=re.MULTILINE)
+        if match:
+            candidate = Path(match.group(1))
+            if not candidate.is_absolute() and ".." not in candidate.parts:
+                return candidate
+    detected = [Path(filename) for filename in SUPPORTED_AGENT_INSTRUCTIONS_FILES if (target_root / filename).exists()]
+    if len(detected) == 1:
+        return detected[0]
+    return AGENTS_PATH
 
 
 def _has_local_workspace_entrypoint(*, target_root: Path, agents_text: str) -> bool:
@@ -205,7 +224,8 @@ def _plan_from_entries(
         include_bootstrap_workspace=include_bootstrap_workspace,
         target_layout=target_layout,
     ):
-        destination = target_root / entry.relative_path
+        relative_path = _configured_agents_path(target_root) if entry.role == "local-entrypoint" else entry.relative_path
+        destination = target_root / relative_path
         rendered = _render_text(entry.source_path, substitutions)
         existing = destination.read_text(encoding="utf-8") if destination.exists() else None
 
@@ -462,6 +482,7 @@ def _plan_agents_entrypoint(
     doctor_mode: bool,
     target_layout: str,
 ) -> None:
+    startup_label = destination.name
     embeds_shared_rules = _embeds_shared_workflow_rules(existing)
     workspace_shared_layer_present = (destination.parent / WORKSPACE_WORKFLOW_PATH).exists()
     workspace_pointer_present = _agents_has_workspace_workflow_pointer(existing)
@@ -509,7 +530,7 @@ def _plan_agents_entrypoint(
             destination,
             (
                 "redundant top-level memory workflow pointer block is still present; "
-                "use --apply-local-entrypoint to slim AGENTS.md to the shared workspace pointer"
+                f"use --apply-local-entrypoint to slim {startup_label} to the shared workspace pointer"
             ),
             role="local-entrypoint",
             safety="manual",
@@ -531,7 +552,7 @@ def _plan_agents_entrypoint(
                 "manual review",
                 destination,
                 (
-                    "AGENTS.md still contains older bootstrap prose outside the managed "
+                    f"{startup_label} still contains older bootstrap prose outside the managed "
                     "workflow pointer block; review and remove stale shared wording manually"
                 ),
                 role="local-entrypoint",
@@ -550,14 +571,14 @@ def _plan_agents_entrypoint(
             "would patch",
             role="local-entrypoint",
             source=str(AGENTS_PATH),
-            detail=("added or refreshed the canonical workflow pointer block near the top of AGENTS.md"),
+            detail=(f"added or refreshed the canonical workflow pointer block near the top of {startup_label}"),
         )
         if embeds_shared_rules:
             result.add(
                 "manual review",
                 destination,
                 (
-                    "older AGENTS.md still embeds shared workflow rules; "
+                    f"older {startup_label} still embeds shared workflow rules; "
                     "--apply-local-entrypoint can patch the workflow pointer block, "
                     "but copied shared rules still need manual slimming"
                 ),
@@ -567,10 +588,13 @@ def _plan_agents_entrypoint(
             )
         return
 
-    detail = "missing canonical workflow pointer block near the top of AGENTS.md; use --apply-local-entrypoint to add or refresh it safely"
+    detail = (
+        f"missing canonical workflow pointer block near the top of {startup_label}; "
+        "use --apply-local-entrypoint to add or refresh it safely"
+    )
     if embeds_shared_rules:
         detail = (
-            "older AGENTS.md still embeds shared workflow rules; "
+            f"older {startup_label} still embeds shared workflow rules; "
             "--apply-local-entrypoint can patch the workflow pointer block, "
             "but copied shared rules still need manual slimming"
         )

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync } from 'node:fs';
 
 const source = readFileSync(new URL('../src/commandPackage.ts', import.meta.url), 'utf8');
 const commandPackage = JSON.parse(readFileSync(new URL('../resources/command_package.json', import.meta.url), 'utf8'));
@@ -30,31 +30,27 @@ test('generated package metadata exposes maturity and weak-agent routing status'
   assert.ok(packageJson.bin);
 });
 
-test('generated runnable adapter delegates supported command to runtime process', () => {
+test('generated runnable adapter executes supported command without Python runtime', () => {
   const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
-  const mockRuntime = fileURLToPath(new URL('./mock-runtime.mjs', import.meta.url));
-  const runtime = `"${process.execPath}" "${mockRuntime}"`;
-  const result = spawnSync(process.execPath, [cli, 'adopt', '--format', 'json'], {
-    encoding: 'utf8',
-    env: { ...process.env, AGENTIC_WORKSPACE_RUNTIME: runtime },
-  });
+  const result = spawnSync(process.execPath, [cli, ...["adopt", "--dry-run", "--format", "json"]], { encoding: 'utf8' });
   assert.equal(result.status, 0);
   const payload = JSON.parse(result.stdout);
-  assert.equal(payload.command, 'adopt');
-  assert.deepEqual(payload.args, ['adopt', '--format', 'json']);
+  assert.equal(typeof payload, 'object');
+  assert.equal(result.stderr, '');
 });
 
-test('generated runnable adapter preserves spaced argv values during runtime handoff', () => {
+test('generated runnable adapter preserves spaced argv values during native execution', () => {
   const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
-  const mockRuntime = fileURLToPath(new URL('./mock-runtime.mjs', import.meta.url));
-  const runtime = `"${process.execPath}" "${mockRuntime}"`;
-  const result = spawnSync(process.execPath, [cli, 'adopt', '--target', 'value with spaces'], {
-    encoding: 'utf8',
-    env: { ...process.env, AGENTIC_WORKSPACE_RUNTIME: runtime },
-  });
-  assert.equal(result.status, 0);
-  const payload = JSON.parse(result.stdout);
-  assert.deepEqual(payload.args, ['adopt', '--target', 'value with spaces']);
+  const spacedTarget = fileURLToPath(new URL('../tmp target with spaces', import.meta.url));
+  mkdirSync(spacedTarget, { recursive: true });
+  try {
+    const args = ["adopt", "--dry-run", "--target", "__SPACED_TARGET__"].map((token) => token === '__SPACED_TARGET__' ? spacedTarget : token);
+    const result = spawnSync(process.execPath, [cli, ...args], { encoding: 'utf8' });
+    assert.equal(result.status, 0);
+    assert.doesNotMatch(result.stderr, /runtime handoff/i);
+  } finally {
+    rmSync(spacedTarget, { recursive: true, force: true });
+  }
 });
 
 test('generated runnable adapter exposes routing status and recovery guidance', () => {
@@ -63,43 +59,41 @@ test('generated runnable adapter exposes routing status and recovery guidance', 
   assert.equal(result.status, 0);
   assert.match(result.stdout, /Supported generated commands:/);
   assert.match(result.stdout, /Weak-agent routing: allowed-mutation-with-review/);
-  assert.match(result.stdout, /generated parser\/help\/validation/);
+  assert.match(result.stdout, /Node\/TypeScript only/);
+  assert.doesNotMatch(result.stdout, /Python runtime handoff/);
   assert.match(result.stdout, /Recovery:/);
 });
 
-test('generated runnable adapter renders command help without runtime handoff', () => {
+test('generated runnable adapter renders command help without executing runtime', () => {
   const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
   const result = spawnSync(process.execPath, [cli, 'adopt', '--help'], {
     encoding: 'utf8',
-    env: { ...process.env, AGENTIC_WORKSPACE_RUNTIME: '' },
   });
   assert.equal(result.status, 0);
   assert.match(result.stdout, /Usage:/);
   assert.match(result.stdout, /Options:/);
 });
 
-test('generated runnable adapter validates choices before runtime handoff', () => {
+test('generated runnable adapter validates choices before command execution', () => {
   const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
   const result = spawnSync(process.execPath, [cli, 'adopt', '--format', '__invalid__'], {
     encoding: 'utf8',
-    env: { ...process.env, AGENTIC_WORKSPACE_RUNTIME: '' },
   });
   assert.equal(result.status, 2);
   assert.equal(result.stdout, '');
   assert.match(result.stderr, /TypeScript CLI validation failed:/);
-  assert.doesNotMatch(result.stderr, /Adapter runtime handoff failed:/);
+  assert.doesNotMatch(result.stderr, /runtime handoff/i);
 });
 
-test('generated runnable adapter validates required options before runtime handoff', () => {
+test('generated runnable adapter validates required options before command execution', () => {
   const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
   const result = spawnSync(process.execPath, [cli, ...["create-review"]], {
     encoding: 'utf8',
-    env: { ...process.env, AGENTIC_WORKSPACE_RUNTIME: '' },
   });
   assert.equal(result.status, 2);
   assert.equal(result.stdout, '');
   assert.match(result.stderr, /missing required option --title/);
-  assert.doesNotMatch(result.stderr, /Adapter runtime handoff failed:/);
+  assert.doesNotMatch(result.stderr, /runtime handoff/i);
 });
 
 test('generated runnable adapter rejects unsupported commands with recovery guidance', () => {
@@ -108,16 +102,5 @@ test('generated runnable adapter rejects unsupported commands with recovery guid
   assert.equal(result.status, 2);
   assert.equal(result.stdout, '');
   assert.match(result.stderr, /Unsupported generated command: __unsupported__/);
-  assert.match(result.stderr, /Recovery:/);
-});
-
-test('generated runnable adapter maps runtime handoff failure with recovery guidance', () => {
-  const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
-  const result = spawnSync(process.execPath, [cli, 'adopt'], {
-    encoding: 'utf8',
-    env: { ...process.env, AGENTIC_WORKSPACE_RUNTIME: '' },
-  });
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /Adapter runtime handoff failed:/);
   assert.match(result.stderr, /Recovery:/);
 });

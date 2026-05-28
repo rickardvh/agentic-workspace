@@ -1,0 +1,140 @@
+{
+  "classification": "lifecycle-mutation",
+  "command_surface": {
+    "command": "reconcile",
+    "format_option": "format"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": true
+  },
+  "guards": [
+    "Reconcile must consume provider-agnostic external evidence and must not hard-code host tracker semantics.",
+    "--apply-safe-prune must only mutate targets already present in cleanup_targets with safe_to_prune=true.",
+    "--dry-run must not write repo state."
+  ],
+  "id": "reconcile.report",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "description": "When true, remove only cleanup targets already marked safe_to_prune by reconcile.",
+      "name": "apply_safe_prune",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "description": "Preview safe-prune application without writing repo state.",
+      "name": "dry_run",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "complete",
+    "steps": [
+      {
+        "arguments": {
+          "operation_id": "reconcile.report"
+        },
+        "description": "Execute the operation through the generated TypeScript domain operation table.",
+        "id": "execute_typescript_domain_operation",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "typescript.domain.execute"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the TypeScript-native operation result.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Generated TypeScript native runtime binding for a command whose source operation has not yet been decomposed into portable IR."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "draft-contract-only",
+  "output": {
+    "kind": "text-or-json"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "reconcile command tests cover provider-agnostic stale-state reporting",
+    "safe-prune tests cover exact roadmap/decomposition cleanup and dry-run behavior"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/state.toml"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/external-intent-evidence.json"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/reviews/"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/execplans/"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the target root.",
+      "id": "resolve_root",
+      "uses": "workspace.root.resolve"
+    },
+    {
+      "description": "Load provider-agnostic planning reconciliation state.",
+      "id": "load_reconcile",
+      "uses": "planning.reconcile.load"
+    },
+    {
+      "description": "When requested, remove exact cleanup targets already marked safe_to_prune and then reload verification state.",
+      "id": "apply_safe_prune",
+      "uses": "planning.reconcile.load"
+    },
+    {
+      "description": "Emit reconcile state in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Show stale planning state and optionally apply exact safe-to-prune cleanup targets.",
+  "writes": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/state.toml",
+      "when": "--apply-safe-prune removes exact safe_to_prune roadmap targets"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/decompositions/",
+      "when": "--apply-safe-prune removes exact safe_to_prune decomposition records"
+    }
+  ]
+}

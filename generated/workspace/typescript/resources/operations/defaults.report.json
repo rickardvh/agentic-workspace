@@ -1,0 +1,118 @@
+{
+  "classification": "read-only-report",
+  "command_surface": {
+    "command": "defaults",
+    "format_option": "format"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": true,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
+  },
+  "guards": [
+    "Unknown sections should be treated as usage errors."
+  ],
+  "id": "defaults.report",
+  "inputs": [
+    {
+      "name": "section",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "verbose",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "select",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "arguments": {},
+        "description": "Load the generated workspace default-route and policy payload resource.",
+        "id": "load_defaults",
+        "outputs": [
+          "defaults_payload"
+        ],
+        "uses": "workspace.defaults.load"
+      },
+      {
+        "arguments": {},
+        "description": "Select a section, tiny profile, or exact field projection from the defaults payload.",
+        "id": "select_defaults",
+        "outputs": [
+          "result"
+        ],
+        "uses": "workspace.defaults.select"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the selected defaults payload in the requested format.",
+        "id": "emit_output",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Defaults report executes generated operation IR through codegen-owned primitive dataflow; generated workspace output loads the defaults payload from generated _contracts/payload.json and owns tiny-router, compact-answer, and selected-output text formatting."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "text-or-json"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "defaults command tests remain compatible",
+    "defaults payload truth is stored as a declarative JSON resource and copied into generated workspace output",
+    "defaults selected-output text and tiny-router text stay in generated output rather than package fallback"
+  ],
+  "reads": [
+    {
+      "required": true,
+      "surface": "workspace contract manifests"
+    },
+    {
+      "required": false,
+      "surface": "verbose flag for broad diagnostic output"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Load default-route and policy contracts.",
+      "id": "load_defaults",
+      "uses": "workspace.defaults.load"
+    },
+    {
+      "description": "Filter to one section when requested.",
+      "id": "select_section",
+      "uses": "workspace.defaults.select"
+    },
+    {
+      "description": "Emit defaults in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Show the machine-readable default-route contract for startup, lifecycle, skills, validation, and combined installs.",
+  "writes": []
+}

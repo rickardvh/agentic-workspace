@@ -1,0 +1,161 @@
+{
+  "classification": "read-only-report",
+  "command_surface": {
+    "command": "report"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": true,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
+  },
+  "guards": [
+    "Report must remain read-only even when module health warnings are found.",
+    "The default profile should route to high-signal sections before exposing high-volume module detail.",
+    "Operational-compression measures must remain descriptive and advisory, not a score, dashboard, workflow engine, or host-specific tracker policy.",
+    "Unknown sections should be treated as usage errors."
+  ],
+  "id": "report.combined",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "modules",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "preset",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "non_interactive",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "startup",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "verbose",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "section",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "complete",
+    "steps": [
+      {
+        "arguments": {
+          "operation_id": "report.combined"
+        },
+        "description": "Execute the operation through the generated TypeScript domain operation table.",
+        "id": "execute_typescript_domain_operation",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "typescript.domain.execute"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the TypeScript-native operation result.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Generated TypeScript native runtime binding for a command whose source operation has not yet been decomposed into portable IR."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "draft-contract-only",
+  "output": {
+    "kind": "module-result"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "report command tests remain compatible",
+    "operational-compression section selector returns compact advisory measures"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": "workspace config and local override"
+    },
+    {
+      "required": false,
+      "surface": "selected module reports"
+    },
+    {
+      "required": false,
+      "surface": "active planning state"
+    },
+    {
+      "required": false,
+      "surface": "existing report, planning, memory, ownership, and proof-routing summaries"
+    },
+    {
+      "required": false,
+      "surface": "verbose flag for broad diagnostic output"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the target root.",
+      "id": "resolve_root",
+      "uses": "workspace.root.resolve"
+    },
+    {
+      "description": "Load config and local posture.",
+      "id": "load_config",
+      "uses": "workspace.config.load"
+    },
+    {
+      "description": "Resolve selected modules.",
+      "id": "resolve_selection",
+      "uses": "workspace.selection.resolve"
+    },
+    {
+      "description": "Assemble combined report, startup guidance, and advisory operational-compression measures from existing loaded state.",
+      "id": "assemble_report",
+      "uses": "workspace.report.assemble"
+    },
+    {
+      "description": "Emit the default router, verbose detail, or one top-level section.",
+      "id": "select_profile_or_section",
+      "uses": "workspace.report.select"
+    },
+    {
+      "description": "Emit combined report.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Show a compact combined workspace report router by default, with explicit verbose diagnostics, operational-compression measures, and section access to deeper detail.",
+  "writes": []
+}

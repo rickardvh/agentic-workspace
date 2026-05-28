@@ -1,0 +1,4 @@
+interface:
+  display_name: "Memory Capture"
+  short_description: "Capture durable lessons into checked-in memory."
+  default_prompt: "Use $memory-capture to put a durable lesson into the right checked-in memory note."

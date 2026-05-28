@@ -1,0 +1,98 @@
+{
+  "classification": "read-only-report",
+  "command_surface": {
+    "command": "handoff",
+    "format_option": "format",
+    "program": "agentic-planning"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": true,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
+  },
+  "guards": [
+    "Host-facing guidance must use agentic-workspace planning handoff rather than a direct module CLI."
+  ],
+  "id": "planning.handoff.report",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "arguments": {
+          "function": "planning_handoff",
+          "import_module": "repo_planning_bootstrap.installer",
+          "kwargs": {
+            "target": {
+              "value": "target"
+            }
+          }
+        },
+        "description": "Load the active planning handoff payload for the requested target.",
+        "id": "load_handoff",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "python.function.call"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the planning handoff in the requested format.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Planning handoff executes generated operation IR through codegen-owned primitive dataflow while the planning module supplies the package-specific handoff payload."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "text-or-json"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": "target repository Planning state"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Load the active planning handoff payload for the requested target.",
+      "id": "load_handoff",
+      "uses": "python.function.call"
+    },
+    {
+      "description": "Emit the planning handoff in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Emit the active Planning handoff through the workspace front door.",
+  "writes": []
+}

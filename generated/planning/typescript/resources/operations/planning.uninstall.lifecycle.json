@@ -1,0 +1,118 @@
+{
+  "classification": "lifecycle-mutation",
+  "command_surface": {
+    "command": "uninstall",
+    "format_option": "format",
+    "program": "agentic-planning"
+  },
+  "effects": {
+    "destructive": true,
+    "idempotent": true,
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": true
+  },
+  "guards": [
+    "Respect dry-run mode by avoiding writes.",
+    "Keep lifecycle writes scoped to managed planning surfaces."
+  ],
+  "id": "planning.uninstall.lifecycle",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "dry_run",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "arguments": {
+          "function": "uninstall_bootstrap",
+          "import_module": "repo_planning_bootstrap.installer",
+          "kwargs": {
+            "dry_run": {
+              "value": "dry_run"
+            },
+            "target": {
+              "value": "target"
+            }
+          }
+        },
+        "description": "Remove managed planning bootstrap files when they still match package content.",
+        "id": "apply_lifecycle",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "python.function.call"
+      },
+      {
+        "arguments": {},
+        "description": "Emit planning lifecycle result in the requested format.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Planning uninstall executes generated operation IR through codegen-owned primitive dataflow while the planning module owns lifecycle mutation policy."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "module-result"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated uninstall dry-run process conformance passes"
+  ],
+  "reads": [
+    {
+      "required": true,
+      "surface": "planning package payload files"
+    },
+    {
+      "required": false,
+      "surface": "target repository managed planning surfaces"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Remove managed planning bootstrap files when they still match package content.",
+      "id": "apply_lifecycle",
+      "uses": "python.function.call"
+    },
+    {
+      "description": "Emit planning lifecycle result in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Remove managed planning bootstrap files when they still match package content.",
+  "writes": [
+    {
+      "required": true,
+      "surface": "target repository managed planning surfaces",
+      "when": "not a dry run"
+    }
+  ]
+}

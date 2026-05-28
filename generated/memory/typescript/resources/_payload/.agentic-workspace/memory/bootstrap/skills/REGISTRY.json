@@ -1,0 +1,33 @@
+{
+  "schema_version": "skill-registry.v1",
+  "owner": "agentic-memory",
+  "source_kind": "temporary-memory-bootstrap-skills",
+  "skills": [
+    {
+      "id": "install",
+      "path": "install/SKILL.md",
+      "scope": "temporary-bootstrap",
+      "stability": "temporary-bootstrap-workspace",
+      "summary": "finish temporary Memory bootstrap installation review conservatively",
+      "activation_hints": {
+        "verbs": ["install", "adopt", "bootstrap", "review"],
+        "nouns": ["memory bootstrap", "temporary bootstrap workspace", "install review", "manual review"],
+        "phrases": ["finish bootstrap installation", "memory install review", "adopt memory bootstrap"],
+        "when": ["temporary memory bootstrap workspace is present", "after agentic-memory init install or adopt"]
+      }
+    },
+    {
+      "id": "cleanup",
+      "path": "cleanup/SKILL.md",
+      "scope": "temporary-bootstrap",
+      "stability": "temporary-bootstrap-workspace",
+      "summary": "remove the temporary Memory bootstrap workspace after install or upgrade work is complete",
+      "activation_hints": {
+        "verbs": ["cleanup", "remove", "delete", "finish"],
+        "nouns": ["temporary bootstrap workspace", "memory bootstrap cleanup", "bootstrap residue"],
+        "phrases": ["bootstrap cleanup", "remove temporary bootstrap workspace", "clean up memory bootstrap"],
+        "when": ["bootstrap work is complete", "temporary memory bootstrap workspace should be removed"]
+      }
+    }
+  ]
+}

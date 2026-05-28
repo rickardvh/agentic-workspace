@@ -450,7 +450,6 @@ def test_doctor_accepts_local_only_agents_indirection(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True, exist_ok=True)
     (target / ".agentic-workspace" / "memory").mkdir(parents=True, exist_ok=True)
-    (target / ".agentic-workspace").mkdir(parents=True, exist_ok=True)
     (target / "AGENTS.md").write_text("Follow instructions in `AGENTS.local.md` if present.\n", encoding="utf-8")
     (target / "AGENTS.local.md").write_text(
         "# Local Agent Instructions\n\n"

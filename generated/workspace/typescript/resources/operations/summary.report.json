@@ -1,0 +1,144 @@
+{
+  "classification": "read-only-report",
+  "command_surface": {
+    "command": "summary",
+    "format_option": "format"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": true,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
+  },
+  "guards": [
+    "Treat missing planning state as unavailable summary data, not as a mutation request.",
+    "Task-scoped summary must omit unrelated historical/detail-heavy planning sections unless explicitly requested through full or broad compact detail commands.",
+    "Prefer --select for exact field drill-down and --verbose only for broad diagnostics."
+  ],
+  "id": "summary.report",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "select",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "verbose",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "task",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "changed",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "complete",
+    "steps": [
+      {
+        "arguments": {
+          "operation_id": "summary.report"
+        },
+        "description": "Execute the operation through the generated TypeScript domain operation table.",
+        "id": "execute_typescript_domain_operation",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "typescript.domain.execute"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the TypeScript-native operation result.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Generated TypeScript native runtime binding for a command whose source operation has not yet been decomposed into portable IR."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "draft-contract-only",
+  "output": {
+    "kind": "text-or-json"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "summary command tests remain compatible"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/"
+    },
+    {
+      "required": false,
+      "surface": "TODO.md"
+    },
+    {
+      "required": false,
+      "surface": "task text for scoped summary"
+    },
+    {
+      "required": false,
+      "surface": "changed path arguments for scoped summary"
+    },
+    {
+      "required": false,
+      "surface": "verbose flag for broad diagnostic output"
+    },
+    {
+      "required": false,
+      "surface": "field selector for exact JSON drill-down"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the target root.",
+      "id": "resolve_root",
+      "uses": "workspace.root.resolve"
+    },
+    {
+      "description": "Load the requested planning summary profile.",
+      "id": "load_summary",
+      "uses": "planning.summary.load"
+    },
+    {
+      "description": "Return only requested JSON fields when --select is provided.",
+      "id": "select_fields",
+      "uses": "output.fields.select"
+    },
+    {
+      "description": "Emit the summary in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Show the active execution summary from the planning module.",
+  "writes": []
+}

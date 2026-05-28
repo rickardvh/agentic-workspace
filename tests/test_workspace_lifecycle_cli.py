@@ -345,6 +345,26 @@ def test_upgrade_local_only_full_install_honors_configured_agent_instructions_fi
     assert startup_review_actions == []
 
 
+def test_setup_mature_repo_uses_configured_agent_instructions_file(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        'schema_version = 1\n\n[workspace]\nagent_instructions_file = "GEMINI.md"\n',
+    )
+    _write(tmp_path / "GEMINI.md", "# Gemini startup\n")
+    _write(tmp_path / ".agentic-workspace" / "planning" / "state.toml", "schema_version = 1\n")
+    _write(tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json", "{}\n")
+    _write(tmp_path / "tools" / "AGENT_QUICKSTART.md", "# Quickstart\n")
+    _write(tmp_path / "tools" / "AGENT_ROUTING.md", "# Routing\n")
+    _write(tmp_path / "memory" / "index.md", "# Memory\n")
+
+    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["orientation"]["mode"] == "no-new-seed-surfaces-needed"
+    assert payload["orientation"]["reason"].startswith("GEMINI.md, ")
+
+
 def test_init_reports_required_prompt_for_high_ambiguity_repo(monkeypatch, tmp_path: Path, capsys) -> None:
     calls: list[tuple[str, str, dict[str, object]]] = []
     _init_git_repo(tmp_path)

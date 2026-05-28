@@ -1,0 +1,308 @@
+{
+  "schema_version": "agentic-workspace/payload-verification-policy/v1",
+  "package": "memory",
+  "bootstrap_version": 47,
+  "version_path": ".agentic-workspace/memory/VERSION.md",
+  "legacy_version_path": "memory/system/VERSION.md",
+  "manifest_path": ".agentic-workspace/memory/repo/manifest.toml",
+  "upgrade_source": {
+    "path": ".agentic-workspace/memory/UPGRADE-SOURCE.toml",
+    "legacy_path": "memory/system/UPGRADE-SOURCE.toml",
+    "allowed_source_types": [
+      "git",
+      "local"
+    ],
+    "required_fields": [
+      "source_ref"
+    ],
+    "date_fields": {
+      "recorded_at": "YYYY-MM-DD"
+    },
+    "integer_fields": [
+      "recommended_upgrade_after_days"
+    ]
+  },
+  "payload_path_aliases": [
+    {
+      "source": "AGENTS.template.md",
+      "target": "AGENTS.md"
+    }
+  ],
+  "required_files": [
+    "AGENTS.md",
+    ".agentic-workspace/memory/repo/index.md",
+    ".agentic-workspace/memory/repo/manifest.toml",
+    ".agentic-workspace/memory/SKILLS.md",
+    ".agentic-workspace/memory/WORKFLOW.md",
+    ".agentic-workspace/memory/UPGRADE-SOURCE.toml",
+    ".agentic-workspace/memory/repo/domains/README.md",
+    ".agentic-workspace/memory/repo/invariants/README.md",
+    ".agentic-workspace/memory/repo/runbooks/README.md",
+    ".agentic-workspace/memory/repo/decisions/README.md",
+    ".agentic-workspace/memory/repo/templates/invariant.template.md",
+    ".agentic-workspace/memory/repo/templates/memory-note.template.md",
+    ".agentic-workspace/memory/repo/templates/runbook.template.md",
+    ".agentic-workspace/docs/memory-metadata-contract.md",
+    ".agentic-workspace/docs/installer-behavior.md",
+    ".agentic-workspace/memory/bootstrap/README.md",
+    ".agentic-workspace/memory/bootstrap/skills/REGISTRY.json",
+    ".agentic-workspace/memory/bootstrap/skills/install/SKILL.md",
+    ".agentic-workspace/memory/bootstrap/skills/install/agents/openai.yaml",
+    ".agentic-workspace/memory/bootstrap/skills/cleanup/SKILL.md",
+    ".agentic-workspace/memory/bootstrap/skills/cleanup/agents/openai.yaml",
+    ".agentic-workspace/memory/skills/README.md",
+    ".agentic-workspace/memory/skills/REGISTRY.json",
+    ".agentic-workspace/memory/skills/memory-capture/SKILL.md",
+    ".agentic-workspace/memory/skills/memory-capture/agents/openai.yaml",
+    ".agentic-workspace/memory/skills/memory-consultation-and-residue/SKILL.md",
+    ".agentic-workspace/memory/skills/memory-consultation-and-residue/agents/openai.yaml",
+    ".agentic-workspace/memory/skills/memory-hygiene/SKILL.md",
+    ".agentic-workspace/memory/skills/memory-hygiene/agents/openai.yaml",
+    ".agentic-workspace/memory/skills/memory-upgrade/SKILL.md",
+    ".agentic-workspace/memory/skills/memory-upgrade/agents/openai.yaml",
+    ".agentic-workspace/memory/skills/memory-refresh/SKILL.md",
+    ".agentic-workspace/memory/skills/memory-refresh/agents/openai.yaml",
+    ".agentic-workspace/memory/skills/memory-router/SKILL.md",
+    ".agentic-workspace/memory/skills/memory-router/agents/openai.yaml"
+  ],
+  "compatibility_contract_files": [
+    "AGENTS.md",
+    ".agentic-workspace/memory/repo/index.md",
+    ".agentic-workspace/memory/repo/manifest.toml",
+    ".agentic-workspace/memory/SKILLS.md",
+    ".agentic-workspace/memory/WORKFLOW.md",
+    ".agentic-workspace/memory/repo/domains/README.md",
+    ".agentic-workspace/memory/repo/invariants/README.md",
+    ".agentic-workspace/memory/repo/runbooks/README.md",
+    ".agentic-workspace/memory/repo/decisions/README.md",
+    ".agentic-workspace/docs/memory-metadata-contract.md"
+  ],
+  "current_memory": {
+    "prefix": ".agentic-workspace/memory/repo/current/",
+    "view_files": [
+      ".agentic-workspace/memory/repo/current/project-state.md",
+      ".agentic-workspace/memory/repo/current/task-context.md",
+      ".agentic-workspace/memory/repo/current/routing-feedback.md"
+    ],
+    "required": [],
+    "optional": [
+      ".agentic-workspace/memory/repo/current/routing-feedback.md"
+    ]
+  },
+  "forbidden_files": [
+    "TODO.md",
+    ".agentic-workspace/memory/repo/current/active-decisions.md",
+    "memory/system/UPGRADE.md",
+    ".agentic-workspace/memory/UPGRADE.md"
+  ],
+  "forbidden_prefixes": [
+    ".agent-work/"
+  ],
+  "guidance_fragments": {
+    ".agentic-workspace/memory/repo/current/project-state.md": [
+      "Keep this note concise and weak-authority",
+      "Prefer replacing stale bullets instead of appending timeline-style progress logs"
+    ],
+    ".agentic-workspace/memory/repo/current/task-context.md": [
+      "Do not turn it into a task list, backlog, execution log, roadmap, or sequencing surface.",
+      "Prefer replacing resolved resume bullets instead of accumulating pass-by-pass checkpoints"
+    ],
+    ".agentic-workspace/memory/repo/current/routing-feedback.md": [
+      "Keep only concrete cases that materially improve routing.",
+      "Prefer one live case per routing issue and prune resolved entries quickly"
+    ]
+  },
+  "workspace_orchestrator_notice": {
+    "marker": ".agentic-workspace/WORKFLOW.md",
+    "detail": "shared Workspace layer is not installed; ordinary host-repo lifecycle should run through `agentic-workspace init --preset memory` or `agentic-workspace upgrade --modules memory`. Direct `agentic-memory` lifecycle commands are module-level maintenance/debugging surfaces and do not provide the full Workspace startup router, shared config, ownership, skills, or combined reports.",
+    "role": "workspace-orchestration",
+    "safety": "safe",
+    "category": "safe-update"
+  },
+  "status_files": [
+    {
+      "path": "AGENTS.md",
+      "role": "local-entrypoint",
+      "safety": "safe",
+      "source": "AGENTS.md"
+    },
+    {
+      "path": ".agentic-workspace/docs/installer-behavior.md",
+      "role": "managed-file",
+      "safety": "safe",
+      "source": ".agentic-workspace/docs/installer-behavior.md"
+    },
+    {
+      "path": ".agentic-workspace/docs/memory-metadata-contract.md",
+      "role": "managed-file",
+      "safety": "safe",
+      "source": ".agentic-workspace/docs/memory-metadata-contract.md"
+    },
+    {
+      "path": ".agentic-workspace/memory/repo/decisions/README.md",
+      "role": "shared-replaceable",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/repo/decisions/README.md"
+    },
+    {
+      "path": ".agentic-workspace/memory/repo/domains/README.md",
+      "role": "shared-replaceable",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/repo/domains/README.md"
+    },
+    {
+      "path": ".agentic-workspace/memory/repo/index.md",
+      "role": "seed-note",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/repo/index.md"
+    },
+    {
+      "path": ".agentic-workspace/memory/repo/invariants/README.md",
+      "role": "shared-replaceable",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/repo/invariants/README.md"
+    },
+    {
+      "path": ".agentic-workspace/memory/repo/manifest.toml",
+      "role": "shared-replaceable",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/repo/manifest.toml"
+    },
+    {
+      "path": ".agentic-workspace/memory/repo/runbooks/README.md",
+      "role": "shared-replaceable",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/repo/runbooks/README.md"
+    },
+    {
+      "path": ".agentic-workspace/memory/repo/templates/invariant.template.md",
+      "role": "shared-template",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/repo/templates/invariant.template.md"
+    },
+    {
+      "path": ".agentic-workspace/memory/repo/templates/memory-note.template.md",
+      "role": "shared-template",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/repo/templates/memory-note.template.md"
+    },
+    {
+      "path": ".agentic-workspace/memory/repo/templates/runbook.template.md",
+      "role": "shared-template",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/repo/templates/runbook.template.md"
+    },
+    {
+      "path": ".agentic-workspace/memory/skills/memory-capture/agents/openai.yaml",
+      "role": "shared-replaceable",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/skills/memory-capture/agents/openai.yaml"
+    },
+    {
+      "path": ".agentic-workspace/memory/skills/memory-capture/SKILL.md",
+      "role": "shared-replaceable",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/skills/memory-capture/SKILL.md"
+    },
+    {
+      "path": ".agentic-workspace/memory/skills/memory-consultation-and-residue/agents/openai.yaml",
+      "role": "shared-replaceable",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/skills/memory-consultation-and-residue/agents/openai.yaml"
+    },
+    {
+      "path": ".agentic-workspace/memory/skills/memory-consultation-and-residue/SKILL.md",
+      "role": "shared-replaceable",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/skills/memory-consultation-and-residue/SKILL.md"
+    },
+    {
+      "path": ".agentic-workspace/memory/skills/memory-hygiene/agents/openai.yaml",
+      "role": "shared-replaceable",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/skills/memory-hygiene/agents/openai.yaml"
+    },
+    {
+      "path": ".agentic-workspace/memory/skills/memory-hygiene/SKILL.md",
+      "role": "shared-replaceable",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/skills/memory-hygiene/SKILL.md"
+    },
+    {
+      "path": ".agentic-workspace/memory/skills/memory-refresh/agents/openai.yaml",
+      "role": "shared-replaceable",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/skills/memory-refresh/agents/openai.yaml"
+    },
+    {
+      "path": ".agentic-workspace/memory/skills/memory-refresh/SKILL.md",
+      "role": "shared-replaceable",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/skills/memory-refresh/SKILL.md"
+    },
+    {
+      "path": ".agentic-workspace/memory/skills/memory-router/agents/openai.yaml",
+      "role": "shared-replaceable",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/skills/memory-router/agents/openai.yaml"
+    },
+    {
+      "path": ".agentic-workspace/memory/skills/memory-router/SKILL.md",
+      "role": "shared-replaceable",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/skills/memory-router/SKILL.md"
+    },
+    {
+      "path": ".agentic-workspace/memory/skills/memory-upgrade/agents/openai.yaml",
+      "role": "shared-replaceable",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/skills/memory-upgrade/agents/openai.yaml"
+    },
+    {
+      "path": ".agentic-workspace/memory/skills/memory-upgrade/SKILL.md",
+      "role": "shared-replaceable",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/skills/memory-upgrade/SKILL.md"
+    },
+    {
+      "path": ".agentic-workspace/memory/skills/README.md",
+      "role": "shared-replaceable",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/skills/README.md"
+    },
+    {
+      "path": ".agentic-workspace/memory/skills/REGISTRY.json",
+      "role": "shared-replaceable",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/skills/REGISTRY.json"
+    },
+    {
+      "path": ".agentic-workspace/memory/SKILLS.md",
+      "role": "shared-replaceable",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/SKILLS.md"
+    },
+    {
+      "path": ".agentic-workspace/memory/UPGRADE-SOURCE.toml",
+      "role": "shared-replaceable",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/UPGRADE-SOURCE.toml"
+    },
+    {
+      "path": ".agentic-workspace/memory/VERSION.md",
+      "role": "shared-replaceable",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/VERSION.md"
+    },
+    {
+      "path": ".agentic-workspace/memory/WORKFLOW.md",
+      "role": "shared-replaceable",
+      "safety": "safe",
+      "source": ".agentic-workspace/memory/WORKFLOW.md"
+    }
+  ],
+  "obsolete_files": [
+    "memory/system/UPGRADE.md",
+    ".agentic-workspace/memory/UPGRADE.md"
+  ]
+}

@@ -268,7 +268,7 @@ def _interface_usage_error_hints(interface: dict[str, Any]) -> list[dict[str, An
 def build_generated_parser() -> argparse.ArgumentParser:
     epilog = (
         f"Weak-agent routing: {_GENERATED_WEAK_AGENT_ROUTING}\n"
-        "Recovery: use one of the supported generated commands or route back to the canonical Python CLI."
+        "Recovery: use one of the supported generated commands or inspect the generated command contract."
     )
     parser = GeneratedArgumentParser(prog="agentic-verification", description="", epilog=epilog, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--version', action='version', version=f'%(prog)s {generated_package_version()}')

@@ -1,0 +1,143 @@
+{
+  "classification": "local-record-append",
+  "command_surface": {
+    "command": "note-delegation-outcome",
+    "format_option": "format"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": false,
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
+  },
+  "guards": [
+    "Required outcome fields must be present and enum-valid.",
+    "Do not treat local outcome records as checked-in repo policy."
+  ],
+  "id": "delegation-outcome.append",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "delegation_target",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "task_class",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "outcome",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "handoff_sufficiency",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "review_burden",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "escalation_required",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "arguments": {},
+        "description": "Resolve and validate the target root for the local-only delegation outcome file.",
+        "id": "resolve_root",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "target_root"
+        ],
+        "uses": "workspace.root.resolve"
+      },
+      {
+        "arguments": {},
+        "description": "Append the local-only delegation outcome record.",
+        "id": "append_record",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "delegation.outcome.append"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the append result in the requested format.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Delegation outcome append executes generated operation IR through codegen-owned primitive dataflow while workspace runtime performs the local-only append compatibility operation and generated output owns the text result."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "text-or-json"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "delegation outcome append tests remain compatible",
+    "delegation outcome text output stays in generated output rather than lifecycle text fallback"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/delegation-outcomes.local.json"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the target root.",
+      "id": "resolve_root",
+      "uses": "workspace.root.resolve"
+    },
+    {
+      "description": "Append the local-only delegation outcome record.",
+      "id": "append_record",
+      "uses": "delegation.outcome.append"
+    },
+    {
+      "description": "Emit append result.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Append one local-only delegation outcome record for target-profile tuning.",
+  "writes": [
+    {
+      "required": true,
+      "surface": ".agentic-workspace/delegation-outcomes.local.json",
+      "when": "append one local outcome record"
+    }
+  ]
+}

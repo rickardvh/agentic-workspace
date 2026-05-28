@@ -1132,24 +1132,70 @@ def test_python_parser_retirement_rejects_generated_command_in_handwritten_parse
     assert any("handwritten parser still accepts generated command 'defaults'" in error for error in errors)
 
 
-def test_typescript_runtime_handoff_thinness_rejects_runtime_owned_behavior() -> None:
+def test_typescript_runtime_check_rejects_python_handoff_behavior() -> None:
     checker = _load_checker()
     cli_text = "\n".join(
         [
             "import { spawnSync } from 'node:child_process';",
+            "const nativeOperationIds = new Set([]);",
             "import { readFileSync, writeSync } from 'node:fs';",
+            "const nativeContractCases = {};",
             "function splitRuntimeCommand(commandLine) { return [commandLine]; }",
             "const [runtimeExecutable, ...runtimeArgs] = splitRuntimeCommand(runtimeCommand);",
             "result = spawnSync(runtimeExecutable, [...runtimeArgs, ...argv], { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });",
-            "JSON.stringify(readFileSync('AGENTS.md'));",
+            "console.error('Adapter runtime handoff failed');",
+        ]
+    )
+    runtime_text = "\n".join(
+        [
+            "export function runGeneratedOperation({ operationId, operationPath, values }) {}",
+            "function runSteps(operation, values) {}",
+            "function executePrimitive(primitive, values, args, operationId) {}",
+            "function executeTypescriptDomainOperation(operationId, values) {}",
+            "if (primitive === 'typescript.domain.execute') return executeTypescriptDomainOperation(String(args.operation_id ?? operationId), values);",
+            "throw new Error('unsupported native TypeScript primitive');",
         ]
     )
 
-    errors = checker._validate_typescript_runtime_handoff_thinness(package="workspace-cli", cli_text=cli_text)
+    errors = checker._validate_typescript_runtime_handoff_thinness(
+        package="workspace-cli",
+        cli_text=cli_text,
+        runtime_text=runtime_text,
+    )
 
-    assert any("imports runtime-owned modules" in error for error in errors)
-    assert any("runtime-owned behavior marker: readFile" in error for error in errors)
-    assert any("runtime-owned behavior marker: JSON.stringify" in error for error in errors)
+    assert any("imports non-native runtime modules" in error for error in errors)
+    assert any("Python/runtime-handoff marker: node:child_process" in error for error in errors)
+    assert any("Python/runtime-handoff marker: Adapter runtime handoff failed" in error for error in errors)
+    assert any("Python/runtime-handoff marker: nativeContractCases" in error for error in errors)
+
+
+def test_typescript_native_execution_check_rejects_missing_ir_steps(tmp_path: Path) -> None:
+    checker = _load_checker()
+    package_root = tmp_path / "package"
+    operation_path = package_root / "resources" / "operations" / "summary.report.json"
+    operation_path.parent.mkdir(parents=True)
+    operation_path.write_text(
+        checker.json.dumps({"id": "summary.report", "ir_plan": {"status": "draft", "steps": []}}),
+        encoding="utf-8",
+    )
+    command_package = {
+        "commands": [
+            {
+                "status": "generated",
+                "command": {"name": "summary"},
+                "operation_ref": {"id": "summary.report", "path": "operations/summary.report.json"},
+                "interface": {"name": "summary"},
+            }
+        ]
+    }
+
+    errors = checker._validate_typescript_native_operation_execution(
+        package="workspace-cli",
+        package_root=package_root,
+        command_package=command_package,
+    )
+
+    assert errors == ["workspace-cli operation 'summary.report' is native but has no executable ir_plan.steps"]
 
 
 def test_generated_command_projection_boundary_rejects_target_owned_runtime_behavior() -> None:

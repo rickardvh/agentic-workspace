@@ -389,6 +389,23 @@ def test_long_horizon_episode_bootstraps_aw_mode_for_pinned_repo_dry_run(tmp_pat
     assert setup_summary["harness_setup_count"] > 0
 
 
+def test_long_horizon_episode_bootstraps_aw_mode_into_configured_startup_file(tmp_path: Path) -> None:
+    module = _load_episode_module()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / ".agentic-workspace").mkdir()
+    (repo / ".agentic-workspace" / "config.toml").write_text(
+        'schema_version = 1\n\n[workspace]\nagent_instructions_file = "GEMINI.md"\n',
+        encoding="utf-8",
+    )
+    (repo / "GEMINI.md").write_text("# Gemini\n", encoding="utf-8")
+
+    module._bootstrap_aw_mode(repo)
+
+    assert "<!-- agentic-workspace:workflow:start -->" in (repo / "GEMINI.md").read_text(encoding="utf-8")
+    assert not (repo / "AGENTS.md").exists()
+
+
 def test_long_horizon_episode_evaluator_excludes_hidden_oracle_and_reports_comparison(tmp_path: Path) -> None:
     module = _load_episode_module()
     suite = _write_suite(tmp_path)

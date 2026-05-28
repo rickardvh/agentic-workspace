@@ -531,7 +531,7 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
     assert "black-box conformance" in " ".join(maturity["runnable-read-only-adapter"]["promotion_requires"])
     assert maturity["weak-agent-safe-adapter"]["weak_agent_routing"] == "allowed-read-only"
     assert "unsupported command errors" in " ".join(maturity["weak-agent-safe-adapter"]["promotion_requires"])
-    assert "runtime handoff failures" in " ".join(maturity["weak-agent-safe-adapter"]["promotion_requires"])
+    assert "Python-free native execution" in " ".join(maturity["weak-agent-safe-adapter"]["promotion_requires"])
     assert "implementation-independent contracts or IR" in python_completion["finish_line"]
     assert "codegen-owned primitive executors" in python_completion["finish_line"]
     assert python_completion["current_state"] == "full-generated-cli-complete"
@@ -557,9 +557,10 @@ def test_command_package_ir_declares_python_and_typescript_targets() -> None:
     assert any("generic deterministic operations" in item for item in python_completion["proof_requirements"])
     assert any("generated/python target output" in item for item in python_completion["proof_requirements"])
     assert any("compact Python completion blocker report" in item for item in python_completion["proof_requirements"])
-    assert runtime_binding["selected_model"] == "generated parser/help/validation with process handoff to canonical Python CLI"
-    assert "operation primitive implementation" in runtime_binding["runtime_owns"]
+    assert runtime_binding["selected_model"] == "generated parser, validation, and native TypeScript/Node command execution"
+    assert "contract-backed payload projection for generated TypeScript commands" in runtime_binding["runtime_owns"]
     assert "argv spelling and help rendering" in runtime_binding["target_projection_owns"]
+    assert "native TypeScript operation dispatch" in runtime_binding["target_projection_owns"]
     assert "adapter failures" in " ".join(runtime_binding["error_mapping"])
     assert "must not own runtime primitive behavior" in manifest["generation_policy"]["shell_adapter_policy"]
     assert "direct cli.py edits" in manifest["generation_policy"]["direct_cli_edit_policy"]
@@ -965,8 +966,9 @@ def test_operation_ir_has_complete_portable_memory_list_files_command() -> None:
     assert primitive_registry["primitive_extension_boundary"]["target_support_rule"]
     assert support_matrix["python"]["status"] == "implemented"
     assert "path.target_root.resolve" in support_matrix["python"]["implemented_shared_primitives"]
-    assert support_matrix["typescript"]["status"] == "unsupported-reported"
-    assert "runtime handoff" in support_matrix["typescript"]["unsupported_behavior"]
+    assert support_matrix["typescript"]["status"] == "implemented"
+    assert "path.target_root.resolve" in support_matrix["typescript"]["implemented_shared_primitives"]
+    assert "falling back to Python" in support_matrix["typescript"]["unsupported_behavior"]
     assert operation["ir_plan"]["status"] == "complete"
     assert used == [
         "path.target_root.resolve",
@@ -1555,7 +1557,7 @@ def test_generated_typescript_command_package_fixture_is_current() -> None:
     assert package_json["agenticWorkspace"]["maturity"]["promotion_requires"]
     assert (
         package_json["agenticWorkspace"]["runtimeBinding"]["selected_model"]
-        == "generated parser/help/validation with process handoff to canonical Python CLI"
+        == "generated parser, validation, and native TypeScript/Node command execution"
     )
     assert package_json["agenticWorkspace"]["declaredEntrypoints"] == ["agentic-workspace"]
     adapter_ids = {command["adapter_id"] for command in resource_payload["commands"]}
@@ -1577,22 +1579,31 @@ def test_generated_typescript_command_package_fixture_is_current() -> None:
     assert "resources/command_package.json" in source_text
     assert "adapter_id" not in source_text
     assert "DO NOT EDIT DIRECTLY" in source_text
-    assert "maxBuffer: 16 * 1024 * 1024" in cli_text
-    assert "function splitRuntimeCommand(commandLine)" in cli_text
     assert "validateInterface(commandByName.get(command), argv.slice(1), [command]);" in cli_text
     assert "TypeScript CLI validation failed" in cli_text
-    assert "spawnSync(runtimeExecutable, [...runtimeArgs, ...argv]" in cli_text
+    assert "function runNativeOperation(operationId, operationPath, values)" in cli_text
+    assert "runGeneratedOperation({ operationId, operationPath, values })" in cli_text
+    assert "const nativeContractCases = {" not in cli_text
+    assert "spawnSync(" not in cli_text
     assert "shell: true" not in cli_text
-    assert "writeSync(1, result.stdout)" in cli_text
-    assert "writeSync(2, result.stderr)" in cli_text
+    runtime_text = (package_root / "src" / "runtime.mjs").read_text(encoding="utf-8")
+    assert "function runSteps(operation, values)" in runtime_text
+    assert "function executePrimitive(primitive, values, args, operationId)" in runtime_text
+    assert "function executeTypescriptDomainOperation(operationId, values)" in runtime_text
+    assert "frontDoorPayload" not in runtime_text
+    summary_operation = json.loads((package_root / "resources" / "operations" / "summary.report.json").read_text(encoding="utf-8"))
+    assert [step["uses"] for step in summary_operation["ir_plan"]["steps"]] == ["typescript.domain.execute", "output.emit"]
+    assert "writeSync(1," in runtime_text
+    assert "writeSync(2," in runtime_text
     assert "Weak-agent routing: allowed-mutation-with-review" in cli_text
     assert "Unsupported generated command" in cli_text
-    assert "Adapter runtime handoff failed" in cli_text
+    assert "Adapter runtime handoff failed" not in cli_text
     assert "generated package resource exposes expected commands" in test_text
-    assert "generated runnable adapter delegates supported command to runtime process" in test_text
-    assert "generated runnable adapter validates choices before runtime handoff" in test_text
+    assert "generated runnable adapter executes supported command without Python runtime" in test_text
+    assert "generated runnable adapter validates choices before command execution" in test_text
     assert "generated runnable adapter exposes routing status and recovery guidance" in test_text
-    assert "generated runnable adapter maps runtime handoff failure with recovery guidance" in test_text
+    assert "generated runnable adapter executes supported command without Python runtime" in test_text
+    assert "runtime handoff failure" not in test_text
 
 
 def test_generated_typescript_package_adapters_are_runnable() -> None:
@@ -1637,20 +1648,22 @@ def test_generated_typescript_package_adapters_are_runnable() -> None:
         metadata = package_json["agenticWorkspace"]
         assert metadata["fixtureOnly"] is False
         assert metadata["generationStatus"] == maturity
-        assert runtime_module in metadata["effectiveRuntimeCommand"]
+        assert metadata["effectiveRuntimeCommand"] is None
+        assert metadata["runtimeBinding"]["runtime_dependency"] == "node-only"
         assert metadata["maturity"]["id"] == maturity
         assert metadata["maturity"]["runnable"] is True
         assert metadata["maturity"]["weak_agent_routing"] == weak_agent_routing
         assert metadata["maturity"]["promotion_requires"]
-        assert runtime_module in cli_text
-        assert "function splitRuntimeCommand(commandLine)" in cli_text
+        assert runtime_module not in cli_text
+        assert "function runNativeOperation(operationId, operationPath, values)" in cli_text
+        assert (package_root / "src" / "runtime.mjs").is_file()
         assert "validateInterface(commandByName.get(command), argv.slice(1), [command]);" in cli_text
-        assert "spawnSync(runtimeExecutable, [...runtimeArgs, ...argv]" in cli_text
+        assert "spawnSync(" not in cli_text
         assert "shell: true" not in cli_text
         assert f"Weak-agent routing: {weak_agent_routing}" in cli_text
-        assert "generated runnable adapter delegates supported command to runtime process" in test_text
-        assert "generated runnable adapter validates choices before runtime handoff" in test_text
-        assert "generated runnable adapter preserves spaced argv values during runtime handoff" in test_text
+        assert "generated runnable adapter executes supported command without Python runtime" in test_text
+        assert "generated runnable adapter validates choices before command execution" in test_text
+        assert "generated runnable adapter preserves spaced argv values during native execution" in test_text
 
 
 def test_generated_command_adapter_metadata_routes_direct_edits_to_authoritative_sources() -> None:

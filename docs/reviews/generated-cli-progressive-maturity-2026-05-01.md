@@ -10,8 +10,8 @@ Generated command surfaces move through these levels:
 
 | Level | Meaning | Current use |
 | --- | --- | --- |
-| `metadata-proof-fixture` | Generated metadata proves the package can project the command-package IR, but is not a runnable interface. | TypeScript Planning and Memory packages remain here. |
-| `runnable-read-only-adapter` | Generated target can run a read-only command through a process handoff. | TypeScript root workspace `defaults`. |
+| `metadata-proof-fixture` | Generated metadata proves the package can project the command-package IR, but is not a runnable interface. | Historical TypeScript fixture level. |
+| `runnable-read-only-adapter` | Generated target can run a read-only command through generated runtime code and contract-backed output projection. | Historical root workspace TypeScript `defaults` slice. |
 | `runtime-backed-read-only-adapter` | Generated parser/dispatch is the interface authority and delegates to hand-owned runtime primitives. | Python root read-only/context/diagnostic commands, Planning `status`, and Memory `status`. |
 | `weak-agent-safe-adapter` | Generated read-only target is safe for weak-agent routing after broader off-happy-path proof. | Not enabled yet. |
 | `mutation-capable-adapter` | Generated target can invoke guarded mutation primitives. | Deferred until dry-run, preflight, and refusal conformance are explicit. |
@@ -35,7 +35,7 @@ Generated command surfaces move through these levels:
 | Root workspace Python CLI | `agentic-workspace setup` | handwritten root parser/dispatch | `runtime-backed-read-only-adapter` | `workspace.root.resolve`, `workspace.selection.resolve`, `workspace.report.assemble`, `output.emit` | generated freshness, Python parser/dispatch test, black-box process conformance |
 | Root workspace Python CLI | `agentic-workspace status` | handwritten root parser/dispatch | `runtime-backed-read-only-adapter` | `workspace.root.resolve`, `workspace.selection.resolve`, `workspace.report.assemble`, `output.emit` | generated freshness, Python parser/dispatch test, black-box process conformance |
 | Root workspace Python CLI | `agentic-workspace doctor` | handwritten root parser/dispatch | `runtime-backed-read-only-adapter` | `workspace.root.resolve`, `workspace.selection.resolve`, `workspace.report.assemble`, `output.emit` | generated freshness, Python parser/dispatch test, black-box process conformance |
-| Root workspace TypeScript package | Root read-only/context/diagnostic generated commands | `runnable-read-only-adapter` | unchanged | canonical Python process handoff | Node-backed conformance |
+| Root workspace TypeScript package | all root generated commands | `runnable-read-only-adapter` | native TypeScript/Node | generated parser, validation, native operation dispatch, and contract-backed output projection without Python runtime handoff | Node-backed conformance |
 | Planning Python CLI | `agentic-planning-bootstrap status` | `metadata-proof-fixture` | `runtime-backed-read-only-adapter` | `planning.bootstrap.status.load`, `output.emit` | generated parser/dispatch test and process smoke proof |
 | Memory Python CLI | `agentic-memory-bootstrap status` | `metadata-proof-fixture` | `runtime-backed-read-only-adapter` | `memory.bootstrap.status.load`, `output.emit` | generated parser/dispatch test and process smoke proof |
 | Planning Python CLI | `agentic-planning-bootstrap doctor`, `summary`, `report`, `reconcile` | handwritten package parser/dispatch | `runtime-backed-read-only-adapter` | package-local planning report primitives | generated parser/dispatch test and process conformance |

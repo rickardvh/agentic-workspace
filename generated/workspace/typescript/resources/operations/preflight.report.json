@@ -1,0 +1,172 @@
+{
+  "classification": "read-only-report",
+  "command_surface": {
+    "command": "preflight",
+    "format_option": "format"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": false,
+    "read_only": true,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
+  },
+  "guards": [
+    "Do not mutate repo state while producing preflight context.",
+    "Token creation is time-dependent, so byte-for-byte output is not idempotent.",
+    "Use preflight_policy.json as the source of token format and age policy."
+  ],
+  "id": "preflight.report",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "active_only",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "task",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "verbose",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "complete",
+    "steps": [
+      {
+        "arguments": {
+          "operation_id": "preflight.report"
+        },
+        "description": "Execute the operation through the generated TypeScript domain operation table.",
+        "id": "execute_typescript_domain_operation",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "typescript.domain.execute"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the TypeScript-native operation result.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Generated TypeScript native runtime binding for a command whose source operation has not yet been decomposed into portable IR."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "draft-contract-only",
+  "output": {
+    "kind": "text-or-json"
+  },
+  "projections": {
+    "cli": {
+      "command_ref": "preflight"
+    },
+    "mcp": {
+      "destructive_hint": false,
+      "idempotent_hint": false,
+      "read_only_hint": true,
+      "tool_name": "agentic_workspace_preflight_report"
+    },
+    "skill": {
+      "activation": [
+        "preflight",
+        "takeover context",
+        "startup context"
+      ],
+      "instruction_summary": "Use this operation to collect compact restart or takeover context before lifecycle work."
+    }
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated token format matches preflight_policy.json",
+    "existing preflight command tests remain unchanged"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/config.toml"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/state.toml"
+    },
+    {
+      "required": true,
+      "surface": "preflight_policy.json"
+    },
+    {
+      "required": false,
+      "surface": "task text for skill recommendations"
+    },
+    {
+      "required": false,
+      "surface": "verbose flag for broad diagnostic output"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the effective target root.",
+      "id": "resolve_root",
+      "uses": "workspace.root.resolve"
+    },
+    {
+      "description": "Load compact startup defaults unless active-only output was requested.",
+      "id": "load_defaults",
+      "uses": "workspace.defaults.load",
+      "when": "active_only is false"
+    },
+    {
+      "description": "Load resolved workspace config unless active-only output was requested.",
+      "id": "load_config",
+      "uses": "workspace.config.load",
+      "when": "active_only is false"
+    },
+    {
+      "description": "Load active planning state when available.",
+      "id": "load_planning_summary",
+      "uses": "planning.summary.load"
+    },
+    {
+      "description": "Create a fresh token suitable for strict preflight gates.",
+      "id": "create_token",
+      "uses": "preflight.token.create"
+    },
+    {
+      "description": "Assemble takeover-safe context, token metadata, and optional task-specific skill recommendations.",
+      "id": "assemble_context",
+      "uses": "preflight.context.assemble"
+    },
+    {
+      "description": "Emit preflight context in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Get compact takeover-safe context: startup defaults, resolved config, and active planning state in one call.",
+  "writes": []
+}

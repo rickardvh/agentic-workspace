@@ -1,0 +1,237 @@
+{
+  "classification": "read-only-report",
+  "command_surface": {
+    "command": "doctor",
+    "format_option": "format",
+    "program": "agentic-memory"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": true,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
+  },
+  "guards": [
+    "doctor must remain read-only."
+  ],
+  "id": "memory.doctor.report",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "strict_doc_ownership",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "verbose",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "command_visibility": "runtime-only",
+      "description": "Runtime adapter compatibility value shared with lifecycle prompt/template operations; not exposed by doctor.",
+      "name": "project_name",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "command_visibility": "runtime-only",
+      "description": "Runtime adapter compatibility value shared with lifecycle prompt/template operations; not exposed by doctor.",
+      "name": "project_purpose",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "command_visibility": "runtime-only",
+      "description": "Runtime adapter compatibility value shared with lifecycle prompt/template operations; not exposed by doctor.",
+      "name": "key_repo_docs",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "command_visibility": "runtime-only",
+      "description": "Runtime adapter compatibility value shared with lifecycle prompt/template operations; not exposed by doctor.",
+      "name": "key_subsystems",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "command_visibility": "runtime-only",
+      "description": "Runtime adapter compatibility value shared with lifecycle prompt/template operations; not exposed by doctor.",
+      "name": "primary_build_command",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "command_visibility": "runtime-only",
+      "description": "Runtime adapter compatibility value shared with lifecycle prompt/template operations; not exposed by doctor.",
+      "name": "primary_test_command",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "command_visibility": "runtime-only",
+      "description": "Runtime adapter compatibility value shared with lifecycle prompt/template operations; not exposed by doctor.",
+      "name": "other_key_commands",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "command_visibility": "runtime-only",
+      "description": "Runtime adapter compatibility value shared with lifecycle prompt/template operations; not exposed by doctor.",
+      "name": "policy_profile",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "arguments": {
+          "must_be_dir": true,
+          "must_exist": true
+        },
+        "description": "Resolve the target root for target-local memory doctor checks.",
+        "id": "resolve_target_root",
+        "on_error": "fail",
+        "outputs": [
+          "target_root"
+        ],
+        "uses": "path.target_root.resolve",
+        "when": {
+          "all": [
+            {
+              "equals": false,
+              "value": "verbose"
+            },
+            {
+              "equals": false,
+              "value": "strict_doc_ownership"
+            }
+          ]
+        }
+      },
+      {
+        "arguments": {
+          "detail_command": "agentic-memory doctor --target . --verbose --format json",
+          "dry_run": true,
+          "message": "Doctor report",
+          "policy_path": "payload_verification.memory.json",
+          "policy_root": "memory.contracts",
+          "target_root_value": "target_root"
+        },
+        "description": "Assemble Memory doctor status from declarative payload status policy for non-strict, non-verbose output.",
+        "id": "assemble_doctor",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "payload.status",
+        "when": {
+          "all": [
+            {
+              "equals": false,
+              "value": "verbose"
+            },
+            {
+              "equals": false,
+              "value": "strict_doc_ownership"
+            }
+          ]
+        }
+      },
+      {
+        "arguments": {},
+        "description": "Load the package-domain doctor report when verbose output or strict doc ownership is requested.",
+        "id": "load_verbose_or_strict_doctor",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "memory.bootstrap.doctor.load",
+        "when": {
+          "any": [
+            {
+              "equals": true,
+              "value": "verbose"
+            },
+            {
+              "equals": true,
+              "value": "strict_doc_ownership"
+            }
+          ]
+        }
+      },
+      {
+        "arguments": {},
+        "description": "Emit the memory doctor payload in the requested format.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit.install-result"
+      }
+    ],
+    "summary": "Memory doctor non-strict, non-verbose text and JSON execute generated operation IR through a schema-backed payload.status primitive. Verbose and strict ownership behavior remains package-domain source runtime."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "text-or-json"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "process conformance remains compatible"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": "package-local runtime state"
+    },
+    {
+      "required": false,
+      "surface": "verbose flag for broad diagnostic output"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the target root for target-local memory doctor checks.",
+      "id": "resolve_target_root",
+      "uses": "path.target_root.resolve"
+    },
+    {
+      "description": "Assemble Memory doctor status from declarative payload status policy.",
+      "id": "assemble_doctor",
+      "uses": "payload.status"
+    },
+    {
+      "description": "Load the package-domain doctor report when verbose output or strict doc ownership is requested.",
+      "id": "load_verbose_or_strict_doctor",
+      "uses": "memory.bootstrap.doctor.load"
+    },
+    {
+      "description": "Emit Memory doctor as JSON or install-result text without package-runtime formatting.",
+      "id": "emit_output",
+      "uses": "output.emit.install-result"
+    }
+  ],
+  "summary": "Read-only agentic-memory doctor report.",
+  "writes": []
+}

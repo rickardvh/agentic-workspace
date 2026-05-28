@@ -5625,6 +5625,11 @@ def _lifecycle_surface_classifications_payload(
         }
     entries: list[dict[str, Any]] = []
     seen: set[tuple[str, str, str]] = set()
+    configured_startup_file = (
+        payload.get("config", {}).get("workspace", {}).get("agent_instructions_file", DEFAULT_AGENT_INSTRUCTIONS_FILE)
+        if isinstance(payload.get("config"), dict)
+        else DEFAULT_AGENT_INSTRUCTIONS_FILE
+    )
 
     def add_entry(
         *,
@@ -5668,7 +5673,12 @@ def _lifecycle_surface_classifications_payload(
             action_kind = str(action.get("kind", ""))
             detail = str(action.get("detail", ""))
             reason_class, reason = _classify_lifecycle_action(
-                path=path, action_kind=action_kind, detail=detail, command_name=command_name, review_required=review_required
+                path=path,
+                action_kind=action_kind,
+                detail=detail,
+                command_name=command_name,
+                review_required=review_required,
+                configured_startup_file=str(configured_startup_file),
             )
             add_entry(
                 path=path,
@@ -5685,7 +5695,12 @@ def _lifecycle_surface_classifications_payload(
             path = _display_path(warning.get("path", "."), target_root)
             message = str(warning.get("message", "needs review"))
             reason_class, reason = _classify_lifecycle_action(
-                path=path, action_kind="warning", detail=message, command_name=command_name, review_required=review_required
+                path=path,
+                action_kind="warning",
+                detail=message,
+                command_name=command_name,
+                review_required=review_required,
+                configured_startup_file=str(configured_startup_file),
             )
             add_entry(
                 path=path,
@@ -5764,7 +5779,9 @@ def _lifecycle_surface_classifications_payload(
     }
 
 
-def _classify_lifecycle_action(*, path: str, action_kind: str, detail: str, command_name: str, review_required: bool) -> tuple[str, str]:
+def _classify_lifecycle_action(
+    *, path: str, action_kind: str, detail: str, command_name: str, review_required: bool, configured_startup_file: str
+) -> tuple[str, str]:
     detail_l = detail.lower()
     path_l = path.lower()
     if action_kind == "skipped":
@@ -5787,7 +5804,7 @@ def _classify_lifecycle_action(*, path: str, action_kind: str, detail: str, comm
     if action_kind in {"would update", "updated", "overwritten", "would overwrite", "would replace", "replaced"}:
         if "optional" in detail_l:
             return ("optional enabled", detail or "Optional managed surface is enabled or refreshed.")
-        if path_l.startswith(".agentic-workspace/") or path == "AGENTS.md":
+        if path_l.startswith(".agentic-workspace/") or path == configured_startup_file:
             return ("core refreshed", detail or "Core managed lifecycle surface is refreshed.")
         return ("product-managed replaced", detail or "Product-managed surface is replaced.")
     if action_kind in {"created", "copied", "would create", "would copy"}:
@@ -9324,7 +9341,8 @@ def _artifact_footprint_by_class(*, target: Any) -> dict[str, Any]:
         return (len(files), [_relative_posix(path, target_root) for path in files[:5]])
 
     def _large_docs() -> tuple[int, list[str]]:
-        candidates = [path for path in [target_root / "README.md", target_root / "AGENTS.md"] if path.is_file()]
+        config = config_lib.load_workspace_config(target_root=target_root)
+        candidates = [path for path in [target_root / "README.md", target_root / config.agent_instructions_file] if path.is_file()]
         docs_root = target_root / "docs"
         if docs_root.exists():
             candidates.extend((path for path in docs_root.rglob("*.md") if path.is_file()))
@@ -13201,9 +13219,9 @@ def _package_boundary_payload(*, target_root: Path) -> dict[str, Any]:
     return {"status": "repo-root-or-subdir", "cwd": relative_cwd.as_posix() or ".", "warning": None}
 
 
-def _authority_marker_for_path(path_text: str) -> dict[str, Any]:
+def _authority_marker_for_path(path_text: str, *, agent_instructions_file: str = DEFAULT_AGENT_INSTRUCTIONS_FILE) -> dict[str, Any]:
     normalized = _normalize_changed_paths([path_text])[0] if _normalize_changed_paths([path_text]) else path_text
-    if normalized == "AGENTS.md":
+    if normalized == agent_instructions_file:
         return _authority_marker_payload(marker_id="root-agent-instructions", normalized=normalized)
     if normalized.startswith(".agentic-workspace/planning/"):
         return _authority_marker_payload(marker_id="planning-surface", normalized=normalized)
@@ -13250,8 +13268,8 @@ def _authority_marker_canonical_source(*, marker: dict[str, Any], normalized: st
     raise WorkspaceUsageError(f"Unsupported authority marker canonical source kind: {kind}")
 
 
-def _boundary_warning_for_path(path_text: str) -> dict[str, Any]:
-    marker = _authority_marker_for_path(path_text)
+def _boundary_warning_for_path(path_text: str, *, agent_instructions_file: str = DEFAULT_AGENT_INSTRUCTIONS_FILE) -> dict[str, Any]:
+    marker = _authority_marker_for_path(path_text, agent_instructions_file=agent_instructions_file)
     normalized = str(marker["path"])
     warning: str | None = None
     if marker["authority"] == "payload":
@@ -13269,11 +13287,13 @@ def _boundary_warning_for_path(path_text: str) -> dict[str, Any]:
     return {"path": normalized, "authority": marker["authority"], "warning": warning, "requires_attention": warning is not None}
 
 
-def _authority_markers_for_startup(*, active_execplan: str | None = None) -> list[dict[str, Any]]:
-    paths = ["AGENTS.md", ".agentic-workspace/WORKFLOW.md", ".agentic-workspace/OWNERSHIP.toml"]
+def _authority_markers_for_startup(
+    *, active_execplan: str | None = None, agent_instructions_file: str = DEFAULT_AGENT_INSTRUCTIONS_FILE
+) -> list[dict[str, Any]]:
+    paths = [agent_instructions_file, ".agentic-workspace/WORKFLOW.md", ".agentic-workspace/OWNERSHIP.toml"]
     if active_execplan:
         paths.append(active_execplan)
-    return [_authority_marker_for_path(path) for path in paths]
+    return [_authority_marker_for_path(path, agent_instructions_file=agent_instructions_file) for path in paths]
 
 
 def _read_budget_payload(*, profile: str, current_need: str, required_sections: list[str], optional_sections: list[str]) -> dict[str, Any]:
@@ -14263,7 +14283,9 @@ def _start_payload(
             evidence_required=["compact active planning summary"] if active_planning_present else [],
         ),
         "package_boundary": _package_boundary_payload(target_root=target_root),
-        "authority_markers": _authority_markers_for_startup(active_execplan=active_execplan),
+        "authority_markers": _authority_markers_for_startup(
+            active_execplan=active_execplan, agent_instructions_file=config.agent_instructions_file
+        ),
         "immediate_next_allowed_action": {
             "action": "continue-active-planning-record" if active_planning_present else "choose-smallest-workflow-shape",
             "summary": next_action,
@@ -14476,7 +14498,9 @@ def _start_payload(
         repair_profile = _compact_repair_plan_profile(changed_paths=normalized_paths, task_text=task_text, proof_command=proof_command)
         if repair_profile["status"] == "direct-no-plan":
             payload["repair_plan_profile"] = repair_profile
-        payload["path_boundaries"] = [_boundary_warning_for_path(path) for path in normalized_paths]
+        payload["path_boundaries"] = [
+            _boundary_warning_for_path(path, agent_instructions_file=config.agent_instructions_file) for path in normalized_paths
+        ]
     elif normalized_paths:
         proof_payload = _proof_selection_for_changed_paths(
             changed_paths=normalized_paths, target_root=target_root, include_durable_intent=False
@@ -14494,7 +14518,9 @@ def _start_payload(
         )
         if repair_profile["status"] == "direct-no-plan":
             payload["repair_plan_profile"] = repair_profile
-        payload["path_boundaries"] = [_boundary_warning_for_path(path) for path in normalized_paths]
+        payload["path_boundaries"] = [
+            _boundary_warning_for_path(path, agent_instructions_file=config.agent_instructions_file) for path in normalized_paths
+        ]
     if profile == "tiny":
         payload["routine_work_context"] = _routine_work_context_payload(
             source_payload=payload,
@@ -15001,7 +15027,9 @@ def _start_tiny_payload_fast(
         ),
         "active_state_summary": active_summary,
         "package_boundary": _package_boundary_payload(target_root=target_root),
-        "authority_markers": _authority_markers_for_startup(active_execplan=active_summary["active_execplan"]),
+        "authority_markers": _authority_markers_for_startup(
+            active_execplan=active_summary["active_execplan"], agent_instructions_file=config.agent_instructions_file
+        ),
         "immediate_next_allowed_action": {
             "action": "continue-active-planning-record" if active_planning_present else "choose-smallest-workflow-shape",
             "summary": next_action_summary,
@@ -15193,7 +15221,9 @@ def _start_tiny_payload_fast(
         repair_profile = _compact_repair_plan_profile(changed_paths=normalized_paths, task_text=task_text, proof_command=proof_command)
         if repair_profile["status"] == "direct-no-plan":
             payload["repair_plan_profile"] = repair_profile
-        payload["path_boundaries"] = [_boundary_warning_for_path(path) for path in normalized_paths]
+        payload["path_boundaries"] = [
+            _boundary_warning_for_path(path, agent_instructions_file=config.agent_instructions_file) for path in normalized_paths
+        ]
     elif normalized_paths:
         proof_command = str(
             _command_with_cli_invoke(
@@ -15207,7 +15237,9 @@ def _start_tiny_payload_fast(
         repair_profile = _compact_repair_plan_profile(changed_paths=normalized_paths, task_text=task_text, proof_command=proof_command)
         if repair_profile["status"] == "direct-no-plan":
             payload["repair_plan_profile"] = repair_profile
-        payload["path_boundaries"] = [_boundary_warning_for_path(path) for path in normalized_paths]
+        payload["path_boundaries"] = [
+            _boundary_warning_for_path(path, agent_instructions_file=config.agent_instructions_file) for path in normalized_paths
+        ]
     cli_compatibility = _cli_compatibility_payload(config=config, compact=True)
     if cli_compatibility["configured"]:
         payload["cli_compatibility"] = cli_compatibility
@@ -16777,8 +16809,9 @@ def _change_impact_lane_ids_for_path(*, path: str, proof: dict[str, Any]) -> lis
 
 def _change_impact_path_payload(*, path: str, ownership_payload: dict[str, Any], proof: dict[str, Any], cli_invoke: str) -> dict[str, Any]:
     ownership_answer, ownership_matched = _ownership_answer_for_path(ownership_payload, repo_path=path)
-    authority_marker = _authority_marker_for_path(path)
-    boundary = _boundary_warning_for_path(path)
+    agent_instructions_file = str(ownership_payload.get("agent_instructions_file", DEFAULT_AGENT_INSTRUCTIONS_FILE))
+    authority_marker = _authority_marker_for_path(path, agent_instructions_file=agent_instructions_file)
+    boundary = _boundary_warning_for_path(path, agent_instructions_file=agent_instructions_file)
     cli_classification = _cli_authority_classification_for_path(path)
     surface_origin = _change_impact_surface_origin(
         path=path, authority_marker=authority_marker, ownership_answer=ownership_answer, cli_classification=cli_classification
@@ -17058,7 +17091,9 @@ def _implement_payload(
         if normalized_paths
         else copy.deepcopy(implementer_template["unknown_scope_proof"])
     )
-    path_boundaries = [_boundary_warning_for_path(path) for path in normalized_paths]
+    path_boundaries = [
+        _boundary_warning_for_path(path, agent_instructions_file=config.agent_instructions_file) for path in normalized_paths
+    ]
     attention_paths = [item["path"] for item in path_boundaries if item["requires_attention"]]
     inspect_files = normalized_paths or list(implementer_template["default_inspect_files"])
     execution_posture = _execution_posture_payload(
@@ -17155,7 +17190,10 @@ def _implement_payload(
         "files_to_avoid": list(implementer_template["files_to_avoid"]),
         "package_boundary": _package_boundary_payload(target_root=target_root),
         "path_boundaries": path_boundaries,
-        "authority_markers": [_authority_marker_for_path(path) for path in normalized_paths or ["AGENTS.md"]],
+        "authority_markers": [
+            _authority_marker_for_path(path, agent_instructions_file=config.agent_instructions_file)
+            for path in normalized_paths or [config.agent_instructions_file]
+        ],
         "task_intent": task_intent,
         "acceptance": acceptance,
         "durable_intent_promotion": promotion_guidance,
@@ -22297,8 +22335,9 @@ def _emit_tiny_defaults_text(payload: dict[str, Any]) -> None:
 
 
 def _setup_orientation_surfaces(*, target_root: Path) -> tuple[Path, ...]:
+    config = config_lib.load_workspace_config(target_root=target_root)
     return (
-        target_root / "AGENTS.md",
+        target_root / config.agent_instructions_file,
         target_root / ".agentic-workspace/planning/state.toml",
         target_root / "tools" / "AGENT_QUICKSTART.md",
         target_root / "tools" / "AGENT_ROUTING.md",
@@ -22336,10 +22375,11 @@ def _setup_payload(
     findings_input = _setup_findings_input_payload(target_root=target_root)
     mature_repo = _repo_looks_setup_mature(target_root=target_root)
     if mature_repo:
+        startup_file = config.agent_instructions_file
         orientation: dict[str, Any] = {
             "mode": "no-new-seed-surfaces-needed",
             "summary": "No new seed surfaces are needed; the repo already has the core setup orientation surfaces.",
-            "reason": "AGENTS.md, .agentic-workspace/planning/state.toml, .agentic-workspace/planning/agent-manifest.json, and .agentic-workspace/memory/repo/index.md are already present.",
+            "reason": f"{startup_file}, .agentic-workspace/planning/state.toml, .agentic-workspace/planning/agent-manifest.json, and .agentic-workspace/memory/repo/index.md are already present.",
         }
         next_action = {"summary": "No new seed surfaces needed", "commands": ["agentic-workspace report --target ./repo --format json"]}
     else:
@@ -26331,7 +26371,9 @@ def _ownership_boundary_review(
     }
 
 
-def _ownership_diagnostics(*, target_root: Path, authority_surfaces: list[dict[str, Any]]) -> dict[str, Any]:
+def _ownership_diagnostics(
+    *, target_root: Path, authority_surfaces: list[dict[str, Any]], agent_instructions_file: str = DEFAULT_AGENT_INSTRUCTIONS_FILE
+) -> dict[str, Any]:
 
     def owner_for(concern: str, fallback: str) -> str:
         for entry in authority_surfaces:
@@ -26391,7 +26433,7 @@ def _ownership_diagnostics(*, target_root: Path, authority_surfaces: list[dict[s
         findings.append(finding)
 
     findings: list[dict[str, Any]] = []
-    agents_text = without_workspace_fence(read_text("AGENTS.md"))
+    agents_text = without_workspace_fence(read_text(agent_instructions_file))
     config_text = read_text(WORKSPACE_CONFIG_PATH.as_posix())
     workflow_text = read_text(WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH.as_posix())
     workspace_workflow_text = read_text(".agentic-workspace/WORKFLOW.md")
@@ -26401,9 +26443,9 @@ def _ownership_diagnostics(*, target_root: Path, authority_surfaces: list[dict[s
             finding_id="startup-adapter-active-state",
             concern="active execution state",
             status="suspected-drift",
-            suspected_surface="AGENTS.md",
+            suspected_surface=agent_instructions_file,
             expected_primary_owner=owner_for("compact-planning-state", ".agentic-workspace/planning/state.toml + execplans"),
-            suggested_route="Move durable current-work and handoff detail into planning state, summary, or an execplan; keep AGENTS.md as an adapter.",
+            suggested_route=f"Move durable current-work and handoff detail into planning state, summary, or an execplan; keep {agent_instructions_file} as an adapter.",
             evidence="startup adapter contains active-state or handoff language outside the managed workspace fence",
         )
     config_active_markers = ("current_task", "active_task", "active_execplan", "handoff", "next_action", "validation_run")
@@ -26430,7 +26472,7 @@ def _ownership_diagnostics(*, target_root: Path, authority_surfaces: list[dict[s
         )
     authoritative_claims: list[str] = []
     for surface, text in (
-        ("AGENTS.md", agents_text),
+        (agent_instructions_file, agents_text),
         (".agentic-workspace/WORKFLOW.md", workspace_workflow_text),
         (WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH.as_posix(), workflow_text),
     ):
@@ -26443,7 +26485,7 @@ def _ownership_diagnostics(*, target_root: Path, authority_surfaces: list[dict[s
             concern="startup routing",
             status="ambiguous-owner",
             claimed_by=authoritative_claims,
-            expected_primary_owner="AGENTS.md as repo startup adapter; structured authority comes from config, ownership, start, and module reports",
+            expected_primary_owner=f"{agent_instructions_file} as repo startup adapter; structured authority comes from config, ownership, start, and module reports",
             suggested_route="Keep startup files as adapters and move policy/state to the declared owner surface.",
             evidence="multiple startup or generated workflow surfaces claim canonical authority",
             severity="warning",
@@ -26485,8 +26527,9 @@ def _select_ownership_payload(payload: dict[str, Any], *, concern: str | None, r
         )
     if repo_path:
         answer, matched = _ownership_answer_for_path(payload, repo_path=repo_path)
-        answer["authority_marker"] = _authority_marker_for_path(repo_path)
-        answer["boundary_warning"] = _boundary_warning_for_path(repo_path)
+        agent_instructions_file = str(payload.get("agent_instructions_file", DEFAULT_AGENT_INSTRUCTIONS_FILE))
+        answer["authority_marker"] = _authority_marker_for_path(repo_path, agent_instructions_file=agent_instructions_file)
+        answer["boundary_warning"] = _boundary_warning_for_path(repo_path, agent_instructions_file=agent_instructions_file)
         return _compact_contract_answer(
             surface="ownership",
             selector={"path": _normalize_repo_path(repo_path)},
@@ -26617,6 +26660,7 @@ def _emit_ownership(
 
 
 def _ownership_payload(*, target_root: Path, descriptors: dict[str, ModuleDescriptor]) -> dict[str, Any]:
+    config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(_preset_modules(descriptors)))
     defaults = _defaults_payload()["ownership_mapping"]
     ledger_path = target_root / defaults["ledger"]
     warnings: list[str] = []
@@ -26647,6 +26691,7 @@ def _ownership_payload(*, target_root: Path, descriptors: dict[str, ModuleDescri
         "command": defaults["command"],
         "rule": defaults["rule"],
         "ledger_path": defaults["ledger"],
+        "agent_instructions_file": config.agent_instructions_file,
         "installed_modules": installed_modules,
         "ownership_classes": ownership_classes,
         "module_roots": module_roots,
@@ -26657,7 +26702,9 @@ def _ownership_payload(*, target_root: Path, descriptors: dict[str, ModuleDescri
         "boundary_review": _ownership_boundary_review(
             module_roots=module_roots, managed_surfaces=managed_surfaces, fences=fences, authority_surfaces=authority_surfaces
         ),
-        "diagnostics": _ownership_diagnostics(target_root=target_root, authority_surfaces=authority_surfaces),
+        "diagnostics": _ownership_diagnostics(
+            target_root=target_root, authority_surfaces=authority_surfaces, agent_instructions_file=config.agent_instructions_file
+        ),
         "warnings": warnings,
     }
 

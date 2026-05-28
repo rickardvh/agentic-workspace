@@ -105,8 +105,8 @@
           "promotion_requires": [
             "help output identifies supported generated commands and the weak-agent routing status",
             "unsupported command errors give a compact recovery path instead of leaving agents to infer next steps",
-            "runtime handoff failures are classified as adapter runtime handoff failures with recovery guidance",
-            "black-box conformance covers normal read-only behavior, unsupported command recovery, and runtime handoff failure mapping",
+            "native TypeScript runtime failures are classified with recovery guidance",
+            "black-box conformance covers normal read-only behavior, unsupported command recovery, and Python-free native execution",
             "generated-package proof advertises the target as weak-agent-safe only after these checks pass"
           ]
         },
@@ -248,9 +248,9 @@
       }
     },
     "non_python_runtime_binding": {
-      "selected_model": "generated parser/help/validation with process handoff to canonical Python CLI",
-      "default_runtime_command": "python -c \"import sys; from agentic_workspace.cli import main; raise SystemExit(main(sys.argv[1:]))\"",
-      "scope": "Read-only generated non-Python adapters may invoke the existing Python command surface as the runtime boundary; mutation-capable commands remain deferred until lifecycle dry-run, preflight, and refusal conformance are explicit.",
+      "selected_model": "generated parser, validation, and native TypeScript/Node command execution",
+      "default_runtime_command": "node-native",
+      "scope": "Generated TypeScript adapters execute declared generated commands through Node/TypeScript runtime code without shelling out to Python for ordinary command execution.",
       "universal_contract_owns": [
         "command identity",
         "operation reference",
@@ -262,19 +262,20 @@
       "target_projection_owns": [
         "target package entrypoint wiring",
         "argv spelling and help rendering",
-        "subprocess invocation envelope",
-        "stdout and stderr forwarding",
-        "exit-code propagation"
+        "native TypeScript operation dispatch",
+        "stdout and stderr emission",
+        "exit-code propagation",
+        "contract-backed output shape projection"
       ],
       "runtime_owns": [
-        "live workspace inspection",
-        "operation primitive implementation",
-        "payload assembly",
-        "canonical JSON or text output behavior"
+        "Node filesystem and process APIs used by generated TypeScript primitives",
+        "contract-backed payload projection for generated TypeScript commands",
+        "canonical JSON or text output behavior emitted by generated TypeScript runtime helpers"
       ],
       "error_mapping": [
-        "Generated adapter failures before process handoff are adapter failures.",
-        "Non-zero exits returned by the delegated canonical process are runtime failures unless the conformance case expects the error.",
+        "Generated parser and validation failures are adapter failures.",
+        "Native TypeScript operation failures are TypeScript native runtime failures.",
+        "Non-zero exits emitted by native TypeScript execution are runtime failures unless the conformance case expects the error.",
         "Generation freshness and no-direct-edit failures remain generation-layer failures before runtime execution starts."
       ]
     }

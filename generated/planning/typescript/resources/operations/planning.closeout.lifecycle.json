@@ -1,0 +1,169 @@
+{
+  "classification": "lifecycle-mutation",
+  "command_surface": {
+    "command": "closeout",
+    "format_option": "format",
+    "program": "agentic-planning"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": false,
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": true
+  },
+  "guards": [
+    "Respect dry-run mode by avoiding writes.",
+    "Use planning closeout as the primary closeout writer instead of hand-editing closeout fields.",
+    "Lane or epic closeout must preserve unresolved parent intent as an explicit continuation."
+  ],
+  "id": "planning.closeout.lifecycle",
+  "inputs": [
+    {
+      "name": "plan",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "claim_level",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "intent_status",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "residue",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "proof_from",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "residue_owner",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "what_happened",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "scope_touched",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "changed_surfaces",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "review_summary",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "outcome_summary",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "expect_planning_revision",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "dry_run",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "discard_archive",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "arguments": {},
+        "description": "Write structured closeout fields and run archive validation.",
+        "id": "apply_lifecycle_operation",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "result"
+        ],
+        "uses": "planning.closeout.apply"
+      },
+      {
+        "arguments": {},
+        "description": "Emit planning lifecycle result in the requested format.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Planning closeout executes generated operation IR through codegen-owned dataflow while the planning module owns closeout policy."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "module-result"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated closeout dry-run process conformance passes"
+  ],
+  "reads": [
+    {
+      "required": true,
+      "surface": "target repository Planning execplan and state"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Write structured closeout fields and run archive validation.",
+      "id": "apply_lifecycle_operation",
+      "uses": "planning.closeout.apply"
+    },
+    {
+      "description": "Emit planning lifecycle result in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Close out a completed execplan through one command-owned writer.",
+  "writes": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/",
+      "when": "not a dry run"
+    }
+  ]
+}
