@@ -130,6 +130,7 @@
         "generated/workspace/python/",
         "generated/planning/python/",
         "generated/memory/python/",
+        "generated/verification/python/",
         "generated/workspace/typescript/",
         "generated/planning/typescript/",
         "generated/memory/typescript/",

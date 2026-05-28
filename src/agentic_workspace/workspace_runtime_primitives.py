@@ -2659,7 +2659,9 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
     from repo_planning_bootstrap.installer import uninstall_bootstrap as planning_uninstall_bootstrap
     from repo_planning_bootstrap.installer import upgrade_bootstrap as planning_upgrade_bootstrap
 
-    def verification_lifecycle_report(*, target: str | None = None, dry_run: bool = True, force: bool = False) -> dict[str, Any]:
+    def verification_lifecycle_report(
+        *, target: str | None = None, dry_run: bool = True, force: bool = False
+    ) -> _VerificationLifecycleResult:
         target_root = _resolve_target_root(target)
         return _VerificationLifecycleResult(
             target_root=target_root,
@@ -2670,7 +2672,7 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
             warnings=[],
         )
 
-    def verification_status_report(*, target: str | None = None) -> dict[str, Any]:
+    def verification_status_report(*, target: str | None = None) -> _VerificationLifecycleResult:
         target_root = _resolve_target_root(target)
         return _VerificationLifecycleResult(
             target_root=target_root,
@@ -3502,12 +3504,23 @@ _MERGE_CONFLICT_MARKERS = ("<<<<<<< ", "=======", ">>>>>>> ")
 _MERGE_CONFLICT_EXTENSIONS = {".toml", ".json", ".md", ".txt"}
 
 
+def _is_workspace_local_scratch_path(*, path: Path, target_root: Path) -> bool:
+    try:
+        relative = path.relative_to(target_root).as_posix()
+    except ValueError:
+        return False
+    scratch_root = WORKSPACE_LOCAL_SCRATCH_ROOT_PATH.as_posix().rstrip("/")
+    return relative == scratch_root or relative.startswith(f"{scratch_root}/")
+
+
 def _workspace_merge_conflict_findings(*, target_root: Path) -> list[dict[str, Any]]:
     workspace_root = target_root / ".agentic-workspace"
     if not workspace_root.exists():
         return []
     findings: list[dict[str, Any]] = []
     for path in sorted(workspace_root.rglob("*")):
+        if _is_workspace_local_scratch_path(path=path, target_root=target_root):
+            continue
         if not path.is_file() or path.suffix.lower() not in _MERGE_CONFLICT_EXTENSIONS:
             continue
         try:
@@ -6240,7 +6253,7 @@ def _run_report_command(
             target_root=target_root,
             config=config,
             source_payload=payload,
-            active_planning_record=raw_active_planning_record or active_planning_record,
+            active_planning_record=raw_active_planning_record or active_planning_record or {},
             assurance_requirements=assurance_requirements,
             verification=verification,
             external_work_delta=external_work_delta,
@@ -10135,23 +10148,26 @@ def _routine_work_context_payload(
                 "knowledge_supersession_attention",
             ],
         }
+        compact_categories: dict[str, Any] = {}
+        for key, value in categories.items():
+            if not isinstance(value, dict) or value.get("status") != "attention":
+                continue
+            signals = value.get("signals", {})
+            signal_payload = signals if isinstance(signals, dict) else {}
+            compact_categories[key] = {
+                "status": value.get("status"),
+                "signals": {
+                    signal_key: signal_payload.get(signal_key)
+                    for signal_key in compact_signal_allowlist[key]
+                    if signal_payload.get(signal_key) not in (None, "", [], {}, 0, False)
+                },
+            }
         compact_payload = {
             "kind": payload["kind"],
             "status": status,
             "surface": surface,
             "authority": "assembled-view",
-            "categories": {
-                key: {
-                    "status": value.get("status"),
-                    "signals": {
-                        signal_key: value.get("signals", {}).get(signal_key)
-                        for signal_key in compact_signal_allowlist[key]
-                        if value.get("signals", {}).get(signal_key) not in (None, "", [], {}, 0, False)
-                    },
-                }
-                for key, value in categories.items()
-                if value.get("status") == "attention"
-            },
+            "categories": compact_categories,
         }
         if knowledge_review.get("status") == "attention":
             compact_payload["knowledge_authority_review"] = knowledge_review
@@ -17265,7 +17281,12 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         next_action = "Resolve path authority warnings before editing."
     elif not payload.get("changed_paths"):
         next_action = "Provide --changed paths or use start/preflight before broad implementation."
-    proof_commands = payload.get("required_validation_commands", [])
+    proof_payload = payload.get("proof", {})
+    proof_commands = (
+        _tiny_required_proof_commands(proof_payload)
+        if isinstance(proof_payload, dict)
+        else _compact_tiny_required_proof_commands(payload.get("required_validation_commands", []))
+    )
     primary_command = proof_commands[0] if isinstance(proof_commands, list) and proof_commands else None
     execution_posture = payload.get("execution_posture", {})
     intent_acknowledgement = payload.get("intent_acknowledgement", {})
@@ -17315,7 +17336,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "kind": payload.get("proof", {}).get("kind", "proof-selection/v1")
             if isinstance(payload.get("proof"), dict)
             else "proof-selection/v1",
-            "required_commands": payload.get("required_validation_commands", []),
+            "required_commands": proof_commands,
             "tiny_surface_compatibility_review": payload.get("proof", {}).get("tiny_surface_compatibility_review", {})
             if isinstance(payload.get("proof"), dict)
             else {},
@@ -22392,8 +22413,21 @@ def _select_proof_payload(
     return payload
 
 
+_TINY_DETAIL_PROOF_COMMAND_FRAGMENTS = ("tests/test_workspace_proof_generated_packages_cli.py",)
+
+
+def _compact_tiny_required_proof_commands(commands: Any) -> list[str]:
+    required_commands = [str(command) for command in _list_payload(commands)]
+    if len(required_commands) <= 1:
+        return required_commands
+    compacted = [
+        command for command in required_commands if not any(fragment in command for fragment in _TINY_DETAIL_PROOF_COMMAND_FRAGMENTS)
+    ]
+    return compacted or required_commands
+
+
 def _tiny_required_proof_commands(answer: dict[str, Any]) -> list[str]:
-    required_commands = [str(command) for command in _list_payload(answer.get("required_commands"))]
+    required_commands = _compact_tiny_required_proof_commands(answer.get("required_commands"))
     verification_commands = {
         str(command)
         for lane in _list_payload(answer.get("selected_lanes"))
@@ -22403,7 +22437,7 @@ def _tiny_required_proof_commands(answer: dict[str, Any]) -> list[str]:
     if not verification_commands:
         return required_commands
     non_verification_commands = [command for command in required_commands if command not in verification_commands]
-    return non_verification_commands or required_commands
+    return _compact_tiny_required_proof_commands(non_verification_commands or required_commands)
 
 
 def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
@@ -25082,6 +25116,7 @@ def _proof_selection_for_changed_paths(
                     "uv run python scripts/check/check_generated_command_packages.py",
                     "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
                     "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
+                    "uv run pytest tests/test_workspace_proof_generated_packages_cli.py -q",
                 ]
                 lane["ci_relationship"] = (
                     "CI may repeat generated-package proof; local Python generated-package closeout should run static, local Python conformance, and Python Docker conformance serially."

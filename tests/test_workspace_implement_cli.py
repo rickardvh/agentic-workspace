@@ -59,6 +59,7 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(tmp_pat
         "uv run python scripts/check/check_generated_command_packages.py",
         "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
         "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
+        "uv run pytest tests/test_workspace_proof_generated_packages_cli.py -q",
     ]
     proof_tiers = {tier["id"]: tier["commands"] for tier in payload["proof"]["proof_command_tiers"]["tiers"]}
     assert proof_tiers["generated_contract"][0]["command"] == "uv run python scripts/check/check_generated_command_packages.py"

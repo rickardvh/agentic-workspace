@@ -829,6 +829,80 @@ candidates = []
     )
 
 
+def test_planning_closeout_treats_retention_size_skip_as_non_blocking(tmp_path: Path, capsys) -> None:
+    _write(
+        tmp_path / "src/agentic_workspace/contracts/structured_file_inventory.json",
+        json.dumps(
+            {
+                "entries": [
+                    {
+                        "pattern": ".agentic-workspace/planning/execplans/archive/*.plan.json",
+                        "schema_or_validator": ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
+                        "owner": "planning",
+                        "guardrails": {"max_bytes": 10},
+                    }
+                ]
+            }
+        )
+        + "\n",
+    )
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "plan-alpha", status = "active", surface = ".agentic-workspace/planning/execplans/plan-alpha.plan.json" },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="active")
+
+    assert (
+        planning_cli.main(
+            [
+                "closeout",
+                "plan-alpha",
+                "--target",
+                str(tmp_path),
+                "--proof-from",
+                "uv run pytest packages/planning/tests/test_archive.py -q",
+                "--what-happened",
+                "implemented the retention skip closeout option fix.",
+                "--scope-touched",
+                "packages/planning closeout completion options",
+                "--changed-surfaces",
+                "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/tests/test_archive.py",
+                "--review-summary",
+                "yes; retention skip warning is not unresolved closeout work.",
+                "--outcome-summary",
+                "retention skip no longer blocks honest closed-plan completion options.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    archived_record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json"
+    options = {option["id"]: option for option in payload["completion_options"]}
+
+    assert any(warning["warning_class"] == "archive_retention_skipped_by_size_guardrail" for warning in payload["warnings"])
+    assert any(action["kind"] == "retention skipped" for action in payload["actions"])
+    assert not archived_record_path.exists()
+    assert not record_path.exists()
+    assert options["resolve-closeout-blocker"]["allowed"] is False
+    assert options["claim-slice-complete"]["allowed"] is True
+    assert options["archive-retention-status"]["allowed"] is True
+    assert "no rerun is needed" in options["archive-retention-status"]["why"]
+    assert not any("rerun planning closeout" in action["detail"] for action in payload["actions"])
+
+
 def test_planning_closeout_blocks_last_proof_without_existing_proof(tmp_path: Path, capsys) -> None:
     _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"

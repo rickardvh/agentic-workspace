@@ -150,6 +150,37 @@ def test_doctor_routes_workspace_merge_conflict_markers_to_manual_review(tmp_pat
     assert "blind regeneration" in " ".join(config_action["do_not"])
 
 
+def test_doctor_ignores_local_scratch_merge_conflict_markers(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write(
+        target
+        / ".agentic-workspace"
+        / "local"
+        / "scratch"
+        / "model-cli-harness"
+        / "run"
+        / "repo"
+        / ".venv"
+        / "Lib"
+        / "site-packages"
+        / "distlib-0.4.0.dist-info"
+        / "LICENSE.txt",
+        "<<<<<<< local scratch\nignored\n=======\nignored\n>>>>>>> local scratch\n",
+    )
+
+    assert cli.main(["doctor", "--verbose", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    encoded = json.dumps(payload)
+    assert payload["health"] == "healthy"
+    assert "distlib-0.4.0.dist-info/LICENSE.txt" not in encoded
+    assert "resolve-workspace-policy-merge-conflict" not in {action["id"] for action in payload["manual_review_actions"]}
+
+
 def test_doctor_promotes_safe_module_lifecycle_repairs_for_missing_memory_templates(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

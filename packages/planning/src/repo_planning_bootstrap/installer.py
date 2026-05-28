@@ -10965,20 +10965,34 @@ def closeout_execplan(
     )
     result.actions.extend(archive_result.actions)
     result.warnings.extend(archive_result.warnings)
-    blocked = bool(result.warnings) or any(action.kind == "manual review" for action in result.actions)
+    retention_skip_warning_classes = {"archive_retention_skipped_by_size_guardrail"}
+    retention_skipped = any(str(warning.get("warning_class", "")) in retention_skip_warning_classes for warning in result.warnings)
+    blocking_warnings = [
+        warning for warning in result.warnings if str(warning.get("warning_class", "")) not in retention_skip_warning_classes
+    ]
+    blocked = bool(blocking_warnings) or any(action.kind == "manual review" for action in result.actions)
+    non_blocking_retention_note = (
+        "archive retention was skipped by size guardrail after closeout distillation; no rerun is needed for the removed plan"
+    )
     result.completion_options.extend(
         [
             {
                 "id": "resolve-closeout-blocker",
                 "allowed": blocked,
                 "command": f"agentic-planning closeout {plan} --proof-from <proof> --what-happened <summary> --scope-touched <paths> --changed-surfaces <surfaces>",
-                "why": "closeout warnings or manual-review actions are present" if blocked else "no closeout blocker is present",
+                "why": "closeout warnings or manual-review actions are present"
+                if blocked
+                else non_blocking_retention_note
+                if retention_skipped
+                else "no closeout blocker is present",
             },
             {
                 "id": "claim-slice-complete",
                 "allowed": not blocked,
                 "command": "",
                 "why": "slice proof, finish-run evidence, and archive preconditions were recorded"
+                if not blocked and not retention_skipped
+                else non_blocking_retention_note
                 if not blocked
                 else "slice completion is blocked until closeout evidence is repaired",
             },
@@ -10999,6 +11013,15 @@ def closeout_execplan(
             },
         ]
     )
+    if retention_skipped:
+        result.completion_options.append(
+            {
+                "id": "archive-retention-status",
+                "allowed": True,
+                "command": "",
+                "why": non_blocking_retention_note,
+            }
+        )
     if blocked:
         result.add("next safe action", record_path, "resolve the reported closeout blocker, then rerun planning closeout")
     else:

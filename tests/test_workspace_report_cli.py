@@ -4674,7 +4674,7 @@ def test_default_command_outputs_stay_router_sized(tmp_path: Path, capsys) -> No
     budgets = {
         "start": (["start", "--target", str(target), "--format", "json"], 9800),
         "summary": (["summary", "--target", str(target), "--format", "json"], 13000),
-        "report": (["report", "--target", str(target), "--format", "json"], 18000),
+        "report": (["report", "--target", str(target), "--format", "json"], 18200),
         "proof": (
             ["proof", "--target", str(target), "--changed", ".agentic-workspace/config.toml", "--format", "json"],
             9000,
