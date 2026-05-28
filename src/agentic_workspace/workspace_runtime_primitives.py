@@ -7120,6 +7120,401 @@ def _automation_readiness_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> di
     }
 
 
+_LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
+    {
+        "section": "section_catalog",
+        "kind": "agentic-workspace/report-section-catalog/v1",
+        "purpose": "compact catalog of section selectors whose payloads stay behind explicit report --section requests",
+        "when_to_use": "when the router hints omit rare or high-context sections and the agent needs a selector index",
+    },
+    {
+        "section": "assurance_requirements",
+        "kind": "agentic-workspace/assurance-requirements/v1",
+        "purpose": "repo-declared assurance requirements, evidence obligations, proof profile, and claim-boundary facts",
+        "when_to_use": "when configured assurance may affect proof, review, or closeout claims",
+    },
+    {
+        "section": "verification",
+        "kind": "agentic-workspace/verification-report/v1",
+        "purpose": "Verification module protocols, routes, evidence bundles, and known gaps",
+        "when_to_use": "when evidence production or review provenance matters more than ordinary proof selection",
+    },
+    {
+        "section": "successful_completion_cost",
+        "kind": "agentic-workspace/successful-completion-cost/v1",
+        "purpose": "recent model CLI evaluation cost, package-read overhead, and first-pass versus rework evidence",
+        "when_to_use": "when deciding whether workflow surfaces should stay default, shrink, or move behind selectors",
+    },
+    {
+        "section": "operational_compression",
+        "kind": "workspace-operational-compression/v1",
+        "purpose": "advisory measures for whether AW surfaces reduce total operational cost",
+        "when_to_use": "when reviewing whether a surface lowers repeated work more than it adds product weight",
+    },
+    {
+        "section": "completion_contract",
+        "kind": "agentic-workspace/completion-contract/v1",
+        "purpose": "Planning completion-contract lens for done, partial, blocked, and continuation-required decisions",
+        "when_to_use": "when deciding whether a slice can honestly close or must route follow-up",
+    },
+    {
+        "section": "repair_loop_residue",
+        "kind": "agentic-workspace/repair-loop-residue/v1",
+        "purpose": "validation-driven repair residue across Planning and Verification",
+        "when_to_use": "after failed validation, partial proof, or interrupted repair loops",
+    },
+    {
+        "section": "structured_findings",
+        "kind": "agentic-workspace/structured-findings/v1",
+        "purpose": "shared finding shape for review, friction, Verification, and promotion residue",
+        "when_to_use": "when review or recovery needs owner-shaped findings instead of prose residue",
+    },
+    {
+        "section": "external_evidence_safety",
+        "kind": "agentic-workspace/external-evidence-safety/v1",
+        "purpose": "external freshness, divergence, and closeout-safety decision support",
+        "when_to_use": "before broad closeout when external issue, CI, scanner, or ticket evidence may be stale or divergent",
+    },
+    {
+        "section": "workflow_compliance_summary",
+        "kind": "agentic-workspace/workflow-compliance-summary/v1",
+        "purpose": ("review/recovery summary of expected entrypoint, observed workflow use, gates, trust impact, and recovery action"),
+        "when_to_use": "during takeover, recovery, review, or closeout when package workflow use may affect trust",
+    },
+    {
+        "section": "continuation_next_actions",
+        "kind": "agentic-workspace/continuation-next-actions/v1",
+        "purpose": "evidence-ranked next actions, validation, risks, and stop conditions for continuation",
+        "when_to_use": "when a future session needs ranked, restartable next actions",
+    },
+    {
+        "section": "migration_pilot_template",
+        "kind": "agentic-workspace/migration-pilot-template/v1",
+        "purpose": "optional migration-pilot decomposition shape with parity and rollout boundaries",
+        "when_to_use": "before turning broad migration or modernization into a bounded pilot",
+    },
+    {
+        "section": "compact_output_criteria",
+        "kind": "agentic-workspace/compact-output-criteria/v1",
+        "purpose": "criteria for compact outputs to remain sufficient for cheap continuation",
+        "when_to_use": "when changing compact CLI output contracts or reviewing restart sufficiency",
+    },
+    {
+        "section": "automation_readiness",
+        "kind": "agentic-workspace/automation-readiness/v1",
+        "purpose": "provider-agnostic automation-readiness checklist that keeps execution outside AW",
+        "when_to_use": "before adding external automation, bot, CI, ticket, or agent workflow integration",
+    },
+)
+
+
+def _lazy_report_section_names() -> set[str]:
+    return {str(item["section"]) for item in _LAZY_REPORT_SECTION_CATALOG}
+
+
+def _report_section_catalog_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
+    sections = [
+        {
+            **item,
+            "payload_is_lazy": True,
+            "command": _command_with_cli_invoke(
+                command=f"agentic-workspace report --target ./repo --section {item['section']} --format json",
+                cli_invoke=cli_invoke,
+            ),
+        }
+        for item in _LAZY_REPORT_SECTION_CATALOG
+    ]
+    return {
+        "kind": "agentic-workspace/report-section-catalog/v1",
+        "status": "available",
+        "section_count": len(sections),
+        "lazy_sections": sections,
+        "default_router_policy": {
+            "rule": "Default report output keeps only routing hints; rare, high-context, or recovery-only payloads stay behind selectors.",
+            "ordinary_entry": _command_with_cli_invoke(
+                command="agentic-workspace report --target ./repo --format json",
+                cli_invoke=cli_invoke,
+            ),
+            "catalog_command": _command_with_cli_invoke(
+                command="agentic-workspace report --target ./repo --section section_catalog --format json",
+                cli_invoke=cli_invoke,
+            ),
+        },
+        "boundary": [
+            "the catalog is a selector index, not a full report",
+            "listed section payloads must remain lazy unless an explicit selector or verbose report already has the needed inputs",
+            "adding a section here should not require ordinary report callers to compute that section",
+        ],
+    }
+
+
+def _workflow_entrypoint_observed(execution: dict[str, Any]) -> dict[str, Any]:
+    handoff_source = _first_boundary_text(
+        execution,
+        keys=("handoff source", "handoff_source", "entrypoint", "entry point", "workflow entrypoint"),
+    )
+    what_happened = _first_boundary_text(
+        execution,
+        keys=("what happened", "summary", "workflow evidence", "package workflow evidence"),
+    )
+    combined = f"{handoff_source} {what_happened}".lower()
+    observed_surfaces = [
+        surface
+        for surface in ("preflight", "start", "summary", "report", "implement", "proof", "closeout", "reconcile")
+        if f"agentic-workspace {surface}" in combined or f"agentic-workspace {surface.replace('_', '-')}" in combined
+    ]
+    observed = handoff_source or what_happened
+    return {
+        "status": "recorded" if observed else "not-recorded",
+        "observed_or_assumed_entrypoint": observed or "not recorded in active Planning execution_run",
+        "observed_surfaces": sorted(set(observed_surfaces)),
+        "source_fields": [
+            "planning.active.planning_record.execution_run.handoff source",
+            "planning.active.planning_record.execution_run.what happened",
+        ],
+    }
+
+
+def _workflow_gate(gate_id: str, summary: str, *, source: str = "", command: str = "") -> dict[str, str]:
+    payload = {"id": gate_id, "summary": summary}
+    if source:
+        payload["source"] = source
+    if command:
+        payload["command"] = command
+    return payload
+
+
+def _workflow_compliance_summary_payload(
+    *,
+    active_planning_record: dict[str, Any],
+    completion_contract: dict[str, Any],
+    repair_loop_residue: dict[str, Any],
+    structured_findings: dict[str, Any],
+    external_evidence_safety: dict[str, Any],
+    verification: dict[str, Any],
+    cli_invoke: str = DEFAULT_CLI_INVOKE,
+) -> dict[str, Any]:
+    active_planning_record = active_planning_record if isinstance(active_planning_record, dict) else {}
+    execution = active_planning_record.get("execution_run", {})
+    execution = execution if isinstance(execution, dict) else {}
+    active_plan_present = bool(active_planning_record) and str(active_planning_record.get("status", "")).strip().lower() != "absent"
+    observed = _workflow_entrypoint_observed(execution)
+    evidence_state = completion_contract.get("evidence_state", {})
+    evidence_state = evidence_state if isinstance(evidence_state, dict) else {}
+    proof_state = str(evidence_state.get("proof_state", "unknown")).strip().lower().replace("-", "_") or "unknown"
+    completion_decision = str(completion_contract.get("completion_decision", "unknown")).strip().lower()
+    closeout_safe = external_evidence_safety.get("closeout_safe", "unknown")
+    satisfied_gates: list[dict[str, str]] = []
+    missing_gates: list[dict[str, str]] = []
+    skipped_or_unavailable_steps: list[dict[str, str]] = []
+
+    if active_plan_present:
+        satisfied_gates.append(
+            _workflow_gate(
+                "active_planning_record",
+                "active Planning evidence is available",
+                source=".agentic-workspace/planning/state.toml or active execplan",
+            )
+        )
+    else:
+        skipped_or_unavailable_steps.append(
+            _workflow_gate(
+                "active_planning_record",
+                "no active Planning record is present; workflow compliance is guidance-only",
+                command=_command_with_cli_invoke(
+                    command="agentic-workspace start --target ./repo --format json",
+                    cli_invoke=cli_invoke,
+                ),
+            )
+        )
+
+    if observed["status"] == "recorded" and observed["observed_surfaces"]:
+        satisfied_gates.append(
+            _workflow_gate(
+                "workflow_entrypoint_recorded",
+                f"recorded entrypoint evidence: {observed['observed_or_assumed_entrypoint']}",
+                source="planning.active.planning_record.execution_run",
+            )
+        )
+    elif active_plan_present:
+        missing_gates.append(
+            _workflow_gate(
+                "workflow_entrypoint_record",
+                "active Planning exists but does not record an AW workflow entrypoint used",
+                command=_command_with_cli_invoke(
+                    command="agentic-workspace preflight --target ./repo --format json",
+                    cli_invoke=cli_invoke,
+                ),
+            )
+        )
+
+    if proof_state in {"passed", "representative", "sufficient_for_claim", "satisfied"}:
+        satisfied_gates.append(_workflow_gate("proof_state", f"proof state is {proof_state}", source="completion_contract"))
+    elif active_plan_present:
+        missing_gates.append(
+            _workflow_gate(
+                "proof_state",
+                f"proof state is {proof_state}",
+                command=_command_with_cli_invoke(
+                    command="agentic-workspace proof --target ./repo --changed <paths> --format json",
+                    cli_invoke=cli_invoke,
+                ),
+            )
+        )
+
+    if completion_decision in {"done", "continuation-required"}:
+        satisfied_gates.append(
+            _workflow_gate(
+                "completion_contract",
+                f"completion contract decision is {completion_decision}",
+                source="completion_contract",
+            )
+        )
+    elif active_plan_present:
+        missing_gates.append(
+            _workflow_gate(
+                "completion_contract",
+                f"completion contract decision is {completion_decision or 'unknown'}",
+                command=_command_with_cli_invoke(
+                    command="agentic-workspace report --target ./repo --section completion_contract --format json",
+                    cli_invoke=cli_invoke,
+                ),
+            )
+        )
+
+    if closeout_safe is True:
+        satisfied_gates.append(
+            _workflow_gate("external_evidence_safety", "external evidence does not block closeout", source="external_evidence_safety")
+        )
+    elif closeout_safe is False:
+        missing_gates.append(
+            _workflow_gate(
+                "external_evidence_safety",
+                "external evidence blocks broad closeout",
+                command=str(external_evidence_safety.get("refresh_command", "")),
+            )
+        )
+    else:
+        skipped_or_unavailable_steps.append(
+            _workflow_gate(
+                "external_evidence_safety",
+                "external evidence is absent or unavailable; Planning remains primary unless external work is in scope",
+                command=str(external_evidence_safety.get("refresh_command", "")),
+            )
+        )
+
+    if repair_loop_residue.get("status") == "active-evidence":
+        missing_gates.append(
+            _workflow_gate(
+                "repair_loop_residue",
+                "repair-loop residue remains active",
+                command=_command_with_cli_invoke(
+                    command="agentic-workspace report --target ./repo --section repair_loop_residue --format json",
+                    cli_invoke=cli_invoke,
+                ),
+            )
+        )
+    if _as_int(structured_findings.get("entry_count")):
+        missing_gates.append(
+            _workflow_gate(
+                "structured_findings",
+                f"{structured_findings.get('entry_count')} structured finding(s) need disposition",
+                command=_command_with_cli_invoke(
+                    command="agentic-workspace report --target ./repo --section structured_findings --format json",
+                    cli_invoke=cli_invoke,
+                ),
+            )
+        )
+    verification_status = str(verification.get("status", "")).strip()
+    if verification_status in {"attention", "blocked", "missing-evidence"}:
+        missing_gates.append(
+            _workflow_gate(
+                "verification",
+                f"Verification status is {verification_status}",
+                command=_command_with_cli_invoke(
+                    command="agentic-workspace report --target ./repo --section verification --format json",
+                    cli_invoke=cli_invoke,
+                ),
+            )
+        )
+
+    if any(gate["id"] in {"external_evidence_safety", "proof_state", "completion_contract"} for gate in missing_gates):
+        trust_impact = "lower-trust"
+    elif missing_gates:
+        trust_impact = "review-required"
+    else:
+        trust_impact = "normal"
+
+    if missing_gates:
+        first_missing = missing_gates[0]
+        recovery_action = {
+            "action": f"resolve-{first_missing['id']}",
+            "command": first_missing.get("command", ""),
+            "reason": first_missing["summary"],
+        }
+    elif skipped_or_unavailable_steps and not active_plan_present:
+        recovery_action = {
+            "action": "establish-workflow-entry",
+            "command": _command_with_cli_invoke(
+                command="agentic-workspace start --target ./repo --format json",
+                cli_invoke=cli_invoke,
+            ),
+            "reason": "no active Planning record is present",
+        }
+    else:
+        recovery_action = {
+            "action": "inspect-closeout-trust-before-broad-claims",
+            "command": _command_with_cli_invoke(
+                command="agentic-workspace report --target ./repo --section closeout_trust --format json",
+                cli_invoke=cli_invoke,
+            ),
+            "reason": "workflow compliance summary is clear enough for review; closeout still owns claim honesty",
+        }
+
+    return {
+        "kind": "agentic-workspace/workflow-compliance-summary/v1",
+        "status": "attention" if missing_gates else "guidance-only" if not active_plan_present else "clear",
+        "authority": "derived-projection",
+        "expected_entrypoint": (
+            "Use AGENTS.md -> agentic-workspace start/preflight for first contact or takeover; "
+            "use implement/proof once changed paths are known; inspect closeout_trust before broad completion claims."
+        ),
+        "observed_or_assumed_entrypoint": observed["observed_or_assumed_entrypoint"],
+        "observed_surfaces": observed["observed_surfaces"],
+        "satisfied_gates": satisfied_gates,
+        "missing_gates": missing_gates,
+        "skipped_or_unavailable_steps": skipped_or_unavailable_steps,
+        "trust_impact": trust_impact,
+        "recovery_action": recovery_action,
+        "source_fields": [
+            *observed["source_fields"],
+            "completion_contract.evidence_state",
+            "external_evidence_safety.closeout_safe",
+            "repair_loop_residue.status",
+            "structured_findings.entry_count",
+            "verification.status",
+        ],
+        "boundary": (
+            "This summarizes existing Planning, Verification, proof, external-evidence, and closeout-related facts; "
+            "it does not run workflow steps or decide work classification for the agent."
+        ),
+        "detail_commands": {
+            "catalog": _command_with_cli_invoke(
+                command="agentic-workspace report --target ./repo --section section_catalog --format json",
+                cli_invoke=cli_invoke,
+            ),
+            "completion_contract": _command_with_cli_invoke(
+                command="agentic-workspace report --target ./repo --section completion_contract --format json",
+                cli_invoke=cli_invoke,
+            ),
+            "closeout_trust": _command_with_cli_invoke(
+                command="agentic-workspace report --target ./repo --section closeout_trust --format json",
+                cli_invoke=cli_invoke,
+            ),
+        },
+    }
+
+
 def _derived_continuation_projection_payloads(
     *,
     target_root: Path,
@@ -7175,11 +7570,21 @@ def _derived_continuation_projection_payloads(
         external_evidence_safety=external_evidence_safety,
         cli_invoke=config.cli_invoke,
     )
+    workflow_compliance_summary = _workflow_compliance_summary_payload(
+        active_planning_record=active_planning_record,
+        completion_contract=completion_contract,
+        repair_loop_residue=repair_loop_residue,
+        structured_findings=structured_findings,
+        external_evidence_safety=external_evidence_safety,
+        verification=verification,
+        cli_invoke=config.cli_invoke,
+    )
     return {
         "completion_contract": completion_contract,
         "repair_loop_residue": repair_loop_residue,
         "structured_findings": structured_findings,
         "external_evidence_safety": external_evidence_safety,
+        "workflow_compliance_summary": workflow_compliance_summary,
         "continuation_next_actions": continuation_next_actions,
         "migration_pilot_template": _migration_pilot_template_payload(cli_invoke=config.cli_invoke),
         "compact_output_criteria": _compact_output_criteria_payload(cli_invoke=config.cli_invoke),
@@ -7198,20 +7603,7 @@ def _run_lazy_report_section_command(
     if section is None:
         return None
     normalized = section.strip()
-    if normalized not in {
-        "assurance_requirements",
-        "verification",
-        "successful_completion_cost",
-        "operational_compression",
-        "completion_contract",
-        "repair_loop_residue",
-        "structured_findings",
-        "external_evidence_safety",
-        "continuation_next_actions",
-        "migration_pilot_template",
-        "compact_output_criteria",
-        "automation_readiness",
-    }:
+    if normalized not in _lazy_report_section_names():
         return None
 
     payload = _report_section_base_payload(
@@ -7220,6 +7612,10 @@ def _run_lazy_report_section_command(
         resolved_preset=resolved_preset,
         config=config,
     )
+    if normalized == "section_catalog":
+        payload["section_catalog"] = _report_section_catalog_payload(cli_invoke=config.cli_invoke)
+        return _select_report_payload(payload, profile="router", section=normalized)
+
     active_planning_record = _active_planning_record_for_report_section(target_root=target_root)
 
     if normalized in {"assurance_requirements", "verification"}:
@@ -7245,6 +7641,7 @@ def _run_lazy_report_section_command(
         "repair_loop_residue",
         "structured_findings",
         "external_evidence_safety",
+        "workflow_compliance_summary",
         "continuation_next_actions",
         "migration_pilot_template",
         "compact_output_criteria",

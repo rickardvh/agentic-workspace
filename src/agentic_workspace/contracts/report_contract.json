@@ -40,6 +40,7 @@
     "repair_loop_residue",
     "structured_findings",
     "external_evidence_safety",
+    "workflow_compliance_summary",
     "continuation_next_actions",
     "migration_pilot_template",
     "compact_output_criteria",

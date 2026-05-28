@@ -44,6 +44,7 @@
     "repair_loop_residue",
     "structured_findings",
     "external_evidence_safety",
+    "workflow_compliance_summary",
     "continuation_next_actions",
     "migration_pilot_template",
     "compact_output_criteria",
@@ -281,6 +282,10 @@
     "external_evidence_safety": {
       "type": "object",
       "description": "External evidence freshness, divergence, stale-after, and closeout-safety projection."
+    },
+    "workflow_compliance_summary": {
+      "type": "object",
+      "description": "Derived review and recovery summary of workflow entrypoint, satisfied or missing gates, trust impact, and recovery action."
     },
     "continuation_next_actions": {
       "type": "object",

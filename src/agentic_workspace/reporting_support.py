@@ -602,6 +602,7 @@ def report_router_payload(
                 cli_invoke=cli_invoke,
                 target_arg=target_arg,
             ),
+            "lazy_section_catalog": "section_catalog",
             "high_volume_sections": profile_payload.get("high_volume_sections", []),
             "omitted_section_hint_count": max(0, len(section_hints) - len(compact_section_hints)),
         },
@@ -651,6 +652,7 @@ def report_router_payload(
                 "context.external_work_reconciliation",
                 "context.surface_value_guardrail",
                 "drill_down.section_hints",
+                "drill_down.deeper_detail.lazy_section_catalog",
                 "drill_down.deeper_detail",
             ],
         },
@@ -713,7 +715,7 @@ def _compact_report_section_hints(hints: list[dict[str, Any]]) -> list[dict[str,
     for item in ordered[:8]:
         compact.append(
             {key: item[key] for key in ("section", "why_now", "command", "volume", "advanced_feature") if key in item}
-            | ({"purpose_summary": str(item.get("purpose", ""))[:96]} if item.get("purpose") else {})
+            | ({"purpose_summary": str(item.get("purpose", ""))[:80]} if item.get("purpose") else {})
         )
     return compact
 
@@ -1036,6 +1038,7 @@ def report_section_hints(
         "completion_contract": "Planning completion-contract lens for what must become true, proof, constraints, and blocked stop",
         "repair_loop_residue": "validation-driven repair loop residue across Planning and Verification",
         "structured_findings": "shared structured finding shape for review and promotion routing",
+        "workflow_compliance_summary": "derived review/recovery summary of workflow entrypoint, gates, trust impact, and recovery action",
         "continuation_next_actions": "evidence-ranked next actions, validation, risks, and stop conditions for continuation",
         "migration_pilot_template": "optional migration-pilot decomposition shape with parity and rollout boundaries",
         "compact_output_criteria": "criteria for compact outputs to remain sufficient for cheap continuation",
@@ -1075,6 +1078,7 @@ def report_section_hints(
         "completion_contract": "inspect when deciding whether work is done, partial, blocked, or continuation-required",
         "repair_loop_residue": "inspect after failed validation, iterative repair, or partial proof to recover the next grounded action",
         "structured_findings": "inspect when review, friction, verification, or promotion residue needs one owner and disposition",
+        "workflow_compliance_summary": "inspect during takeover, recovery, review, or closeout when workflow use affects trust",
         "continuation_next_actions": "inspect when a future session needs ranked next actions with evidence and stop conditions",
         "migration_pilot_template": "inspect before turning broad migration or modernization into a bounded pilot",
         "compact_output_criteria": "inspect when changing compact CLI output contracts or reviewing restart sufficiency",
