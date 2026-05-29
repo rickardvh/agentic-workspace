@@ -1559,7 +1559,7 @@ def test_implement_selector_surfaces_reuse_pressure_without_blocking_direct_work
     assert payload["values"]["context.workflow_sufficiency"]["decision"] == "enough-for-bounded-implementation"
 
 
-def test_implement_reuse_pressure_ignores_dependency_cache_definitions(tmp_path: Path, capsys) -> None:
+def test_implement_reuse_pressure_ignores_dependency_cache_definitions(tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch) -> None:
     _init_git_repo(tmp_path)
     _write(
         tmp_path / "src" / "sample_app" / "text.py",
@@ -1569,6 +1569,20 @@ def test_implement_reuse_pressure_ignores_dependency_cache_definitions(tmp_path:
         tmp_path / "packages" / "planning" / ".uv-cache" / "archive-v0" / "dependency" / "text.py",
         "def normalize_text(value):\n    return value\n",
     )
+    _write(
+        tmp_path / ".venv" / "Lib" / "site-packages" / "dependency" / "text.py",
+        "def normalize_text(value):\n    return value\n",
+    )
+
+    original_is_file = Path.is_file
+
+    def fail_if_dependency_tree_is_inspected(path: Path) -> bool:
+        relative_parts = path.relative_to(tmp_path).parts if path.is_relative_to(tmp_path) else path.parts
+        assert ".venv" not in relative_parts
+        assert ".uv-cache" not in relative_parts
+        return original_is_file(path)
+
+    monkeypatch.setattr(Path, "is_file", fail_if_dependency_tree_is_inspected)
 
     assert (
         cli.main(
