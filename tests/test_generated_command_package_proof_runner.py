@@ -6,10 +6,13 @@ import importlib.util
 import json
 import subprocess
 import sys
+import textwrap
 from pathlib import Path
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "check" / "run_generated_command_package_proof.py"
 CHECK_SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_generated_command_packages.py"
+_CHECKER_CASE_PREFIX = "__checker_case_result__="
 
 
 def _load_runner():
@@ -30,6 +33,57 @@ def _load_checker():
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
+
+
+def _run_checker_case(source: str) -> dict[str, object]:
+    script = f"""
+from __future__ import annotations
+
+import copy
+import importlib.util
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+CHECK_SCRIPT_PATH = Path({str(CHECK_SCRIPT_PATH)!r})
+spec = importlib.util.spec_from_file_location("check_generated_command_packages_case", CHECK_SCRIPT_PATH)
+assert spec is not None
+checker = importlib.util.module_from_spec(spec)
+assert spec.loader is not None
+sys.modules[spec.name] = checker
+spec.loader.exec_module(checker)
+
+
+def _emit(payload):
+    print({str(_CHECKER_CASE_PREFIX)!r} + json.dumps(payload, sort_keys=True))
+
+{textwrap.indent(textwrap.dedent(source).strip(), " " * 0)}
+"""
+    completed = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode:
+        raise AssertionError(
+            f"checker subprocess failed\nreturncode={completed.returncode}\nstdout:\n{completed.stdout}\nstderr:\n{completed.stderr}"
+        )
+    for line in reversed(completed.stdout.splitlines()):
+        if line.startswith(_CHECKER_CASE_PREFIX):
+            payload = json.loads(line[len(_CHECKER_CASE_PREFIX) :])
+            assert isinstance(payload, dict)
+            return payload
+    raise AssertionError(f"checker subprocess did not emit a result\nstdout:\n{completed.stdout}\nstderr:\n{completed.stderr}")
+
+
+def _checker_case_errors(source: str) -> list[str]:
+    payload = _run_checker_case(source)
+    errors = payload.get("errors")
+    assert isinstance(errors, list)
+    return [str(error) for error in errors]
 
 
 def test_generated_command_package_proof_defaults_to_docker_steps() -> None:
@@ -124,58 +178,64 @@ def test_generated_python_conformance_uses_contract_artifacts() -> None:
     assert verification_report.expected_fields == {"status": "absent", "configured": False}
 
 
-def test_full_python_completion_rejects_whole_file_runtime_boundary_acceptance(monkeypatch) -> None:
-    checker = _load_checker()
-    ir = copy.deepcopy(checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT))
-    ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
-    ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
-    original_manifest = checker.python_runtime_projection_inventory_manifest
+def test_full_python_completion_rejects_whole_file_runtime_boundary_acceptance() -> None:
+    errors = _checker_case_errors(
+        """
+        ir = copy.deepcopy(checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT))
+        ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
+        ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
+        original_manifest = checker.python_runtime_projection_inventory_manifest
 
-    def fake_manifest() -> dict[str, object]:
-        payload = copy.deepcopy(original_manifest())
-        payload["accepted_runtime_boundaries"]["entries"] = [
-            {
-                "path": "src/agentic_workspace/workspace_runtime_primitives.py",
-                "boundary_kind": "package-runtime-source",
-                "runtime_boundary_class": "package-specific-judgment",
-                "status": "accepted-permanent-package-domain-boundary",
-            }
-        ]
-        return payload
+        def fake_manifest() -> dict[str, object]:
+            payload = copy.deepcopy(original_manifest())
+            payload["accepted_runtime_boundaries"]["entries"] = [
+                {
+                    "path": "src/agentic_workspace/workspace_runtime_primitives.py",
+                    "boundary_kind": "package-runtime-source",
+                    "runtime_boundary_class": "package-specific-judgment",
+                    "status": "accepted-permanent-package-domain-boundary",
+                }
+            ]
+            return payload
 
-    monkeypatch.setattr(checker, "python_runtime_projection_inventory_manifest", fake_manifest)
-
-    errors = checker._validate_full_python_completion_executable_ownership(ir)
+        checker.python_runtime_projection_inventory_manifest = fake_manifest
+        _emit({"errors": checker._validate_full_python_completion_executable_ownership(ir)})
+        """
+    )
 
     assert any("whole-file runtime boundary acceptance" in error for error in errors)
     assert any("unaccepted package-domain runtime/lifecycle source is still present" in error for error in errors)
     assert any("generated runtime facades still bridge to unaccepted package-owned runtime helpers" in error for error in errors)
 
 
-def test_full_python_completion_rejects_wrong_operation_function_call_metadata(monkeypatch) -> None:
-    checker = _load_checker()
-    inventory = copy.deepcopy(checker.python_runtime_projection_inventory_manifest())
-    entry = next(item for item in inventory["accepted_runtime_boundaries"]["entries"] if item["binding_kind"] == "operation-function-call")
-    entry["operation_ids"] = ["wrong.operation"]
-    monkeypatch.setattr(checker, "python_runtime_projection_inventory_manifest", lambda: inventory)
-
-    errors = checker._validate_python_completion_accepted_runtime_boundaries()[0]
+def test_full_python_completion_rejects_wrong_operation_function_call_metadata() -> None:
+    errors = _checker_case_errors(
+        """
+        inventory = copy.deepcopy(checker.python_runtime_projection_inventory_manifest())
+        entry = next(item for item in inventory["accepted_runtime_boundaries"]["entries"] if item["binding_kind"] == "operation-function-call")
+        entry["operation_ids"] = ["wrong.operation"]
+        checker.python_runtime_projection_inventory_manifest = lambda: inventory
+        _emit({"errors": checker._validate_python_completion_accepted_runtime_boundaries()[0]})
+        """
+    )
 
     assert any("must declare operation_ids" in error for error in errors)
 
 
-def test_full_python_completion_rejects_weak_output_boundary_audit(monkeypatch) -> None:
-    checker = _load_checker()
-    inventory = copy.deepcopy(checker.python_runtime_projection_inventory_manifest())
-    entry = next(
-        item for item in inventory["accepted_runtime_boundaries"]["entries"] if item.get("source_symbol") == "_emit_memory_operation_output"
+def test_full_python_completion_rejects_weak_output_boundary_audit() -> None:
+    errors = _checker_case_errors(
+        """
+        inventory = copy.deepcopy(checker.python_runtime_projection_inventory_manifest())
+        entry = next(
+            item for item in inventory["accepted_runtime_boundaries"]["entries"] if item.get("source_symbol") == "_emit_memory_operation_output"
+        )
+        entry["runtime_boundary_class"] = "mutation-orchestration"
+        entry["why_not_generic_deterministic"] = "package output"
+        entry["generic_behavior_audit"] = "package output"
+        checker.python_runtime_projection_inventory_manifest = lambda: inventory
+        _emit({"errors": checker._validate_python_completion_accepted_runtime_boundaries()[0]})
+        """
     )
-    entry["runtime_boundary_class"] = "mutation-orchestration"
-    entry["why_not_generic_deterministic"] = "package output"
-    entry["generic_behavior_audit"] = "package output"
-    monkeypatch.setattr(checker, "python_runtime_projection_inventory_manifest", lambda: inventory)
-
-    errors = checker._validate_python_completion_accepted_runtime_boundaries()[0]
 
     assert any("output-emission boundary must use runtime_boundary_class='package-specific-judgment'" in error for error in errors)
     assert any("output-emission boundary must explain the remaining package-specific output judgment" in error for error in errors)
@@ -246,10 +306,14 @@ def test_planning_generated_force_include_classification_names_missing_surface(m
 
 
 def test_python_completion_blocker_report_accepts_exact_symbol_runtime_boundaries() -> None:
-    checker = _load_checker()
-    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
-
-    report = checker._python_completion_blockers_report(ir)
+    payload = _run_checker_case(
+        """
+        ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+        _emit({"report": checker._python_completion_blockers_report(ir)})
+        """
+    )
+    report = payload["report"]
+    assert isinstance(report, dict)
 
     assert report["kind"] == "python-completion-blockers/v1"
     assert report["current_state"] == "full-generated-cli-complete"
@@ -289,32 +353,40 @@ def test_python_completion_blocker_report_accepts_exact_symbol_runtime_boundarie
     }
 
 
-def test_lifecycle_dry_run_generation_regression_is_blocked(monkeypatch) -> None:
-    checker = _load_checker()
-    inventory = copy.deepcopy(checker.python_runtime_projection_inventory_manifest())
-    entry = next(
-        item for item in inventory["accepted_runtime_boundaries"]["entries"] if item.get("operation_id") == "memory.install.lifecycle"
+def test_lifecycle_dry_run_generation_regression_is_blocked() -> None:
+    errors = _checker_case_errors(
+        """
+        inventory = copy.deepcopy(checker.python_runtime_projection_inventory_manifest())
+        entry = next(
+            item for item in inventory["accepted_runtime_boundaries"]["entries"] if item.get("operation_id") == "memory.install.lifecycle"
+        )
+        entry["operation_path"] = "generated/planning/python/operations/planning.install.lifecycle.json"
+        checker.python_runtime_projection_inventory_manifest = lambda: inventory
+        _emit({"errors": checker._validate_lifecycle_dry_run_generation()})
+        """
     )
-    entry["operation_path"] = "generated/planning/python/operations/planning.install.lifecycle.json"
-    monkeypatch.setattr(checker, "python_runtime_projection_inventory_manifest", lambda: inventory)
-
-    errors = checker._validate_lifecycle_dry_run_generation()
 
     assert any("does not route the default dry-run branch through payload.lifecycle-plan" in error for error in errors)
 
 
-def test_runtime_budget_metrics_compare_against_recorded_baseline(monkeypatch) -> None:
-    checker = _load_checker()
-    inventory = copy.deepcopy(checker.python_runtime_projection_inventory_manifest())
-    accepted = inventory["accepted_runtime_boundaries"]
-    current_symbols = [checker._accepted_runtime_symbol_id(entry) for entry in accepted["entries"] if isinstance(entry, dict)]
-    accepted["baseline_symbols"] = current_symbols[:-1] + [
-        "operation-function-call|generated/memory/python/operations/retired.report.json|retired.report|"
-        "repo_memory_bootstrap.installer|retired_runtime_symbol"
-    ]
-    monkeypatch.setattr(checker, "python_runtime_projection_inventory_manifest", lambda: inventory)
-
-    runtime_metrics = checker._python_runtime_boundary_metrics()
+def test_runtime_budget_metrics_compare_against_recorded_baseline() -> None:
+    payload = _run_checker_case(
+        """
+        inventory = copy.deepcopy(checker.python_runtime_projection_inventory_manifest())
+        accepted = inventory["accepted_runtime_boundaries"]
+        current_symbols = [checker._accepted_runtime_symbol_id(entry) for entry in accepted["entries"] if isinstance(entry, dict)]
+        accepted["baseline_symbols"] = current_symbols[:-1] + [
+            "operation-function-call|generated/memory/python/operations/retired.report.json|retired.report|"
+            "repo_memory_bootstrap.installer|retired_runtime_symbol"
+        ]
+        checker.python_runtime_projection_inventory_manifest = lambda: inventory
+        _emit({"runtime_metrics": checker._python_runtime_boundary_metrics(), "current_symbols": current_symbols})
+        """
+    )
+    runtime_metrics = payload["runtime_metrics"]
+    current_symbols = payload["current_symbols"]
+    assert isinstance(runtime_metrics, dict)
+    assert isinstance(current_symbols, list)
 
     assert runtime_metrics["new_symbols_since_baseline"] == [current_symbols[-1]]
     assert runtime_metrics["removed_symbols_since_baseline"] == [
@@ -605,12 +677,13 @@ def test_run_docker_does_not_reclassify_explicit_adapter_failures(monkeypatch, c
     assert "classification=proof-environment/setup-failure" not in captured.out
 
 
-def test_static_generated_package_proof_fails_when_conformance_coverage_drifts(monkeypatch) -> None:
-    checker = _load_checker()
-
-    monkeypatch.setattr(checker, "_runnable_typescript_conformance_cases", lambda: ([], ["missing contract-backed case"]))
-
-    errors = checker._validate_static_surfaces()
+def test_static_generated_package_proof_fails_when_conformance_coverage_drifts() -> None:
+    errors = _checker_case_errors(
+        """
+        checker._runnable_typescript_conformance_cases = lambda: ([], ["missing contract-backed case"])
+        _emit({"errors": checker._validate_static_surfaces()})
+        """
+    )
 
     assert "static conformance coverage drift: missing contract-backed case" in errors
 
@@ -684,190 +757,208 @@ def test_command_package_ir_records_deferred_shell_transport_evaluation() -> Non
     assert root_targets["powershell"]["maturity_level_ref"] == "deferred"
 
 
-def test_static_generated_package_proof_rejects_read_only_routing_for_mutating_targets(monkeypatch) -> None:
-    checker = _load_checker()
-    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
-    memory_package = next(package for package in ir["packages"] if package["id"] == "memory-bootstrap")
-    python_target = next(target for target in memory_package["targets"] if target["kind"] == "python")
-    python_target["maturity_level_ref"] = "weak-agent-safe-adapter"
-    python_target["generation_status"] = "weak-agent-safe-adapter"
-    monkeypatch.setattr(checker, "load_workspace_command_package_ir", lambda *, repo_root: ir)
-
-    errors = checker._validate_static_surfaces()
+def test_static_generated_package_proof_rejects_read_only_routing_for_mutating_targets() -> None:
+    errors = _checker_case_errors(
+        """
+        ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+        memory_package = next(package for package in ir["packages"] if package["id"] == "memory-bootstrap")
+        python_target = next(target for target in memory_package["targets"] if target["kind"] == "python")
+        python_target["maturity_level_ref"] = "weak-agent-safe-adapter"
+        python_target["generation_status"] = "weak-agent-safe-adapter"
+        checker.load_workspace_command_package_ir = lambda *, repo_root: ir
+        _emit({"errors": checker._validate_static_surfaces()})
+        """
+    )
 
     assert any("weak-agent-safe-adapter while generated commands include mutation-capable effects" in error for error in errors)
 
 
-def test_static_generated_package_proof_requires_python_completion_gate_evidence(monkeypatch) -> None:
-    checker = _load_checker()
-    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
-    ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
-    ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"] = [
-        item
-        for item in ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"]
-        if item["id"] != "python-docker-conformance"
-    ]
-    monkeypatch.setattr(checker, "load_workspace_command_package_ir", lambda *, repo_root: ir)
-
-    errors = checker._validate_static_surfaces()
+def test_static_generated_package_proof_requires_python_completion_gate_evidence() -> None:
+    errors = _checker_case_errors(
+        """
+        ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+        ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
+        ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"] = [
+            item
+            for item in ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"]
+            if item["id"] != "python-docker-conformance"
+        ]
+        checker.load_workspace_command_package_ir = lambda *, repo_root: ir
+        _emit({"errors": checker._validate_static_surfaces()})
+        """
+    )
 
     assert any("python-docker-conformance" in error for error in errors)
 
 
-def test_static_generated_package_proof_requires_operation_ir_runtime_consumption_evidence(monkeypatch) -> None:
-    checker = _load_checker()
-    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
-    ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
-    ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"] = [
-        item
-        for item in ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"]
-        if item["id"] != "representative-operation-ir-runtime-consumed"
-    ]
-    monkeypatch.setattr(checker, "load_workspace_command_package_ir", lambda *, repo_root: ir)
-
-    errors = checker._validate_static_surfaces()
+def test_static_generated_package_proof_requires_operation_ir_runtime_consumption_evidence() -> None:
+    errors = _checker_case_errors(
+        """
+        ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+        ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
+        ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"] = [
+            item
+            for item in ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"]
+            if item["id"] != "representative-operation-ir-runtime-consumed"
+        ]
+        checker.load_workspace_command_package_ir = lambda *, repo_root: ir
+        _emit({"errors": checker._validate_static_surfaces()})
+        """
+    )
 
     assert any("representative-operation-ir-runtime-consumed" in error for error in errors)
 
 
-def test_static_generated_package_proof_requires_exhaustive_operation_inventory_evidence(monkeypatch) -> None:
-    checker = _load_checker()
-    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
-    ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
-    ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"] = [
-        item
-        for item in ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"]
-        if item["id"] != "operation-execution-inventory-exhaustive"
-    ]
-    monkeypatch.setattr(checker, "load_workspace_command_package_ir", lambda *, repo_root: ir)
-
-    errors = checker._validate_static_surfaces()
+def test_static_generated_package_proof_requires_exhaustive_operation_inventory_evidence() -> None:
+    errors = _checker_case_errors(
+        """
+        ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+        ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
+        ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"] = [
+            item
+            for item in ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"]
+            if item["id"] != "operation-execution-inventory-exhaustive"
+        ]
+        checker.load_workspace_command_package_ir = lambda *, repo_root: ir
+        _emit({"errors": checker._validate_static_surfaces()})
+        """
+    )
 
     assert any("operation-execution-inventory-exhaustive" in error for error in errors)
 
 
-def test_static_generated_package_proof_rejects_python_completion_proof_surface_drift(monkeypatch) -> None:
-    checker = _load_checker()
-    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
-    ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
-    for item in ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"]:
-        if item["id"] == "python-docker-conformance":
-            item["proof"] = "uv run python scripts/check/check_generated_command_packages.py"
-            break
-    monkeypatch.setattr(checker, "load_workspace_command_package_ir", lambda *, repo_root: ir)
-
-    errors = checker._validate_static_surfaces()
+def test_static_generated_package_proof_rejects_python_completion_proof_surface_drift() -> None:
+    errors = _checker_case_errors(
+        """
+        ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+        ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
+        for item in ir["generation_policy"]["python_cli_completion"]["completion_gate"]["satisfied_by"]:
+            if item["id"] == "python-docker-conformance":
+                item["proof"] = "uv run python scripts/check/check_generated_command_packages.py"
+                break
+        checker.load_workspace_command_package_ir = lambda *, repo_root: ir
+        _emit({"errors": checker._validate_static_surfaces()})
+        """
+    )
 
     assert any("--python-docker-conformance --require-docker" in error for error in errors)
 
 
-def test_static_generated_package_proof_rejects_full_completion_with_compatibility_handlers(monkeypatch) -> None:
-    checker = _load_checker()
-    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
-    ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
-    ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
-    original_load_json = checker._load_json
+def test_static_generated_package_proof_rejects_full_completion_with_compatibility_handlers() -> None:
+    errors = _checker_case_errors(
+        """
+        ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+        ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
+        ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
+        original_load_json = checker._load_json
 
-    def fake_load_json(path: str) -> dict[str, object]:
-        payload = original_load_json(path)
-        if path == "python_operation_execution_inventory.json":
-            payload = dict(payload)
-            entries = [dict(entry) for entry in payload["entries"]]
-            entries[0]["status"] = "compatibility-runtime-handler"
-            payload["entries"] = entries
-        return payload
+        def fake_load_json(path: str) -> dict[str, object]:
+            payload = original_load_json(path)
+            if path == "python_operation_execution_inventory.json":
+                payload = dict(payload)
+                entries = [dict(entry) for entry in payload["entries"]]
+                entries[0]["status"] = "compatibility-runtime-handler"
+                payload["entries"] = entries
+            return payload
 
-    monkeypatch.setattr(checker, "load_workspace_command_package_ir", lambda *, repo_root: ir)
-    monkeypatch.setattr(checker, "_load_json", fake_load_json)
-
-    errors = checker._validate_static_surfaces()
+        checker.load_workspace_command_package_ir = lambda *, repo_root: ir
+        checker._load_json = fake_load_json
+        _emit({"errors": checker._validate_static_surfaces()})
+        """
+    )
 
     assert any("compatibility-runtime-handler" in error for error in errors)
 
 
-def test_static_generated_package_proof_rejects_full_completion_with_generic_runtime_debt(monkeypatch) -> None:
-    checker = _load_checker()
-    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
-    ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
-    ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
-    original_load_json = checker._load_json
+def test_static_generated_package_proof_rejects_full_completion_with_generic_runtime_debt() -> None:
+    errors = _checker_case_errors(
+        """
+        ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+        ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
+        ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
+        original_load_json = checker._load_json
 
-    def fake_load_json(path: str) -> dict[str, object]:
-        payload = original_load_json(path)
-        if path == "python_operation_execution_inventory.json":
-            payload = dict(payload)
-            entries = [dict(entry) for entry in payload["entries"]]
-            entries[0]["status"] = "accepted-hand-owned-runtime-primitive"
-            entries[0]["runtime_boundary_class"] = "generic-deterministic-runtime-debt"
-            entries[0]["runtime_boundary_reason"] = "still generic runtime debt"
-            payload["entries"] = entries
-        return payload
+        def fake_load_json(path: str) -> dict[str, object]:
+            payload = original_load_json(path)
+            if path == "python_operation_execution_inventory.json":
+                payload = dict(payload)
+                entries = [dict(entry) for entry in payload["entries"]]
+                entries[0]["status"] = "accepted-hand-owned-runtime-primitive"
+                entries[0]["runtime_boundary_class"] = "generic-deterministic-runtime-debt"
+                entries[0]["runtime_boundary_reason"] = "still generic runtime debt"
+                payload["entries"] = entries
+            return payload
 
-    monkeypatch.setattr(checker, "load_workspace_command_package_ir", lambda *, repo_root: ir)
-    monkeypatch.setattr(checker, "_load_json", fake_load_json)
-
-    errors = checker._validate_static_surfaces()
+        checker.load_workspace_command_package_ir = lambda *, repo_root: ir
+        checker._load_json = fake_load_json
+        _emit({"errors": checker._validate_static_surfaces()})
+        """
+    )
 
     assert any("generic deterministic behavior as runtime debt" in error for error in errors)
 
 
-def test_static_generated_package_proof_rejects_full_completion_when_generated_main_delegates_first(monkeypatch) -> None:
-    checker = _load_checker()
-    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
-    ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
-    ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
-    original_read_text = checker.Path.read_text
+def test_static_generated_package_proof_rejects_full_completion_when_generated_main_delegates_first() -> None:
+    errors = _checker_case_errors(
+        r"""
+        ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+        ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
+        ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
+        original_read_text = checker.Path.read_text
 
-    def fake_read_text(self, *args, **kwargs):
-        text = original_read_text(self, *args, **kwargs)
-        if self.as_posix().endswith("generated/workspace/python/cli.py"):
-            return text.replace(
-                "    if supports_generated_command(argv_list):\n"
-                "        try:\n"
-                "            return run_generated_command(argv_list, _run_command_module)\n"
-                "        except Exception as exc:\n"
-                "            if exc.__class__.__name__.endswith('UsageError') or exc.__class__.__name__ == 'RepoDetectionError':\n"
-                "                build_generated_parser().error(str(exc))\n"
-                "            raise\n\n"
-                "    build_generated_parser().parse_args(argv_list)\n"
-                "    return 0\n",
-                "    return 2\n",
-            )
-        return text
+        def fake_read_text(self, *args, **kwargs):
+            text = original_read_text(self, *args, **kwargs)
+            if self.as_posix().endswith("generated/workspace/python/cli.py"):
+                return text.replace(
+                    "    if supports_generated_command(argv_list):\n"
+                    "        try:\n"
+                    "            return run_generated_command(argv_list, _run_command_module)\n"
+                    "        except Exception as exc:\n"
+                    "            if exc.__class__.__name__.endswith('UsageError') or exc.__class__.__name__ == 'RepoDetectionError':\n"
+                    "                build_generated_parser().error(str(exc))\n"
+                    "            raise\n\n"
+                    "    build_generated_parser().parse_args(argv_list)\n"
+                    "    return 0\n",
+                    "    return 2\n",
+                )
+            return text
 
-    monkeypatch.setattr(checker, "load_workspace_command_package_ir", lambda *, repo_root: ir)
-    monkeypatch.setattr(checker.Path, "read_text", fake_read_text)
-
-    errors = checker._validate_static_surfaces()
+        checker.load_workspace_command_package_ir = lambda *, repo_root: ir
+        checker.Path.read_text = fake_read_text
+        _emit({"errors": checker._validate_static_surfaces()})
+        """
+    )
 
     assert any("missing generated-main boundary fragment" in error for error in errors)
 
 
-def test_static_generated_package_proof_rejects_full_completion_with_product_runtime_source(monkeypatch) -> None:
-    checker = _load_checker()
-    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
-    ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
-    ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
-    original_read_text = checker.Path.read_text
-    original_is_file = checker.Path.is_file
-    product_runtime_source = "scratch/product_runtime.py"
+def test_static_generated_package_proof_rejects_full_completion_with_product_runtime_source() -> None:
+    errors = _checker_case_errors(
+        r"""
+        ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+        ir["generation_policy"]["python_cli_completion"]["current_state"] = "full-generated-cli-complete"
+        ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
+        original_read_text = checker.Path.read_text
+        original_is_file = checker.Path.is_file
+        product_runtime_source = "scratch/product_runtime.py"
 
-    def fake_read_text(self, *args, **kwargs):
-        if self.as_posix().endswith(product_runtime_source):
-            return "import argparse\n\ndef main(argv=None):\n    parser = argparse.ArgumentParser()\n    parser.add_subparsers()\n"
-        return original_read_text(self, *args, **kwargs)
+        def fake_read_text(self, *args, **kwargs):
+            if self.as_posix().endswith(product_runtime_source):
+                return "import argparse\n\ndef main(argv=None):\n    parser = argparse.ArgumentParser()\n    parser.add_subparsers()\n"
+            return original_read_text(self, *args, **kwargs)
 
-    def fake_is_file(self):
-        if self.as_posix().endswith(product_runtime_source):
-            return True
-        return original_is_file(self)
+        def fake_is_file(self):
+            if self.as_posix().endswith(product_runtime_source):
+                return True
+            return original_is_file(self)
 
-    monkeypatch.setattr(checker, "load_workspace_command_package_ir", lambda *, repo_root: ir)
-    monkeypatch.setattr(checker, "PYTHON_FULL_COMPLETION_BLOCKING_EXECUTABLE_PATHS", (product_runtime_source,))
-    monkeypatch.setattr(checker.Path, "read_text", fake_read_text)
-    monkeypatch.setattr(checker.Path, "is_file", fake_is_file)
-
-    errors = checker._validate_static_surfaces()
+        checker.load_workspace_command_package_ir = lambda *, repo_root: ir
+        checker.PYTHON_FULL_COMPLETION_BLOCKING_EXECUTABLE_PATHS = (product_runtime_source,)
+        checker.Path.read_text = fake_read_text
+        checker.Path.is_file = fake_is_file
+        _emit({"errors": checker._validate_static_surfaces()})
+        """
+    )
 
     assert any(
         "scratch/product_runtime.py owns executable behavior markers" in error and "parser construction" in error for error in errors
@@ -887,50 +978,54 @@ def test_generated_workspace_defaults_loader_uses_generated_resource() -> None:
     assert (checker.REPO_ROOT / "generated" / "workspace" / "python" / "_contracts" / "payload.json").is_file()
 
 
-def test_static_generated_package_proof_rejects_full_completion_when_runtime_outputs_are_not_rendered(monkeypatch) -> None:
-    checker = _load_checker()
-    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
-    completion = ir["generation_policy"]["python_cli_completion"]
-    completion["current_state"] = "full-generated-cli-complete"
-    completion["completion_gate"]["state"] = "satisfied"
-    completion["completion_gate"]["satisfied_by"].append(
-        {
-            "id": "product-specific-runtime-generated-output-owned",
-            "evidence": "test fixture claims product runtime files are generated outputs",
-            "proof": "scripts/check/check_generated_command_packages.py::_validate_full_python_completion_executable_ownership",
-        }
+def test_static_generated_package_proof_rejects_full_completion_when_runtime_outputs_are_not_rendered() -> None:
+    errors = _checker_case_errors(
+        """
+        ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+        completion = ir["generation_policy"]["python_cli_completion"]
+        completion["current_state"] = "full-generated-cli-complete"
+        completion["completion_gate"]["state"] = "satisfied"
+        completion["completion_gate"]["satisfied_by"].append(
+            {
+                "id": "product-specific-runtime-generated-output-owned",
+                "evidence": "test fixture claims product runtime files are generated outputs",
+                "proof": "scripts/check/check_generated_command_packages.py::_validate_full_python_completion_executable_ownership",
+            }
+        )
+
+        original_render_outputs = checker.render_workspace_command_package_outputs
+
+        def fake_render_outputs(manifest, *, repo_root):
+            return [
+                output
+                for output in original_render_outputs(manifest, repo_root=repo_root)
+                if output.path.relative_to(checker.REPO_ROOT).as_posix() != "generated/workspace/python/cli.py"
+            ]
+
+        checker.load_workspace_command_package_ir = lambda *, repo_root: ir
+        checker.render_workspace_command_package_outputs = fake_render_outputs
+        _emit({"errors": checker._validate_static_surfaces()})
+        """
     )
-
-    original_render_outputs = checker.render_workspace_command_package_outputs
-
-    def fake_render_outputs(manifest, *, repo_root):
-        return [
-            output
-            for output in original_render_outputs(manifest, repo_root=repo_root)
-            if output.path.relative_to(checker.REPO_ROOT).as_posix() != "generated/workspace/python/cli.py"
-        ]
-
-    monkeypatch.setattr(checker, "load_workspace_command_package_ir", lambda *, repo_root: ir)
-    monkeypatch.setattr(checker, "render_workspace_command_package_outputs", fake_render_outputs)
-
-    errors = checker._validate_static_surfaces()
 
     assert any("not produced by command-generation render_outputs()" in error for error in errors)
 
 
-def test_static_generated_package_proof_rejects_missing_runtime_projection_inventory_entry(monkeypatch) -> None:
-    checker = _load_checker()
-    original_manifest = checker.python_runtime_projection_inventory_manifest
+def test_static_generated_package_proof_rejects_missing_runtime_projection_inventory_entry() -> None:
+    errors = _checker_case_errors(
+        """
+        original_manifest = checker.python_runtime_projection_inventory_manifest
 
-    def fake_manifest() -> dict[str, object]:
-        payload = original_manifest()
-        payload = dict(payload)
-        payload["entries"] = list(payload["entries"][:-1])
-        return payload
+        def fake_manifest() -> dict[str, object]:
+            payload = original_manifest()
+            payload = dict(payload)
+            payload["entries"] = list(payload["entries"][:-1])
+            return payload
 
-    monkeypatch.setattr(checker, "python_runtime_projection_inventory_manifest", fake_manifest)
-
-    errors = checker._validate_python_runtime_projection_inventory(full_completion=False)
+        checker.python_runtime_projection_inventory_manifest = fake_manifest
+        _emit({"errors": checker._validate_python_runtime_projection_inventory(full_completion=False)})
+        """
+    )
 
     assert any("missing runtime projection entries" in error for error in errors)
 
@@ -952,88 +1047,99 @@ def test_static_generated_package_proof_rejects_legacy_generated_python_package_
     assert any("legacy generated Python package directories" in error for error in errors)
 
 
-def test_static_generated_package_proof_rejects_full_completion_with_transitional_runtime_projection_debt(monkeypatch) -> None:
-    checker = _load_checker()
-    original_manifest = checker.python_runtime_projection_inventory_manifest
+def test_static_generated_package_proof_rejects_full_completion_with_transitional_runtime_projection_debt() -> None:
+    errors = _checker_case_errors(
+        """
+        original_manifest = checker.python_runtime_projection_inventory_manifest
 
-    def fake_manifest() -> dict[str, object]:
-        payload = original_manifest()
-        payload = dict(payload)
-        entries = [dict(entry) for entry in payload["entries"]]
-        entries[0]["provenance_status"] = "transitional-generated-output-debt"
-        entries[0]["blocking_full_completion"] = True
-        payload["entries"] = entries
-        return payload
+        def fake_manifest() -> dict[str, object]:
+            payload = original_manifest()
+            payload = dict(payload)
+            entries = [dict(entry) for entry in payload["entries"]]
+            entries[0]["provenance_status"] = "transitional-generated-output-debt"
+            entries[0]["blocking_full_completion"] = True
+            payload["entries"] = entries
+            return payload
 
-    monkeypatch.setattr(checker, "python_runtime_projection_inventory_manifest", fake_manifest)
-
-    errors = checker._validate_python_runtime_projection_inventory(full_completion=True)
+        checker.python_runtime_projection_inventory_manifest = fake_manifest
+        _emit({"errors": checker._validate_python_runtime_projection_inventory(full_completion=True)})
+        """
+    )
 
     assert any("transitional-generated-output-debt" in error for error in errors)
 
 
 def test_static_generated_package_proof_accepts_current_runtime_projection_inventory_for_partial_completion() -> None:
-    checker = _load_checker()
-
-    errors = checker._validate_python_runtime_projection_inventory(full_completion=False)
+    errors = _checker_case_errors(
+        """
+        _emit({"errors": checker._validate_python_runtime_projection_inventory(full_completion=False)})
+        """
+    )
 
     assert errors == []
 
 
-def test_static_generated_package_proof_rejects_shipped_source_cli_backslide(monkeypatch) -> None:
-    checker = _load_checker()
+def test_static_generated_package_proof_rejects_shipped_source_cli_backslide() -> None:
     backslid_source = "src/agentic_workspace/cli_backslide.py"
-    original_read_text = checker.Path.read_text
-    original_is_file = checker.Path.is_file
+    errors = _checker_case_errors(
+        r"""
+        backslid_source = "src/agentic_workspace/cli_backslide.py"
+        original_read_text = checker.Path.read_text
+        original_is_file = checker.Path.is_file
 
-    def fake_read_text(self, *args, **kwargs):
-        if self.as_posix().endswith(backslid_source):
-            return "import argparse\n\ndef main(argv=None):\n    parser = argparse.ArgumentParser()\n    parser.add_subparsers()\n"
-        return original_read_text(self, *args, **kwargs)
+        def fake_read_text(self, *args, **kwargs):
+            if self.as_posix().endswith(backslid_source):
+                return "import argparse\n\ndef main(argv=None):\n    parser = argparse.ArgumentParser()\n    parser.add_subparsers()\n"
+            return original_read_text(self, *args, **kwargs)
 
-    def fake_is_file(self):
-        if self.as_posix().endswith(backslid_source):
-            return True
-        return original_is_file(self)
+        def fake_is_file(self):
+            if self.as_posix().endswith(backslid_source):
+                return True
+            return original_is_file(self)
 
-    monkeypatch.setattr(checker, "_tracked_python_source_files", lambda: [backslid_source])
-    monkeypatch.setattr(checker.Path, "read_text", fake_read_text)
-    monkeypatch.setattr(checker.Path, "is_file", fake_is_file)
-
-    errors = checker._validate_python_shipped_source_executable_retirement()
+        checker._tracked_python_source_files = lambda: [backslid_source]
+        checker.Path.read_text = fake_read_text
+        checker.Path.is_file = fake_is_file
+        _emit({"errors": checker._validate_python_shipped_source_executable_retirement()})
+        """
+    )
 
     assert any(backslid_source in error and "parser construction" in error for error in errors)
 
 
-def test_static_generated_package_proof_uses_behavior_detection_not_plain_keywords(monkeypatch) -> None:
-    checker = _load_checker()
-    harmless_source = "src/agentic_workspace/harmless_notes.py"
-    original_read_text = checker.Path.read_text
-    original_is_file = checker.Path.is_file
+def test_static_generated_package_proof_uses_behavior_detection_not_plain_keywords() -> None:
+    errors = _checker_case_errors(
+        r"""
+        harmless_source = "src/agentic_workspace/harmless_notes.py"
+        original_read_text = checker.Path.read_text
+        original_is_file = checker.Path.is_file
 
-    def fake_read_text(self, *args, **kwargs):
-        if self.as_posix().endswith(harmless_source):
-            return 'TEXT = "argparse.ArgumentParser and def main are only prose here"\n'
-        return original_read_text(self, *args, **kwargs)
+        def fake_read_text(self, *args, **kwargs):
+            if self.as_posix().endswith(harmless_source):
+                return 'TEXT = "argparse.ArgumentParser and def main are only prose here"\n'
+            return original_read_text(self, *args, **kwargs)
 
-    def fake_is_file(self):
-        if self.as_posix().endswith(harmless_source):
-            return True
-        return original_is_file(self)
+        def fake_is_file(self):
+            if self.as_posix().endswith(harmless_source):
+                return True
+            return original_is_file(self)
 
-    monkeypatch.setattr(checker, "_tracked_python_source_files", lambda: [harmless_source])
-    monkeypatch.setattr(checker.Path, "read_text", fake_read_text)
-    monkeypatch.setattr(checker.Path, "is_file", fake_is_file)
-
-    errors = checker._validate_python_shipped_source_executable_retirement()
+        checker._tracked_python_source_files = lambda: [harmless_source]
+        checker.Path.read_text = fake_read_text
+        checker.Path.is_file = fake_is_file
+        _emit({"errors": checker._validate_python_shipped_source_executable_retirement()})
+        """
+    )
 
     assert errors == []
 
 
 def test_static_generated_package_proof_accepts_current_shipped_source_retirement() -> None:
-    checker = _load_checker()
-
-    errors = checker._validate_python_shipped_source_executable_retirement()
+    errors = _checker_case_errors(
+        """
+        _emit({"errors": checker._validate_python_shipped_source_executable_retirement()})
+        """
+    )
 
     assert errors == []
 
@@ -1049,31 +1155,37 @@ def test_tracked_python_source_files_falls_back_without_git(monkeypatch) -> None
     assert "scripts/check/check_generated_command_packages.py" in sources
 
 
-def test_static_generated_package_proof_rejects_satisfied_gate_for_non_full_state(monkeypatch) -> None:
-    checker = _load_checker()
-    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
-    ir["generation_policy"]["python_cli_completion"]["current_state"] = "adapter-layer-proven-not-full-generated-cli"
-    ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
-    monkeypatch.setattr(checker, "load_workspace_command_package_ir", lambda *, repo_root: ir)
-
-    errors = checker._validate_static_surfaces()
+def test_static_generated_package_proof_rejects_satisfied_gate_for_non_full_state() -> None:
+    errors = _checker_case_errors(
+        """
+        ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+        ir["generation_policy"]["python_cli_completion"]["current_state"] = "adapter-layer-proven-not-full-generated-cli"
+        ir["generation_policy"]["python_cli_completion"]["completion_gate"]["state"] = "satisfied"
+        checker.load_workspace_command_package_ir = lambda *, repo_root: ir
+        _emit({"errors": checker._validate_static_surfaces()})
+        """
+    )
 
     assert any("cannot mark the Python CLI completion gate satisfied" in error for error in errors)
 
 
 def test_static_generated_package_proof_accepts_current_python_completion_gate() -> None:
-    checker = _load_checker()
-
-    errors = checker._validate_static_surfaces()
+    errors = _checker_case_errors(
+        """
+        _emit({"errors": checker._validate_static_surfaces()})
+        """
+    )
 
     assert not [error for error in errors if "Python CLI completion" in error or "Python completion" in error]
 
 
-def test_static_generated_package_proof_rejects_missing_primitive_conformance_case(monkeypatch) -> None:
-    checker = _load_checker()
-    monkeypatch.setattr(checker, "REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE", {"missing.primitive"})
-
-    errors = checker._validate_static_surfaces()
+def test_static_generated_package_proof_rejects_missing_primitive_conformance_case() -> None:
+    errors = _checker_case_errors(
+        """
+        checker.REQUIRED_PORTABLE_PRIMITIVE_CONFORMANCE = {"missing.primitive"}
+        _emit({"errors": checker._validate_static_surfaces()})
+        """
+    )
 
     assert "primitive conformance is missing required primitive case: missing.primitive" in errors
 
