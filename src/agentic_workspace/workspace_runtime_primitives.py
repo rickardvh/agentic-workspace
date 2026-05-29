@@ -130,6 +130,7 @@ from agentic_workspace.reporting_support import (
     setup_discovery_payload,
     standing_intent_payload,
 )
+from agentic_workspace.repository_scanning import repository_scan_files
 from agentic_workspace.result_adapter import adapt_module_result, serialise_value
 from agentic_workspace.workspace_output import (
     _display_path,
@@ -9317,7 +9318,16 @@ def _artifact_footprint_by_class(*, target: Any) -> dict[str, Any]:
         root = target_root / relative
         if not root.exists():
             return (0, [])
-        files = sorted((path for path in root.rglob(pattern) if path.is_file()))
+        files = [
+            path
+            for path in repository_scan_files(
+                target_root,
+                relative_roots=[relative],
+                include_untracked=True,
+                include_managed_workspace=True,
+            )
+            if fnmatch.fnmatch(path.name, pattern)
+        ]
         return (len(files), [_relative_posix(path, target_root) for path in files[:5]])
 
     def _top_level_plan_count() -> tuple[int, list[str]]:
@@ -9331,13 +9341,17 @@ def _artifact_footprint_by_class(*, target: Any) -> dict[str, Any]:
         root = target_root / ".agentic-workspace" / "memory" / "repo"
         if not root.exists():
             return (0, [])
-        files = sorted(
-            (
-                path
-                for path in root.rglob("*.md")
-                if path.is_file() and ".agentic-workspace/memory/repo/current/" not in _relative_posix(path, target_root)
+        files = [
+            path
+            for path in repository_scan_files(
+                target_root,
+                relative_roots=[".agentic-workspace/memory/repo"],
+                include_untracked=True,
+                include_managed_workspace=True,
+                suffixes={".md"},
             )
-        )
+            if ".agentic-workspace/memory/repo/current/" not in _relative_posix(path, target_root)
+        ]
         return (len(files), [_relative_posix(path, target_root) for path in files[:5]])
 
     def _large_docs() -> tuple[int, list[str]]:
@@ -9455,9 +9469,16 @@ def _artifact_class(*, class_id: str, role: str, count: int, sample: list[str], 
 
 
 def _generated_output_files(*, target_root: Path) -> list[Path]:
-    candidates: list[Path] = []
-    for pattern in ("generated/**/*",):
-        candidates.extend((path for path in target_root.glob(pattern) if path.is_file() and (not _is_runtime_cache_file(path))))
+    candidates = [
+        path
+        for path in repository_scan_files(
+            target_root,
+            relative_roots=["generated"],
+            include_untracked=True,
+            include_managed_workspace=False,
+        )
+        if not _is_runtime_cache_file(path)
+    ]
     return sorted({path.resolve(): path for path in candidates}.values(), key=lambda path: path.as_posix())
 
 
@@ -16193,9 +16214,10 @@ def _reuse_pressure_payload(
             ),
         }
 
+    scan_files = _iter_reuse_scan_files(target_root)
     raw_findings: list[dict[str, Any]] = []
     for changed_path in normalized_paths:
-        raw_findings.extend(_reuse_pressure_findings_for_path(target_root=target_root, changed_path=changed_path))
+        raw_findings.extend(_reuse_pressure_findings_for_path(target_root=target_root, changed_path=changed_path, scan_files=scan_files))
     generated_aggregation = _generated_reuse_pressure_aggregation(changed_paths=normalized_paths)
     if generated_aggregation.get("status") == "present":
         generated_paths = set(generated_aggregation.get("changed_generated_paths", []))
@@ -16295,22 +16317,24 @@ def _generated_reuse_pressure_aggregation(*, changed_paths: list[str]) -> dict[s
     }
 
 
-def _reuse_pressure_findings_for_path(*, target_root: Path, changed_path: str) -> list[dict[str, Any]]:
+def _reuse_pressure_findings_for_path(*, target_root: Path, changed_path: str, scan_files: Sequence[Path]) -> list[dict[str, Any]]:
     path = target_root / changed_path
     if not path.is_file():
         return []
     if path.suffix == ".py":
         return [
-            *_reuse_pressure_python_findings(target_root=target_root, changed_path=changed_path, path=path),
+            *_reuse_pressure_python_findings(target_root=target_root, changed_path=changed_path, path=path, scan_files=scan_files),
             *_reuse_pressure_inventory_findings(target_root=target_root, changed_path=changed_path, path=path),
         ]
     return [
-        *_reuse_pressure_surface_findings(target_root=target_root, changed_path=changed_path, path=path),
+        *_reuse_pressure_surface_findings(target_root=target_root, changed_path=changed_path, path=path, scan_files=scan_files),
         *_reuse_pressure_inventory_findings(target_root=target_root, changed_path=changed_path, path=path),
     ]
 
 
-def _reuse_pressure_python_findings(*, target_root: Path, changed_path: str, path: Path) -> list[dict[str, Any]]:
+def _reuse_pressure_python_findings(
+    *, target_root: Path, changed_path: str, path: Path, scan_files: Sequence[Path]
+) -> list[dict[str, Any]]:
     try:
         text = path.read_text(encoding="utf-8")
     except UnicodeDecodeError:
@@ -16322,7 +16346,7 @@ def _reuse_pressure_python_findings(*, target_root: Path, changed_path: str, pat
     )
     findings: list[dict[str, Any]] = []
     for name in definitions[:12]:
-        matches = _find_definition_matches(target_root=target_root, name=name, exclude=path)
+        matches = _find_definition_matches(target_root=target_root, name=name, exclude=path, scan_files=scan_files)
         if not matches:
             continue
         state = "abstraction_pressure" if len(matches) >= 2 else "existing_helper_candidate"
@@ -16336,12 +16360,14 @@ def _reuse_pressure_python_findings(*, target_root: Path, changed_path: str, pat
                 "why": f"{name} is already defined elsewhere in the repository.",
             }
         )
-    special_case_findings = _repeated_special_case_findings(target_root=target_root, changed_path=changed_path, path=path, text=text)
+    special_case_findings = _repeated_special_case_findings(
+        target_root=target_root, changed_path=changed_path, path=path, text=text, scan_files=scan_files
+    )
     findings.extend(special_case_findings)
     if findings:
         return findings
     sibling_candidates = _sibling_helper_candidates(
-        path=path, target_root=target_root, changed_tokens=_reuse_pressure_tokens(path=path, text=text)
+        path=path, target_root=target_root, changed_tokens=_reuse_pressure_tokens(path=path, text=text), scan_files=scan_files
     )
     if sibling_candidates:
         candidate_paths = [candidate["path"] for candidate in sibling_candidates]
@@ -16363,10 +16389,12 @@ def _reuse_pressure_python_findings(*, target_root: Path, changed_path: str, pat
     return findings
 
 
-def _repeated_special_case_findings(*, target_root: Path, changed_path: str, path: Path, text: str) -> list[dict[str, Any]]:
+def _repeated_special_case_findings(
+    *, target_root: Path, changed_path: str, path: Path, text: str, scan_files: Sequence[Path]
+) -> list[dict[str, Any]]:
     findings: list[dict[str, Any]] = []
     for marker in _special_case_markers(text)[:8]:
-        matches = _find_special_case_matches(target_root=target_root, marker=marker, exclude=path)
+        matches = _find_special_case_matches(target_root=target_root, marker=marker, exclude=path, scan_files=scan_files)
         if not matches:
             continue
         findings.append(
@@ -16400,10 +16428,10 @@ def _special_case_markers(text: str) -> list[str]:
     return markers
 
 
-def _find_special_case_matches(*, target_root: Path, marker: str, exclude: Path) -> list[str]:
+def _find_special_case_matches(*, target_root: Path, marker: str, exclude: Path, scan_files: Sequence[Path]) -> list[str]:
     matches: list[str] = []
     marker_pattern = re.compile(rf"^\s*{re.escape(marker)}\s*$", flags=re.MULTILINE)
-    for candidate in _iter_reuse_scan_files(target_root):
+    for candidate in scan_files:
         if candidate == exclude or candidate.suffix != ".py":
             continue
         try:
@@ -16418,10 +16446,12 @@ def _find_special_case_matches(*, target_root: Path, marker: str, exclude: Path)
     return matches
 
 
-def _reuse_pressure_surface_findings(*, target_root: Path, changed_path: str, path: Path) -> list[dict[str, Any]]:
+def _reuse_pressure_surface_findings(
+    *, target_root: Path, changed_path: str, path: Path, scan_files: Sequence[Path]
+) -> list[dict[str, Any]]:
     basename = path.name.lower()
     matches: list[str] = []
-    for candidate in _iter_reuse_scan_files(target_root):
+    for candidate in scan_files:
         if candidate == path or candidate.name.lower() != basename:
             continue
         matches.append(candidate.relative_to(target_root).as_posix())
@@ -16475,10 +16505,10 @@ def _reuse_pressure_inventory_findings(*, target_root: Path, changed_path: str, 
     ]
 
 
-def _find_definition_matches(*, target_root: Path, name: str, exclude: Path) -> list[str]:
+def _find_definition_matches(*, target_root: Path, name: str, exclude: Path, scan_files: Sequence[Path]) -> list[str]:
     pattern = re.compile(rf"^\s*(?:def|class)\s+{re.escape(name)}\b", flags=re.MULTILINE)
     matches: list[str] = []
-    for candidate in _iter_reuse_scan_files(target_root):
+    for candidate in scan_files:
         if candidate == exclude or candidate.suffix != ".py":
             continue
         try:
@@ -16492,9 +16522,11 @@ def _find_definition_matches(*, target_root: Path, name: str, exclude: Path) -> 
     return matches
 
 
-def _sibling_helper_candidates(*, path: Path, target_root: Path, changed_tokens: set[str]) -> list[dict[str, Any]]:
+def _sibling_helper_candidates(
+    *, path: Path, target_root: Path, changed_tokens: set[str], scan_files: Sequence[Path]
+) -> list[dict[str, Any]]:
     candidates: list[dict[str, Any]] = []
-    for sibling in sorted(path.parent.glob("*.py")):
+    for sibling in sorted(candidate for candidate in scan_files if candidate.parent == path.parent and candidate.suffix == ".py"):
         if sibling == path:
             continue
         try:
@@ -16543,30 +16575,15 @@ def _reuse_pressure_tokens(*, path: Path, text: str) -> set[str]:
 
 
 def _iter_reuse_scan_files(target_root: Path) -> list[Path]:
-    skip_dirs = {".git", ".hg", ".svn", ".venv", "__pycache__", ".pytest_cache", ".ruff_cache", "dist", "build", "node_modules"}
     suffixes = {".py", ".json", ".toml", ".yaml", ".yml", ".md"}
-    files: list[Path] = []
-    for root, dirnames, filenames in os.walk(target_root):
-        dirnames[:] = sorted(dirname for dirname in dirnames if dirname not in skip_dirs and not dirname.startswith(".uv-cache"))
-        root_path = Path(root)
-        for filename in sorted(filenames):
-            if len(files) >= 800:
-                break
-            path = root_path / filename
-            if path.suffix not in suffixes:
-                continue
-            try:
-                relative_parts = path.relative_to(target_root).parts
-            except ValueError:
-                relative_parts = path.parts
-            if any(part in skip_dirs or part.startswith(".uv-cache") for part in relative_parts):
-                continue
-            if not path.is_file():
-                continue
-            files.append(path)
-        if len(files) >= 800:
-            break
-    return sorted(files)
+    return repository_scan_files(
+        target_root,
+        exclude_relative_roots=[WORKSPACE_LOCAL_SCRATCH_ROOT_PATH.as_posix()],
+        include_untracked=True,
+        include_managed_workspace=True,
+        suffixes=suffixes,
+        max_files=800,
+    )
 
 
 def _changed_path_command_argument(*, changed_paths: list[str], compact: bool) -> str:

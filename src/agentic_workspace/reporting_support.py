@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from agentic_workspace.config import DEFAULT_CLI_INVOKE, WorkspaceUsageError
+from agentic_workspace.repository_scanning import repository_scan_files
 
 REPO_FRICTION_LARGE_FILE_THRESHOLD = 400
 REPO_FRICTION_CONCEPT_SURFACE_THRESHOLD = 200
@@ -21,19 +22,6 @@ REPO_FRICTION_SCAN_SUFFIXES = {
     ".yaml",
     ".yml",
     ".txt",
-}
-REPO_FRICTION_SKIP_DIRS = {
-    ".git",
-    ".hg",
-    ".svn",
-    "__pycache__",
-    ".mypy_cache",
-    ".pytest_cache",
-    ".ruff_cache",
-    ".venv",
-    "node_modules",
-    "dist",
-    "build",
 }
 REPO_FRICTION_REGENERABLE_CACHE_PREFIXES = (".agentic-workspace/local/cache/", "scratch/")
 
@@ -2099,13 +2087,12 @@ def _repo_friction_hotspot_payload(
 
 def _repo_friction_hotspots(*, target_root: Path, cli_invoke: str = DEFAULT_CLI_INVOKE) -> list[dict[str, Any]]:
     hotspots: list[dict[str, Any]] = []
-    for path in sorted(target_root.rglob("*")):
-        if not path.is_file():
-            continue
-        if any(part in REPO_FRICTION_SKIP_DIRS or part.startswith(".uv-cache") for part in path.parts):
-            continue
-        if path.suffix.lower() not in REPO_FRICTION_SCAN_SUFFIXES:
-            continue
+    for path in repository_scan_files(
+        target_root,
+        include_untracked=True,
+        include_managed_workspace=True,
+        suffixes=REPO_FRICTION_SCAN_SUFFIXES,
+    ):
         try:
             line_count = sum(1 for _ in path.open("r", encoding="utf-8"))
         except (UnicodeDecodeError, OSError):
@@ -2122,22 +2109,20 @@ def _repo_friction_hotspots(*, target_root: Path, cli_invoke: str = DEFAULT_CLI_
 
 def _repo_friction_regenerable_cache_hotspots(*, target_root: Path, cli_invoke: str = DEFAULT_CLI_INVOKE) -> list[dict[str, Any]]:
     hotspots: list[dict[str, Any]] = []
-    for prefix in REPO_FRICTION_REGENERABLE_CACHE_PREFIXES:
-        cache_root = target_root / prefix.rstrip("/")
-        if not cache_root.exists():
+    for path in repository_scan_files(
+        target_root,
+        relative_roots=[prefix.rstrip("/") for prefix in REPO_FRICTION_REGENERABLE_CACHE_PREFIXES],
+        include_untracked=True,
+        include_managed_workspace=True,
+        suffixes=REPO_FRICTION_SCAN_SUFFIXES,
+    ):
+        try:
+            line_count = sum(1 for _ in path.open("r", encoding="utf-8"))
+        except (UnicodeDecodeError, OSError):
             continue
-        for path in sorted(cache_root.rglob("*")):
-            if not path.is_file() or path.suffix.lower() not in REPO_FRICTION_SCAN_SUFFIXES:
-                continue
-            try:
-                line_count = sum(1 for _ in path.open("r", encoding="utf-8"))
-            except (UnicodeDecodeError, OSError):
-                continue
-            if line_count < REPO_FRICTION_LARGE_FILE_THRESHOLD:
-                continue
-            hotspots.append(
-                _repo_friction_hotspot_payload(path=path, target_root=target_root, line_count=line_count, cli_invoke=cli_invoke)
-            )
+        if line_count < REPO_FRICTION_LARGE_FILE_THRESHOLD:
+            continue
+        hotspots.append(_repo_friction_hotspot_payload(path=path, target_root=target_root, line_count=line_count, cli_invoke=cli_invoke))
     hotspots.sort(key=lambda item: (-int(item["line_count"]), str(item["path"])))
     return hotspots[:REPO_FRICTION_MAX_HOTSPOTS]
 

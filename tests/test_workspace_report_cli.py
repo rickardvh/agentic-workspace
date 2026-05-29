@@ -4816,6 +4816,28 @@ def test_report_surfaces_large_file_hotspots_as_repo_friction_evidence(tmp_path:
     assert signal["primary_next_action"]["action"] == "inspect-symbols-before-refactor"
 
 
+def test_report_repo_friction_honors_gitignore_with_managed_workspace_exception(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    subprocess.run(["git", "-C", str(target), "init"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    _write(target / ".gitignore", "ignored/\n.agentic-workspace/\n")
+    _write(
+        target / ".agentic-workspace" / "config.toml",
+        'schema_version = 1\n\n[workspace]\nimprovement_latitude = "balanced"\n',
+    )
+    _write(target / "src" / "big_module.py", "\n".join(f"line_{index}" for index in range(450)) + "\n")
+    _write(target / "ignored" / "hidden_big.py", "\n".join(f"line_{index}" for index in range(900)) + "\n")
+    _write(target / ".agentic-workspace" / "docs" / "managed.md", "\n".join(f"line_{index}" for index in range(450)) + "\n")
+
+    assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    large_paths = {item["path"] for item in payload["repo_friction"]["large_file_hotspots"]["items"]}
+    assert "src/big_module.py" in large_paths
+    assert "ignored/hidden_big.py" not in large_paths
+    assert ".agentic-workspace/docs/managed.md" in large_paths
+
+
 def test_report_does_not_promote_regenerable_cache_as_large_file_friction(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
