@@ -1,0 +1,159 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Host-repo learning proof-selection review",
+  "date": "2026-05-29",
+  "scope": [
+    "Issue #1211 validation-lane review of host-repo proof assumptions, learned route hints, and negative-evidence gaps."
+  ],
+  "classification": "validation-lane",
+  "goal": [
+    "Produce issue #1211 groundwork by identifying the smallest evidence-backed proof-selection and learning gaps that would keep host-repo behavior assumption-shaped."
+  ],
+  "non_goals": [
+    "Do not implement fixes in this review pass.",
+    "Do not promote findings into active planning or roadmap automatically.",
+    "Do not turn the command-generation symptom into a pytest-only design."
+  ],
+  "review_mode": {
+    "mode": "validation-lane",
+    "review question": "Does current proof selection distinguish confirmed host-repo evidence from AW-source-repo heuristics before selecting executable proof?",
+    "default finding cap": "3 findings",
+    "inputs inspected first": "issue #1211, proof-selection runtime, proof-selection rules, proof-route-hints schema, focused proof CLI tests, and temporary host-repo probes"
+  },
+  "review_method": {
+    "commands used": "uv run agentic-workspace start --task \"Produce a bounded review as groundwork for issue #1211: inspect host-repo assumptions, proof-selection heuristics, learned repo behavior routing, and gaps before implementation.\" --format json; uv run agentic-workspace skills --target . --task \"bounded review issue 1211 host-repo assumptions proof selection memory promotion\" --format json; uv run agentic-workspace memory promotion-report --target . --mode remediation --format json; uv run agentic-workspace proof against temporary pyproject-only and tests-dir-only host repos; rg targeted proof-selection and proof-route-hints surfaces.",
+    "evidence sources": "src/agentic_workspace/workspace_runtime_primitives.py, src/agentic_workspace/contracts/proof_selection_rules.json, src/agentic_workspace/contracts/schemas/proof_route_hints.schema.json, tests/test_workspace_proof_cli.py, tests/test_workspace_lifecycle_cli.py, issue #1211, and temporary proof CLI output."
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1211",
+      "label": "Issue #1211",
+      "role": "intent",
+      "locator": "Host-repo behavior must be learned from confirmed evidence, not hard-coded assumptions."
+    },
+    {
+      "kind": "source",
+      "target": "src/agentic_workspace/workspace_runtime_primitives.py",
+      "label": "Proof-selection runtime",
+      "role": "evidence",
+      "locator": "lines 24403-24527, 24754-24872, 25475-25984"
+    },
+    {
+      "kind": "contract",
+      "target": "src/agentic_workspace/contracts/proof_selection_rules.json",
+      "label": "Proof-selection rules",
+      "role": "evidence",
+      "locator": "workspace_cli lane, pyproject.toml exact match, fallback_lane"
+    },
+    {
+      "kind": "schema",
+      "target": "src/agentic_workspace/contracts/schemas/proof_route_hints.schema.json",
+      "label": "Proof-route hints schema",
+      "role": "evidence",
+      "locator": "hint fields and learning_policy"
+    }
+  ],
+  "findings": [
+    {
+      "id": "pyproject-tests-directory-imply-pytest-capability",
+      "title": "Python-looking repo markers still become a required pytest command",
+      "summary": "Proof selection treats `pyproject.toml`, `pytest.ini`, or `tests/` as a live target test capability and can select `uv run pytest` before the target repo confirms pytest is installed or configured.",
+      "evidence": "`_target_role_command_candidates` appends `uv run pytest` when `pyproject.toml`, `pytest.ini`, or `tests/` exists (src/agentic_workspace/workspace_runtime_primitives.py:24853). `_target_proof_capabilities` reports Python available on the same marker class (src/agentic_workspace/workspace_runtime_primitives.py:24770). A temporary repo with only `pyproject.toml` and `uv.lock` selected required command `uv run pytest` with route_source `live-adapted-target-capability`; a temporary repo with only `tests/` and changed `llms.txt` did the same.",
+      "risk if unchanged": "Issue #1211 can be closed by a narrow-looking path while the motivating command-generation failure still reproduces: AW tells agents to run pytest in repos where pytest is absent, then classifies the manual fallback as an add-on rather than treating the command as unconfirmed.",
+      "suggested action": "Split Python project detection from pytest command confirmation. Treat bare `pyproject.toml` or `tests/` as discovery evidence only; require a declared pytest dependency/config, a runnable probe, a repo-configured proof profile, or previously confirmed repo evidence before selecting `uv run pytest` as required proof.",
+      "confidence": "high",
+      "source": "friction-confirmed",
+      "promotion target": "Issue #1211 implementation slice: proof-selection capability model and tests/test_workspace_proof_cli.py regression coverage",
+      "promotion trigger": "Before any PR claims #1211 proof-selection closure or fixes the command-generation pytest symptom.",
+      "post-remediation note shape": "shrink to a compact evidence pointer after regression tests cover pyproject-only and tests-dir-only hosts."
+    },
+    {
+      "id": "unmatched-host-paths-inherit-aw-workspace-cli-lane",
+      "title": "Unknown host paths inherit the AW `workspace_cli` lane",
+      "summary": "Unmatched changed paths still fall back to the AW source repo's `workspace_cli` validation lane, which carries targeted-test behavior and package-specific proof command expectations.",
+      "evidence": "`proof_selection_rules.json` defines `pyproject.toml` as `workspace_cli` and `fallback_lane` as `workspace_cli`. `_proof_selection_for_changed_paths` selects that fallback for every unmatched path (src/agentic_workspace/workspace_runtime_primitives.py:25551). In a temporary host repo with only `tests/`, changed `llms.txt` selected lane `workspace_cli`, adapted `make test-workspace` to `uv run pytest`, and emitted required command `uv run pytest`.",
+      "risk if unchanged": "Even after pytest detection is tightened, unfamiliar host-repo files can still be interpreted through AW-source-repo semantics, producing proof lanes, command names, and explanations that imply AW knows the host repo's ownership model.",
+      "suggested action": "Introduce an unknown-host or manual-discovery proof intent for paths that do not match confirmed host config or checked-in AW-owned surfaces. Keep AW-source-repo lanes authoritative only when the target is the AW source checkout or when host config explicitly maps the path.",
+      "confidence": "high",
+      "source": "static-analysis",
+      "promotion target": "Issue #1211 implementation slice: proof-selection rule contract and host-target classification tests",
+      "promotion trigger": "When changing proof-selection rules for host-repo learning or adding regression fixtures for unfamiliar repos.",
+      "post-remediation note shape": "shrink after tests prove unmatched host paths produce discovery/manual verification rather than `workspace_cli` proof."
+    },
+    {
+      "id": "learned-route-hints-lack-owner-provenance-negative-state",
+      "title": "Learned route hints do not yet satisfy the owner/provenance contract",
+      "summary": "The existing `.agentic-workspace/proof-route-hints.json` surface is advisory and live-confirmed, but it is a product-level route-hint file with limited state. It does not model owner routing, timestamped provenance, scoped applicability, or durable negative evidence.",
+      "evidence": "Lifecycle init persists `.agentic-workspace/proof-route-hints.json` for package.json scripts (tests/test_workspace_lifecycle_cli.py:538). The schema requires `id`, `intent_type`, `candidate_command`, `source`, `confidence`, and `requires_live_confirmation`, but has no `learned_at`, `confirmed_at`, `confirmed_by`, `applies_to`, `owner`, `negative`, or `superseded_by` fields (src/agentic_workspace/contracts/schemas/proof_route_hints.schema.json). `_confirm_learned_route_hints` classifies hints as `live-confirmed` or `stale-or-unavailable` at runtime without persisting negative/stale evidence or routing it to Memory, config, docs, tests/checks, Planning, or issue follow-up (src/agentic_workspace/workspace_runtime_primitives.py:24479).",
+      "risk if unchanged": "A pytest-only or live-discovery-only fix can still miss #1211's broader invariant: learned host facts need the right owner and provenance, and absent commands need a path that prevents repeated false proof without inventing another silent product shortcut.",
+      "suggested action": "Before expanding proof-route-hints, define the owner-routing contract for learned repo facts: when a hint remains ephemeral, when it becomes Memory/config/docs/checks/Planning, and how failed/absent commands become scoped negative evidence. Add schema and tests only after that routing decision is explicit.",
+      "confidence": "medium-high",
+      "source": "mixed",
+      "promotion target": "Issue #1211 design slice: learned-fact ownership/provenance contract plus proof-route-hints or Memory integration tests",
+      "promotion trigger": "Before adding new first-class learned-route state or claiming the mechanism applies beyond proof selection.",
+      "post-remediation note shape": "retain until owner-routing is decided, then shrink to the issue/design decision and regression test pointers."
+    }
+  ],
+  "recommendation": {
+    "promote": "Use these findings as implementation groundwork for issue #1211. The first two findings are suitable first-slice acceptance tests; the third should shape the design boundary before expanding persistent learned-route state.",
+    "defer": "Do not promote a roadmap or active planning item from this artifact because issue #1211 already owns the upstream intent.",
+    "dismiss": "No findings dismissed."
+  },
+  "retention": {
+    "closeout shape": "shrink",
+    "trigger": "findings promoted, dismissed, or superseded",
+    "proof surface": "routed issues, planning state, docs, checks, Memory, or a compact retained review stub"
+  },
+  "prose_templates": {
+    "review_finding": {
+      "sections": [
+        "Finding",
+        "Evidence",
+        "Impact",
+        "Recommendation",
+        "Owner",
+        "Status"
+      ],
+      "field_map": {
+        "Finding": "findings[].title + findings[].summary",
+        "Evidence": "findings[].evidence + findings[].source",
+        "Impact": "findings[].risk if unchanged",
+        "Recommendation": "findings[].suggested action + findings[].promotion target",
+        "Owner": "findings[].promotion target",
+        "Status": "recommendation/promote|defer|dismiss"
+      },
+      "rule": "Use only these headings when a prose finding is needed; keep the canonical fields structured."
+    },
+    "handoff_or_closeout": {
+      "sections": [
+        "Intent",
+        "What changed",
+        "Proof",
+        "Remaining risk",
+        "Durable residue",
+        "Next owner"
+      ],
+      "field_map": {
+        "Intent": "intent/outcome or requested_outcome",
+        "What changed": "execution_summary/outcome delivered",
+        "Proof": "proof_report/validation proof",
+        "Remaining risk": "finished_run_review/misinterpretation risk or follow-on decision",
+        "Durable residue": "durable_residue + closeout_distillation",
+        "Next owner": "execution_summary/follow-on routed to or required_continuation/owner surface"
+      },
+      "rule": "Prefer structured fields; use this shape only for short human-readable summaries."
+    }
+  },
+  "validation_commands": [
+    "uv run agentic-workspace proof --target <temp pyproject-only repo> --changed pyproject.toml --changed uv.lock --format json",
+    "uv run agentic-workspace proof --target <temp tests-dir-only repo> --changed llms.txt --format json",
+    "uv run agentic-workspace summary --target . --format json",
+    "uv run agentic-workspace doctor --target . --modules planning --format json",
+    "Get-Content .agentic-workspace/planning/reviews/2026-05-29-host-repo-learning-proof-selection.review.json | ConvertFrom-Json"
+  ],
+  "drift_log": [
+    "2026-05-29: Review record created by create-review.",
+    "2026-05-29: Filled with issue #1211 validation-lane findings after focused source inspection and temporary host-repo proof probes."
+  ]
+}
