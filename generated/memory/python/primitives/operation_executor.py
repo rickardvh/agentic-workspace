@@ -110,6 +110,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'memory.bootstrap.doctor.load': _handle_memory_bootstrap_doctor_load,
                 'memory.current.load': _handle_memory_current_load,
                 'memory.prompt.render': _handle_memory_prompt_render,
+                'memory.promotion_report.load': _handle_memory_promotion_report_load,
                 'memory.report.load': _handle_memory_report_load,
                 'memory.route_report.load': _handle_memory_route_report_load,
                 'output.emit': _handle_output_emit,
@@ -163,6 +164,12 @@ def _handle_memory_prompt_render(values: dict[str, Any], arguments: dict[str, An
     from .memory_runtime import _load_memory_prompt
 
     return _load_memory_prompt(values, arguments, context)
+
+
+def _handle_memory_promotion_report_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from repo_memory_bootstrap.installer import promotion_report
+
+    return promotion_report(mode=values.get('mode'), notes=values.get('notes'), target=values.get('target'))
 
 
 def _handle_memory_report_load(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:

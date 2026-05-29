@@ -991,7 +991,7 @@
       "tier_reason": "Promotion candidate selection depends on Memory note metadata policy, remediation grouping, and package-owned judgment rather than portable target-executor behavior.",
       "conformance_ref": "memory.promotion-report.process",
       "migration_path": "Extract deterministic note scanning or grouping into schema-backed Tier 1 primitives only after promotion/remediation policy is modeled as data.",
-      "generic_behavior_audit": "Not counted as portable codegen completion; retained as a named Memory domain boundary for host runtimes while Python operation IR declares the checked-in package call through python.function.call."
+      "generic_behavior_audit": "Not counted as portable codegen completion; retained as a named Memory domain boundary for host runtimes. Python generated operation IR now declares memory.promotion_report.load directly, and the host primitive registry records the checked-in package binding metadata instead of exposing python.function.call in the operation contract."
     },
     {
       "id": "python.function.call",

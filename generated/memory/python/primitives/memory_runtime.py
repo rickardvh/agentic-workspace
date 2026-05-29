@@ -64,7 +64,7 @@ def _available_selectors_for_payload(payload: Any, prefix: str = '') -> list[str
     return selectors
 
 
-def _select_payload_fields(payload: dict[str, Any], *, select: str | None, source_command: str) -> dict[str, Any]:
+def _select_payload_fields(payload: dict[str, Any], *, select: str | None, source_command: str, selected_output_kind: str) -> dict[str, Any]:
     values: dict[str, Any] = {}
     missing: list[str] = []
     for selector in _selector_tokens(select):
@@ -73,7 +73,7 @@ def _select_payload_fields(payload: dict[str, Any], *, select: str | None, sourc
             values[selector] = value
         else:
             missing.append(selector)
-    selected: dict[str, Any] = {'kind': 'agentic-workspace/selected-output/v1', 'source_command': source_command, 'values': values}
+    selected: dict[str, Any] = {'kind': selected_output_kind, 'source_command': source_command, 'values': values}
     if missing:
         selected['missing'] = missing
         selected['selector_rule'] = 'Comma-separated dot paths select exact JSON fields; unknown fields are reported in missing.'
@@ -81,8 +81,8 @@ def _select_payload_fields(payload: dict[str, Any], *, select: str | None, sourc
     return selected
 
 
-def _selector_refs(*, command: str, answer: Any) -> list[str]:
-    refs = ['.agentic-workspace/docs/compact-contract-profile.md', command]
+def _selector_refs(*, command: str, answer: Any, compact_profile_ref: str = '') -> list[str]:
+    refs = [ref for ref in (compact_profile_ref, command) if ref]
     if isinstance(answer, dict):
         for key in ('canonical_doc', 'command', 'path', 'surface', 'ledger_path'):
             value = answer.get(key)
@@ -95,23 +95,23 @@ def _compact_contract_answer(*, surface: str, selector: dict[str, Any], answer: 
     return {'profile': 'compact-contract-answer/v1', 'surface': surface, 'selector': selector, 'matched': True, 'answer': answer, 'refs': refs}
 
 
-def _select_section(payload: dict[str, Any], *, section: str, source_command: str) -> dict[str, Any]:
+def _select_section(payload: dict[str, Any], *, section: str, source_command: str, command_ref: str, compact_profile_ref: str) -> dict[str, Any]:
     normalized = section.strip()
     if normalized not in payload:
         supported = ', '.join(sorted(str(key) for key in payload))
         raise ValueError(f'{source_command} --section must match one of: {supported}.')
     answer = payload[normalized]
-    return _compact_contract_answer(surface=source_command, selector={'section': normalized}, answer=answer, refs=_selector_refs(command=f'agentic-workspace {source_command} --format json', answer=answer))
+    return _compact_contract_answer(surface=source_command, selector={'section': normalized}, answer=answer, refs=_selector_refs(command=command_ref, answer=answer, compact_profile_ref=compact_profile_ref))
 
 
-def _tiny_sectioned_payload(payload: dict[str, Any], *, common_sections: list[str]) -> dict[str, Any]:
+def _tiny_sectioned_payload(payload: dict[str, Any], *, common_sections: list[str], sectioned_payload_kind: str, section_detail_command: str, full_detail_command: str) -> dict[str, Any]:
     return {
-        'kind': 'agentic-workspace/defaults-router/v1',
+        'kind': sectioned_payload_kind,
         'profile': 'tiny',
         'summary': 'Default-route contract sections are available on demand; request one section or full detail instead of loading the whole contract.',
         'available_sections': sorted(str(key) for key in payload),
         'common_sections': list(common_sections),
-        'detail_commands': {'section': 'agentic-workspace defaults --section <section> --format json', 'full': 'agentic-workspace defaults --verbose --format json'},
+        'detail_commands': {'section': section_detail_command, 'full': full_detail_command},
     }
 
 
@@ -178,6 +178,9 @@ def _emit_delegation_outcomes_text(payload: dict[str, Any]) -> str:
 
 def _emit_memory_operation_output(values: dict[str, Any], arguments: dict[str, Any], context: Any) -> Any:
     result = values['result']
+    selected_output_kind = 'agentic-workspace/selected-output/v1'
+    sectioned_payload_kind = 'agentic-workspace/defaults-router/v1'
+    delegation_outcomes_kind = 'agentic-workspace/delegation-outcomes/v1'
     if str(values.get('format') or 'text') == 'json' and isinstance(result, dict):
         print(json.dumps(_serialise_value(values['result']), indent=2))
         return None
@@ -186,16 +189,16 @@ def _emit_memory_operation_output(values: dict[str, Any], arguments: dict[str, A
 
         print(_emit_output(values=values, arguments=arguments), end='')
         return None
-    if isinstance(result, dict) and result.get('kind') == 'agentic-workspace/defaults-router/v1':
+    if isinstance(result, dict) and result.get('kind') == sectioned_payload_kind:
         print(_emit_tiny_sectioned_text(result), end='')
         return None
     if isinstance(result, dict) and result.get('profile') == 'compact-contract-answer/v1':
         print(_emit_compact_answer_text(result), end='')
         return None
-    if isinstance(result, dict) and result.get('kind') == 'agentic-workspace/selected-output/v1':
+    if isinstance(result, dict) and result.get('kind') == selected_output_kind:
         print(_emit_selected_output_text(result), end='')
         return None
-    if isinstance(result, dict) and result.get('kind') == 'agentic-workspace/delegation-outcomes/v1':
+    if delegation_outcomes_kind and isinstance(result, dict) and result.get('kind') == delegation_outcomes_kind:
         print(_emit_delegation_outcomes_text(result), end='')
         return None
     from repo_memory_bootstrap.runtime_primitives import _emit_memory_operation_output as source_function

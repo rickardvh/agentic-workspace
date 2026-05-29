@@ -19,6 +19,7 @@ SOURCE_PATH = "src/agentic_workspace/contracts/command_package_ir.json"
 SCHEMA_PATH = "command_generation:schemas/command_package_ir.schema.json"
 REGENERATE_COMMAND = "uv run python scripts/generate/generate_command_packages.py"
 TYPESCRIPT_RUNTIME_SUPPORT_PATH = "src/agentic_workspace/contracts/typescript_runtime_support.mjs"
+OPERATION_PRIMITIVES_PATH = "src/agentic_workspace/contracts/operation_primitives.json"
 
 
 def _operation_refs(command: dict[str, object], inherited: dict[str, object] | None = None) -> list[dict[str, object]]:
@@ -33,8 +34,66 @@ def _operation_refs(command: dict[str, object], inherited: dict[str, object] | N
     return refs
 
 
+def _operation_primitives_manifest(*, repo_root: Path) -> dict[str, object]:
+    return json.loads((repo_root / OPERATION_PRIMITIVES_PATH).read_text(encoding="utf-8"))
+
+
+def _primitive_target_support(
+    primitive_id: str,
+    primitive: dict[str, object],
+    primitives_manifest: dict[str, object],
+) -> tuple[dict[str, str], dict[str, str]]:
+    if primitive_id == "typescript.domain.execute":
+        return (
+            {"python": "unsupported", "typescript": "host-implemented"},
+            {"python": "TypeScript domain execution is only available in generated Node runtimes."},
+        )
+    extension = primitives_manifest.get("primitive_extension_boundary", {})
+    matrix = extension.get("target_support_matrix", []) if isinstance(extension, dict) else []
+    support: dict[str, str] = {}
+    unsupported: dict[str, str] = {}
+    portability = str(primitive.get("portability", "domain-runtime"))
+    for item in matrix if isinstance(matrix, list) else []:
+        if not isinstance(item, dict):
+            continue
+        target = str(item.get("target", "")).strip()
+        if target not in {"python", "typescript"}:
+            continue
+        status = str(item.get("status", "unsupported"))
+        implemented = {str(value) for value in item.get("implemented_shared_primitives", []) if isinstance(value, str)}
+        if portability == "target-executor":
+            if primitive_id in implemented:
+                support[target] = "implemented"
+            else:
+                support[target] = "unsupported"
+                unsupported[target] = str(item.get("unsupported_behavior", "Primitive is not implemented by this target."))
+        elif status == "implemented":
+            support[target] = "host-implemented"
+        else:
+            support[target] = "unsupported"
+            unsupported[target] = str(item.get("unsupported_behavior", "Primitive is not implemented by this target."))
+    return support or {"python": "host-implemented", "typescript": "host-implemented"}, unsupported
+
+
+def _merge_effects(current: dict[str, object], incoming: dict[str, object]) -> dict[str, object]:
+    if not current:
+        return dict(incoming)
+    merged = dict(current)
+    for field in ("destructive", "writes_repo_state", "requires_preflight_gate"):
+        merged[field] = bool(merged.get(field)) or bool(incoming.get(field))
+    for field in ("read_only", "idempotent"):
+        merged[field] = bool(merged.get(field, True)) and bool(incoming.get(field, True))
+    return merged
+
+
 def _host_primitive_definitions(manifest: dict[str, object], *, repo_root: Path) -> list[dict[str, object]]:
     builtin_ids = BUILTIN_PORTABLE_PRIMITIVES.ids()
+    primitives_manifest = _operation_primitives_manifest(repo_root=repo_root)
+    primitive_entries = {
+        str(primitive.get("id")): (index, primitive)
+        for index, primitive in enumerate(primitives_manifest.get("primitives", []))
+        if isinstance(primitive, dict) and primitive.get("id")
+    }
     primitive_ids: set[str] = {
         "workspace.config.load",
         "workspace.config.emit",
@@ -43,6 +102,7 @@ def _host_primitive_definitions(manifest: dict[str, object], *, repo_root: Path)
         "output.fields.select",
         "typescript.domain.execute",
     }
+    primitive_usage: dict[str, dict[str, object]] = {}
     for package in manifest.get("packages", []):
         if not isinstance(package, dict):
             continue
@@ -50,6 +110,13 @@ def _host_primitive_definitions(manifest: dict[str, object], *, repo_root: Path)
         for command in package.get("commands", []):
             if not isinstance(command, dict):
                 continue
+            effect_hints = command.get("effect_hints", {})
+            effects = dict(effect_hints) if isinstance(effect_hints, dict) else {}
+            conformance_refs = [
+                str(ref)
+                for ref in command.get("conformance_refs", [])
+                if isinstance(ref, str) and ref.strip()
+            ]
             for operation_ref in _operation_refs(command):
                 operation_path = str(operation_ref.get("path", ""))
                 source = operation_contract_root / operation_path
@@ -59,20 +126,78 @@ def _host_primitive_definitions(manifest: dict[str, object], *, repo_root: Path)
                 steps = operation.get("ir_plan", {}).get("steps", [])
                 if not isinstance(steps, list):
                     continue
-                for step in steps:
+                for step_index, step in enumerate(steps):
                     if isinstance(step, dict):
                         primitive = str(step.get("uses", "")).strip()
                         if primitive and primitive not in builtin_ids:
                             primitive_ids.add(primitive)
-    return [
-        {
-            "id": primitive_id,
-            "kind": "host",
-            "target_support": {"python": "host-implemented", "typescript": "host-implemented"},
-            "owner": "agentic-workspace",
-        }
-        for primitive_id in sorted(primitive_ids)
-    ]
+                            usage = primitive_usage.setdefault(
+                                primitive,
+                                {
+                                    "effects": {},
+                                    "conformance_refs": [],
+                                    "operation_refs": [],
+                                    "input_schema_ref": "",
+                                    "output_schema_ref": "",
+                                },
+                            )
+                            usage["effects"] = _merge_effects(dict(usage.get("effects", {})), effects)
+                            refs = usage.get("conformance_refs", [])
+                            if isinstance(refs, list):
+                                for ref in conformance_refs:
+                                    if ref not in refs:
+                                        refs.append(ref)
+                            operation_refs = usage.get("operation_refs", [])
+                            if isinstance(operation_refs, list):
+                                operation_ref_path = f"{package.get('operation_contract_root')}/{operation_path}"
+                                if operation_ref_path not in operation_refs:
+                                    operation_refs.append(operation_ref_path)
+                            if not usage.get("input_schema_ref"):
+                                usage["input_schema_ref"] = (
+                                    f"{package.get('operation_contract_root')}/{operation_path}#/ir_plan/steps/{step_index}/arguments"
+                                )
+                            if not usage.get("output_schema_ref"):
+                                usage["output_schema_ref"] = (
+                                    f"{package.get('operation_contract_root')}/{operation_path}#/ir_plan/steps/{step_index}/outputs"
+                                )
+    definitions: list[dict[str, object]] = []
+    for primitive_id in sorted(primitive_ids):
+        primitive_index, primitive = primitive_entries.get(primitive_id, (-1, {}))
+        usage = primitive_usage.get(primitive_id, {})
+        support, unsupported = _primitive_target_support(primitive_id, primitive, primitives_manifest)
+        conformance_refs = list(usage.get("conformance_refs", [])) if isinstance(usage.get("conformance_refs"), list) else []
+        primitive_conformance = str(primitive.get("conformance_ref", "")).strip()
+        if primitive_conformance and primitive_conformance not in conformance_refs:
+            conformance_refs.append(primitive_conformance)
+        primitive_schema_ref = (
+            f"{OPERATION_PRIMITIVES_PATH}#/primitives/{primitive_index}" if primitive_index >= 0 else OPERATION_PRIMITIVES_PATH
+        )
+        input_schema_ref = str(usage.get("input_schema_ref") or f"{primitive_schema_ref}/input_schema")
+        output_schema_ref = str(usage.get("output_schema_ref") or f"{primitive_schema_ref}/output_schema")
+        definitions.append(
+            {
+                "id": primitive_id,
+                "kind": str(primitive.get("portability") or primitive.get("kind") or "host"),
+                "description": str(primitive.get("summary") or f"{primitive_id} host primitive"),
+                "input_schema": {"$ref": input_schema_ref},
+                "input_schema_ref": input_schema_ref,
+                "output_schema": {"$ref": output_schema_ref},
+                "output_schema_ref": output_schema_ref,
+                "effects": usage.get("effects", {}),
+                "target_support": support,
+                "unsupported_targets": unsupported,
+                "unsupported_behavior": str(
+                    primitive.get("unsupported_behavior")
+                    or primitives_manifest.get("primitive_extension_boundary", {}).get(
+                        "target_support_rule",
+                        "Unsupported primitive ids fail instead of falling back silently.",
+                    )
+                ),
+                "owner": str(primitive.get("tier_owner") or "agentic-workspace"),
+                "conformance_refs": conformance_refs,
+            }
+        )
+    return definitions
 
 
 def workspace_command_generation_host_manifest(*, repo_root: Path = REPO_ROOT) -> CommandGenerationHostManifest:
@@ -87,6 +212,7 @@ def workspace_command_generation_host_manifest(*, repo_root: Path = REPO_ROOT) -
         },
         primitive_registry=PrimitiveRegistry.from_definitions(_host_primitive_definitions(manifest, repo_root=repo_root)),
         typescript_runtime_support_path=repo_root / TYPESCRIPT_RUNTIME_SUPPORT_PATH,
+        operation_schema_version="agentic-workspace/operation/v1",
     )
 
 

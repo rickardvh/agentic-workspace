@@ -43,18 +43,14 @@
     "steps": [
       {
         "arguments": {
-          "function": "promotion_report",
-          "import_module": "repo_memory_bootstrap.installer",
-          "kwargs": {
-            "mode": {
-              "value": "mode"
-            },
-            "notes": {
-              "value": "notes"
-            },
-            "target": {
-              "value": "target"
-            }
+          "mode": {
+            "value": "mode"
+          },
+          "notes": {
+            "value": "notes"
+          },
+          "target": {
+            "value": "target"
           }
         },
         "description": "Load the memory promotion report domain payload for the requested target and filters.",
@@ -63,7 +59,7 @@
         "outputs": [
           "result"
         ],
-        "uses": "python.function.call"
+        "uses": "memory.promotion_report.load"
       },
       {
         "arguments": {},
@@ -100,9 +96,9 @@
   "schema_version": "agentic-workspace/operation/v1",
   "steps": [
     {
-      "description": "Load the memory package promotion report through a checked-in package runtime function.",
+      "description": "Load the Memory package promotion report through a named domain primitive.",
       "id": "load_promotion_report",
-      "uses": "python.function.call"
+      "uses": "memory.promotion_report.load"
     },
     {
       "description": "Emit promotion report in the requested format.",

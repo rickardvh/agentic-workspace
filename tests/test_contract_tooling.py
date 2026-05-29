@@ -678,7 +678,7 @@ def test_command_package_ir_reuses_generated_adapter_truth() -> None:
     assert "parser library" in defaults_command["projection_boundary"]["target_specific"]
 
 
-def test_command_package_ir_rejects_generated_direct_function_call_handlers() -> None:
+def test_command_package_ir_rejects_undeclared_function_call_handlers() -> None:
     script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
     spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)
     assert spec is not None and spec.loader is not None
@@ -698,7 +698,26 @@ def test_command_package_ir_rejects_generated_direct_function_call_handlers() ->
 
     errors = module._validate_command_package_ir(manifest)
 
-    assert any("declare python.function.call in operation IR instead" in error for error in errors)
+    assert any("declared domain-runtime primitive" in error for error in errors)
+
+
+def test_command_package_ir_allows_named_domain_function_call_handlers() -> None:
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_contract_tooling_surfaces.py"
+    spec = importlib.util.spec_from_file_location("check_contract_tooling_surfaces", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    manifest = copy.deepcopy(contract_tooling.command_package_ir_manifest())
+    memory_package = next(package for package in manifest["packages"] if package["id"] == "memory-bootstrap")
+    handlers = memory_package["python_runtime_binding"]["operation_executor"]["handlers"]
+    promotion_handler = next(handler for handler in handlers if handler["primitive"] == "memory.promotion_report.load")
+
+    assert promotion_handler["handler"] == "function_call"
+    assert not [
+        error
+        for error in module._validate_command_package_ir(manifest)
+        if "memory.promotion_report.load" in error and "function_call" in error
+    ]
 
 
 def test_python_contract_consumption_declares_validated_loader_bindings() -> None:
@@ -1116,6 +1135,19 @@ def test_workspace_command_generation_integration_owns_repo_paths() -> None:
     assert module.SCHEMA_PATH == "command_generation:schemas/command_package_ir.schema.json"
     manifest = module.load_workspace_command_package_ir()
     assert manifest["schema_version"] == "agentic-workspace/command-package-ir/v1"
+    host_manifest = module.workspace_command_generation_host_manifest()
+    assert host_manifest.primitive_registry is not None
+    promotion = host_manifest.primitive_registry.require_declared("memory.promotion_report.load")
+    assert promotion.input_schema_ref.endswith("#/ir_plan/steps/0/arguments")
+    assert promotion.output_schema_ref.endswith("#/ir_plan/steps/0/outputs")
+    assert promotion.effects["read_only"] is True
+    assert promotion.target_support["python"] == "host-implemented"
+    assert promotion.target_support["typescript"] == "host-implemented"
+    assert "memory.promotion-report.process" in promotion.conformance_refs
+    domain_execute = host_manifest.primitive_registry.require_declared("typescript.domain.execute")
+    assert domain_execute.target_support["python"] == "unsupported"
+    assert domain_execute.target_support["typescript"] == "host-implemented"
+    assert "TypeScript domain execution" in domain_execute.unsupported_targets["python"]
 
 
 def test_generate_command_packages_wrapper_uses_workspace_consumer_integration() -> None:

@@ -30,7 +30,7 @@ for SOURCE_ROOT in (
         sys.path.insert(0, str(SOURCE_ROOT))
 
 import command_generation  # noqa: E402
-from command_generation import command_package_schema_path  # noqa: E402
+from command_generation import CommandGenerationHostManifest, PrimitiveRegistry, command_package_schema_path, render_outputs  # noqa: E402
 from command_generation.generated_package_loader import (  # noqa: E402
     load_generated_command_module_for_entrypoint,
     load_generated_command_package_for_entrypoint,
@@ -403,7 +403,6 @@ def _conformance_env(*, runtime: str | None = None) -> dict[str, str]:
         str(REPO_ROOT / "packages" / "planning" / "src"),
         str(REPO_ROOT / "packages" / "memory" / "src"),
         str(REPO_ROOT / "packages" / "verification" / "src"),
-        str(REPO_ROOT / "internal" / "command-generation" / "src"),
     ]
     existing_pythonpath = env.get("PYTHONPATH")
     if existing_pythonpath:
@@ -1673,6 +1672,16 @@ def _validate_python_completion_accepted_runtime_boundaries(*, require_exact: bo
             facade_keys = {key for key in expected_keys if key[0] == "runtime-facade-call" and key[1] == facade_path}
             if facade_keys and facade_keys <= accepted_keys:
                 accepted_nonblocking_paths.add(facade_path)
+        operation_executor_by_operation_prefix = {
+            "generated/workspace/python/operations/": "generated/workspace/python/primitives/operation_executor.py",
+            "generated/planning/python/operations/": "generated/planning/python/primitives/operation_executor.py",
+            "generated/memory/python/operations/": "generated/memory/python/primitives/operation_executor.py",
+            "generated/verification/python/operations/": "generated/verification/python/primitives/operation_executor.py",
+        }
+        for prefix, executor_path in operation_executor_by_operation_prefix.items():
+            operation_keys = {key for key in expected_keys if key[0] == "operation-function-call" and key[1].startswith(prefix)}
+            if operation_keys and operation_keys <= accepted_keys:
+                accepted_nonblocking_paths.add(executor_path)
         for source_path, keys in source_path_keys.items():
             if keys and keys <= accepted_keys:
                 accepted_nonblocking_paths.add(source_path)
@@ -2601,8 +2610,17 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
     for portable_operation_id in ("memory.list-files.report", "memory.list-skills.report"):
         if portable_operation_id not in memory_operation_executor_text:
             errors.append(f"{portable_operation_id} must be supported by memory run_operation_ir")
-    if "_handle_memory_promotion_report_load" in memory_operation_executor_text:
-        errors.append("memory promotion-report must execute through declared memory.promotion_report.load, not a runtime facade handler")
+    promotion_operation = REPO_ROOT / "generated" / "memory" / "python" / "operations" / "memory.promotion-report.report.json"
+    if promotion_operation.is_file():
+        promotion_text = promotion_operation.read_text(encoding="utf-8")
+        if '"uses": "memory.promotion_report.load"' not in promotion_text:
+            errors.append("generated memory promotion-report operation must execute through declared memory.promotion_report.load")
+        if '"uses": "python.function.call"' in promotion_text:
+            errors.append("generated memory promotion-report operation must not expose python.function.call in operation IR")
+    else:
+        errors.append("generated memory promotion-report operation is missing")
+    if "_handle_memory_promotion_report_load" not in memory_operation_executor_text:
+        errors.append("memory operation IR executor must render the declared memory.promotion_report.load host-domain handler")
     if "_assemble_memory_operation_payload" in memory_operation_executor_text:
         errors.append("memory operation IR executor must not keep the dead payload.assemble runtime bridge for direct commands")
     for marker in (
@@ -3028,6 +3046,194 @@ def _validate_command_generation_extraction_readiness(ir: dict[str, object]) -> 
     return errors
 
 
+def _validate_command_generation_non_aw_fixture() -> list[str]:
+    errors: list[str] = []
+    with tempfile.TemporaryDirectory(prefix="command-generation-non-aw-fixture-") as tmp:
+        root = Path(tmp)
+        (root / "contracts" / "operations").mkdir(parents=True)
+        (root / "payload").mkdir()
+        (root / "payload" / "todos.json").write_text(
+            json.dumps([{"title": "Write proof"}, {"title": "Run proof"}]),
+            encoding="utf-8",
+        )
+        operation = {
+            "schema_version": "fixture-operation/v1",
+            "id": "todo.list.report",
+            "migration_status": "runtime-consumed",
+            "ir_plan": {
+                "status": "complete",
+                "steps": [
+                    {
+                        "id": "read_todos",
+                        "uses": "filesystem.read",
+                        "arguments": {"root": "todo.payload", "path": "todos.json"},
+                        "outputs": ["todo_text"],
+                    },
+                    {"id": "parse_todos", "uses": "json.parse", "arguments": {"source": "todo_text"}, "outputs": ["todos"]},
+                    {
+                        "id": "assemble",
+                        "uses": "payload.assemble",
+                        "arguments": {
+                            "fields": {
+                                "template": {
+                                    "kind": "todo-list/v1",
+                                    "item_count": {"$count": "todos"},
+                                    "items": {"$value": "todos"},
+                                }
+                            }
+                        },
+                        "outputs": ["result"],
+                    },
+                    {"id": "emit", "uses": "output.emit", "outputs": ["emitted"]},
+                ],
+            },
+        }
+        (root / "contracts" / "operations" / "todo.list.report.json").write_text(json.dumps(operation), encoding="utf-8")
+        manifest = {
+            "schema_version": "agentic-workspace/command-package-ir/v1",
+            "summary": "Non-AW fixture command package.",
+            "schema": "schemas/command_package_ir.schema.json",
+            "source_contracts": ["contracts/operations/todo.list.report.json"],
+            "generation_policy": {
+                "non_python_runtime_binding": {"selected_model": "native runtime"},
+                "generated_package_maturity": {
+                    "levels": [
+                        {
+                            "id": "weak-agent-safe-adapter",
+                            "summary": "Runnable fixture.",
+                            "runnable": True,
+                            "runtime_backed": True,
+                            "weak_agent_routing": "allowed-read-only",
+                            "promotion_requires": ["fixture proof"],
+                        }
+                    ]
+                },
+            },
+            "packages": [
+                {
+                    "id": "todo-fixture",
+                    "program": "todoctl",
+                    "package_role": "fixture-cli",
+                    "operation_contract_root": "contracts",
+                    "version_metadata": {"source": "python-package-metadata", "distribution": "todo-fixture", "fallback_version": "0.0.0"},
+                    "targets": [
+                        {
+                            "kind": "python",
+                            "package_name": "todo-fixture",
+                            "generated_root": "todo_cli_pkg",
+                            "entrypoints": ["todoctl"],
+                            "test_environment": "python-dev",
+                            "maturity_level_ref": "weak-agent-safe-adapter",
+                        }
+                    ],
+                    "commands": [
+                        {
+                            "adapter_id": "todo.list.cli",
+                            "status": "generated",
+                            "command": {"name": "list"},
+                            "interface": {
+                                "name": "list",
+                                "help": "List todos.",
+                                "options": [
+                                    {
+                                        "name": "format",
+                                        "flags": ["--format"],
+                                        "choices": ["text", "json"],
+                                        "default": "json",
+                                        "help": "Output format.",
+                                    }
+                                ],
+                            },
+                            "operation_ref": {"id": "todo.list.report", "path": "operations/todo.list.report.json"},
+                            "runtime_binding": {
+                                "kind": "operation-primitive-sequence",
+                                "primitive_refs": ["filesystem.read", "json.parse", "payload.assemble", "output.emit"],
+                            },
+                            "schemas": {"input": [], "output": []},
+                            "effect_hints": {
+                                "read_only": True,
+                                "destructive": False,
+                                "idempotent": True,
+                                "writes_repo_state": False,
+                                "requires_preflight_gate": False,
+                            },
+                            "conformance_refs": ["todo.list.process"],
+                            "projection_boundary": {
+                                "universal": ["command identity"],
+                                "target_specific": ["parser wiring"],
+                                "runtime_owned": ["portable primitive execution"],
+                            },
+                        }
+                    ],
+                    "python_runtime_binding": {
+                        "entrypoint": "todoctl",
+                        "default_runtime_command": "python -m todo_cli_pkg.cli",
+                        "runtime_module_file": "cli",
+                        "render_runtime_module": True,
+                        "resource_copies": [{"source_root": "payload", "generated_root": "_payload", "required_marker": "todos.json"}],
+                        "operation_executor": {
+                            "module_file": "primitives.operation_executor",
+                            "supported_operation_ids": ["todo.list.report"],
+                            "initial_values": [{"name": "format", "arg": "format", "default": "json"}],
+                            "context_roots": [{"name": "todo.payload", "generated_root": "_payload", "required_marker": "todos.json"}],
+                            "handlers": [],
+                        },
+                        "runtime_module_handlers": [],
+                        "local_runtime_bindings": [],
+                    },
+                }
+            ],
+        }
+        try:
+            outputs = render_outputs(
+                manifest,
+                repo_root=root,
+                source_path="fixture-command-package-ir.json",
+                regenerate_command="fixture generate",
+                host_manifest=CommandGenerationHostManifest(primitive_registry=PrimitiveRegistry.from_definitions([])),
+            )
+        except Exception as exc:  # noqa: BLE001
+            return [f"command-generation non-AW fixture did not render: {exc}"]
+        for output in outputs:
+            output.path.parent.mkdir(parents=True, exist_ok=True)
+            output.path.write_text(output.content, encoding="utf-8")
+        generated_text = "\n".join(
+            output.content
+            for output in outputs
+            if output.path.suffix == ".py" and output.path.name != "primitive_executor.py"
+        )
+        forbidden = sorted(token for token in COMMAND_GENERATION_PRODUCT_LITERAL_TOKENS if token in generated_text)
+        if forbidden:
+            errors.append(f"command-generation non-AW fixture rendered product literals: {forbidden!r}")
+        result = subprocess.run(
+            [
+                _python_executable(),
+                "-c",
+                (
+                    "import json, sys; sys.path.insert(0, sys.argv[1]); "
+                    "from todo_cli_pkg.cli import main; "
+                    "raise SystemExit(main(['list', '--format', 'json']))"
+                ),
+                str(root),
+            ],
+            cwd=root,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            errors.append(f"command-generation non-AW fixture command failed: {result.stderr.strip()}")
+        else:
+            try:
+                payload = json.loads(result.stdout)
+            except json.JSONDecodeError as exc:
+                errors.append(f"command-generation non-AW fixture did not emit JSON: {exc}: {result.stdout!r}")
+            else:
+                if payload.get("item_count") != 2:
+                    errors.append(f"command-generation non-AW fixture emitted wrong item_count: {payload!r}")
+    return errors
+
+
 def _run_adapter_conformance(*, require_node: bool) -> list[str]:
     errors: list[str] = []
     node = shutil.which("node")
@@ -3220,6 +3426,7 @@ def _validate_static_surfaces() -> list[str]:
         errors.append(f"command-package IR validation failed: {exc}")
     else:
         errors.extend(_validate_command_generation_extraction_readiness(ir))
+        errors.extend(_validate_command_generation_non_aw_fixture())
         errors.extend(_validate_generated_operation_cli_inputs(ir))
         maturity_policy = ir.get("generation_policy", {}).get("generated_package_maturity", {})
         level_ids = {level.get("id") for level in maturity_policy.get("levels", []) if isinstance(level, dict)}

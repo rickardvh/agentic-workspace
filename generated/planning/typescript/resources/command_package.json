@@ -2494,8 +2494,11 @@
       {
         "generated_function_overrides": [
           {
+            "delegation_outcomes_kind": "agentic-workspace/delegation-outcomes/v1",
             "function": "emit_planning_operation_output",
-            "implementation": "json_output_with_source_fallback"
+            "implementation": "json_output_with_source_fallback",
+            "sectioned_payload_kind": "agentic-workspace/defaults-router/v1",
+            "selected_output_kind": "agentic-workspace/selected-output/v1"
           }
         ],
         "module_file": "primitives.planning_runtime",

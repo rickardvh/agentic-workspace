@@ -262,14 +262,8 @@ def test_python_completion_blocker_report_accepts_exact_symbol_runtime_boundarie
     assert runtime_metrics["status"] == "available"
     assert runtime_metrics["accepted_runtime_symbol_count"] == sum(runtime_metrics["accepted_runtime_symbol_count_by_package"].values())
     assert runtime_metrics["accepted_runtime_symbol_count"] == sum(runtime_metrics["accepted_runtime_symbol_count_by_class"].values())
-    assert runtime_metrics["python_bridge_step_count"] == 2
+    assert runtime_metrics["python_bridge_step_count"] == 1
     assert runtime_metrics["python_bridge_symbols"] == [
-        {
-            "operation_id": "memory.promotion-report.report",
-            "runtime_boundary_class": "package-specific-judgment",
-            "source_module": "repo_memory_bootstrap.installer",
-            "source_symbol": "promotion_report",
-        },
         {
             "operation_id": "verification.report.report",
             "runtime_boundary_class": "package-specific-judgment",
@@ -356,14 +350,8 @@ def test_python_completion_blocker_report_has_json_cli_mode(capsys) -> None:
     runtime_metrics = payload["accepted_runtime_boundary_metrics"]
     assert runtime_metrics["accepted_runtime_symbol_count_by_package"]
     assert runtime_metrics["output_fallback_symbol_count"] == runtime_metrics["accepted_output_emission_symbol_count"]
-    assert runtime_metrics["python_bridge_step_count"] == 2
+    assert runtime_metrics["python_bridge_step_count"] == 1
     assert runtime_metrics["python_bridge_symbols"] == [
-        {
-            "operation_id": "memory.promotion-report.report",
-            "runtime_boundary_class": "package-specific-judgment",
-            "source_module": "repo_memory_bootstrap.installer",
-            "source_symbol": "promotion_report",
-        },
         {
             "operation_id": "verification.report.report",
             "runtime_boundary_class": "package-specific-judgment",

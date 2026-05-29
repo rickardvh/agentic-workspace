@@ -24,16 +24,6 @@
       "rule": "Reusable command-generation source must not import Agentic Workspace product modules. Product-specific literals in command-generation source require explicit accepted-coupling inventory with owner, reason, and migration path.",
       "accepted_couplings": [
         {
-          "id": "generated-package-resource-projections",
-          "kind": "temporary-generated-resource-projection",
-          "paths": [
-            "command_generation/generator.py"
-          ],
-          "owner": "#1100 / #892 tier-7-command-generation-extraction-readiness",
-          "reason": "The generator still renders a small set of generated package-resource command projections and product-shaped output helpers while the operation IR primitives are being normalized.",
-          "migration_path": "Move remaining projection facts into operation contracts, command package IR, or target-local generated resources, then render them through generic command-generation primitives without package-name branches."
-        },
-        {
           "id": "generic-output-compatibility-renderers",
           "kind": "accepted-output-compatibility-boundary",
           "paths": [
@@ -635,11 +625,20 @@
                   "workflow_sufficiency",
                   "authority_hierarchy",
                   "compliance_economics"
-                ]
+                ],
+                "selected_output_kind": "agentic-workspace/selected-output/v1",
+                "sectioned_payload_kind": "agentic-workspace/defaults-router/v1",
+                "compact_profile_ref": ".agentic-workspace/docs/compact-contract-profile.md",
+                "section_command_ref": "agentic-workspace defaults --format json",
+                "section_detail_command": "agentic-workspace defaults --section <section> --format json",
+                "full_detail_command": "agentic-workspace defaults --verbose --format json"
               },
               {
                 "function": "_emit_workspace_operation_output",
-                "implementation": "json_output_with_source_fallback"
+                "implementation": "json_output_with_source_fallback",
+                "selected_output_kind": "agentic-workspace/selected-output/v1",
+                "sectioned_payload_kind": "agentic-workspace/defaults-router/v1",
+                "delegation_outcomes_kind": "agentic-workspace/delegation-outcomes/v1"
               }
             ]
           }
@@ -5069,7 +5068,10 @@
             "generated_function_overrides": [
               {
                 "function": "emit_planning_operation_output",
-                "implementation": "json_output_with_source_fallback"
+                "implementation": "json_output_with_source_fallback",
+                "selected_output_kind": "agentic-workspace/selected-output/v1",
+                "sectioned_payload_kind": "agentic-workspace/defaults-router/v1",
+                "delegation_outcomes_kind": "agentic-workspace/delegation-outcomes/v1"
               }
             ]
           }
@@ -8076,7 +8078,10 @@
             "generated_function_overrides": [
               {
                 "function": "_emit_memory_operation_output",
-                "implementation": "json_output_with_source_fallback"
+                "implementation": "json_output_with_source_fallback",
+                "selected_output_kind": "agentic-workspace/selected-output/v1",
+                "sectioned_payload_kind": "agentic-workspace/defaults-router/v1",
+                "delegation_outcomes_kind": "agentic-workspace/delegation-outcomes/v1"
               }
             ]
           }
@@ -8345,6 +8350,23 @@
               "handler": "runtime_handler",
               "function": "_load_memory_prompt",
               "import_module": "repo_memory_bootstrap.runtime_primitives"
+            },
+            {
+              "primitive": "memory.promotion_report.load",
+              "handler": "function_call",
+              "import_module": "repo_memory_bootstrap.installer",
+              "function": "promotion_report",
+              "kwargs": {
+                "target": {
+                  "value": "target"
+                },
+                "notes": {
+                  "value": "notes"
+                },
+                "mode": {
+                  "value": "mode"
+                }
+              }
             },
             {
               "primitive": "memory.report.load",
@@ -10776,7 +10798,7 @@
           "runtime_binding": {
             "kind": "operation-primitive-sequence",
             "primitive_refs": [
-              "python.function.call",
+              "memory.promotion_report.load",
               "output.emit"
             ]
           },

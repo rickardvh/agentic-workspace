@@ -811,7 +811,12 @@ def _validate_command_package_ir(payload: dict[str, object]) -> list[str]:
     adapters = {adapter["id"]: adapter for adapter in command_adapter_generation_manifest()["adapters"]}
     operations = {operation["id"]: operation for operation in operation_contracts_manifest()["operations"]}
     conformance_refs = {contract["id"] for contract in conformance_contracts_manifest()["contracts"]}
-    primitive_refs = {primitive["id"] for primitive in operation_primitives_manifest()["primitives"]}
+    primitive_entries = {
+        str(primitive["id"]): primitive
+        for primitive in operation_primitives_manifest()["primitives"]
+        if isinstance(primitive, dict) and primitive.get("id")
+    }
+    primitive_refs = set(primitive_entries)
     packages = payload.get("packages", [])
     if not isinstance(packages, list):
         return ["command_package_ir.json packages must be a list"]
@@ -837,15 +842,38 @@ def _validate_command_package_ir(payload: dict[str, object]) -> list[str]:
             if isinstance(operation_executor, dict):
                 handlers = operation_executor.get("handlers", [])
                 if isinstance(handlers, list):
+                    package_runtime_primitives = {
+                        str(ref)
+                        for command in commands
+                        if isinstance(command, dict) and isinstance(command.get("runtime_binding"), dict)
+                        for ref in command["runtime_binding"].get("primitive_refs", [])
+                    }
                     for handler in handlers:
                         if not isinstance(handler, dict):
                             continue
                         if handler.get("handler") == "function_call":
                             primitive = str(handler.get("primitive", ""))
-                            errors.append(
-                                f"command_package_ir package {program} primitive {primitive} uses direct function_call; "
-                                "declare python.function.call in operation IR instead"
-                            )
+                            primitive_entry = primitive_entries.get(primitive, {})
+                            if primitive not in primitive_entries:
+                                errors.append(
+                                    f"command_package_ir package {program} primitive {primitive} uses function_call without "
+                                    "a declared domain-runtime primitive"
+                                )
+                            if primitive == "python.function.call" or primitive_entry.get("portability") == "target-executor":
+                                errors.append(
+                                    f"command_package_ir package {program} primitive {primitive} uses direct function_call; "
+                                    "declare a named domain-runtime primitive in operation IR instead"
+                                )
+                            if primitive not in package_runtime_primitives:
+                                errors.append(
+                                    f"command_package_ir package {program} primitive {primitive} has a function_call handler "
+                                    "but no generated command references that primitive"
+                                )
+                            if primitive_entry.get("taxonomy_tier") == "tier-1-portable-codegen":
+                                errors.append(
+                                    f"command_package_ir package {program} primitive {primitive} cannot use function_call for "
+                                    "tier-1 portable codegen behavior"
+                                )
         for command in commands:
             if not isinstance(command, dict):
                 errors.append(f"command_package_ir package {program} command entry must be an object")

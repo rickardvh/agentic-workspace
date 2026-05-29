@@ -569,6 +569,32 @@
                           "type": "string",
                           "minLength": 1
                         },
+                        "selected_output_kind": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "sectioned_payload_kind": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "compact_profile_ref": {
+                          "type": "string"
+                        },
+                        "section_command_ref": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "section_detail_command": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "full_detail_command": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "delegation_outcomes_kind": {
+                          "type": "string"
+                        },
                         "common_sections": {
                           "type": "array",
                           "items": {

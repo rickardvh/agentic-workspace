@@ -55,8 +55,8 @@
   "steps": [
     {
       "id": "load_promotion_report",
-      "uses": "python.function.call",
-      "description": "Load the memory package promotion report through a checked-in package runtime function."
+      "uses": "memory.promotion_report.load",
+      "description": "Load the Memory package promotion report through a named domain primitive."
     },
     {
       "id": "emit_output",
@@ -78,21 +78,17 @@
     "steps": [
       {
         "id": "load_report",
-        "uses": "python.function.call",
+        "uses": "memory.promotion_report.load",
         "description": "Load the memory promotion report domain payload for the requested target and filters.",
         "arguments": {
-          "import_module": "repo_memory_bootstrap.installer",
-          "function": "promotion_report",
-          "kwargs": {
-            "target": {
-              "value": "target"
-            },
-            "notes": {
-              "value": "notes"
-            },
-            "mode": {
-              "value": "mode"
-            }
+          "target": {
+            "value": "target"
+          },
+          "notes": {
+            "value": "notes"
+          },
+          "mode": {
+            "value": "mode"
           }
         },
         "outputs": [
