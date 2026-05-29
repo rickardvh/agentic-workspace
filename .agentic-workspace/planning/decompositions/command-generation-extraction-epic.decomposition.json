@@ -1,0 +1,168 @@
+{
+  "kind": "planning-decomposition/v1",
+  "title": "Command-generation extraction epic decomposition",
+  "status": "partially-promoted",
+  "larger_intended_outcome": "Extract command-generation from Agentic Workspace as an independently installable maintainer/source-checkout package while AW remains the host for command meaning, generated outputs, domain primitives, runtime-boundary policy, and packaging proof.",
+  "non_goals": [
+    "Do not close GitHub #1201 from a partial slice or planning artifact alone.",
+    "Do not make command-generation a shipped AW runtime dependency.",
+    "Do not turn the package into a broad general-purpose CLI framework.",
+    "Do not move AW command contracts, generated outputs, or domain primitive meaning into command-generation."
+  ],
+  "candidate_lanes": [
+    {
+      "id": "github-1201-command-generation-extraction",
+      "title": "#1201 Extract command-generation as an independent maintainer dependency",
+      "readiness": "promoted",
+      "outcome": "Coordinate the full extraction epic, enforce runtime dependency boundaries, and close only after all child lanes have proof.",
+      "owner_surface": ".agentic-workspace/planning/execplans/command-generation-extraction-epic.plan.json",
+      "proof": "All child lane proofs pass; AW runtime packaging excludes command-generation; PR closeout maps every #1201 acceptance criterion.",
+      "depends_on": [],
+      "parallel_with": []
+    },
+    {
+      "id": "github-1202-public-api-host-manifest",
+      "title": "#1202 Define command-generation public API and host manifest",
+      "readiness": "promoted",
+      "outcome": "AW consumes command-generation through a small public API and host manifest rather than renderer internals.",
+      "owner_surface": ".agentic-workspace/planning/execplans/command-generation-public-api-host-manifest.plan.json",
+      "proof": "Public API tests pass and AW generation uses public command_generation APIs only.",
+      "depends_on": [
+        "github-1201-command-generation-extraction"
+      ],
+      "parallel_with": []
+    },
+    {
+      "id": "github-1203-schema-ownership",
+      "title": "#1203 Move generic codegen schemas toward package ownership",
+      "readiness": "promoted",
+      "outcome": "Generic command package schemas have command-generation-owned paths and explicit AW resolution or mirror checks.",
+      "owner_surface": ".agentic-workspace/planning/execplans/command-generation-schema-ownership.plan.json",
+      "proof": "Package schema tests and AW generated package checks load package-owned schemas without AW contract-tool imports.",
+      "depends_on": [
+        "github-1202-public-api-host-manifest"
+      ],
+      "parallel_with": [
+        "github-1204-primitive-registry"
+      ]
+    },
+    {
+      "id": "github-1204-primitive-registry",
+      "title": "#1204 Add custom primitive registry and target support contract",
+      "readiness": "promoted",
+      "outcome": "Host/domain primitives are schema-backed, registry-validated, target-supported, or explicitly unsupported.",
+      "owner_surface": ".agentic-workspace/planning/execplans/command-generation-primitive-registry.plan.json",
+      "proof": "Primitive conformance covers registered, supported, unsupported, and unregistered cases.",
+      "depends_on": [
+        "github-1202-public-api-host-manifest",
+        "github-1203-schema-ownership"
+      ],
+      "parallel_with": [
+        "github-1203-schema-ownership"
+      ]
+    },
+    {
+      "id": "github-1205-renderer-decoupling",
+      "title": "#1205 Remove AW-specific branches from command-generation renderers",
+      "readiness": "promoted",
+      "outcome": "Generic renderers no longer hardcode AW package ids, command ids, payload lists, or resource conventions.",
+      "owner_surface": ".agentic-workspace/planning/execplans/command-generation-renderer-decoupling.plan.json",
+      "proof": "Static coupling checks plus generated AW freshness/conformance pass after at least one AW-specific branch is removed or converted to data/IR.",
+      "depends_on": [
+        "github-1202-public-api-host-manifest",
+        "github-1204-primitive-registry"
+      ],
+      "parallel_with": [
+        "github-1206-non-aw-fixture"
+      ]
+    },
+    {
+      "id": "github-1206-non-aw-fixture",
+      "title": "#1206 Add non-AW command-generation fixture package",
+      "readiness": "promoted",
+      "outcome": "A small non-AW fixture renders and runs through command-generation public APIs without AW imports, paths, or command names.",
+      "owner_surface": ".agentic-workspace/planning/execplans/command-generation-non-aw-fixture.plan.json",
+      "proof": "Command-generation tests render the fixture, execute a portable operation, and cover a custom primitive supported or unsupported case.",
+      "depends_on": [
+        "github-1202-public-api-host-manifest",
+        "github-1204-primitive-registry"
+      ],
+      "parallel_with": [
+        "github-1205-renderer-decoupling"
+      ]
+    },
+    {
+      "id": "github-1207-aw-api-consumption",
+      "title": "#1207 Convert AW generation and checks to command-generation package APIs",
+      "readiness": "promoted",
+      "outcome": "AW scripts are host wrappers around command_generation APIs, with only AW-specific policy remaining in AW.",
+      "owner_surface": ".agentic-workspace/planning/execplans/command-generation-aw-api-consumption.plan.json",
+      "proof": "AW generation/check wrappers use package APIs, guard tests reject internal imports, and generated-output freshness passes.",
+      "depends_on": [
+        "github-1202-public-api-host-manifest",
+        "github-1205-renderer-decoupling",
+        "github-1206-non-aw-fixture"
+      ],
+      "parallel_with": []
+    },
+    {
+      "id": "github-1208-external-dependency-adoption",
+      "title": "#1208 Prepare external command-generation dependency adoption",
+      "readiness": "promoted",
+      "outcome": "AW uses command-generation as an external maintainer dependency while installed AW runtime remains independent of it.",
+      "owner_surface": ".agentic-workspace/planning/execplans/command-generation-external-dependency-adoption.plan.json",
+      "proof": "AW generation/checks work from the git dependency, AW runtime package metadata excludes command-generation, and both repos pass their tests.",
+      "depends_on": [
+        "github-1207-aw-api-consumption",
+        "github-1206-non-aw-fixture",
+        "github-1205-renderer-decoupling"
+      ],
+      "parallel_with": []
+    }
+  ],
+  "dependency_assumptions": [
+    "#1202 is the first implementation seam; later lanes should not bypass the public API/manifest boundary.",
+    "#1203 and #1204 can be shaped together, but custom primitives need a stable manifest/API surface.",
+    "#1205 and #1206 can proceed in parallel once API and primitive registry boundaries are stable.",
+    "#1208 is last because adopting the external dependency before fixture and AW wrapper proof would lock in hidden coupling."
+  ],
+  "parallelization_assumptions": [
+    "Schema ownership and primitive registry work can be reviewed independently if both consume the same host manifest contract.",
+    "Renderer decoupling and non-AW fixture work can proceed in parallel after public API and registry contracts are ready.",
+    "External dependency adoption should remain serial and final."
+  ],
+  "proof_expectations": [
+    "Each lane must run the narrow package tests relevant to its owner surface and the AW generated package freshness/conformance checks when AW outputs are affected.",
+    "Closeout for #1201 requires a parent acceptance map across #1202-#1208, not just a merged extraction PR.",
+    "Any dogfooding improvement discovered during execution must be fixed immediately if it blocks this epic or filed as a follow-up issue otherwise.",
+    "Runtime package proof must continue to show command-generation is absent from AW shipped dependencies."
+  ],
+  "promotion_rule": "All eight GitHub lanes are promoted into execplans. Execute only dependency-ready lanes, keep validation local to each lane, and do not close the parent until all child completion criteria and runtime dependency proof are satisfied.",
+  "references": [
+    {
+      "kind": "issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1201",
+      "label": "GitHub #1201",
+      "role": "parent"
+    },
+    {
+      "kind": "pull-request",
+      "target": "https://github.com/rickardvh/agentic-workspace/pull/1210",
+      "label": "GitHub PR #1210",
+      "role": "current extraction PR"
+    },
+    {
+      "kind": "repository",
+      "target": "../command-generation",
+      "label": "command-generation sibling repo",
+      "role": "external package checkout"
+    },
+    {
+      "kind": "issue",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/1215",
+      "label": "GitHub #1215",
+      "role": "dogfooding follow-up"
+    }
+  ],
+  "notes": "Created after dogfooding showed the eight ingested GitHub candidates had been implemented against directly without first promoting them into durable decomposition and execplan surfaces. Follow-up guardrail filed as GitHub #1215."
+}
