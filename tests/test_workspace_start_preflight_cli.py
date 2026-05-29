@@ -1570,7 +1570,7 @@ def test_start_decomposition_only_delegation_requires_lane_promotion_before_hand
     assert "Select or promote" in decision["delegation_next_step"]["precondition"]
 
 
-def test_start_exposes_decomposition_without_prompt_text_blocking(tmp_path: Path, capsys) -> None:
+def test_start_blocks_broad_work_when_decomposition_lane_needs_promotion(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(
         tmp_path / ".agentic-workspace" / "planning" / "decompositions" / "dogfood.decomposition.json",
@@ -1620,11 +1620,98 @@ def test_start_exposes_decomposition_without_prompt_text_blocking(tmp_path: Path
     )
 
     payload = json.loads(capsys.readouterr().out)
-    assert "planning_safety_gate" not in _start_context(payload).get("planning", {})
-    assert _start_workflow_sufficiency(payload)["decision"] == "enough-for-first-contact-routing"
-    assert _start_primary_action(payload)["action"] == "choose-smallest-workflow-shape"
+    gate = _start_planning_safety_gate(payload)
+    assert gate["status"] == "blocked"
+    assert gate["decision"] == "candidate-lane-promotion-required"
+    assert gate["implementation_allowed"] is False
+    assert gate["candidate_pressure"]["status"] == "promotion-required"
+    assert gate["candidate_pressure"]["candidate_ids"] == ["safety-slice"]
+    assert "promote-to-plan --item-id safety-slice" in gate["promotion_command"]
+    assert _start_workflow_sufficiency(payload)["decision"] == "candidate-lane-promotion-required"
+    assert _start_primary_action(payload)["action"] == "select-or-promote-candidate-lane"
+    assert payload["next_safe_action"]["implementation_allowed"] is False
     decision = _start_context_value(payload, "delegation_decision")
     assert decision["decomposition_delegation"]["status"] == "available-without-active-planning"
+
+
+def test_start_blocks_epic_work_with_multiple_roadmap_candidates(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = [
+  { id = "github-1201-command-package", maturity = "candidate", status = "next", priority = "P1", refs = "GitHub #1201", title = "Command package extraction", outcome = "Extract the command package.", reason = "Open issue.", promotion_signal = "Promote before implementation.", suggested_first_slice = "Shape a bounded lane." },
+  { id = "github-1202-runtime-parity", maturity = "candidate", status = "next", priority = "P1", refs = "GitHub #1202", title = "Runtime parity", outcome = "Prove generated runtime parity.", reason = "Open issue.", promotion_signal = "Promote before implementation.", suggested_first_slice = "Shape a bounded lane." },
+]
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Implement the command generation extraction epic",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    gate = _start_planning_safety_gate(payload)
+    assert gate["decision"] == "candidate-lane-promotion-required"
+    assert gate["implementation_allowed"] is False
+    assert gate["candidate_pressure"]["roadmap_candidate_count"] == 2
+    assert gate["candidate_pressure"]["candidate_ids"] == [
+        "github-1201-command-package",
+        "github-1202-runtime-parity",
+    ]
+    assert "planning promote-to-plan --item-id github-1201-command-package" in gate["candidate_pressure"]["route_options"][0]["command"]
+    assert payload["next_safe_action"]["implementation_allowed"] is False
+
+
+def test_start_marks_bare_issue_ref_scope_unknown_without_external_evidence(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Implement #1189", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    gate = _start_planning_safety_gate(payload)
+    assert gate["status"] == "attention"
+    assert gate["decision"] == "external-issue-scope-unknown"
+    assert gate["implementation_allowed"] is True
+    assert gate["issue_scope_evidence"]["status"] == "unknown"
+    assert gate["issue_scope_evidence"]["risk"] == "high"
+    assert gate["issue_scope_evidence"]["missing_issue_refs"] == ["#1189"]
+    assert "external-intent refresh-github" in gate["issue_scope_evidence"]["refresh_command"]
 
 
 def test_implement_flags_scope_growth_without_active_execplan(tmp_path: Path, capsys) -> None:
